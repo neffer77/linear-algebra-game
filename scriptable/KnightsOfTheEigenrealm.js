@@ -71,9 +71,10 @@ h2{font-size:18px}
 .tag.r{background:#4a2b2f;color:#ffb3b6;border-color:#6a3c41}
 
 /* top bar */
-#hud{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;
+.hud{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;
   background:rgba(20,14,36,.85);border:1px solid var(--edge);border-radius:12px;font-size:13px;font-weight:700}
-#hud .sp{flex:1}
+.hud .sp{flex:1}
+.hud>span{white-space:nowrap}
 .coin{color:var(--gold)}
 
 /* battle */
@@ -146,8 +147,8 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
 
 #powerbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px}
-#powerbar .pw{padding:7px 9px;border-radius:10px;border:1px solid var(--edge);background:#2b2247;
-  font-size:13px;font-weight:800;cursor:pointer}
+#powerbar .pw{padding:10px 12px;border-radius:10px;border:1px solid var(--edge);background:#2b2247;
+  font-size:13px;font-weight:800;cursor:pointer;min-height:38px;display:flex;align-items:center}
 #powerbar .pw:active{transform:translateY(2px)}
 #powerbar .pw.off{opacity:.35;pointer-events:none}
 
@@ -246,6 +247,105 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 #vignette.crit{animation-duration:.62s;}
 @keyframes beat{0%,100%{filter:brightness(.75)}18%{filter:brightness(1.5)}36%{filter:brightness(.9)}}
 @media (prefers-reduced-motion: reduce){#vignette.on{animation:none}}
+
+/* ================= heraldic pass ================= */
+:root{
+  --serif: Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;
+  --gold-lt:#ffe6ae; --gold-dk:#7d5c10;
+}
+
+/* Gold-leaf headings. A gradient fill needs drop-shadow rather than
+   text-shadow, which paints behind the clipped text and shows through. */
+h1,h2{font-family:var(--serif); letter-spacing:.015em;}
+h1{
+  background:linear-gradient(180deg,var(--gold-lt) 0%,var(--gold) 46%,#b07d16 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:none; filter:drop-shadow(0 2px 0 rgba(0,0,0,.55));
+}
+.crest{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));}
+
+/* Panel titles become pennants with a swallowtail notch. */
+.panel h2{
+  display:inline-block; max-width:calc(100% + 12px);
+  margin:-12px 0 10px -12px; padding:7px 30px 7px 14px;
+  background:linear-gradient(180deg,#3b3063,#291f47);
+  border:1px solid var(--gold-dk); border-left:3px solid var(--gold);
+  border-radius:0 0 4px 0;
+  clip-path:polygon(0 0, 100% 0, calc(100% - 11px) 50%, 100% 100%, 0 100%);
+  font-size:16px;
+}
+.panel h2:first-child{margin-top:-12px;}
+
+/* Divider: a gold hairline broken for a lozenge. */
+hr{border:0; height:16px; position:relative; margin:12px 0;}
+hr:before{content:""; position:absolute; left:0; right:0; top:50%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dk) 16%,transparent 45%,
+    transparent 55%,var(--gold-dk) 84%,transparent);}
+hr:after{content:"◆"; position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-52%); color:var(--gold); font-size:9px; line-height:1;}
+
+/* Panels get an inner rule, like a ruled page. */
+.panel{box-shadow:0 6px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06),
+  inset 0 0 0 1px rgba(242,193,78,.07);}
+
+/* Buttons read as cast metal rather than flat plates. */
+.btn{
+  background:linear-gradient(180deg,#3d3160,#281f45);
+  border:1px solid #4b3d78;
+  box-shadow:0 4px 0 #150e28, inset 0 1px 0 rgba(255,255,255,.10),
+             inset 0 -2px 0 rgba(0,0,0,.32);
+}
+.btn:active{box-shadow:0 1px 0 #150e28, inset 0 1px 0 rgba(255,255,255,.08);}
+.btn.gold{
+  background:linear-gradient(180deg,#ffdf90,#f2c14e 42%,#c9962c 100%);
+  border-color:var(--gold-dk); color:#2a1c00;
+  text-shadow:0 1px 0 rgba(255,255,255,.35);
+  box-shadow:0 4px 0 #5f4110, inset 0 1px 0 rgba(255,255,255,.6),
+             inset 0 -2px 0 rgba(0,0,0,.18);
+}
+.btn.gold:active{box-shadow:0 1px 0 #5f4110, inset 0 1px 0 rgba(255,255,255,.5);}
+.btn.ghost{background:linear-gradient(180deg,#262040,#1b1531); border-color:#332a55;}
+
+/* The question card is framed like an illuminated page: corner brackets only,
+   so nothing can clip the text at narrow widths. */
+#qpanel{position:relative; border-color:rgba(242,193,78,.34);}
+#qpanel:before,#qpanel:after{
+  content:""; position:absolute; width:15px; height:15px; border:2px solid var(--gold);
+  opacity:.8; pointer-events:none;}
+#qpanel:before{top:5px; left:5px; border-right:0; border-bottom:0; border-radius:4px 0 0 0;}
+#qpanel:after{bottom:5px; right:5px; border-left:0; border-top:0; border-radius:0 0 4px 0;}
+#qtopic{font-family:var(--serif); font-size:12px; letter-spacing:.16em; color:var(--gold);
+  opacity:.85;}
+
+/* HUD becomes a ruled banner strip. */
+.hud{border-top:2px solid var(--gold-dk); border-bottom:2px solid var(--gold-dk);
+  border-left:1px solid var(--edge); border-right:1px solid var(--edge);
+  background:linear-gradient(180deg,#241b3d,#1a1430); border-radius:8px;}
+.hud .coin{font-family:var(--serif); font-size:15px;}
+
+/* Map nodes: a gilt edge and a plate behind the sigil. */
+.node{border-left:3px solid var(--gold-dk);}
+.node.done{border-left-color:#3f6a46;}
+.node .ico{border:1px solid var(--gold-dk); background:linear-gradient(180deg,#1d1633,#120d24);}
+.realmhdr h2{font-family:var(--serif);}
+
+.tag,.pill,.medal{font-family:var(--serif); letter-spacing:.02em;}
+
+/* Screen change: a sword-glint sweeps across. */
+#wipe{position:fixed; inset:0; z-index:70; pointer-events:none; overflow:hidden; display:none;}
+#wipe.go{display:block;}
+#wipe i{position:absolute; top:-20%; left:-45%; width:30%; height:140%;
+  transform:skewX(-16deg);
+  background:linear-gradient(90deg,transparent,rgba(242,193,78,.5),rgba(255,246,222,.8),
+    rgba(242,193,78,.5),transparent);
+  animation:sweep .34s ease-out forwards;}
+@keyframes sweep{to{left:125%}}
+.screen.on{animation:fadeIn .26s cubic-bezier(.2,.7,.3,1);}
+@keyframes fadeIn{from{opacity:0; transform:translateY(9px) scale(.992)}to{opacity:1; transform:none}}
+@media (prefers-reduced-motion: reduce){
+  #wipe{display:none!important}
+  .screen.on{animation:none}
+}
 </style>
 </head>
 <body>
@@ -281,7 +381,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <!-- ============ MAP ============ -->
   <div class="screen" id="s-map">
-    <div id="hud"></div>
+    <div id="hud" class="hud"></div>
     <div class="panel" style="padding:10px">
       <div class="row">
         <button class="btn sm" onclick="UI.go('s-shop')">🏪 Smithy</button>
@@ -340,7 +440,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <!-- ============ SHOP ============ -->
   <div class="screen" id="s-shop">
-    <div id="hud2"></div>
+    <div id="hud2" class="hud"></div>
     <div class="panel"><h2>🏪 The Smithy</h2><div class="sub">Spend gold won in battle. Equip from Gear.</div></div>
     <div id="shopList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
@@ -349,7 +449,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <!-- ============ GEAR ============ -->
   <div class="screen" id="s-gear">
-    <div id="hud3"></div>
+    <div id="hud3" class="hud"></div>
     <div id="gearList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
     <div style="height:20px"></div>
@@ -390,6 +490,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <div id="bigBanner"></div>
   <div id="vignette"></div>
+  <div id="wipe"><i></i></div>
   <div id="chest"></div>
 </div>
 
@@ -3005,6 +3106,7 @@ const UI = {
   hist:[],
   go(id, noPush){
     const cur=document.querySelector('.screen.on');
+    if(cur && cur.id!==id && Prefs.d.motion) this.glint();
     if(cur && cur.id!==id && !noPush) this.hist.push(cur.id);
     document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
     window.scrollTo(0,0);
@@ -3017,6 +3119,12 @@ const UI = {
     if(id==='s-prefs') this.renderPrefs();
   },
   back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
+  glint(){
+    const w=document.getElementById('wipe'); if(!w) return;
+    w.classList.remove('go'); void w.offsetWidth;      // restart the animation
+    w.classList.add('go');
+    setTimeout(()=>w.classList.remove('go'), 380);
+  },
   toast(msg){
     const d=document.createElement('div'); d.className='toast'; d.innerHTML=msg;
     document.body.appendChild(d);

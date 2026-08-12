@@ -220,6 +220,13 @@ Inside `index.html` the code is organised as:
 | `Prefs`, `Haptic`, `Celebrate` | sound/motion/haptic preferences, vibration, and the single funnel every full-screen callout goes through |
 | `TITLES`, `Titles` | milestone definitions and award checks |
 
+The interface is heraldic rather than generic: panel titles are pennants with a
+swallowtail notch, dividers are gold hairlines broken for a lozenge, buttons read as cast
+metal, and the question card is framed with gold corner brackets. Headings are set in a
+system serif with a gold-leaf gradient — no webfont is inlined, which keeps the Scriptable
+file paste-able and sidesteps font licensing entirely. Changing screens sweeps a
+sword-glint across, suppressed under reduced motion.
+
 All artwork is drawn procedurally on a `<canvas>`: the knight, ten enemy types, six
 skylines, weather, torches and a twinkling sky. There are no image assets to load.
 
