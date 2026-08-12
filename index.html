@@ -140,6 +140,53 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 .crest{font-size:46px;text-align:center;line-height:1}
 .kbd{display:inline-block;padding:1px 6px;border-radius:5px;background:#332957;border:1px solid var(--edge);font-size:12px}
+
+/* ---- juice ---- */
+.track{position:relative}
+.track .ghost{position:absolute;left:0;top:0;bottom:0;width:100%;
+  background:rgba(255,255,255,.5);transition:width .55s ease .3s}
+.track .fill{position:relative;z-index:1}
+#sceneWrap{position:relative}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:#fff;mix-blend-mode:screen}
+#bigBanner{position:fixed;left:0;right:0;top:34%;z-index:60;pointer-events:none;
+  text-align:center;opacity:0;transition:opacity .16s}
+#bigBanner.on{opacity:1}
+#bigBanner .bnr{display:inline-block;text-align:center;transform:scale(.7);
+  max-width:78vw;min-width:0;padding:0 8px;box-sizing:border-box;
+  animation:bpop .42s cubic-bezier(.2,1.25,.4,1) forwards}
+#bigBanner .bt{font-size:clamp(21px,7.4vw,34px);font-weight:900;letter-spacing:.5px;color:var(--bc);
+  text-shadow:0 3px 0 rgba(0,0,0,.6),0 0 26px var(--bc);line-height:1.12;
+  overflow-wrap:break-word}
+#bigBanner .bs{margin-top:4px;font-size:clamp(12px,3.4vw,14px);font-weight:800;color:var(--ink);
+  text-shadow:0 2px 6px rgba(0,0,0,.9);overflow-wrap:break-word}
+/* The pop overshoots past its keyframe, so max-width leaves room for the peak. */
+@keyframes bpop{0%{transform:scale(.62) rotate(-3deg)}60%{transform:scale(1.08) rotate(.8deg)}100%{transform:scale(1) rotate(0)}}
+.choice.right{animation:rpop .34s cubic-bezier(.2,1.4,.4,1)}
+@keyframes rpop{0%{transform:scale(1)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+.choice.wrong{animation:shake .34s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+#comboTxt.hot{color:var(--gold);font-weight:900;text-shadow:0 0 10px rgba(242,193,78,.6)}
+#comboTxt.blaze{color:#ff9c3d;font-weight:900;text-shadow:0 0 14px rgba(255,120,40,.8)}
+.xpwrap{flex:none;width:52px}
+.xptrack{height:5px;border-radius:4px;background:#140f24;border:1px solid var(--edge);overflow:hidden}
+.xptrack div{height:100%;background:linear-gradient(90deg,#5aa9e6,#a06bd6);transition:width .5s ease}
+.pref{display:flex;align-items:center;gap:10px;padding:11px;border-radius:12px;margin:6px 0;
+  border:1px solid var(--edge);background:#241c3e;cursor:pointer}
+.pref .sw{width:46px;height:26px;border-radius:99px;background:#3a3160;position:relative;flex:none;
+  transition:background .2s}
+.pref .sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#8f85b8;transition:transform .2s,background .2s}
+.pref.on .sw{background:#2f7a4c}
+.pref.on .sw i{transform:translateX(20px);background:#eafff1}
+.medal{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;margin:4px 4px 0 0;
+  background:#2b2247;border:1px solid var(--edge);font-size:12px;font-weight:800}
+.medal.got{border-color:var(--gold);background:#3a2f16;color:var(--gold)}
+.streakbox{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+  background:linear-gradient(90deg,#3a2416,#241c3e);border:1px solid #6b4a10}
+.streakbox .n{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
+@media (prefers-reduced-motion: reduce){
+  .choice.right,.choice.wrong,#bigBanner .bnr{animation:none}
+}
 </style>
 </head>
 <body>
@@ -158,6 +205,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       <button class="btn" onclick="UI.go('s-map')" id="btnContinue" style="display:none">🏰 Continue Journey</button>
       <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
       <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
+      <button class="btn ghost" onclick="UI.go('s-prefs')">⚙️ Settings &amp; Titles</button>
     </div>
     <div class="panel sub">
       <b style="color:var(--gold)">How it works</b><br>
@@ -166,6 +214,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       • <b style="color:var(--red)">Wrong</b> → the foe strikes you, and you're shown exactly why.<br>
       • Win gold &amp; loot → forge better blades, plate, and relics.
     </div>
+    <div id="streakRow"></div>
     <div class="center small" id="resetRow" style="display:none">
       <span class="kbd" onclick="Game.hardReset()">Erase save</span>
     </div>
@@ -183,6 +232,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       <div class="row">
         <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
         <button class="btn sm ghost" onclick="Game.rest()">🔥 Camp &amp; Rest</button>
+        <button class="btn sm ghost" onclick="UI.go('s-prefs')">⚙️ Settings</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -194,14 +244,14 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div class="bars">
       <div class="bar">
         <div class="lbl"><span>🛡️ You</span><span id="pHpTxt">100/100</span></div>
-        <div class="track"><div class="fill hp" id="pHp"></div></div>
+        <div class="track"><div class="ghost" id="pGhost"></div><div class="fill hp" id="pHp"></div></div>
       </div>
       <div class="bar">
         <div class="lbl"><span id="foeName">Foe</span><span id="eHpTxt">100/100</span></div>
-        <div class="track"><div class="fill foe" id="eHp"></div></div>
+        <div class="track"><div class="ghost" id="eGhost"></div><div class="fill foe" id="eHp"></div></div>
       </div>
     </div>
-    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas></div>
+    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas><div id="flash"></div></div>
     <div class="track thin" style="margin-top:6px"><div class="fill time" id="timeBar"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">
       <span class="small" id="comboTxt">Combo ×1.0</span>
@@ -254,6 +304,13 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="s-prefs">
+    <div id="prefList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ TRAINING ============ -->
   <div class="screen" id="s-train">
     <div class="panel"><h2>🎯 Training Grounds</h2><div class="sub">Practise freely. No damage taken, no gold earned — just repetitions.</div></div>
@@ -272,6 +329,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div style="height:20px"></div>
   </div>
 
+  <div id="bigBanner"></div>
 </div>
 
 <script>
@@ -886,11 +944,19 @@ const Mastery = {
   },
   update(key, ok){
     const r=this.rec(key);
+    const was=r.m;
     r.seen++;
     if(ok) r.c++; else r.w++;
     const alpha = r.seen<4 ? 0.45 : 0.25;      // adapt fast at first, settle later
     r.m = clamp(r.m + alpha*((ok?1:0) - r.m), 0, 1);
     r.last = Game.s.qCount;
+    // Crossing into "solid" is the moment worth celebrating: it is real learning.
+    // A latch rather than an edge test — the crossing and the minimum-exposure
+    // gate can otherwise be satisfied on different answers and never coincide.
+    let justMastered=false;
+    if(r.m>=0.85 && r.seen>=5 && !r.mastered){ r.mastered=1; justMastered=true; }
+    else if(r.m<0.6) r.mastered=0;            // it can be lost, and re-earned
+    return {mastered:justMastered, was};
   },
   // How many questions should pass before a topic is worth revisiting.
   dueIn(r){ return 3 + Math.round(r.m*r.m*22); },
@@ -1049,6 +1115,8 @@ const Game = {
       stats:{wins:0, correct:0, wrong:0, best:0},
       qCount:0,            // questions answered ever; the clock for spaced repetition
       arenaBest:0,         // deepest arena wave reached
+      streak:{days:0,last:null},   // consecutive days practised
+      titles:{},           // earned milestone ids
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -1077,13 +1145,24 @@ const Game = {
   },
   save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.s)); }catch(e){} },
   hardReset(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); },
-  start(){ this.s=this.fresh(); this.save(); UI.go('s-map'); },
+  start(){ this.s=this.fresh(); this.touchStreak(); this.save(); UI.go('s-map'); },
   rest(){
     const cost = 25 + this.s.lvl*5;
     if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return; }
     if(this.s.gold<cost){ UI.toast(`A night's camp costs ${cost} gold.`); return; }
     this.s.gold-=cost; this.s.hp=this.s.maxHp; this.save(); UI.renderMap();
     UI.toast(`🔥 Rested by the fire. Full health for ${cost} gold.`);
+  },
+  // Returns the new streak length if today is a fresh day, else null.
+  touchStreak(){
+    const st=this.s.streak||(this.s.streak={days:0,last:null});
+    const today=dayKey(new Date());
+    if(st.last===today) return null;
+    const yest=dayKey(new Date(Date.now()-864e5));
+    st.days = (st.last===yest) ? st.days+1 : 1;
+    st.last = today;
+    this.save();
+    return st.days;
   },
   weapon(){ return WEAPONS.find(w=>w.id===this.s.weapon); },
   armor(){ return ARMORS.find(a=>a.id===this.s.armor); },
@@ -1109,33 +1188,130 @@ const Game = {
   },
   recordAnswer(topic, ok){
     if(ok) this.s.stats.correct++; else this.s.stats.wrong++;
-    Mastery.update(topic, ok);
+    const res=Mastery.update(topic, ok);
     this.s.qCount++;
+    return res;
   }
+};
+
+/* ------------------------------ preferences ------------------------------ */
+const PREF_KEY='eigenrealm.prefs';
+const Prefs = {
+  d:{sound:true, motion:true, haptics:true},
+  load(){
+    let stored=null;
+    try{ stored=localStorage.getItem(PREF_KEY); if(stored) Object.assign(this.d, JSON.parse(stored)); }catch(e){}
+    // Honour the OS setting the first time, before the player has chosen.
+    if(!stored && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) this.d.motion=false;
+  },
+  save(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(this.d)); }catch(e){} },
+  toggle(k){ this.d[k]=!this.d[k]; this.save(); if(k==='sound'&&this.d.sound) Sfx.good(0); UI.renderPrefs(); }
+};
+
+/* -------------------------------- haptics -------------------------------- */
+const Haptic = {
+  fire(pattern){
+    if(!Prefs.d.haptics || !navigator.vibrate) return;
+    try{ navigator.vibrate(pattern); }catch(e){}
+  },
+  tap(){ this.fire(12); },
+  hit(){ this.fire(22); },
+  crit(){ this.fire([28,40,55]); },
+  hurt(){ this.fire([50,30,50]); },
+  win(){ this.fire([30,50,30,50,90]); }
 };
 
 /* --------------------------------- audio --------------------------------- */
 const Sfx = {
-  ctx:null, on:true,
-  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ this.on=false; } } },
-  play(freq, dur, type, vol){
-    if(!this.on) return; this.init(); if(!this.ctx) return;
+  ctx:null, ok:true,
+  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ this.ok=false; } } },
+  play(freq, dur, type, vol, when){
+    if(!this.ok || !Prefs.d.sound) return;
+    this.init(); if(!this.ctx) return;
     try{
+      const t=this.ctx.currentTime+(when||0);
       const o=this.ctx.createOscillator(), g=this.ctx.createGain();
-      o.type=type||'triangle'; o.frequency.value=freq;
-      g.gain.setValueAtTime(vol||.06, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(.0001, this.ctx.currentTime+dur);
+      o.type=type||'triangle'; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol||.06, t+.012);
+      g.gain.exponentialRampToValueAtTime(.0001, t+dur);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(this.ctx.currentTime+dur);
+      o.start(t); o.stop(t+dur+.02);
     }catch(e){}
   },
-  hit(){ this.play(180,.18,'square',.07); setTimeout(()=>this.play(90,.2,'sawtooth',.05),40); },
-  hurt(){ this.play(120,.28,'sawtooth',.07); },
-  good(){ this.play(660,.09,'triangle',.06); setTimeout(()=>this.play(990,.14,'triangle',.05),80); },
-  bad(){ this.play(200,.22,'square',.05); },
-  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.play(f,.22,'triangle',.06),i*110)); },
-  coin(){ this.play(880,.07,'square',.05); setTimeout(()=>this.play(1320,.1,'square',.04),60); }
+  // A short downward sweep — used for impacts, which need weight rather than pitch.
+  thud(f0, f1, dur, type, vol){
+    if(!this.ok || !Prefs.d.sound) return;
+    this.init(); if(!this.ctx) return;
+    try{
+      const t=this.ctx.currentTime;
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type=type||'sawtooth';
+      o.frequency.setValueAtTime(f0,t);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur);
+      g.gain.setValueAtTime(vol||.08,t);
+      g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(t); o.stop(t+dur+.02);
+    }catch(e){}
+  },
+  hit(){ this.thud(320,90,.16,'square',.07); this.play(140,.2,'sawtooth',.05,.02); },
+  crit(){ this.thud(520,70,.26,'sawtooth',.10); this.play(1200,.1,'square',.05); this.play(1600,.14,'triangle',.04,.06); },
+  hurt(){ this.thud(180,50,.3,'sawtooth',.08); },
+  slam(){ this.thud(240,40,.42,'sawtooth',.11); this.play(70,.35,'square',.06,.03); },
+  // Rising with the streak: the reward literally climbs as you build a combo.
+  good(combo){
+    const step=Math.min(combo||0, 14);
+    const base=590*Math.pow(1.0595, step);            // one semitone per hit
+    this.play(base,.09,'triangle',.055);
+    this.play(base*1.5,.13,'triangle',.045,.07);
+  },
+  bad(){ this.play(220,.14,'square',.05); this.play(165,.22,'square',.045,.1); },
+  milestone(){ [0,1,2,3].forEach(i=>this.play(523*Math.pow(1.26,i),.16,'triangle',.06,i*.06)); },
+  mastered(){ [523,659,784,1046,1318].forEach((f,i)=>this.play(f,.28,'triangle',.06,i*.08)); },
+  win(){ [523,659,784,1046].forEach((f,i)=>this.play(f,.22,'triangle',.06,i*.11)); },
+  level(){ [392,523,659,784,1046].forEach((f,i)=>this.play(f,.3,'triangle',.07,i*.09)); },
+  coin(n){ const t=(n||0)*.045; this.play(1050,.06,'square',.045,t); this.play(1560,.09,'square',.035,t+.05); }
 };
+
+/* ------------------------------ celebration ------------------------------ */
+/* One place to fire a full-screen callout. Every dopamine beat routes here so
+   reduced-motion and sound preferences are honoured in a single spot.       */
+const Celebrate = {
+  q:[], showing:false,
+  banner(text, sub, colour, sound){
+    // Keep the queue short: a stale "NICE!" arriving three hits later is worse
+    // than dropping it, because the callout should describe the current moment.
+    this.q.push({text, sub, colour, sound});
+    if(this.q.length>2) this.q.splice(0, this.q.length-2);
+    if(!this.showing) this._next();
+  },
+  _next(){
+    const item=this.q.shift();
+    if(!item){ this.showing=false; return; }
+    this.showing=true;
+    const el=document.getElementById('bigBanner');
+    el.innerHTML=`<div class="bnr" style="--bc:${item.colour||'var(--gold)'}">
+        <div class="bt">${item.text}</div>${item.sub?`<div class="bs">${item.sub}</div>`:''}</div>`;
+    el.classList.add('on');
+    if(item.sound) item.sound();
+    const hold = (Prefs.d.motion ? 950 : 620) / (this.q.length?1.6:1);   // catch up when stacked
+    setTimeout(()=>{ el.classList.remove('on'); setTimeout(()=>this._next(), 180); }, hold);
+  }
+};
+
+/* Animated number roll-up — watching a total climb is half the reward. */
+function countUp(el, to, dur, prefix){
+  if(!el) return;
+  if(!Prefs.d.motion){ el.textContent=(prefix||'')+to; return; }
+  const t0=performance.now(), from=0;
+  (function step(now){
+    const k=clamp((now-t0)/dur,0,1);
+    const eased=1-Math.pow(1-k,3);
+    el.textContent=(prefix||'')+Math.round(from+(to-from)*eased);
+    if(k<1) requestAnimationFrame(step);
+  })(t0);
+}
 
 /* ------------------------------- rendering -------------------------------- */
 const cv = document.getElementById('scene');
@@ -1444,23 +1620,54 @@ const Anim = {
   pl:0, el:0,           // lunge amounts 0..1
   ph:0, eh:0,           // hurt flash timers
   shake:0,
+  hitstop:0,            // freeze-frame: the thing that makes a hit feel heavy
+  slow:1,               // time scale, dipped for a killing blow
+  cam:{z:1, fx:400, fy:230},
+  flash:0,
   floats:[], parts:[],
   pending:null,
-  reset(){ this.pl=this.el=this.ph=this.eh=this.shake=0; this.floats=[]; this.parts=[]; this.pending=null; },
+  reset(){
+    this.pl=this.el=this.ph=this.eh=this.shake=0;
+    this.hitstop=0; this.slow=1; this.flash=0; this.cam.z=1;
+    this.floats=[]; this.parts=[]; this.pending=null;
+  },
+  // Punch the camera toward a point, then let it drift back.
+  punch(x,y,z){ if(!Prefs.d.motion) return; this.cam.fx=x; this.cam.fy=y; this.cam.z=z; },
+  freeze(sec){ if(Prefs.d.motion) this.hitstop=Math.max(this.hitstop,sec); },
   float(x,y,txt,col,big){ this.floats.push({x,y,txt,col,life:1.2,big:!!big}); },
   burst(x,y,col,n){
-    for(let i=0;i<(n||18);i++){
+    let count=n||18;
+    if(!Prefs.d.motion) count=Math.min(count,6);
+    for(let i=0;i<count;i++){
       const a=Math.random()*Math.PI*2, sp=60+Math.random()*260;
       this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-70,life:.5+Math.random()*.5,col,r:2+Math.random()*4});
     }
   },
-  strike(who, dmg, crit, label){
+  // Gold coins arcing off a defeated foe.
+  coins(x,y,n){
+    const count=Prefs.d.motion?(n||14):4;
+    for(let i=0;i<count;i++){
+      const a=-Math.PI/2+(Math.random()-.5)*1.7, sp=180+Math.random()*260;
+      this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1+Math.random()*.6,col:'#f2c14e',r:3.5+Math.random()*2.5});
+    }
+  },
+  strike(who, dmg, crit, label, kill){
     // who: 'p' player attacks, 'e' enemy attacks
-    this.pending={who,dmg,crit,label,fired:false};
+    this.pending={who,dmg,crit,label,kill,fired:false};
     if(who==='p') this.pl=0.001; else this.el=0.001;
   },
   loop(ts){
-    const dt = Math.min(.05,(ts-Anim.last)/1000||.016); Anim.last=ts; Anim.t+=dt;
+    const real = Math.min(.05,(ts-Anim.last)/1000||.016); Anim.last=ts;
+    let dt = real;
+    if(Anim.hitstop>0){ Anim.hitstop-=real; dt*=0.05; }   // the freeze-frame
+    dt *= Anim.slow;
+    Anim.t+=dt;
+    // camera and time scale ease back to rest
+    Anim.cam.z += (1-Anim.cam.z)*Math.min(1, real*5);
+    Anim.slow  += (1-Anim.slow )*Math.min(1, real*1.6);
+    Anim.flash  = Math.max(0, Anim.flash - real*3.2);
+    const fl=document.getElementById('flash');
+    if(fl) fl.style.opacity=Anim.flash.toFixed(3);
     // lunges
     const step=(v)=> v>0 ? Math.min(1.0001, v+dt*3.2) : 0;
     if(Anim.pl>0){ Anim.pl=step(Anim.pl); if(Anim.pl>=1) Anim.pl=0; }
@@ -1475,11 +1682,28 @@ const Anim = {
       if(prog>=.42){
         P.fired=true;
         const tx = P.who==='p' ? 560 : 250;
-        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?30:18);
+        const slam = P.label==='SLAM';
+        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?34:18);
         Anim.float(tx, H-230, (P.label?P.label+' ':(P.crit?'CRIT ':''))+'-'+P.dmg,
                    P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
-        Anim.shake = P.crit?1.4:.9;
-        if(P.who==='p'){ Anim.eh=.35; Sfx.hit(); } else { Anim.ph=.35; Sfx.hurt(); }
+        Anim.shake = (P.crit?1.5:.9) * (Prefs.d.motion?1:.35);
+        Anim.freeze(P.crit?.13:.06);
+        Anim.punch(tx, H-200, P.crit?1.14:1.05);
+        if(P.crit) Anim.flash=.55;
+        if(P.kill){                                   // the killing blow gets the full treatment
+          Anim.slow=Prefs.d.motion?0.28:1;
+          Anim.freeze(.2); Anim.punch(tx,H-200,1.3);
+          Anim.flash=.8; Anim.shake=1.8*(Prefs.d.motion?1:.35);
+          Anim.coins(tx,H-190,16);
+        }
+        if(P.who==='p'){
+          Anim.eh=.35;
+          if(P.crit){ Sfx.crit(); Haptic.crit(); } else { Sfx.hit(); Haptic.hit(); }
+        } else {
+          Anim.ph=.35; Anim.flash=Math.max(Anim.flash,slam?.5:.28);
+          if(slam) Sfx.slam(); else Sfx.hurt();
+          Haptic.hurt();
+        }
       }
     }
 
@@ -1495,6 +1719,11 @@ const Anim = {
   draw(){
     const B=Battle;
     cx.save();
+    if(Anim.cam.z!==1){
+      cx.translate(Anim.cam.fx, Anim.cam.fy);
+      cx.scale(Anim.cam.z, Anim.cam.z);
+      cx.translate(-Anim.cam.fx, -Anim.cam.fy);
+    }
     if(Anim.shake>0){ cx.translate((Math.random()-.5)*Anim.shake*16,(Math.random()-.5)*Anim.shake*16); }
     drawBg(B.realm ? B.realm.sky : ['#22183a','#0b0812']);
     const gy = H-120;
@@ -1579,8 +1808,11 @@ const Battle = {
 
   updateBars(){
     const g=Game.s;
-    document.getElementById('pHp').style.width  = clamp(g.hp/g.maxHp*100,0,100)+'%';
-    document.getElementById('eHp').style.width  = clamp(this.ehp/this.emax*100,0,100)+'%';
+    const pPct=clamp(g.hp/g.maxHp*100,0,100), ePct=clamp(this.ehp/this.emax*100,0,100);
+    document.getElementById('pHp').style.width  = pPct+'%';
+    document.getElementById('eHp').style.width  = ePct+'%';
+    document.getElementById('pGhost').style.width = pPct+'%';   // trails behind, showing the wound
+    document.getElementById('eGhost').style.width = ePct+'%';
     document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
     document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
     const pips = this.slamNext ? '⚡ WIND-UP'
@@ -1589,7 +1821,10 @@ const Battle = {
       (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
-      `Combo ×${(1+this.combo*.15).toFixed(2)}  ·  streak ${this.combo}`;
+      `Combo ×${(1+Math.min(this.combo,7)*.15).toFixed(2)}  ·  streak ${this.combo}`;
+    const ct=document.getElementById('comboTxt');
+    ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
+    ct.classList.toggle('blaze', this.combo>=8);
     const fb=document.getElementById('fleeBtn');
     if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings' : '🏃 Retreat';
     this.renderPowers();
@@ -1689,8 +1924,9 @@ const Battle = {
       else if(b===btn) b.classList.add('wrong');
       else b.classList.add('faded');
     });
-    Game.recordAnswer(this.cur.key, ok);
+    this.lastMastery = Game.recordAnswer(this.cur.key, ok);
 
+    Haptic.tap();
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -1702,8 +1938,9 @@ const Battle = {
       dmg = Math.round(dmg * (0.9+Math.random()*0.2));
       this.rage=false;
       this.ehp=Math.max(0,this.ehp-dmg);
-      Anim.strike('p',dmg,crit);
-      Sfx.good();
+      Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      Sfx.good(this.combo);                       // pitch climbs with the streak
+      this.comboBeat();
     } else {
       this.combo=0;
       const def=this.defStat();
@@ -1711,6 +1948,11 @@ const Battle = {
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       Sfx.bad();
+    }
+    // Crossing a topic into "solid" is the payoff the whole game is built around.
+    if(this.lastMastery && this.lastMastery.mastered){
+      setTimeout(()=>Celebrate.banner('MASTERED', TOPIC_LABEL[this.cur.key]||this.cur.topic,
+        'var(--green)', ()=>{Sfx.mastered(); Haptic.win();}), 700);
     }
 
     // The foe fights on its own clock: it winds up over a few turns and then
@@ -1736,6 +1978,16 @@ const Battle = {
     Game.save();
     setTimeout(()=>this.updateBars(),420);
     this.showExplain(ok, choice);
+  },
+
+  // Streak milestones: escalating callouts so a hot run feels like one.
+  comboBeat(){
+    const c=this.combo;
+    const M={3:['NICE!','three in a row'],5:['ON FIRE!','×1.75 damage'],
+             8:['UNSTOPPABLE!','×2.05 damage — the cap'],12:['LEGENDARY!','twelve straight'],
+             16:['IMMORTAL!','sixteen straight'],25:['GODLIKE!','twenty-five straight']};
+    const hit = M[c] || (c>25 && c%10===0 ? ['GODLIKE ×'+Math.floor(c/10),c+' straight'] : null);
+    if(hit) Celebrate.banner(hit[0], hit[1], c>=8?'#ff9c3d':'var(--gold)', ()=>{Sfx.milestone(); Haptic.win();});
   },
 
   showExplain(ok, picked){
@@ -1809,8 +2061,8 @@ const Battle = {
           <div class="sub" style="margin-top:6px">${this.foe.nm} falls before your blade.</div>
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
-            <div class="coin">+${gold} gold</div>
-            <div style="color:var(--blue)">+${xp} experience</div>
+            <div class="coin">+<span id="rGold">0</span> gold</div>
+            <div style="color:var(--blue)">+<span id="rXp">0</span> experience</div>
             ${loot?`<div style="color:var(--purple)">Looted ${loot}</div>`:''}
             ${ups?`<div style="color:var(--gold)">⬆️ Level ${g.lvl}! Health restored to ${g.maxHp}.</div>`:''}
             ${unlocked?`<div style="color:var(--green)">🗺️ ${unlocked} now lies open.</div>`:''}
@@ -1821,6 +2073,12 @@ const Battle = {
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>`;
+      countUp(document.getElementById('rGold'), gold, 900);
+      countUp(document.getElementById('rXp'),   xp,   900);
+      for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
+      Haptic.win();
+      if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
+      Titles.check();
       Anim.stop();
     },1200);
   },
@@ -1858,6 +2116,55 @@ const Battle = {
     UI.toast('🏃 You slip away into the trees.');
   }
 };
+
+/* -------------------------------- titles --------------------------------- */
+/* Milestones worth chasing. Most are tied to actually learning something
+   rather than merely grinding, so the reward tracks the point of the game.  */
+const TITLES = [
+  {id:'first',    ic:'⚔️', nm:'First Blood',     ds:'Win your first battle',        t:g=>g.stats.wins>=1},
+  {id:'squire',   ic:'🛡️', nm:'Squire',          ds:'Solve 50 riddles',             t:g=>g.stats.correct>=50},
+  {id:'errant',   ic:'🐎', nm:'Knight-Errant',   ds:'Solve 250 riddles',            t:g=>g.stats.correct>=250},
+  {id:'scholar',  ic:'📚', nm:'Scholar',         ds:'Solve 1000 riddles',           t:g=>g.stats.correct>=1000},
+  {id:'form',     ic:'🔥', nm:'Perfect Form',    ds:'Reach a streak of 15',         t:g=>g.stats.best>=15},
+  {id:'realm',    ic:'🗺️', nm:'Realm Walker',    ds:'Clear an entire realm',
+    t:g=>REALMS.some((r,ri)=>r.foes.every((f,fi)=>g.cleared[ri+':'+fi]))},
+  {id:'dragon',   ic:'🐉', nm:'Dragonslayer',    ds:'Fell the Eigen Dragon',        t:g=>!!g.cleared['4:3']},
+  {id:'arena10',  ic:'🏟️', nm:'Gladiator',       ds:'Reach arena wave 10',          t:g=>(g.arenaBest||0)>=10},
+  {id:'arena20',  ic:'👑', nm:'Arena Champion',  ds:'Reach arena wave 20',          t:g=>(g.arenaBest||0)>=20},
+  {id:'poly',     ic:'🧠', nm:'Polymath',        ds:'Master 10 topics',
+    t:()=>Mastery.all().filter(x=>x.r.m>=0.85).length>=10},
+  {id:'magister', ic:'✨', nm:'Grand Magister',  ds:'Master every topic in the game',
+    t:()=>Mastery.all().filter(x=>x.r.m>=0.85).length>=Object.keys(TOPIC_LABEL).length},
+  {id:'devoted',  ic:'📅', nm:'Devoted',         ds:'Practise seven days running',
+    t:g=>(g.streak&&g.streak.days)>=7}
+];
+
+const Titles = {
+  check(){
+    const g=Game.s; if(!g) return;
+    g.titles=g.titles||{};
+    let got=false;
+    for(const t of TITLES){
+      if(g.titles[t.id]) continue;
+      let earned=false;
+      try{ earned=!!t.t(g); }catch(e){}
+      if(earned){
+        g.titles[t.id]=1; got=true;
+        Celebrate.banner(t.ic+' '+t.nm, t.ds, 'var(--gold)', ()=>{Sfx.mastered(); Haptic.win();});
+      }
+    }
+    if(got) Game.save();
+  },
+  count(){ const g=Game.s; return g&&g.titles ? Object.keys(g.titles).length : 0; },
+  latest(){
+    const g=Game.s; if(!g||!g.titles) return null;
+    const owned=TITLES.filter(t=>g.titles[t.id]);
+    return owned.length? owned[owned.length-1] : null;
+  }
+};
+
+/* Local-date key, so the streak rolls over at the player's midnight. */
+function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
 
 /* -------------------------------- arena ---------------------------------- */
 /* Endless mode, unlocked once the Eigen Dragon falls. Waves scale, you never
@@ -1953,8 +2260,8 @@ const Arena = {
         <div class="sub" style="margin-top:6px">${foe.nm} falls. The gate grinds open again.</div>
         <hr>
         <div style="font-size:15px;font-weight:800;line-height:1.8">
-          <div class="coin">+${gold} gold</div>
-          <div style="color:var(--blue)">+${foe.xp} experience</div>
+          <div class="coin">+<span id="aGold">0</span> gold</div>
+          <div style="color:var(--blue)">+<span id="aXp">0</span> experience</div>
           ${ups?`<div style="color:var(--gold)">⬆️ Level ${Game.s.lvl}!</div>`:''}
           ${healed?`<div style="color:var(--green)">🩹 The crowd throws down a poultice: +${healed} health</div>`:''}
         </div>
@@ -1970,6 +2277,13 @@ const Arena = {
       :`<button class="btn gold" onclick="Arena.nextWave()">⚔️ Wave ${this.wave+1} →</button>
         <button class="btn ghost" onclick="Arena.retire()">🚪 Retire with your winnings</button>`}
       <div style="height:20px"></div>`;
+    countUp(document.getElementById('aGold'), gold, 800);
+    countUp(document.getElementById('aXp'), foe.xp, 800);
+    for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
+    Haptic.win();
+    if(ups) Celebrate.banner('LEVEL '+Game.s.lvl, 'Maximum health now '+Game.s.maxHp, 'var(--gold)', ()=>Sfx.level());
+    if(this.wave%5===0) Celebrate.banner('WAVE '+this.wave, 'champion felled', '#ff9c3d', ()=>Sfx.milestone());
+    Titles.check();
   },
 
   take(i){
@@ -2034,6 +2348,7 @@ const UI = {
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
+    if(id==='s-prefs') this.renderPrefs();
   },
   back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
   toast(msg){
@@ -2043,9 +2358,31 @@ const UI = {
   },
   hud(){
     const g=Game.s;
-    const pct=Math.round(g.xp/Game.xpNeeded()*100);
-    return `<span>🛡️ Lv ${g.lvl}</span><span>❤️ ${Math.round(g.hp)}/${g.maxHp}</span>
-            <span class="sp"></span><span class="coin">🪙 ${g.gold}</span><span class="small">XP ${pct}%</span>`;
+    const pct=clamp(Math.round(g.xp/Game.xpNeeded()*100),0,100);
+    const days=(g.streak&&g.streak.days)||0;
+    return `<span>🛡️ ${g.lvl}</span><span>❤️ ${Math.round(g.hp)}/${g.maxHp}</span>
+            ${days>1?`<span title="day streak">🔥 ${days}</span>`:''}
+            <span class="sp"></span>
+            <span class="xpwrap"><div class="xptrack"><div style="width:${pct}%"></div></div></span>
+            <span class="coin">🪙 ${g.gold}</span>`;
+  },
+  renderPrefs(){
+    const row=(k,ic,nm,ds)=>`<div class="pref ${Prefs.d[k]?'on':''}" onclick="Prefs.toggle('${k}')">
+        <div style="font-size:20px">${ic}</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">${nm}</div>
+        <div class="small">${ds}</div></div><div class="sw"><i></i></div></div>`;
+    document.getElementById('prefList').innerHTML=`
+      <div class="panel"><h2>⚙️ Settings</h2>
+        ${row('sound','🔊','Sound','Strikes, streak tones and fanfares')}
+        ${row('motion','✨','Full motion','Screen shake, hit-stop, particles and slow-motion')}
+        ${row('haptics','📳','Haptics','Vibration on hits, where the device supports it')}
+      </div>
+      <div class="panel"><h2>🏅 Titles</h2>
+        <div class="sub" style="margin-bottom:6px">${Titles.count()} of ${TITLES.length} earned.</div>
+        ${TITLES.map(t=>{const got=Game.s&&Game.s.titles&&Game.s.titles[t.id];
+          return `<span class="medal ${got?'got':''}">${got?t.ic:'🔒'} ${t.nm}
+            <span class="small" style="font-weight:400">— ${t.ds}</span></span>`;}).join('')}
+      </div>`;
   },
   renderMap(){
     if(!Game.s) return;
@@ -2298,13 +2635,25 @@ const Train = {
 
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
+  Prefs.load();
   if(Game.load()){
     document.getElementById('btnContinue').style.display='';
     document.getElementById('resetRow').style.display='';
+    const days=Game.touchStreak();
+    const st=Game.s.streak||{days:0};
+    document.getElementById('streakRow').innerHTML = st.days>0
+      ? `<div class="streakbox"><div class="n">${st.days}</div>
+         <div><div style="font-weight:800;font-size:14px">day${st.days===1?'':'s'} in a row</div>
+         <div class="small">${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div></div></div>`
+      : '';
+    if(days && days>1) setTimeout(()=>Celebrate.banner('🔥 '+days+' DAY STREAK','welcome back','#ff9c3d',
+      ()=>{Sfx.milestone(); Haptic.win();}), 400);
+    Titles.check();
   }
   fitCanvas();
-  document.addEventListener('touchstart',()=>Sfx.init(),{once:true});
-  document.addEventListener('click',()=>Sfx.init(),{once:true});
+  const wake=()=>Sfx.init();
+  document.addEventListener('touchstart',wake,{once:true});
+  document.addEventListener('click',wake,{once:true});
   // prevent iOS double-tap zoom on rapid answering
   let lastTouch=0;
   document.addEventListener('touchend',e=>{

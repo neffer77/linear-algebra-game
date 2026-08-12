@@ -93,6 +93,13 @@ screen. Armour adds both flat damage reduction and maximum health.
 **Losing** costs 15% of your gold and nothing else. You keep every item, level, and piece
 of gear. Death is a speed bump, not a wall.
 
+**Game feel.** Hits land with a freeze-frame, a camera punch and a screen flash; the
+killing blow adds slow-motion and a shower of coins. Health bars leave a white trail
+showing the wound you just took. The tone that plays on a correct answer climbs a semitone
+per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 / 5 / 8 /
+12 / 16 / 25 fire escalating callouts. Rewards roll up rather than appearing. Every one of
+these can be turned off — see Settings.
+
 **🏟️ The Arena** opens once the Eigen Dragon falls. Endless waves drawn from *every* topic
 in the game, scaling until they kill you. There is no free healing between waves — only a
 poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
@@ -147,6 +154,28 @@ The game is built so that losing teaches you as much as winning.
   gone stale. Neither requires you to know what you're bad at.
 - **📜 Chronicle** (on the Gear screen) — per-topic mastery bars, weakest first, labelled
   weak / shaky / steady / solid, with a running count of what needs work and what is due.
+- **The loudest celebration in the game is for learning, not looting.** When a topic
+  crosses into mastery you get a full-screen MASTERED callout and a fanfare — the same
+  treatment a level-up gets. It fires once per topic, and can be lost and re-earned if
+  your accuracy on it falls away.
+- **Titles** — twelve milestones, most tied to understanding rather than grinding
+  (*Polymath* for ten topics mastered, *Grand Magister* for all 38), plus a daily practice
+  streak, because spaced practice is how this material actually sticks.
+
+---
+
+## Settings and accessibility
+
+Reachable from the title screen and the map (⚙️).
+
+| Setting | Effect |
+|---|---|
+| 🔊 Sound | All synthesised audio. Off by default is never assumed — it respects your choice. |
+| ✨ Full motion | Screen shake, hit-stop, camera punch, slow-motion and particle volume. Turning it off keeps the game fully playable and legible; it defaults to off if your OS asks for reduced motion. |
+| 📳 Haptics | Vibration on hits and rewards, where the device supports it. |
+
+Verified free of horizontal overflow and undersized tap targets at 320×568, 375×667,
+390×844, 414×896, 768×1024 and 844×390 (landscape).
 
 ---
 
@@ -170,7 +199,9 @@ Inside `index.html` the code is organised as:
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
 | `UI`, `Shop`, `Train` | screens |
-| `Sfx` | WebAudio blips, synthesised — no audio files |
+| `Sfx` | WebAudio synthesis — impacts, streak tones, fanfares; no audio files |
+| `Prefs`, `Haptic`, `Celebrate` | sound/motion/haptic preferences, vibration, and the single funnel every full-screen callout goes through |
+| `TITLES`, `Titles` | milestone definitions and award checks |
 
 All artwork is drawn procedurally on a `<canvas>`: the knight, seven enemy types, torches,
 towers, and a twinkling sky. There are no image assets to load.
@@ -196,6 +227,10 @@ The mathematics is verified rather than assumed. The generators were checked by:
   four unique choices, the answer present among them, and no malformed output.
 - **21,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
+- **Layout at six viewports** from a 320px iPhone SE to a 768px iPad and 844×390 landscape,
+  asserting no horizontal overflow, no tap target under 32px, and that the largest
+  full-screen callouts still fit — including at the peak of their overshooting pop
+  animation, which is where they first broke.
 - **Arena pacing**, simulated over 300 runs per scenario to confirm that runs reliably end,
   that accuracy dominates gear in how deep you get, and that the boon draft keeps a
   well-played run growing rather than stalling.
