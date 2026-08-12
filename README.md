@@ -68,6 +68,13 @@ from a specific, common error. Pick the entrywise product on a matrix multiplica
 the game says so by name, then explains the row-times-column rule. Roughly 78% of wrong
 answers carry a diagnosis of the exact mistake behind them.
 
+**It adapts to you.** The game keeps a mastery score per topic and uses it to decide what
+to ask next, so weak and overdue topics come back more often and solid ones step aside. In
+a measured run, the topic a player kept missing drew **3.8× the airtime** of a mastered
+one. Difficulty follows the same signal: a topic you are failing is asked at the easiest
+tier, one you have mastered at the hardest. When a weak topic is deliberately brought back
+it is marked ⟳ review, so the targeting is visible rather than mysterious.
+
 **Progression.** Beating a foe earns gold and XP, and often loot. Levelling raises your
 maximum health and heals you fully. Clearing a realm's boss unlocks the next realm.
 
@@ -118,9 +125,11 @@ The game is built so that losing teaches you as much as winning.
 - **📖 Tome of Lore** — nine short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
-  gold. Just repetitions and explanations.
-- **📜 Chronicle** (on the Gear screen) — per-topic accuracy bars showing exactly where you
-  are strong and where you bleed.
+  gold. Two adaptive drills sit at the top: **Drill my weakest** pulls from your six worst
+  topics, and **Review what's due** pulls whatever the spaced-repetition schedule says has
+  gone stale. Neither requires you to know what you're bad at.
+- **📜 Chronicle** (on the Gear screen) — per-topic mastery bars, weakest first, labelled
+  weak / shaky / steady / solid, with a running count of what needs work and what is due.
 
 ---
 
@@ -138,7 +147,8 @@ Inside `index.html` the code is organised as:
 |---|---|
 | `GEN` | the 38 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
-| `Game` | state, saving to `localStorage`, levelling |
+| `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
+| `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat |
 | `UI`, `Shop`, `Train` | screens |
@@ -168,5 +178,9 @@ The mathematics is verified rather than assumed. The generators were checked by:
   four unique choices, the answer present among them, and no malformed output.
 - **21,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
+- **The adaptive scheduler**, simulated over thousands of questions against a synthetic
+  learner with known per-topic skill: weak topics drew 3.8× the airtime of mastered ones,
+  the mastery model tracked true skill to within 5% mean error, mastered topics still
+  resurfaced rather than starving, and back-to-back repeats stayed near 2%.
 - **21,000 calculus checks** — derivatives against centred finite differences, definite
   integrals against Simpson's rule, and limits against numeric evaluation.

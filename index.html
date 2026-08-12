@@ -97,6 +97,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
   animation:pulse 1s ease-in-out infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}50%{box-shadow:0 0 0 6px rgba(229,72,77,0)}}
 .pips{font-size:11px;color:var(--red);letter-spacing:1px}
+.mtag{float:right;font-size:11px;font-weight:800;opacity:.85}
+.rev{display:inline-block;padding:1px 7px;border-radius:999px;background:#3a2f5e;
+  border:1px solid var(--purple);color:#d9b8ff;font-size:10px;letter-spacing:.5px;margin-left:4px}
 .miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
   padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
 .miss b{color:#ffb3b6}
@@ -867,6 +870,80 @@ const TOPIC_LABEL = {
   secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives'
 };
 
+/* ------------------------------- mastery --------------------------------- */
+/* Per-topic mastery drives three things: which topic comes up next, how hard
+   the problem is, and what the Chronicle reports. The model is a plain
+   exponential moving average of recent outcomes plus a spaced-repetition
+   interval that stretches as a topic becomes solid.
+
+   A record is {c, w, m, seen, last}: lifetime correct/wrong for reporting,
+   mastery m in [0,1], and `last` = the value of qCount when the topic was
+   last asked.                                                              */
+const Mastery = {
+  rec(key){
+    const t=Game.s.topicStats;
+    return t[key] || (t[key]={c:0,w:0,m:0,seen:0,last:-999});
+  },
+  update(key, ok){
+    const r=this.rec(key);
+    r.seen++;
+    if(ok) r.c++; else r.w++;
+    const alpha = r.seen<4 ? 0.45 : 0.25;      // adapt fast at first, settle later
+    r.m = clamp(r.m + alpha*((ok?1:0) - r.m), 0, 1);
+    r.last = Game.s.qCount;
+  },
+  // How many questions should pass before a topic is worth revisiting.
+  dueIn(r){ return 3 + Math.round(r.m*r.m*22); },
+  overdue(key){
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return true;
+    return (Game.s.qCount - r.last) >= this.dueIn(r);
+  },
+  weight(key){
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return 5;                          // unseen: introduce it
+    const elapsed = Game.s.qCount - r.last;
+    if(elapsed < 2) return 0.05;                         // never ask twice in a row
+    const need = Math.pow(1-r.m, 2)*4 + 0.3;             // weak topics dominate
+    const due  = Math.min(elapsed/this.dueIn(r), 2.5);   // overdue topics resurface
+    return need * (0.4 + due);
+  },
+  pick(pool){
+    if(!pool.length) return null;
+    if(!Game.s) return R.pick(pool);
+    const ws=pool.map(k=>this.weight(k));
+    let t=ws.reduce((a,b)=>a+b,0)*Math.random();
+    for(let i=0;i<pool.length;i++){ t-=ws[i]; if(t<=0) return pool[i]; }
+    return pool[pool.length-1];
+  },
+  // Ease off where a player is struggling; push harder where they are solid.
+  adjustDiff(key, base){
+    const r=Game.s&&Game.s.topicStats[key];
+    if(!r || r.seen<3) return Math.min(base,2);          // go gently on new material
+    if(r.m < 0.45) return 1;
+    if(r.m > 0.85) return clamp(base+1,1,3);
+    return base;
+  },
+  // Is this a weak topic being deliberately brought back?
+  isReview(key){
+    const r=Game.s&&Game.s.topicStats[key];
+    return !!(r && r.seen>=3 && r.m<0.6);
+  },
+  label(m){ return m>=0.85?'solid' : m>=0.6?'steady' : m>=0.35?'shaky' : 'weak'; },
+  colour(m){ return m>=0.85?'var(--green)' : m>=0.6?'var(--gold)' : 'var(--red)'; },
+  all(){
+    return Object.keys(TOPIC_LABEL)
+      .map(k=>({k, r:Game.s.topicStats[k]}))
+      .filter(x=>x.r && x.r.seen>0);
+  },
+  weakest(n){
+    return this.all().sort((a,b)=>a.r.m-b.r.m).slice(0,n).map(x=>x.k);
+  },
+  dueList(){
+    return this.all().filter(x=>this.overdue(x.k)).map(x=>x.k);
+  }
+};
+
 /* --------------------------- tome (lesson pages) ------------------------- */
 const TOME = [
  {t:'⚔️ Vectors are arrows with bookkeeping',
@@ -970,13 +1047,32 @@ const Game = {
       cleared:{},          // "realm:index" -> true
       realm:0,
       stats:{wins:0, correct:0, wrong:0, best:0},
-      topicStats:{}        // topic -> {c, w}
+      qCount:0,            // questions answered ever; the clock for spaced repetition
+      topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
   load(){
-    try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); return true; } }
-    catch(e){}
+    try{
+      const raw=localStorage.getItem(SAVE_KEY);
+      if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); this.migrate(); return true; }
+    }catch(e){}
     return false;
+  },
+  // Older saves stored only {c,w}; seed the mastery model from that history.
+  migrate(){
+    const t=this.s.topicStats||(this.s.topicStats={});
+    let total=0;
+    for(const k of Object.keys(t)){
+      const r=t[k];
+      r.c=r.c||0; r.w=r.w||0;
+      if(typeof r.seen!=='number') r.seen=r.c+r.w;
+      if(typeof r.m!=='number')    r.m = r.seen? r.c/r.seen : 0;
+      if(typeof r.last!=='number') r.last=-999;
+      total+=r.seen;
+    }
+    // In normal play qCount and the sum of `seen` advance together, so a
+    // shortfall means this save predates the mastery model.
+    if(typeof this.s.qCount!=='number' || this.s.qCount<total) this.s.qCount=total;
   },
   save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.s)); }catch(e){} },
   hardReset(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); },
@@ -1000,8 +1096,9 @@ const Game = {
     return ups;
   },
   recordAnswer(topic, ok){
-    const t = this.s.topicStats[topic] || (this.s.topicStats[topic]={c:0,w:0});
-    if(ok){ t.c++; this.s.stats.correct++; } else { t.w++; this.s.stats.wrong++; }
+    if(ok) this.s.stats.correct++; else this.s.stats.wrong++;
+    Mastery.update(topic, ok);
+    this.s.qCount++;
   }
 };
 
@@ -1507,18 +1604,20 @@ const Battle = {
     this.answered=false;
     const ex=document.getElementById('explain');
     ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
-    const pool=this.realm.pool;
-    let key=R.pick(pool);
-    // bosses occasionally reach back into earlier realms
-    if(this.foe.boss && R.chance(.3) && this.ri>0) key=R.pick(REALMS[R.i(0,this.ri-1)].pool);
-    const diff = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+    // Topic choice is weighted by mastery: weak and overdue topics surface more.
+    let pool=this.realm.pool;
+    if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
+    const key=Mastery.pick(pool);
+    const base = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+    const diff = Mastery.adjustDiff(key, base);
     this.cur = buildQuestion(key, diff);
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
       tg.innerHTML=`⚡ <b>${this.foe.nm}</b> is winding up — answer correctly to brace the blow!`;
     } else tg.style.display='none';
-    document.getElementById('qtopic').textContent = this.cur.topic;
+    document.getElementById('qtopic').innerHTML = this.cur.topic +
+      (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '');
     document.getElementById('qbox').innerHTML = this.cur.q;
     const box=document.getElementById('choices'); box.innerHTML='';
     this.cur.choices.forEach(c=>{
@@ -1824,7 +1923,11 @@ const UI = {
   renderGear(){
     const g=Game.s, w=Game.weapon(), a=Game.armor();
     const acc=g.stats.correct+g.stats.wrong;
-    const rows=Object.entries(g.topicStats).sort((x,y)=>(y[1].c+y[1].w)-(x[1].c+x[1].w));
+    const rows=Object.entries(g.topicStats).filter(([k,v])=>v.seen>0).sort((x,y)=>x[1].m-y[1].m);
+    const solid=rows.filter(([k,v])=>v.m>=0.85).length;
+    const shaky=rows.filter(([k,v])=>v.m<0.6).length;
+    const dueN=Mastery.dueList().length;
+    const untouched=Object.keys(TOPIC_LABEL).length-rows.length;
     document.getElementById('hud3').innerHTML=this.hud();
     document.getElementById('gearList').innerHTML=`
       <div class="panel"><h2>🎒 Your Gear</h2>
@@ -1841,15 +1944,24 @@ const UI = {
         <div class="sub">Battles won: <b>${g.stats.wins}</b> · Riddles solved: <b>${g.stats.correct}</b> ·
         Accuracy: <b>${acc?Math.round(g.stats.correct/acc*100):0}%</b> · Best streak: <b>${g.stats.best}</b></div>
         <hr>
-        <div class="small" style="margin-bottom:6px">Where you are strong and where you bleed:</div>
+        <div class="small" style="margin-bottom:6px">
+          Mastery, weakest first. The game uses this to choose what to ask you next.<br>
+          <b style="color:var(--green)">${solid} solid</b> ·
+          <b style="color:var(--red)">${shaky} need work</b> ·
+          <b style="color:var(--purple)">${dueN} due for review</b>${untouched?` · ${untouched} not yet seen`:''}
+        </div>
         ${rows.length?rows.map(([k,v])=>{
-          const tot=v.c+v.w, p=Math.round(v.c/tot*100);
-          const col=p>=80?'var(--green)':p>=55?'var(--gold)':'var(--red)';
-          return `<div style="margin:5px 0">
+          const pct=Math.round(v.m*100), col=Mastery.colour(v.m);
+          const due=Mastery.overdue(k);
+          return `<div style="margin:6px 0">
             <div style="display:flex;justify-content:space-between;font-size:12px">
-              <span>${TOPIC_LABEL[k]||k}</span><span style="color:${col}">${p}% <span class="small">(${tot})</span></span></div>
-            <div class="track thin"><div class="fill" style="width:${p}%;background:${col}"></div></div></div>`;
+              <span>${TOPIC_LABEL[k]||k}${due?' <span class="rev">⟳ due</span>':''}</span>
+              <span style="color:${col}">${Mastery.label(v.m)} ${pct}%
+                <span class="small">(${v.c}/${v.seen})</span></span></div>
+            <div class="track thin"><div class="fill" style="width:${pct}%;background:${col}"></div></div></div>`;
         }).join(''):'<div class="small">No riddles answered yet.</div>'}
+        ${rows.length?`<button class="btn sm" style="margin-top:10px"
+           onclick="UI.go('s-train');Train.startPool('weak')">⚠️ Drill my weakest topics</button>`:''}
       </div>`;
   },
   renderTome(){
@@ -1886,7 +1998,7 @@ const Shop = {
 
 /* ------------------------------- training --------------------------------- */
 const Train = {
-  key:null, c:0, w:0, cur:null,
+  pool:[], title:'', c:0, w:0, cur:null,
   renderPick(){
     document.getElementById('trainRun').style.display='none';
     document.getElementById('trainPick').style.display='';
@@ -1897,13 +2009,38 @@ const Train = {
       ['Limits & Derivatives',['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','secondDeriv','critical','partial']],
       ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area']]
     ];
-    document.getElementById('trainPick').innerHTML = groups.map(([nm,keys])=>
+    // Adaptive drills, offered first — they need no decision from the player.
+    const weak = Game.s ? Mastery.weakest(6) : [];
+    const due  = Game.s ? Mastery.dueList()  : [];
+    let head = '<div class="panel"><h2 style="font-size:15px;color:var(--gold)">Sharpen where it counts</h2>';
+    if(weak.length){
+      head += `<button class="btn sm" onclick="Train.startPool('weak')">⚠️ Drill my weakest
+        <span class="small" style="font-weight:400"><br>${weak.slice(0,4).map(k=>TOPIC_LABEL[k]).join(' · ')}${weak.length>4?' …':''}</span></button>`;
+    }
+    if(due.length){
+      head += `<button class="btn sm" onclick="Train.startPool('due')">⟳ Review what's due
+        <span class="small" style="font-weight:400"><br>${due.length} topic${due.length>1?'s':''} ready to come back</span></button>`;
+    }
+    if(!weak.length && !due.length){
+      head += '<div class="sub">Answer a few riddles anywhere and the game will start tracking which topics need work.</div>';
+    }
+    head += '</div>';
+
+    document.getElementById('trainPick').innerHTML = head + groups.map(([nm,keys])=>
       `<div class="panel"><h2 style="font-size:15px;color:var(--gold)">${nm}</h2>
-        ${keys.map(k=>`<button class="btn sm" onclick="Train.start('${k}')">${TOPIC_LABEL[k]}</button>`).join('')}
+        ${keys.map(k=>{
+          const r=Game.s&&Game.s.topicStats[k];
+          const tag = r&&r.seen ? `<span class="mtag" style="color:${Mastery.colour(r.m)}">${Mastery.label(r.m)}</span>` : '';
+          return `<button class="btn sm" onclick="Train.startPool('${k}')">${TOPIC_LABEL[k]}${tag}</button>`;
+        }).join('')}
       </div>`).join('');
   },
-  start(k){
-    this.key=k; this.c=0; this.w=0;
+  startPool(what){
+    if(what==='weak'){ this.pool=Mastery.weakest(6); this.title='Weakest topics'; }
+    else if(what==='due'){ this.pool=Mastery.dueList(); this.title='Due for review'; }
+    else { this.pool=[what]; this.title=TOPIC_LABEL[what]; }
+    if(!this.pool.length){ UI.toast('Nothing to drill yet — play a few rounds first.'); return; }
+    this.c=0; this.w=0;
     document.getElementById('trainPick').style.display='none';
     document.getElementById('trainBack').style.display='none';
     document.getElementById('trainRun').style.display='';
@@ -1911,8 +2048,12 @@ const Train = {
   },
   next(){
     document.getElementById('tExplain').style.display='none';
-    this.cur=buildQuestion(this.key, R.i(1,3));
-    document.getElementById('tTopic').textContent=this.cur.topic;
+    const key = this.pool.length>1 ? Mastery.pick(this.pool) : this.pool[0];
+    const diff = Game.s ? Mastery.adjustDiff(key, 2) : R.i(1,3);
+    this.cur=buildQuestion(key, diff);
+    document.getElementById('tTopic').innerHTML =
+      (this.pool.length>1 ? this.title+' — ' : '') + this.cur.topic +
+      (Game.s&&Mastery.isReview(key) ? ' <span class="rev">⟳ review</span>' : '');
     document.getElementById('tQ').innerHTML=this.cur.q;
     const box=document.getElementById('tChoices'); box.innerHTML='';
     this.cur.choices.forEach(c=>{
