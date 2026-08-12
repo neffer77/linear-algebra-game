@@ -237,7 +237,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div class="panel" id="explain" style="display:none"></div>
     <div id="powerbar"></div>
     <div class="center" style="margin-top:8px">
-      <span class="kbd" onclick="Battle.flee()">🏃 Retreat</span>
+      <span class="kbd" id="fleeBtn" onclick="Battle.flee()">🏃 Retreat</span>
     </div>
     <div style="height:16px"></div>
   </div>
@@ -1067,6 +1067,7 @@ const Game = {
       realm:0,
       stats:{wins:0, correct:0, wrong:0, best:0},
       qCount:0,            // questions answered ever; the clock for spaced repetition
+      arenaBest:0,         // deepest arena wave reached
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -1105,13 +1106,24 @@ const Game = {
   },
   weapon(){ return WEAPONS.find(w=>w.id===this.s.weapon); },
   armor(){ return ARMORS.find(a=>a.id===this.s.armor); },
-  maxHp(){ return 100 + (this.s.lvl-1)*18 + this.armor().hp; },
+  maxHp(){
+    const base = 100 + (this.s.lvl-1)*18 + this.armor().hp;
+    const mul = (typeof Arena!=='undefined' && Arena.active) ? Arena.mods.hpMul : 1;
+    return Math.round(base*mul);
+  },
   xpNeeded(){ return 60 + (this.s.lvl-1)*45; },
   gainXp(n){
     this.s.xp += n;
     let ups=0;
     while(this.s.xp >= this.xpNeeded()){ this.s.xp -= this.xpNeeded(); this.s.lvl++; ups++; }
-    if(ups){ this.s.maxHp=this.maxHp(); this.s.hp=this.s.maxHp; }
+    if(ups){
+      const before=this.s.maxHp;
+      this.s.maxHp=this.maxHp();
+      // A free full heal every level would undo the arena's attrition.
+      if(typeof Arena!=='undefined' && Arena.active)
+        this.s.hp=Math.min(this.s.maxHp, this.s.hp + Math.max(0,this.s.maxHp-before));
+      else this.s.hp=this.s.maxHp;
+    }
     return ups;
   },
   recordAnswer(topic, ok){
@@ -1556,11 +1568,20 @@ const Battle = {
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
   begin(ri, fi){
+    this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
-    const f=this.realm.foes[fi];
+    this._start(this.realm.foes[fi]);
+  },
+  beginArena(foe, wave){
+    this.mode='arena';
+    this.realm=Arena.realm; this.ri=0; this.fi=Math.min(6, wave);
+    this._start(foe);
+  },
+  _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
-    this.charge=0; this.chargeMax=f.boss?2:3; this.slamNext=false; this.lastSlam=0;
+    this.charge=0; this.slamNext=false; this.lastSlam=0;
+    this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     Anim.reset();
     UI.go('s-battle');
@@ -1568,6 +1589,12 @@ const Battle = {
     this.updateBars();
     this.nextQuestion();
   },
+  // Weapon and armour as they stand right now, including any arena boons.
+  wStats(){
+    const w=Game.weapon(), m=this.mode==='arena'?Arena.mods:null;
+    return {dmg:w.dmg*(m?m.dmg:1), crit:w.crit+(m?m.crit:0)};
+  },
+  defStat(){ return Game.armor().def + (this.mode==='arena'?Arena.mods.def:0); },
 
   updateBars(){
     const g=Game.s;
@@ -1579,7 +1606,11 @@ const Battle = {
       : '●'.repeat(this.charge)+'○'.repeat(Math.max(0,this.chargeMax-this.charge));
     document.getElementById('foeName').innerHTML =
       (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
-    document.getElementById('comboTxt').textContent = \`Combo ×\${(1+this.combo*.15).toFixed(2)}  ·  streak \${this.combo}\`;
+    document.getElementById('comboTxt').textContent =
+      (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
+      \`Combo ×\${(1+this.combo*.15).toFixed(2)}  ·  streak \${this.combo}\`;
+    const fb=document.getElementById('fleeBtn');
+    if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings' : '🏃 Retreat';
     this.renderPowers();
   },
 
@@ -1627,7 +1658,8 @@ const Battle = {
     let pool=this.realm.pool;
     if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
     const key=Mastery.pick(pool);
-    const base = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+    const base = this.mode==='arena' ? 3
+               : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
     const diff = Mastery.adjustDiff(key, base);
     this.cur = buildQuestion(key, diff);
     const tg=document.getElementById('telegraph');
@@ -1681,7 +1713,7 @@ const Battle = {
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
-      const w=Game.weapon();
+      const w=this.wStats();
       const speed = el<7000?1.5 : el<14000?1.2 : 1.0;
       const comboMul = 1 + Math.min(this.combo,7)*.15;
       const crit = R.chance(w.crit + this.combo*0.02);
@@ -1693,7 +1725,7 @@ const Battle = {
       Sfx.good();
     } else {
       this.combo=0;
-      const def=Game.armor().def;
+      const def=this.defStat();
       let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
@@ -1707,7 +1739,7 @@ const Battle = {
     if(this.slamNext){
       this.slamNext=false;
       const raw=this.foe.atk*1.7*(ok?0.35:1);
-      this.lastSlam=Math.max(3, Math.round(raw - Game.armor().def));
+      this.lastSlam=Math.max(3, Math.round(raw - this.defStat()));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       setTimeout(()=>{
@@ -1763,6 +1795,7 @@ const Battle = {
     if(this.over) return;
     this.over='win'; clearInterval(this.timer);
     Anim.burst(610,H-190,this.foe.col,42); Sfx.win();
+    if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.cleared(f);},1100); return; }
     const g=Game.s;
     const key=this.ri+':'+this.fi;
     const first=!g.cleared[key];
@@ -1814,6 +1847,7 @@ const Battle = {
   lose(){
     if(this.over) return;
     this.over='lose'; clearInterval(this.timer); Sfx.hurt();
+    if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     const g=Game.s;
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
@@ -1838,8 +1872,170 @@ const Battle = {
 
   flee(){
     clearInterval(this.timer); this.over='flee'; Anim.stop();
+    if(this.mode==='arena'){ Arena.retire(); return; }
     UI.go('s-map');
     UI.toast('🏃 You slip away into the trees.');
+  }
+};
+
+/* -------------------------------- arena ---------------------------------- */
+/* Endless mode, unlocked once the Eigen Dragon falls. Waves scale, you never
+   heal for free, and the run ends when you do. Problems are drawn from every
+   topic in the game, still weighted by mastery — so the deeper you push, the
+   more it hunts for your weak spots.                                        */
+const ARENA_ADJ = ['Spectral','Nullspace','Divergent','Singular','Recursive','Asymptotic',
+  'Orthogonal','Degenerate','Infinite','Convergent','Transposed','Unbounded','Nilpotent'];
+const ARENA_NOUN = ['Revenant','Warden','Colossus','Serpent','Harbinger','Devourer',
+  'Sentinel','Phantom','Behemoth','Aberration','Tyrant','Herald'];
+const ARENA_ART = ['slime','goblin','skeleton','golem','wisp','harpy','wraith','dragon','lich','knightfoe'];
+const ARENA_COL = ['#e5484d','#a06bd6','#5aa9e6','#57cc7a','#f2c14e','#e07b39','#6fd3c4','#f06bb0'];
+
+/* Run-scoped boons, drafted three at a time. They stack. */
+const BOONS = [
+  {ic:'🩸', nm:'Vigour',     ds:'+25% maximum health, and heal that much now',
+   go(){ const b=Game.s.maxHp; Arena.mods.hpMul*=1.25; Game.s.maxHp=Game.maxHp();
+         Game.s.hp=Math.min(Game.s.maxHp, Game.s.hp+(Game.s.maxHp-b)); }},
+  {ic:'⚔️', nm:'Whetstone',  ds:'+25% weapon damage for this run',
+   go(){ Arena.mods.dmg += .25; }},
+  {ic:'🛡️', nm:'Bulwark',    ds:'+7 defence for this run',
+   go(){ Arena.mods.def += 7; }},
+  {ic:'🔥', nm:'Fury',       ds:'+12% critical chance for this run',
+   go(){ Arena.mods.crit += .12; }},
+  {ic:'⏳', nm:'Tempo',      ds:'foes need one extra turn to wind up',
+   go(){ Arena.mods.charge += 1; }},
+  {ic:'🧪', nm:'Supplies',   ds:'+3 Healing Draughts',
+   go(){ Game.s.items.potion += 3; }},
+  {ic:'🔮', nm:'Foresight',  ds:'+3 Sage\\'s Insights',
+   go(){ Game.s.items.insight += 3; }},
+  {ic:'💰', nm:'Avarice',    ds:'+60% gold from this run',
+   go(){ Arena.mods.gold += .6; }},
+  {ic:'❤️‍🩹', nm:'Second Wind', ds:'restore health to full right now',
+   go(){ Game.s.hp = Game.s.maxHp; }},
+  {ic:'🪶', nm:'Plumage',    ds:'+1 Phoenix Feather',
+   go(){ Game.s.items.feather += 1; }}
+];
+
+const Arena = {
+  active:false, wave:0, earned:0, mods:null,
+  realm:{nm:'The Arena', col:'#f2c14e', sky:['#4a2410','#0d0705'], pool:null},
+
+  unlocked(){ return !!(Game.s && Game.s.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]); },
+
+  start(){
+    this.active=true; this.wave=0; this.earned=0;
+    this.mods={dmg:1, def:0, crit:0, gold:1, charge:0, hpMul:1};
+    this.realm.pool = Object.keys(TOPIC_LABEL);
+    Game.s.maxHp = Game.maxHp();
+    Game.s.hp = Game.s.maxHp;          // you enter fresh; you will not be topped up again
+    Game.save();
+    this.nextWave();
+  },
+
+  foeFor(w){
+    const champion = w%5===0;
+    const hp  = Math.round((200 + w*95) * (champion?1.7:1));
+    const atk = Math.round(30 * Math.pow(1.085, w-1) * (champion?1.25:1));
+    return {
+      nm:(champion?'':R.pick(ARENA_ADJ)+' ')+R.pick(ARENA_NOUN),
+      art:R.pick(ARENA_ART), col:R.pick(ARENA_COL),
+      hp, atk, boss:champion,
+      gold:Math.round((50 + w*18)*(champion?2:1)),
+      xp:Math.round((30 + w*10)*(champion?2:1))
+    };
+  },
+
+  nextWave(){
+    this.wave++;
+    Battle.beginArena(this.foeFor(this.wave), this.wave);
+  },
+
+  // Called by Battle.win() when a wave falls.
+  cleared(foe){
+    const gold=Math.round(foe.gold*this.mods.gold);
+    Game.s.gold += gold; this.earned += gold;
+    const ups=Game.gainXp(foe.xp);
+    let healed=0;
+    if(this.wave%5===0){                      // a breather after each champion
+      healed=Math.round(Game.s.maxHp*.25);
+      Game.s.hp=Math.min(Game.s.maxHp, Game.s.hp+healed);
+    }
+    if(this.wave>(Game.s.arenaBest||0)) Game.s.arenaBest=this.wave;
+    Game.save();
+
+    const draft = this.wave%3===0 ? R.shuffle(BOONS).slice(0,3) : null;
+    this.pending = draft;
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">\${foe.boss?'👑':'⚔️'}</div>
+      <div class="panel center">
+        <h1 style="font-size:20px">Wave \${this.wave} cleared</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} falls. The gate grinds open again.</div>
+        <hr>
+        <div style="font-size:15px;font-weight:800;line-height:1.8">
+          <div class="coin">+\${gold} gold</div>
+          <div style="color:var(--blue)">+\${foe.xp} experience</div>
+          \${ups?\`<div style="color:var(--gold)">⬆️ Level \${Game.s.lvl}!</div>\`:''}
+          \${healed?\`<div style="color:var(--green)">🩹 The crowd throws down a poultice: +\${healed} health</div>\`:''}
+        </div>
+        <hr>
+        <div class="small">❤️ \${Math.round(Game.s.hp)}/\${Game.s.maxHp} · 🪙 \${this.earned} earned this run · best wave \${Game.s.arenaBest}</div>
+      </div>
+      \${draft?\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">Choose a boon</h2>
+        <div class="sub" style="margin-bottom:6px">It lasts the rest of the run.</div>
+        \${draft.map((b,i)=>\`<button class="btn" onclick="Arena.take(\${i})">
+          <span style="font-size:18px">\${b.ic}</span> <b>\${b.nm}</b>
+          <span class="small" style="font-weight:400"><br>\${b.ds}</span></button>\`).join('')}
+      </div>\`
+      :\`<button class="btn gold" onclick="Arena.nextWave()">⚔️ Wave \${this.wave+1} →</button>
+        <button class="btn ghost" onclick="Arena.retire()">🚪 Retire with your winnings</button>\`}
+      <div style="height:20px"></div>\`;
+  },
+
+  take(i){
+    const b=this.pending&&this.pending[i];
+    if(!b) return;
+    this.pending=null;
+    b.go(); Game.save(); Sfx.win();
+    UI.toast(\`\${b.ic} \${b.nm} claimed.\`);
+    this.nextWave();
+  },
+
+  // Called by Battle.lose().
+  ended(foe){
+    this.active=false;
+    const record = this.wave >= (Game.s.arenaBest||0);
+    Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
+    Game.s.maxHp=Game.maxHp();                 // drop any Vigour stacking
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">💀</div>
+      <div class="panel center">
+        <h1 style="font-size:20px;color:var(--red)">The Arena claims you</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} ends your run on wave \${this.wave}.</div>
+        <hr>
+        <div style="font-size:16px;font-weight:800;line-height:1.9">
+          <div>Waves survived: <span style="color:var(--gold)">\${this.wave-1}</span></div>
+          <div class="coin">\${this.earned} gold carried out</div>
+          \${record?'<div style="color:var(--green)">🏅 A new record!</div>':\`<div class="small">Best: wave \${Game.s.arenaBest}</div>\`}
+        </div>
+        <hr>
+        <div class="sub">You keep every coin. The gold is yours whether you walk out or are carried.</div>
+      </div>
+      <button class="btn gold" onclick="Arena.start()">↻ Enter again</button>
+      <button class="btn" onclick="UI.go('s-shop')">🏪 Spend it at the Smithy</button>
+      <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
+      <div style="height:20px"></div>\`;
+  },
+
+  retire(){
+    this.active=false;
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-map');
+    UI.toast(\`🚪 Retired on wave \${this.wave} with \${this.earned} gold.\`);
   }
 };
 
@@ -1897,6 +2093,19 @@ const UI = {
         </div>\`;
       });
     });
+    // The Arena sits past the campaign, opened by the last boss.
+    const aOpen=Arena.unlocked(), best=g.arenaBest||0;
+    out+=\`<div class="realmhdr"><span class="dot" style="background:var(--gold)"></span>
+          <h2 style="color:var(--gold)">The Arena</h2>\${aOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.</div>
+      <div class="node \${aOpen?'':'locked'}" onclick="Arena.start()">
+        <div class="ico" style="font-size:24px">🏟️</div>
+        <div style="flex:1">
+          <div class="nm">Endless Waves \${best?\`<span class="tag g">best: wave \${best}</span>\`:''}</div>
+          <div class="dt">\${aOpen?'Scaling foes · boons every 3 waves · a breather every 5':'Defeat the Eigen Dragon to open the gates'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">\${aOpen?'▶':'🔒'}</div>
+      </div>\`;
     list.innerHTML=out;
   },
   renderShop(){

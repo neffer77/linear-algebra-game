@@ -93,6 +93,23 @@ screen. Armour adds both flat damage reduction and maximum health.
 **Losing** costs 15% of your gold and nothing else. You keep every item, level, and piece
 of gear. Death is a speed bump, not a wall.
 
+**🏟️ The Arena** opens once the Eigen Dragon falls. Endless waves drawn from *every* topic
+in the game, scaling until they kill you. There is no free healing between waves — only a
+poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
+you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
+slower enemy wind-up, richer purses). You keep every coin you earn whether you retire on
+your own terms or are carried out, and your deepest wave is recorded.
+
+Because your damage is roughly fixed and the foes' is not, how deep you get is mostly a
+measure of your accuracy rather than your gear:
+
+| Run | Median wave reached |
+|---|---|
+| Campaign gear, 75% accuracy | 8 |
+| Campaign gear, 90% accuracy | 12 |
+| Campaign gear, 100% accuracy | 20 |
+| Best gear, 100% accuracy | 25 |
+
 ---
 
 ## The five realms
@@ -148,9 +165,10 @@ Inside `index.html` the code is organised as:
 | `GEN` | the 38 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
 | `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
+| `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
-| `Battle` | turn flow, damage maths, victory and defeat |
+| `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
 | `UI`, `Shop`, `Train` | screens |
 | `Sfx` | WebAudio blips, synthesised — no audio files |
 
@@ -178,6 +196,9 @@ The mathematics is verified rather than assumed. The generators were checked by:
   four unique choices, the answer present among them, and no malformed output.
 - **21,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
+- **Arena pacing**, simulated over 300 runs per scenario to confirm that runs reliably end,
+  that accuracy dominates gear in how deep you get, and that the boon draft keeps a
+  well-played run growing rather than stalling.
 - **The adaptive scheduler**, simulated over thousands of questions against a synthetic
   learner with known per-topic skill: weak topics drew 3.8× the airtime of mastered ones,
   the mastery model tracked true skill to within 5% mean error, mastered topics still
