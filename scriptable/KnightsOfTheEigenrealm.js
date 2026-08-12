@@ -206,6 +206,46 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 @media (prefers-reduced-motion: reduce){
   .choice.right,.choice.wrong,#bigBanner .bnr{animation:none}
 }
+
+/* ---- loot reveal ---- */
+#chest{position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center;
+  background:rgba(8,6,16,.86); padding:20px;}
+#chest.on{display:flex;}
+#chest .cbox{position:relative; text-align:center; max-width:19rem; width:100%;}
+#chest .clid{font-size:64px; line-height:1; animation:shk .16s ease-in-out infinite;}
+#chest .clid.pop{animation:lidpop .45s cubic-bezier(.2,1.6,.4,1) forwards;}
+@keyframes shk{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes lidpop{0%{transform:scale(1)}45%{transform:scale(1.5) translateY(-16px)}
+  100%{transform:scale(.2) translateY(-46px); opacity:0}}
+#chest .cburst{position:absolute; left:50%; top:34px; width:8px; height:8px; margin-left:-4px;
+  border-radius:50%; opacity:0; box-shadow:0 0 0 0 var(--rc);}
+#chest .cburst.go{animation:burst .6s ease-out forwards;}
+@keyframes burst{0%{opacity:.9; box-shadow:0 0 12px 4px var(--rc)}
+  100%{opacity:0; box-shadow:0 0 8px 130px rgba(0,0,0,0)}}
+#chest .ccard{margin-top:8px; padding:18px 16px; border-radius:14px; opacity:0; transform:scale(.8);
+  background:linear-gradient(180deg,#2a2246,#1c1636); border:2px solid var(--rc);
+  box-shadow:0 0 34px -6px var(--rc); position:relative; overflow:hidden;}
+#chest .ccard.go{animation:cardin .5s cubic-bezier(.2,1.35,.4,1) forwards;}
+@keyframes cardin{to{opacity:1; transform:scale(1)}}
+#chest .ccard:after{content:""; position:absolute; inset:0; transform:translateX(-120%);
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.32) 50%,transparent 62%);}
+#chest .ccard.go:after{animation:sheen .9s .35s ease-out;}
+@keyframes sheen{to{transform:translateX(120%)}}
+#chest .crar{font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--rc);}
+#chest .cic{font-size:46px; line-height:1.2; margin:2px 0 4px;}
+#chest .cnm{font-size:18px; font-weight:900; color:var(--ink);}
+#chest .cds{font-size:13px; color:var(--dim); margin-top:4px; line-height:1.5;}
+#chest .cnew{font-size:10px; font-weight:900; letter-spacing:1px; padding:2px 6px; border-radius:5px;
+  background:var(--gold); color:#2a1c00; vertical-align:middle;}
+
+/* ---- near death ---- */
+#vignette{position:fixed; inset:0; z-index:40; pointer-events:none; opacity:0;
+  background:radial-gradient(ellipse at center, transparent 42%, rgba(180,20,28,.85) 100%);
+  transition:opacity .4s;}
+#vignette.on{opacity:calc(var(--vi,.5) * .8); animation:beat 1.15s ease-in-out infinite;}
+#vignette.crit{animation-duration:.62s;}
+@keyframes beat{0%,100%{filter:brightness(.75)}18%{filter:brightness(1.5)}36%{filter:brightness(.9)}}
+@media (prefers-reduced-motion: reduce){#vignette.on{animation:none}}
 </style>
 </head>
 <body>
@@ -349,6 +389,8 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
   </div>
 
   <div id="bigBanner"></div>
+  <div id="vignette"></div>
+  <div id="chest"></div>
 </div>
 
 <script>
@@ -361,11 +403,16 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
 /* ---------------------------------- utils ------------------------------- */
 const R = {
-  i:(a,b)=>Math.floor(Math.random()*(b-a+1))+a,
+  // _r is swapped for a seeded generator during the daily skirmish, so the
+  // same date produces the same twelve problems on every device.
+  _r: Math.random,
+  seed(n){ let x=(n>>>0)||1; R._r=()=>{ x=(x*1664525+1013904223)>>>0; return x/4294967296; }; },
+  unseed(){ R._r=Math.random; },
+  i:(a,b)=>Math.floor(R._r()*(b-a+1))+a,
   nz:(a,b)=>{let v=0;let g=0;while(v===0&&g++<40)v=R.i(a,b);return v||1;},
-  pick:a=>a[Math.floor(Math.random()*a.length)],
-  shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;},
-  chance:p=>Math.random()<p
+  pick:a=>a[Math.floor(R._r()*a.length)],
+  shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(R._r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;},
+  chance:p=>R._r()<p
 };
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};
 const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
@@ -997,7 +1044,7 @@ const Mastery = {
     if(!pool.length) return null;
     if(!Game.s) return R.pick(pool);
     const ws=pool.map(k=>this.weight(k));
-    let t=ws.reduce((a,b)=>a+b,0)*Math.random();
+    let t=ws.reduce((a,b)=>a+b,0)*R._r();
     for(let i=0;i<pool.length;i++){ t-=ws[i]; if(t<=0) return pool[i]; }
     return pool[pool.length-1];
   },
@@ -1155,6 +1202,8 @@ const Game = {
       qCount:0,            // questions answered ever; the clock for spaced repetition
       arenaBest:0,         // deepest arena wave reached
       streak:{days:0,last:null},   // consecutive days practised
+      bounties:[],         // three rotating goals
+      daily:null,          // daily skirmish scores
       titles:{},           // earned milestone ids
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
@@ -1310,7 +1359,10 @@ const Sfx = {
   mastered(){ [523,659,784,1046,1318].forEach((f,i)=>this.play(f,.28,'triangle',.06,i*.08)); },
   win(){ [523,659,784,1046].forEach((f,i)=>this.play(f,.22,'triangle',.06,i*.11)); },
   level(){ [392,523,659,784,1046].forEach((f,i)=>this.play(f,.3,'triangle',.07,i*.09)); },
-  coin(n){ const t=(n||0)*.045; this.play(1050,.06,'square',.045,t); this.play(1560,.09,'square',.035,t+.05); }
+  coin(n){ const t=(n||0)*.045; this.play(1050,.06,'square',.045,t); this.play(1560,.09,'square',.035,t+.05); },
+  chestShake(){ [0,.16,.32,.48].forEach((t,i)=>this.play(150+i*8,.07,'square',.035,t)); },
+  chestOpen(){ this.thud(420,120,.2,'square',.06); [784,988,1175].forEach((f,i)=>this.play(f,.2,'triangle',.055,i*.07)); },
+  heart(){ this.thud(96,44,.16,'sine',.13); this.thud(80,38,.13,'sine',.09,.19); }
 };
 
 /* ------------------------------ celebration ------------------------------ */
@@ -2077,6 +2129,12 @@ const Battle = {
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
     this._start(this.realm.foes[fi]);
   },
+  beginDaily(){
+    this.mode='daily';
+    this.realm=REALMS[0]; this.ri=0; this.fi=2;
+    this._start({nm:'Straw Knight', art:'knightfoe', col:'#c9b8a0',
+                 hp:999999, atk:0, gold:0, xp:0, dummy:true});
+  },
   beginArena(foe, wave){
     this.mode='arena';
     this.realm=Arena.realm; this.ri=0; this.fi=Math.min(6, wave);
@@ -2085,7 +2143,7 @@ const Battle = {
   _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
-    this.charge=0; this.slamNext=false; this.lastSlam=0;
+    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
     this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
@@ -2112,12 +2170,14 @@ const Battle = {
     document.getElementById('eGhost').style.width = ePct+'%';
     document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
     document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
+    this.tension(g.hp/g.maxHp);
     const pips = this.slamNext ? '⚡ WIND-UP'
       : '●'.repeat(this.charge)+'○'.repeat(Math.max(0,this.chargeMax-this.charge));
     document.getElementById('foeName').innerHTML =
       (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
+      (this.mode==='daily' ? \`🗡️ \${Math.min(Daily.n+1,Daily.LEN)}/\${Daily.LEN}  ·  \${Daily.score} pts  ·  \` : '') +
       \`Combo ×\${(1+Math.min(this.combo,7)*.15).toFixed(2)}  ·  streak \${this.combo}\`;
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
@@ -2125,6 +2185,18 @@ const Battle = {
     const fb=document.getElementById('fleeBtn');
     if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings' : '🏃 Retreat';
     this.renderPowers();
+  },
+
+  // A red pulse that quickens as health falls — the most visceral feedback a game has.
+  tension(frac){
+    const v=document.getElementById('vignette');
+    if(!v) return;
+    const low = frac<0.3 && !this.over && Game.s.hp>0;
+    v.classList.toggle('on', low);
+    v.classList.toggle('crit', frac<0.15 && low);
+    if(low) v.style.setProperty('--vi', clamp(1-frac/0.3, .25, 1).toFixed(2));
+    if(low && !this._wasLow) Sfx.heart();
+    this._wasLow = low;
   },
 
   renderPowers(){
@@ -2167,13 +2239,21 @@ const Battle = {
     this.answered=false;
     const ex=document.getElementById('explain');
     ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
-    // Topic choice is weighted by mastery: weak and overdue topics surface more.
-    let pool=this.realm.pool;
-    if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
-    const key=Mastery.pick(pool);
-    const base = this.mode==='arena' ? 3
-               : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
-    const diff = Mastery.adjustDiff(key, base);
+    let key, diff;
+    if(this.mode==='daily'){
+      // Fixed pool, fixed difficulty, seeded draw — the run has to be identical
+      // on every device, which rules out mastery weighting entirely.
+      key = R.pick(DAILY_POOL);
+      diff = 2;
+    } else {
+      // Topic choice is weighted by mastery: weak and overdue topics surface more.
+      let pool=this.realm.pool;
+      if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
+      key=Mastery.pick(pool);
+      const base = this.mode==='arena' ? 3
+                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+      diff = Mastery.adjustDiff(key, base);
+    }
     this.cur = buildQuestion(key, diff);
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
@@ -2191,6 +2271,7 @@ const Battle = {
       b.onclick=()=>this.answer(b,c);
       box.appendChild(b);
     });
+    if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
     this.startTimer();
     this.renderPowers();
@@ -2224,6 +2305,19 @@ const Battle = {
     this.lastMastery = Game.recordAnswer(this.cur.key, ok);
 
     Haptic.tap();
+    if(this.mode==='daily'){
+      this.combo = ok ? this.combo+1 : 0;
+      const pts=Daily.award(ok, el, this.combo);
+      if(ok){
+        this.ehp=Math.max(0,this.ehp-1);
+        Anim.strike('p', pts, this.combo>=5, 'PTS');
+        Sfx.good(this.combo); this.comboBeat();
+      } else { Anim.strike('e', 0, false, 'MISS'); Sfx.bad(); }
+      Game.save();
+      setTimeout(()=>this.updateBars(),420);
+      this.showExplain(ok, choice);
+      return;
+    }
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -2238,6 +2332,10 @@ const Battle = {
       Anim.strike('p',dmg,crit,null,this.ehp<=0);
       Sfx.good(this.combo);                       // pitch climbs with the streak
       this.comboBeat();
+      Bounty.bump('solve',1);
+      Bounty.bump('topic',1,this.cur.key);
+      Bounty.bump('streak',this.combo);
+      if(crit) Bounty.bump('crit',1);
     } else {
       this.combo=0;
       const def=this.defStat();
@@ -2245,6 +2343,7 @@ const Battle = {
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       Sfx.bad();
+      this.missed++;
     }
     // Crossing a topic into "solid" is the payoff the whole game is built around.
     if(this.lastMastery && this.lastMastery.mastered){
@@ -2305,6 +2404,11 @@ const Battle = {
 
   afterTurn(){
     if(this.over) return;                       // battle already resolved
+    if(this.mode==='daily'){
+      Daily.n++;
+      if(Daily.n>=Daily.LEN){ this.over='daily'; clearInterval(this.timer); Daily.finish(); return; }
+      this.nextQuestion(); return;
+    }
     if(this.ehp<=0){ this.win(); return; }
     if(Game.s.hp<=0){
       if(Game.s.items.feather>0 && !this.usedFeather){
@@ -2323,6 +2427,7 @@ const Battle = {
 
   win(){
     if(this.over) return;
+    this.tension(1);
     this.over='win'; clearInterval(this.timer);
     Anim.burst(610,H-190,this.foe.col,42); Sfx.win();
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.cleared(f);},1100); return; }
@@ -2330,20 +2435,17 @@ const Battle = {
     const key=this.ri+':'+this.fi;
     const first=!g.cleared[key];
     g.cleared[key]=true; g.stats.wins++;
+    Bounty.bump('wins',1);
+    if(this.missed===0) Bounty.bump('flaw',1);
     const gold=Math.round(this.foe.gold*(first?1:0.45));
     const xp=Math.round(this.foe.xp*(first?1:0.4));
     g.gold+=gold;
     const ups=Game.gainXp(xp);
 
-    // loot
-    let loot=null;
-    if(R.chance(this.foe.boss?1:.42)){
-      const roll=Math.random();
-      if(roll<.5){ g.items.potion++; loot=\`\${ITEMS.potion.ic} a Healing Draught\`; }
-      else if(roll<.78){ g.items.insight++; loot=\`\${ITEMS.insight.ic} a Sage's Insight\`; }
-      else if(roll<.95){ g.items.rage++; loot=\`\${ITEMS.rage.ic} a Berserker Rune\`; }
-      else { g.items.feather++; loot=\`\${ITEMS.feather.ic} a Phoenix Feather\`; }
-    }
+    // loot — rolled now, revealed by the chest once the victory panel is up
+    const drop = R.chance(this.foe.boss?1:.5)
+      ? Loot.roll({boss:this.foe.boss, tier:Math.min(6, this.ri+2)}) : null;
+    const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -2370,6 +2472,7 @@ const Battle = {
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
+      if(drop) setTimeout(()=>Chest.open(drop), 700);
       countUp(document.getElementById('rGold'), gold, 900);
       countUp(document.getElementById('rXp'),   xp,   900);
       for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
@@ -2382,6 +2485,7 @@ const Battle = {
 
   lose(){
     if(this.over) return;
+    this.tension(1);
     this.over='lose'; clearInterval(this.timer); Sfx.hurt();
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     const g=Game.s;
@@ -2407,7 +2511,7 @@ const Battle = {
   },
 
   flee(){
-    clearInterval(this.timer); this.over='flee'; Anim.stop();
+    clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1);
     if(this.mode==='arena'){ Arena.retire(); return; }
     UI.go('s-map');
     UI.toast('🏃 You slip away into the trees.');
@@ -2462,6 +2566,262 @@ const Titles = {
 
 /* Local-date key, so the streak rolls over at the player's midnight. */
 function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+/* --------------------------------- loot ---------------------------------- */
+/* A drop used to be a 42% roll printing one line of text. It is now a rarity
+   roll with a reveal, and rare tiers can drop gear — which until now was only
+   ever bought, so the shop was the sole source of upgrades.                  */
+const RARITY = {
+  common:    {nm:'Common',    col:'#9aa6b5'},
+  uncommon:  {nm:'Uncommon',  col:'#57cc7a'},
+  rare:      {nm:'Rare',      col:'#5aa9e6'},
+  epic:      {nm:'Epic',      col:'#a06bd6'},
+  legendary: {nm:'Legendary', col:'#f2c14e'}
+};
+
+const Loot = {
+  // Gear the player does not yet own, capped so realm one cannot drop the best blade.
+  gearPool(tier){
+    const out=[];
+    WEAPONS.forEach((w,i)=>{ if(i>0 && i<=tier && !Game.s.owned[w.id]) out.push(w); });
+    ARMORS .forEach((a,i)=>{ if(i>0 && i<=tier && !Game.s.owned[a.id]) out.push(a); });
+    return out;
+  },
+  rollRarity(luck){
+    const w=[['common',100],['uncommon',46*luck],['rare',19*luck],['epic',5.5*luck],['legendary',1.3*luck]];
+    let t=w.reduce((s,x)=>s+x[1],0)*Math.random();
+    for(const [id,v] of w){ t-=v; if(t<=0) return id; }
+    return 'common';
+  },
+  roll(ctx){
+    const luck = ctx.boss ? 2.6 : 1;
+    let rar = this.rollRarity(luck);
+    if(ctx.boss && rar==='common') rar='uncommon';     // a boss always gives something
+    const pool = this.gearPool(ctx.tier);
+
+    // The high tiers hand over gear whenever any is still unowned.
+    if((rar==='rare'||rar==='epic'||rar==='legendary') && pool.length){
+      const idx = rar==='legendary' ? pool.length-1
+                : rar==='epic'      ? Math.min(pool.length-1, Math.floor(pool.length*0.66))
+                : Math.floor(Math.random()*pool.length);
+      const g = pool[idx];
+      const isWeapon = WEAPONS.indexOf(g)>=0;
+      return {rar, ic:g.ic, nm:g.nm, ds:g.ds, tagNew:true,
+        apply(){
+          Game.s.owned[g.id]=1;
+          if(isWeapon) Game.s.weapon=g.id;
+          else { Game.s.armor=g.id; Game.s.maxHp=Game.maxHp(); Game.s.hp=Math.min(Game.s.maxHp,Game.s.hp+g.hp); }
+        }};
+    }
+    if(rar==='legendary'||rar==='epic'){                     // nothing left to find — pay out
+      const n = rar==='legendary'?2:1;
+      return {rar, ic:'🪶', nm:n>1?'Phoenix Feathers':'Phoenix Feather',
+        ds:'Revives you once at half health.', count:n,
+        apply(){ Game.s.items.feather+=n; }};
+    }
+    if(rar==='rare'){
+      const gold = 120 + ctx.tier*70;
+      return {rar, ic:'💰', nm:'Buried Purse', ds:gold+' gold, and a rune besides.',
+        apply(){ Game.s.gold+=gold; Game.s.items.rage++; }};
+    }
+    if(rar==='uncommon'){
+      const pick=R.pick(['potions','insight','rage']);
+      if(pick==='potions') return {rar, ic:'🧪', nm:'Draughts ×2', ds:'Two Healing Draughts.',
+        apply(){ Game.s.items.potion+=2; }};
+      if(pick==='insight') return {rar, ic:'🔮', nm:"Sage's Insight ×2", ds:'Burns away two wrong answers.',
+        apply(){ Game.s.items.insight+=2; }};
+      return {rar, ic:'🔥', nm:'Berserker Rune', ds:'Next correct strike deals 2.5× damage.',
+        apply(){ Game.s.items.rage++; }};
+    }
+    return R.chance(.5)
+      ? {rar, ic:'🧪', nm:'Healing Draught', ds:'Restores 45% of your health.', apply(){ Game.s.items.potion++; }}
+      : {rar, ic:'🔮', nm:"Sage's Insight", ds:'Burns away two wrong answers.', apply(){ Game.s.items.insight++; }};
+  }
+};
+
+/* The reveal. Chest shakes, bursts in the rarity colour, card sweeps in. */
+const Chest = {
+  pending:null, after:null,
+  open(item, after){
+    // The reveal is deferred by a beat, and the player may have moved on in the
+    // meantime — advancing an arena wave, say. Never open over a live fight.
+    const now=document.querySelector('.screen.on');
+    if(!now || now.id!=='s-result'){ item.apply(); Game.save(); if(after) after(); return; }
+    // A second drop must not silently discard the first.
+    if(this.pending){ this.pending.apply(); Game.save(); }
+    this.pending=item; this.after=after||null;
+    const col=RARITY[item.rar].col;
+    const el=document.getElementById('chest');
+    el.style.setProperty('--rc', col);
+    el.innerHTML=\`<div class="cbox">
+        <div class="clid" id="clid">🎁</div>
+        <div class="cburst" id="cburst"></div>
+        <div class="ccard" id="ccard">
+          <div class="crar">\${RARITY[item.rar].nm}</div>
+          <div class="cic">\${item.ic}</div>
+          <div class="cnm">\${item.nm}\${item.tagNew?' <span class="cnew">NEW</span>':''}</div>
+          <div class="cds">\${item.ds}</div>
+        </div>
+        <button class="btn gold" id="cbtn" style="display:none;max-width:16rem;margin:14px auto 0">Collect</button>
+      </div>\`;
+    el.classList.add('on');
+    document.getElementById('cbtn').onclick=()=>this.close();
+    Sfx.chestShake();
+    const wait = Prefs.d.motion ? 780 : 220;
+    setTimeout(()=>this.burst(), wait);
+  },
+  burst(){
+    const el=document.getElementById('chest'); if(!el.classList.contains('on')) return;
+    document.getElementById('clid').classList.add('pop');
+    document.getElementById('cburst').classList.add('go');
+    document.getElementById('ccard').classList.add('go');
+    document.getElementById('cbtn').style.display='';
+    const rar=this.pending.rar;
+    if(rar==='legendary'||rar==='epic'){ Sfx.mastered(); Haptic.win(); }
+    else { Sfx.chestOpen(); Haptic.hit(); }
+  },
+  close(){
+    const el=document.getElementById('chest');
+    el.classList.remove('on');
+    const it=this.pending, cb=this.after;
+    this.pending=null; this.after=null;
+    if(it){ it.apply(); Game.save(); }
+    if(cb) cb();
+  }
+};
+
+/* ------------------------------- bounties -------------------------------- */
+/* Three rotating goals so a session always has a reason beyond the next node.
+   Completing one pays out and immediately rolls a replacement.              */
+const BOUNTY_KINDS = [
+  {id:'wins',   mk:()=>({n:R.i(2,4)}),
+   txt:b=>\`Win \${b.n} battles\`,                              gold:b=>70*b.n},
+  {id:'streak', mk:()=>({n:R.pick([8,12,16])}), peak:true,
+   txt:b=>\`Reach a streak of \${b.n}\`,                        gold:b=>20*b.n},
+  {id:'crit',   mk:()=>({n:R.i(4,9)}),
+   txt:b=>\`Land \${b.n} critical strikes\`,                    gold:b=>32*b.n},
+  {id:'flaw',   mk:()=>({n:R.i(1,2)}),
+   txt:b=>\`Win \${b.n} fight\${b.n>1?'s':''} without a single miss\`, gold:b=>170*b.n},
+  {id:'solve',  mk:()=>({n:R.i(15,30)}),
+   txt:b=>\`Solve \${b.n} riddles\`,                            gold:b=>7*b.n},
+  {id:'topic',  mk:()=>({n:R.i(4,8), k:R.pick(Object.keys(TOPIC_LABEL))}),
+   txt:b=>\`Solve \${b.n} × \${TOPIC_LABEL[b.k]||b.k}\`,         gold:b=>18*b.n}
+];
+
+const Bounty = {
+  kind(id){ return BOUNTY_KINDS.find(k=>k.id===id); },
+  ensure(){
+    const g=Game.s; if(!g) return;
+    g.bounties = g.bounties || [];
+    let guard=0;
+    while(g.bounties.length<3 && guard++<30) g.bounties.push(this.make(g.bounties));
+  },
+  make(existing){
+    let kind, guard=0;
+    do{ kind=R.pick(BOUNTY_KINDS); } while(existing.some(b=>b.id===kind.id) && guard++<25);
+    const b=Object.assign({id:kind.id, p:0}, kind.mk());
+    b.gold=kind.gold(b);
+    return b;
+  },
+  txt(b){ const k=this.kind(b.id); return k?k.txt(b):''; },
+  // Counters accumulate; 'streak' instead records a high-water mark.
+  bump(id, amount, meta){
+    const g=Game.s; if(!g||!g.bounties) return;
+    let done=false;
+    for(const b of g.bounties){
+      if(b.id!==id || b.p>=b.n) continue;
+      if(id==='topic' && meta!==b.k) continue;
+      const k=this.kind(id);
+      b.p = k && k.peak ? Math.max(b.p, amount) : Math.min(b.n, b.p+amount);
+      if(b.p>=b.n) done=true;
+    }
+    if(done) this.claim();
+  },
+  claim(){
+    const g=Game.s;
+    const done=g.bounties.filter(b=>b.p>=b.n);
+    if(!done.length) return;
+    const gold=done.reduce((s,b)=>s+b.gold,0);
+    g.gold+=gold;
+    g.bounties=g.bounties.filter(b=>b.p<b.n);
+    this.ensure();
+    Game.save();
+    Celebrate.banner('BOUNTY CLAIMED', '+'+gold+' gold', 'var(--gold)',
+      ()=>{Sfx.milestone(); Haptic.win();});
+  },
+  // The cheapest thing you cannot yet afford — a visible next step.
+  nextUnlock(){
+    const g=Game.s; if(!g) return null;
+    const all=WEAPONS.concat(ARMORS).filter(x=>x.cost>0 && !g.owned[x.id]);
+    all.sort((a,b)=>a.cost-b.cost);
+    return all[0]||null;
+  }
+};
+
+/* ---------------------------- daily skirmish ------------------------------ */
+/* Twelve questions from a seed derived from the date, so the run is the same
+   everywhere that day and a score means something. No health, no death — the
+   only thing at stake is the number.                                        */
+// Realms one to four: varied, but stops short of the hardest set so a daily is
+// approachable for someone who has not finished the campaign.
+const DAILY_POOL = REALMS.slice(0,4).reduce((a,r)=>a.concat(r.pool), []);
+
+const Daily = {
+  LEN:12,
+  seedFor(d){ d=d||new Date(); return (d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate())>>>0; },
+  today(){ return dayKey(new Date()); },
+  state(){
+    const g=Game.s;
+    g.daily = g.daily || {day:null, best:0, runs:0, allTimeBest:0};
+    if(g.daily.day!==this.today()){ g.daily.day=this.today(); g.daily.best=0; g.daily.runs=0; }
+    return g.daily;
+  },
+  start(){
+    this.state();
+    this.score=0; this.n=0;
+    R.seed(this.seedFor());
+    Battle.beginDaily();
+  },
+  // Points reward accuracy first, then speed, then the streak.
+  award(ok, ms, combo){
+    if(!ok) return 0;
+    const speed = ms<6000?1.5 : ms<12000?1.25 : ms<22000?1.05 : 1;
+    const pts=Math.round(100*speed*(1+Math.min(combo,10)*0.06));
+    this.score+=pts;
+    return pts;
+  },
+  finish(){
+    R.unseed();
+    const st=this.state();
+    st.runs++;
+    const record = this.score>st.best;
+    if(record) st.best=this.score;
+    if(this.score>(st.allTimeBest||0)) st.allTimeBest=this.score;
+    Game.save();
+    Titles.check();
+    Anim.stop();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">🗡️</div>
+      <div class="panel center">
+        <h1 style="font-size:22px">Daily Skirmish</h1>
+        <div class="sub" style="margin-top:6px">\${this.LEN} riddles, the same for everyone today.</div>
+        <hr>
+        <div style="font-size:34px;font-weight:900;color:var(--gold)" id="dScore">0</div>
+        <div class="small">points</div>
+        \${record?'<div style="color:var(--green);font-weight:800;margin-top:8px">🏅 Best of the day!</div>':
+          \`<div class="small" style="margin-top:8px">Today's best: \${st.best}</div>\`}
+        <hr>
+        <div class="small">All-time best: \${st.allTimeBest} · runs today: \${st.runs}</div>
+      </div>
+      <button class="btn gold" onclick="Daily.start()">↻ Run it again</button>
+      <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
+      <div style="height:20px"></div>\`;
+    countUp(document.getElementById('dScore'), this.score, 1100);
+    if(record){ Celebrate.banner('NEW BEST', this.score+' points', 'var(--gold)', ()=>{Sfx.mastered(); Haptic.win();}); }
+    else Sfx.win();
+  }
+};
 
 /* -------------------------------- arena ---------------------------------- */
 /* Endless mode, unlocked once the Eigen Dragon falls. Waves scale, you never
@@ -2549,8 +2909,13 @@ const Arena = {
       Game.s.hp=Math.min(Game.s.maxHp, Game.s.hp+healed);
     }
     if(this.wave>(Game.s.arenaBest||0)) Game.s.arenaBest=this.wave;
+    Bounty.bump('wins',1);
+    if(Battle.missed===0) Bounty.bump('flaw',1);
     Game.save();
 
+    const drop = R.chance(foe.boss?1:.34)
+      ? Loot.roll({boss:foe.boss, tier:Math.min(6, 2+Math.floor(this.wave/4))}) : null;
+    if(drop) setTimeout(()=>Chest.open(drop), 700);
     const draft = this.wave%3===0 ? R.shuffle(BOONS).slice(0,3) : null;
     this.pending = draft;
     UI.go('s-result');
@@ -2691,7 +3056,32 @@ const UI = {
     Game.s.hp=Math.min(Game.s.hp,Game.s.maxHp);
     ['hud','hud2','hud3'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=this.hud();});
     const g=Game.s, list=document.getElementById('mapList');
-    let out='';
+    Bounty.ensure();
+    const st=Daily.state(), nx=Bounty.nextUnlock();
+    let out=\`<div class="panel" style="padding:11px">
+      <div class="node" style="margin:0 0 8px" onclick="Daily.start()">
+        <div class="ico" style="font-size:24px">🗡️</div>
+        <div style="flex:1">
+          <div class="nm">Daily Skirmish \${st.best?\`<span class="tag g">best \${st.best}</span>\`:'<span class="tag">new today</span>'}</div>
+          <div class="dt">\${Daily.LEN} riddles from today's seed · same for everyone</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>
+      <div class="small" style="margin:8px 0 4px;font-weight:800;color:var(--gold)">📜 Bounties</div>
+      \${g.bounties.map(b=>{
+        const pct=Math.round(b.p/b.n*100);
+        return \`<div style="margin:6px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>\${Bounty.txt(b)}</span>
+            <span class="coin">🪙 \${b.gold} <span class="small">\${b.p}/\${b.n}</span></span></div>
+          <div class="track thin"><div class="fill" style="width:\${pct}%;background:var(--gold)"></div></div>
+        </div>\`;}).join('')}
+      \${nx?\`<hr><div style="display:flex;justify-content:space-between;font-size:12px">
+          <span>Next unlock: <b>\${nx.ic} \${nx.nm}</b></span>
+          <span class="coin">\${g.gold}/\${nx.cost}</span></div>
+        <div class="track thin"><div class="fill" style="width:\${clamp(g.gold/nx.cost*100,0,100)}%;background:linear-gradient(90deg,#5aa9e6,#a06bd6)"></div></div>\`
+        :'<hr><div class="small">Every weapon and every plate is yours.</div>'}
+    </div>\`;
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];

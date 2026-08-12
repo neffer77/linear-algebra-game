@@ -78,6 +78,23 @@ it is marked ⟳ review, so the targeting is visible rather than mysterious.
 **Progression.** Beating a foe earns gold and XP, and often loot. Levelling raises your
 maximum health and heals you fully. Clearing a realm's boss unlocks the next realm.
 
+**Loot** rolls a rarity — common through legendary — and opens as a chest that shakes,
+bursts in the rarity's colour and sweeps a card in. Rare tiers and above hand over
+*gear*, which until now could only ever be bought, so the Smithy is no longer the only
+source of upgrades. A boss never drops common.
+
+**Bounties.** Three rotating goals sit on the map — solve twenty riddles, land six crits,
+win a fight without a single miss — each paying gold and rolling a replacement the moment
+it completes. Beside them, the next unlock you are saving toward and how close you are.
+
+**🗡️ Daily Skirmish.** Twelve riddles drawn from a seed derived from the date, so the run
+is *identical on every device that day* — it deliberately ignores your mastery model,
+which would otherwise personalise the questions and make the score meaningless. No health,
+no death; the only thing at stake is the number. Best of the day and all-time are kept.
+
+**Near death.** Below a third health a red vignette pulses at heartbeat tempo and a low
+thump plays on each new question. Below a sixth, it quickens.
+
 **Gear** — 7 weapons and 6 armour sets, bought at the Smithy and equipped from the Gear
 screen. Armour adds both flat damage reduction and maximum health.
 
