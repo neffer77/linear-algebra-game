@@ -1,0 +1,1827 @@
+// Knights of the Eigenrealm — a knight-battler that teaches
+// linear algebra and calculus.
+//
+// GENERATED FILE. Edit index.html and re-run `node build-scriptable.js`.
+//
+// How to use:
+//   1. Copy this whole file.
+//   2. Open Scriptable on iOS, tap +, paste, and name it
+//      "Knights of the Eigenrealm".
+//   3. Tap ▶ to play. Add it to your home screen via the Shortcuts app
+//      ("Run Script") for one-tap launching.
+//
+// Everything runs offline inside a WebView. Progress is saved to the
+// WebView's local storage and also mirrored to iCloud/local Scriptable
+// storage so it survives the app being closed.
+
+// Variables used by Scriptable.
+// icon-color: deep-blue; icon-glyph: chess-knight;
+
+const HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#120d1c">
+<title>Knights of the Eigenrealm</title>
+<style>
+:root{
+  --bg:#120d1c; --bg2:#1c1430; --panel:#221a38; --panel2:#2c2249;
+  --ink:#f3ecd8; --dim:#a99ccb; --gold:#f2c14e; --gold2:#c9962c;
+  --red:#e5484d; --green:#57cc7a; --blue:#5aa9e6; --purple:#a06bd6;
+  --edge:#3d3163;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:radial-gradient(120% 80% at 50% 0%,#2a1f45 0%,var(--bg) 60%,#0b0812 100%);
+  color:var(--ink);
+  font-family:"Trebuchet MS","Avenir Next",Avenir,system-ui,-apple-system,sans-serif;
+  overscroll-behavior:none; user-select:none; -webkit-user-select:none;
+}
+#app{max-width:520px;margin:0 auto;padding:env(safe-area-inset-top) 10px calc(env(safe-area-inset-bottom) + 10px);min-height:100%}
+.screen{display:none;animation:fade .25s ease}
+.screen.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:.5px}
+h1{font-size:26px;color:var(--gold);text-shadow:0 2px 0 #6b4a10,0 0 18px rgba(242,193,78,.35)}
+h2{font-size:18px}
+.sub{color:var(--dim);font-size:13px;line-height:1.45}
+
+.panel{background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);
+  border:1px solid var(--edge);border-radius:14px;padding:12px;margin:10px 0;
+  box-shadow:0 6px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
+
+.btn{display:block;width:100%;padding:13px 14px;margin:8px 0;border-radius:12px;cursor:pointer;
+  border:1px solid var(--edge);background:linear-gradient(180deg,#3a2e5e,#2a2148);color:var(--ink);
+  font:inherit;font-size:16px;font-weight:700;text-align:left;
+  box-shadow:0 4px 0 rgba(0,0,0,.4);transition:transform .06s,filter .12s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.btn.gold{background:linear-gradient(180deg,#f2c14e,#c9962c);color:#2a1c00;border-color:#8a6612}
+.btn.ghost{background:linear-gradient(180deg,#241c3c,#1b1530);color:var(--dim)}
+.btn.sm{padding:9px 11px;font-size:14px;margin:5px 0}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.center{text-align:center}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;
+  background:#372b5c;color:var(--dim);border:1px solid var(--edge)}
+.tag.g{background:#2f4a33;color:#9ee8b3;border-color:#3f6a46}
+.tag.r{background:#4a2b2f;color:#ffb3b6;border-color:#6a3c41}
+
+/* top bar */
+#hud{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;
+  background:rgba(20,14,36,.85);border:1px solid var(--edge);border-radius:12px;font-size:13px;font-weight:700}
+#hud .sp{flex:1}
+.coin{color:var(--gold)}
+
+/* battle */
+#sceneWrap{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--edge);
+  box-shadow:0 6px 0 rgba(0,0,0,.35)}
+canvas{display:block;width:100%;height:auto;image-rendering:auto}
+.bars{display:flex;gap:10px;margin:8px 0 2px}
+.bar{flex:1}
+.bar .lbl{display:flex;justify-content:space-between;font-size:12px;font-weight:800;margin-bottom:3px}
+.track{height:12px;border-radius:8px;background:#140f24;border:1px solid var(--edge);overflow:hidden}
+.fill{height:100%;width:100%;transition:width .35s cubic-bezier(.2,.8,.3,1)}
+.fill.hp{background:linear-gradient(90deg,#57cc7a,#2f9c55)}
+.fill.foe{background:linear-gradient(90deg,#e5484d,#8c2226)}
+.fill.time{background:linear-gradient(90deg,#f2c14e,#e07b39);transition:width .1s linear}
+.track.thin{height:7px}
+
+#qbox{font-size:19px;font-weight:800;line-height:1.5;text-align:center;padding:6px 2px 10px}
+#qtopic{font-size:11px;color:var(--dim);text-align:center;letter-spacing:1px;text-transform:uppercase}
+.choice{font-size:17px;text-align:center;font-weight:800}
+.choice.right{background:linear-gradient(180deg,#3fa564,#2b7a49);border-color:#59d089;color:#eafff1}
+.choice.wrong{background:linear-gradient(180deg,#b3383c,#7d2427);border-color:#e5484d;color:#ffe9ea}
+.choice.faded{opacity:.25;pointer-events:none}
+
+/* matrices & math */
+.mtx{display:inline-grid;grid-auto-flow:column;gap:0 10px;vertical-align:middle;position:relative;
+  padding:2px 9px;margin:0 2px}
+.mtx .col{display:grid;gap:2px;text-align:center}
+.mtx:before,.mtx:after{content:"";position:absolute;top:0;bottom:0;width:6px;border:2px solid var(--gold)}
+.mtx:before{left:0;border-right:0;border-radius:3px 0 0 3px}
+.mtx:after{right:0;border-left:0;border-radius:0 3px 3px 0}
+.vecb{color:var(--gold)}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.8em;line-height:1.1;margin:0 2px}
+.frac span:first-child{border-bottom:1.5px solid currentColor;padding:0 3px}
+
+/* explain card */
+#explain{border-left:4px solid var(--gold);font-size:15px;line-height:1.6}
+#explain .head{font-weight:900;margin-bottom:6px;font-size:16px}
+
+/* map */
+.node{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;
+  border:1px solid var(--edge);background:linear-gradient(180deg,#2b2247,#211a39);cursor:pointer;
+  box-shadow:0 4px 0 rgba(0,0,0,.4)}
+.node:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.4)}
+.node.locked{opacity:.45;pointer-events:none}
+.node.done{border-color:#3f6a46}
+.node .ico{width:44px;height:44px;flex:none;border-radius:10px;background:#171129;display:grid;place-items:center}
+.node .nm{font-weight:800;font-size:15px}
+.node .dt{font-size:12px;color:var(--dim)}
+.realmhdr{display:flex;align-items:center;gap:8px;margin-top:14px}
+.realmhdr .dot{width:10px;height:10px;border-radius:50%}
+
+/* items */
+.item{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;margin:6px 0;
+  border:1px solid var(--edge);background:#241c3e}
+.item .ic{font-size:24px;width:34px;text-align:center}
+.item .nm{font-weight:800;font-size:14px}
+.item .ds{font-size:12px;color:var(--dim)}
+.item.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(242,193,78,.3)}
+.pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
+
+#powerbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px}
+#powerbar .pw{padding:7px 9px;border-radius:10px;border:1px solid var(--edge);background:#2b2247;
+  font-size:13px;font-weight:800;cursor:pointer}
+#powerbar .pw:active{transform:translateY(2px)}
+#powerbar .pw.off{opacity:.35;pointer-events:none}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:24px;z-index:50;
+  background:#2b2247;border:1px solid var(--gold);color:var(--ink);padding:10px 16px;border-radius:12px;
+  font-weight:800;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.6);animation:pop .3s ease}
+@keyframes pop{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+.small{font-size:12px;color:var(--dim)}
+hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
+.crest{font-size:46px;text-align:center;line-height:1}
+.kbd{display:inline-block;padding:1px 6px;border-radius:5px;background:#332957;border:1px solid var(--edge);font-size:12px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ TITLE ============ -->
+  <div class="screen on" id="s-title">
+    <div style="height:14px"></div>
+    <div class="crest">⚔️🛡️</div>
+    <div class="center" style="margin-top:8px">
+      <h1>Knights of the Eigenrealm</h1>
+      <div class="sub" style="margin-top:6px">Battle foes with linear algebra &amp; calculus.<br>Solve to strike. Miss and bleed.</div>
+    </div>
+    <div class="panel">
+      <button class="btn gold" onclick="Game.start()">⚔️ Begin the Quest</button>
+      <button class="btn" onclick="UI.go('s-map')" id="btnContinue" style="display:none">🏰 Continue Journey</button>
+      <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
+      <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
+    </div>
+    <div class="panel sub">
+      <b style="color:var(--gold)">How it works</b><br>
+      • Each turn you get a math riddle — tap one of four answers.<br>
+      • <b style="color:var(--green)">Correct</b> → your knight strikes. Faster answers hit harder.<br>
+      • <b style="color:var(--red)">Wrong</b> → the foe strikes you, and you're shown exactly why.<br>
+      • Win gold &amp; loot → forge better blades, plate, and relics.
+    </div>
+    <div class="center small" id="resetRow" style="display:none">
+      <span class="kbd" onclick="Game.hardReset()">Erase save</span>
+    </div>
+  </div>
+
+  <!-- ============ MAP ============ -->
+  <div class="screen" id="s-map">
+    <div id="hud"></div>
+    <div class="panel" style="padding:10px">
+      <div class="row">
+        <button class="btn sm" onclick="UI.go('s-shop')">🏪 Smithy</button>
+        <button class="btn sm" onclick="UI.go('s-gear')">🎒 Gear</button>
+        <button class="btn sm" onclick="UI.go('s-tome')">📖 Tome</button>
+      </div>
+      <div class="row">
+        <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
+        <button class="btn sm ghost" onclick="Game.rest()">🔥 Camp &amp; Rest</button>
+      </div>
+    </div>
+    <div id="mapList"></div>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ BATTLE ============ -->
+  <div class="screen" id="s-battle">
+    <div class="bars">
+      <div class="bar">
+        <div class="lbl"><span>🛡️ You</span><span id="pHpTxt">100/100</span></div>
+        <div class="track"><div class="fill hp" id="pHp"></div></div>
+      </div>
+      <div class="bar">
+        <div class="lbl"><span id="foeName">Foe</span><span id="eHpTxt">100/100</span></div>
+        <div class="track"><div class="fill foe" id="eHp"></div></div>
+      </div>
+    </div>
+    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas></div>
+    <div class="track thin" style="margin-top:6px"><div class="fill time" id="timeBar"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span class="small" id="comboTxt">Combo ×1.0</span>
+      <span class="small" id="speedTxt">Swift strike bonus active</span>
+    </div>
+
+    <div class="panel" id="qpanel">
+      <div id="qtopic"></div>
+      <div id="qbox"></div>
+      <div id="choices"></div>
+    </div>
+
+    <div class="panel" id="explain" style="display:none"></div>
+    <div id="powerbar"></div>
+    <div class="center" style="margin-top:8px">
+      <span class="kbd" onclick="Battle.flee()">🏃 Retreat</span>
+    </div>
+    <div style="height:16px"></div>
+  </div>
+
+  <!-- ============ RESULT ============ -->
+  <div class="screen" id="s-result">
+    <div style="height:20px"></div>
+    <div id="resultBody"></div>
+  </div>
+
+  <!-- ============ SHOP ============ -->
+  <div class="screen" id="s-shop">
+    <div id="hud2"></div>
+    <div class="panel"><h2>🏪 The Smithy</h2><div class="sub">Spend gold won in battle. Equip from Gear.</div></div>
+    <div id="shopList"></div>
+    <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ GEAR ============ -->
+  <div class="screen" id="s-gear">
+    <div id="hud3"></div>
+    <div id="gearList"></div>
+    <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ TOME ============ -->
+  <div class="screen" id="s-tome">
+    <div class="panel"><h2>📖 Tome of Lore</h2><div class="sub">Every spell in this game is real mathematics. Read a page, then go swing a sword at it.</div></div>
+    <div id="tomeList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ TRAINING ============ -->
+  <div class="screen" id="s-train">
+    <div class="panel"><h2>🎯 Training Grounds</h2><div class="sub">Practise freely. No damage taken, no gold earned — just repetitions.</div></div>
+    <div id="trainPick"></div>
+    <div id="trainRun" style="display:none">
+      <div class="panel">
+        <div id="tTopic" class="small center"></div>
+        <div id="tQ" style="font-size:19px;font-weight:800;text-align:center;padding:8px 2px 10px;line-height:1.5"></div>
+        <div id="tChoices"></div>
+      </div>
+      <div class="panel" id="tExplain" style="display:none;border-left:4px solid var(--gold);font-size:15px;line-height:1.6"></div>
+      <div class="center small" id="tScore"></div>
+      <button class="btn ghost" onclick="Train.quit()">← Leave the yard</button>
+    </div>
+    <button class="btn ghost" id="trainBack" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   Knights of the Eigenrealm
+   A turn-based knight battler where the combat system is linear algebra
+   and calculus. Pure vanilla JS, no dependencies, single file.
+   ========================================================================= */
+
+/* ---------------------------------- utils ------------------------------- */
+const R = {
+  i:(a,b)=>Math.floor(Math.random()*(b-a+1))+a,
+  nz:(a,b)=>{let v=0;let g=0;while(v===0&&g++<40)v=R.i(a,b);return v||1;},
+  pick:a=>a[Math.floor(Math.random()*a.length)],
+  shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;},
+  chance:p=>Math.random()<p
+};
+const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};
+const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
+const neg = n => (n<0? '−'+Math.abs(n) : String(n));      // true minus sign
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// column-major HTML matrix: mat([[a,b],[c,d]]) with rows given as rows
+function mat(rows){
+  const cols = rows[0].length;
+  let out='<span class="mtx">';
+  for(let c=0;c<cols;c++){
+    out+='<span class="col">';
+    for(let r=0;r<rows.length;r++) out+='<span>'+neg(rows[r][c])+'</span>';
+    out+='</span>';
+  }
+  return out+'</span>';
+}
+const vec = a => mat(a.map(x=>[x]));                       // column vector
+const vecR= a => '⟨'+a.map(neg).join(', ')+'⟩';            // inline row vector
+const frac= (a,b)=>\`<span class="frac"><span>\${neg(a)}</span><span>\${neg(b)}</span></span>\`;
+
+// polynomial from [[coef,power],...]
+function poly(terms,v='x'){
+  const t = terms.filter(t=>t[0]!==0);
+  if(!t.length) return '0';
+  let s='';
+  t.forEach(([c,p],i)=>{
+    const a=Math.abs(c);
+    let body = p===0 ? String(a) : (a===1?'':String(a)) + v + (p===1?'':sup(p));
+    if(i===0) s += (c<0?'−':'') + body;
+    else      s += (c<0?' − ':' + ') + body;
+  });
+  return s;
+}
+const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
+const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
+
+/* --------------------------- problem generators -------------------------- */
+/* Each generator returns {q, a, d:[distractors], ex} where \`a\` is the exact
+   correct answer string and \`ex\` is a plain-language explanation.           */
+
+const GEN = {
+
+/* ---------- Realm 1 : vectors ---------- */
+vecAdd(d){
+  const k=[6,9,12][d-1]||9;
+  const u=[R.nz(-k,k),R.nz(-k,k)], v=[R.nz(-k,k),R.nz(-k,k)];
+  const s=[u[0]+v[0],u[1]+v[1]];
+  return {topic:'Vector Addition',
+    q:\`\${vecR(u)} + \${vecR(v)} = ?\`,
+    a:vecR(s),
+    d:[vecR([u[0]-v[0],u[1]-v[1]]), vecR([u[0]+v[1],u[1]+v[0]]), vecR([s[0],s[1]+R.nz(-3,3)]), vecR([u[0]*v[0],u[1]*v[1]])],
+    ex:\`Add matching slots, nothing else. \${neg(u[0])}+\${neg(v[0])} = \${neg(s[0])} on top, \${neg(u[1])}+\${neg(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
+},
+vecScale(d){
+  const c=R.nz(-4-d,4+d), v=[R.nz(-8,8),R.nz(-8,8)];
+  const s=[c*v[0],c*v[1]];
+  return {topic:'Scalar Multiplication',
+    q:\`\${neg(c)} · \${vecR(v)} = ?\`,
+    a:vecR(s), d:[vecR([c*v[0],v[1]]), vecR([c+v[0],c+v[1]]), vecR([-s[0],-s[1]]), vecR([s[1],s[0]])],
+    ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${neg(v[0])} = \${neg(s[0])} and \${neg(c)}·\${neg(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
+},
+vecCombo(d){
+  const a=R.i(2,3+d), b=R.i(2,3+d), u=[R.nz(-6,6),R.nz(-6,6)], v=[R.nz(-6,6),R.nz(-6,6)];
+  const s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
+  return {topic:'Linear Combination',
+    q:\`u = \${vecR(u)}, v = \${vecR(v)}<br>\${a}u − \${b}v = ?\`,
+    a:vecR(s), d:[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]), vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]), vecR([s[0]+R.nz(-4,4),s[1]]), vecR([-s[0],-s[1]])],
+    ex:\`Scale first, then add. \${a}u = \${vecR([a*u[0],a*u[1]])} and \${b}v = \${vecR([b*v[0],b*v[1]])}. Subtracting gives \${vecR(s)}. Any expression like this is a "linear combination" — the whole subject is built out of them.\`};
+},
+dot(d){
+  const k=[6,9,12][d-1]||9;
+  const u=[R.nz(-k,k),R.nz(-k,k)], v=[R.nz(-k,k),R.nz(-k,k)];
+  const s=u[0]*v[0]+u[1]*v[1];
+  return {topic:'Dot Product',
+    q:\`\${vecR(u)} · \${vecR(v)} = ?\`,
+    a:neg(s), d:[neg(u[0]*v[0]-u[1]*v[1]), neg(u[0]*v[1]+u[1]*v[0]), neg(-s), neg(s+R.nz(-6,6))],
+    ex:\`Multiply matching slots and add the results: (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(u[0]*v[0])} + \${neg(u[1]*v[1])} = \${neg(s)}. The dot product is a single number, never a vector — it measures how much the two arrows point the same way.\`};
+},
+mag(){
+  const t=R.pick([[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[20,21,29]]);
+  const sx=R.chance(.5)?1:-1, sy=R.chance(.5)?1:-1;
+  const v=[t[0]*sx,t[1]*sy];
+  return {topic:'Vector Length',
+    q:\`‖\${vecR(v)}‖ = ?\`,
+    a:String(t[2]), d:[String(t[0]+t[1]), String(t[2]+1), String(Math.abs(t[0]-t[1])), String(t[2]*2)],
+    ex:\`Length is Pythagoras: √(\${t[0]}² + \${t[1]}²) = √(\${t[0]*t[0]} + \${t[1]*t[1]}) = √\${t[2]*t[2]} = \${t[2]}. Signs vanish because the components get squared — length is never negative.\`};
+},
+orth(){
+  const u=[R.nz(-6,6),R.nz(-6,6)];
+  const yes=R.chance(.5);
+  const v = yes ? [-u[1],u[0]] : [R.nz(-6,6),R.nz(-6,6)];
+  const s=u[0]*v[0]+u[1]*v[1];
+  const truth = s===0;
+  return {topic:'Orthogonality',
+    q:\`Are u = \${vecR(u)} and v = \${vecR(v)} perpendicular?\`,
+    a: truth ? 'Yes — dot product is 0' : 'No — dot product is '+neg(s),
+    d:['Yes — dot product is 0','No — dot product is '+neg(s),'Only if both are unit vectors','Impossible to tell without angles'],
+    ex:\`Two vectors are perpendicular exactly when their dot product is zero. Here u·v = \${neg(u[0])}·\${neg(v[0])} + \${neg(u[1])}·\${neg(v[1])} = \${neg(s)}, so they \${truth?'are':'are not'} perpendicular.\`};
+},
+
+/* ---------- Realm 2 : matrices ---------- */
+matVec(d){
+  const k=[5,7,9][d-1]||7;
+  const A=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]], v=[R.nz(-6,6),R.nz(-6,6)];
+  const s=[A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]];
+  return {topic:'Matrix × Vector',
+    q:\`\${mat(A)}\${vec(v)} = ?\`,
+    a:vec(s), d:[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]), vec([s[1],s[0]]), vec([A[0][0]*v[0],A[1][1]*v[1]]), vec([s[0]+R.nz(-5,5),s[1]])],
+    ex:\`Each output row is that row dotted with the vector. Top: (\${neg(A[0][0])})(\${neg(v[0])}) + (\${neg(A[0][1])})(\${neg(v[1])}) = \${neg(s[0])}. Bottom: (\${neg(A[1][0])})(\${neg(v[0])}) + (\${neg(A[1][1])})(\${neg(v[1])}) = \${neg(s[1])}.\`};
+},
+det2(d){
+  const k=[5,8,11][d-1]||8;
+  const A=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
+  const s=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+  return {topic:'Determinant (2×2)',
+    q:\`det \${mat(A)} = ?\`,
+    a:neg(s), d:[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]), neg(-s), neg(A[0][0]+A[1][1]), neg(s+R.nz(-7,7))],
+    ex:\`For a 2×2 it's (top-left)(bottom-right) − (top-right)(bottom-left) = (\${neg(A[0][0])})(\${neg(A[1][1])}) − (\${neg(A[0][1])})(\${neg(A[1][0])}) = \${neg(s)}. That number is the signed area scaling factor of the transformation; zero would mean it squashes the plane flat.\`};
+},
+transpose(){
+  const A=[[R.nz(-9,9),R.i(-9,9)],[R.i(-9,9),R.nz(-9,9)]];
+  const T=[[A[0][0],A[1][0]],[A[0][1],A[1][1]]];
+  return {topic:'Transpose',
+    q:\`\${mat(A)}<sup>T</sup> = ?\`,
+    a:mat(T), d:[mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), mat([[-A[0][0],-A[1][0]],[-A[0][1],-A[1][1]]]), mat([[A[1][0],A[0][0]],[A[1][1],A[0][1]]])],
+    ex:\`Transposing flips the matrix across its main diagonal: rows become columns. The diagonal entries \${neg(A[0][0])} and \${neg(A[1][1])} stay put, while \${neg(A[0][1])} and \${neg(A[1][0])} swap places.\`};
+},
+matMul(d){
+  const k=[3,5,7][d-1]||5;
+  const A=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
+  const B=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
+  const C=[[A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
+           [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]];
+  const W=[[A[0][0]*B[0][0],A[0][1]*B[0][1]],[A[1][0]*B[1][0],A[1][1]*B[1][1]]];
+  return {topic:'Matrix Multiplication',
+    q:\`\${mat(A)}\${mat(B)} = ?\`,
+    a:mat(C), d:[mat(W), mat([[C[1][1],C[0][1]],[C[1][0],C[0][0]]]), mat([[C[0][0],C[1][0]],[C[0][1],C[1][1]]]), mat([[C[0][0]+R.nz(-4,4),C[0][1]],[C[1][0],C[1][1]]])],
+    ex:\`Entry (row i, col j) = row i of the first matrix dotted with column j of the second. Top-left: (\${neg(A[0][0])})(\${neg(B[0][0])}) + (\${neg(A[0][1])})(\${neg(B[1][0])}) = \${neg(C[0][0])}. Repeat for the other three. Note it is <i>not</i> entrywise multiplication.\`};
+},
+trace(){
+  const A=[[R.nz(-9,9),R.i(-9,9)],[R.i(-9,9),R.nz(-9,9)]];
+  const s=A[0][0]+A[1][1];
+  return {topic:'Trace',
+    q:\`tr \${mat(A)} = ?\`,
+    a:neg(s), d:[neg(A[0][1]+A[1][0]), neg(A[0][0]*A[1][1]), neg(-s), neg(A[0][0]*A[1][1]-A[0][1]*A[1][0])],
+    ex:\`The trace is just the sum down the main diagonal: \${neg(A[0][0])} + \${neg(A[1][1])} = \${neg(s)}. It also equals the sum of the eigenvalues, which is why it shows up everywhere.\`};
+},
+solve2(d){
+  const x=R.nz(-5,5), y=R.nz(-5,5);
+  const a=R.nz(-4,4), b=R.nz(-4,4), c=R.nz(-4,4);
+  let e=R.nz(-4,4);
+  if(a*e-b*c===0) e=e+ (e>0?1:-1) + (a*(e+1)-b*c===0?1:0);
+  const p=a*x+b*y, q2=c*x+e*y;
+  return {topic:'Solving a 2×2 System',
+    q:\`\${poly([[a,1]],'x')} \${b<0?'−':'+'} \${Math.abs(b)===1?'':Math.abs(b)}y = \${neg(p)}<br>\${poly([[c,1]],'x')} \${e<0?'−':'+'} \${Math.abs(e)===1?'':Math.abs(e)}y = \${neg(q2)}\`,
+    a:\`x = \${neg(x)}, y = \${neg(y)}\`,
+    d:[\`x = \${neg(y)}, y = \${neg(x)}\`,\`x = \${neg(-x)}, y = \${neg(y)}\`,\`x = \${neg(x+1)}, y = \${neg(y-1)}\`,\`No solution\`],
+    ex:\`Written as a matrix equation this is \${mat([[a,b],[c,e]])}\${vec(['x','y'])} = \${vec([p,q2])}. Since the determinant \${neg(a*e-b*c)} is not zero there is exactly one solution, and it is x = \${neg(x)}, y = \${neg(y)}. Substitute back to check both equations.\`};
+},
+inv2(){
+  let A, det;
+  do{ A=[[R.nz(-5,5),R.i(-5,5)],[R.i(-5,5),R.nz(-5,5)]]; det=A[0][0]*A[1][1]-A[0][1]*A[1][0]; }
+  while(det===0 || Math.abs(det)>6);
+  const adj=[[A[1][1],-A[0][1]],[-A[1][0],A[0][0]]];
+  const show=m=>\`\${frac(1,det)} \${mat(m)}\`;
+  return {topic:'Inverse of a 2×2',
+    q:\`\${mat(A)}<sup>−1</sup> = ?\`,
+    a:show(adj),
+    d:[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]]), \`\${frac(1,-det)} \${mat(adj)}\`],
+    ex:\`The recipe: swap the diagonal entries, flip the sign of the other two, then divide by the determinant. det = \${neg(det)}, so the inverse is \${frac(1,det)} times \${mat(adj)}. If the determinant were 0 no inverse would exist.\`};
+},
+det3(){
+  const A=[[R.nz(-4,4),R.i(-3,3),R.i(-3,3)],[R.i(-3,3),R.nz(-4,4),R.i(-3,3)],[R.i(-3,3),R.i(-3,3),R.nz(-4,4)]];
+  const m=(r,c)=>{const rs=[0,1,2].filter(i=>i!==r), cs=[0,1,2].filter(i=>i!==c);
+    return A[rs[0]][cs[0]]*A[rs[1]][cs[1]]-A[rs[0]][cs[1]]*A[rs[1]][cs[0]];};
+  const s=A[0][0]*m(0,0)-A[0][1]*m(0,1)+A[0][2]*m(0,2);
+  return {topic:'Determinant (3×3)',
+    q:\`det \${mat(A)} = ?\`,
+    a:neg(s), d:[neg(-s), neg(s+R.nz(-9,9)), neg(A[0][0]*A[1][1]*A[2][2]), neg(s*2)],
+    ex:\`Expand along the top row with alternating signs + − +: \${neg(A[0][0])}·\${neg(m(0,0))} − \${neg(A[0][1])}·\${neg(m(0,1))} + \${neg(A[0][2])}·\${neg(m(0,2))} = \${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.\`};
+},
+cross(){
+  const u=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)], v=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)];
+  const s=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
+  return {topic:'Cross Product',
+    q:\`\${vecR(u)} × \${vecR(v)} = ?\`,
+    a:vecR(s), d:[vecR([-s[0],-s[1],-s[2]]), vecR([u[0]*v[0],u[1]*v[1],u[2]*v[2]]), vecR([s[1],s[2],s[0]]), neg(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])],
+    ex:\`Component by component: (u₂v₃−u₃v₂, u₃v₁−u₁v₃, u₁v₂−u₂v₁) = \${vecR(s)}. Unlike the dot product this returns a <i>vector</i>, and it is perpendicular to both inputs.\`};
+},
+rank(){
+  const indep=R.chance(.5);
+  const c1=[R.nz(-5,5),R.nz(-5,5)];
+  const k=R.nz(-3,3);
+  const c2= indep ? [R.nz(-5,5),R.nz(-5,5)] : [k*c1[0],k*c1[1]];
+  const A=[[c1[0],c2[0]],[c1[1],c2[1]]];
+  const det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+  const truth=det!==0;
+  return {topic:'Linear Independence',
+    q:\`Are the columns of \${mat(A)} linearly independent?\`,
+    a: truth ? 'Yes — det ≠ 0' : 'No — one is a multiple of the other',
+    d:['Yes — det ≠ 0','No — one is a multiple of the other','Yes — they are both nonzero','Only when the matrix is square'],
+    ex:\`Columns of a square matrix are independent exactly when the determinant is nonzero. Here det = \${neg(det)}, so they \${truth?'are independent and span the whole plane':'are dependent — the second column is just a scaled copy of the first, so together they only span a line'}.\`};
+},
+eigen2(){
+  const l1=R.nz(-5,5); let l2=R.nz(-5,5); if(l2===l1) l2=l1+1;
+  const b=R.i(1,4);
+  const A=[[l1,b],[0,l2]];                 // triangular ⇒ eigenvalues on diagonal
+  return {topic:'Eigenvalues',
+    q:\`Eigenvalues of \${mat(A)}?\`,
+    a:\`\${neg(Math.min(l1,l2))} and \${neg(Math.max(l1,l2))}\`,
+    d:[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`, \`\${neg(b)} and \${neg(0)}\`, \`\${neg(-l1)} and \${neg(-l2)}\`, \`\${neg(l1*l2)} only\`],
+    ex:\`This matrix is triangular (a zero below the diagonal), and a triangular matrix wears its eigenvalues on the diagonal: \${neg(l1)} and \${neg(l2)}. Check with the characteristic equation det(A − λI) = (\${neg(l1)} − λ)(\${neg(l2)} − λ) = 0. Eigenvalues tell you how much each special direction is stretched.\`};
+},
+proj(){
+  const t=R.pick([[3,4,5],[6,8,10],[5,12,13]]);
+  const v=[t[0],t[1]], u=[R.nz(-6,6),R.nz(-6,6)];
+  const dp=u[0]*v[0]+u[1]*v[1];
+  return {topic:'Scalar Projection',
+    q:\`How much of u = \${vecR(u)} points along v = \${vecR(v)}?<br><span class="small">(the scalar projection u·v / ‖v‖)</span>\`,
+    a: frac(dp,t[2]),
+    d:[frac(dp,t[2]*t[2]), frac(t[2],dp), neg(dp), frac(-dp,t[2])],
+    ex:\`Scalar projection = u·v / ‖v‖. Here u·v = \${neg(dp)} and ‖v‖ = √(\${t[0]}²+\${t[1]}²) = \${t[2]}, giving \${frac(dp,t[2])}. It is the length of u's shadow cast onto the line through v.\`};
+},
+
+/* ---------- Realm 3 : limits & derivatives ---------- */
+limPoly(){
+  const t=[[R.nz(1,4),2],[R.nz(-6,6),1],[R.i(-8,8),0]];
+  const a=R.nz(-3,3);
+  const s=evalPoly(t,a);
+  return {topic:'Limit by Substitution',
+    q:\`lim<sub>x→\${neg(a)}</sub> ( \${poly(t)} ) = ?\`,
+    a:neg(s), d:[neg(-s), neg(s+R.nz(-6,6)), neg(evalPoly(dPoly(t),a)), 'Does not exist'],
+    ex:\`Polynomials are continuous everywhere, so you may simply plug in x = \${neg(a)}: \${t.map(([c,p])=>\`(\${neg(c)})(\${neg(a)})\${p?sup(p):'⁰'}\`).join(' + ')} = \${neg(s)}. Substitution only fails when it produces something like 0/0.\`};
+},
+limRational(){
+  const a=R.nz(1,6), extra=R.nz(-5,5);
+  // (x² − a²)/(x − a) → x + a
+  const s=2*a;
+  return {topic:'Limit (0/0 form)',
+    q:\`lim<sub>x→\${neg(a)}</sub> \${frac(\`x² − \${a*a}\`,\`x − \${a}\`)} = ?\`,
+    a:neg(s), d:[neg(a), '0', 'Does not exist', neg(a*a)],
+    ex:\`Substituting gives 0/0, so factor first: x² − \${a*a} = (x − \${a})(x + \${a}). Cancel the (x − \${a}) and you're left with x + \${a}, which at x = \${a} equals \${neg(s)}. The hole in the graph doesn't affect the limit.\`};
+},
+limInf(){
+  const a=R.i(2,9), b=R.i(2,9);
+  const k=R.pick([1,2]);
+  if(k===1){
+    return {topic:'Limit at Infinity',
+      q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x² + \${R.i(1,9)}x\`,\`\${b}x² − \${R.i(1,9)}\`)} = ?\`,
+      a:frac(a,b), d:['0','∞',frac(b,a),neg(a-b)],
+      ex:\`When top and bottom have the same highest power, the limit is the ratio of those leading coefficients: \${a}/\${b}. Everything of lower degree becomes negligible once x is enormous.\`};
+  }
+  return {topic:'Limit at Infinity',
+    q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x + \${R.i(1,9)}\`,\`\${b}x² + \${R.i(1,9)}\`)} = ?\`,
+    a:'0', d:['∞',frac(a,b),frac(b,a),'1'],
+    ex:\`The bottom grows like x² while the top only grows like x, so the denominator wins by a whole power of x and the fraction is crushed to 0.\`};
+},
+powerRule(d){
+  const n=R.i(2,3+d);
+  const t=[[R.nz(2,9),n],[R.nz(-9,9),n>2?2:1],[R.i(-9,9),0]];
+  const dt=dPoly(t);
+  return {topic:'Derivative (Power Rule)',
+    q:\`\${frac('d','dx')} ( \${poly(t)} ) = ?\`,
+    a:poly(dt), d:[poly(t.map(([c,p])=>[c*p,p])), poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)), poly(dPoly(dt)), poly(t.map(([c,p])=>[c*(p+1),p+1]))],
+    ex:\`Bring the power down and drop it by one: \${t.filter(x=>x[0]).map(([c,p])=>p===0?\`the constant \${neg(c)} → 0\`:\`\${neg(c)}x\${p===1?'':sup(p)} → \${neg(c*p)}\${p-1===0?'':'x'+(p-1===1?'':sup(p-1))}\`).join(', ')}. Result: \${poly(dt)}.\`};
+},
+evalDeriv(){
+  const t=[[R.nz(1,4),3],[R.nz(-6,6),2],[R.nz(-8,8),1],[R.i(-9,9),0]];
+  const dt=dPoly(t), a=R.nz(-3,3), s=evalPoly(dt,a);
+  return {topic:'Derivative at a Point',
+    q:\`f(x) = \${poly(t)}<br>f′(\${neg(a)}) = ?\`,
+    a:neg(s), d:[neg(evalPoly(t,a)), neg(-s), neg(s+R.nz(-9,9)), neg(evalPoly(dPoly(dt),a))],
+    ex:\`First differentiate: f′(x) = \${poly(dt)}. Then substitute x = \${neg(a)} to get \${neg(s)}. That number is the slope of the curve at that exact point — and the instantaneous rate of change.\`};
+},
+trigDeriv(){
+  const k=R.i(2,6);
+  const which=R.pick(['sin','cos']);
+  const q = which==='sin' ? \`sin(\${k}x)\` : \`cos(\${k}x)\`;
+  const a = which==='sin' ? \`\${k}cos(\${k}x)\` : \`−\${k}sin(\${k}x)\`;
+  return {topic:'Derivative of Trig',
+    q:\`\${frac('d','dx')} \${q} = ?\`,
+    a, d:[which==='sin'?\`cos(\${k}x)\`:\`−sin(\${k}x)\`, which==='sin'?\`−\${k}cos(\${k}x)\`:\`\${k}sin(\${k}x)\`, \`\${k}\${which}(\${k}x)\`, \`\${frac(1,k)}\${which==='sin'?'cos':'sin'}(\${k}x)\`],
+    ex:\`sin differentiates to cos, cos differentiates to −sin. The inner function \${k}x has derivative \${k}, and the chain rule says multiply by it — so the answer is \${a}.\`};
+},
+expLog(){
+  const k=R.i(2,7);
+  if(R.chance(.5)) return {topic:'Derivative of eˣ',
+    q:\`\${frac('d','dx')} e<sup>\${k}x</sup> = ?\`,
+    a:\`\${k}e<sup>\${k}x</sup>\`, d:[\`e<sup>\${k}x</sup>\`,\`\${k}x·e<sup>\${k}x</sup>\`,\`\${frac(1,k)}e<sup>\${k}x</sup>\`,\`e<sup>\${k}</sup>\`],
+    ex:\`e<sup>u</sup> differentiates to e<sup>u</sup> times u′. With u = \${k}x, u′ = \${k}, so the answer is \${k}e<sup>\${k}x</sup>. The exponential is the one function that essentially reproduces itself.\`};
+  return {topic:'Derivative of ln',
+    q:\`\${frac('d','dx')} ln(\${k}x) = ?\`,
+    a:frac(1,'x'), d:[frac(1,k+'x'), frac(k,'x'), frac('1','ln x'), \`\${k}ln(x)\`],
+    ex:\`Chain rule: derivative of ln(u) is u′/u = \${k}/(\${k}x), and the \${k}s cancel to give 1/x. Interesting fact: ln(\${k}x) = ln \${k} + ln x, and the constant ln \${k} has derivative 0 — same answer.\`};
+},
+productRule(){
+  const a=R.nz(2,5), b=R.nz(-6,6), c=R.nz(2,5), e=R.nz(-6,6);
+  // (ax+b)(cx+e) → 2ac x + (ae+bc)
+  const A=2*a*c, B=a*e+b*c;
+  return {topic:'Product Rule',
+    q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})(\${poly([[c,1],[e,0]])}) = ?\`,
+    a:poly([[A,1],[B,0]]), d:[poly([[a*c,1],[b*e,0]]), poly([[a*c,1],[0,0]]), poly([[A,1],[-B,0]]), poly([[a+c,1],[b+e,0]])],
+    ex:\`(fg)′ = f′g + fg′. Here f′ = \${a} and g′ = \${c}, so we get \${a}(\${poly([[c,1],[e,0]])}) + (\${poly([[a,1],[b,0]])})(\${c}) = \${poly([[A,1],[B,0]])}. Expanding first and differentiating gives the same thing — the rule just saves work when expanding is ugly.\`};
+},
+quotient(){
+  const a=R.nz(2,6);
+  return {topic:'Quotient Rule',
+    q:\`\${frac('d','dx')} \${frac('x',\`x + \${a}\`)} = ?\`,
+    a:frac(a,\`(x + \${a})²\`), d:[frac(1,\`(x + \${a})²\`), frac(-a,\`(x + \${a})²\`), frac(\`2x + \${a}\`,\`(x + \${a})²\`), '1'],
+    ex:\`(f/g)′ = (f′g − fg′)/g². With f = x, g = x + \${a}: numerator = 1·(x + \${a}) − x·1 = \${a}. So the derivative is \${a}/(x + \${a})², which is always positive — the function is increasing everywhere it's defined.\`};
+},
+chainRule(){
+  const a=R.i(2,5), b=R.nz(-6,6), n=R.i(2,4);
+  return {topic:'Chain Rule',
+    q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})\${sup(n)} = ?\`,
+    a:\`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`,
+    d:[\`\${n}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n)}\`, \`\${a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${a})\${sup(n-1)}\`],
+    ex:\`Outside first, then inside. The outer power gives \${n}(inner)\${sup(n-1)}; the inner function \${poly([[a,1],[b,0]])} has derivative \${a}. Multiply: \${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}. Forgetting that inner \${a} is the single most common calculus slip.\`};
+},
+tangent(){
+  const t=[[R.nz(1,4),2],[R.nz(-7,7),1],[R.i(-7,7),0]];
+  const a=R.nz(-3,3), dt=dPoly(t), m=evalPoly(dt,a), y=evalPoly(t,a);
+  return {topic:'Tangent Line',
+    q:\`f(x) = \${poly(t)}<br>Slope of the tangent line at x = \${neg(a)}?\`,
+    a:neg(m), d:[neg(y), neg(-m), neg(m+R.nz(-6,6)), neg(evalPoly(t,a)+m)],
+    ex:\`The tangent slope <i>is</i> the derivative. f′(x) = \${poly(dt)}, so f′(\${neg(a)}) = \${neg(m)}. (The full tangent line would be y − \${neg(y)} = \${neg(m)}(x − \${neg(a)}).)\`};
+},
+
+/* ---------- Realm 4 : integrals ---------- */
+indefPower(){
+  const n=R.i(1,4), c=(n+1)*R.i(1,4);
+  return {topic:'Indefinite Integral',
+    q:\`∫ \${poly([[c,n]])} dx = ?\`,
+    a:\`\${poly([[c/(n+1),n+1]])} + C\`,
+    d:[\`\${poly([[c,n+1]])} + C\`, \`\${poly([[c*n,n-1]])} + C\`, \`\${poly([[c/(n+1),n]])} + C\`, \`\${poly([[c*(n+1),n+1]])} + C\`],
+    ex:\`Reverse the power rule: raise the power by one, then divide by the new power. x\${sup(n)} → x\${sup(n+1)}/\${n+1}, so \${c}x\${sup(n)} → \${c/(n+1)}x\${sup(n+1)}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.\`};
+},
+defPoly(){
+  const c=R.i(1,4)*2, b=R.nz(-5,5), hi=R.i(2,4);
+  const t=[[c,1],[b,0]];
+  const F=[[c/2,2],[b,1]];
+  const s=evalPoly(F,hi)-evalPoly(F,0);
+  return {topic:'Definite Integral',
+    q:\`∫<sub>0</sub><sup>\${hi}</sup> (\${poly(t)}) dx = ?\`,
+    a:neg(s), d:[neg(evalPoly(t,hi)), neg(s+R.nz(-8,8)), neg(-s), neg(evalPoly(F,hi))],
+    ex:\`Antidifferentiate: F(x) = \${poly(F)}. Then the Fundamental Theorem says evaluate F at the top and subtract F at the bottom: F(\${hi}) − F(0) = \${neg(evalPoly(F,hi))} − \${neg(evalPoly(F,0))} = \${neg(s)}. That's the signed area under the curve.\`};
+},
+uSub(){
+  const n=R.i(2,4), a=R.i(1,5);
+  return {topic:'u-Substitution',
+    q:\`∫ 2x(x² + \${a})\${sup(n)} dx = ?\`,
+    a:\`\${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C\`,
+    d:[\`\${frac(1,n)}(x² + \${a})\${sup(n)} + C\`, \`2x(x² + \${a})\${sup(n+1)} + C\`, \`\${frac(1,n+1)}(x² + \${a})\${sup(n)} + C\`, \`(x² + \${a})\${sup(n+1)} + C\`],
+    ex:\`Let u = x² + \${a}; then du = 2x dx, which is exactly the rest of the integrand. The problem becomes ∫u\${sup(n)} du = u\${sup(n+1)}/\${n+1}. Substitute back to get \${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C.\`};
+},
+intTrig(){
+  const k=R.i(2,6);
+  const which=R.pick(['sin','cos']);
+  const a = which==='sin' ? \`−\${frac(1,k)}cos(\${k}x) + C\` : \`\${frac(1,k)}sin(\${k}x) + C\`;
+  return {topic:'Integrating Trig',
+    q:\`∫ \${which}(\${k}x) dx = ?\`,
+    a, d:[which==='sin'?\`\${frac(1,k)}cos(\${k}x) + C\`:\`−\${frac(1,k)}sin(\${k}x) + C\`, which==='sin'?\`−\${k}cos(\${k}x) + C\`:\`\${k}sin(\${k}x) + C\`, \`\${which}(\${k}x) + C\`, \`−\${which}(\${k}x) + C\`],
+    ex:\`Antiderivatives run the derivative rules backwards: ∫sin = −cos, ∫cos = sin. Because the inside is \${k}x you must also divide by \${k} to undo the chain rule. Answer: \${a}.\`};
+},
+intExp(){
+  const k=R.i(2,6);
+  return {topic:'Integrating eˣ',
+    q:\`∫ e<sup>\${k}x</sup> dx = ?\`,
+    a:\`\${frac(1,k)}e<sup>\${k}x</sup> + C\`,
+    d:[\`e<sup>\${k}x</sup> + C\`,\`\${k}e<sup>\${k}x</sup> + C\`,\`\${frac(1,k+1)}e<sup>\${k+1}x</sup> + C\`,\`x·e<sup>\${k}x</sup> + C\`],
+    ex:\`Differentiating e<sup>\${k}x</sup> multiplies by \${k}, so integrating must divide by \${k}. Check by differentiating the answer: \${frac(1,k)}·\${k}e<sup>\${k}x</sup> = e<sup>\${k}x</sup>. ✓\`};
+},
+area(){
+  const a=R.i(2,4);
+  const s=a*a*a/3;
+  const nice = Number.isInteger(s) ? String(s) : frac(a*a*a,3);
+  return {topic:'Area Under a Curve',
+    q:\`Area between y = x² and the x-axis from 0 to \${a}?\`,
+    a:nice, d:[String(a*a*a), frac(a*a,2), String(a*a*a*2), frac(a*a*a,2)],
+    ex:\`Area = ∫₀\${sup(a)} x² dx = [x³/3]₀\${sup(a)} = \${a}³/3 = \${a*a*a}/3. Notice it's a third of the \${a}×\${a*a} bounding rectangle — the parabola leaves two thirds empty.\`};
+},
+
+/* ---------- Realm 5 : mixed mastery ---------- */
+secondDeriv(){
+  const t=[[R.nz(1,4),4],[R.nz(-5,5),3],[R.nz(-6,6),2],[R.i(-9,9),1]];
+  const d1=dPoly(t), d2=dPoly(d1);
+  return {topic:'Second Derivative',
+    q:\`f(x) = \${poly(t)}<br>f″(x) = ?\`,
+    a:poly(d2), d:[poly(d1), poly(dPoly(d2)), poly(t), poly(d1.map(([c,p])=>[c*2,p]))],
+    ex:\`Differentiate twice. f′(x) = \${poly(d1)}, then f″(x) = \${poly(d2)}. The second derivative measures concavity — positive means the curve bends upward like a bowl.\`};
+},
+critical(){
+  const r1=R.nz(-4,4);
+  let r2=R.nz(-4,4), guard=0;
+  while((r2===r1 || r2===0) && guard++<30) r2=R.nz(-4,4);
+  if(r2===r1||r2===0) r2 = r1===3?-3:3;
+  const a=Math.min(r1,r2), b=Math.max(r1,r2);
+  // f'(x) = 3(x-a)(x-b)  ⇒ f(x)= x³ - 3/2(a+b)x² + 3abx
+  return {topic:'Critical Points',
+    q:\`f′(x) = 3(x \${a<0?'+':'−'} \${Math.abs(a)})(x \${b<0?'+':'−'} \${Math.abs(b)})<br>Where are the critical points?\`,
+    a:\`x = \${neg(a)} and x = \${neg(b)}\`,
+    d:[\`x = \${neg(-a)} and x = \${neg(-b)}\`, \`x = 0 only\`, \`x = \${neg(a+b)}\`, \`x = \${neg(3)} and x = \${neg(a*b)}\`],
+    ex:\`Critical points are where the derivative is zero (or undefined). A product is zero when a factor is zero, so x = \${neg(a)} and x = \${neg(b)}. These are the candidates for peaks and valleys of f.\`};
+},
+partial(){
+  const a=R.nz(2,5), b=R.nz(2,5), c=R.nz(-6,6);
+  return {topic:'Partial Derivative',
+    q:\`f(x,y) = \${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}xy\${sup(3)}<br>∂f/∂x = ?\`,
+    a:\`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`,
+    d:[\`\${a}x² \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}x \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`, \`\${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`],
+    ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${neg(c)}xy³ → \${neg(c)}y³ (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
+},
+
+};
+
+/* ------------------------------ topic metadata --------------------------- */
+const TOPIC_LABEL = {
+  vecAdd:'Vector Addition', vecScale:'Scalar Multiplication', vecCombo:'Linear Combinations',
+  dot:'Dot Product', mag:'Vector Length', orth:'Orthogonality',
+  matVec:'Matrix × Vector', det2:'2×2 Determinant', transpose:'Transpose',
+  matMul:'Matrix Multiplication', trace:'Trace', solve2:'Linear Systems',
+  inv2:'Matrix Inverse', det3:'3×3 Determinant', cross:'Cross Product',
+  rank:'Linear Independence', eigen2:'Eigenvalues', proj:'Projection',
+  limPoly:'Limits by Substitution', limRational:'Limits (0/0)', limInf:'Limits at Infinity',
+  powerRule:'Power Rule', evalDeriv:'Derivative at a Point', trigDeriv:'Trig Derivatives',
+  expLog:'e and ln Derivatives', productRule:'Product Rule', quotient:'Quotient Rule',
+  chainRule:'Chain Rule', tangent:'Tangent Lines',
+  indefPower:'Indefinite Integrals', defPoly:'Definite Integrals', uSub:'u-Substitution',
+  intTrig:'Integrating Trig', intExp:'Integrating eˣ', area:'Area Under Curves',
+  secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives'
+};
+
+/* --------------------------- tome (lesson pages) ------------------------- */
+const TOME = [
+ {t:'⚔️ Vectors are arrows with bookkeeping',
+  b:'A vector like ⟨3, −2⟩ is an instruction: go 3 right, 2 down. Adding vectors means following one instruction then the other. Multiplying by a scalar stretches the arrow (and flips it if the scalar is negative). Its length comes straight from Pythagoras: ‖⟨3,−4⟩‖ = √(9+16) = 5.'},
+ {t:'🎯 The dot product measures agreement',
+  b:'u·v multiplies matching components and adds them up, producing a single number. Big and positive means the arrows point roughly the same way; negative means roughly opposite; exactly zero means perpendicular. That last case is the workhorse — "perpendicular" and "dot product is zero" are the same sentence in two languages.'},
+ {t:'🛡️ A matrix is a machine that moves space',
+  b:'Multiplying a matrix by a vector transforms that vector — rotating, stretching, shearing, or reflecting it. To compute it, dot each row of the matrix with the vector. Multiplying two matrices means doing one transformation after the other, which is why order matters: AB is usually not BA.'},
+ {t:'📐 The determinant is the area factor',
+  b:'For a 2×2 matrix, det = ad − bc. It tells you how much the transformation scales areas. A determinant of 3 triples areas; a determinant of −1 flips orientation without changing size; a determinant of 0 collapses the plane onto a line, destroying information — which is exactly why such matrices have no inverse.'},
+ {t:'👑 Eigenvectors are the directions that survive',
+  b:'Most vectors get knocked off their line when a matrix acts on them. An eigenvector is a rare direction that stays on its own line, only stretched by a factor λ — the eigenvalue. Find them by solving det(A − λI) = 0. For a triangular matrix the eigenvalues are simply the diagonal entries.'},
+ {t:'🌫️ A limit is where a function is headed',
+  b:'lim(x→a) f(x) asks what value f approaches near a — not necessarily what it equals at a. For continuous things like polynomials you can just substitute. When substitution gives 0/0 the expression is hiding a cancellation: factor, cancel, then substitute. That single trick powers the entire definition of the derivative.'},
+ {t:'📈 The derivative is instantaneous change',
+  b:'f′(x) is the slope of the tangent line — how fast f changes right now. The power rule handles most of it: bring the exponent down, drop it by one. Then three combining rules: product (f′g + fg′), quotient ((f′g − fg′)/g²), and chain (outside derivative × inside derivative). The chain rule is the one people forget.'},
+ {t:'🏺 The integral accumulates',
+  b:'An integral adds up infinitely many infinitesimal slices, which geometrically is the area under a curve. Antidifferentiation reverses the power rule: raise the power, divide by the new power, add C. The Fundamental Theorem then ties both halves of calculus together: ∫ₐᵇ f = F(b) − F(a).'},
+ {t:'🔗 Where the two subjects meet',
+  b:'Take a function of several variables and differentiate it with respect to each one in turn, holding the others still. Stack those partial derivatives into a vector and you have the gradient — a vector that points in the direction of steepest increase. Linear algebra supplies the vector, calculus supplies the slopes. Every neural network on Earth is trained by walking downhill along that vector.'}
+];
+
+/* ------------------------------- content --------------------------------- */
+const WEAPONS = [
+  {id:'w0', nm:'Rusted Trainer',       ic:'🗡️', dmg:9,  crit:.05, cost:0,    ds:'A blunt practice blade. It has seen better centuries.'},
+  {id:'w1', nm:'Iron Shortsword',      ic:'⚔️', dmg:14, crit:.08, cost:60,   ds:'Honest steel, honestly sharpened.'},
+  {id:'w2', nm:'Vector Saber',         ic:'🗡️', dmg:20, crit:.10, cost:150,  ds:'Strikes along the direction of greatest harm.'},
+  {id:'w3', nm:'Determinant Cleaver',  ic:'🪓', dmg:27, crit:.12, cost:300,  ds:'Scales its damage by the area it sweeps.'},
+  {id:'w4', nm:'Gradient Halberd',     ic:'🔱', dmg:35, crit:.15, cost:520,  ds:'Always finds the steepest path into armour.'},
+  {id:'w5', nm:'Eigenblade',           ic:'⚔️', dmg:45, crit:.20, cost:850,  ds:'Cuts only along directions that do not turn.'},
+  {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'}
+];
+const ARMORS = [
+  {id:'a0', nm:'Peasant Tunic',      ic:'👕', def:0,  hp:0,  cost:0,    ds:'Cloth. Purely decorative in a fight.'},
+  {id:'a1', nm:'Leather Jerkin',     ic:'🥋', def:2,  hp:10, cost:70,   ds:'Boiled leather, cheap and cheerful.'},
+  {id:'a2', nm:'Chainmail Hauberk',  ic:'🛡️', def:4,  hp:20, cost:170,  ds:'Thousands of tiny rings, each doing its part.'},
+  {id:'a3', nm:'Orthogonal Plate',   ic:'🛡️', def:7,  hp:35, cost:340,  ds:'Deflects blows at perfect right angles.'},
+  {id:'a4', nm:'Identity Aegis',     ic:'🛡️', def:11, hp:55, cost:620,  ds:'Leaves you exactly as you were.'},
+  {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'}
+];
+const ITEMS = {
+  potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
+  insight:{nm:"Sage's Insight",  ic:'🔮', cost:55,  ds:'Burns away two wrong answers.'},
+  rage:{nm:'Berserker Rune',    ic:'🔥', cost:70,  ds:'Your next correct strike deals 2.5× damage.'},
+  feather:{nm:'Phoenix Feather',ic:'🪶', cost:200, ds:'Automatically revives you once at half health.'}
+};
+
+const REALMS = [
+  {nm:'Vale of Vectors', col:'#57cc7a', sky:['#1e3b2c','#0d1a14'],
+   pool:['vecAdd','vecScale','dot','mag','vecCombo','orth'],
+   foes:[
+     {nm:'Meadow Slime', art:'slime', hp:52,  atk:9,  gold:22, xp:12, col:'#6fd39a'},
+     {nm:'Bramble Goblin',art:'goblin',hp:78, atk:12, gold:34, xp:20, col:'#8bd46a'},
+     {nm:'Thicket Brute', art:'goblin',hp:104,atk:15, gold:46, xp:28, col:'#4fae74'},
+     {nm:'The Vector Wyrm',art:'dragon',hp:165,atk:20,gold:110,xp:70, col:'#39c47a', boss:true}
+   ]},
+  {nm:'Matrix Marches', col:'#5aa9e6', sky:['#1b2c47','#0b1220'],
+   pool:['matVec','det2','transpose','matMul','trace','solve2'],
+   foes:[
+     {nm:'Rank-One Skeleton', art:'skeleton',hp:120,atk:18, gold:52, xp:34, col:'#cfe3f5'},
+     {nm:'Row Reducer',       art:'golem',   hp:150,atk:22, gold:66, xp:44, col:'#6f9ed6'},
+     {nm:'Shear Sentinel',    art:'skeleton',hp:180,atk:26, gold:80, xp:52, col:'#9ecbf0'},
+     {nm:'The Determinant Golem',art:'golem',hp:270,atk:33, gold:190,xp:120,col:'#4a7fc4', boss:true}
+   ]},
+  {nm:'Cliffs of Change', col:'#f2c14e', sky:['#4a2f1c','#180f0a'],
+   pool:['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','tangent','productRule'],
+   foes:[
+     {nm:'Asymptote Wisp',  art:'wisp',  hp:190,atk:28, gold:88, xp:60, col:'#ffe08a'},
+     {nm:'Secant Harpy',    art:'harpy', hp:225,atk:33, gold:104,xp:72, col:'#f0a94e'},
+     {nm:'Slope Stalker',   art:'wisp',  hp:260,atk:38, gold:120,xp:84, col:'#ffd166'},
+     {nm:'The Tangent Wraith',art:'wraith',hp:390,atk:47,gold:280,xp:190,col:'#e8b13a', boss:true}
+   ]},
+  {nm:'Integral Abyss', col:'#a06bd6', sky:['#2c1b44','#0e0817'],
+   pool:['indefPower','defPoly','uSub','intTrig','intExp','area','chainRule','quotient'],
+   foes:[
+     {nm:'Riemann Shade',   art:'wraith',hp:290,atk:42, gold:130,xp:100, col:'#c39af0'},
+     {nm:'Abyssal Chimera', art:'dragon',hp:340,atk:48, gold:155,xp:120, col:'#9a5fd4'},
+     {nm:'Constant of Dread',art:'wisp', hp:380,atk:54, gold:175,xp:135, col:'#b58af0'},
+     {nm:'The Lich of Limits',art:'lich',hp:540,atk:66, gold:400,xp:300, col:'#8e4ed6', boss:true}
+   ]},
+  {nm:'Eigen Citadel', col:'#e5484d', sky:['#43202a','#150a0e'],
+   pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule'],
+   foes:[
+     {nm:'Basis Knight',    art:'knightfoe',hp:420,atk:58, gold:200,xp:170, col:'#f08a8d'},
+     {nm:'Nullspace Drake', art:'dragon',   hp:480,atk:66, gold:235,xp:200, col:'#d4585c'},
+     {nm:'Spectral Champion',art:'knightfoe',hp:540,atk:74,gold:270,xp:230, col:'#ff9ea1'},
+     {nm:'The Eigen Dragon',art:'dragon',   hp:820,atk:92, gold:650,xp:520, col:'#e5484d', boss:true}
+   ]}
+];
+
+/* -------------------------------- state ---------------------------------- */
+const SAVE_KEY = 'eigenrealm.v1';
+const Game = {
+  s:null,
+  fresh(){
+    return {
+      hp:100, maxHp:100, gold:0, xp:0, lvl:1,
+      weapon:'w0', armor:'a0',
+      owned:{w0:1,a0:1},
+      items:{potion:2, insight:1, rage:0, feather:0},
+      cleared:{},          // "realm:index" -> true
+      realm:0,
+      stats:{wins:0, correct:0, wrong:0, best:0},
+      topicStats:{}        // topic -> {c, w}
+    };
+  },
+  load(){
+    try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); return true; } }
+    catch(e){}
+    return false;
+  },
+  save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.s)); }catch(e){} },
+  hardReset(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); },
+  start(){ this.s=this.fresh(); this.save(); UI.go('s-map'); },
+  rest(){
+    const cost = 25 + this.s.lvl*5;
+    if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return; }
+    if(this.s.gold<cost){ UI.toast(\`A night's camp costs \${cost} gold.\`); return; }
+    this.s.gold-=cost; this.s.hp=this.s.maxHp; this.save(); UI.renderMap();
+    UI.toast(\`🔥 Rested by the fire. Full health for \${cost} gold.\`);
+  },
+  weapon(){ return WEAPONS.find(w=>w.id===this.s.weapon); },
+  armor(){ return ARMORS.find(a=>a.id===this.s.armor); },
+  maxHp(){ return 100 + (this.s.lvl-1)*18 + this.armor().hp; },
+  xpNeeded(){ return 60 + (this.s.lvl-1)*45; },
+  gainXp(n){
+    this.s.xp += n;
+    let ups=0;
+    while(this.s.xp >= this.xpNeeded()){ this.s.xp -= this.xpNeeded(); this.s.lvl++; ups++; }
+    if(ups){ this.s.maxHp=this.maxHp(); this.s.hp=this.s.maxHp; }
+    return ups;
+  },
+  recordAnswer(topic, ok){
+    const t = this.s.topicStats[topic] || (this.s.topicStats[topic]={c:0,w:0});
+    if(ok){ t.c++; this.s.stats.correct++; } else { t.w++; this.s.stats.wrong++; }
+  }
+};
+
+/* --------------------------------- audio --------------------------------- */
+const Sfx = {
+  ctx:null, on:true,
+  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ this.on=false; } } },
+  play(freq, dur, type, vol){
+    if(!this.on) return; this.init(); if(!this.ctx) return;
+    try{
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type=type||'triangle'; o.frequency.value=freq;
+      g.gain.setValueAtTime(vol||.06, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.0001, this.ctx.currentTime+dur);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(this.ctx.currentTime+dur);
+    }catch(e){}
+  },
+  hit(){ this.play(180,.18,'square',.07); setTimeout(()=>this.play(90,.2,'sawtooth',.05),40); },
+  hurt(){ this.play(120,.28,'sawtooth',.07); },
+  good(){ this.play(660,.09,'triangle',.06); setTimeout(()=>this.play(990,.14,'triangle',.05),80); },
+  bad(){ this.play(200,.22,'square',.05); },
+  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.play(f,.22,'triangle',.06),i*110)); },
+  coin(){ this.play(880,.07,'square',.05); setTimeout(()=>this.play(1320,.1,'square',.04),60); }
+};
+
+/* ------------------------------- rendering -------------------------------- */
+const cv = document.getElementById('scene');
+const cx = cv.getContext('2d');
+const W = 800, H = 400;
+
+function fitCanvas(){
+  const dpr = Math.min(window.devicePixelRatio||1, 2.5);
+  const w = cv.clientWidth || 400;
+  cv.width  = Math.round(w*dpr);
+  cv.height = Math.round(w*dpr*H/W);
+  cx.setTransform(dpr*w/W,0,0,dpr*w/W,0,0);
+}
+window.addEventListener('resize', fitCanvas);
+
+/* --- small drawing helpers --- */
+function rr(x,y,w,h,r){ cx.beginPath(); cx.moveTo(x+r,y);
+  cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r);
+  cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
+function fillRR(x,y,w,h,r,c){ cx.fillStyle=c; rr(x,y,w,h,r); cx.fill(); }
+function circle(x,y,r,c){ cx.beginPath(); cx.arc(x,y,r,0,7); cx.fillStyle=c; cx.fill(); }
+
+/* --- knight (the player) --- */
+function drawKnight(x,y,s,lunge,hurt,dead){
+  cx.save();
+  cx.translate(x + lunge*70, y);
+  if(dead){ cx.rotate(-0.9); cx.globalAlpha=.55; }
+  cx.scale(s,s);
+
+  // shadow
+  cx.save(); cx.globalAlpha=.3; circle(0,4,34,'#000'); cx.restore();
+
+  const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
+  const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
+  const cape = '#7a2f8f';
+
+  // cape
+  cx.save();
+  cx.beginPath();
+  const sw = Math.sin(Anim.t*3)*6;
+  cx.moveTo(-6,-72); cx.quadraticCurveTo(-46+sw,-30,-30+sw,10);
+  cx.quadraticCurveTo(-10,4,6,-70);
+  cx.fillStyle=cape; cx.fill();
+  cx.restore();
+
+  // legs
+  fillRR(-20,-30,15,34,5,dark);
+  fillRR(5,-30,15,34,5,dark);
+  fillRR(-23,-2,20,9,4,'#4a4038');
+  fillRR(3,-2,20,9,4,'#4a4038');
+
+  // body
+  fillRR(-24,-78,48,52,10,skin);
+  // tabard
+  cx.fillStyle=cape; cx.fillRect(-9,-78,18,50);
+  cx.fillStyle='#f2c14e';
+  cx.beginPath(); cx.moveTo(0,-66); cx.lineTo(6,-56); cx.lineTo(0,-46); cx.lineTo(-6,-56); cx.closePath(); cx.fill();
+  // pauldrons
+  circle(-26,-72,12,dark); circle(26,-72,12,dark);
+  circle(-26,-72,7,skin);  circle(26,-72,7,skin);
+
+  // helmet
+  fillRR(-19,-118,38,40,13,skin);
+  cx.fillStyle='#1a1622'; cx.fillRect(-14,-106,28,8);
+  cx.fillStyle='#5ad1ff'; cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
+  // plume
+  cx.beginPath(); cx.moveTo(0,-120);
+  cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
+  cx.quadraticCurveTo(10,-130,-2,-122);
+  cx.fillStyle='#e5484d'; cx.fill();
+
+  // shield (left arm)
+  cx.save(); cx.translate(-38,-58); cx.rotate(-0.15);
+  cx.beginPath(); cx.moveTo(-14,-20); cx.lineTo(14,-20); cx.lineTo(14,8); cx.quadraticCurveTo(0,24,-14,8); cx.closePath();
+  cx.fillStyle='#3f6bb5'; cx.fill(); cx.lineWidth=3; cx.strokeStyle='#f2c14e'; cx.stroke();
+  cx.fillStyle='#f2c14e'; cx.font='bold 15px serif'; cx.textAlign='center'; cx.fillText('λ',0,2);
+  cx.restore();
+
+  // sword (right arm) — swings with the lunge
+  cx.save();
+  cx.translate(36,-58);
+  cx.rotate(0.22 + lunge*2.2);   // rests clear of the helm, slashes forward
+  cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-6,9,20);          // grip
+  cx.fillStyle='#f2c14e'; cx.fillRect(-13,-10,28,7);        // crossguard
+  const g=cx.createLinearGradient(0,-70,0,-8);
+  g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#dfe8f5'); g.addColorStop(1,'#93a3ba');
+  cx.fillStyle=g;
+  cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
+  cx.restore();
+
+  cx.restore();
+}
+
+/* --- enemies --- */
+function drawFoe(x,y,s,art,col,lunge,hurt,dead){
+  cx.save();
+  cx.translate(x - lunge*70, y);
+  if(dead){ cx.rotate(0.9); cx.globalAlpha=.5; }
+  cx.scale(s,s);                     // sprites are authored facing left, toward the knight
+  const c = hurt>0 ? '#ffffff' : col;
+  const bob = Math.sin(Anim.t*2.2)*4;
+
+  cx.save(); cx.globalAlpha=.3; circle(0,4,34,'#000'); cx.restore();
+  cx.translate(0,bob);
+
+  const shade = shadeCol(c,-40);
+
+  if(art==='slime'){
+    const sq = 1 + Math.sin(Anim.t*3)*.07;
+    cx.save(); cx.scale(1/sq, sq);
+    cx.beginPath(); cx.moveTo(-42,2);
+    cx.quadraticCurveTo(-46,-64,0,-64); cx.quadraticCurveTo(46,-64,42,2);
+    cx.closePath(); cx.fillStyle=c; cx.fill();
+    cx.globalAlpha=.35; circle(-14,-40,9,'#fff'); cx.globalAlpha=1;
+    circle(-14,-28,6,'#1a1622'); circle(14,-28,6,'#1a1622');
+    circle(-15,-30,2.5,'#fff'); circle(13,-30,2.5,'#fff');
+    cx.restore();
+  }
+  else if(art==='goblin'){
+    fillRR(-16,-34,13,36,5,shade); fillRR(3,-34,13,36,5,shade);
+    fillRR(-24,-74,48,44,12,c);
+    // ears
+    cx.beginPath(); cx.moveTo(-24,-92); cx.lineTo(-48,-104); cx.lineTo(-24,-78); cx.fillStyle=c; cx.fill();
+    cx.beginPath(); cx.moveTo(24,-92); cx.lineTo(48,-104); cx.lineTo(24,-78); cx.fill();
+    fillRR(-20,-108,40,34,11,c);
+    circle(-10,-94,5,'#1a1622'); circle(10,-94,5,'#1a1622');
+    circle(-11,-95,2,'#f2c14e'); circle(9,-95,2,'#f2c14e');
+    cx.fillStyle='#fff';
+    cx.beginPath(); cx.moveTo(-8,-84); cx.lineTo(-4,-76); cx.lineTo(0,-84); cx.closePath(); cx.fill();
+    cx.beginPath(); cx.moveTo(2,-84); cx.lineTo(6,-76); cx.lineTo(10,-84); cx.closePath(); cx.fill();
+    // club
+    cx.save(); cx.translate(-32,-58); cx.rotate(0.5 - lunge*2.2);
+    cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-40,8,44); fillRR(-11,-56,22,20,7,'#8b7350'); cx.restore();
+  }
+  else if(art==='skeleton'){
+    cx.strokeStyle=c; cx.lineWidth=7; cx.lineCap='round';
+    cx.beginPath(); cx.moveTo(0,-30); cx.lineTo(-14,2); cx.moveTo(0,-30); cx.lineTo(14,2); cx.stroke();
+    cx.beginPath(); cx.moveTo(0,-30); cx.lineTo(0,-76); cx.stroke();
+    for(let i=0;i<4;i++){ cx.beginPath(); cx.moveTo(-15,-70+i*11); cx.lineTo(15,-70+i*11); cx.stroke(); }
+    cx.beginPath(); cx.moveTo(0,-70); cx.lineTo(-26,-46); cx.moveTo(0,-70); cx.lineTo(26,-46); cx.stroke();
+    fillRR(-19,-112,38,36,13,c);
+    circle(-9,-96,6,'#1a1622'); circle(9,-96,6,'#1a1622');
+    circle(-9,-96,2.5,'#e5484d'); circle(9,-96,2.5,'#e5484d');
+    cx.fillStyle='#1a1622'; cx.fillRect(-8,-84,16,4);
+    cx.save(); cx.translate(-30,-56); cx.rotate(0.4-lunge*2.2);
+    cx.fillStyle='#b9c6d6'; cx.fillRect(-3,-58,6,52); cx.fillRect(-12,-14,24,6); cx.restore();
+  }
+  else if(art==='golem'){
+    fillRR(-30,-40,24,44,6,shade); fillRR(6,-40,24,44,6,shade);
+    fillRR(-40,-104,80,68,14,c);
+    fillRR(-52,-98,16,44,7,shade); fillRR(36,-98,16,44,7,shade);
+    cx.fillStyle='#1a1622'; cx.fillRect(-24,-88,18,9); cx.fillRect(6,-88,18,9);
+    circle(-15,-84,4,'#f2c14e'); circle(15,-84,4,'#f2c14e');
+    cx.strokeStyle=shade; cx.lineWidth=3;
+    cx.beginPath(); cx.moveTo(-40,-64); cx.lineTo(40,-64); cx.moveTo(0,-104); cx.lineTo(0,-64); cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.15)';
+    cx.fillRect(-34,-98,26,26);
+  }
+  else if(art==='wisp' || art==='wraith'){
+    const a=Anim.t*2;
+    for(let i=3;i>0;i--){
+      cx.globalAlpha = .16*i;
+      circle(Math.sin(a+i)*7, -58+Math.cos(a+i)*7, 34+i*9, c);
+    }
+    cx.globalAlpha=1;
+    cx.beginPath();
+    cx.moveTo(-30,-58); cx.quadraticCurveTo(-34,-116,0,-116);
+    cx.quadraticCurveTo(34,-116,30,-58);
+    cx.quadraticCurveTo(20,-4,0,-14); cx.quadraticCurveTo(-20,-4,-30,-58);
+    cx.fillStyle=c; cx.fill();
+    circle(-11,-84,7,'#1a1622'); circle(11,-84,7,'#1a1622');
+    circle(-11,-84,3,'#fff'); circle(11,-84,3,'#fff');
+    if(art==='wraith'){
+      cx.save(); cx.translate(-34,-70); cx.rotate(0.3-lunge*2);
+      cx.strokeStyle='#e8e8ff'; cx.lineWidth=4; cx.beginPath();
+      cx.moveTo(0,0); cx.quadraticCurveTo(-24,-30,-8,-58); cx.stroke(); cx.restore();
+    }
+  }
+  else if(art==='harpy'){
+    // wings
+    cx.save();
+    const f=Math.sin(Anim.t*6)*.4;
+    [-1,1].forEach(sgn=>{
+      cx.save(); cx.translate(sgn*24,-76); cx.rotate(sgn*(0.5+f));
+      cx.beginPath(); cx.moveTo(0,0);
+      cx.quadraticCurveTo(sgn*54,-30,sgn*66,10);
+      cx.quadraticCurveTo(sgn*34,-4,0,20); cx.closePath();
+      cx.fillStyle=shade; cx.fill(); cx.restore();
+    });
+    cx.restore();
+    fillRR(-22,-90,44,58,16,c);
+    fillRR(-17,-122,34,34,12,c);
+    cx.beginPath(); cx.moveTo(-16,-104); cx.lineTo(-34,-98); cx.lineTo(-16,-94); cx.closePath();
+    cx.fillStyle='#f2c14e'; cx.fill();
+    circle(-6,-108,5,'#1a1622'); circle(9,-108,5,'#1a1622');
+    cx.strokeStyle='#f2c14e'; cx.lineWidth=4; cx.lineCap='round';
+    cx.beginPath(); cx.moveTo(-9,-32); cx.lineTo(-13,2); cx.moveTo(9,-32); cx.lineTo(13,2); cx.stroke();
+  }
+  else if(art==='dragon'){
+    // wings
+    [-1,1].forEach(sgn=>{
+      cx.save(); cx.translate(0,-88); cx.rotate(sgn*(0.35+Math.sin(Anim.t*3)*.2));
+      cx.beginPath(); cx.moveTo(0,0);
+      cx.quadraticCurveTo(sgn*70,-56,sgn*92,-2);
+      cx.quadraticCurveTo(sgn*52,-14,0,26); cx.closePath();
+      cx.fillStyle=shade; cx.fill(); cx.restore();
+    });
+    // tail
+    cx.beginPath(); cx.moveTo(26,-24);
+    cx.quadraticCurveTo(78,-14,66,-64); cx.quadraticCurveTo(72,-26,26,-8);
+    cx.fillStyle=c; cx.fill();
+    fillRR(-28,-38,20,40,6,shade); fillRR(10,-38,20,40,6,shade);
+    fillRR(-32,-100,64,64,18,c);
+    // belly
+    fillRR(-18,-84,36,44,12, shadeCol(c,50));
+    // head
+    cx.save(); cx.translate(-30,-112);
+    fillRR(-26,-24,52,40,14,c);
+    cx.beginPath(); cx.moveTo(-26,-6); cx.lineTo(-52,4); cx.lineTo(-26,12); cx.closePath(); cx.fillStyle=c; cx.fill();
+    // horns
+    cx.beginPath(); cx.moveTo(6,-24); cx.lineTo(16,-46); cx.lineTo(20,-22); cx.closePath(); cx.fillStyle='#f2c14e'; cx.fill();
+    cx.beginPath(); cx.moveTo(-8,-24); cx.lineTo(-2,-44); cx.lineTo(4,-22); cx.closePath(); cx.fill();
+    circle(-10,-8,6,'#1a1622'); circle(-11,-9,2.5,'#f2c14e');
+    cx.restore();
+  }
+  else if(art==='lich'){
+    for(let i=2;i>0;i--){ cx.globalAlpha=.14*i; circle(0,-70,50+i*12,c); }
+    cx.globalAlpha=1;
+    cx.beginPath(); cx.moveTo(-34,-40); cx.lineTo(-24,-108); cx.lineTo(24,-108); cx.lineTo(34,-40);
+    cx.quadraticCurveTo(0,-22,-34,-40); cx.closePath(); cx.fillStyle=c; cx.fill();
+    // hood
+    cx.beginPath(); cx.moveTo(-26,-104); cx.quadraticCurveTo(0,-152,26,-104); cx.quadraticCurveTo(0,-118,-26,-104);
+    cx.fillStyle=shade; cx.fill();
+    fillRR(-16,-130,32,30,11,'#e8e2f0');
+    circle(-7,-116,5,'#1a1622'); circle(7,-116,5,'#1a1622');
+    circle(-7,-116,2.5,'#7cf'); circle(7,-116,2.5,'#7cf');
+    // staff
+    cx.save(); cx.translate(-38,-60); cx.rotate(0.15-lunge*1.6);
+    cx.fillStyle='#4a3a5e'; cx.fillRect(-3,-70,6,86);
+    circle(0,-78,11,'#7cf'); cx.globalAlpha=.4; circle(0,-78,18,'#7cf'); cx.restore();
+  }
+  else if(art==='knightfoe'){
+    fillRR(-20,-32,16,36,5,shade); fillRR(4,-32,16,36,5,shade);
+    fillRR(-26,-80,52,52,11,c);
+    circle(-28,-74,12,shade); circle(28,-74,12,shade);
+    fillRR(-20,-120,40,42,13,c);
+    cx.fillStyle='#1a1622'; cx.fillRect(-15,-108,30,9);
+    cx.fillStyle='#e5484d'; cx.fillRect(-13,-106,10,5); cx.fillRect(3,-106,10,5);
+    cx.beginPath(); cx.moveTo(-6,-122); cx.lineTo(0,-142); cx.lineTo(6,-122); cx.closePath();
+    cx.fillStyle=shade; cx.fill();
+    cx.save(); cx.translate(-34,-62); cx.rotate(0.5-lunge*2.3);
+    cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-6,8,18);
+    cx.fillStyle='#c0c8d4'; cx.fillRect(-12,-10,25,6);
+    cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(0,-70); cx.closePath();
+    cx.fillStyle='#d8e0ec'; cx.fill(); cx.restore();
+  }
+  cx.restore();
+}
+function shadeCol(hex,amt){
+  const n=parseInt(hex.slice(1),16);
+  const r=clamp((n>>16)+amt,0,255), g=clamp(((n>>8)&255)+amt,0,255), b=clamp((n&255)+amt,0,255);
+  return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
+}
+
+/* --- background --- */
+function drawBg(sky){
+  const g=cx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,sky[0]); g.addColorStop(1,sky[1]);
+  cx.fillStyle=g; cx.fillRect(0,0,W,H);
+  // moon
+  cx.save(); cx.globalAlpha=.5; circle(660,74,34,'#fff6d8');
+  cx.globalAlpha=.12; circle(660,74,62,'#fff6d8'); cx.restore();
+  // stars
+  cx.fillStyle='rgba(255,255,255,.5)';
+  for(let i=0;i<28;i++){
+    const x=(i*137)%W, y=(i*61)%180;
+    const tw=.4+.6*Math.abs(Math.sin(Anim.t*1.4+i));
+    cx.globalAlpha=tw*.6; cx.fillRect(x,y,2,2);
+  }
+  cx.globalAlpha=1;
+  // far towers
+  cx.fillStyle='rgba(0,0,0,.35)';
+  [[60,150],[150,190],[300,165],[560,180],[720,155]].forEach(([x,h])=>{
+    cx.fillRect(x,H-120-h,52,h+120);
+    cx.beginPath(); cx.moveTo(x-8,H-120-h); cx.lineTo(x+26,H-150-h); cx.lineTo(x+60,H-120-h); cx.closePath(); cx.fill();
+  });
+  // ground
+  const gg=cx.createLinearGradient(0,H-120,0,H);
+  gg.addColorStop(0,'rgba(0,0,0,.45)'); gg.addColorStop(1,'rgba(0,0,0,.8)');
+  cx.fillStyle=gg; cx.fillRect(0,H-120,W,120);
+  cx.strokeStyle='rgba(255,255,255,.08)'; cx.lineWidth=2;
+  cx.beginPath(); cx.moveTo(0,H-120); cx.lineTo(W,H-120); cx.stroke();
+  // torches
+  [90,710].forEach(x=>{
+    cx.fillStyle='#4a3a2a'; cx.fillRect(x-4,H-190,8,72);
+    const fl=8+Math.sin(Anim.t*8+x)*3;
+    cx.save(); cx.globalAlpha=.85;
+    circle(x,H-196,fl,'#f2c14e'); cx.globalAlpha=.35; circle(x,H-198,fl*2.2,'#e07b39');
+    cx.restore();
+  });
+}
+
+/* --- animation driver --- */
+const Anim = {
+  t:0, raf:null, last:0,
+  pl:0, el:0,           // lunge amounts 0..1
+  ph:0, eh:0,           // hurt flash timers
+  shake:0,
+  floats:[], parts:[],
+  pending:null,
+  reset(){ this.pl=this.el=this.ph=this.eh=this.shake=0; this.floats=[]; this.parts=[]; this.pending=null; },
+  float(x,y,txt,col,big){ this.floats.push({x,y,txt,col,life:1.2,big:!!big}); },
+  burst(x,y,col,n){
+    for(let i=0;i<(n||18);i++){
+      const a=Math.random()*Math.PI*2, sp=60+Math.random()*260;
+      this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-70,life:.5+Math.random()*.5,col,r:2+Math.random()*4});
+    }
+  },
+  strike(who, dmg, crit){
+    // who: 'p' player attacks, 'e' enemy attacks
+    this.pending={who,dmg,crit,fired:false};
+    if(who==='p') this.pl=0.001; else this.el=0.001;
+  },
+  loop(ts){
+    const dt = Math.min(.05,(ts-Anim.last)/1000||.016); Anim.last=ts; Anim.t+=dt;
+    // lunges
+    const step=(v)=> v>0 ? Math.min(1.0001, v+dt*3.2) : 0;
+    if(Anim.pl>0){ Anim.pl=step(Anim.pl); if(Anim.pl>=1) Anim.pl=0; }
+    if(Anim.el>0){ Anim.el=step(Anim.el); if(Anim.el>=1) Anim.el=0; }
+    Anim.ph=Math.max(0,Anim.ph-dt); Anim.eh=Math.max(0,Anim.eh-dt);
+    Anim.shake=Math.max(0,Anim.shake-dt*2.6);
+
+    // impact moment
+    const P=Anim.pending;
+    if(P && !P.fired){
+      const prog = P.who==='p' ? Anim.pl : Anim.el;
+      if(prog>=.42){
+        P.fired=true;
+        const tx = P.who==='p' ? 560 : 250;
+        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?30:18);
+        Anim.float(tx, H-230, (P.crit?'CRIT ':'')+'-'+P.dmg, P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
+        Anim.shake = P.crit?1.4:.9;
+        if(P.who==='p'){ Anim.eh=.35; Sfx.hit(); } else { Anim.ph=.35; Sfx.hurt(); }
+      }
+    }
+
+    // particles / floats
+    Anim.parts.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=620*dt; p.life-=dt; });
+    Anim.parts=Anim.parts.filter(p=>p.life>0);
+    Anim.floats.forEach(f=>{ f.y-=52*dt; f.life-=dt; });
+    Anim.floats=Anim.floats.filter(f=>f.life>0);
+
+    Anim.draw();
+    Anim.raf=requestAnimationFrame(Anim.loop);
+  },
+  draw(){
+    const B=Battle;
+    cx.save();
+    if(Anim.shake>0){ cx.translate((Math.random()-.5)*Anim.shake*16,(Math.random()-.5)*Anim.shake*16); }
+    drawBg(B.realm ? B.realm.sky : ['#22183a','#0b0812']);
+    const gy = H-120;
+    drawKnight(205, gy, 1.32, Anim.pl>0?Math.sin(Anim.pl*Math.PI):0, Anim.ph, B.over==='lose');
+    if(B.foe) drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
+                      Anim.el>0?Math.sin(Anim.el*Math.PI):0, Anim.eh, B.over==='win');
+    // particles
+    Anim.parts.forEach(p=>{ cx.globalAlpha=clamp(p.life,0,1); circle(p.x,p.y,p.r,p.col); });
+    cx.globalAlpha=1;
+    // floats
+    Anim.floats.forEach(f=>{
+      cx.globalAlpha=clamp(f.life,0,1);
+      cx.font=\`bold \${f.big?40:30}px "Trebuchet MS",sans-serif\`;
+      cx.textAlign='center'; cx.lineWidth=6; cx.strokeStyle='rgba(0,0,0,.7)';
+      cx.strokeText(f.txt,f.x,f.y); cx.fillStyle=f.col; cx.fillText(f.txt,f.x,f.y);
+    });
+    cx.globalAlpha=1;
+    cx.restore();
+  },
+  go(){ if(!this.raf){ this.last=performance.now(); this.raf=requestAnimationFrame(this.loop); } },
+  stop(){ if(this.raf){ cancelAnimationFrame(this.raf); this.raf=null; } }
+};
+
+/* ------------------------------- questions -------------------------------- */
+function buildQuestion(key, diff){
+  const gen = GEN[key];
+  const p = gen(diff||1);
+  const ch=[p.a];
+  for(const x of R.shuffle(p.d)) if(ch.length<4 && !ch.includes(x)) ch.push(x);
+  let guard=0;
+  while(ch.length<4 && guard++<40){ const x=String(R.i(-25,25)); if(!ch.includes(x)) ch.push(x); }
+  return {key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, choices:R.shuffle(ch)};
+}
+
+/* -------------------------------- battle ---------------------------------- */
+const Battle = {
+  realm:null, foe:null, ri:0, fi:0,
+  ehp:0, emax:0, combo:0, over:null,
+  qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
+
+  begin(ri, fi){
+    this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
+    const f=this.realm.foes[fi];
+    this.foe=f; this.emax=f.hp; this.ehp=f.hp;
+    this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
+    Anim.reset();
+    UI.go('s-battle');
+    fitCanvas(); Anim.go();
+    this.updateBars();
+    this.nextQuestion();
+  },
+
+  updateBars(){
+    const g=Game.s;
+    document.getElementById('pHp').style.width  = clamp(g.hp/g.maxHp*100,0,100)+'%';
+    document.getElementById('eHp').style.width  = clamp(this.ehp/this.emax*100,0,100)+'%';
+    document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
+    document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
+    document.getElementById('foeName').textContent = (this.foe.boss?'👑 ':'')+this.foe.nm;
+    document.getElementById('comboTxt').textContent = \`Combo ×\${(1+this.combo*.15).toFixed(2)}  ·  streak \${this.combo}\`;
+    this.renderPowers();
+  },
+
+  renderPowers(){
+    const bar=document.getElementById('powerbar'); const it=Game.s.items;
+    bar.innerHTML='';
+    const add=(k,label,enabled,fn)=>{
+      const d=document.createElement('div');
+      d.className='pw'+(enabled?'':' off'); d.innerHTML=label;
+      d.onclick=fn; bar.appendChild(d);
+    };
+    add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
+    add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered, ()=>Battle.useInsight());
+    add('rage',   \`\${ITEMS.rage.ic} Rune ×\${it.rage}\`, it.rage>0 && !this.rage, ()=>Battle.useRage());
+    if(it.feather>0) add('feather', \`\${ITEMS.feather.ic} Feather ×\${it.feather}\`, false, ()=>{});
+  },
+
+  usePotion(){
+    const g=Game.s; if(g.items.potion<1) return;
+    g.items.potion--; const heal=Math.round(g.maxHp*.45);
+    g.hp=Math.min(g.maxHp,g.hp+heal);
+    Anim.float(220,H-240,'+'+heal,'#7bffa8'); Sfx.good();
+    Game.save(); this.updateBars();
+  },
+  useInsight(){
+    const g=Game.s; if(g.items.insight<1||this.answered) return;
+    g.items.insight--;
+    const btns=[...document.querySelectorAll('#choices .choice')].filter(b=>b.dataset.correct!=='1' && !b.classList.contains('faded'));
+    R.shuffle(btns).slice(0,2).forEach(b=>b.classList.add('faded'));
+    Sfx.coin(); Game.save(); this.renderPowers();
+  },
+  useRage(){
+    const g=Game.s; if(g.items.rage<1||this.rage) return;
+    g.items.rage--; this.rage=true;
+    Anim.float(220,H-260,'RAGE!','#ff9c3d',true); Sfx.good();
+    Game.save(); this.renderPowers();
+  },
+
+  nextQuestion(){
+    if(this.over) return;
+    this.answered=false;
+    const ex=document.getElementById('explain');
+    ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
+    const pool=this.realm.pool;
+    let key=R.pick(pool);
+    // bosses occasionally reach back into earlier realms
+    if(this.foe.boss && R.chance(.3) && this.ri>0) key=R.pick(REALMS[R.i(0,this.ri-1)].pool);
+    const diff = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+    this.cur = buildQuestion(key, diff);
+    document.getElementById('qtopic').textContent = this.cur.topic;
+    document.getElementById('qbox').innerHTML = this.cur.q;
+    const box=document.getElementById('choices'); box.innerHTML='';
+    this.cur.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===this.cur.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+    this.qStart=performance.now();
+    this.startTimer();
+    this.renderPowers();
+  },
+
+  startTimer(){
+    clearInterval(this.timer);
+    const bar=document.getElementById('timeBar');
+    const LIMIT=22000;
+    this.timer=setInterval(()=>{
+      const el=performance.now()-this.qStart;
+      const pct=clamp(100-el/LIMIT*100,0,100);
+      bar.style.width=pct+'%';
+      document.getElementById('speedTxt').textContent =
+        el<7000 ? '⚡ Swift strike ×1.5' : el<14000 ? '✦ Steady strike ×1.2' : 'Measured strike ×1.0';
+      if(pct<=0) clearInterval(this.timer);
+    },100);
+  },
+
+  answer(btn, choice){
+    if(this.answered) return;
+    this.answered=true; clearInterval(this.timer);
+    const ok = choice===this.cur.a;
+    const el = performance.now()-this.qStart;
+    document.querySelectorAll('#choices .choice').forEach(b=>{
+      b.onclick=null;
+      if(b.dataset.correct==='1') b.classList.add('right');
+      else if(b===btn) b.classList.add('wrong');
+      else b.classList.add('faded');
+    });
+    Game.recordAnswer(this.cur.key, ok);
+
+    if(ok){
+      this.combo++;
+      Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
+      const w=Game.weapon();
+      const speed = el<7000?1.5 : el<14000?1.2 : 1.0;
+      const comboMul = 1 + Math.min(this.combo,7)*.15;
+      const crit = R.chance(w.crit + this.combo*0.02);
+      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1);
+      dmg = Math.round(dmg * (0.9+Math.random()*0.2));
+      this.rage=false;
+      this.ehp=Math.max(0,this.ehp-dmg);
+      Anim.strike('p',dmg,crit);
+      Sfx.good();
+    } else {
+      this.combo=0;
+      const def=Game.armor().def;
+      let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
+      Game.s.hp=Math.max(0,Game.s.hp-dmg);
+      Anim.strike('e',dmg,false);
+      Sfx.bad();
+    }
+    Game.save();
+    setTimeout(()=>this.updateBars(),420);
+    this.showExplain(ok);
+  },
+
+  showExplain(ok){
+    const e=document.getElementById('explain');
+    e.style.display='block';
+    e.innerHTML =
+      \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${ok?'⚔️ A clean strike!':'🩸 The blow lands on you.'}</div>\`+
+      (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${this.cur.a}</b>.</div>\`)+
+      \`<div>\${this.cur.ex}</div>\`+
+      \`<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>\`;
+    const btn=document.getElementById('contBtn');
+    btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
+    e.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },
+
+  afterTurn(){
+    if(this.over) return;                       // battle already resolved
+    if(this.ehp<=0){ this.win(); return; }
+    if(Game.s.hp<=0){
+      if(Game.s.items.feather>0 && !this.usedFeather){
+        Game.s.items.feather--; this.usedFeather=true;
+        Game.s.hp=Math.round(Game.s.maxHp*.5);
+        Anim.float(220,H-250,'REVIVED','#ffd166',true);
+        Anim.burst(200,H-190,'#ffd166',34); Sfx.win();
+        Game.save(); this.updateBars();
+        document.getElementById('explain').style.display='none';
+        this.nextQuestion(); return;
+      }
+      this.lose(); return;
+    }
+    this.nextQuestion();
+  },
+
+  win(){
+    if(this.over) return;
+    this.over='win'; clearInterval(this.timer);
+    Anim.burst(610,H-190,this.foe.col,42); Sfx.win();
+    const g=Game.s;
+    const key=this.ri+':'+this.fi;
+    const first=!g.cleared[key];
+    g.cleared[key]=true; g.stats.wins++;
+    const gold=Math.round(this.foe.gold*(first?1:0.45));
+    const xp=Math.round(this.foe.xp*(first?1:0.4));
+    g.gold+=gold;
+    const ups=Game.gainXp(xp);
+
+    // loot
+    let loot=null;
+    if(R.chance(this.foe.boss?1:.42)){
+      const roll=Math.random();
+      if(roll<.5){ g.items.potion++; loot=\`\${ITEMS.potion.ic} a Healing Draught\`; }
+      else if(roll<.78){ g.items.insight++; loot=\`\${ITEMS.insight.ic} a Sage's Insight\`; }
+      else if(roll<.95){ g.items.rage++; loot=\`\${ITEMS.rage.ic} a Berserker Rune\`; }
+      else { g.items.feather++; loot=\`\${ITEMS.feather.ic} a Phoenix Feather\`; }
+    }
+    // boss unlocks the next realm
+    let unlocked=null;
+    if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
+    Game.save();
+
+    setTimeout(()=>{
+      UI.go('s-result');
+      document.getElementById('resultBody').innerHTML=\`
+        <div class="center crest">🏆</div>
+        <div class="panel center">
+          <h1 style="font-size:22px">Victory!</h1>
+          <div class="sub" style="margin-top:6px">\${this.foe.nm} falls before your blade.</div>
+          <hr>
+          <div style="font-size:16px;font-weight:800;line-height:1.9">
+            <div class="coin">+\${gold} gold</div>
+            <div style="color:var(--blue)">+\${xp} experience</div>
+            \${loot?\`<div style="color:var(--purple)">Looted \${loot}</div>\`:''}
+            \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
+            \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
+          </div>
+          <hr>
+          <div class="small">Longest streak this battle: \${g.stats.best}</div>
+        </div>
+        <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
+        <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
+        <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
+      Anim.stop();
+    },1200);
+  },
+
+  lose(){
+    if(this.over) return;
+    this.over='lose'; clearInterval(this.timer); Sfx.hurt();
+    const g=Game.s;
+    const lost=Math.round(g.gold*.15);
+    g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
+    Game.save();
+    setTimeout(()=>{
+      UI.go('s-result');
+      document.getElementById('resultBody').innerHTML=\`
+        <div class="center crest">💀</div>
+        <div class="panel center">
+          <h1 style="font-size:22px;color:var(--red)">You have fallen</h1>
+          <div class="sub" style="margin-top:6px">\${this.foe.nm} stands over your shield. You are dragged back to camp.</div>
+          <hr>
+          <div style="font-weight:800">−\${lost} gold lost in the retreat</div>
+          <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+        </div>
+        <button class="btn gold" onclick="Battle.begin(\${this.ri},\${this.fi})">⚔️ Try again</button>
+        <button class="btn" onclick="UI.go('s-tome')">📖 Study the Tome</button>
+        <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>\`;
+      Anim.stop();
+    },900);
+  },
+
+  flee(){
+    clearInterval(this.timer); this.over='flee'; Anim.stop();
+    UI.go('s-map');
+    UI.toast('🏃 You slip away into the trees.');
+  }
+};
+
+/* ---------------------------------- UI ------------------------------------ */
+const UI = {
+  hist:[],
+  go(id, noPush){
+    const cur=document.querySelector('.screen.on');
+    if(cur && cur.id!==id && !noPush) this.hist.push(cur.id);
+    document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
+    window.scrollTo(0,0);
+    if(id!=='s-battle') Anim.stop();
+    if(id==='s-map') this.renderMap();
+    if(id==='s-shop') this.renderShop();
+    if(id==='s-gear') this.renderGear();
+    if(id==='s-tome') this.renderTome();
+    if(id==='s-train') Train.renderPick();
+  },
+  back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
+  toast(msg){
+    const d=document.createElement('div'); d.className='toast'; d.innerHTML=msg;
+    document.body.appendChild(d);
+    setTimeout(()=>{ d.style.transition='opacity .3s'; d.style.opacity=0; setTimeout(()=>d.remove(),320); },1800);
+  },
+  hud(){
+    const g=Game.s;
+    const pct=Math.round(g.xp/Game.xpNeeded()*100);
+    return \`<span>🛡️ Lv \${g.lvl}</span><span>❤️ \${Math.round(g.hp)}/\${g.maxHp}</span>
+            <span class="sp"></span><span class="coin">🪙 \${g.gold}</span><span class="small">XP \${pct}%</span>\`;
+  },
+  renderMap(){
+    if(!Game.s) return;
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp,Game.s.maxHp);
+    ['hud','hud2','hud3'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=this.hud();});
+    const g=Game.s, list=document.getElementById('mapList');
+    let out='';
+    REALMS.forEach((r,ri)=>{
+      const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
+      const unlocked = ri===0 || !!g.cleared[prevBossKey];
+      out+=\`<div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
+            <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}</div>
+            <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div>\`;
+      r.foes.forEach((f,fi)=>{
+        const done=!!g.cleared[ri+':'+fi];
+        const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
+        const open = unlocked && prevDone;
+        out+=\`<div class="node \${open?'':'locked'} \${done?'done':''}" onclick="Battle.begin(\${ri},\${fi})">
+          <div class="ico" style="font-size:24px">\${f.boss?'👑':'👾'}</div>
+          <div style="flex:1">
+            <div class="nm">\${f.nm} \${done?'<span class="tag g">cleared</span>':''}\${f.boss?'<span class="tag r">boss</span>':''}</div>
+            <div class="dt">❤️ \${f.hp} · ⚔️ \${f.atk} · 🪙 \${f.gold}</div>
+          </div>
+          <div style="font-size:20px;color:var(--dim)">\${open?'▶':'🔒'}</div>
+        </div>\`;
+      });
+    });
+    list.innerHTML=out;
+  },
+  renderShop(){
+    const g=Game.s, out=[];
+    const buy=(kind,id,cost,owned)=>\`onclick="Shop.buy('\${kind}','\${id}',\${cost})"\`;
+    out.push('<div class="panel"><h2>⚔️ Weapons</h2>');
+    WEAPONS.forEach(w=>{
+      const owned=!!g.owned[w.id], eq=g.weapon===w.id;
+      out.push(\`<div class="item \${eq?'equipped':''}">
+        <div class="ic">\${w.ic}</div>
+        <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">\${w.ds}</div>
+          <div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div>
+        \${eq?'<span class="pill">equipped</span>':
+          owned?\`<button class="btn sm" style="width:auto" onclick="Shop.equip('w','\${w.id}')">Equip</button>\`:
+          \`<button class="btn sm gold" style="width:auto" \${buy('w',w.id,w.cost)}>🪙 \${w.cost}</button>\`}
+      </div>\`);
+    });
+    out.push('</div><div class="panel"><h2>🛡️ Armour</h2>');
+    ARMORS.forEach(a=>{
+      const owned=!!g.owned[a.id], eq=g.armor===a.id;
+      out.push(\`<div class="item \${eq?'equipped':''}">
+        <div class="ic">\${a.ic}</div>
+        <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">\${a.ds}</div>
+          <div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div>
+        \${eq?'<span class="pill">equipped</span>':
+          owned?\`<button class="btn sm" style="width:auto" onclick="Shop.equip('a','\${a.id}')">Equip</button>\`:
+          \`<button class="btn sm gold" style="width:auto" \${buy('a',a.id,a.cost)}>🪙 \${a.cost}</button>\`}
+      </div>\`);
+    });
+    out.push('</div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>');
+    Object.entries(ITEMS).forEach(([k,it])=>{
+      out.push(\`<div class="item">
+        <div class="ic">\${it.ic}</div>
+        <div style="flex:1"><div class="nm">\${it.nm} <span class="tag">held ×\${g.items[k]}</span></div>
+        <div class="ds">\${it.ds}</div></div>
+        <button class="btn sm gold" style="width:auto" onclick="Shop.buyItem('\${k}',\${it.cost})">🪙 \${it.cost}</button>
+      </div>\`);
+    });
+    out.push('</div>');
+    document.getElementById('shopList').innerHTML=out.join('');
+    document.getElementById('hud2').innerHTML=this.hud();
+  },
+  renderGear(){
+    const g=Game.s, w=Game.weapon(), a=Game.armor();
+    const acc=g.stats.correct+g.stats.wrong;
+    const rows=Object.entries(g.topicStats).sort((x,y)=>(y[1].c+y[1].w)-(x[1].c+x[1].w));
+    document.getElementById('hud3').innerHTML=this.hud();
+    document.getElementById('gearList').innerHTML=\`
+      <div class="panel"><h2>🎒 Your Gear</h2>
+        <div class="item equipped"><div class="ic">\${w.ic}</div>
+          <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div></div>
+        <div class="item equipped"><div class="ic">\${a.ic}</div>
+          <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div></div>
+        <hr>
+        <div class="row" style="flex-wrap:wrap">
+          \${Object.entries(ITEMS).map(([k,it])=>\`<span class="pill">\${it.ic} \${g.items[k]}</span>\`).join('')}
+        </div>
+      </div>
+      <div class="panel"><h2>📜 Chronicle</h2>
+        <div class="sub">Battles won: <b>\${g.stats.wins}</b> · Riddles solved: <b>\${g.stats.correct}</b> ·
+        Accuracy: <b>\${acc?Math.round(g.stats.correct/acc*100):0}%</b> · Best streak: <b>\${g.stats.best}</b></div>
+        <hr>
+        <div class="small" style="margin-bottom:6px">Where you are strong and where you bleed:</div>
+        \${rows.length?rows.map(([k,v])=>{
+          const tot=v.c+v.w, p=Math.round(v.c/tot*100);
+          const col=p>=80?'var(--green)':p>=55?'var(--gold)':'var(--red)';
+          return \`<div style="margin:5px 0">
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>\${TOPIC_LABEL[k]||k}</span><span style="color:\${col}">\${p}% <span class="small">(\${tot})</span></span></div>
+            <div class="track thin"><div class="fill" style="width:\${p}%;background:\${col}"></div></div></div>\`;
+        }).join(''):'<div class="small">No riddles answered yet.</div>'}
+      </div>\`;
+  },
+  renderTome(){
+    document.getElementById('tomeList').innerHTML =
+      TOME.map(p=>\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">\${p.t}</h2>
+        <div class="sub" style="margin-top:6px;font-size:14px">\${p.b}</div></div>\`).join('');
+  }
+};
+
+const Shop = {
+  buy(kind,id,cost){
+    const g=Game.s;
+    if(g.owned[id]) return;
+    if(g.gold<cost){ UI.toast('Not enough gold, knight.'); return; }
+    g.gold-=cost; g.owned[id]=1;
+    if(kind==='w') g.weapon=id;
+    else { g.armor=id; g.maxHp=Game.maxHp(); g.hp=Math.min(g.maxHp, g.hp + ARMORS.find(a=>a.id===id).hp); }
+    Sfx.coin(); Game.save(); UI.renderShop();
+    UI.toast('Purchased and equipped.');
+  },
+  equip(kind,id){
+    const g=Game.s;
+    if(kind==='w') g.weapon=id;
+    else { g.armor=id; g.maxHp=Game.maxHp(); g.hp=Math.min(g.hp,g.maxHp); }
+    Sfx.coin(); Game.save(); UI.renderShop();
+  },
+  buyItem(k,cost){
+    const g=Game.s;
+    if(g.gold<cost){ UI.toast('Not enough gold, knight.'); return; }
+    g.gold-=cost; g.items[k]++; Sfx.coin(); Game.save(); UI.renderShop();
+    UI.toast(\`\${ITEMS[k].ic} \${ITEMS[k].nm} acquired.\`);
+  }
+};
+
+/* ------------------------------- training --------------------------------- */
+const Train = {
+  key:null, c:0, w:0, cur:null,
+  renderPick(){
+    document.getElementById('trainRun').style.display='none';
+    document.getElementById('trainPick').style.display='';
+    document.getElementById('trainBack').style.display='';
+    const groups=[
+      ['Vectors',['vecAdd','vecScale','vecCombo','dot','mag','orth']],
+      ['Matrices',['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','rank','eigen2','cross','proj']],
+      ['Limits & Derivatives',['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','secondDeriv','critical','partial']],
+      ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area']]
+    ];
+    document.getElementById('trainPick').innerHTML = groups.map(([nm,keys])=>
+      \`<div class="panel"><h2 style="font-size:15px;color:var(--gold)">\${nm}</h2>
+        \${keys.map(k=>\`<button class="btn sm" onclick="Train.start('\${k}')">\${TOPIC_LABEL[k]}</button>\`).join('')}
+      </div>\`).join('');
+  },
+  start(k){
+    this.key=k; this.c=0; this.w=0;
+    document.getElementById('trainPick').style.display='none';
+    document.getElementById('trainBack').style.display='none';
+    document.getElementById('trainRun').style.display='';
+    this.next();
+  },
+  next(){
+    document.getElementById('tExplain').style.display='none';
+    this.cur=buildQuestion(this.key, R.i(1,3));
+    document.getElementById('tTopic').textContent=this.cur.topic;
+    document.getElementById('tQ').innerHTML=this.cur.q;
+    const box=document.getElementById('tChoices'); box.innerHTML='';
+    this.cur.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===this.cur.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+    document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
+  },
+  answer(btn,choice){
+    const ok=choice===this.cur.a;
+    document.querySelectorAll('#tChoices .choice').forEach(b=>{
+      b.onclick=null;
+      if(b.dataset.correct==='1') b.classList.add('right');
+      else if(b===btn) b.classList.add('wrong'); else b.classList.add('faded');
+    });
+    if(ok){ this.c++; Sfx.good(); } else { this.w++; Sfx.bad(); }
+    if(Game.s){ Game.recordAnswer(this.cur.key, ok); Game.save(); }
+    const e=document.getElementById('tExplain');
+    e.style.display='block';
+    e.innerHTML=\`<div style="font-weight:900;color:\${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
+        \${ok?'Correct.':'Not quite — the answer was <span style="color:var(--gold)">'+this.cur.a+'</span>.'}</div>
+      <div>\${this.cur.ex}</div>
+      <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>\`;
+    document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
+  },
+  quit(){ this.renderPick(); }
+};
+
+/* -------------------------------- boot ------------------------------------ */
+(function boot(){
+  if(Game.load()){
+    document.getElementById('btnContinue').style.display='';
+    document.getElementById('resetRow').style.display='';
+  }
+  fitCanvas();
+  document.addEventListener('touchstart',()=>Sfx.init(),{once:true});
+  document.addEventListener('click',()=>Sfx.init(),{once:true});
+  // prevent iOS double-tap zoom on rapid answering
+  let lastTouch=0;
+  document.addEventListener('touchend',e=>{
+    const now=Date.now();
+    if(now-lastTouch<=300){ e.preventDefault(); }
+    lastTouch=now;
+  },{passive:false});
+})();
+</script>
+</body>
+</html>
+`;
+
+const SAVE_FILE = "eigenrealm-save.json";
+const fm = FileManager.local();
+const savePath = fm.joinPath(fm.documentsDirectory(), SAVE_FILE);
+
+// Pull any previously saved progress off disk so it survives app restarts.
+let restored = "null";
+if (fm.fileExists(savePath)) {
+  try { restored = fm.readString(savePath) || "null"; } catch (e) { restored = "null"; }
+}
+
+// Bridge: seed localStorage before the game boots, and hand progress back
+// to Scriptable whenever it changes.
+const BRIDGE = `
+(function(){
+  var KEY = "eigenrealm.v1";
+  var seed = ${JSON.stringify(restored)};
+  try {
+    if (seed && seed !== "null" && !localStorage.getItem(KEY)) {
+      localStorage.setItem(KEY, seed);
+    }
+  } catch(e) {}
+  // Mirror every write back out so the native side can persist it.
+  window.__lastSave = null;
+  setInterval(function(){
+    try { window.__lastSave = localStorage.getItem(KEY); } catch(e) {}
+  }, 1000);
+})();
+`;
+
+const wv = new WebView();
+await wv.loadHTML(HTML);
+await wv.evaluateJavaScript(BRIDGE, false);
+await wv.present(true);
+
+// After the player closes the view, write their progress to disk.
+try {
+  const finalSave = await wv.evaluateJavaScript(
+    'completion(localStorage.getItem("eigenrealm.v1"))', true
+  );
+  if (finalSave) fm.writeString(savePath, finalSave);
+} catch (e) {
+  // Nothing to persist — the player may have closed before any progress.
+}
+
+Script.complete();
