@@ -48,7 +48,6 @@
   .eyebrow{font:600 .72rem/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
     letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3);}
 
-  /* ---- masthead ---- */
   .mast{border-bottom:2px solid var(--ink); padding-bottom:1.6rem; margin-bottom:2.2rem;
     display:flex; flex-direction:column; gap:.9rem;}
   .lede{font-size:clamp(1.02rem,2.1vw,1.18rem); color:var(--ink-2); max-width:60ch;}
@@ -59,54 +58,49 @@
     font-variant-numeric:tabular-nums; letter-spacing:-.02em;}
   .fact span{font-size:.76rem; color:var(--ink-3); letter-spacing:.03em;}
   .fact.grow b{color:var(--verdigris);}
+  .fact.key b{color:var(--amber);}
 
-  /* ---- sections ---- */
   section{margin-top:3.4rem;}
   .shead{display:flex; align-items:baseline; gap:1rem; padding-bottom:.7rem;
     border-bottom:1px solid var(--rule); margin-bottom:1.4rem; flex-wrap:wrap;}
   .shead .num{font:600 .8rem/1 ui-monospace,SFMono-Regular,Menlo,monospace;
     color:var(--ink-3); letter-spacing:.1em; padding-top:.35rem;}
   .stack{display:flex; flex-direction:column; gap:1rem;}
-  .stack-lg{display:flex; flex-direction:column; gap:2.2rem;}
 
-  /* ---- workstream cards, hairline not boxed ---- */
-  .streams{display:grid; gap:1.6rem; grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));}
+  .streams{display:grid; gap:1.6rem; grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));}
   .stream{display:flex; flex-direction:column; gap:.55rem; padding-top:.9rem;
     border-top:3px solid var(--ink);}
   .stream.b{border-top-color:var(--verdigris);}
   .stream.c{border-top-color:var(--crimson);}
+  .stream.d{border-top-color:var(--amber);}
   .stream .k{font:600 .72rem/1 ui-monospace,Menlo,monospace; letter-spacing:.12em;
     text-transform:uppercase; color:var(--ink-3);}
   .stream p{color:var(--ink-2); font-size:.94rem;}
 
-  /* ---- tables ---- */
   .scroll{overflow-x:auto; -webkit-overflow-scrolling:touch;}
-  table{border-collapse:collapse; width:100%; min-width:34rem; font-size:.9rem;}
+  table{border-collapse:collapse; width:100%; min-width:32rem; font-size:.9rem;}
   th{text-align:left; font:600 .72rem/1.4 ui-monospace,Menlo,monospace;
     letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3);
     padding:0 .9rem .55rem 0; border-bottom:1px solid var(--rule); white-space:nowrap;}
-  td{padding:.6rem .9rem .6rem 0; border-bottom:1px solid var(--rule-2);
-    vertical-align:top;}
+  td{padding:.6rem .9rem .6rem 0; border-bottom:1px solid var(--rule-2); vertical-align:top;}
   td:last-child,th:last-child{padding-right:0;}
   tbody tr:last-child td{border-bottom:none;}
   .num-col{font-variant-numeric:tabular-nums; white-space:nowrap;}
 
-  /* ---- phase rail ---- */
   .phase{display:grid; grid-template-columns:5.5rem 1fr; gap:0 1.6rem;
     padding:1.3rem 0; border-bottom:1px solid var(--rule-2);}
   .phase:last-child{border-bottom:none;}
   .pcode{font:600 .78rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
     letter-spacing:.08em; color:var(--ink-3); display:flex; flex-direction:column; gap:.3rem;}
   .pcode .id{color:var(--ink); font-size:1rem;}
+  .pcode .tag{color:var(--amber);}
   .pbody{display:flex; flex-direction:column; gap:.55rem;}
-  .pbody h3{margin-bottom:.1rem;}
   .pbody p{color:var(--ink-2); font-size:.95rem;}
   .gate{font-size:.86rem; color:var(--ink); background:var(--sunk);
     border-left:2px solid var(--verdigris); padding:.5rem .8rem; border-radius:0 3px 3px 0;}
   .gate b{font:600 .7rem/1.4 ui-monospace,Menlo,monospace; letter-spacing:.1em;
     text-transform:uppercase; color:var(--ink-3); display:block; margin-bottom:.15rem;}
 
-  /* ---- risk list ---- */
   .risk{display:grid; grid-template-columns:auto 1fr; gap:.2rem 1rem; padding:.95rem 0;
     border-bottom:1px solid var(--rule-2);}
   .risk:last-child{border-bottom:none;}
@@ -126,6 +120,7 @@
   .note{background:var(--surface); border:1px solid var(--rule);
     padding:1.1rem 1.25rem; border-radius:4px; display:flex; flex-direction:column; gap:.5rem;}
   .note .eyebrow{color:var(--crimson);}
+  .note.warm .eyebrow{color:var(--amber);}
 
   .decide{display:grid; grid-template-columns:auto 1fr; gap:.75rem 1rem; align-items:baseline;}
   .decide .q{font:600 .78rem/1.5 ui-monospace,Menlo,monospace; color:var(--ink-3);}
@@ -134,7 +129,7 @@
   a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--verdigris); outline-offset:2px;}
   @media (max-width:34rem){
     .phase{grid-template-columns:1fr; gap:.5rem;}
-    .pcode{flex-direction:row; gap:.6rem; align-items:baseline;}
+    .pcode{flex-direction:row; gap:.6rem; align-items:baseline; flex-wrap:wrap;}
     .decide{grid-template-columns:1fr; gap:.2rem 0;}
     .decide .q{margin-top:.6rem;}
   }
@@ -146,21 +141,22 @@
   <header class="mast">
     <div class="eyebrow">Knights of the Eigenrealm — build plan</div>
     <h1>Eigenrealm Expansion</h1>
-    <p class="lede">Three workstreams that move the game from a mechanically rich quiz over
-      half a first course, to something that actually teaches linear algebra and calculus:
-      more of the subject, the geometry drawn rather than described, and problems that run
-      several steps deep.</p>
+    <p class="lede">Four workstreams that move the game from a mechanically rich quiz over
+      half a first course to something that genuinely teaches: more of the subject, the
+      geometry drawn rather than described, problems that run several steps deep — and a
+      fourth stream that keeps the first three from making the game worse at its job.</p>
     <div class="facts">
       <div class="fact"><b>38 → 70</b><span>problem generators</span></div>
       <div class="fact grow"><b>5 → 8</b><span>realms</span></div>
       <div class="fact grow"><b>0 → 6</b><span>figure kinds</span></div>
       <div class="fact grow"><b>0 → 10</b><span>multi-step chains</span></div>
-      <div class="fact"><b>7</b><span>phases, in order</span></div>
+      <div class="fact key"><b>25% → 0%</b><span>guess floor</span></div>
+      <div class="fact"><b>9</b><span>phases, in order</span></div>
     </div>
   </header>
 
   <section>
-    <div class="shead"><span class="num">01</span><h2>The three workstreams</h2></div>
+    <div class="shead"><span class="num">01</span><h2>The four workstreams</h2></div>
     <div class="streams">
       <div class="stream a">
         <span class="k">A — Content</span>
@@ -172,25 +168,79 @@
       <div class="stream b">
         <span class="k">B — Figures</span>
         <h3>Draw the geometry</h3>
-        <p>A declarative figure spec on any generator, rendered to a small canvas beside
-          the question — arrows, areas, tangents, transformed grids. The largest single
-          gain in intuition, especially for linear algebra.</p>
+        <p>A declarative figure spec on any generator, rendered beside the question —
+          arrows, areas, tangents, transformed grids. The largest single gain in
+          intuition, especially for linear algebra.</p>
       </div>
       <div class="stream c">
         <span class="k">C — Chains</span>
         <h3>Teach procedure, not just recall</h3>
-        <p>Boss fights pose a linked sequence — differentiate, solve, classify — where each
-          step feeds the next and the completed chain reads back as a worked solution.</p>
+        <p>Boss fights pose a linked sequence — differentiate, solve, classify — where
+          each step feeds the next and the finished chain reads back as a worked
+          solution.</p>
+      </div>
+      <div class="stream d">
+        <span class="k">D — Learning</span>
+        <h3>Keep fun and learning aligned</h3>
+        <p>Remove the guess floor, teach before testing, and quarantine the spectacle
+          away from the moment of thought. Carries the most learning weight of the
+          four, and the least new content.</p>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">02</span><h2>The shared spine</h2></div>
+    <div class="shead"><span class="num">02</span><h2>Where fun and learning diverge</h2></div>
     <div class="col stack">
-      <p>All three workstreams touch the same contract, so it changes once, first. A
-        generator currently returns <code>{topic, q, a, d, ex}</code>. It gains two optional
-        fields, and a parallel collection appears for chains.</p>
+      <p>Workstreams A–C came from asking what would make the game better. Workstream D
+        came from asking whether that was the same question as what would make it teach
+        better. It mostly isn't, and in three specific places the current build is working
+        against itself.</p>
+      <div class="note warm">
+        <span class="eyebrow">The structural tension</span>
+        <p>Interesting-but-irrelevant graphics and sound reliably <b>reduce</b> learning
+          from instructional material, because they compete for the working memory the
+          maths needs. Screen shake during a determinant problem is load, not help. The
+          entire "prettier and juicier" direction is textbook seductive detail.</p>
+      </div>
+      <p>The resolution is not to drop the spectacle — a tool you actually open beats a
+        better tool you don't, and adherence is the real failure mode of self-study. The
+        resolution is to <b>separate them in time</b>.</p>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Phase of a turn</th><th>Treatment</th></tr></thead>
+          <tbody>
+            <tr><td>Question on screen, you are thinking</td>
+              <td><b>Calm.</b> No shake, no particles, no combo ticker, no countdown bar.
+                Nothing moving but the idle breathing.</td></tr>
+            <tr><td>Answer submitted, resolution playing</td>
+              <td><b>Everything.</b> Hit-stop, flash, slow-motion, coins, banners, rising
+                streak tones — the full reward, in the window where it costs nothing.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 style="margin-top:.6rem">Three mechanics to fix, not add</h3>
+      <ul>
+        <li><b>The speed bonus rewards guessing.</b> ×1.5 under seven seconds pushes
+          pattern-matching over reasoning, and time pressure specifically degrades maths
+          performance. Fix: apply it <em>only</em> to topics already mastered, where
+          fluency is the honest goal, and switch it off on weak ones. The mastery model
+          to do that already exists.</li>
+        <li><b>Easing weak topics removes the struggle.</b> <code>adjustDiff</code> drops
+          to tier 1 below 0.45 mastery. Comfort is where learning stops. Fix: hold weak
+          topics at tier 2 and offer a hint instead.</li>
+        <li><b>The spacing is not spaced.</b> <code>dueIn</code> counts <em>questions</em>,
+          not days — so a topic revisited twelve questions later in the same sitting
+          counts as spaced repetition. Fix: store a timestamp and schedule in days.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="num">03</span><h2>The shared spine</h2></div>
+    <div class="col stack">
+      <p>All four workstreams touch the same contract, so it changes once, first. A
+        generator currently returns <code>{topic, q, a, d, ex}</code>.</p>
       <div class="scroll">
         <table>
           <thead><tr><th>Field</th><th>Shape</th><th>Rule</th></tr></thead>
@@ -200,25 +250,27 @@
                 <span class="mono">u</span> and <span class="mono">v</span>, never their sum.</td></tr>
             <tr><td><code>figAnswer</code></td><td><code>{kind, …}</code></td>
               <td>Drawn in the explanation, where giving it away is the point.</td></tr>
+            <tr><td><code>input</code></td><td><code>{kind, slots, range}</code></td>
+              <td>How the answer is built by tapping — number pad, sign-and-digit steppers,
+                one slot per vector component or matrix entry.</td></tr>
             <tr><td><code>CHAINS[key]</code></td><td><code>{topic, intro, steps[], fig}</code></td>
-              <td>Each step is a normal <code>{q, a, d, ex}</code>; later steps may quote
-                earlier answers.</td></tr>
+              <td>Each step is a normal question; later steps may quote earlier answers.</td></tr>
+            <tr><td><code>example</code></td><td><code>{worked, faded}</code></td>
+              <td>Shown before a topic's first question, and again if mastery collapses.</td></tr>
           </tbody>
         </table>
       </div>
-      <p>Everything downstream — <code>buildQuestion</code>, <code>Mastery</code>,
-        <code>Battle</code>, Training, the Chronicle — keeps working on generators that omit
-        the new fields, so the change is additive and the existing 38 need no edits on day
-        one.</p>
+      <p>Every field is optional, so the existing 38 generators keep working untouched on
+        day one and gain the new behaviour as each is revisited.</p>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">03</span><h2>Workstream A — the missing syllabus</h2></div>
+    <div class="shead"><span class="num">04</span><h2>Workstream A — the missing syllabus</h2></div>
     <div class="col stack" style="margin-bottom:1.4rem">
-      <p>Three new realms, each a coherent strand rather than a grab bag. The eighth is the
-        capstone the game has been pointing at from the beginning: the Tome's last page
-        already says gradients are where the two subjects meet.</p>
+      <p>Three new realms, each a coherent strand rather than a grab bag. The eighth is
+        the capstone the game has been pointing at from the beginning: the Tome's last
+        page already says gradients are where the two subjects meet.</p>
     </div>
     <div class="scroll">
       <table>
@@ -247,14 +299,13 @@
     </div>
     <div class="col stack" style="margin-top:1.4rem">
       <p>Every new generator carries the same obligations as the existing ones: three
-        difficulty tiers, four unique choices, a worked explanation, and distractors tagged
-        with the specific misconception they encode — the tagging rate must not fall below
-        the current 78%.</p>
+        difficulty tiers, a worked explanation, and wrong answers tagged with the specific
+        misconception they encode — the tagging rate must not fall below the current 78%.</p>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">04</span><h2>Workstream B — figures</h2></div>
+    <div class="shead"><span class="num">05</span><h2>Workstream B — figures</h2></div>
     <div class="col stack" style="margin-bottom:1.4rem">
       <p>One renderer, six kinds, driven by data rather than per-question drawing code.
         Figures draw once to a static canvas — they must not join the battle's animation
@@ -267,7 +318,7 @@
           <tr><td><code>plane</code></td><td>Axes, grid, labelled arrows, optional
             parallelogram, projection drop-line, angle arc</td>
             <td>Addition, scaling, combinations, dot product, length, orthogonality,
-              projection, independence, cross product</td></tr>
+              projection, independence, cross product, gradients</td></tr>
           <tr><td><code>grid</code></td><td>The unit square and a lattice, before and after
             a matrix acts on it</td>
             <td>Matrix × vector, determinant as area factor, transformations,
@@ -290,22 +341,19 @@
       <div class="note">
         <span class="eyebrow">The rule that makes or breaks this</span>
         <p>A figure attached to the question must be answerable-from only by doing the
-          maths. Drawing the resultant of a vector addition turns the problem into
-          reading a picture. The payoff figure goes in <code>figAnswer</code>, where it
-          becomes the explanation — and that split is worth enforcing with a test.</p>
+          maths. Drawing the resultant of a vector addition turns the problem into reading
+          a picture. The payoff figure goes in <code>figAnswer</code>, where it becomes
+          the explanation — and that split is worth enforcing with a test.</p>
       </div>
-      <p>Roughly 30 of the eventual 70 generators can carry a question figure; nearly all
-        can carry an answer figure. Figures inherit the game's palette and must stay legible
-        at 320&nbsp;px wide.</p>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">05</span><h2>Workstream C — chains</h2></div>
+    <div class="shead"><span class="num">06</span><h2>Workstream C — chains</h2></div>
     <div class="col stack" style="margin-bottom:1.4rem">
-      <p>Ten chains, each three or four steps, posed by bosses. The player answers steps in
-        sequence; earlier answers stay on screen so the solution visibly assembles itself.
-        Getting a step wrong does not abort the chain — it costs the finisher.</p>
+      <p>Ten chains, each three or four steps, posed by bosses. Earlier answers stay on
+        screen so the solution visibly assembles itself. A wrong step does not abort the
+        chain — it costs the finisher.</p>
     </div>
     <div class="scroll">
       <table>
@@ -325,15 +373,12 @@
       </table>
     </div>
     <div class="col stack" style="margin-top:1.4rem">
-      <h3>Combat integration</h3>
       <ul>
         <li>Each correct step charges a <b>finisher</b>; completing the chain lands one
-          large strike scaled by how many steps were clean. This makes a boss feel different
-          from a rank-and-file foe without adding a new interaction.</li>
+          large strike scaled by how many steps were clean.</li>
         <li>The foe's wind-up meter is the open question — a three-step chain spans three
-          turns, so the slam will land mid-chain. Freezing it during a chain is simpler and
-          reads fairer; letting it fire keeps the pressure. <b>This needs deciding before
-          the chain UI is built.</b></li>
+          turns, so a slam will land mid-chain. Freezing it reads fairer; letting it fire
+          keeps the pressure. <b>Decide before the chain UI is built.</b></li>
         <li>Mastery records each step against its own topic, so a chain feeds the adaptive
           scheduler exactly like single questions.</li>
       </ul>
@@ -341,176 +386,266 @@
   </section>
 
   <section>
-    <div class="shead"><span class="num">06</span><h2>Phases</h2></div>
+    <div class="shead"><span class="num">07</span><h2>Workstream D — learning</h2></div>
+    <div class="col stack">
+      <p>The least glamorous stream and the one with the most effect on whether any of
+        this teaches you anything.</p>
+
+      <h3>Retire the four options</h3>
+      <p>Multiple choice tests recognition; recall requires generation, and the difference
+        is large. A 25% guess floor also means the game cannot distinguish <em>knows
+        it</em> from <em>eliminated three</em> — which quietly corrupts the mastery model
+        every other feature depends on. Answers get built by tapping instead: a number pad
+        for scalars, sign-and-digit steppers per component for vectors, one slot per entry
+        for matrices. Minimal typing survives; the guess floor does not.</p>
+
+      <h3>Teach before testing</h3>
+      <p>There is currently no instruction anywhere in the game — it is pure examination.
+        A topic's first appearance should show a fully worked example, then a faded one
+        where you supply the last step, then unassisted problems. The same sequence
+        returns if a topic's mastery collapses.</p>
+
+      <h3>Make errors land</h3>
+      <p>A wrong answer's explanation can be dismissed instantly. Requiring the correct
+        answer to be re-entered before continuing forces the correction through, and costs
+        nothing when you already understood it.</p>
+
+      <h3>Ask why, occasionally</h3>
+      <p>After some correct answers: <em>which rule did you use?</em> with three options.
+        Self-explanation is cheap to build and disproportionately effective — and unlike
+        the main question, recognition is the right format here.</p>
+
+      <div class="note warm">
+        <span class="eyebrow">The consequence nobody plans for</span>
+        <p>Removing multiple choice breaks two things that quietly depend on it.
+          <b>Sage's Insight</b> — the relic that burns away two wrong answers — has nothing
+          to burn, and needs redesigning into a hint that reveals the first step.
+          And <b>misconception tagging</b> currently works by matching the chosen string
+          against tagged distractors; with freely built answers it must instead compare the
+          constructed value against a table of known-wrong values. Same data, different
+          retrieval — but every generator is affected.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="shead"><span class="num">08</span><h2>Phases</h2></div>
     <div class="col" style="margin-bottom:.6rem">
-      <p>Ordered because the order is load-bearing: P0 unblocks everything, figures on
-        existing content prove the renderer before 32 new generators depend on it, and the
-        UI cannot absorb 70 topics until P5.</p>
+      <p>Ordered because the order is load-bearing: P0 unblocks everything, the cheap
+        learning fixes land before content multiplies their effect, figures are proven on
+        known-good problems before 32 new generators depend on them, and the UI cannot
+        absorb 70 topics until P7.</p>
     </div>
 
     <div class="phase">
       <div class="pcode"><span class="id">P0</span><span>spine</span></div>
       <div class="pbody">
         <h3>Contract and harness</h3>
-        <p>Extend the generator contract with <code>fig</code> / <code>figAnswer</code>,
-          add the <code>CHAINS</code> collection and its battle mode behind a flag, and —
-          the real work — build a small expression evaluator so symbolic answers can be
-          checked numerically. The current harness only parses polynomials, which will not
-          survive series, implicit differentiation, or vector-valued answers.</p>
-        <div class="gate"><b>Done when</b>The existing 38 generators pass unchanged, and the
-          new harness can verify an arbitrary symbolic answer by evaluating it at sample
-          points.</div>
+        <p>Extend the generator contract with every optional field above, and — the real
+          work — build a small expression evaluator so symbolic answers can be checked
+          numerically. The current harness parses polynomials only, which will not survive
+          series, implicit differentiation, or vector-valued answers.</p>
+        <div class="gate"><b>Done when</b>The existing 38 pass unchanged, and the harness
+          can verify an arbitrary symbolic answer by evaluating it at sample points.</div>
       </div>
     </div>
 
     <div class="phase">
-      <div class="pcode"><span class="id">P1</span><span>figures</span></div>
+      <div class="pcode"><span class="id">P1</span><span class="tag">learning</span></div>
+      <div class="pbody">
+        <h3>The cheap fixes that pull the other way</h3>
+        <p>Calm during the question and loud during resolution. Speed bonus restricted to
+          mastered topics. Weak topics held at tier 2 with a hint rather than dropped to
+          tier 1. Wrong answers require re-entering the right one. Spacing rescheduled in
+          days instead of questions. Small, self-contained, and it improves the game you
+          already have before a line of new content exists.</p>
+        <div class="gate"><b>Done when</b>Nothing animates while a question is unanswered;
+          a topic answered today is scheduled for tomorrow, not twelve questions from now;
+          and a full playthrough confirms the speed bonus never fires on a weak topic.</div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="pcode"><span class="id">P2</span><span>figures</span></div>
       <div class="pbody">
         <h3>Renderer, proven on content that already exists</h3>
-        <p>Build all six figure kinds and attach them to the current 38 generators. No new
-          maths — this phase exists to shake the renderer out against known-good problems
-          and to deliver visible value immediately.</p>
-        <div class="gate"><b>Done when</b>Every figure kind renders at 320&nbsp;px without
-          overflow, no question figure reveals its answer, and a full campaign playthrough
+        <p>All six figure kinds, attached to the current 38 generators. No new maths — this
+          phase shakes the renderer out against known-good problems and delivers visible
+          value immediately.</p>
+        <div class="gate"><b>Done when</b>Every kind renders at 320&nbsp;px without
+          overflow, no question figure reveals its answer, and a campaign playthrough
           leaks no canvases.</div>
       </div>
     </div>
 
     <div class="phase">
-      <div class="pcode"><span class="id">P2</span><span>content</span></div>
+      <div class="pcode"><span class="id">P3</span><span class="tag">learning</span></div>
       <div class="pbody">
-        <h3>Spectral Reach — advanced linear algebra</h3>
-        <p>Twelve generators, realm six, with <code>grid</code> and <code>plane</code>
-          figures throughout. Eigenvectors drawn as the arrows that survive a
-          transformation is the single most clarifying picture in the subject.</p>
-        <div class="gate"><b>Done when</b>Each generator is numerically verified, tagging
-          stays above 78%, and the realm's difficulty curve is simulated.</div>
-      </div>
-    </div>
-
-    <div class="phase">
-      <div class="pcode"><span class="id">P3</span><span>content</span></div>
-      <div class="pbody">
-        <h3>Infinite Expanse — advanced calculus</h3>
-        <p>Thirteen generators, realm seven, leaning on <code>curve</code>,
-          <code>region</code> and <code>bars</code>.</p>
-        <div class="gate"><b>Done when</b>As P2, plus every integral answer is confirmed by
-          quadrature and every derivative by finite differences.</div>
+        <h3>Tap-to-build answers</h3>
+        <p>The input widgets, the misconception lookup rewritten to match constructed
+          values, Sage's Insight redesigned, and self-explanation prompts. The single
+          largest learning change in the plan, and the one that most needs playing before
+          it is extended to 70 topics.</p>
+        <div class="gate"><b>Done when</b>Every existing generator has an input spec,
+          misconception feedback still fires on constructed answers, and campaign balance
+          is re-simulated — accuracy will fall for everyone once guessing stops working.</div>
       </div>
     </div>
 
     <div class="phase">
       <div class="pcode"><span class="id">P4</span><span>content</span></div>
       <div class="pbody">
-        <h3>Gradient Summit — the capstone</h3>
-        <p>Seven generators, realm eight, where the two subjects finally meet: the gradient
-          as a vector of partial derivatives, drawn on the <code>plane</code> renderer built
-          in P1. The Tome gains a closing page and the final boss becomes the game's thesis
-          rather than just its hardest fight.</p>
-        <div class="gate"><b>Done when</b>The campaign is 32 fights, balance is re-simulated
-          end to end, and a headless run clears all eight realms.</div>
+        <h3>Spectral Reach — advanced linear algebra</h3>
+        <p>Twelve generators with <code>grid</code> and <code>plane</code> figures
+          throughout. Eigenvectors drawn as the arrows that survive a transformation is
+          the single most clarifying picture in the subject.</p>
+        <div class="gate"><b>Done when</b>Each generator is numerically verified, tagging
+          stays above 78%, and the realm's difficulty curve is simulated.</div>
       </div>
     </div>
 
     <div class="phase">
-      <div class="pcode"><span class="id">P5</span><span>ui</span></div>
+      <div class="pcode"><span class="id">P5</span><span>content</span></div>
+      <div class="pbody">
+        <h3>Infinite Expanse — advanced calculus</h3>
+        <p>Thirteen generators leaning on <code>curve</code>, <code>region</code> and
+          <code>bars</code>.</p>
+        <div class="gate"><b>Done when</b>As P4, plus every integral confirmed by
+          quadrature and every derivative by finite differences.</div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="pcode"><span class="id">P6</span><span>content</span></div>
+      <div class="pbody">
+        <h3>Gradient Summit — the capstone</h3>
+        <p>Seven generators where the two subjects finally meet: the gradient as a vector
+          of partial derivatives, drawn on the <code>plane</code> renderer from P2. The
+          Tome gains a closing page and the final boss becomes the game's thesis rather
+          than just its hardest fight.</p>
+        <div class="gate"><b>Done when</b>The campaign is 32 fights, balance is
+          re-simulated end to end, and a headless run clears all eight realms.</div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="pcode"><span class="id">P7</span><span>ui</span></div>
       <div class="pbody">
         <h3>Absorb 70 topics</h3>
         <p>The Chronicle and the Training picker both render one row per topic. At 70 that
           is a wall of bars and a wall of buttons. Both need grouping by strand with
-          collapse, and the Chronicle should lead with the summary it already computes.</p>
-        <div class="gate"><b>Done when</b>Both screens are navigable at 320&nbsp;px with all
-          70 topics seen, and no screen exceeds two thumb-scrolls to reach any topic.</div>
+          collapse, leading with the summary the Chronicle already computes.</p>
+        <div class="gate"><b>Done when</b>Both screens are navigable at 320&nbsp;px with
+          all 70 topics seen, and any topic is reachable in under two thumb-scrolls.</div>
       </div>
     </div>
 
     <div class="phase">
-      <div class="pcode"><span class="id">P6</span><span>chains</span></div>
+      <div class="pcode"><span class="id">P8</span><span>chains</span></div>
       <div class="pbody">
-        <h3>Chains and the boss rite</h3>
-        <p>Ten chains, the step tracker, the finisher, and the wind-up decision. Last
-          because chains are the only workstream that changes the shape of a turn, and it
-          is cheaper to change that once the content it draws on exists.</p>
-        <div class="gate"><b>Done when</b>Every chain completes, each step's answer is among
-          its choices, later steps follow from earlier ones, and a boss fight is winnable
-          and losable at plausible accuracies.</div>
+        <h3>Chains, worked examples and the boss rite</h3>
+        <p>Ten chains, the step tracker, the finisher, the wind-up decision — and the
+          worked-example ladder, which shares the same step machinery and so is cheapest
+          to build here.</p>
+        <div class="gate"><b>Done when</b>Every chain completes, later steps follow from
+          earlier ones, a new topic always opens with a worked example, and a boss fight is
+          winnable and losable at plausible accuracies.</div>
       </div>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">07</span><h2>What this breaks</h2></div>
+    <div class="shead"><span class="num">09</span><h2>What this breaks</h2></div>
     <div class="col" style="margin-bottom:.4rem">
-      <p>Found by reading the current code against the plan. The first one is a live bug the
-        moment a sixth realm exists.</p>
+      <p>Found by reading the current code against the plan. The first two are live today,
+        independent of anything here being built.</p>
     </div>
 
     <div class="risk">
-      <span class="sev now">P0</span>
+      <span class="sev now">live</span>
+      <span class="rt">Spacing is measured in questions, not days</span>
+      <span class="rd"><code>dueIn</code> compares against <code>qCount</code>, so the
+        spaced-repetition schedule has no notion that a week has passed. Inside one long
+        session everything simply cycles. Fixed in P1.</span>
+    </div>
+    <div class="risk">
+      <span class="sev now">live</span>
       <span class="rt">Dragonslayer fires three realms early</span>
       <span class="rd"><code>Titles</code> hardcodes <code>cleared['4:3']</code>. Add realms
         and the title awards for beating what is no longer the last boss. Must derive from
-        <code>REALMS.length</code>, as <code>Arena.unlocked()</code> already correctly does.</span>
+        <code>REALMS.length</code>, as <code>Arena.unlocked()</code> already correctly
+        does.</span>
     </div>
     <div class="risk">
       <span class="sev now">P0</span>
       <span class="rt">The verification harness cannot read the new answers</span>
-      <span class="rd">Current numeric checks parse polynomial strings only. Series, implicit
-        differentiation, vector-valued and set-valued answers all need a real expression
-        evaluator, or the new content ships unverified — which would abandon the one
-        discipline that has caught every bug so far.</span>
+      <span class="rd">Current numeric checks parse polynomial strings only. Series,
+        implicit differentiation and vector-valued answers need a real expression
+        evaluator, or the new content ships unverified — abandoning the one discipline
+        that has caught every bug so far.</span>
     </div>
     <div class="risk">
-      <span class="sev soon">P4</span>
+      <span class="sev soon">P3</span>
+      <span class="rt">Sage's Insight has nothing left to burn</span>
+      <span class="rd">The relic removes two wrong options. With constructed answers there
+        are no options. It becomes a hint that reveals the first step — a redesign, not a
+        tweak.</span>
+    </div>
+    <div class="risk">
+      <span class="sev soon">P3</span>
+      <span class="rt">Every difficulty number becomes wrong at once</span>
+      <span class="rd">Removing the 25% guess floor drops everyone's accuracy. The whole
+        balance model — enemy health, wind-up damage, arena depth — was simulated against
+        multiple-choice accuracy and must be re-derived.</span>
+    </div>
+    <div class="risk">
+      <span class="sev soon">P6</span>
       <span class="rt">Arena floods with material you have never seen</span>
       <span class="rd">The arena pool is every topic, and unseen topics carry the highest
-        selection weight so they get introduced promptly. At 70 topics that turns an early
-        arena run into a wall of unfamiliar advanced problems. Gate the pool to topics whose
-        realm is unlocked.</span>
+        selection weight so they are introduced promptly. At 70 topics that turns an early
+        run into a wall of unfamiliar advanced problems. Gate the pool to unlocked
+        realms.</span>
     </div>
     <div class="risk">
-      <span class="sev soon">P4</span>
+      <span class="sev soon">P6</span>
       <span class="rt">Enemy scaling runs out</span>
-      <span class="rd">The curve was tuned for five realms and tops out around 92 attack.
-        Three more realms need the curve extended and the whole campaign re-simulated,
-        including the wind-up damage that gear is balanced against.</span>
+      <span class="rd">The curve was tuned for five realms and tops out near 92 attack.
+        Three more need it extended and the campaign re-simulated, including the wind-up
+        damage gear is balanced against.</span>
     </div>
     <div class="risk">
-      <span class="sev soon">P5</span>
+      <span class="sev watch">P7</span>
       <span class="rt">Boss cross-realm draws become trivia</span>
-      <span class="rd">A boss reaches back into any earlier realm with equal probability. At
-        realm eight that means the final boss can ask about vector addition. Weight the
-        reach-back toward recent realms.</span>
+      <span class="rd">A boss reaches back into any earlier realm with equal probability.
+        At realm eight the final boss can ask about vector addition. Weight the reach-back
+        toward recent realms.</span>
     </div>
     <div class="risk">
-      <span class="sev watch">P6</span>
+      <span class="sev watch">P8</span>
       <span class="rt">The Scriptable file gets unwieldy to paste</span>
-      <span class="rd">140&nbsp;KB today, an estimated 260&nbsp;KB after this plan. Still
-        well inside what Scriptable runs, but large enough that the build should probably
-        start minifying the embedded HTML.</span>
-    </div>
-    <div class="risk">
-      <span class="sev watch">P6</span>
-      <span class="rt">Grand Magister becomes a different promise</span>
-      <span class="rd">Mastering every topic goes from 38 to 70. That is intentional — but
-        it is worth a second, reachable title so the ladder does not end in a cliff.</span>
+      <span class="rd">140&nbsp;KB today, an estimated 280&nbsp;KB after this plan. Well
+        inside what Scriptable runs, but large enough that the build should start minifying
+        the embedded HTML.</span>
     </div>
   </section>
 
   <section>
-    <div class="shead"><span class="num">08</span><h2>Decisions I need from you</h2></div>
+    <div class="shead"><span class="num">10</span><h2>Decisions I need from you</h2></div>
     <div class="col">
       <div class="decide">
         <span class="q">01</span>
+        <span>How far does tap-to-build go? Every question, or multiple choice on a topic's
+          first exposures and construction once you have seen it — scaffolding that fades
+          as mastery rises.</span>
+        <span class="q">02</span>
         <span>Does the foe's wind-up fire mid-chain, or freeze until the chain resolves?
           Freezing reads fairer; firing keeps the pressure that makes gear matter.</span>
-        <span class="q">02</span>
-        <span>Chains in Training as well as boss fights? They are the best teaching tool in
-          the plan, and locking them to bosses hides them behind the campaign.</span>
         <span class="q">03</span>
-        <span>Ship realm by realm, or hold everything for one release? Incremental means you
-          can play P2 while P3 is built.</span>
+        <span>Chains in Training as well as boss fights? They are the best teaching tool
+          in the plan, and locking them to bosses hides them behind the campaign.</span>
         <span class="q">04</span>
+        <span>Ship realm by realm, or hold everything for one release?</span>
+        <span class="q">05</span>
         <span>Is 70 topics the right ceiling, or would you rather go deeper on fewer —
           more problem variety per topic instead of more topics?</span>
       </div>
@@ -518,15 +653,17 @@
   </section>
 
   <section>
-    <div class="shead"><span class="num">09</span><h2>What I would do first</h2></div>
+    <div class="shead"><span class="num">11</span><h2>What I would do first</h2></div>
     <div class="col stack">
-      <p><b>P0 and P1 together</b>, then stop and let you play. That combination adds no new
-        mathematics but changes how the existing game feels to learn from — every vector
-        becomes an arrow, every integral a shaded region, every tangent a line touching a
-        curve. It is the cheapest way to find out whether drawing the geometry actually
-        helps you before committing to 32 generators that assume it does.</p>
-      <p>The content waves are the larger prize, but they are also the part most improved by
-        knowing how you actually play.</p>
+      <p><b>P1 on its own, then stop and let you play.</b> It adds no content, no art and
+        no new mechanics — it fixes three things that are quietly working against you,
+        moves the spectacle out of the thinking window, and makes the spaced repetition
+        actually spaced. It is the smallest change in the plan with the largest effect on
+        whether the hours you put in stick.</p>
+      <p>Then <b>P2 and P3 together</b>: the geometry drawn, and the guessing removed. That
+        pairing is where the game stops being a quiz. Content waves are the larger prize
+        but the least urgent — thirty-two more topics taught the current way is thirty-two
+        more topics you can guess your way through.</p>
     </div>
   </section>
 
