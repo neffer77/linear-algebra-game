@@ -34,16 +34,16 @@ function loadGame() {
                              script.indexOf('/* -------------------------------- battle'));
   const out = {};
   new Function('exports', mathPart + build +
-    ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.mat=mat;exports.R=R;')(out);
+    ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;')(out);
   return out;
 }
-const { GEN, buildQuestion, mat } = loadGame();
+const { GEN, buildQuestion, buildMote, mat } = loadGame();
 
 const fails = [];
 const fail = (area, key, msg) => fails.push(`[${area}] ${key}: ${msg}`);
 
 /* ------------------------------------------------------------- 1. structure */
-let generated = 0, tagged = 0, wrongShown = 0;
+let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0;
 const seenComplexity = new Set();
 
 for (const key of Object.keys(GEN)) {
@@ -76,10 +76,16 @@ for (const key of Object.keys(GEN)) {
         if (!Array.isArray(q.motes)) fail('contract', key, 'motes must be an array');
         else q.motes.forEach((m, n) => {
           if (!m || !m.q || !m.a || !Array.isArray(m.d)) { fail('contract', key, `mote ${n} is missing q/a/d`); return; }
-          if (m.d.length < 3) fail('contract', key, `mote ${n} needs three distractors to fill four choices`);
+          if (m.d.length < 3) fail('contract', key, `mote ${n} needs at least three authored distractors`);
           const vals = m.d.map(x => Array.isArray(x) ? x[0] : x);
-          if (vals.includes(m.a)) fail('contract', key, `mote ${n} lists its own answer as a distractor`);
-          if (new Set(vals).size !== vals.length) fail('contract', key, `mote ${n} has duplicate distractors`);
+          if (![...new Set(vals)].some(v => v !== m.a))
+            fail('contract', key, `mote ${n} has no distractor that differs from its answer`);
+          // The invariant that matters is what the player is shown.
+          const shown = buildMote(Object.assign({}, m, { _choices: null, _why: null }));
+          if (shown.length !== 4) fail('contract', key, `mote ${n} renders ${shown.length} choices, not four`);
+          if (new Set(shown).size !== shown.length) fail('contract', key, `mote ${n} renders duplicate choices`);
+          if (!shown.includes(m.a)) fail('contract', key, `mote ${n} renders without its answer`);
+          motesChecked++;
           m.d.forEach((x, j) => {
             if (Array.isArray(x) && (!x[1] || x[1].length < 12))
               fail('contract', key, `mote ${n} distractor ${j} has a thin reason`);
@@ -279,7 +285,10 @@ console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(),
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
-if (seenComplexity.size) console.log(`  generators declaring motes ${pad(seenComplexity.size, 10)}`);
+if (seenComplexity.size) {
+  console.log(`  generators with mote ladders ${pad(seenComplexity.size, 8)}`);
+  console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
+}
 console.log('─'.repeat(58));
 
 if (fails.length) {

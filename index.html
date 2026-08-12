@@ -327,6 +327,50 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   #wipe{display:none!important}
   .screen.on{animation:none}
 }
+
+/* ---- codex ---- */
+#codex{position:fixed; inset:0; z-index:78; display:none; align-items:center; justify-content:center;
+  background:rgba(8,6,16,.88); padding:20px;}
+#codex.on{display:flex;}
+#codex .cxbox{max-width:21rem; width:100%; padding:18px 16px; border-radius:14px;
+  background:linear-gradient(180deg,#2a2246,#1c1636); border:2px solid var(--gold);
+  box-shadow:0 0 34px -8px var(--gold);}
+#codex .cxk{font-family:var(--serif); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:8px;}
+#codex .cxrule{font-size:16px; line-height:1.55; font-weight:700;}
+#codex .cxeg{margin-top:10px; padding:9px 11px; border-radius:8px; background:#171129;
+  border-left:3px solid var(--gold-dk); font-size:14px; line-height:1.6; color:var(--dim);}
+
+/* ---- rite ---- */
+#riteBar{display:flex; align-items:center; gap:6px; justify-content:center; margin-bottom:8px;
+  font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);}
+#riteBar .rp{width:12px; height:12px; border-radius:50%; border:2px solid var(--edge); background:#171129;}
+#riteBar .rp.done{background:var(--green); border-color:var(--green);}
+#riteBar .rp.miss{background:var(--red); border-color:var(--red);}
+#riteBar .rp.now{border-color:var(--gold); box-shadow:0 0 8px var(--gold);}
+#riteTrail{font-size:12px; color:var(--dim); line-height:1.7; margin-bottom:6px;}
+#riteTrail b{color:var(--ink);}
+.qchip{display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:34px;
+  margin-left:6px; border-radius:9px; border:1px solid var(--gold-dk); background:#2b2247;
+  color:var(--gold); font-weight:900; cursor:pointer; vertical-align:middle;}
+#qhead{display:flex; align-items:center; justify-content:center; gap:2px; margin-bottom:2px;}
+
+/* ---- perfect strike ---- */
+#pstrike{margin-top:8px;}
+#pstrike .pbtn{display:block; width:100%; padding:11px; border-radius:12px; cursor:pointer;
+  border:1px dashed var(--gold); background:rgba(242,193,78,.08); color:var(--gold);
+  font-weight:900; font-size:14px; text-align:center;}
+#pad{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:8px;}
+#pad button{padding:14px 0; font-size:19px; font-weight:900; border-radius:11px;
+  border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink);
+  box-shadow:0 3px 0 #150e28;}
+#pad button:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+#padVal{grid-column:1/-1; text-align:center; font-size:24px; font-weight:900; letter-spacing:2px;
+  padding:10px; border-radius:11px; background:#140f24; border:1px solid var(--gold-dk);
+  min-height:48px; font-family:var(--serif);}
+.cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
+  border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
+.cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -400,9 +444,12 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 
     <div class="panel" id="qpanel">
       <div id="telegraph" style="display:none"></div>
-      <div id="qtopic"></div>
+      <div id="riteBar" style="display:none"></div>
+      <div id="riteTrail" style="display:none"></div>
+      <div id="qhead"><div id="qtopic"></div></div>
       <div id="qbox"></div>
       <div id="choices"></div>
+      <div id="pstrike" style="display:none"></div>
     </div>
 
     <div class="panel" id="explain" style="display:none"></div>
@@ -473,6 +520,7 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   <div id="vignette"></div>
   <div id="wipe"><i></i></div>
   <div id="chest"></div>
+  <div id="codex"></div>
 </div>
 
 <script>
@@ -660,12 +708,37 @@ transpose(){
 },
 matMul(d){
   const k=[3,5,7][d-1]||5;
-  const A=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
-  const B=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
+  const A=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
+  const B=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
   const C=[[A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
            [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]];
   const W=[[A[0][0]*B[0][0],A[0][1]*B[0][1]],[A[1][0]*B[1][0],A[1][1]*B[1][1]]];
   return {topic:'Matrix Multiplication',
+    complexity:3,
+    codex:{rule:'Entry (row i, column j) is row i of the left matrix dotted with column j of the right. It is never entrywise.',
+           eg:'top-left = (row 1)·(column 1)'},
+    motes:[
+      {q:'Which pairing produces the <b>top-left</b> entry of the product?',
+       a:'row 1 of the left × column 1 of the right',
+       d:[['row 1 of the left × row 1 of the right','columns of the right matrix, not its rows'],
+          ['the two top-left entries multiplied','that would be entrywise multiplication'],
+          ['column 1 of the left × row 1 of the right','the row comes from the left matrix']],
+       ex:'Rows from the left, columns from the right — that pairing is the whole rule.'},
+      {q:`Row 1 of ${mat(A)} dotted with column 1 of ${mat(B)} = ?`,
+       a:neg(C[0][0]),
+       d:[[neg(A[0][0]*B[0][0]),'only the first pair was multiplied; both terms count'],
+          [neg(A[0][0]*B[0][0]+A[0][1]*B[0][1]),'that used row 1 of the right matrix instead of column 1'],
+          [neg(C[1][0]),'that is the bottom-left entry — wrong row'],
+          [neg(C[0][1]),'that is the top-right entry — wrong column']],
+       ex:`(${neg(A[0][0])})(${neg(B[0][0])}) + (${neg(A[0][1])})(${neg(B[1][0])}) = ${neg(C[0][0])}.`},
+      {q:`And row 2 dotted with column 2 — the <b>bottom-right</b> entry?`,
+       a:neg(C[1][1]),
+       d:[[neg(A[1][1]*B[1][1]),'only one of the two products was taken'],
+          [neg(C[0][1]),'that is the top-right entry — wrong row'],
+          [neg(C[1][0]),'that is the bottom-left entry — wrong column'],
+          [neg(C[0][0]),'that is the top-left entry']],
+       ex:`(${neg(A[1][0])})(${neg(B[0][1])}) + (${neg(A[1][1])})(${neg(B[1][1])}) = ${neg(C[1][1])}.`}
+    ],
     q:`${mat(A)}${mat(B)} = ?`,
     a:mat(C),
     d:[[mat(W),'that multiplied matching entries — matrix multiplication dots each row against each column'],
@@ -702,12 +775,43 @@ solve2(d){
     ex:`Written as a matrix equation this is ${mat([[a,b],[c,e]])}${vec(['x','y'])} = ${vec([p,q2])}. Since the determinant ${neg(a*e-b*c)} is not zero there is exactly one solution, and it is x = ${neg(x)}, y = ${neg(y)}. Substitute back to check both equations.`};
 },
 inv2(){
-  let A, det;
-  do{ A=[[R.nz(-5,5),R.i(-5,5)],[R.i(-5,5),R.nz(-5,5)]]; det=A[0][0]*A[1][1]-A[0][1]*A[1][0]; }
-  while(det===0 || Math.abs(det)>6);
+  // Equal diagonal entries make "swap the diagonal" a no-op, and b = −c makes
+  // the negation step ambiguous — both produce a degenerate drill.
+  let A, det, guard=0, degenerate=true;
+  do{
+    A=[[R.nz(-5,5),R.nz(-5,5)],[R.nz(-5,5),R.nz(-5,5)]];
+    det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    // Equal diagonal entries make "swap the diagonal" a no-op, which both
+    // weakens the drill and collapses the distractors onto each other.
+    degenerate = det===0 || Math.abs(det)>6 || A[0][0]===A[1][1];
+  } while(degenerate && guard++<400);
+  if(degenerate){ A=[[3,1],[2,3]]; det=7; }
   const adj=[[A[1][1],-A[0][1]],[-A[1][0],A[0][0]]];
   const show=m=>`${frac(1,det)} ${mat(m)}`;
   return {topic:'Inverse of a 2×2',
+    complexity:3,
+    codex:{rule:'Swap the diagonal entries, negate the other two, then divide the whole thing by the determinant.',
+           eg:'[a b; c d]⁻¹ = 1/(ad−bc) · [d −b; −c a]'},
+    motes:[
+      {q:`What is det ${mat(A)}?`,
+       a:neg(det),
+       d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the second product is subtracted, not added'],
+          [neg(-det),'the order is ad − bc'],
+          [neg(A[0][0]+A[1][1]),'that is the trace']],
+       ex:`ad − bc = (${neg(A[0][0])})(${neg(A[1][1])}) − (${neg(A[0][1])})(${neg(A[1][0])}) = ${neg(det)}.`},
+      {q:'Swap the diagonal and negate the off-diagonal. Which matrix is that?',
+       a:mat(adj),
+       d:[[mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'nothing moved at all — both halves of the recipe are missing'],
+          [mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'the diagonal swapped but the off-diagonal was not negated'],
+          [mat([[A[0][0],-A[0][1]],[-A[1][0],A[1][1]]]),'the off-diagonal was negated but the diagonal never swapped']],
+       ex:`${neg(A[0][0])} and ${neg(A[1][1])} trade places; ${neg(A[0][1])} and ${neg(A[1][0])} flip sign.`},
+      {q:'What do you divide that matrix by?',
+       a:`the determinant, ${neg(det)}`,
+       d:[['the trace','the trace plays no part in the inverse'],
+          ['nothing — it is already the inverse','without dividing, A times it gives det·I rather than I'],
+          [`${neg(-det)}`,'the sign is wrong; divide by det itself']],
+       ex:`A times the swapped matrix gives ${neg(det)}·I, so dividing by ${neg(det)} leaves the identity.`}
+    ],
     q:`${mat(A)}<sup>−1</sup> = ?`,
     a:show(adj),
     d:[[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'the entries were left where they were — you must swap the diagonal and negate the off-diagonal'],
@@ -765,6 +869,24 @@ eigen2(){
   const b=R.i(1,4);
   const A=[[l1,b],[0,l2]];                 // triangular ⇒ eigenvalues on diagonal
   return {topic:'Eigenvalues',
+    complexity:3,
+    codex:{rule:'Eigenvalues solve det(A − λI) = 0. For a triangular matrix they are simply the diagonal entries.',
+           eg:'[a b; 0 d] has eigenvalues a and d'},
+    motes:[
+      {q:`What is det(A − λI) for ${mat(A)}?`,
+       a:`(${neg(l1)} − λ)(${neg(l2)} − λ)`,
+       d:[[`(${neg(l1)} − λ)(${neg(l2)} − λ) − ${b}`,`the ${b} multiplies a zero, so it contributes nothing`],
+          [`(${neg(l1)} + λ)(${neg(l2)} + λ)`,'it is A − λI, so λ is subtracted'],
+          [`${neg(l1*l2)} − λ`,'both diagonal entries carry their own λ']],
+       ex:`Subtracting λ down the diagonal leaves a triangular matrix, whose determinant is just the diagonal product.`},
+      {q:`Solve (${neg(l1)} − λ)(${neg(l2)} − λ) = 0.`,
+       a:`λ = ${neg(Math.min(l1,l2))} and λ = ${neg(Math.max(l1,l2))}`,
+       d:[[`λ = ${neg(-l1)} and λ = ${neg(-l2)}`,'a factor (a − λ) vanishes at λ = a, not −a'],
+          [`λ = ${neg(l1+l2)}`,'a product is zero when either factor is, giving two roots'],
+          [`λ = ${neg(l1*l2)}`,'that is the product of the roots, not a root'],
+          [`λ = ${neg(b)}`,'that is the off-diagonal entry, which does not affect a triangular matrix']],
+       ex:`A product is zero when a factor is, so λ = ${neg(l1)} or λ = ${neg(l2)} — the diagonal entries.`}
+    ],
     q:`Eigenvalues of ${mat(A)}?`,
     a:`${neg(Math.min(l1,l2))} and ${neg(Math.max(l1,l2))}`,
     d:[[`${neg(l1+l2)} and ${neg(l1*l2)}`,'those are the trace and the determinant — related to the eigenvalues, but not them'],
@@ -894,9 +1016,37 @@ expLog(){
     ex:`Chain rule: derivative of ln(u) is u′/u = ${k}/(${k}x), and the ${k}s cancel to give 1/x. Interesting fact: ln(${k}x) = ln ${k} + ln x, and the constant ln ${k} has derivative 0 — same answer.`};
 },
 productRule(){
-  const a=R.nz(2,5), b=R.nz(-6,6), c=R.nz(2,5), e=R.nz(-6,6);
+  const a=R.nz(2,5), c=R.nz(2,5);
+  let b=R.nz(-6,6), e=R.nz(-6,6), guard=0;
+  // A zero constant term would collapse one distractor onto the answer.
+  while(a*e+b*c===0 && guard++<40){ b=R.nz(-6,6); e=R.nz(-6,6); }
+  if(a*e+b*c===0) e = e===6 ? 5 : e+1;
   const A=2*a*c, B=a*e+b*c;
   return {topic:'Product Rule',
+    complexity:3,
+    codex:{rule:'(fg)′ = f′g + fg′. Differentiate one factor at a time and add — never multiply the two derivatives.',
+           eg:'(2x+1)(3x−4) → 2(3x−4) + (2x+1)(3)'},
+    motes:[
+      {q:`With f = ${poly([[a,1],[b,0]])}, what is f′?`,
+       a:String(a),
+       d:[[`${a}x`,'the x goes when you differentiate a linear term'],
+          [poly([[a,1],[b,0]]),'that is f itself, undifferentiated'],
+          ['0','only the constant differentiates to zero']],
+       ex:`${poly([[a,1],[b,0]])} differentiates to ${a}: the coefficient survives, the constant vanishes.`},
+      {q:`With g = ${poly([[c,1],[e,0]])}, what is g′?`,
+       a:String(c),
+       d:[[`${c}x`,'the x is lost when the power drops to zero'],
+          [poly([[c,1],[e,0]]),'that is g itself'],
+          ['1','the coefficient on x carries through']],
+       ex:`Same rule: ${poly([[c,1],[e,0]])} differentiates to ${c}.`},
+      {q:`Now assemble f′g + fg′ = ${a}(${poly([[c,1],[e,0]])}) + (${poly([[a,1],[b,0]])})(${c}).`,
+       a:poly([[A,1],[B,0]]),
+       d:[[poly([[a*c,1],[b*e,0]]),'that multiplied the two derivatives instead of adding two products'],
+          [poly([[A,1],[-B,0]]),'the constant terms are added, not subtracted'],
+          [poly([[a*c,1],[0,0]]),'both cross terms contribute to the constant'],
+          [poly([[a+c,1],[b+e,0]]),'that added the factors instead of differentiating the product']],
+       ex:`${a}(${poly([[c,1],[e,0]])}) gives ${poly([[a*c,1],[a*e,0]])}, and (${poly([[a,1],[b,0]])})(${c}) gives ${poly([[a*c,1],[b*c,0]])}. Adding them: ${poly([[A,1],[B,0]])}.`}
+    ],
     q:`${frac('d','dx')} (${poly([[a,1],[b,0]])})(${poly([[c,1],[e,0]])}) = ?`,
     a:poly([[A,1],[B,0]]),
     d:[[poly([[a*c,1],[b*e,0]]),'that multiplied the two derivatives together — the rule is f′g + fg′, not f′g′'],
@@ -987,6 +1137,29 @@ defPoly(){
   const F=[[c/2,2],[b,1]];
   const s=evalPoly(F,hi)-evalPoly(F,0);
   return {topic:'Definite Integral',
+    complexity:3,
+    codex:{rule:'Antidifferentiate, evaluate at the top limit, then subtract the value at the bottom limit.',
+           eg:'∫ₐᵇ f = F(b) − F(a)'},
+    motes:[
+      {q:`An antiderivative of ${poly(t)} is?`,
+       a:poly(F),
+       d:[[poly([[c,2],[b,1]]),'the x² term must be divided by its new power, 2'],
+          [poly(t),'that is the integrand, unchanged'],
+          [poly([[c,0]]),'that differentiates rather than integrates']],
+       ex:`Raise each power and divide by the new one: ${c}x → ${c/2}x², and ${neg(b)} → ${neg(b)}x.`},
+      {q:`Evaluate ${poly(F)} at x = ${hi}.`,
+       a:neg(evalPoly(F,hi)),
+       d:[[neg(evalPoly(t,hi)),'that evaluates the integrand, not the antiderivative'],
+          [neg(evalPoly(F,hi)+1),'check the arithmetic once more'],
+          ['0','only the lower limit gives zero here']],
+       ex:`Substituting x = ${hi} into ${poly(F)} gives ${neg(evalPoly(F,hi))} — the accumulated area up to the top limit.`},
+      {q:`F(${hi}) − F(0) = ${neg(evalPoly(F,hi))} − ? `,
+       a:'0',
+       d:[[neg(evalPoly(F,hi)),'that would subtract the top value from itself'],
+          [neg(hi),'substitute 0 into F, not the limit itself'],
+          [neg(b),'every term of F carries an x, so all of them vanish at 0']],
+       ex:`Every term of ${poly(F)} has an x in it, so F(0) = 0 and the answer is just F(${hi}).`}
+    ],
     q:`∫<sub>0</sub><sup>${hi}</sup> (${poly(t)}) dx = ?`,
     a:neg(s),
     d:[[neg(evalPoly(t,hi)),'that evaluates the integrand at the top limit — you must antidifferentiate first'],
@@ -1105,6 +1278,29 @@ partial(){
   const a=R.nz(2,5), b=R.nz(2,5), c=R.nz(-6,6);
   const sgn=c<0?'−':'+', ac=Math.abs(c);
   return {topic:'Partial Derivative',
+    complexity:3,
+    codex:{rule:'For ∂/∂x, treat y as a frozen constant and differentiate as usual. y is held still, not set to zero.',
+           eg:'∂/∂x of 3x²y is 6xy — the y just comes along'},
+    motes:[
+      {q:`Differentiating with respect to x, what happens to y?`,
+       a:'it is held constant',
+       d:[['it becomes zero','constants multiply through; they do not vanish unless they stand alone'],
+          ['it is differentiated too','that would be the total derivative, not a partial one'],
+          ['it becomes 1','holding y fixed keeps its value, whatever it is']],
+       ex:'A partial derivative freezes every other variable and differentiates in one of them.'},
+      {q:`∂/∂x of ${a}x²y = ?`,
+       a:`${2*a}xy`,
+       d:[[`${2*a}x`,'y is a constant factor and stays'],
+          [`${a}x²`,'the y stays and the power drops'],
+          [`${2*a}x²y`,'the power must fall from 2 to 1']],
+       ex:`x² → 2x, and the constant factor ${a}y rides along: ${2*a}xy.`},
+      {q:`∂/∂x of ${ac}xy${sup(3)} = ?`,
+       a:`${ac}y${sup(3)}`,
+       d:[[`${3*ac}xy²`,'that differentiated with respect to y'],
+          [`${ac}xy${sup(3)}`,'the x had power 1, so differentiating removes it'],
+          ['0','the term contains x, so it does not vanish']],
+       ex:`x to the first power differentiates to 1, leaving the constant factor ${ac}y³.`}
+    ],
     q:`f(x,y) = ${a}x²y ${sgn} ${ac}xy${sup(3)}<br>∂f/∂x = ?`,
     a:`${2*a}xy ${sgn} ${ac}y${sup(3)}`,
     d:[[`${a}x² ${sgn} ${Math.abs(3*c)}xy²`,'that differentiated with respect to y instead of x'],
@@ -1147,14 +1343,19 @@ const Mastery = {
     const t=Game.s.topicStats;
     return t[key] || (t[key]={c:0,w:0,m:0,seen:0,last:-999});
   },
-  update(key, ok){
+  // `weight` scales how much an outcome moves mastery. A mote is one small step
+  // of a topic, so four of them must not count as four full answers — otherwise
+  // the scheduler believes you have mastered what you were merely walked through.
+  update(key, ok, weight){
     const r=this.rec(key);
     const was=r.m;
-    r.seen++;
-    if(ok) r.c++; else r.w++;
-    const alpha = r.seen<4 ? 0.45 : 0.25;      // adapt fast at first, settle later
+    const w = weight===undefined ? 1 : weight;
+    r.seen += w;
+    if(ok) r.c+=w; else r.w+=w;
+    const alpha = (r.seen<4 ? 0.45 : 0.25) * w;
     r.m = clamp(r.m + alpha*((ok?1:0) - r.m), 0, 1);
     r.last = Game.s.qCount;
+    r.t = Date.now();                          // wall clock, for real spacing
     // Crossing into "solid" is the moment worth celebrating: it is real learning.
     // A latch rather than an edge test — the crossing and the minimum-exposure
     // gate can otherwise be satisfied on different answers and never coincide.
@@ -1163,12 +1364,17 @@ const Mastery = {
     else if(r.m<0.6) r.mastered=0;            // it can be lost, and re-earned
     return {mastered:justMastered, was};
   },
-  // How many questions should pass before a topic is worth revisiting.
+  // Within a session, spacing is counted in questions.
   dueIn(r){ return 3 + Math.round(r.m*r.m*22); },
+  // Across sessions it has to be counted in days, or a topic answered
+  // yesterday is never "due" simply because few questions have passed.
+  dueDays(r){ return 1 + Math.round(r.m*r.m*6); },
+  daysSince(r){ return r.t ? (Date.now()-r.t)/864e5 : Infinity; },
   overdue(key){
     const r=Game.s.topicStats[key];
     if(!r || !r.seen) return true;
-    return (Game.s.qCount - r.last) >= this.dueIn(r);
+    return (Game.s.qCount - r.last) >= this.dueIn(r)
+        || this.daysSince(r) >= this.dueDays(r);
   },
   weight(key){
     const r=Game.s.topicStats[key];
@@ -1176,8 +1382,9 @@ const Mastery = {
     const elapsed = Game.s.qCount - r.last;
     if(elapsed < 2) return 0.05;                         // never ask twice in a row
     const need = Math.pow(1-r.m, 2)*4 + 0.3;             // weak topics dominate
-    const due  = Math.min(elapsed/this.dueIn(r), 2.5);   // overdue topics resurface
-    return need * (0.4 + due);
+    const due  = Math.min(elapsed/this.dueIn(r), 2.5);   // overdue within the session
+    const cal  = Math.min(this.daysSince(r)/this.dueDays(r), 2.5);  // and across days
+    return need * (0.4 + Math.max(due, cal));
   },
   pick(pool){
     if(!pool.length) return null;
@@ -1342,6 +1549,7 @@ const Game = {
       arenaBest:0,         // deepest arena wave reached
       streak:{days:0,last:null},   // consecutive days practised
       bounties:[],         // three rotating goals
+      riteWins:{},         // ladders cleared per topic; drives scaffolding fade
       daily:null,          // daily skirmish scores
       titles:{},           // earned milestone ids
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
@@ -1364,6 +1572,7 @@ const Game = {
       if(typeof r.seen!=='number') r.seen=r.c+r.w;
       if(typeof r.m!=='number')    r.m = r.seen? r.c/r.seen : 0;
       if(typeof r.last!=='number') r.last=-999;
+      if(typeof r.t!=='number') r.t=0;         // never seen on the wall clock
       total+=r.seen;
     }
     // In normal play qCount and the sum of `seen` advance together, so a
@@ -1413,9 +1622,11 @@ const Game = {
     }
     return ups;
   },
-  recordAnswer(topic, ok){
+  // `weight` is forwarded to the mastery model: a ladder step counts for a
+  // fraction of a full answer. Dropping it here silently inflates mastery.
+  recordAnswer(topic, ok, weight){
     if(ok) this.s.stats.correct++; else this.s.stats.wrong++;
-    const res=Mastery.update(topic, ok);
+    const res=Mastery.update(topic, ok, weight);
     this.s.qCount++;
     return res;
   }
@@ -2263,6 +2474,34 @@ function buildQuestion(key, diff){
   };
 }
 
+
+/* A mote's four choices. Numeric distractors can coincide with the answer on
+   particular draws, so the authored list is filtered and then padded — the same
+   treatment buildQuestion gives the parent question. The invariant that matters
+   is the rendered result: four distinct choices, one of them correct. */
+function buildMote(m){
+  if(m._choices) return m._choices;
+  const why={};
+  const ds=[];
+  for(const x of (m.d||[])){
+    const v=Array.isArray(x)?x[0]:x, reason=Array.isArray(x)?x[1]:null;
+    if(v===m.a || ds.includes(v)) continue;
+    if(reason) why[v]=reason;
+    ds.push(v);
+  }
+  const ch=[m.a];
+  for(const x of R.shuffle(ds)) if(ch.length<4) ch.push(x);
+  const n=Number(String(m.a).replace('−','-'));
+  let guard=0;
+  while(ch.length<4 && Number.isFinite(n) && guard++<60){
+    const cand=neg(n + R.nz(-9,9));
+    if(!ch.includes(cand)) ch.push(cand);
+  }
+  m._why=why;
+  m._choices=R.shuffle(ch);
+  return m._choices;
+}
+
 /* -------------------------------- battle ---------------------------------- */
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
@@ -2399,47 +2638,153 @@ const Battle = {
                  : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
       diff = Mastery.adjustDiff(key, base);
     }
+    this.curDiff = diff;
     this.cur = buildQuestion(key, diff);
+    // A complex topic arrives as a ladder until it has been cleared enough
+    // times; after that the whole problem is offered for far more damage.
+    this.rite = null;
+    if(this.mode!=='daily' && this.cur.complexity===3 && Array.isArray(this.cur.motes)
+       && this.cur.motes.length && !Rite.graduated(key)){
+      this.rite = {motes:this.cur.motes, i:0, clean:0, trail:[], parent:this.cur};
+    }
+    this.unassisted = !this.rite && this.cur.complexity===3 && Rite.graduated(key);
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
       tg.innerHTML=`⚡ <b>${this.foe.nm}</b> is winding up — answer correctly to brace the blow!`;
     } else tg.style.display='none';
-    document.getElementById('qtopic').innerHTML = this.cur.topic +
-      (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '');
-    document.getElementById('qbox').innerHTML = this.cur.q;
-    const box=document.getElementById('choices'); box.innerHTML='';
-    this.cur.choices.forEach(c=>{
-      const b=document.createElement('button');
-      b.className='btn choice'; b.innerHTML=c;
-      if(c===this.cur.a) b.dataset.correct='1';
-      b.onclick=()=>this.answer(b,c);
-      box.appendChild(b);
-    });
+    this.renderStep();
     if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
     this.startTimer();
     this.renderPowers();
   },
 
+  // Windows scale with difficulty so that working carefully still earns the
+  // bonus. A hard problem you reason through in twenty seconds was not slow.
+  speedWindows(){
+    const d=this.curDiff||2;
+    return d>=3 ? [16000,32000] : d===2 ? [12000,24000] : [8000,16000];
+  },
+  speedMult(el){
+    const [a,b]=this.speedWindows();
+    return el<a ? 1.5 : el<b ? 1.2 : 1.0;
+  },
+  // Nothing animates while a question is unanswered: the countdown bar was the
+  // only moving thing on screen during the moment that needs concentration.
   startTimer(){
     clearInterval(this.timer);
     const bar=document.getElementById('timeBar');
-    const LIMIT=22000;
-    this.timer=setInterval(()=>{
-      const el=performance.now()-this.qStart;
-      const pct=clamp(100-el/LIMIT*100,0,100);
-      bar.style.width=pct+'%';
-      document.getElementById('speedTxt').textContent =
-        el<7000 ? '⚡ Swift strike ×1.5' : el<14000 ? '✦ Steady strike ×1.2' : 'Measured strike ×1.0';
-      if(pct<=0) clearInterval(this.timer);
-    },100);
+    if(bar) bar.style.width='0%';
+    document.getElementById('speedTxt').textContent='';
+  },
+
+  // What the player is actually being asked right now: a ladder step, or the
+  // whole problem once the scaffolding has faded.
+  step(){
+    return this.rite ? this.rite.motes[this.rite.i] : this.cur;
+  },
+
+  renderStep(){
+    const st=this.step();
+    const rb=document.getElementById('riteBar'), tr=document.getElementById('riteTrail');
+    if(this.rite){
+      const n=this.rite.motes.length;
+      rb.style.display='flex';
+      rb.innerHTML='Rite &nbsp;'+this.rite.trail.map(ok=>`<span class="rp ${ok?'done':'miss'}"></span>`).join('')
+        + `<span class="rp now"></span>`
+        + '<span class="rp"></span>'.repeat(Math.max(0,n-this.rite.i-1))
+        + `&nbsp; ${this.rite.i+1}/${n}`;
+      tr.style.display = this.rite.trail.length ? 'block' : 'none';
+      tr.innerHTML = this.rite.steps ? this.rite.steps.map((x,i)=>`${i+1}. <b>${x}</b>`).join('<br>') : '';
+    } else { rb.style.display='none'; tr.style.display='none'; }
+
+    document.getElementById('qtopic').innerHTML = this.cur.topic +
+      (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
+      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
+
+    // Codex chip
+    const head=document.getElementById('qhead');
+    const old=head.querySelector('.qchip'); if(old) old.remove();
+    if(Codex.has(this.cur)){
+      const chip=document.createElement('span');
+      chip.className='qchip'; chip.textContent='?';
+      chip.title='Peek at the rule';
+      chip.onclick=()=>this.peek();
+      head.appendChild(chip);
+    }
+
+    document.getElementById('qbox').innerHTML = st.q;
+    const box=document.getElementById('choices'); box.innerHTML='';
+    const choices = st===this.cur ? this.cur.choices : buildMote(st);
+    choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===st.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+    this.renderPerfect();
+  },
+
+  // Motes carry raw distractors; shuffle them into four choices on the spot.
+  peek(){
+    const costs=Codex.costsCombo(this.cur.key);
+    Codex.open(this.cur, ()=>{
+      if(costs && this.combo>0){
+        this.combo=0;
+        UI.toast('The rule is yours — your combo is not.');
+        this.updateBars();
+      }
+    });
+  },
+
+  // Perfect Strike: build a numeric answer instead of picking one, for triple
+  // damage. Only offered where the answer is a plain integer, which is the
+  // honest boundary of what a keypad can express.
+  canPerfect(){
+    const st=this.step();
+    return this.mode!=='daily' && !this.answered && /^−?\d+$/.test(String(st.a));
+  },
+  renderPerfect(){
+    const p=document.getElementById('pstrike');
+    if(!this.canPerfect()){ p.style.display='none'; p.innerHTML=''; return; }
+    p.style.display='';
+    p.innerHTML=`<div class="pbtn" id="pgo">⚔ Perfect Strike — build it yourself, ×3 damage</div>`;
+    document.getElementById('pgo').onclick=()=>this.openPad();
+  },
+  openPad(){
+    this.padVal='';
+    document.getElementById('choices').innerHTML='';
+    const p=document.getElementById('pstrike');
+    p.innerHTML=`<div id="pad">
+      <div id="padVal">—</div>
+      ${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-k="${n}">${n}</button>`).join('')}
+      <button data-k="−">±</button><button data-k="0">0</button><button data-k="⌫">⌫</button>
+      <button data-k="ok" class="btn gold" style="grid-column:1/-1;padding:13px">Strike</button>
+    </div>`;
+    p.querySelectorAll('#pad button').forEach(b=>{
+      b.onclick=()=>this.pad(b.dataset.k);
+    });
+  },
+  pad(k){
+    if(k==='⌫') this.padVal=this.padVal.slice(0,-1);
+    else if(k==='−') this.padVal = this.padVal.startsWith('−') ? this.padVal.slice(1) : '−'+this.padVal;
+    else if(k==='ok'){
+      if(!this.padVal || this.padVal==='−') return;
+      this.perfect=true;
+      this.answer(null, this.padVal);
+      return;
+    }
+    else this.padVal += k;
+    document.getElementById('padVal').textContent = this.padVal || '—';
   },
 
   answer(btn, choice){
     if(this.answered) return;
     this.answered=true; clearInterval(this.timer);
-    const ok = choice===this.cur.a;
+    const st = this.step();
+    const ok = choice===st.a;
     const el = performance.now()-this.qStart;
     document.querySelectorAll('#choices .choice').forEach(b=>{
       b.onclick=null;
@@ -2447,9 +2792,38 @@ const Battle = {
       else if(b===btn) b.classList.add('wrong');
       else b.classList.add('faded');
     });
-    this.lastMastery = Game.recordAnswer(this.cur.key, ok);
+    document.getElementById('pstrike').style.display='none';
+
+    // A ladder step is one small piece of a topic, so it moves mastery by a
+    // fraction; the parent problem still counts in full.
+    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length) : 1;
+    this.lastMastery = Game.recordAnswer(this.cur.key, ok, weight);
+
+    // --- a step of a Rite: teach, chip in a little damage, move on ---
+    if(this.rite){
+      const r=this.rite;
+      r.trail.push(ok);
+      r.steps = r.steps || [];
+      r.steps.push(`${st.q.replace(/<[^>]+>/g,' ').trim().slice(0,44)} → ${ok?st.a:'<span style="color:var(--red)">'+st.a+'</span>'}`);
+      if(ok){
+        r.clean++;
+        this.combo++;
+        const chip=Math.max(3, Math.round(this.wStats().dmg*0.25));
+        this.ehp=Math.max(0,this.ehp-chip);
+        Anim.strike('p', chip, false, 'STEP');
+        Sfx.good(this.combo);
+      } else {
+        Anim.float(560, H-250, 'MISSTEP', '#ff8b8b');
+        Sfx.bad();
+      }
+      Game.save();
+      setTimeout(()=>this.updateBars(),380);
+      this.showExplain(ok, choice, st);
+      return;
+    }
 
     Haptic.tap();
+
     if(this.mode==='daily'){
       this.combo = ok ? this.combo+1 : 0;
       const pts=Daily.award(ok, el, this.combo);
@@ -2467,12 +2841,15 @@ const Battle = {
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
       const w=this.wStats();
-      const speed = el<7000?1.5 : el<14000?1.2 : 1.0;
+      const speed = this.speedMult(el);
       const comboMul = 1 + Math.min(this.combo,7)*.15;
       const crit = R.chance(w.crit + this.combo*0.02);
-      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1);
+      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1);
+      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1) * bonus;
       dmg = Math.round(dmg * (0.9+Math.random()*0.2));
       this.rage=false;
+      if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
+      else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
       Anim.strike('p',dmg,crit,null,this.ehp<=0);
       Sfx.good(this.combo);                       // pitch climbs with the streak
@@ -2482,6 +2859,7 @@ const Battle = {
       Bounty.bump('streak',this.combo);
       if(crit) Bounty.bump('crit',1);
     } else {
+      if(this.perfect) this.combo=0;               // a missed Perfect Strike costs the streak
       this.combo=0;
       const def=this.defStat();
       let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
@@ -2499,6 +2877,11 @@ const Battle = {
     // The foe fights on its own clock: it winds up over a few turns and then
     // slams regardless of your answer. A correct answer braces the blow rather
     // than avoiding it, so armour and draughts always matter.
+    const [sa,sb]=this.speedWindows();
+    document.getElementById('speedTxt').textContent = ok
+      ? (el<sa ? '⚡ Swift strike ×1.5' : el<sb ? '✦ Steady strike ×1.2' : 'Measured strike ×1.0')
+      : '';
+    this.perfect=false; this.finisher=1;
     this.lastSlam=0; this.lastBraced=ok;
     if(this.slamNext){
       this.slamNext=false;
@@ -2531,17 +2914,26 @@ const Battle = {
     if(hit) Celebrate.banner(hit[0], hit[1], c>=8?'#ff9c3d':'var(--gold)', ()=>{Sfx.milestone(); Haptic.win();});
   },
 
-  showExplain(ok, picked){
+  showExplain(ok, picked, st){
+    st = st || this.cur;
+    const inRite = st !== this.cur;
+    const why = inRite ? (st._why||{}) : this.cur.why;
+    const miss = !ok && why[picked];
     const e=document.getElementById('explain');
-    const miss = !ok && this.cur.why[picked];
+    const head = inRite
+      ? (ok ? '✔️ Step taken.' : '✕ Not that step.')
+      : (ok ? '⚔️ A clean strike!' : '🩸 The blow lands on you.');
+    // A wrong answer is exactly when the rule is worth restating.
+    const rule = (!ok && this.cur.codex)
+      ? `<div class="cxinline"><b>The rule</b><br>${this.cur.codex.rule}</div>` : '';
     e.style.display='block';
     e.innerHTML =
-      `<div class="head" style="color:${ok?'var(--green)':'var(--red)'}">${ok?'⚔️ A clean strike!':'🩸 The blow lands on you.'}</div>`+
-      (ok?'':`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">${this.cur.a}</b>.</div>`)+
+      `<div class="head" style="color:${ok?'var(--green)':'var(--red)'}">${head}</div>`+
+      (ok?'':`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">${st.a}</b>.</div>`)+
       (miss?`<div class="miss">You chose <b>${picked}</b>: ${miss}.</div>`:'')+
       (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>`:'')+
-      `<div>${this.cur.ex}</div>`+
-      `<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>`;
+      `<div>${st.ex}</div>`+ rule +
+      `<button class="btn gold" style="margin-top:10px" id="contBtn">${inRite?'Next step ▶':'Continue ▶'}</button>`;
     const btn=document.getElementById('contBtn');
     btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
     e.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -2549,6 +2941,27 @@ const Battle = {
 
   afterTurn(){
     if(this.over) return;                       // battle already resolved
+    // Mid-ladder: advance to the next step without ending the turn.
+    if(this.rite){
+      const r=this.rite;
+      r.i++;
+      if(r.i < r.motes.length){
+        this.answered=false;
+        const ex=document.getElementById('explain'); ex.style.display='none'; ex.innerHTML='';
+        this.qStart=performance.now();
+        this.renderStep();
+        return;
+      }
+      // Ladder finished: the parent problem lands as one scaled blow.
+      const clean=r.clean, total=r.motes.length;
+      Rite.record(this.cur.key, clean===total);
+      this.finisher = 1 + 1.6*(clean/total);
+      this.rite=null;
+      this.answered=false;                       // answer() guards on this
+      this.qStart=performance.now()-999999;      // the finisher is not a speed test
+      this.answer(null, this.cur.a);             // the assembled solution strikes
+      return;
+    }
     if(this.mode==='daily'){
       Daily.n++;
       if(Daily.n>=Daily.LEN){ this.over='daily'; clearInterval(this.timer); Daily.finish(); return; }
@@ -2711,6 +3124,59 @@ const Titles = {
 
 /* Local-date key, so the streak rolls over at the player's midnight. */
 function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+/* --------------------------------- codex ---------------------------------- */
+/* One card per topic: the rule in a sentence and a worked scrap. Free to peek
+   while a topic is new, then it costs combo — cheap enough to use, expensive
+   enough to matter.                                                          */
+const Codex = {
+  FREE_SIGHTS: 6,
+  costsCombo(key){
+    const r = Game.s && Game.s.topicStats[key];
+    return !!(r && r.seen >= this.FREE_SIGHTS);
+  },
+  has(cur){ return !!(cur && cur.codex); },
+  open(cur, onClose){
+    if(!this.has(cur)) return;
+    const free = !this.costsCombo(cur.key);
+    const el=document.getElementById('codex');
+    el.innerHTML=`<div class="cxbox">
+        <div class="cxk">${cur.topic}</div>
+        <div class="cxrule">${cur.codex.rule}</div>
+        ${cur.codex.eg?`<div class="cxeg">${cur.codex.eg}</div>`:''}
+        <div class="small" style="margin-top:10px">${free
+          ? 'Free while this topic is still new to you.'
+          : 'Peeking costs your combo.'}</div>
+        <button class="btn gold" id="cxclose" style="margin-top:10px">Back to the fight</button>
+      </div>`;
+    el.classList.add('on');
+    document.getElementById('cxclose').onclick=()=>{
+      el.classList.remove('on');
+      if(onClose) onClose(free);
+    };
+    Sfx.coin(0);
+  }
+};
+
+/* ---------------------------------- rite ---------------------------------- */
+/* A complex topic arrives as a ladder of five-second steps that chain into a
+   combo and end in a finisher. Four fast wins read better than one hard
+   question, and they happen to be how procedure is actually learnt.          */
+const Rite = {
+  // How many clean ladders before the game offers the whole problem instead.
+  GRADUATE: 3,
+  graduated(key){
+    const g=Game.s; if(!g) return false;
+    const r=g.topicStats[key];
+    return (g.riteWins && g.riteWins[key] || 0) >= this.GRADUATE && r && r.m >= 0.7;
+  },
+  record(key, clean){
+    const g=Game.s;
+    g.riteWins = g.riteWins || {};
+    if(clean) g.riteWins[key] = (g.riteWins[key]||0) + 1;
+    Game.save();
+  }
+};
 
 /* --------------------------------- loot ---------------------------------- */
 /* A drop used to be a 42% roll printing one line of text. It is now a rarity

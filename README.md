@@ -53,8 +53,10 @@ doesn't even ask for that.
 | Correct | Your knight lunges and strikes. Damage = weapon × speed × combo × crit. |
 | Wrong | The foe strikes you, and the correct method is explained before you continue. |
 
-- **Speed bonus** — answer under 7s for ×1.5, under 14s for ×1.2. There is no penalty for
-  being slow, so thinking is never punished.
+- **Speed bonus** — the window scales with difficulty (8s / 12s / 16s for ×1.5), so working
+  a hard problem through carefully still earns it. There is no penalty for being slow, and
+  nothing on screen counts down while a question is unanswered — the moment that needs
+  concentration is the one moment nothing is moving.
 - **Combo** — each consecutive correct answer adds +15% damage, up to ×2.05. One mistake
   resets it.
 - **Crit** — scales with your weapon and grows as your streak builds.
@@ -62,6 +64,30 @@ doesn't even ask for that.
   turn, and when it flashes ⚡ the next blow lands *regardless of your answer*. Answering
   correctly braces it down to about a third; armour subtracts from what's left. This is
   why gear, draughts and gold matter even to a player who never misses.
+
+**⛓️ Rites.** A topic that is genuinely complex does not arrive as one hard question. It
+arrives as a ladder of five-second steps — *pick u · find du · rewrite · integrate* — each
+its own tap with its own small hit and rising tone, ending in one scaled finisher. Four
+fast wins read better than one hard question, and they happen to be how procedure is
+actually learnt. A clean ladder deals **5.8× weapon damage** against **3.6×** for a single
+correct answer, so taking the long way is rewarded rather than taxed. The foe still acts
+once per ladder, on the finisher.
+
+**Scaffolding fades into damage.** Clear a topic's ladder three times at high mastery and
+the game stops offering the ladder and hands you the whole problem instead — marked
+*unassisted ×2*. The support disappears because you chose the bigger reward, not because a
+difficulty setting moved. Ladder steps move mastery by a *fraction* of a full answer, so
+being walked through something never convinces the scheduler you have mastered it.
+
+**📖 The Codex.** Every complex topic carries a card: the rule in a sentence and a worked
+scrap. A `?` sits beside the topic name — free to peek while a topic is still new to you,
+and after that it costs your combo. Get one wrong and the rule appears in the explanation
+alongside the diagnosis.
+
+**⚔ Perfect Strike.** Where an answer is a plain number you can decline the four choices and
+build it on a keypad instead, for **×3 damage**, with a miss costing the combo. Generation
+rather than recognition, offered as a risk you may take rather than a friction everyone
+pays.
 
 **Misconception feedback.** The four choices are not padding — each wrong one is built
 from a specific, common error. Pick the entrywise product on a matrix multiplication and
@@ -273,7 +299,9 @@ against Simpson's rule, limits by direct evaluation).
 **26 of 38 generators are now independently verified against the mathematics**, up from 8
 when the harness could only parse polynomials. The remaining twelve have answers that are
 not scalar expressions — vectors, matrices, yes/no judgements, sets of roots — and are
-covered by the structural and algebraic layers instead.
+covered by the structural and algebraic layers instead. Mote ladders are checked the same
+way, on the choices a player is actually shown rather than the authored list — 28,800
+rendered steps per run.
 
 The generators were also checked by:
 
