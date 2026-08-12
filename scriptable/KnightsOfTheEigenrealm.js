@@ -111,6 +111,14 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 /* explain card */
 #explain{border-left:4px solid var(--gold);font-size:15px;line-height:1.6}
 #explain .head{font-weight:900;margin-bottom:6px;font-size:16px}
+#telegraph{background:rgba(229,72,77,.16);border:1px solid var(--red);border-radius:10px;
+  padding:8px 10px;margin-bottom:8px;font-size:13px;font-weight:700;text-align:center;
+  animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}50%{box-shadow:0 0 0 6px rgba(229,72,77,0)}}
+.pips{font-size:11px;color:var(--red);letter-spacing:1px}
+.miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
+  padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
+.miss b{color:#ffb3b6}
 
 /* map */
 .node{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;
@@ -217,6 +225,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     </div>
 
     <div class="panel" id="qpanel">
+      <div id="telegraph" style="display:none"></div>
       <div id="qtopic"></div>
       <div id="qbox"></div>
       <div id="choices"></div>
@@ -347,7 +356,10 @@ vecAdd(d){
   return {topic:'Vector Addition',
     q:\`\${vecR(u)} + \${vecR(v)} = ?\`,
     a:vecR(s),
-    d:[vecR([u[0]-v[0],u[1]-v[1]]), vecR([u[0]+v[1],u[1]+v[0]]), vecR([s[0],s[1]+R.nz(-3,3)]), vecR([u[0]*v[0],u[1]*v[1]])],
+    d:[[vecR([u[0]-v[0],u[1]-v[1]]),'that subtracts v instead of adding it'],
+       [vecR([u[0]+v[1],u[1]+v[0]]),'the components got crossed — first pairs with first, second with second'],
+       [vecR([u[0]*v[0],u[1]*v[1]]),'that multiplies the components; addition is what was asked'],
+       vecR([s[0],s[1]+R.nz(-3,3)])],
     ex:\`Add matching slots, nothing else. \${neg(u[0])}+\${neg(v[0])} = \${neg(s[0])} on top, \${neg(u[1])}+\${neg(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
 },
 vecScale(d){
@@ -355,7 +367,11 @@ vecScale(d){
   const s=[c*v[0],c*v[1]];
   return {topic:'Scalar Multiplication',
     q:\`\${neg(c)} · \${vecR(v)} = ?\`,
-    a:vecR(s), d:[vecR([c*v[0],v[1]]), vecR([c+v[0],c+v[1]]), vecR([-s[0],-s[1]]), vecR([s[1],s[0]])],
+    a:vecR(s),
+    d:[[vecR([c*v[0],v[1]]),'only the first component got scaled — a scalar multiplies every component'],
+       [vecR([c+v[0],c+v[1]]),'the scalar was added to each component instead of multiplied'],
+       [vecR([-s[0],-s[1]]),'the direction is flipped — check the sign of the scalar'],
+       vecR([s[1],s[0]])],
     ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${neg(v[0])} = \${neg(s[0])} and \${neg(c)}·\${neg(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
 },
 vecCombo(d){
@@ -363,7 +379,11 @@ vecCombo(d){
   const s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
   return {topic:'Linear Combination',
     q:\`u = \${vecR(u)}, v = \${vecR(v)}<br>\${a}u − \${b}v = ?\`,
-    a:vecR(s), d:[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]), vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]), vecR([s[0]+R.nz(-4,4),s[1]]), vecR([-s[0],-s[1]])],
+    a:vecR(s),
+    d:[[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]),'that adds the two scaled vectors — the problem subtracts'],
+       [vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]),"v's components got crossed"],
+       [vecR([-s[0],-s[1]]),'the whole result is negated — you computed '+b+'v − '+a+'u'],
+       vecR([s[0]+R.nz(-4,4),s[1]])],
     ex:\`Scale first, then add. \${a}u = \${vecR([a*u[0],a*u[1]])} and \${b}v = \${vecR([b*v[0],b*v[1]])}. Subtracting gives \${vecR(s)}. Any expression like this is a "linear combination" — the whole subject is built out of them.\`};
 },
 dot(d){
@@ -372,7 +392,11 @@ dot(d){
   const s=u[0]*v[0]+u[1]*v[1];
   return {topic:'Dot Product',
     q:\`\${vecR(u)} · \${vecR(v)} = ?\`,
-    a:neg(s), d:[neg(u[0]*v[0]-u[1]*v[1]), neg(u[0]*v[1]+u[1]*v[0]), neg(-s), neg(s+R.nz(-6,6))],
+    a:neg(s),
+    d:[[neg(u[0]*v[0]-u[1]*v[1]),'the two products were subtracted — the dot product adds them'],
+       [neg(u[0]*v[1]+u[1]*v[0]),'the components got crossed; multiply first with first, second with second'],
+       [neg(-s),'a sign slipped somewhere in the products'],
+       neg(s+R.nz(-6,6))],
     ex:\`Multiply matching slots and add the results: (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(u[0]*v[0])} + \${neg(u[1]*v[1])} = \${neg(s)}. The dot product is a single number, never a vector — it measures how much the two arrows point the same way.\`};
 },
 mag(){
@@ -381,20 +405,28 @@ mag(){
   const v=[t[0]*sx,t[1]*sy];
   return {topic:'Vector Length',
     q:\`‖\${vecR(v)}‖ = ?\`,
-    a:String(t[2]), d:[String(t[0]+t[1]), String(t[2]+1), String(Math.abs(t[0]-t[1])), String(t[2]*2)],
+    a:String(t[2]),
+    d:[[String(t[0]+t[1]),'that just adds the components — length needs the square root of the sum of squares'],
+       [String(Math.abs(t[0]-t[1])),'the components were subtracted; they must be squared and added'],
+       [String(t[2]*2),'twice the correct length — the square root was never taken properly'],
+       String(t[2]+1)],
     ex:\`Length is Pythagoras: √(\${t[0]}² + \${t[1]}²) = √(\${t[0]*t[0]} + \${t[1]*t[1]}) = √\${t[2]*t[2]} = \${t[2]}. Signs vanish because the components get squared — length is never negative.\`};
 },
 orth(){
   const u=[R.nz(-6,6),R.nz(-6,6)];
-  const yes=R.chance(.5);
-  const v = yes ? [-u[1],u[0]] : [R.nz(-6,6),R.nz(-6,6)];
+  const wantPerp=R.chance(.5);
+  const v = wantPerp ? [-u[1],u[0]] : [R.nz(-6,6),R.nz(-6,6)];
   const s=u[0]*v[0]+u[1]*v[1];
   const truth = s===0;
   return {topic:'Orthogonality',
     q:\`Are u = \${vecR(u)} and v = \${vecR(v)} perpendicular?\`,
-    a: truth ? 'Yes — dot product is 0' : 'No — dot product is '+neg(s),
-    d:['Yes — dot product is 0','No — dot product is '+neg(s),'Only if both are unit vectors','Impossible to tell without angles'],
-    ex:\`Two vectors are perpendicular exactly when their dot product is zero. Here u·v = \${neg(u[0])}·\${neg(v[0])} + \${neg(u[1])}·\${neg(v[1])} = \${neg(s)}, so they \${truth?'are':'are not'} perpendicular.\`};
+    a: truth ? 'Yes — they are perpendicular' : 'No — they are not perpendicular',
+    d:[ truth ? ['No — they are not perpendicular',\`their dot product is 0, and a zero dot product is exactly what perpendicular means\`]
+              : ['Yes — they are perpendicular',\`their dot product is \${neg(s)}, not 0\`],
+        ['Only if both are unit vectors','length is irrelevant here — perpendicularity is decided by the dot product alone'],
+        ['You would need the angle between them','you never need the angle; the dot product settles it'],
+        ['Only if they have the same length','equal length has nothing to do with meeting at a right angle']],
+    ex:\`Two vectors are perpendicular exactly when their dot product is zero. Here u·v = (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(s)}, so they \${truth?'are':'are not'} perpendicular.\`};
 },
 
 /* ---------- Realm 2 : matrices ---------- */
@@ -404,7 +436,11 @@ matVec(d){
   const s=[A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]];
   return {topic:'Matrix × Vector',
     q:\`\${mat(A)}\${vec(v)} = ?\`,
-    a:vec(s), d:[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]), vec([s[1],s[0]]), vec([A[0][0]*v[0],A[1][1]*v[1]]), vec([s[0]+R.nz(-5,5),s[1]])],
+    a:vec(s),
+    d:[[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]),'that dotted the vector with the columns — each output entry uses a row'],
+       [vec([s[1],s[0]]),'the two output components are in the wrong order'],
+       [vec([A[0][0]*v[0],A[1][1]*v[1]]),'only the diagonal entries were used — each row contributes both of its terms'],
+       vec([s[0]+R.nz(-5,5),s[1]])],
     ex:\`Each output row is that row dotted with the vector. Top: (\${neg(A[0][0])})(\${neg(v[0])}) + (\${neg(A[0][1])})(\${neg(v[1])}) = \${neg(s[0])}. Bottom: (\${neg(A[1][0])})(\${neg(v[0])}) + (\${neg(A[1][1])})(\${neg(v[1])}) = \${neg(s[1])}.\`};
 },
 det2(d){
@@ -413,7 +449,11 @@ det2(d){
   const s=A[0][0]*A[1][1]-A[0][1]*A[1][0];
   return {topic:'Determinant (2×2)',
     q:\`det \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]), neg(-s), neg(A[0][0]+A[1][1]), neg(s+R.nz(-7,7))],
+    a:neg(s),
+    d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the two products were added — the determinant subtracts the second'],
+       [neg(-s),'the subtraction ran backwards; it is ad − bc, in that order'],
+       [neg(A[0][0]+A[1][1]),'that is the trace (the diagonal sum), not the determinant'],
+       neg(s+R.nz(-7,7))],
     ex:\`For a 2×2 it's (top-left)(bottom-right) − (top-right)(bottom-left) = (\${neg(A[0][0])})(\${neg(A[1][1])}) − (\${neg(A[0][1])})(\${neg(A[1][0])}) = \${neg(s)}. That number is the signed area scaling factor of the transformation; zero would mean it squashes the plane flat.\`};
 },
 transpose(){
@@ -421,7 +461,11 @@ transpose(){
   const T=[[A[0][0],A[1][0]],[A[0][1],A[1][1]]];
   return {topic:'Transpose',
     q:\`\${mat(A)}<sup>T</sup> = ?\`,
-    a:mat(T), d:[mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), mat([[-A[0][0],-A[1][0]],[-A[0][1],-A[1][1]]]), mat([[A[1][0],A[0][0]],[A[1][1],A[0][1]]])],
+    a:mat(T),
+    d:[[mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'that swapped the diagonal entries — transposing leaves those alone and swaps the other two'],
+       [mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'that is the original matrix, unchanged'],
+       [mat([[-A[0][0],-A[1][0]],[-A[0][1],-A[1][1]]]),'transposing never changes any signs'],
+       mat([[A[1][0],A[0][0]],[A[1][1],A[0][1]]])],
     ex:\`Transposing flips the matrix across its main diagonal: rows become columns. The diagonal entries \${neg(A[0][0])} and \${neg(A[1][1])} stay put, while \${neg(A[0][1])} and \${neg(A[1][0])} swap places.\`};
 },
 matMul(d){
@@ -433,7 +477,11 @@ matMul(d){
   const W=[[A[0][0]*B[0][0],A[0][1]*B[0][1]],[A[1][0]*B[1][0],A[1][1]*B[1][1]]];
   return {topic:'Matrix Multiplication',
     q:\`\${mat(A)}\${mat(B)} = ?\`,
-    a:mat(C), d:[mat(W), mat([[C[1][1],C[0][1]],[C[1][0],C[0][0]]]), mat([[C[0][0],C[1][0]],[C[0][1],C[1][1]]]), mat([[C[0][0]+R.nz(-4,4),C[0][1]],[C[1][0],C[1][1]]])],
+    a:mat(C),
+    d:[[mat(W),'that multiplied matching entries — matrix multiplication dots each row against each column'],
+       [mat([[C[0][0],C[1][0]],[C[0][1],C[1][1]]]),'this is the transpose of the correct product'],
+       [mat([[C[1][1],C[0][1]],[C[1][0],C[0][0]]]),'the right numbers, but in the wrong positions'],
+       mat([[C[0][0]+R.nz(-4,4),C[0][1]],[C[1][0],C[1][1]]])],
     ex:\`Entry (row i, col j) = row i of the first matrix dotted with column j of the second. Top-left: (\${neg(A[0][0])})(\${neg(B[0][0])}) + (\${neg(A[0][1])})(\${neg(B[1][0])}) = \${neg(C[0][0])}. Repeat for the other three. Note it is <i>not</i> entrywise multiplication.\`};
 },
 trace(){
@@ -441,7 +489,11 @@ trace(){
   const s=A[0][0]+A[1][1];
   return {topic:'Trace',
     q:\`tr \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(A[0][1]+A[1][0]), neg(A[0][0]*A[1][1]), neg(-s), neg(A[0][0]*A[1][1]-A[0][1]*A[1][0])],
+    a:neg(s),
+    d:[[neg(A[0][1]+A[1][0]),'that sums the off-diagonal entries — the trace uses the main diagonal'],
+       [neg(A[0][0]*A[1][1]),'the diagonal entries were multiplied instead of added'],
+       [neg(A[0][0]*A[1][1]-A[0][1]*A[1][0]),'that is the determinant, not the trace'],
+       neg(-s)],
     ex:\`The trace is just the sum down the main diagonal: \${neg(A[0][0])} + \${neg(A[1][1])} = \${neg(s)}. It also equals the sum of the eigenvalues, which is why it shows up everywhere.\`};
 },
 solve2(d){
@@ -453,7 +505,10 @@ solve2(d){
   return {topic:'Solving a 2×2 System',
     q:\`\${poly([[a,1]],'x')} \${b<0?'−':'+'} \${Math.abs(b)===1?'':Math.abs(b)}y = \${neg(p)}<br>\${poly([[c,1]],'x')} \${e<0?'−':'+'} \${Math.abs(e)===1?'':Math.abs(e)}y = \${neg(q2)}\`,
     a:\`x = \${neg(x)}, y = \${neg(y)}\`,
-    d:[\`x = \${neg(y)}, y = \${neg(x)}\`,\`x = \${neg(-x)}, y = \${neg(y)}\`,\`x = \${neg(x+1)}, y = \${neg(y-1)}\`,\`No solution\`],
+    d:[[\`x = \${neg(y)}, y = \${neg(x)}\`,'the right two numbers, but x and y are swapped'],
+       [\`x = \${neg(-x)}, y = \${neg(y)}\`,'the sign of x is wrong — substitute back into the first equation and it fails'],
+       ['No solution','the determinant is not zero, so there is exactly one solution'],
+       \`x = \${neg(x+1)}, y = \${neg(y-1)}\`],
     ex:\`Written as a matrix equation this is \${mat([[a,b],[c,e]])}\${vec(['x','y'])} = \${vec([p,q2])}. Since the determinant \${neg(a*e-b*c)} is not zero there is exactly one solution, and it is x = \${neg(x)}, y = \${neg(y)}. Substitute back to check both equations.\`};
 },
 inv2(){
@@ -465,7 +520,10 @@ inv2(){
   return {topic:'Inverse of a 2×2',
     q:\`\${mat(A)}<sup>−1</sup> = ?\`,
     a:show(adj),
-    d:[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]]), \`\${frac(1,-det)} \${mat(adj)}\`],
+    d:[[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'the entries were left where they were — you must swap the diagonal and negate the off-diagonal'],
+       [show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'the diagonal was swapped but the off-diagonal entries were never negated'],
+       [\`\${frac(1,-det)} \${mat(adj)}\`,'the right matrix, but divided by −det instead of det'],
+       show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]])],
     ex:\`The recipe: swap the diagonal entries, flip the sign of the other two, then divide by the determinant. det = \${neg(det)}, so the inverse is \${frac(1,det)} times \${mat(adj)}. If the determinant were 0 no inverse would exist.\`};
 },
 det3(){
@@ -475,7 +533,11 @@ det3(){
   const s=A[0][0]*m(0,0)-A[0][1]*m(0,1)+A[0][2]*m(0,2);
   return {topic:'Determinant (3×3)',
     q:\`det \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(-s), neg(s+R.nz(-9,9)), neg(A[0][0]*A[1][1]*A[2][2]), neg(s*2)],
+    a:neg(s),
+    d:[[neg(-s),'the alternating signs ran the wrong way — the pattern is + − +'],
+       [neg(A[0][0]*A[1][1]*A[2][2]),'that is only the diagonal product; a 3×3 determinant needs all the cofactor terms'],
+       [neg(A[0][0]*m(0,0)+A[0][1]*m(0,1)+A[0][2]*m(0,2)),'the middle term must be subtracted, not added'],
+       neg(s+R.nz(-9,9))],
     ex:\`Expand along the top row with alternating signs + − +: \${neg(A[0][0])}·\${neg(m(0,0))} − \${neg(A[0][1])}·\${neg(m(0,1))} + \${neg(A[0][2])}·\${neg(m(0,2))} = \${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.\`};
 },
 cross(){
@@ -483,7 +545,11 @@ cross(){
   const s=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
   return {topic:'Cross Product',
     q:\`\${vecR(u)} × \${vecR(v)} = ?\`,
-    a:vecR(s), d:[vecR([-s[0],-s[1],-s[2]]), vecR([u[0]*v[0],u[1]*v[1],u[2]*v[2]]), vecR([s[1],s[2],s[0]]), neg(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])],
+    a:vecR(s),
+    d:[[vecR([-s[0],-s[1],-s[2]]),'that is v × u — swapping the order reverses the sign'],
+       [vecR([u[0]*v[0],u[1]*v[1],u[2]*v[2]]),'componentwise multiplication is not the cross product'],
+       [neg(u[0]*v[0]+u[1]*v[1]+u[2]*v[2]),'that is the dot product — a single number, not a vector'],
+       vecR([s[1],s[2],s[0]])],
     ex:\`Component by component: (u₂v₃−u₃v₂, u₃v₁−u₁v₃, u₁v₂−u₂v₁) = \${vecR(s)}. Unlike the dot product this returns a <i>vector</i>, and it is perpendicular to both inputs.\`};
 },
 rank(){
@@ -496,8 +562,12 @@ rank(){
   const truth=det!==0;
   return {topic:'Linear Independence',
     q:\`Are the columns of \${mat(A)} linearly independent?\`,
-    a: truth ? 'Yes — det ≠ 0' : 'No — one is a multiple of the other',
-    d:['Yes — det ≠ 0','No — one is a multiple of the other','Yes — they are both nonzero','Only when the matrix is square'],
+    a: truth ? 'Yes — the determinant is not zero' : 'No — one column is a multiple of the other',
+    d:[ truth ? ['No — one column is a multiple of the other',\`no scalar turns one column into the other here; the determinant is \${neg(det)}, which is not zero\`]
+              : ['Yes — the determinant is not zero',\`the determinant is 0 here, so the columns are dependent\`],
+        ['Yes — both columns are nonzero','being nonzero is not enough; two nonzero vectors can still sit on the same line'],
+        ['Only square matrices can have independent columns','independence is defined for any collection of vectors, square or not'],
+        ['Only if the columns are perpendicular','perpendicular vectors are independent, but independence does not require right angles']],
     ex:\`Columns of a square matrix are independent exactly when the determinant is nonzero. Here det = \${neg(det)}, so they \${truth?'are independent and span the whole plane':'are dependent — the second column is just a scaled copy of the first, so together they only span a line'}.\`};
 },
 eigen2(){
@@ -507,7 +577,10 @@ eigen2(){
   return {topic:'Eigenvalues',
     q:\`Eigenvalues of \${mat(A)}?\`,
     a:\`\${neg(Math.min(l1,l2))} and \${neg(Math.max(l1,l2))}\`,
-    d:[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`, \`\${neg(b)} and \${neg(0)}\`, \`\${neg(-l1)} and \${neg(-l2)}\`, \`\${neg(l1*l2)} only\`],
+    d:[[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`,'those are the trace and the determinant — related to the eigenvalues, but not them'],
+       [\`\${neg(-l1)} and \${neg(-l2)}\`,'the signs are flipped; solve (λ − a)(λ − d) = 0, not (λ + a)(λ + d) = 0'],
+       [\`\${neg(b)} and \${neg(0)}\`,'those are the off-diagonal entries, which do not set the eigenvalues of a triangular matrix'],
+       \`\${neg(l1*l2)} only\`],
     ex:\`This matrix is triangular (a zero below the diagonal), and a triangular matrix wears its eigenvalues on the diagonal: \${neg(l1)} and \${neg(l2)}. Check with the characteristic equation det(A − λI) = (\${neg(l1)} − λ)(\${neg(l2)} − λ) = 0. Eigenvalues tell you how much each special direction is stretched.\`};
 },
 proj(){
@@ -517,7 +590,10 @@ proj(){
   return {topic:'Scalar Projection',
     q:\`How much of u = \${vecR(u)} points along v = \${vecR(v)}?<br><span class="small">(the scalar projection u·v / ‖v‖)</span>\`,
     a: frac(dp,t[2]),
-    d:[frac(dp,t[2]*t[2]), frac(t[2],dp), neg(dp), frac(-dp,t[2])],
+    d:[[frac(dp,t[2]*t[2]),'that divides by ‖v‖², which is the coefficient for the vector projection, not the scalar one'],
+       [neg(dp),'that is just u·v — it still needs dividing by the length of v'],
+       [frac(t[2],dp),'the fraction is upside down'],
+       frac(-dp,t[2])],
     ex:\`Scalar projection = u·v / ‖v‖. Here u·v = \${neg(dp)} and ‖v‖ = √(\${t[0]}²+\${t[1]}²) = \${t[2]}, giving \${frac(dp,t[2])}. It is the length of u's shadow cast onto the line through v.\`};
 },
 
@@ -528,16 +604,23 @@ limPoly(){
   const s=evalPoly(t,a);
   return {topic:'Limit by Substitution',
     q:\`lim<sub>x→\${neg(a)}</sub> ( \${poly(t)} ) = ?\`,
-    a:neg(s), d:[neg(-s), neg(s+R.nz(-6,6)), neg(evalPoly(dPoly(t),a)), 'Does not exist'],
+    a:neg(s),
+    d:[[neg(evalPoly(dPoly(t),a)),'that evaluates the derivative — a limit of a continuous function is plain substitution'],
+       ['Does not exist','polynomials are continuous everywhere, so this limit always exists'],
+       [neg(-s),'a sign slipped — watch the negative value being squared'],
+       neg(s+R.nz(-6,6))],
     ex:\`Polynomials are continuous everywhere, so you may simply plug in x = \${neg(a)}: \${t.map(([c,p])=>\`(\${neg(c)})(\${neg(a)})\${p?sup(p):'⁰'}\`).join(' + ')} = \${neg(s)}. Substitution only fails when it produces something like 0/0.\`};
 },
 limRational(){
-  const a=R.nz(1,6), extra=R.nz(-5,5);
-  // (x² − a²)/(x − a) → x + a
+  const a=R.nz(1,6);
   const s=2*a;
   return {topic:'Limit (0/0 form)',
     q:\`lim<sub>x→\${neg(a)}</sub> \${frac(\`x² − \${a*a}\`,\`x − \${a}\`)} = ?\`,
-    a:neg(s), d:[neg(a), '0', 'Does not exist', neg(a*a)],
+    a:neg(s),
+    d:[[neg(a),\`that is x itself; after cancelling you are left with x + \${a}, not x\`],
+       ['0','both parts vanish, but their ratio does not — factor before you judge'],
+       ['Does not exist','the 0/0 form only means substitution is premature; factoring reveals a perfectly good limit'],
+       neg(a*a)],
     ex:\`Substituting gives 0/0, so factor first: x² − \${a*a} = (x − \${a})(x + \${a}). Cancel the (x − \${a}) and you're left with x + \${a}, which at x = \${a} equals \${neg(s)}. The hole in the graph doesn't affect the limit.\`};
 },
 limInf(){
@@ -546,12 +629,20 @@ limInf(){
   if(k===1){
     return {topic:'Limit at Infinity',
       q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x² + \${R.i(1,9)}x\`,\`\${b}x² − \${R.i(1,9)}\`)} = ?\`,
-      a:frac(a,b), d:['0','∞',frac(b,a),neg(a-b)],
+      a:frac(a,b),
+      d:[['∞','top and bottom grow at the same rate, so the ratio stays finite'],
+         ['0','the numerator does not vanish — both sides grow like x²'],
+         [frac(b,a),'the ratio is upside down; it is the top leading coefficient over the bottom one'],
+         neg(a-b)],
       ex:\`When top and bottom have the same highest power, the limit is the ratio of those leading coefficients: \${a}/\${b}. Everything of lower degree becomes negligible once x is enormous.\`};
   }
   return {topic:'Limit at Infinity',
     q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x + \${R.i(1,9)}\`,\`\${b}x² + \${R.i(1,9)}\`)} = ?\`,
-    a:'0', d:['∞',frac(a,b),frac(b,a),'1'],
+    a:'0',
+    d:[['∞','the denominator grows faster, so the fraction shrinks rather than blows up'],
+       [frac(a,b),'that would be right if the powers matched, but the bottom is a whole power higher'],
+       ['1','the two sides grow at different rates, so the ratio never settles at 1'],
+       frac(b,a)],
     ex:\`The bottom grows like x² while the top only grows like x, so the denominator wins by a whole power of x and the fraction is crushed to 0.\`};
 },
 powerRule(d){
@@ -560,7 +651,11 @@ powerRule(d){
   const dt=dPoly(t);
   return {topic:'Derivative (Power Rule)',
     q:\`\${frac('d','dx')} ( \${poly(t)} ) = ?\`,
-    a:poly(dt), d:[poly(t.map(([c,p])=>[c*p,p])), poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)), poly(dPoly(dt)), poly(t.map(([c,p])=>[c*(p+1),p+1]))],
+    a:poly(dt),
+    d:[[poly(t.map(([c,p])=>[c*p,p])),'the coefficients were multiplied by the power but the exponents never dropped'],
+       [poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)),'the exponents dropped but the coefficients were never multiplied by them'],
+       [poly(dPoly(dt)),'that is the second derivative — differentiated once too often'],
+       poly(t.map(([c,p])=>[c*(p+1),p+1]))],
     ex:\`Bring the power down and drop it by one: \${t.filter(x=>x[0]).map(([c,p])=>p===0?\`the constant \${neg(c)} → 0\`:\`\${neg(c)}x\${p===1?'':sup(p)} → \${neg(c*p)}\${p-1===0?'':'x'+(p-1===1?'':sup(p-1))}\`).join(', ')}. Result: \${poly(dt)}.\`};
 },
 evalDeriv(){
@@ -568,7 +663,11 @@ evalDeriv(){
   const dt=dPoly(t), a=R.nz(-3,3), s=evalPoly(dt,a);
   return {topic:'Derivative at a Point',
     q:\`f(x) = \${poly(t)}<br>f′(\${neg(a)}) = ?\`,
-    a:neg(s), d:[neg(evalPoly(t,a)), neg(-s), neg(s+R.nz(-9,9)), neg(evalPoly(dPoly(dt),a))],
+    a:neg(s),
+    d:[[neg(evalPoly(t,a)),'that is f(a) — the height of the curve, not its slope'],
+       [neg(evalPoly(dPoly(dt),a)),'that is f″(a), the second derivative'],
+       [neg(-s),'a sign slipped while substituting a negative value'],
+       neg(s+R.nz(-9,9))],
     ex:\`First differentiate: f′(x) = \${poly(dt)}. Then substitute x = \${neg(a)} to get \${neg(s)}. That number is the slope of the curve at that exact point — and the instantaneous rate of change.\`};
 },
 trigDeriv(){
@@ -578,50 +677,77 @@ trigDeriv(){
   const a = which==='sin' ? \`\${k}cos(\${k}x)\` : \`−\${k}sin(\${k}x)\`;
   return {topic:'Derivative of Trig',
     q:\`\${frac('d','dx')} \${q} = ?\`,
-    a, d:[which==='sin'?\`cos(\${k}x)\`:\`−sin(\${k}x)\`, which==='sin'?\`−\${k}cos(\${k}x)\`:\`\${k}sin(\${k}x)\`, \`\${k}\${which}(\${k}x)\`, \`\${frac(1,k)}\${which==='sin'?'cos':'sin'}(\${k}x)\`],
+    a,
+    d:[[which==='sin'?\`cos(\${k}x)\`:\`−sin(\${k}x)\`,\`the chain rule was skipped — the inner \${k}x contributes a factor of \${k}\`],
+       [which==='sin'?\`−\${k}cos(\${k}x)\`:\`\${k}sin(\${k}x)\`,'the sign is wrong: sin differentiates to +cos, cos differentiates to −sin'],
+       [\`\${frac(1,k)}\${which==='sin'?'cos':'sin'}(\${k}x)\`,\`dividing by \${k} is what integrating does; differentiating multiplies by it\`],
+       \`\${k}\${which}(\${k}x)\`],
     ex:\`sin differentiates to cos, cos differentiates to −sin. The inner function \${k}x has derivative \${k}, and the chain rule says multiply by it — so the answer is \${a}.\`};
 },
 expLog(){
   const k=R.i(2,7);
   if(R.chance(.5)) return {topic:'Derivative of eˣ',
     q:\`\${frac('d','dx')} e<sup>\${k}x</sup> = ?\`,
-    a:\`\${k}e<sup>\${k}x</sup>\`, d:[\`e<sup>\${k}x</sup>\`,\`\${k}x·e<sup>\${k}x</sup>\`,\`\${frac(1,k)}e<sup>\${k}x</sup>\`,\`e<sup>\${k}</sup>\`],
+    a:\`\${k}e<sup>\${k}x</sup>\`,
+    d:[[\`e<sup>\${k}x</sup>\`,\`the chain rule was skipped — the inner \${k}x contributes a factor of \${k}\`],
+       [\`\${k}x·e<sup>\${k}x</sup>\`,'the exponent was brought down as if this were a power; exponentials do not behave that way'],
+       [\`\${frac(1,k)}e<sup>\${k}x</sup>\`,\`dividing by \${k} is what integrating does; differentiating multiplies by it\`],
+       \`e<sup>\${k}</sup>\`],
     ex:\`e<sup>u</sup> differentiates to e<sup>u</sup> times u′. With u = \${k}x, u′ = \${k}, so the answer is \${k}e<sup>\${k}x</sup>. The exponential is the one function that essentially reproduces itself.\`};
   return {topic:'Derivative of ln',
     q:\`\${frac('d','dx')} ln(\${k}x) = ?\`,
-    a:frac(1,'x'), d:[frac(1,k+'x'), frac(k,'x'), frac('1','ln x'), \`\${k}ln(x)\`],
+    a:frac(1,'x'),
+    d:[[frac(1,k+'x'),\`the chain rule gives \${k} on top, and it cancels the \${k} underneath — leaving 1/x\`],
+       [frac(k,'x'),\`the \${k} was applied on top without cancelling the \${k} in the denominator\`],
+       [\`\${k}ln(x)\`,'that is not a derivative at all — ln does not survive differentiation'],
+       frac('1','ln x')],
     ex:\`Chain rule: derivative of ln(u) is u′/u = \${k}/(\${k}x), and the \${k}s cancel to give 1/x. Interesting fact: ln(\${k}x) = ln \${k} + ln x, and the constant ln \${k} has derivative 0 — same answer.\`};
 },
 productRule(){
   const a=R.nz(2,5), b=R.nz(-6,6), c=R.nz(2,5), e=R.nz(-6,6);
-  // (ax+b)(cx+e) → 2ac x + (ae+bc)
   const A=2*a*c, B=a*e+b*c;
   return {topic:'Product Rule',
     q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})(\${poly([[c,1],[e,0]])}) = ?\`,
-    a:poly([[A,1],[B,0]]), d:[poly([[a*c,1],[b*e,0]]), poly([[a*c,1],[0,0]]), poly([[A,1],[-B,0]]), poly([[a+c,1],[b+e,0]])],
+    a:poly([[A,1],[B,0]]),
+    d:[[poly([[a*c,1],[b*e,0]]),'that multiplied the two derivatives together — the rule is f′g + fg′, not f′g′'],
+       [poly([[a+c,1],[b+e,0]]),'the two factors were added rather than differentiated as a product'],
+       [poly([[a*c,1],[0,0]]),'only one cross term survived; both f′g and fg′ contribute'],
+       poly([[A,1],[-B,0]])],
     ex:\`(fg)′ = f′g + fg′. Here f′ = \${a} and g′ = \${c}, so we get \${a}(\${poly([[c,1],[e,0]])}) + (\${poly([[a,1],[b,0]])})(\${c}) = \${poly([[A,1],[B,0]])}. Expanding first and differentiating gives the same thing — the rule just saves work when expanding is ugly.\`};
 },
 quotient(){
   const a=R.nz(2,6);
   return {topic:'Quotient Rule',
     q:\`\${frac('d','dx')} \${frac('x',\`x + \${a}\`)} = ?\`,
-    a:frac(a,\`(x + \${a})²\`), d:[frac(1,\`(x + \${a})²\`), frac(-a,\`(x + \${a})²\`), frac(\`2x + \${a}\`,\`(x + \${a})²\`), '1'],
+    a:frac(a,\`(x + \${a})²\`),
+    d:[[frac(-a,\`(x + \${a})²\`),'the numerator ran backwards; it is f′g − fg′, in that order'],
+       ['1','the derivative of a quotient is not the quotient of the derivatives'],
+       [frac(\`2x + \${a}\`,\`(x + \${a})²\`),'the x terms cancel in the numerator — recompute f′g − fg′'],
+       frac(1,\`(x + \${a})²\`)],
     ex:\`(f/g)′ = (f′g − fg′)/g². With f = x, g = x + \${a}: numerator = 1·(x + \${a}) − x·1 = \${a}. So the derivative is \${a}/(x + \${a})², which is always positive — the function is increasing everywhere it's defined.\`};
 },
 chainRule(){
   const a=R.i(2,5), b=R.nz(-6,6), n=R.i(2,4);
+  const inner=poly([[a,1],[b,0]]);
   return {topic:'Chain Rule',
-    q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})\${sup(n)} = ?\`,
-    a:\`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`,
-    d:[\`\${n}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n)}\`, \`\${a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${a})\${sup(n-1)}\`],
-    ex:\`Outside first, then inside. The outer power gives \${n}(inner)\${sup(n-1)}; the inner function \${poly([[a,1],[b,0]])} has derivative \${a}. Multiply: \${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}. Forgetting that inner \${a} is the single most common calculus slip.\`};
+    q:\`\${frac('d','dx')} (\${inner})\${sup(n)} = ?\`,
+    a:\`\${n*a}(\${inner})\${sup(n-1)}\`,
+    d:[[\`\${n}(\${inner})\${sup(n-1)}\`,\`the inner derivative was forgotten — differentiating \${inner} gives \${a}\`],
+       [\`\${n*a}(\${inner})\${sup(n)}\`,'the outer power was never reduced by one'],
+       [\`\${a}(\${inner})\${sup(n-1)}\`,'the outer power was never brought down as a factor'],
+       \`\${n*a}(\${a})\${sup(n-1)}\`],
+    ex:\`Outside first, then inside. The outer power gives \${n}(inner)\${sup(n-1)}; the inner function \${inner} has derivative \${a}. Multiply: \${n*a}(\${inner})\${sup(n-1)}. Forgetting that inner \${a} is the single most common calculus slip.\`};
 },
 tangent(){
   const t=[[R.nz(1,4),2],[R.nz(-7,7),1],[R.i(-7,7),0]];
   const a=R.nz(-3,3), dt=dPoly(t), m=evalPoly(dt,a), y=evalPoly(t,a);
   return {topic:'Tangent Line',
     q:\`f(x) = \${poly(t)}<br>Slope of the tangent line at x = \${neg(a)}?\`,
-    a:neg(m), d:[neg(y), neg(-m), neg(m+R.nz(-6,6)), neg(evalPoly(t,a)+m)],
+    a:neg(m),
+    d:[[neg(y),'that is f at that point — the height of the curve, not the slope of the tangent'],
+       [neg(-m),'a sign slipped while substituting'],
+       [neg(evalPoly(t,a)+m),'the function value and the slope were added together'],
+       neg(m+R.nz(-6,6))],
     ex:\`The tangent slope <i>is</i> the derivative. f′(x) = \${poly(dt)}, so f′(\${neg(a)}) = \${neg(m)}. (The full tangent line would be y − \${neg(y)} = \${neg(m)}(x − \${neg(a)}).)\`};
 },
 
@@ -631,7 +757,10 @@ indefPower(){
   return {topic:'Indefinite Integral',
     q:\`∫ \${poly([[c,n]])} dx = ?\`,
     a:\`\${poly([[c/(n+1),n+1]])} + C\`,
-    d:[\`\${poly([[c,n+1]])} + C\`, \`\${poly([[c*n,n-1]])} + C\`, \`\${poly([[c/(n+1),n]])} + C\`, \`\${poly([[c*(n+1),n+1]])} + C\`],
+    d:[[\`\${poly([[c,n+1]])} + C\`,'the power went up but the coefficient was never divided by the new power'],
+       [\`\${poly([[c*n,n-1]])} + C\`,'that differentiates instead of integrating — the power went down'],
+       [\`\${poly([[c/(n+1),n]])} + C\`,'the coefficient was divided but the power never rose'],
+       \`\${poly([[c*(n+1),n+1]])} + C\`],
     ex:\`Reverse the power rule: raise the power by one, then divide by the new power. x\${sup(n)} → x\${sup(n+1)}/\${n+1}, so \${c}x\${sup(n)} → \${c/(n+1)}x\${sup(n+1)}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.\`};
 },
 defPoly(){
@@ -641,7 +770,11 @@ defPoly(){
   const s=evalPoly(F,hi)-evalPoly(F,0);
   return {topic:'Definite Integral',
     q:\`∫<sub>0</sub><sup>\${hi}</sup> (\${poly(t)}) dx = ?\`,
-    a:neg(s), d:[neg(evalPoly(t,hi)), neg(s+R.nz(-8,8)), neg(-s), neg(evalPoly(F,hi))],
+    a:neg(s),
+    d:[[neg(evalPoly(t,hi)),'that evaluates the integrand at the top limit — you must antidifferentiate first'],
+       [neg(evalPoly([[c,2],[b,1]],hi)),\`the x² term was not divided by 2 when antidifferentiating\`],
+       [neg(-s),'the limits were subtracted the wrong way; it is F(top) − F(bottom)'],
+       neg(s+R.nz(-8,8))],
     ex:\`Antidifferentiate: F(x) = \${poly(F)}. Then the Fundamental Theorem says evaluate F at the top and subtract F at the bottom: F(\${hi}) − F(0) = \${neg(evalPoly(F,hi))} − \${neg(evalPoly(F,0))} = \${neg(s)}. That's the signed area under the curve.\`};
 },
 uSub(){
@@ -649,7 +782,10 @@ uSub(){
   return {topic:'u-Substitution',
     q:\`∫ 2x(x² + \${a})\${sup(n)} dx = ?\`,
     a:\`\${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C\`,
-    d:[\`\${frac(1,n)}(x² + \${a})\${sup(n)} + C\`, \`2x(x² + \${a})\${sup(n+1)} + C\`, \`\${frac(1,n+1)}(x² + \${a})\${sup(n)} + C\`, \`(x² + \${a})\${sup(n+1)} + C\`],
+    d:[[\`\${frac(1,n)}(x² + \${a})\${sup(n)} + C\`,'the power was never raised by one'],
+       [\`2x(x² + \${a})\${sup(n+1)} + C\`,'the 2x was left in place, but it is exactly the du that gets consumed'],
+       [\`(x² + \${a})\${sup(n+1)} + C\`,'the division by the new power is missing'],
+       \`\${frac(1,n+1)}(x² + \${a})\${sup(n)} + C\`],
     ex:\`Let u = x² + \${a}; then du = 2x dx, which is exactly the rest of the integrand. The problem becomes ∫u\${sup(n)} du = u\${sup(n+1)}/\${n+1}. Substitute back to get \${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C.\`};
 },
 intTrig(){
@@ -658,7 +794,11 @@ intTrig(){
   const a = which==='sin' ? \`−\${frac(1,k)}cos(\${k}x) + C\` : \`\${frac(1,k)}sin(\${k}x) + C\`;
   return {topic:'Integrating Trig',
     q:\`∫ \${which}(\${k}x) dx = ?\`,
-    a, d:[which==='sin'?\`\${frac(1,k)}cos(\${k}x) + C\`:\`−\${frac(1,k)}sin(\${k}x) + C\`, which==='sin'?\`−\${k}cos(\${k}x) + C\`:\`\${k}sin(\${k}x) + C\`, \`\${which}(\${k}x) + C\`, \`−\${which}(\${k}x) + C\`],
+    a,
+    d:[[which==='sin'?\`\${frac(1,k)}cos(\${k}x) + C\`:\`−\${frac(1,k)}sin(\${k}x) + C\`,'the sign is wrong: ∫sin = −cos and ∫cos = +sin'],
+       [which==='sin'?\`−\${k}cos(\${k}x) + C\`:\`\${k}sin(\${k}x) + C\`,\`multiplied by \${k} instead of divided — integrating undoes the chain rule, so you divide\`],
+       [\`\${which}(\${k}x) + C\`,'integrating swaps sin and cos; the function cannot come back unchanged'],
+       \`−\${which}(\${k}x) + C\`],
     ex:\`Antiderivatives run the derivative rules backwards: ∫sin = −cos, ∫cos = sin. Because the inside is \${k}x you must also divide by \${k} to undo the chain rule. Answer: \${a}.\`};
 },
 intExp(){
@@ -666,7 +806,10 @@ intExp(){
   return {topic:'Integrating eˣ',
     q:\`∫ e<sup>\${k}x</sup> dx = ?\`,
     a:\`\${frac(1,k)}e<sup>\${k}x</sup> + C\`,
-    d:[\`e<sup>\${k}x</sup> + C\`,\`\${k}e<sup>\${k}x</sup> + C\`,\`\${frac(1,k+1)}e<sup>\${k+1}x</sup> + C\`,\`x·e<sup>\${k}x</sup> + C\`],
+    d:[[\`e<sup>\${k}x</sup> + C\`,\`the \${k} from the inner function was never divided out\`],
+       [\`\${k}e<sup>\${k}x</sup> + C\`,\`multiplied by \${k} instead of divided — that is what differentiating does\`],
+       [\`\${frac(1,k+1)}e<sup>\${k+1}x</sup> + C\`,'the exponent was raised as if this were the power rule; exponentials keep their exponent'],
+       [\`x·e<sup>\${k}x</sup> + C\`,'multiplying by x is what you do for a constant, not for an exponential']],
     ex:\`Differentiating e<sup>\${k}x</sup> multiplies by \${k}, so integrating must divide by \${k}. Check by differentiating the answer: \${frac(1,k)}·\${k}e<sup>\${k}x</sup> = e<sup>\${k}x</sup>. ✓\`};
 },
 area(){
@@ -675,7 +818,11 @@ area(){
   const nice = Number.isInteger(s) ? String(s) : frac(a*a*a,3);
   return {topic:'Area Under a Curve',
     q:\`Area between y = x² and the x-axis from 0 to \${a}?\`,
-    a:nice, d:[String(a*a*a), frac(a*a,2), String(a*a*a*2), frac(a*a*a,2)],
+    a:nice,
+    d:[[String(a*a*a),'the antiderivative x³/3 was used without dividing by 3'],
+       [frac(a*a,2),'that is the area under y = x, not y = x²'],
+       [frac(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
+       String(a*a*a*2)],
     ex:\`Area = ∫₀\${sup(a)} x² dx = [x³/3]₀\${sup(a)} = \${a}³/3 = \${a*a*a}/3. Notice it's a third of the \${a}×\${a*a} bounding rectangle — the parabola leaves two thirds empty.\`};
 },
 
@@ -685,7 +832,11 @@ secondDeriv(){
   const d1=dPoly(t), d2=dPoly(d1);
   return {topic:'Second Derivative',
     q:\`f(x) = \${poly(t)}<br>f″(x) = ?\`,
-    a:poly(d2), d:[poly(d1), poly(dPoly(d2)), poly(t), poly(d1.map(([c,p])=>[c*2,p]))],
+    a:poly(d2),
+    d:[[poly(d1),'that is the first derivative — differentiate once more'],
+       [poly(dPoly(d2)),'that is the third derivative — one differentiation too many'],
+       [poly(t),'that is the original function, undifferentiated'],
+       poly(d1.map(([c,p])=>[c*2,p]))],
     ex:\`Differentiate twice. f′(x) = \${poly(d1)}, then f″(x) = \${poly(d2)}. The second derivative measures concavity — positive means the curve bends upward like a bowl.\`};
 },
 critical(){
@@ -694,19 +845,25 @@ critical(){
   while((r2===r1 || r2===0) && guard++<30) r2=R.nz(-4,4);
   if(r2===r1||r2===0) r2 = r1===3?-3:3;
   const a=Math.min(r1,r2), b=Math.max(r1,r2);
-  // f'(x) = 3(x-a)(x-b)  ⇒ f(x)= x³ - 3/2(a+b)x² + 3abx
   return {topic:'Critical Points',
     q:\`f′(x) = 3(x \${a<0?'+':'−'} \${Math.abs(a)})(x \${b<0?'+':'−'} \${Math.abs(b)})<br>Where are the critical points?\`,
     a:\`x = \${neg(a)} and x = \${neg(b)}\`,
-    d:[\`x = \${neg(-a)} and x = \${neg(-b)}\`, \`x = 0 only\`, \`x = \${neg(a+b)}\`, \`x = \${neg(3)} and x = \${neg(a*b)}\`],
-    ex:\`Critical points are where the derivative is zero (or undefined). A product is zero when a factor is zero, so x = \${neg(a)} and x = \${neg(b)}. These are the candidates for peaks and valleys of f.\`};
+    d:[[\`x = \${neg(-a)} and x = \${neg(-b)}\`,'the signs are flipped — a factor (x − 3) vanishes at x = 3, not x = −3'],
+       ['x = 0 only','a product is zero wherever any factor is zero, and neither factor here vanishes at 0'],
+       [\`x = \${neg(a+b)}\`,'the two roots were added together instead of being read off separately'],
+       [\`x = 3 and x = \${neg(a*b)}\`,'the 3 out front is a coefficient, not a root — it never vanishes']],
+    ex:\`Critical points are where the derivative is zero (or fails to exist). A product is zero when a factor is zero, so x = \${neg(a)} and x = \${neg(b)}. These are the candidates for peaks and valleys of f.\`};
 },
 partial(){
   const a=R.nz(2,5), b=R.nz(2,5), c=R.nz(-6,6);
+  const sgn=c<0?'−':'+', ac=Math.abs(c);
   return {topic:'Partial Derivative',
-    q:\`f(x,y) = \${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}xy\${sup(3)}<br>∂f/∂x = ?\`,
-    a:\`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`,
-    d:[\`\${a}x² \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}x \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`, \`\${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`],
+    q:\`f(x,y) = \${a}x²y \${sgn} \${ac}xy\${sup(3)}<br>∂f/∂x = ?\`,
+    a:\`\${2*a}xy \${sgn} \${ac}y\${sup(3)}\`,
+    d:[[\`\${a}x² \${sgn} \${Math.abs(3*c)}xy²\`,'that differentiated with respect to y instead of x'],
+       [\`\${2*a}xy \${sgn} \${Math.abs(3*c)}xy²\`,'the first term is right, but the second was differentiated with respect to y'],
+       [\`\${2*a}x \${sgn} \${ac}y\${sup(3)}\`,'the y was dropped from the first term — y is held constant, not set to zero'],
+       [\`\${a}x²y \${sgn} \${ac}y\${sup(3)}\`,'the first term was never differentiated at all']],
     ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${neg(c)}xy³ → \${neg(c)}y³ (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
 },
 
@@ -1207,9 +1364,9 @@ const Anim = {
       this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-70,life:.5+Math.random()*.5,col,r:2+Math.random()*4});
     }
   },
-  strike(who, dmg, crit){
+  strike(who, dmg, crit, label){
     // who: 'p' player attacks, 'e' enemy attacks
-    this.pending={who,dmg,crit,fired:false};
+    this.pending={who,dmg,crit,label,fired:false};
     if(who==='p') this.pl=0.001; else this.el=0.001;
   },
   loop(ts){
@@ -1229,7 +1386,8 @@ const Anim = {
         P.fired=true;
         const tx = P.who==='p' ? 560 : 250;
         Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?30:18);
-        Anim.float(tx, H-230, (P.crit?'CRIT ':'')+'-'+P.dmg, P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
+        Anim.float(tx, H-230, (P.label?P.label+' ':(P.crit?'CRIT ':''))+'-'+P.dmg,
+                   P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
         Anim.shake = P.crit?1.4:.9;
         if(P.who==='p'){ Anim.eh=.35; Sfx.hit(); } else { Anim.ph=.35; Sfx.hurt(); }
       }
@@ -1251,6 +1409,11 @@ const Anim = {
     drawBg(B.realm ? B.realm.sky : ['#22183a','#0b0812']);
     const gy = H-120;
     drawKnight(205, gy, 1.32, Anim.pl>0?Math.sin(Anim.pl*Math.PI):0, Anim.ph, B.over==='lose');
+    if(B.foe && B.slamNext && !B.over){
+      const r=1+Math.sin(Anim.t*6)*.5;
+      cx.save(); cx.globalAlpha=.25+r*.2; cx.strokeStyle='#e5484d'; cx.lineWidth=3+r*2;
+      cx.beginPath(); cx.ellipse(605, gy-70, 74+r*8, 96+r*8, 0, 0, 7); cx.stroke(); cx.restore();
+    }
     if(B.foe) drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                       Anim.el>0?Math.sin(Anim.el*Math.PI):0, Anim.eh, B.over==='win');
     // particles
@@ -1271,14 +1434,22 @@ const Anim = {
 };
 
 /* ------------------------------- questions -------------------------------- */
+/* A distractor is either a bare string or [text, "the mistake it represents"].
+   The tagged ones let the game name the error a player actually made. */
 function buildQuestion(key, diff){
   const gen = GEN[key];
   const p = gen(diff||1);
+  const why = {};
+  const ds = (p.d||[]).map(x=>{
+    if(Array.isArray(x)){ why[x[0]] = x[1]; return x[0]; }
+    return x;
+  });
   const ch=[p.a];
-  for(const x of R.shuffle(p.d)) if(ch.length<4 && !ch.includes(x)) ch.push(x);
+  for(const x of R.shuffle(ds)) if(ch.length<4 && !ch.includes(x)) ch.push(x);
   let guard=0;
   while(ch.length<4 && guard++<40){ const x=String(R.i(-25,25)); if(!ch.includes(x)) ch.push(x); }
-  return {key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, choices:R.shuffle(ch)};
+  delete why[p.a];                      // never explain the right answer as a mistake
+  return {key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, why, choices:R.shuffle(ch)};
 }
 
 /* -------------------------------- battle ---------------------------------- */
@@ -1292,6 +1463,8 @@ const Battle = {
     const f=this.realm.foes[fi];
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
+    this.charge=0; this.chargeMax=f.boss?2:3; this.slamNext=false; this.lastSlam=0;
+    this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     Anim.reset();
     UI.go('s-battle');
     fitCanvas(); Anim.go();
@@ -1305,7 +1478,10 @@ const Battle = {
     document.getElementById('eHp').style.width  = clamp(this.ehp/this.emax*100,0,100)+'%';
     document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
     document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
-    document.getElementById('foeName').textContent = (this.foe.boss?'👑 ':'')+this.foe.nm;
+    const pips = this.slamNext ? '⚡ WIND-UP'
+      : '●'.repeat(this.charge)+'○'.repeat(Math.max(0,this.chargeMax-this.charge));
+    document.getElementById('foeName').innerHTML =
+      (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
     document.getElementById('comboTxt').textContent = \`Combo ×\${(1+this.combo*.15).toFixed(2)}  ·  streak \${this.combo}\`;
     this.renderPowers();
   },
@@ -1356,6 +1532,11 @@ const Battle = {
     if(this.foe.boss && R.chance(.3) && this.ri>0) key=R.pick(REALMS[R.i(0,this.ri-1)].pool);
     const diff = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
     this.cur = buildQuestion(key, diff);
+    const tg=document.getElementById('telegraph');
+    if(this.slamNext){
+      tg.style.display='block';
+      tg.innerHTML=\`⚡ <b>\${this.foe.nm}</b> is winding up — answer correctly to brace the blow!\`;
+    } else tg.style.display='none';
     document.getElementById('qtopic').textContent = this.cur.topic;
     document.getElementById('qbox').innerHTML = this.cur.q;
     const box=document.getElementById('choices'); box.innerHTML='';
@@ -1419,17 +1600,41 @@ const Battle = {
       Anim.strike('e',dmg,false);
       Sfx.bad();
     }
+
+    // The foe fights on its own clock: it winds up over a few turns and then
+    // slams regardless of your answer. A correct answer braces the blow rather
+    // than avoiding it, so armour and draughts always matter.
+    this.lastSlam=0; this.lastBraced=ok;
+    if(this.slamNext){
+      this.slamNext=false;
+      const raw=this.foe.atk*1.7*(ok?0.35:1);
+      this.lastSlam=Math.max(3, Math.round(raw - Game.armor().def));
+      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
+      const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
+      setTimeout(()=>{
+        if(this.over || this.token!==tok) return;
+        Anim.strike('e', amt, true, 'SLAM');
+        Sfx.hurt();
+        setTimeout(()=>this.updateBars(),420);
+      }, delay);
+    } else if(++this.charge >= this.chargeMax){
+      this.charge=0; this.slamNext=true;
+    }
+
     Game.save();
     setTimeout(()=>this.updateBars(),420);
-    this.showExplain(ok);
+    this.showExplain(ok, choice);
   },
 
-  showExplain(ok){
+  showExplain(ok, picked){
     const e=document.getElementById('explain');
+    const miss = !ok && this.cur.why[picked];
     e.style.display='block';
     e.innerHTML =
       \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${ok?'⚔️ A clean strike!':'🩸 The blow lands on you.'}</div>\`+
       (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${this.cur.a}</b>.</div>\`)+
+      (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+
+      (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${this.cur.ex}</div>\`+
       \`<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>\`;
     const btn=document.getElementById('contBtn');
@@ -1748,9 +1953,11 @@ const Train = {
     if(ok){ this.c++; Sfx.good(); } else { this.w++; Sfx.bad(); }
     if(Game.s){ Game.recordAnswer(this.cur.key, ok); Game.save(); }
     const e=document.getElementById('tExplain');
+    const miss = !ok && this.cur.why[choice];
     e.style.display='block';
     e.innerHTML=\`<div style="font-weight:900;color:\${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
         \${ok?'Correct.':'Not quite — the answer was <span style="color:var(--gold)">'+this.cur.a+'</span>.'}</div>
+      \${miss?\`<div class="miss">You chose <b>\${choice}</b>: \${miss}.</div>\`:''}
       <div>\${this.cur.ex}</div>
       <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>\`;
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;

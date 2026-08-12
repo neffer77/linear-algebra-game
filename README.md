@@ -58,6 +58,15 @@ doesn't even ask for that.
 - **Combo** — each consecutive correct answer adds +15% damage, up to ×2.05. One mistake
   resets it.
 - **Crit** — scales with your weapon and grows as your streak builds.
+- **Wind-up** — the foe also fights on its own clock. A meter beside its name fills each
+  turn, and when it flashes ⚡ the next blow lands *regardless of your answer*. Answering
+  correctly braces it down to about a third; armour subtracts from what's left. This is
+  why gear, draughts and gold matter even to a player who never misses.
+
+**Misconception feedback.** The four choices are not padding — each wrong one is built
+from a specific, common error. Pick the entrywise product on a matrix multiplication and
+the game says so by name, then explains the row-times-column rule. Roughly 78% of wrong
+answers carry a diagnosis of the exact mistake behind them.
 
 **Progression.** Beating a foe earns gold and XP, and often loot. Levelling raises your
 maximum health and heals you fully. Clearing a realm's boss unlocks the next realm.
@@ -104,6 +113,8 @@ The game is built so that losing teaches you as much as winning.
 
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
+- **Wrong answers are diagnosed, not just corrected** — the game names the misconception
+  your specific choice came from before explaining the right method.
 - **📖 Tome of Lore** — nine short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
@@ -125,7 +136,7 @@ Inside `index.html` the code is organised as:
 
 | Section | Role |
 |---|---|
-| `GEN` | the 38 problem generators; each returns a question, answer, distractors, and explanation |
+| `GEN` | the 38 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
 | `Game` | state, saving to `localStorage`, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
@@ -141,6 +152,11 @@ towers, and a twinkling sky. There are no image assets to load.
 Add a generator to `GEN` returning `{topic, q, a, d, ex}` — where `q` and the choices may
 contain HTML (helpers `mat()`, `vec()`, `poly()`, `frac()`, `sup()` are provided) — then
 add its key to `TOPIC_LABEL`, to a realm's `pool`, and to a group in `Train.renderPick`.
+
+Entries in `d` are either a bare string or `[text, "the mistake it represents"]`. Prefer
+the tagged form: it is what lets the game tell a player *what they did wrong* rather than
+only what the answer was. Reserve bare strings for filler with no teachable error behind
+it, such as an off-by-a-few arithmetic slip.
 
 ---
 
