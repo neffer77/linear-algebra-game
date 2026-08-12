@@ -917,9 +917,37 @@ quotient(){
     ex:`(f/g)′ = (f′g − fg′)/g². With f = x, g = x + ${a}: numerator = 1·(x + ${a}) − x·1 = ${a}. So the derivative is ${a}/(x + ${a})², which is always positive — the function is increasing everywhere it's defined.`};
 },
 chainRule(){
-  const a=R.i(2,5), b=R.nz(-6,6), n=R.i(2,4);
+  const n=R.i(2,4), b=R.nz(-6,6);
+  // The inner coefficient must differ from the outer power, or the mote
+  // distractor "that is the outer power" collides with the correct answer.
+  let a=R.i(2,5), guard=0;
+  while(a===n && guard++<20) a=R.i(2,5);
+  if(a===n) a = n===5 ? 2 : n+1;
   const inner=poly([[a,1],[b,0]]);
   return {topic:'Chain Rule',
+    complexity:3,
+    codex:{rule:'Differentiate the outside, leaving the inside alone, then multiply by the derivative of the inside.',
+           eg:`(${inner})${sup(n)} → ${n}(${inner})${sup(n-1)} · ${a}`},
+    motes:[
+      {q:`In (${inner})${sup(n)}, what is the inner function?`,
+       a:inner,
+       d:[[`x${sup(n)}`,'that is the outer shape, not what sits inside it'],
+          [`${n}`,'the power is the outer operation'],
+          ['x','the whole bracket is the inner function, not just x']],
+       ex:`The bracket is the inside; raising to the ${n}th power is what is done to it.`},
+      {q:`Differentiate the inner function ${inner}.`,
+       a:String(a),
+       d:[[String(n),'that is the outer power, not the inner derivative'],
+          [String(a*n),'that is the two factors already multiplied together'],
+          ['1','the coefficient on x survives differentiation']],
+       ex:`${inner} differentiates to ${a} — the constant vanishes and the coefficient remains.`},
+      {q:`Now assemble: ${n}(${inner})${sup(n-1)} × ${a} = ?`,
+       a:`${n*a}(${inner})${sup(n-1)}`,
+       d:[[`${n}(${inner})${sup(n-1)}`,'the inner derivative was dropped at the last step'],
+          [`${n*a}(${inner})${sup(n)}`,'the outer power was never reduced'],
+          [`${n*a}x${sup(n-1)}`,'the bracket stays intact inside the power']],
+       ex:`Multiply the outer derivative by the inner one: ${n} × ${a} = ${n*a}, and the bracket keeps its reduced power.`}
+    ],
     q:`${frac('d','dx')} (${inner})${sup(n)} = ?`,
     a:`${n*a}(${inner})${sup(n-1)}`,
     d:[[`${n}(${inner})${sup(n-1)}`,`the inner derivative was forgotten — differentiating ${inner} gives ${a}`],
@@ -970,6 +998,35 @@ defPoly(){
 uSub(){
   const n=R.i(2,4), a=R.i(1,5);
   return {topic:'u-Substitution',
+    complexity:3,
+    codex:{rule:'Choose u so that its derivative already appears in the integrand; integrate in u, then substitute back.',
+           eg:`∫2x(x²+${a})${sup(n)}dx → u = x²+${a}, du = 2x dx → ∫u${sup(n)}du`},
+    motes:[
+      {q:`∫ 2x(x² + ${a})${sup(n)} dx — what should u be?`,
+       a:`u = x² + ${a}`,
+       d:[[`u = 2x`,'that is the part that becomes du, not u'],
+          [`u = (x² + ${a})${sup(n)}`,'u is the inner function, without the outer power'],
+          [`u = x`,'substituting u = x changes nothing']],
+       ex:`Pick the inside of the awkward part. Here that is x² + ${a}, because its derivative 2x is sitting right there in the integrand.`},
+      {q:`With u = x² + ${a}, what is du?`,
+       a:'du = 2x dx',
+       d:[['du = 2x',"du carries a dx — it is a differential, not a derivative"],
+          ['du = x dx','the derivative of x² is 2x, not x'],
+          [`du = (2x + ${a}) dx`,'the constant differentiates to zero']],
+       ex:`Differentiate u = x² + ${a} to get du/dx = 2x, so du = 2x dx — exactly the rest of the integrand.`},
+      {q:`Rewrite ∫ 2x(x² + ${a})${sup(n)} dx in terms of u.`,
+       a:`∫ u${sup(n)} du`,
+       d:[[`∫ 2x u${sup(n)} du`,'the 2x has already been absorbed into du'],
+          [`∫ u${sup(n)} dx`,'once you substitute, the variable of integration is u'],
+          [`∫ u du`,'the outer power stays']],
+       ex:`The 2x dx becomes du and the bracket becomes u, leaving the much simpler ∫u${sup(n)} du.`},
+      {q:`∫ u${sup(n)} du = ?`,
+       a:`${frac(1,n+1)}u${sup(n+1)} + C`,
+       d:[[`${frac(1,n)}u${sup(n)} + C`,'the power must rise by one first'],
+          [`u${sup(n+1)} + C`,'the division by the new power is missing'],
+          [`${n}u${sup(n-1)} + C`,'that differentiates instead of integrating']],
+       ex:`Reverse the power rule: raise the power, divide by the new power. Then put u = x² + ${a} back.`}
+    ],
     q:`∫ 2x(x² + ${a})${sup(n)} dx = ?`,
     a:`${frac(1,n+1)}(x² + ${a})${sup(n+1)} + C`,
     d:[[`${frac(1,n)}(x² + ${a})${sup(n)} + C`,'the power was never raised by one'],
@@ -2197,7 +2254,13 @@ function buildQuestion(key, diff){
   let guard=0;
   while(ch.length<4 && guard++<40){ const x=String(R.i(-25,25)); if(!ch.includes(x)) ch.push(x); }
   delete why[p.a];                      // never explain the right answer as a mistake
-  return {key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, why, choices:R.shuffle(ch)};
+  return {
+    key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, why, choices:R.shuffle(ch),
+    // Optional, and consumed by later work: how hard the topic is to hold in
+    // one piece, the ladder it breaks into, its one-card summary, a figure
+    // spec, and how the answer may be constructed rather than chosen.
+    complexity:p.complexity, motes:p.motes, codex:p.codex, fig:p.fig, input:p.input
+  };
 }
 
 /* -------------------------------- battle ---------------------------------- */

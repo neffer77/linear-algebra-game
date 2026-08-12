@@ -254,7 +254,28 @@ it, such as an off-by-a-few arithmetic slip.
 
 ## Correctness
 
-The mathematics is verified rather than assumed. The generators were checked by:
+The mathematics is verified rather than assumed, and the harness ships with the game:
+
+```bash
+npm test            # every check
+npm run test:quick  # fewer repetitions
+```
+
+`tools/mathexpr.js` compiles the game's *display HTML* — nested fraction spans, `<sup>`
+powers, unicode superscripts, U+2212 minus — back into evaluable expressions, which is
+what lets an answer be checked numerically at all. `tools/verify.js` runs three layers:
+structure (four unique choices, answer present, misconceptions substantial), algebra
+(matrices parsed back out of the rendered HTML and recomputed, including
+`A · adj(A) = det(A) · I`), and analysis (derivatives against finite differences,
+integrals differentiated back to their integrand so the `+ C` cancels, definite integrals
+against Simpson's rule, limits by direct evaluation).
+
+**26 of 38 generators are now independently verified against the mathematics**, up from 8
+when the harness could only parse polynomials. The remaining twelve have answers that are
+not scalar expressions — vectors, matrices, yes/no judgements, sets of roots — and are
+covered by the structural and algebraic layers instead.
+
+The generators were also checked by:
 
 - **57,000 generated problems** across all 38 generators at every difficulty, asserting
   four unique choices, the answer present among them, and no malformed output.

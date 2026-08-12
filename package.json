@@ -1,0 +1,11 @@
+{
+  "name": "knights-of-the-eigenrealm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A turn-based knight battler whose combat system is linear algebra and calculus.",
+  "scripts": {
+    "test": "node tools/verify.js",
+    "test:quick": "node tools/verify.js --reps 60",
+    "build": "node build-scriptable.js"
+  }
+}
