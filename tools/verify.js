@@ -34,17 +34,64 @@ function loadGame() {
                              script.indexOf('/* -------------------------------- battle'));
   const out = {};
   new Function('exports', mathPart + build +
-    ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;')(out);
+    ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
+    'exports.Figure=Figure;exports.figEval=figEval;')(out);
   return out;
 }
-const { GEN, buildQuestion, buildMote, mat } = loadGame();
+const { GEN, buildQuestion, buildMote, mat, Figure, figEval } = loadGame();
+
+/* Figures are data, so their contract can be checked without a browser. Each
+   kind names the fields it cannot draw without; the reveal flags are the ones
+   that paint the payoff, and so belong only in an answer figure. */
+const FIG_REQUIRED = {
+  plane: ['vecs'], grid: ['m'], curve: ['f', 'lo', 'hi'],
+  region: ['f', 'lo', 'hi'], bars: ['f', 'lo', 'hi'], numberline: ['at']
+};
+const FIG_REVEALS = ['para', 'proj', 'tangent', 'legs', 'right', 'sum'];
+const finite = n => typeof n === 'number' && isFinite(n);
+
+function checkFigure(spec, key, where) {
+  if (!Figure.KINDS.includes(spec.kind)) return fail('figure', key, `${where} has unknown kind ${spec.kind}`);
+  for (const f of FIG_REQUIRED[spec.kind]) {
+    if (spec[f] === undefined) fail('figure', key, `${where} (${spec.kind}) is missing ${f}`);
+  }
+  if (spec.vecs) {
+    if (!Array.isArray(spec.vecs)) fail('figure', key, `${where} vecs is not an array`);
+    else for (const o of spec.vecs) {
+      if (!o || !Array.isArray(o.v) || o.v.length !== 2 || !o.v.every(finite))
+        fail('figure', key, `${where} has a malformed vector ${JSON.stringify(o && o.v)}`);
+    }
+  }
+  if (spec.m && !(Array.isArray(spec.m) && spec.m.length === 2 && spec.m.every(r => r.length === 2 && r.every(finite))))
+    fail('figure', key, `${where} has a malformed matrix`);
+  if (spec.lo !== undefined && !(finite(spec.lo) && finite(spec.hi) && spec.hi > spec.lo))
+    fail('figure', key, `${where} has an empty or malformed domain [${spec.lo}, ${spec.hi}]`);
+  if (spec.f) {
+    // The curve has to be drawable: sample it and insist on real, finite values.
+    const lo = spec.lo, hi = spec.hi;
+    let good = 0;
+    for (let i = 0; i <= 24; i++) {
+      const y = figEval(spec.f, lo + (hi - lo) * i / 24);
+      if (finite(y)) good++;
+    }
+    if (good < 20) fail('figure', key, `${where} function is undefined over most of [${lo}, ${hi}]`);
+  }
+  if (spec.caption !== undefined && (typeof spec.caption !== 'string' || spec.caption.length < 8))
+    fail('figure', key, `${where} caption is too thin`);
+}
 
 const fails = [];
 const fail = (area, key, msg) => fails.push(`[${area}] ${key}: ${msg}`);
 
 /* ------------------------------------------------------------- 1. structure */
-let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0;
-const seenComplexity = new Set();
+let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0, figsChecked = 0;
+const seenComplexity = new Set(), figKeys = new Set(), figKinds = new Set();
+
+/** Parse ⟨a, b⟩ out of a rendered answer, or null if it is not a 2-vector. */
+function vecOf(html) {
+  const m = String(html).replace(/<[^>]+>/g, '').match(/⟨\s*(−?-?\d+)\s*,\s*(−?-?\d+)\s*⟩/);
+  return m ? [m[1], m[2]].map(s => parseInt(s.replace(/−/g, '-'), 10)) : null;
+}
 
 for (const key of Object.keys(GEN)) {
   for (let d = 1; d <= 3; d++) {
@@ -95,7 +142,23 @@ for (const key of Object.keys(GEN)) {
       }
       if (q.codex !== undefined && (!q.codex.rule || q.codex.rule.length > 200))
         fail('contract', key, 'codex needs a rule of at most 200 characters');
-      if (q.fig !== undefined && !q.fig.kind) fail('contract', key, 'fig needs a kind');
+      if (q.fig !== undefined) {
+        figKeys.add(key); figKinds.add(q.fig.kind); figsChecked++;
+        checkFigure(q.fig, key, 'fig');
+        // A question figure must be a prompt, not a solution: it may not carry
+        // a flag that paints the payoff, nor draw the answer as one of its
+        // arrows. Doing the mathematics has to remain the only way through.
+        for (const flag of FIG_REVEALS) {
+          if (q.fig[flag]) fail('figure', key, `fig sets "${flag}", which reveals the answer`);
+        }
+        const av = vecOf(q.a);
+        if (av && (q.fig.vecs || []).some(o => o.v[0] === av[0] && o.v[1] === av[1]))
+          fail('figure', key, `fig draws the answer vector ⟨${av}⟩`);
+      }
+      if (q.figAnswer !== undefined) {
+        figKeys.add(key); figKinds.add(q.figAnswer.kind); figsChecked++;
+        checkFigure(q.figAnswer, key, 'figAnswer');
+      }
       if (q.input !== undefined && !q.input.kind) fail('contract', key, 'input needs a kind');
     }
   }
@@ -288,6 +351,10 @@ console.log(`    verified against maths                 (${(verified / total * 1
 if (seenComplexity.size) {
   console.log(`  generators with mote ladders ${pad(seenComplexity.size, 8)}`);
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
+}
+if (figKeys.size) {
+  console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
+  console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);
 }
 console.log('─'.repeat(58));
 

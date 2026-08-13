@@ -189,6 +189,13 @@ The game is built so that losing teaches you as much as winning.
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
+- **Figures you can read at a glance** — seventeen topics carry a drawn diagram beside the
+  question, and a second one beside the explanation. The split is deliberate: the question
+  figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
+  there; the parallelogram and the resultant only appear once you have answered. A
+  determinant question draws nothing, and then shows you the unit square turned into the
+  parallelogram whose area is the answer. Six kinds cover it — the plane, a transformed
+  grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — nine short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
@@ -237,6 +244,7 @@ Inside `index.html` the code is organised as:
 | `GEN` | the 38 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
 | `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
+| `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
@@ -270,6 +278,14 @@ outlines running; particle systems drop to zero under reduced motion.
 Add a generator to `GEN` returning `{topic, q, a, d, ex}` — where `q` and the choices may
 contain HTML (helpers `mat()`, `vec()`, `poly()`, `frac()`, `sup()` are provided) — then
 add its key to `TOPIC_LABEL`, to a realm's `pool`, and to a group in `Train.renderPick`.
+
+To give it a diagram, add `fig` (drawn beside the question) and/or `figAnswer` (drawn with
+the explanation) — plain serialisable data, e.g.
+`{kind:'plane', vecs:[{v:[3,1], col:'#5aa9e6', label:'u'}], caption:'…'}`. Figures are
+painted once into a static canvas and never join the battle's animation loop. The one rule
+the harness enforces is that a question figure may not carry a reveal flag (`para`, `proj`,
+`tangent`, `legs`, `right`, `sum`) nor draw the answer vector — the payoff picture belongs
+in `figAnswer`.
 
 Entries in `d` are either a bare string or `[text, "the mistake it represents"]`. Prefer
 the tagged form: it is what lets the game tell a player *what they did wrong* rather than
@@ -322,3 +338,12 @@ The generators were also checked by:
   resurfaced rather than starving, and back-to-back repeats stayed near 2%.
 - **21,000 calculus checks** — derivatives against centred finite differences, definite
   integrals against Simpson's rule, and limits against numeric evaluation.
+- **34,800 figure specs**, checked for a known kind, the fields that kind cannot draw
+  without, a domain the function is actually defined over, and — for question figures —
+  that they do not give the answer away. That last check earned its keep immediately: it
+  found that scalar multiplication could roll a scalar of 1, asking "1 · v = ?" over a
+  picture of v, and that a linear combination could land back on one of its own inputs.
+- **1,044 figures rendered in a headless browser at 320px**, asserting every one carries
+  real ink rather than an empty frame, that none overflows its column, and that a full
+  20-node campaign holds steady at one battle canvas with at most two figures alive —
+  no leaked canvases.

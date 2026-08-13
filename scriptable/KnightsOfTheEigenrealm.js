@@ -390,6 +390,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
   border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
 .cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
+.fig{display:block; width:100%; height:auto; border-radius:10px; margin:8px 0 2px;
+  border:1px solid var(--edge); background:#171129;}
+.figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
+#afig .fig{margin-top:10px;}
 </style>
 </head>
 <body>
@@ -467,6 +471,7 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
       <div id="riteTrail" style="display:none"></div>
       <div id="qhead"><div id="qtopic"></div></div>
       <div id="qbox"></div>
+      <div id="qfig"></div>
       <div id="choices"></div>
       <div id="pstrike" style="display:none"></div>
     </div>
@@ -613,6 +618,10 @@ vecAdd(d){
   return {topic:'Vector Addition',
     q:\`\${vecR(u)} + \${vecR(v)} = ?\`,
     a:vecR(s),
+    // u and v only — drawing the resultant would answer the question.
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', para:true, caption:'Walk along u, then along v — the diagonal is the sum.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'},{v:s,col:'#f2c14e',label:'u+v'}]},
     d:[[vecR([u[0]-v[0],u[1]-v[1]]),'that subtracts v instead of adding it'],
        [vecR([u[0]+v[1],u[1]+v[0]]),'the components got crossed — first pairs with first, second with second'],
        [vecR([u[0]*v[0],u[1]*v[1]]),'that multiplies the components; addition is what was asked'],
@@ -620,11 +629,17 @@ vecAdd(d){
     ex:\`Add matching slots, nothing else. \${neg(u[0])}+\${neg(v[0])} = \${neg(s[0])} on top, \${neg(u[1])}+\${neg(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
 },
 vecScale(d){
-  const c=R.nz(-4-d,4+d), v=[R.nz(-8,8),R.nz(-8,8)];
+  // c = 1 would ask nothing at all, and would make the first distractor
+  // (scale only the top component) land on the answer.
+  let c=R.nz(-4-d,4+d); while(c===1) c=R.nz(-4-d,4+d);
+  const v=[R.nz(-8,8),R.nz(-8,8)];
   const s=[c*v[0],c*v[1]];
   return {topic:'Scalar Multiplication',
     q:\`\${neg(c)} · \${vecR(v)} = ?\`,
     a:vecR(s),
+    fig:{kind:'plane', vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
+    figAnswer:{kind:'plane', caption:'Same line, new length'+(c<0?' — and the other way along it.':'.'),
+      vecs:[{v:v,col:'#5aa9e6',label:'v'},{v:s,col:'#f2c14e',label:neg(c)+'v'}]},
     d:[[vecR([c*v[0],v[1]]),'only the first component got scaled — a scalar multiplies every component'],
        [vecR([c+v[0],c+v[1]]),'the scalar was added to each component instead of multiplied'],
        [vecR([-s[0],-s[1]]),'the direction is flipped — check the sign of the scalar'],
@@ -632,11 +647,22 @@ vecScale(d){
     ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${neg(v[0])} = \${neg(s[0])} and \${neg(c)}·\${neg(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
 },
 vecCombo(d){
-  const a=R.i(2,3+d), b=R.i(2,3+d), u=[R.nz(-6,6),R.nz(-6,6)], v=[R.nz(-6,6),R.nz(-6,6)];
-  const s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
+  const a=R.i(2,3+d), b=R.i(2,3+d);
+  let u, v, s;
+  do {
+    u=[R.nz(-6,6),R.nz(-6,6)]; v=[R.nz(-6,6),R.nz(-6,6)];
+    s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
+    // If the combination lands back on u or v, the figure would be showing the
+    // answer — and the question would be a coincidence rather than a drill.
+  } while((s[0]===u[0]&&s[1]===u[1]) || (s[0]===v[0]&&s[1]===v[1]));
   return {topic:'Linear Combination',
     q:\`u = \${vecR(u)}, v = \${vecR(v)}<br>\${a}u − \${b}v = ?\`,
     a:vecR(s),
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', caption:'Scale each arrow first, then add them tip to tail.',
+      vecs:[{v:[a*u[0],a*u[1]],col:'#5aa9e6',label:a+'u'},
+            {v:[-b*v[0],-b*v[1]],col:'#57cc7a',label:'−'+b+'v'},
+            {v:s,col:'#f2c14e',label:'result'}]},
     d:[[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]),'that adds the two scaled vectors — the problem subtracts'],
        [vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]),"v's components got crossed"],
        [vecR([-s[0],-s[1]]),'the whole result is negated — you computed '+b+'v − '+a+'u'],
@@ -650,6 +676,10 @@ dot(d){
   return {topic:'Dot Product',
     q:\`\${vecR(u)} · \${vecR(v)} = ?\`,
     a:neg(s),
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', proj:true,
+      caption:'Gold is u&rsquo;s shadow on v &mdash; the dot product measures its reach.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
     d:[[neg(u[0]*v[0]-u[1]*v[1]),'the two products were subtracted — the dot product adds them'],
        [neg(u[0]*v[1]+u[1]*v[0]),'the components got crossed; multiply first with first, second with second'],
        [neg(-s),'a sign slipped somewhere in the products'],
@@ -663,6 +693,9 @@ mag(){
   return {topic:'Vector Length',
     q:\`‖\${vecR(v)}‖ = ?\`,
     a:String(t[2]),
+    fig:{kind:'plane', vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
+    figAnswer:{kind:'plane', legs:true, caption:'The arrow is the hypotenuse of a right triangle.',
+      vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
     d:[[String(t[0]+t[1]),'that just adds the components — length needs the square root of the sum of squares'],
        [String(Math.abs(t[0]-t[1])),'the components were subtracted; they must be squared and added'],
        [String(t[2]*2),'twice the correct length — the square root was never taken properly'],
@@ -677,6 +710,10 @@ orth(){
   const truth = s===0;
   return {topic:'Orthogonality',
     q:\`Are u = \${vecR(u)} and v = \${vecR(v)} perpendicular?\`,
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', right:truth, proj:!truth,
+      caption: truth ? 'A right angle at the origin.' : 'They lean the same way — no right angle.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
     a: truth ? 'Yes — they are perpendicular' : 'No — they are not perpendicular',
     d:[ truth ? ['No — they are not perpendicular',\`their dot product is 0, and a zero dot product is exactly what perpendicular means\`]
               : ['Yes — they are perpendicular',\`their dot product is \${neg(s)}, not 0\`],
@@ -694,6 +731,11 @@ matVec(d){
   return {topic:'Matrix × Vector',
     q:\`\${mat(A)}\${vec(v)} = ?\`,
     a:vec(s),
+    fig:{kind:'grid', m:A, vecs:[{v:v, raw:true, col:'#e5484d', label:'v'}],
+      caption:'The matrix moves the whole grid; where does v land?'},
+    figAnswer:{kind:'grid', m:A, caption:'v rides the grid to its new position.',
+      vecs:[{v:v, raw:true, col:'rgba(229,72,77,.45)', label:'v'},
+            {v:s, raw:true, col:'#f2c14e', label:'Av'}]},
     d:[[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]),'that dotted the vector with the columns — each output entry uses a row'],
        [vec([s[1],s[0]]),'the two output components are in the wrong order'],
        [vec([A[0][0]*v[0],A[1][1]*v[1]]),'only the diagonal entries were used — each row contributes both of its terms'],
@@ -707,6 +749,7 @@ det2(d){
   return {topic:'Determinant (2×2)',
     q:\`det \${mat(A)} = ?\`,
     a:neg(s),
+    figAnswer:{kind:'grid', m:A, caption:'The unit square becomes this — the determinant is the area factor.'},
     d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the two products were added — the determinant subtracts the second'],
        [neg(-s),'the subtraction ran backwards; it is ad − bc, in that order'],
        [neg(A[0][0]+A[1][1]),'that is the trace (the diagonal sum), not the determinant'],
@@ -875,6 +918,11 @@ rank(){
   const truth=det!==0;
   return {topic:'Linear Independence',
     q:\`Are the columns of \${mat(A)} linearly independent?\`,
+    fig:{kind:'plane', vecs:[{v:c1,col:'#5aa9e6',label:'col 1'},{v:c2,col:'#57cc7a',label:'col 2'}]},
+    figAnswer:{kind:'plane', para:truth,
+      caption: truth ? 'Two directions — together they span the plane.'
+                     : 'Both lie on one line, so they only ever span that line.',
+      vecs:[{v:c1,col:'#5aa9e6',label:'col 1'},{v:c2,col:'#57cc7a',label:'col 2'}]},
     a: truth ? 'Yes — the determinant is not zero' : 'No — one column is a multiple of the other',
     d:[ truth ? ['No — one column is a multiple of the other',\`no scalar turns one column into the other here; the determinant is \${neg(det)}, which is not zero\`]
               : ['Yes — the determinant is not zero',\`the determinant is 0 here, so the columns are dependent\`],
@@ -908,6 +956,9 @@ eigen2(){
     ],
     q:\`Eigenvalues of \${mat(A)}?\`,
     a:\`\${neg(Math.min(l1,l2))} and \${neg(Math.max(l1,l2))}\`,
+    figAnswer:{kind:'grid', m:A, basis:false,
+      caption:'The arrows that keep their own line are the eigenvectors; how far they stretch is λ.',
+      vecs:[{v:[1,0],col:'#f2c14e',label:'λ='+neg(l1)}]},
     d:[[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`,'those are the trace and the determinant — related to the eigenvalues, but not them'],
        [\`\${neg(-l1)} and \${neg(-l2)}\`,'the signs are flipped; solve (λ − a)(λ − d) = 0, not (λ + a)(λ + d) = 0'],
        [\`\${neg(b)} and \${neg(0)}\`,'those are the off-diagonal entries, which do not set the eigenvalues of a triangular matrix'],
@@ -920,6 +971,9 @@ proj(){
   const dp=u[0]*v[0]+u[1]*v[1];
   return {topic:'Scalar Projection',
     q:\`How much of u = \${vecR(u)} points along v = \${vecR(v)}?<br><span class="small">(the scalar projection u·v / ‖v‖)</span>\`,
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', proj:true, caption:'Gold is u&rsquo;s shadow on the line through v.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
     a: frac(dp,t[2]),
     d:[[frac(dp,t[2]*t[2]),'that divides by ‖v‖², which is the coefficient for the vector projection, not the scalar one'],
        [neg(dp),'that is just u·v — it still needs dividing by the length of v'],
@@ -936,6 +990,8 @@ limPoly(){
   return {topic:'Limit by Substitution',
     q:\`lim<sub>x→\${neg(a)}</sub> ( \${poly(t)} ) = ?\`,
     a:neg(s),
+    fig:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]],
+      caption:'A polynomial has no gaps, so the limit is just the value there.'},
     d:[[neg(evalPoly(dPoly(t),a)),'that evaluates the derivative — a limit of a continuous function is plain substitution'],
        ['Does not exist','polynomials are continuous everywhere, so this limit always exists'],
        [neg(-s),'a sign slipped — watch the negative value being squared'],
@@ -948,6 +1004,8 @@ limRational(){
   return {topic:'Limit (0/0 form)',
     q:\`lim<sub>x→\${neg(a)}</sub> \${frac(\`x² − \${a*a}\`,\`x − \${a}\`)} = ?\`,
     a:neg(s),
+    fig:{kind:'numberline', at:a, hole:true, span:2,
+      caption:'The function is undefined at the hole — the limit asks where it is heading.'},
     d:[[neg(a),\`that is x itself; after cancelling you are left with x + \${a}, not x\`],
        ['0','both parts vanish, but their ratio does not — factor before you judge'],
        ['Does not exist','the 0/0 form only means substitution is premature; factoring reveals a perfectly good limit'],
@@ -995,6 +1053,9 @@ evalDeriv(){
   return {topic:'Derivative at a Point',
     q:\`f(x) = \${poly(t)}<br>f′(\${neg(a)}) = ?\`,
     a:neg(s),
+    fig:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]]},
+    figAnswer:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]], tangent:a,
+      caption:'f′ at a point is the slope of that tangent.'},
     d:[[neg(evalPoly(t,a)),'that is f(a) — the height of the curve, not its slope'],
        [neg(evalPoly(dPoly(dt),a)),'that is f″(a), the second derivative'],
        [neg(-s),'a sign slipped while substituting a negative value'],
@@ -1131,6 +1192,10 @@ tangent(){
   return {topic:'Tangent Line',
     q:\`f(x) = \${poly(t)}<br>Slope of the tangent line at x = \${neg(a)}?\`,
     a:neg(m),
+    fig:{kind:'curve', f:{poly:t}, lo:a-3, hi:a+3, pts:[[a]],
+      caption:'The slope of the curve exactly at the marked point.'},
+    figAnswer:{kind:'curve', f:{poly:t}, lo:a-3, hi:a+3, pts:[[a]], tangent:a,
+      caption:'The tangent line just grazes the curve there.'},
     d:[[neg(y),'that is f at that point — the height of the curve, not the slope of the tangent'],
        [neg(-m),'a sign slipped while substituting'],
        [neg(evalPoly(t,a)+m),'the function value and the slope were added together'],
@@ -1181,6 +1246,8 @@ defPoly(){
     ],
     q:\`∫<sub>0</sub><sup>\${hi}</sup> (\${poly(t)}) dx = ?\`,
     a:neg(s),
+    fig:{kind:'region', f:{poly:t}, lo:0, hi:hi,
+      caption:'The shaded area is what the integral measures.'},
     d:[[neg(evalPoly(t,hi)),'that evaluates the integrand at the top limit — you must antidifferentiate first'],
        [neg(evalPoly([[c,2],[b,1]],hi)),\`the x² term was not divided by 2 when antidifferentiating\`],
        [neg(-s),'the limits were subtracted the wrong way; it is F(top) − F(bottom)'],
@@ -1258,6 +1325,9 @@ area(){
   return {topic:'Area Under a Curve',
     q:\`Area between y = x² and the x-axis from 0 to \${a}?\`,
     a:nice,
+    fig:{kind:'region', f:{poly:[[1,2]]}, lo:0, hi:a},
+    figAnswer:{kind:'bars', f:{poly:[[1,2]]}, lo:0, hi:a, n:8,
+      caption:'Slice it finer and finer and the rectangles become the integral.'},
     d:[[String(a*a*a),'the antiderivative x³/3 was used without dividing by 3'],
        [frac(a*a,2),'that is the area under y = x, not y = x²'],
        [frac(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
@@ -2489,7 +2559,8 @@ function buildQuestion(key, diff){
     // Optional, and consumed by later work: how hard the topic is to hold in
     // one piece, the ladder it breaks into, its one-card summary, a figure
     // spec, and how the answer may be constructed rather than chosen.
-    complexity:p.complexity, motes:p.motes, codex:p.codex, fig:p.fig, input:p.input
+    complexity:p.complexity, motes:p.motes, codex:p.codex,
+    fig:p.fig, figAnswer:p.figAnswer, input:p.input
   };
 }
 
@@ -2520,6 +2591,313 @@ function buildMote(m){
   m._choices=R.shuffle(ch);
   return m._choices;
 }
+
+/* -------------------------------- figures --------------------------------- */
+/* Six data-driven diagram kinds. A generator declares \`fig\` (drawn beside the
+   question) and/or \`figAnswer\` (drawn in the explanation). Figures are painted
+   once into a static canvas — they must never join the battle's animation loop,
+   which is the obvious way to leak frames.
+
+   The rule that makes this teach rather than spoil: a question figure must be
+   answerable-from only by doing the mathematics. Draw u and v, never their sum;
+   the payoff picture belongs in figAnswer.                                    */
+
+const FIG_W = 320;
+// Each kind gets the shape it actually wants. Vector diagrams are square-ish,
+// so in a wide letterbox the drawing shrinks to a narrow central column with
+// dead air either side; a number line is the opposite and needs almost no
+// height at all. FIG_H is the height of the figure being drawn right now —
+// render() sets it before dispatching, and drawing is synchronous.
+const FIG_H_BY_KIND = {plane:196, grid:196, curve:152, region:152, bars:152, numberline:104};
+let FIG_H = 152;
+const FIG_COL = {
+  axis:'#6b5f92', grid:'rgba(140,125,190,.18)', ink:'#e8e2f5', dim:'#a99ccb',
+  a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', fill:'rgba(242,193,78,.22)'
+};
+
+// Every figure function is described by data so the spec stays serialisable.
+function figEval(f, x){
+  if(!f) return 0;
+  if(f.poly) return f.poly.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
+  switch(f.fn){
+    case 'sin': return Math.sin((f.k||1)*x);
+    case 'cos': return Math.cos((f.k||1)*x);
+    case 'exp': return Math.exp((f.k||1)*x);
+    case 'inv': return 1/((f.k||1)*x);
+    default: return 0;
+  }
+}
+
+const Figure = {
+  KINDS:['plane','grid','curve','region','bars','numberline'],
+
+  /** Paint \`spec\` into a fresh canvas appended to \`host\`. */
+  render(spec, host){
+    if(!host) return null;
+    host.innerHTML='';
+    if(!spec || !this.KINDS.includes(spec.kind)) return null;
+    FIG_H = FIG_H_BY_KIND[spec.kind] || 152;
+    const cv=document.createElement('canvas');
+    cv.className='fig';
+    const dpr=Math.min(window.devicePixelRatio||1, 2.5);
+    cv.width=Math.round(FIG_W*dpr); cv.height=Math.round(FIG_H*dpr);
+    cv.style.width='100%'; cv.style.height='auto';
+    const g=cv.getContext('2d');
+    g.setTransform(dpr,0,0,dpr,0,0);
+    try{ this[spec.kind](g, spec); }
+    catch(e){ return null; }
+    host.appendChild(cv);
+    if(spec.caption){
+      const cap=document.createElement('div');
+      cap.className='figcap'; cap.innerHTML=spec.caption;
+      host.appendChild(cap);
+    }
+    return cv;
+  },
+
+  /* ---- shared scaffolding ---- */
+  frame(g){
+    g.clearRect(0,0,FIG_W,FIG_H);
+    g.fillStyle='#171129'; g.fillRect(0,0,FIG_W,FIG_H);
+  },
+  arrow(g, x0,y0, x1,y1, col, label, wide){
+    g.strokeStyle=col; g.fillStyle=col; g.lineWidth=wide||2.4; g.lineCap='round';
+    g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke();
+    const a=Math.atan2(y1-y0, x1-x0), s=8;
+    g.beginPath();
+    g.moveTo(x1,y1);
+    g.lineTo(x1-s*Math.cos(a-0.42), y1-s*Math.sin(a-0.42));
+    g.lineTo(x1-s*Math.cos(a+0.42), y1-s*Math.sin(a+0.42));
+    g.closePath(); g.fill();
+    if(label){
+      g.font='bold 12px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+      const dx=(x1-x0), dy=(y1-y0), L=Math.hypot(dx,dy)||1;
+      g.fillText(label, x1 + dx/L*12, y1 + dy/L*12);
+    }
+  },
+
+  /* ---- 1. plane: vectors on axes ---- */
+  plane(g, s){
+    this.frame(g);
+    const span = s.span || Math.max(4, Math.ceil(Math.max(
+      ...(s.vecs||[{v:[1,1]}]).flatMap(o=>o.v.map(Math.abs))) * 1.25));
+    const cx0=FIG_W/2, cy0=FIG_H/2, k=Math.min(FIG_W,FIG_H)/(2.2*span);
+    const X=x=>cx0+x*k, Y=y=>cy0-y*k;
+
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    for(let i=-span;i<=span;i++){
+      g.beginPath(); g.moveTo(X(i),0); g.lineTo(X(i),FIG_H); g.stroke();
+      g.beginPath(); g.moveTo(0,Y(i)); g.lineTo(FIG_W,Y(i)); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.6;
+    g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+
+    // optional parallelogram spanned by the first two vectors
+    if(s.para && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      g.fillStyle=FIG_COL.fill;
+      g.beginPath();
+      g.moveTo(X(0),Y(0)); g.lineTo(X(u[0]),Y(u[1]));
+      g.lineTo(X(u[0]+v[0]),Y(u[1]+v[1])); g.lineTo(X(v[0]),Y(v[1]));
+      g.closePath(); g.fill();
+    }
+    // right-angle marker at the origin
+    if(s.right && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      const nu=Math.hypot(...u)||1, nv=Math.hypot(...v)||1, m=14;
+      const p1=[u[0]/nu*m/k, u[1]/nu*m/k], p2=[v[0]/nv*m/k, v[1]/nv*m/k];
+      g.strokeStyle=FIG_COL.c; g.lineWidth=2;
+      g.beginPath();
+      g.moveTo(X(p1[0]),Y(p1[1]));
+      g.lineTo(X(p1[0]+p2[0]),Y(p1[1]+p2[1]));
+      g.lineTo(X(p2[0]),Y(p2[1]));
+      g.stroke();
+    }
+    // projection drop-line
+    if(s.proj && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      const t=(u[0]*v[0]+u[1]*v[1])/((v[0]*v[0]+v[1]*v[1])||1);
+      const p=[v[0]*t, v[1]*t];
+      g.setLineDash([4,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(u[0]),Y(u[1])); g.lineTo(X(p[0]),Y(p[1])); g.stroke();
+      g.setLineDash([]);
+      // Gold, and deliberately unlabelled: the shadow lies along v, so a word
+      // set beside a short one would land on the very arrows it describes.
+      // Colour carries it instead — gold is the computed thing throughout —
+      // and the caption says which arrow is which.
+      this.arrow(g, X(0),Y(0), X(p[0]),Y(p[1]), FIG_COL.b, '', 3.4);
+    }
+    (s.vecs||[]).forEach(o=>this.arrow(g, X(0),Y(0), X(o.v[0]),Y(o.v[1]), o.col||FIG_COL.a, o.label));
+    // right-triangle legs, for length problems
+    if(s.legs && s.vecs && s.vecs.length){
+      const v=s.vecs[0].v;
+      g.setLineDash([5,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(v[0]),Y(0)); g.lineTo(X(v[0]),Y(v[1])); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle=FIG_COL.dim; g.font='bold 11px system-ui,sans-serif'; g.textAlign='center';
+      g.fillText(String(Math.abs(v[0])), X(v[0]/2), Y(0)+(v[1]>0?14:-6));
+      g.fillText(String(Math.abs(v[1])), X(v[0])+(v[0]>0?14:-14), Y(v[1]/2));
+    }
+  },
+
+  /* ---- 2. grid: what a matrix does to the plane ---- */
+  grid(g, s){
+    this.frame(g);
+    const M=s.m||[[1,0],[0,1]];
+    const T=(x,y)=>[M[0][0]*x+M[0][1]*y, M[1][0]*x+M[1][1]*y];
+    const c1=T(1,0), c2=T(0,1), c3=T(1,1);
+    // The span has to follow the matrix: a determinant of 40 throws the unit
+    // square right out of a frame sized for the identity. Everything that gets
+    // drawn — corners and arrows alike — votes on how far out the view reaches.
+    const reach=Math.max(1, ...[c1,c2,c3, ...(s.vecs||[]).map(o=>o.raw?o.v:T(o.v[0],o.v[1]))]
+      .flatMap(p=>[Math.abs(p[0]),Math.abs(p[1])]));
+    const span=s.span||Math.max(2.6, reach*1.18);
+    const cx0=FIG_W/2, cy0=FIG_H/2, k=Math.min(FIG_W,FIG_H)/(2.2*span);
+    const X=x=>cx0+x*k, Y=y=>cy0-y*k;
+
+    // the original lattice, faint, thinned out so the lines never crowd
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    const L=Math.ceil(span), step=Math.max(1, Math.round(span/5));
+    for(let i=-L;i<=L;i+=step){
+      g.beginPath(); g.moveTo(X(i),Y(-L)); g.lineTo(X(i),Y(L)); g.stroke();
+      g.beginPath(); g.moveTo(X(-L),Y(i)); g.lineTo(X(L),Y(i)); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
+    g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+
+    // the unit square, before and after
+    if(s.before!==false){
+      g.strokeStyle='rgba(169,156,203,.55)'; g.setLineDash([4,3]); g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(1),Y(0)); g.lineTo(X(1),Y(1)); g.lineTo(X(0),Y(1));
+      g.closePath(); g.stroke(); g.setLineDash([]);
+    }
+    g.fillStyle=FIG_COL.fill;
+    g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(c1[0]),Y(c1[1]));
+    g.lineTo(X(c3[0]),Y(c3[1])); g.lineTo(X(c2[0]),Y(c2[1])); g.closePath(); g.fill();
+    g.strokeStyle=FIG_COL.b; g.lineWidth=2; g.stroke();
+
+    if(s.basis!==false){
+      this.arrow(g, X(0),Y(0), X(c1[0]),Y(c1[1]), FIG_COL.a, 'î');
+      this.arrow(g, X(0),Y(0), X(c2[0]),Y(c2[1]), FIG_COL.c, 'ĵ');
+    }
+    (s.vecs||[]).forEach(o=>{
+      const p=o.raw ? o.v : T(o.v[0],o.v[1]);
+      this.arrow(g, X(0),Y(0), X(p[0]),Y(p[1]), o.col||FIG_COL.d, o.label);
+    });
+  },
+
+  /* ---- 3/4/5. curve, shaded region, Riemann bars ---- */
+  plot(g, s, mode){
+    this.frame(g);
+    const lo = s.lo!==undefined ? s.lo : -3, hi = s.hi!==undefined ? s.hi : 3;
+    const pad = (hi-lo)*0.12;
+    const x0=lo-pad, x1=hi+pad;
+    const N=120;
+    let ymin=Infinity, ymax=-Infinity;
+    const ys=[];
+    for(let i=0;i<=N;i++){
+      const x=x0+(x1-x0)*i/N, y=figEval(s.f, x);
+      ys.push(y);
+      if(isFinite(y)){ ymin=Math.min(ymin,y); ymax=Math.max(ymax,y); }
+    }
+    if(!isFinite(ymin)||!isFinite(ymax)){ ymin=-1; ymax=1; }
+    if(ymax-ymin < 1e-6){ ymax+=1; ymin-=1; }
+    const yPad=(ymax-ymin)*0.18; ymin-=yPad; ymax+=yPad;
+    const X=x=>18+(x-x0)/(x1-x0)*(FIG_W-30);
+    const Y=y=>FIG_H-16-(y-ymin)/(ymax-ymin)*(FIG_H-30);
+
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    for(let i=0;i<=6;i++){
+      const gx=18+i*(FIG_W-30)/6;
+      g.beginPath(); g.moveTo(gx,6); g.lineTo(gx,FIG_H-10); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.5;
+    if(ymin<0 && ymax>0){ g.beginPath(); g.moveTo(10,Y(0)); g.lineTo(FIG_W-6,Y(0)); g.stroke(); }
+    if(x0<0 && x1>0){ g.beginPath(); g.moveTo(X(0),4); g.lineTo(X(0),FIG_H-8); g.stroke(); }
+
+    // shaded region between lo and hi
+    if(mode==='region'){
+      g.fillStyle=FIG_COL.fill;
+      g.beginPath(); g.moveTo(X(lo),Y(0));
+      for(let i=0;i<=N;i++){
+        const x=lo+(hi-lo)*i/N;
+        g.lineTo(X(x),Y(figEval(s.f,x)));
+      }
+      g.lineTo(X(hi),Y(0)); g.closePath(); g.fill();
+    }
+    // Riemann rectangles
+    if(mode==='bars'){
+      const n=s.n||6, w=(hi-lo)/n;
+      g.fillStyle='rgba(90,169,230,.28)'; g.strokeStyle=FIG_COL.a; g.lineWidth=1.2;
+      for(let i=0;i<n;i++){
+        const xa=lo+i*w, ym=figEval(s.f, xa+w/2);
+        const top=Y(ym), base=Y(0);
+        g.fillRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
+        g.strokeRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
+      }
+    }
+
+    g.strokeStyle=FIG_COL.b; g.lineWidth=2.4; g.lineJoin='round';
+    g.beginPath();
+    for(let i=0;i<=N;i++){
+      const x=x0+(x1-x0)*i/N, y=ys[i];
+      if(!isFinite(y)) continue;
+      if(i===0) g.moveTo(X(x),Y(y)); else g.lineTo(X(x),Y(y));
+    }
+    g.stroke();
+
+    // tangent line at a point
+    if(s.tangent!==undefined){
+      const a=s.tangent, h=1e-4;
+      const ya=figEval(s.f,a), m=(figEval(s.f,a+h)-figEval(s.f,a-h))/(2*h);
+      g.strokeStyle=FIG_COL.d; g.lineWidth=2; g.setLineDash([6,4]);
+      g.beginPath();
+      g.moveTo(X(x0), Y(ya+m*(x0-a)));
+      g.lineTo(X(x1), Y(ya+m*(x1-a)));
+      g.stroke(); g.setLineDash([]);
+    }
+    (s.pts||[]).forEach(p=>{
+      const x=p[0], y=p.length>1?p[1]:figEval(s.f,x);
+      g.fillStyle=p[2]||FIG_COL.d;
+      g.beginPath(); g.arc(X(x),Y(y),4.5,0,7); g.fill();
+      g.strokeStyle='#171129'; g.lineWidth=1.5; g.stroke();
+    });
+  },
+  curve(g,s){ this.plot(g,s,'curve'); },
+  region(g,s){ this.plot(g,s,'region'); },
+  bars(g,s){ this.plot(g,s,'bars'); },
+
+  /* ---- 6. numberline: approaching a point ---- */
+  numberline(g, s){
+    this.frame(g);
+    const a=s.at||0, span=s.span||3;
+    const X=x=>FIG_W/2+(x-a)/span*(FIG_W/2-26);
+    const y=FIG_H/2;
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=2;
+    g.beginPath(); g.moveTo(12,y); g.lineTo(FIG_W-12,y); g.stroke();
+
+    g.fillStyle=FIG_COL.dim; g.font='bold 11px system-ui,sans-serif'; g.textAlign='center';
+    for(let i=-2;i<=2;i++){
+      const t=a+i*span/2;
+      g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
+      g.beginPath(); g.moveTo(X(t),y-5); g.lineTo(X(t),y+5); g.stroke();
+      g.fillText(String(+t.toFixed(2)).replace('-','−'), X(t), y+20);
+    }
+    // approach arrows from both sides
+    this.arrow(g, X(a-span*0.78), y-26, X(a-span*0.14), y-26, FIG_COL.a, '');
+    this.arrow(g, X(a+span*0.78), y-26, X(a+span*0.14), y-26, FIG_COL.c, '');
+    // an open circle marks a value the function never reaches
+    g.lineWidth=2.4;
+    g.strokeStyle = s.hole ? FIG_COL.b : FIG_COL.d;
+    g.beginPath(); g.arc(X(a), y, 5.5, 0, 7);
+    if(s.hole){ g.fillStyle='#171129'; g.fill(); g.stroke(); }
+    else { g.fillStyle=FIG_COL.d; g.fill(); }
+    g.fillStyle=FIG_COL.ink; g.font='bold 12px system-ui,sans-serif';
+    g.fillText(s.label||('x → '+String(a).replace('-','−')), X(a), y-44);
+  }
+};
 
 /* -------------------------------- battle ---------------------------------- */
 const Battle = {
@@ -2734,6 +3112,9 @@ const Battle = {
     }
 
     document.getElementById('qbox').innerHTML = st.q;
+    // A question figure must never reveal the answer; the payoff picture is
+    // held back for the explanation.
+    Figure.render(st.fig || (st===this.cur ? this.cur.fig : null), document.getElementById('qfig'));
     const box=document.getElementById('choices'); box.innerHTML='';
     const choices = st===this.cur ? this.cur.choices : buildMote(st);
     choices.forEach(c=>{
@@ -2952,7 +3333,9 @@ const Battle = {
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${st.ex}</div>\`+ rule +
+      \`<div id="afig"></div>\`+
       \`<button class="btn gold" style="margin-top:10px" id="contBtn">\${inRite?'Next step ▶':'Continue ▶'}</button>\`;
+    Figure.render(st.figAnswer || (st===this.cur ? this.cur.figAnswer : null), document.getElementById('afig'));
     const btn=document.getElementById('contBtn');
     btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
     e.scrollIntoView({behavior:'smooth',block:'nearest'});
