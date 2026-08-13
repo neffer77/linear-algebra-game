@@ -55,18 +55,23 @@ if (fm.fileExists(savePath)) {
 // to Scriptable whenever it changes.
 const BRIDGE = \`
 (function(){
-  var KEY = "eigenrealm.v1";
+  // Progress is spread across several keys now — the knight roster and one
+  // save slot per knight — so the bridge carries the whole namespace rather
+  // than a single key.
   var seed = \${JSON.stringify(restored)};
   try {
-    if (seed && seed !== "null" && !localStorage.getItem(KEY)) {
-      localStorage.setItem(KEY, seed);
+    var all = seed && seed !== "null" ? JSON.parse(seed) : null;
+    if (all && typeof all === "object") {
+      // Older builds stored the bare save string under one key; accept both.
+      if (typeof all === "string" || all.hp !== undefined) {
+        if (!localStorage.getItem("eigenrealm.v1")) localStorage.setItem("eigenrealm.v1", seed);
+      } else {
+        for (var k in all) if (Object.prototype.hasOwnProperty.call(all, k)) {
+          if (localStorage.getItem(k) === null) localStorage.setItem(k, all[k]);
+        }
+      }
     }
   } catch(e) {}
-  // Mirror every write back out so the native side can persist it.
-  window.__lastSave = null;
-  setInterval(function(){
-    try { window.__lastSave = localStorage.getItem(KEY); } catch(e) {}
-  }, 1000);
 })();
 \`;
 
@@ -78,7 +83,9 @@ await wv.present(true);
 // After the player closes the view, write their progress to disk.
 try {
   const finalSave = await wv.evaluateJavaScript(
-    'completion(localStorage.getItem("eigenrealm.v1"))', true
+    'completion(JSON.stringify(Object.keys(localStorage)' +
+    '.filter(function(k){return k.indexOf("eigenrealm.") === 0;})' +
+    '.reduce(function(o,k){o[k]=localStorage.getItem(k);return o;}, {})))', true
   );
   if (finalSave) fm.writeString(savePath, finalSave);
 } catch (e) {

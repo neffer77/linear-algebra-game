@@ -48,6 +48,21 @@ jobs:
           console.log(`index.html OK (${(html.length / 1024).toFixed(1)} KB, ${local.length} local refs)`);
           '
 
+      # An icon named in the manifest but missing from the repo produces an
+      # install prompt that silently fails, which is worse than no prompt.
+      - name: Check the manifest's icons exist
+        run: |
+          node -e '
+          const fs = require("fs");
+          const m = JSON.parse(fs.readFileSync("manifest.webmanifest", "utf8"));
+          const missing = m.icons.map(i => i.src).filter(p => !fs.existsSync(p));
+          if (missing.length) { console.error("Missing icons: " + missing.join(", ")); process.exit(1); }
+          const shell = fs.readFileSync("sw.js", "utf8");
+          const unlisted = m.icons.map(i => i.src).filter(p => !shell.includes(p));
+          if (unlisted.length) { console.error("Not precached by sw.js: " + unlisted.join(", ")); process.exit(1); }
+          console.log(`manifest OK (${m.icons.length} icons, all present and precached)`);
+          '
+
       # scriptable/KnightsOfTheEigenrealm.js is generated from index.html. The
       # README asks contributors to regenerate it by hand, which is easy to
       # forget, so fail the build when the committed copy has drifted.
@@ -74,11 +89,16 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html README.md _site/
+          cp index.html README.md manifest.webmanifest sw.js _site/
+          cp -r icons _site/
           # Served so players can copy the iOS script straight from the site.
           cp -r scriptable _site/
           # Pages runs Jekyll over the artifact unless told not to.
           touch _site/.nojekyll
+          # The worker must differ byte-for-byte between deploys or browsers
+          # never notice there is an update, and players sit on a stale build.
+          sed -i "s/^const VERSION = 'dev';/const VERSION = '$(git rev-parse --short HEAD)';/" _site/sw.js
+          grep -q "const VERSION = 'dev';" _site/sw.js && { echo "::error::sw.js version was not stamped"; exit 1; } || true
           cat > _site/build-info.json <<JSON
           {
             "version": "$(git rev-parse --short HEAD)",

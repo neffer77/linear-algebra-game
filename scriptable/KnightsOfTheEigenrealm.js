@@ -23,7 +23,16 @@ const HTML = `<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eigenrealm">
 <meta name="theme-color" content="#120d1c">
+<meta name="description" content="A turn-based knight battler where the combat system is linear algebra and calculus.">
+<!-- Both are optional: opened straight off disk these 404 and the game is
+     unaffected. Served over http(s) they make it installable, which is what
+     keeps saves out of reach of Safari's seven-day storage sweep. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 <title>Knights of the Eigenrealm</title>
 <style>
 :root{
@@ -71,9 +80,10 @@ h2{font-size:18px}
 .tag.r{background:#4a2b2f;color:#ffb3b6;border-color:#6a3c41}
 
 /* top bar */
-#hud{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;
+.hud{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;
   background:rgba(20,14,36,.85);border:1px solid var(--edge);border-radius:12px;font-size:13px;font-weight:700}
-#hud .sp{flex:1}
+.hud .sp{flex:1}
+.hud>span{white-space:nowrap}
 .coin{color:var(--gold)}
 
 /* battle */
@@ -111,6 +121,17 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 /* explain card */
 #explain{border-left:4px solid var(--gold);font-size:15px;line-height:1.6}
 #explain .head{font-weight:900;margin-bottom:6px;font-size:16px}
+#telegraph{background:rgba(229,72,77,.16);border:1px solid var(--red);border-radius:10px;
+  padding:8px 10px;margin-bottom:8px;font-size:13px;font-weight:700;text-align:center;
+  animation:pulse 1s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.5)}50%{box-shadow:0 0 0 6px rgba(229,72,77,0)}}
+.pips{font-size:11px;color:var(--red);letter-spacing:1px}
+.mtag{float:right;font-size:11px;font-weight:800;opacity:.85}
+.rev{display:inline-block;padding:1px 7px;border-radius:999px;background:#3a2f5e;
+  border:1px solid var(--purple);color:#d9b8ff;font-size:10px;letter-spacing:.5px;margin-left:4px}
+.miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
+  padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
+.miss b{color:#ffb3b6}
 
 /* map */
 .node{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;
@@ -135,8 +156,8 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .pill{padding:6px 10px;border-radius:10px;background:#332957;border:1px solid var(--edge);font-size:12px;font-weight:800}
 
 #powerbar{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:4px}
-#powerbar .pw{padding:7px 9px;border-radius:10px;border:1px solid var(--edge);background:#2b2247;
-  font-size:13px;font-weight:800;cursor:pointer}
+#powerbar .pw{padding:10px 12px;border-radius:10px;border:1px solid var(--edge);background:#2b2247;
+  font-size:13px;font-weight:800;cursor:pointer;min-height:38px;display:flex;align-items:center}
 #powerbar .pw:active{transform:translateY(2px)}
 #powerbar .pw.off{opacity:.35;pointer-events:none}
 
@@ -148,6 +169,272 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 .crest{font-size:46px;text-align:center;line-height:1}
 .kbd{display:inline-block;padding:1px 6px;border-radius:5px;background:#332957;border:1px solid var(--edge);font-size:12px}
+
+/* ---- juice ---- */
+.track{position:relative}
+.track .ghost{position:absolute;left:0;top:0;bottom:0;width:100%;
+  background:rgba(255,255,255,.5);transition:width .55s ease .3s}
+.track .fill{position:relative;z-index:1}
+#sceneWrap{position:relative}
+#flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:#fff;mix-blend-mode:screen}
+#bigBanner{position:fixed;left:0;right:0;top:34%;z-index:60;pointer-events:none;
+  text-align:center;opacity:0;transition:opacity .16s}
+#bigBanner.on{opacity:1}
+#bigBanner .bnr{display:inline-block;text-align:center;transform:scale(.7);
+  max-width:78vw;min-width:0;padding:0 8px;box-sizing:border-box;
+  animation:bpop .42s cubic-bezier(.2,1.25,.4,1) forwards}
+#bigBanner .bt{font-size:clamp(21px,7.4vw,34px);font-weight:900;letter-spacing:.5px;color:var(--bc);
+  text-shadow:0 3px 0 rgba(0,0,0,.6),0 0 26px var(--bc);line-height:1.12;
+  overflow-wrap:break-word}
+#bigBanner .bs{margin-top:4px;font-size:clamp(12px,3.4vw,14px);font-weight:800;color:var(--ink);
+  text-shadow:0 2px 6px rgba(0,0,0,.9);overflow-wrap:break-word}
+/* The pop overshoots past its keyframe, so max-width leaves room for the peak. */
+@keyframes bpop{0%{transform:scale(.62) rotate(-3deg)}60%{transform:scale(1.08) rotate(.8deg)}100%{transform:scale(1) rotate(0)}}
+.choice.right{animation:rpop .34s cubic-bezier(.2,1.4,.4,1)}
+@keyframes rpop{0%{transform:scale(1)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+.choice.wrong{animation:shake .34s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+#comboTxt.hot{color:var(--gold);font-weight:900;text-shadow:0 0 10px rgba(242,193,78,.6)}
+#comboTxt.blaze{color:#ff9c3d;font-weight:900;text-shadow:0 0 14px rgba(255,120,40,.8)}
+.xpwrap{flex:none;width:52px}
+.xptrack{height:5px;border-radius:4px;background:#140f24;border:1px solid var(--edge);overflow:hidden}
+.xptrack div{height:100%;background:linear-gradient(90deg,#5aa9e6,#a06bd6);transition:width .5s ease}
+.pref{display:flex;align-items:center;gap:10px;padding:11px;border-radius:12px;margin:6px 0;
+  border:1px solid var(--edge);background:#241c3e;cursor:pointer}
+.pref .sw{width:46px;height:26px;border-radius:99px;background:#3a3160;position:relative;flex:none;
+  transition:background .2s}
+.pref .sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;
+  background:#8f85b8;transition:transform .2s,background .2s}
+.pref.on .sw{background:#2f7a4c}
+.pref.on .sw i{transform:translateX(20px);background:#eafff1}
+.medal{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:10px;margin:4px 4px 0 0;
+  background:#2b2247;border:1px solid var(--edge);font-size:12px;font-weight:800}
+.medal.got{border-color:var(--gold);background:#3a2f16;color:var(--gold)}
+.streakbox{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;
+  background:linear-gradient(90deg,#3a2416,#241c3e);border:1px solid #6b4a10}
+.streakbox .n{font-size:26px;font-weight:900;color:var(--gold);line-height:1}
+@media (prefers-reduced-motion: reduce){
+  .choice.right,.choice.wrong,#bigBanner .bnr{animation:none}
+}
+
+/* ---- loot reveal ---- */
+#chest{position:fixed; inset:0; z-index:80; display:none; align-items:center; justify-content:center;
+  background:rgba(8,6,16,.86); padding:20px;}
+#chest.on{display:flex;}
+#chest .cbox{position:relative; text-align:center; max-width:19rem; width:100%;}
+#chest .clid{font-size:64px; line-height:1; animation:shk .16s ease-in-out infinite;}
+#chest .clid.pop{animation:lidpop .45s cubic-bezier(.2,1.6,.4,1) forwards;}
+@keyframes shk{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+@keyframes lidpop{0%{transform:scale(1)}45%{transform:scale(1.5) translateY(-16px)}
+  100%{transform:scale(.2) translateY(-46px); opacity:0}}
+#chest .cburst{position:absolute; left:50%; top:34px; width:8px; height:8px; margin-left:-4px;
+  border-radius:50%; opacity:0; box-shadow:0 0 0 0 var(--rc);}
+#chest .cburst.go{animation:burst .6s ease-out forwards;}
+@keyframes burst{0%{opacity:.9; box-shadow:0 0 12px 4px var(--rc)}
+  100%{opacity:0; box-shadow:0 0 8px 130px rgba(0,0,0,0)}}
+#chest .ccard{margin-top:8px; padding:18px 16px; border-radius:14px; opacity:0; transform:scale(.8);
+  background:linear-gradient(180deg,#2a2246,#1c1636); border:2px solid var(--rc);
+  box-shadow:0 0 34px -6px var(--rc); position:relative; overflow:hidden;}
+#chest .ccard.go{animation:cardin .5s cubic-bezier(.2,1.35,.4,1) forwards;}
+@keyframes cardin{to{opacity:1; transform:scale(1)}}
+#chest .ccard:after{content:""; position:absolute; inset:0; transform:translateX(-120%);
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.32) 50%,transparent 62%);}
+#chest .ccard.go:after{animation:sheen .9s .35s ease-out;}
+@keyframes sheen{to{transform:translateX(120%)}}
+#chest .crar{font-size:11px; font-weight:900; letter-spacing:2px; text-transform:uppercase; color:var(--rc);}
+#chest .cic{font-size:46px; line-height:1.2; margin:2px 0 4px;}
+#chest .cnm{font-size:18px; font-weight:900; color:var(--ink);}
+#chest .cds{font-size:13px; color:var(--dim); margin-top:4px; line-height:1.5;}
+#chest .cnew{font-size:10px; font-weight:900; letter-spacing:1px; padding:2px 6px; border-radius:5px;
+  background:var(--gold); color:#2a1c00; vertical-align:middle;}
+
+/* ---- near death ---- */
+#vignette{position:fixed; inset:0; z-index:40; pointer-events:none; opacity:0;
+  background:radial-gradient(ellipse at center, transparent 42%, rgba(180,20,28,.85) 100%);
+  transition:opacity .4s;}
+#vignette.on{opacity:calc(var(--vi,.5) * .8); animation:beat 1.15s ease-in-out infinite;}
+#vignette.crit{animation-duration:.62s;}
+@keyframes beat{0%,100%{filter:brightness(.75)}18%{filter:brightness(1.5)}36%{filter:brightness(.9)}}
+@media (prefers-reduced-motion: reduce){#vignette.on{animation:none}}
+
+/* ================= heraldic pass ================= */
+:root{
+  --serif: Georgia,"Iowan Old Style","Palatino Linotype",Palatino,"Times New Roman",serif;
+  --gold-lt:#ffe6ae; --gold-dk:#7d5c10;
+}
+
+/* Gold-leaf headings. A gradient fill needs drop-shadow rather than
+   text-shadow, which paints behind the clipped text and shows through. */
+h1,h2{font-family:var(--serif); letter-spacing:.015em;}
+h1{
+  background:linear-gradient(180deg,var(--gold-lt) 0%,var(--gold) 46%,#b07d16 100%);
+  -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:none; filter:drop-shadow(0 2px 0 rgba(0,0,0,.55));
+}
+.crest{filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));}
+
+/* Panel titles become pennants with a swallowtail notch. */
+.panel h2{
+  display:inline-block; max-width:calc(100% + 12px);
+  margin:-12px 0 10px -12px; padding:7px 30px 7px 14px;
+  background:linear-gradient(180deg,#3b3063,#291f47);
+  border:1px solid var(--gold-dk); border-left:3px solid var(--gold);
+  border-radius:0 0 4px 0;
+  clip-path:polygon(0 0, 100% 0, calc(100% - 11px) 50%, 100% 100%, 0 100%);
+  font-size:16px;
+}
+.panel h2:first-child{margin-top:-12px;}
+
+/* Divider: a gold hairline broken for a lozenge. */
+hr{border:0; height:16px; position:relative; margin:12px 0;}
+hr:before{content:""; position:absolute; left:0; right:0; top:50%; height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dk) 16%,transparent 45%,
+    transparent 55%,var(--gold-dk) 84%,transparent);}
+hr:after{content:"◆"; position:absolute; left:50%; top:50%;
+  transform:translate(-50%,-52%); color:var(--gold); font-size:9px; line-height:1;}
+
+/* Panels get an inner rule, like a ruled page. */
+.panel{box-shadow:0 6px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06),
+  inset 0 0 0 1px rgba(242,193,78,.07);}
+
+/* Buttons read as cast metal rather than flat plates. */
+.btn{
+  background:linear-gradient(180deg,#3d3160,#281f45);
+  border:1px solid #4b3d78;
+  box-shadow:0 4px 0 #150e28, inset 0 1px 0 rgba(255,255,255,.10),
+             inset 0 -2px 0 rgba(0,0,0,.32);
+}
+.btn:active{box-shadow:0 1px 0 #150e28, inset 0 1px 0 rgba(255,255,255,.08);}
+.btn.gold{
+  background:linear-gradient(180deg,#ffdf90,#f2c14e 42%,#c9962c 100%);
+  border-color:var(--gold-dk); color:#2a1c00;
+  text-shadow:0 1px 0 rgba(255,255,255,.35);
+  box-shadow:0 4px 0 #5f4110, inset 0 1px 0 rgba(255,255,255,.6),
+             inset 0 -2px 0 rgba(0,0,0,.18);
+}
+.btn.gold:active{box-shadow:0 1px 0 #5f4110, inset 0 1px 0 rgba(255,255,255,.5);}
+.btn.ghost{background:linear-gradient(180deg,#262040,#1b1531); border-color:#332a55;}
+
+/* The question card is framed like an illuminated page: corner brackets only,
+   so nothing can clip the text at narrow widths. */
+#qpanel{position:relative; border-color:rgba(242,193,78,.34);}
+#qpanel:before,#qpanel:after{
+  content:""; position:absolute; width:15px; height:15px; border:2px solid var(--gold);
+  opacity:.8; pointer-events:none;}
+#qpanel:before{top:5px; left:5px; border-right:0; border-bottom:0; border-radius:4px 0 0 0;}
+#qpanel:after{bottom:5px; right:5px; border-left:0; border-top:0; border-radius:0 0 4px 0;}
+#qtopic{font-family:var(--serif); font-size:12px; letter-spacing:.16em; color:var(--gold);
+  opacity:.85;}
+
+/* HUD becomes a ruled banner strip. */
+.hud{border-top:2px solid var(--gold-dk); border-bottom:2px solid var(--gold-dk);
+  border-left:1px solid var(--edge); border-right:1px solid var(--edge);
+  background:linear-gradient(180deg,#241b3d,#1a1430); border-radius:8px;}
+.hud .coin{font-family:var(--serif); font-size:15px;}
+
+/* Map nodes: a gilt edge and a plate behind the sigil. */
+.node{border-left:3px solid var(--gold-dk);}
+.node.done{border-left-color:#3f6a46;}
+.node .ico{border:1px solid var(--gold-dk); background:linear-gradient(180deg,#1d1633,#120d24);}
+.realmhdr h2{font-family:var(--serif);}
+
+.tag,.pill,.medal{font-family:var(--serif); letter-spacing:.02em;}
+
+/* Screen change: a sword-glint sweeps across. */
+#wipe{position:fixed; inset:0; z-index:70; pointer-events:none; overflow:hidden; display:none;}
+#wipe.go{display:block;}
+#wipe i{position:absolute; top:-20%; left:-45%; width:30%; height:140%;
+  transform:skewX(-16deg);
+  background:linear-gradient(90deg,transparent,rgba(242,193,78,.5),rgba(255,246,222,.8),
+    rgba(242,193,78,.5),transparent);
+  animation:sweep .34s ease-out forwards;}
+@keyframes sweep{to{left:125%}}
+.screen.on{animation:fadeIn .26s cubic-bezier(.2,.7,.3,1);}
+@keyframes fadeIn{from{opacity:0; transform:translateY(9px) scale(.992)}to{opacity:1; transform:none}}
+@media (prefers-reduced-motion: reduce){
+  #wipe{display:none!important}
+  .screen.on{animation:none}
+}
+
+/* ---- codex ---- */
+#codex{position:fixed; inset:0; z-index:78; display:none; align-items:center; justify-content:center;
+  background:rgba(8,6,16,.88); padding:20px;}
+#codex.on{display:flex;}
+#codex .cxbox{max-width:21rem; width:100%; padding:18px 16px; border-radius:14px;
+  background:linear-gradient(180deg,#2a2246,#1c1636); border:2px solid var(--gold);
+  box-shadow:0 0 34px -8px var(--gold);}
+#codex .cxk{font-family:var(--serif); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:8px;}
+#codex .cxrule{font-size:16px; line-height:1.55; font-weight:700;}
+#codex .cxeg{margin-top:10px; padding:9px 11px; border-radius:8px; background:#171129;
+  border-left:3px solid var(--gold-dk); font-size:14px; line-height:1.6; color:var(--dim);}
+
+/* ---- rite ---- */
+#riteBar{display:flex; align-items:center; gap:6px; justify-content:center; margin-bottom:8px;
+  font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);}
+#riteBar .rp{width:12px; height:12px; border-radius:50%; border:2px solid var(--edge); background:#171129;}
+#riteBar .rp.done{background:var(--green); border-color:var(--green);}
+#riteBar .rp.miss{background:var(--red); border-color:var(--red);}
+#riteBar .rp.now{border-color:var(--gold); box-shadow:0 0 8px var(--gold);}
+#riteTrail{font-size:12px; color:var(--dim); line-height:1.7; margin-bottom:6px;}
+#riteTrail b{color:var(--ink);}
+.qchip{display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:34px;
+  margin-left:6px; border-radius:9px; border:1px solid var(--gold-dk); background:#2b2247;
+  color:var(--gold); font-weight:900; cursor:pointer; vertical-align:middle;}
+#qhead{display:flex; align-items:center; justify-content:center; gap:2px; margin-bottom:2px;}
+
+/* ---- perfect strike ---- */
+#pstrike{margin-top:8px;}
+#pstrike .pbtn{display:block; width:100%; padding:11px; border-radius:12px; cursor:pointer;
+  border:1px dashed var(--gold); background:rgba(242,193,78,.08); color:var(--gold);
+  font-weight:900; font-size:14px; text-align:center;}
+#pad{display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-top:8px;}
+#pad button{padding:14px 0; font-size:19px; font-weight:900; border-radius:11px;
+  border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink);
+  box-shadow:0 3px 0 #150e28;}
+#pad button:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+#padVal{grid-column:1/-1; text-align:center; font-size:24px; font-weight:900; letter-spacing:2px;
+  padding:10px; border-radius:11px; background:#140f24; border:1px solid var(--gold-dk);
+  min-height:48px; font-family:var(--serif);}
+.cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
+  border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
+.cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
+/* Collapsible strand. At seventy topics the flat list was a wall of buttons;
+   these headers keep every screen to one thumb-reach, and opening one closes
+   the rest so the list never grows underneath your thumb. */
+/* One bar, two jobs: "a new version is ready" and "install me so your saves
+   survive". Both are interruptions, so both sit out of the way at the bottom
+   and are dismissible. */
+#updateBar{position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom));
+  z-index:55; display:none; align-items:center; gap:10px; padding:11px 13px;
+  border-radius:12px; border:1px solid var(--edge); background:#241b3d;
+  box-shadow:0 10px 30px rgba(0,0,0,.5); font-size:13px; line-height:1.4}
+#updateBar.on{display:flex}
+#codeBox{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+  padding:18px; background:rgba(8,5,16,.78); backdrop-filter:blur(3px)}
+#codeBox.on{display:flex}
+#codeBox textarea{width:100%; height:96px; margin:8px 0; padding:10px; border-radius:10px;
+  border:1px solid var(--edge); background:#0f0a1c; color:var(--ink); font:12px/1.45 ui-monospace,Menlo,monospace;
+  resize:none; -webkit-user-select:text; user-select:text}
+.knightchip{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+  border:1px solid var(--edge); background:rgba(255,255,255,.05); font-weight:700; font-size:13px;
+  min-height:36px; cursor:pointer}
+details.strand{border-top:1px solid var(--edge)}
+details.strand:first-of-type{border-top:0}
+details.strand>summary{list-style:none; cursor:pointer; min-height:44px; padding:10px 2px;
+  display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px}
+details.strand>summary::-webkit-details-marker{display:none}
+details.strand>summary .sname{flex:1}
+details.strand>summary .schev{color:var(--dim); transition:transform .18s ease}
+details.strand[open]>summary .schev{transform:rotate(90deg)}
+.sbadge{font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px;
+  background:rgba(255,255,255,.06); color:var(--dim)}
+.sbadge.warn{background:rgba(229,72,77,.16); color:#ff9b9e}
+.strandBody{padding-bottom:6px}
+.fig{display:block; width:100%; height:auto; border-radius:10px; margin:8px 0 2px;
+  border:1px solid var(--edge); background:#171129;}
+.figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
+#afig .fig{margin-top:10px;}
 </style>
 </head>
 <body>
@@ -161,11 +448,14 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       <h1>Knights of the Eigenrealm</h1>
       <div class="sub" style="margin-top:6px">Battle foes with linear algebra &amp; calculus.<br>Solve to strike. Miss and bleed.</div>
     </div>
+    <div id="knightRow"></div>
     <div class="panel">
-      <button class="btn gold" onclick="Game.start()">⚔️ Begin the Quest</button>
+      <button class="btn gold" onclick="Game.start()" id="btnBegin">⚔️ Begin the Quest</button>
       <button class="btn" onclick="UI.go('s-map')" id="btnContinue" style="display:none">🏰 Continue Journey</button>
       <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
       <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
+      <button class="btn ghost" onclick="Knights.open()">🛡️ Switch knight</button>
+      <button class="btn ghost" onclick="UI.go('s-prefs')">⚙️ Settings &amp; Titles</button>
     </div>
     <div class="panel sub">
       <b style="color:var(--gold)">How it works</b><br>
@@ -174,14 +464,24 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       • <b style="color:var(--red)">Wrong</b> → the foe strikes you, and you're shown exactly why.<br>
       • Win gold &amp; loot → forge better blades, plate, and relics.
     </div>
+    <div id="streakRow"></div>
     <div class="center small" id="resetRow" style="display:none">
-      <span class="kbd" onclick="Game.hardReset()">Erase save</span>
+      <span class="kbd" onclick="Knights.eraseActive()">Erase this knight</span>
     </div>
+  </div>
+
+  <!-- ============ KNIGHTS ============ -->
+  <div class="screen" id="s-knights">
+    <div class="panel"><h2>🛡️ Who is playing?</h2>
+      <div class="sub">Each knight keeps their own progress on this device.<br>
+        <b style="color:var(--gold)">📤 Move</b> copies a knight to a different device or browser.</div></div>
+    <div id="knightList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
   </div>
 
   <!-- ============ MAP ============ -->
   <div class="screen" id="s-map">
-    <div id="hud"></div>
+    <div id="hud" class="hud"></div>
     <div class="panel" style="padding:10px">
       <div class="row">
         <button class="btn sm" onclick="UI.go('s-shop')">🏪 Smithy</button>
@@ -191,6 +491,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
       <div class="row">
         <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
         <button class="btn sm ghost" onclick="Game.rest()">🔥 Camp &amp; Rest</button>
+        <button class="btn sm ghost" onclick="UI.go('s-prefs')">⚙️ Settings</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -202,14 +503,14 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div class="bars">
       <div class="bar">
         <div class="lbl"><span>🛡️ You</span><span id="pHpTxt">100/100</span></div>
-        <div class="track"><div class="fill hp" id="pHp"></div></div>
+        <div class="track"><div class="ghost" id="pGhost"></div><div class="fill hp" id="pHp"></div></div>
       </div>
       <div class="bar">
         <div class="lbl"><span id="foeName">Foe</span><span id="eHpTxt">100/100</span></div>
-        <div class="track"><div class="fill foe" id="eHp"></div></div>
+        <div class="track"><div class="ghost" id="eGhost"></div><div class="fill foe" id="eHp"></div></div>
       </div>
     </div>
-    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas></div>
+    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas><div id="flash"></div></div>
     <div class="track thin" style="margin-top:6px"><div class="fill time" id="timeBar"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">
       <span class="small" id="comboTxt">Combo ×1.0</span>
@@ -217,15 +518,20 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     </div>
 
     <div class="panel" id="qpanel">
-      <div id="qtopic"></div>
+      <div id="telegraph" style="display:none"></div>
+      <div id="riteBar" style="display:none"></div>
+      <div id="riteTrail" style="display:none"></div>
+      <div id="qhead"><div id="qtopic"></div></div>
       <div id="qbox"></div>
+      <div id="qfig"></div>
       <div id="choices"></div>
+      <div id="pstrike" style="display:none"></div>
     </div>
 
     <div class="panel" id="explain" style="display:none"></div>
     <div id="powerbar"></div>
     <div class="center" style="margin-top:8px">
-      <span class="kbd" onclick="Battle.flee()">🏃 Retreat</span>
+      <span class="kbd" id="fleeBtn" onclick="Battle.flee()">🏃 Retreat</span>
     </div>
     <div style="height:16px"></div>
   </div>
@@ -238,7 +544,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <!-- ============ SHOP ============ -->
   <div class="screen" id="s-shop">
-    <div id="hud2"></div>
+    <div id="hud2" class="hud"></div>
     <div class="panel"><h2>🏪 The Smithy</h2><div class="sub">Spend gold won in battle. Equip from Gear.</div></div>
     <div id="shopList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
@@ -247,7 +553,7 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
   <!-- ============ GEAR ============ -->
   <div class="screen" id="s-gear">
-    <div id="hud3"></div>
+    <div id="hud3" class="hud"></div>
     <div id="gearList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
     <div style="height:20px"></div>
@@ -257,6 +563,13 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
   <div class="screen" id="s-tome">
     <div class="panel"><h2>📖 Tome of Lore</h2><div class="sub">Every spell in this game is real mathematics. Read a page, then go swing a sword at it.</div></div>
     <div id="tomeList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ SETTINGS ============ -->
+  <div class="screen" id="s-prefs">
+    <div id="prefList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -279,6 +592,13 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
     <div style="height:20px"></div>
   </div>
 
+  <div id="bigBanner"></div>
+  <div id="vignette"></div>
+  <div id="wipe"><i></i></div>
+  <div id="chest"></div>
+  <div id="codex"></div>
+  <div id="codeBox"></div>
+  <div id="updateBar"></div>
 </div>
 
 <script>
@@ -291,11 +611,16 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 
 /* ---------------------------------- utils ------------------------------- */
 const R = {
-  i:(a,b)=>Math.floor(Math.random()*(b-a+1))+a,
+  // _r is swapped for a seeded generator during the daily skirmish, so the
+  // same date produces the same twelve problems on every device.
+  _r: Math.random,
+  seed(n){ let x=(n>>>0)||1; R._r=()=>{ x=(x*1664525+1013904223)>>>0; return x/4294967296; }; },
+  unseed(){ R._r=Math.random; },
+  i:(a,b)=>Math.floor(R._r()*(b-a+1))+a,
   nz:(a,b)=>{let v=0;let g=0;while(v===0&&g++<40)v=R.i(a,b);return v||1;},
-  pick:a=>a[Math.floor(Math.random()*a.length)],
-  shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;},
-  chance:p=>Math.random()<p
+  pick:a=>a[Math.floor(R._r()*a.length)],
+  shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(R._r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;},
+  chance:p=>R._r()<p
 };
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};
 const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
@@ -330,6 +655,12 @@ function poly(terms,v='x'){
   });
   return s;
 }
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){const t=b;b=a%b;a=t;}return a||1;};
+// A fraction in lowest terms, rendered as a plain integer when it divides out.
+const rat=(n,dm)=>{ if(dm<0){n=-n;dm=-dm;} const g=gcd(n,dm); n/=g; dm/=g;
+  return dm===1 ? neg(n) : frac(n,dm); };
+// " + 3xy" or " − xy" — so a negative coefficient never renders as "+ −3xy".
+const sgn=(c,body)=>\` \${c<0?'−':'+'} \${Math.abs(c)===1&&body?'':Math.abs(c)}\${body}\`;
 const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
 
@@ -347,23 +678,55 @@ vecAdd(d){
   return {topic:'Vector Addition',
     q:\`\${vecR(u)} + \${vecR(v)} = ?\`,
     a:vecR(s),
-    d:[vecR([u[0]-v[0],u[1]-v[1]]), vecR([u[0]+v[1],u[1]+v[0]]), vecR([s[0],s[1]+R.nz(-3,3)]), vecR([u[0]*v[0],u[1]*v[1]])],
+    // u and v only — drawing the resultant would answer the question.
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', para:true, caption:'Walk along u, then along v — the diagonal is the sum.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'},{v:s,col:'#f2c14e',label:'u+v'}]},
+    d:[[vecR([u[0]-v[0],u[1]-v[1]]),'that subtracts v instead of adding it'],
+       [vecR([u[0]+v[1],u[1]+v[0]]),'the components got crossed — first pairs with first, second with second'],
+       [vecR([u[0]*v[0],u[1]*v[1]]),'that multiplies the components; addition is what was asked'],
+       vecR([s[0],s[1]+R.nz(-3,3)])],
     ex:\`Add matching slots, nothing else. \${neg(u[0])}+\${neg(v[0])} = \${neg(s[0])} on top, \${neg(u[1])}+\${neg(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
 },
 vecScale(d){
-  const c=R.nz(-4-d,4+d), v=[R.nz(-8,8),R.nz(-8,8)];
+  // c = 1 would ask nothing at all, and would make the first distractor
+  // (scale only the top component) land on the answer.
+  let c=R.nz(-4-d,4+d); while(c===1) c=R.nz(-4-d,4+d);
+  const v=[R.nz(-8,8),R.nz(-8,8)];
   const s=[c*v[0],c*v[1]];
   return {topic:'Scalar Multiplication',
     q:\`\${neg(c)} · \${vecR(v)} = ?\`,
-    a:vecR(s), d:[vecR([c*v[0],v[1]]), vecR([c+v[0],c+v[1]]), vecR([-s[0],-s[1]]), vecR([s[1],s[0]])],
+    a:vecR(s),
+    fig:{kind:'plane', vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
+    figAnswer:{kind:'plane', caption:'Same line, new length'+(c<0?' — and the other way along it.':'.'),
+      vecs:[{v:v,col:'#5aa9e6',label:'v'},{v:s,col:'#f2c14e',label:neg(c)+'v'}]},
+    d:[[vecR([c*v[0],v[1]]),'only the first component got scaled — a scalar multiplies every component'],
+       [vecR([c+v[0],c+v[1]]),'the scalar was added to each component instead of multiplied'],
+       [vecR([-s[0],-s[1]]),'the direction is flipped — check the sign of the scalar'],
+       vecR([s[1],s[0]])],
     ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${neg(v[0])} = \${neg(s[0])} and \${neg(c)}·\${neg(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
 },
 vecCombo(d){
-  const a=R.i(2,3+d), b=R.i(2,3+d), u=[R.nz(-6,6),R.nz(-6,6)], v=[R.nz(-6,6),R.nz(-6,6)];
-  const s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
+  const a=R.i(2,3+d), b=R.i(2,3+d);
+  let u, v, s;
+  do {
+    u=[R.nz(-6,6),R.nz(-6,6)]; v=[R.nz(-6,6),R.nz(-6,6)];
+    s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];
+    // If the combination lands back on u or v, the figure would be showing the
+    // answer — and the question would be a coincidence rather than a drill.
+  } while((s[0]===u[0]&&s[1]===u[1]) || (s[0]===v[0]&&s[1]===v[1]));
   return {topic:'Linear Combination',
     q:\`u = \${vecR(u)}, v = \${vecR(v)}<br>\${a}u − \${b}v = ?\`,
-    a:vecR(s), d:[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]), vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]), vecR([s[0]+R.nz(-4,4),s[1]]), vecR([-s[0],-s[1]])],
+    a:vecR(s),
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', caption:'Scale each arrow first, then add them tip to tail.',
+      vecs:[{v:[a*u[0],a*u[1]],col:'#5aa9e6',label:a+'u'},
+            {v:[-b*v[0],-b*v[1]],col:'#57cc7a',label:'−'+b+'v'},
+            {v:s,col:'#f2c14e',label:'result'}]},
+    d:[[vecR([a*u[0]+b*v[0],a*u[1]+b*v[1]]),'that adds the two scaled vectors — the problem subtracts'],
+       [vecR([a*u[0]-b*v[1],a*u[1]-b*v[0]]),"v's components got crossed"],
+       [vecR([-s[0],-s[1]]),'the whole result is negated — you computed '+b+'v − '+a+'u'],
+       vecR([s[0]+R.nz(-4,4),s[1]])],
     ex:\`Scale first, then add. \${a}u = \${vecR([a*u[0],a*u[1]])} and \${b}v = \${vecR([b*v[0],b*v[1]])}. Subtracting gives \${vecR(s)}. Any expression like this is a "linear combination" — the whole subject is built out of them.\`};
 },
 dot(d){
@@ -372,7 +735,15 @@ dot(d){
   const s=u[0]*v[0]+u[1]*v[1];
   return {topic:'Dot Product',
     q:\`\${vecR(u)} · \${vecR(v)} = ?\`,
-    a:neg(s), d:[neg(u[0]*v[0]-u[1]*v[1]), neg(u[0]*v[1]+u[1]*v[0]), neg(-s), neg(s+R.nz(-6,6))],
+    a:neg(s),
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', proj:true,
+      caption:'Gold is u&rsquo;s shadow on v &mdash; the dot product measures its reach.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    d:[[neg(u[0]*v[0]-u[1]*v[1]),'the two products were subtracted — the dot product adds them'],
+       [neg(u[0]*v[1]+u[1]*v[0]),'the components got crossed; multiply first with first, second with second'],
+       [neg(-s),'a sign slipped somewhere in the products'],
+       neg(s+R.nz(-6,6))],
     ex:\`Multiply matching slots and add the results: (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(u[0]*v[0])} + \${neg(u[1]*v[1])} = \${neg(s)}. The dot product is a single number, never a vector — it measures how much the two arrows point the same way.\`};
 },
 mag(){
@@ -381,20 +752,35 @@ mag(){
   const v=[t[0]*sx,t[1]*sy];
   return {topic:'Vector Length',
     q:\`‖\${vecR(v)}‖ = ?\`,
-    a:String(t[2]), d:[String(t[0]+t[1]), String(t[2]+1), String(Math.abs(t[0]-t[1])), String(t[2]*2)],
+    a:String(t[2]),
+    fig:{kind:'plane', vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
+    figAnswer:{kind:'plane', legs:true, caption:'The arrow is the hypotenuse of a right triangle.',
+      vecs:[{v:v,col:'#5aa9e6',label:'v'}]},
+    d:[[String(t[0]+t[1]),'that just adds the components — length needs the square root of the sum of squares'],
+       [String(Math.abs(t[0]-t[1])),'the components were subtracted; they must be squared and added'],
+       [String(t[2]*2),'twice the correct length — the square root was never taken properly'],
+       String(t[2]+1)],
     ex:\`Length is Pythagoras: √(\${t[0]}² + \${t[1]}²) = √(\${t[0]*t[0]} + \${t[1]*t[1]}) = √\${t[2]*t[2]} = \${t[2]}. Signs vanish because the components get squared — length is never negative.\`};
 },
 orth(){
   const u=[R.nz(-6,6),R.nz(-6,6)];
-  const yes=R.chance(.5);
-  const v = yes ? [-u[1],u[0]] : [R.nz(-6,6),R.nz(-6,6)];
+  const wantPerp=R.chance(.5);
+  const v = wantPerp ? [-u[1],u[0]] : [R.nz(-6,6),R.nz(-6,6)];
   const s=u[0]*v[0]+u[1]*v[1];
   const truth = s===0;
   return {topic:'Orthogonality',
     q:\`Are u = \${vecR(u)} and v = \${vecR(v)} perpendicular?\`,
-    a: truth ? 'Yes — dot product is 0' : 'No — dot product is '+neg(s),
-    d:['Yes — dot product is 0','No — dot product is '+neg(s),'Only if both are unit vectors','Impossible to tell without angles'],
-    ex:\`Two vectors are perpendicular exactly when their dot product is zero. Here u·v = \${neg(u[0])}·\${neg(v[0])} + \${neg(u[1])}·\${neg(v[1])} = \${neg(s)}, so they \${truth?'are':'are not'} perpendicular.\`};
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', right:truth, proj:!truth,
+      caption: truth ? 'A right angle at the origin.' : 'They lean the same way — no right angle.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    a: truth ? 'Yes — they are perpendicular' : 'No — they are not perpendicular',
+    d:[ truth ? ['No — they are not perpendicular',\`their dot product is 0, and a zero dot product is exactly what perpendicular means\`]
+              : ['Yes — they are perpendicular',\`their dot product is \${neg(s)}, not 0\`],
+        ['Only if both are unit vectors','length is irrelevant here — perpendicularity is decided by the dot product alone'],
+        ['You would need the angle between them','you never need the angle; the dot product settles it'],
+        ['Only if they have the same length','equal length has nothing to do with meeting at a right angle']],
+    ex:\`Two vectors are perpendicular exactly when their dot product is zero. Here u·v = (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(s)}, so they \${truth?'are':'are not'} perpendicular.\`};
 },
 
 /* ---------- Realm 2 : matrices ---------- */
@@ -404,7 +790,16 @@ matVec(d){
   const s=[A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]];
   return {topic:'Matrix × Vector',
     q:\`\${mat(A)}\${vec(v)} = ?\`,
-    a:vec(s), d:[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]), vec([s[1],s[0]]), vec([A[0][0]*v[0],A[1][1]*v[1]]), vec([s[0]+R.nz(-5,5),s[1]])],
+    a:vec(s),
+    fig:{kind:'grid', m:A, vecs:[{v:v, raw:true, col:'#e5484d', label:'v'}],
+      caption:'The matrix moves the whole grid; where does v land?'},
+    figAnswer:{kind:'grid', m:A, caption:'v rides the grid to its new position.',
+      vecs:[{v:v, raw:true, col:'rgba(229,72,77,.45)', label:'v'},
+            {v:s, raw:true, col:'#f2c14e', label:'Av'}]},
+    d:[[vec([A[0][0]*v[0]+A[1][0]*v[1], A[0][1]*v[0]+A[1][1]*v[1]]),'that dotted the vector with the columns — each output entry uses a row'],
+       [vec([s[1],s[0]]),'the two output components are in the wrong order'],
+       [vec([A[0][0]*v[0],A[1][1]*v[1]]),'only the diagonal entries were used — each row contributes both of its terms'],
+       vec([s[0]+R.nz(-5,5),s[1]])],
     ex:\`Each output row is that row dotted with the vector. Top: (\${neg(A[0][0])})(\${neg(v[0])}) + (\${neg(A[0][1])})(\${neg(v[1])}) = \${neg(s[0])}. Bottom: (\${neg(A[1][0])})(\${neg(v[0])}) + (\${neg(A[1][1])})(\${neg(v[1])}) = \${neg(s[1])}.\`};
 },
 det2(d){
@@ -413,7 +808,12 @@ det2(d){
   const s=A[0][0]*A[1][1]-A[0][1]*A[1][0];
   return {topic:'Determinant (2×2)',
     q:\`det \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]), neg(-s), neg(A[0][0]+A[1][1]), neg(s+R.nz(-7,7))],
+    a:neg(s),
+    figAnswer:{kind:'grid', m:A, caption:'The unit square becomes this — the determinant is the area factor.'},
+    d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the two products were added — the determinant subtracts the second'],
+       [neg(-s),'the subtraction ran backwards; it is ad − bc, in that order'],
+       [neg(A[0][0]+A[1][1]),'that is the trace (the diagonal sum), not the determinant'],
+       neg(s+R.nz(-7,7))],
     ex:\`For a 2×2 it's (top-left)(bottom-right) − (top-right)(bottom-left) = (\${neg(A[0][0])})(\${neg(A[1][1])}) − (\${neg(A[0][1])})(\${neg(A[1][0])}) = \${neg(s)}. That number is the signed area scaling factor of the transformation; zero would mean it squashes the plane flat.\`};
 },
 transpose(){
@@ -421,19 +821,52 @@ transpose(){
   const T=[[A[0][0],A[1][0]],[A[0][1],A[1][1]]];
   return {topic:'Transpose',
     q:\`\${mat(A)}<sup>T</sup> = ?\`,
-    a:mat(T), d:[mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), mat([[-A[0][0],-A[1][0]],[-A[0][1],-A[1][1]]]), mat([[A[1][0],A[0][0]],[A[1][1],A[0][1]]])],
+    a:mat(T),
+    d:[[mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'that swapped the diagonal entries — transposing leaves those alone and swaps the other two'],
+       [mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'that is the original matrix, unchanged'],
+       [mat([[-A[0][0],-A[1][0]],[-A[0][1],-A[1][1]]]),'transposing never changes any signs'],
+       mat([[A[1][0],A[0][0]],[A[1][1],A[0][1]]])],
     ex:\`Transposing flips the matrix across its main diagonal: rows become columns. The diagonal entries \${neg(A[0][0])} and \${neg(A[1][1])} stay put, while \${neg(A[0][1])} and \${neg(A[1][0])} swap places.\`};
 },
 matMul(d){
   const k=[3,5,7][d-1]||5;
-  const A=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
-  const B=[[R.nz(-k,k),R.i(-k,k)],[R.i(-k,k),R.nz(-k,k)]];
+  const A=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
+  const B=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
   const C=[[A[0][0]*B[0][0]+A[0][1]*B[1][0], A[0][0]*B[0][1]+A[0][1]*B[1][1]],
            [A[1][0]*B[0][0]+A[1][1]*B[1][0], A[1][0]*B[0][1]+A[1][1]*B[1][1]]];
   const W=[[A[0][0]*B[0][0],A[0][1]*B[0][1]],[A[1][0]*B[1][0],A[1][1]*B[1][1]]];
   return {topic:'Matrix Multiplication',
+    complexity:3,
+    codex:{rule:'Entry (row i, column j) is row i of the left matrix dotted with column j of the right. It is never entrywise.',
+           eg:'top-left = (row 1)·(column 1)'},
+    motes:[
+      {q:'Which pairing produces the <b>top-left</b> entry of the product?',
+       a:'row 1 of the left × column 1 of the right',
+       d:[['row 1 of the left × row 1 of the right','columns of the right matrix, not its rows'],
+          ['the two top-left entries multiplied','that would be entrywise multiplication'],
+          ['column 1 of the left × row 1 of the right','the row comes from the left matrix']],
+       ex:'Rows from the left, columns from the right — that pairing is the whole rule.'},
+      {q:\`Row 1 of \${mat(A)} dotted with column 1 of \${mat(B)} = ?\`,
+       a:neg(C[0][0]),
+       d:[[neg(A[0][0]*B[0][0]),'only the first pair was multiplied; both terms count'],
+          [neg(A[0][0]*B[0][0]+A[0][1]*B[0][1]),'that used row 1 of the right matrix instead of column 1'],
+          [neg(C[1][0]),'that is the bottom-left entry — wrong row'],
+          [neg(C[0][1]),'that is the top-right entry — wrong column']],
+       ex:\`(\${neg(A[0][0])})(\${neg(B[0][0])}) + (\${neg(A[0][1])})(\${neg(B[1][0])}) = \${neg(C[0][0])}.\`},
+      {q:\`And row 2 dotted with column 2 — the <b>bottom-right</b> entry?\`,
+       a:neg(C[1][1]),
+       d:[[neg(A[1][1]*B[1][1]),'only one of the two products was taken'],
+          [neg(C[0][1]),'that is the top-right entry — wrong row'],
+          [neg(C[1][0]),'that is the bottom-left entry — wrong column'],
+          [neg(C[0][0]),'that is the top-left entry']],
+       ex:\`(\${neg(A[1][0])})(\${neg(B[0][1])}) + (\${neg(A[1][1])})(\${neg(B[1][1])}) = \${neg(C[1][1])}.\`}
+    ],
     q:\`\${mat(A)}\${mat(B)} = ?\`,
-    a:mat(C), d:[mat(W), mat([[C[1][1],C[0][1]],[C[1][0],C[0][0]]]), mat([[C[0][0],C[1][0]],[C[0][1],C[1][1]]]), mat([[C[0][0]+R.nz(-4,4),C[0][1]],[C[1][0],C[1][1]]])],
+    a:mat(C),
+    d:[[mat(W),'that multiplied matching entries — matrix multiplication dots each row against each column'],
+       [mat([[C[0][0],C[1][0]],[C[0][1],C[1][1]]]),'this is the transpose of the correct product'],
+       [mat([[C[1][1],C[0][1]],[C[1][0],C[0][0]]]),'the right numbers, but in the wrong positions'],
+       mat([[C[0][0]+R.nz(-4,4),C[0][1]],[C[1][0],C[1][1]]])],
     ex:\`Entry (row i, col j) = row i of the first matrix dotted with column j of the second. Top-left: (\${neg(A[0][0])})(\${neg(B[0][0])}) + (\${neg(A[0][1])})(\${neg(B[1][0])}) = \${neg(C[0][0])}. Repeat for the other three. Note it is <i>not</i> entrywise multiplication.\`};
 },
 trace(){
@@ -441,7 +874,11 @@ trace(){
   const s=A[0][0]+A[1][1];
   return {topic:'Trace',
     q:\`tr \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(A[0][1]+A[1][0]), neg(A[0][0]*A[1][1]), neg(-s), neg(A[0][0]*A[1][1]-A[0][1]*A[1][0])],
+    a:neg(s),
+    d:[[neg(A[0][1]+A[1][0]),'that sums the off-diagonal entries — the trace uses the main diagonal'],
+       [neg(A[0][0]*A[1][1]),'the diagonal entries were multiplied instead of added'],
+       [neg(A[0][0]*A[1][1]-A[0][1]*A[1][0]),'that is the determinant, not the trace'],
+       neg(-s)],
     ex:\`The trace is just the sum down the main diagonal: \${neg(A[0][0])} + \${neg(A[1][1])} = \${neg(s)}. It also equals the sum of the eigenvalues, which is why it shows up everywhere.\`};
 },
 solve2(d){
@@ -453,19 +890,56 @@ solve2(d){
   return {topic:'Solving a 2×2 System',
     q:\`\${poly([[a,1]],'x')} \${b<0?'−':'+'} \${Math.abs(b)===1?'':Math.abs(b)}y = \${neg(p)}<br>\${poly([[c,1]],'x')} \${e<0?'−':'+'} \${Math.abs(e)===1?'':Math.abs(e)}y = \${neg(q2)}\`,
     a:\`x = \${neg(x)}, y = \${neg(y)}\`,
-    d:[\`x = \${neg(y)}, y = \${neg(x)}\`,\`x = \${neg(-x)}, y = \${neg(y)}\`,\`x = \${neg(x+1)}, y = \${neg(y-1)}\`,\`No solution\`],
+    d:[[\`x = \${neg(y)}, y = \${neg(x)}\`,'the right two numbers, but x and y are swapped'],
+       [\`x = \${neg(-x)}, y = \${neg(y)}\`,'the sign of x is wrong — substitute back into the first equation and it fails'],
+       ['No solution','the determinant is not zero, so there is exactly one solution'],
+       \`x = \${neg(x+1)}, y = \${neg(y-1)}\`],
     ex:\`Written as a matrix equation this is \${mat([[a,b],[c,e]])}\${vec(['x','y'])} = \${vec([p,q2])}. Since the determinant \${neg(a*e-b*c)} is not zero there is exactly one solution, and it is x = \${neg(x)}, y = \${neg(y)}. Substitute back to check both equations.\`};
 },
 inv2(){
-  let A, det;
-  do{ A=[[R.nz(-5,5),R.i(-5,5)],[R.i(-5,5),R.nz(-5,5)]]; det=A[0][0]*A[1][1]-A[0][1]*A[1][0]; }
-  while(det===0 || Math.abs(det)>6);
+  // Equal diagonal entries make "swap the diagonal" a no-op, and b = −c makes
+  // the negation step ambiguous — both produce a degenerate drill.
+  let A, det, guard=0, degenerate=true;
+  do{
+    A=[[R.nz(-5,5),R.nz(-5,5)],[R.nz(-5,5),R.nz(-5,5)]];
+    det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    // Equal diagonal entries make "swap the diagonal" a no-op, which both
+    // weakens the drill and collapses the distractors onto each other.
+    degenerate = det===0 || Math.abs(det)>6 || A[0][0]===A[1][1];
+  } while(degenerate && guard++<400);
+  if(degenerate){ A=[[3,1],[2,3]]; det=7; }
   const adj=[[A[1][1],-A[0][1]],[-A[1][0],A[0][0]]];
   const show=m=>\`\${frac(1,det)} \${mat(m)}\`;
   return {topic:'Inverse of a 2×2',
+    complexity:3,
+    codex:{rule:'Swap the diagonal entries, negate the other two, then divide the whole thing by the determinant.',
+           eg:'[a b; c d]⁻¹ = 1/(ad−bc) · [d −b; −c a]'},
+    motes:[
+      {q:\`What is det \${mat(A)}?\`,
+       a:neg(det),
+       d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the second product is subtracted, not added'],
+          [neg(-det),'the order is ad − bc'],
+          [neg(A[0][0]+A[1][1]),'that is the trace']],
+       ex:\`ad − bc = (\${neg(A[0][0])})(\${neg(A[1][1])}) − (\${neg(A[0][1])})(\${neg(A[1][0])}) = \${neg(det)}.\`},
+      {q:'Swap the diagonal and negate the off-diagonal. Which matrix is that?',
+       a:mat(adj),
+       d:[[mat([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'nothing moved at all — both halves of the recipe are missing'],
+          [mat([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'the diagonal swapped but the off-diagonal was not negated'],
+          [mat([[A[0][0],-A[0][1]],[-A[1][0],A[1][1]]]),'the off-diagonal was negated but the diagonal never swapped']],
+       ex:\`\${neg(A[0][0])} and \${neg(A[1][1])} trade places; \${neg(A[0][1])} and \${neg(A[1][0])} flip sign.\`},
+      {q:'What do you divide that matrix by?',
+       a:\`the determinant, \${neg(det)}\`,
+       d:[['the trace','the trace plays no part in the inverse'],
+          ['nothing — it is already the inverse','without dividing, A times it gives det·I rather than I'],
+          [\`\${neg(-det)}\`,'the sign is wrong; divide by det itself']],
+       ex:\`A times the swapped matrix gives \${neg(det)}·I, so dividing by \${neg(det)} leaves the identity.\`}
+    ],
     q:\`\${mat(A)}<sup>−1</sup> = ?\`,
     a:show(adj),
-    d:[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]), show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]), show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]]), \`\${frac(1,-det)} \${mat(adj)}\`],
+    d:[[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'the entries were left where they were — you must swap the diagonal and negate the off-diagonal'],
+       [show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'the diagonal was swapped but the off-diagonal entries were never negated'],
+       [\`\${frac(1,-det)} \${mat(adj)}\`,'the right matrix, but divided by −det instead of det'],
+       show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]])],
     ex:\`The recipe: swap the diagonal entries, flip the sign of the other two, then divide by the determinant. det = \${neg(det)}, so the inverse is \${frac(1,det)} times \${mat(adj)}. If the determinant were 0 no inverse would exist.\`};
 },
 det3(){
@@ -475,7 +949,11 @@ det3(){
   const s=A[0][0]*m(0,0)-A[0][1]*m(0,1)+A[0][2]*m(0,2);
   return {topic:'Determinant (3×3)',
     q:\`det \${mat(A)} = ?\`,
-    a:neg(s), d:[neg(-s), neg(s+R.nz(-9,9)), neg(A[0][0]*A[1][1]*A[2][2]), neg(s*2)],
+    a:neg(s),
+    d:[[neg(-s),'the alternating signs ran the wrong way — the pattern is + − +'],
+       [neg(A[0][0]*A[1][1]*A[2][2]),'that is only the diagonal product; a 3×3 determinant needs all the cofactor terms'],
+       [neg(A[0][0]*m(0,0)+A[0][1]*m(0,1)+A[0][2]*m(0,2)),'the middle term must be subtracted, not added'],
+       neg(s+R.nz(-9,9))],
     ex:\`Expand along the top row with alternating signs + − +: \${neg(A[0][0])}·\${neg(m(0,0))} − \${neg(A[0][1])}·\${neg(m(0,1))} + \${neg(A[0][2])}·\${neg(m(0,2))} = \${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.\`};
 },
 cross(){
@@ -483,7 +961,11 @@ cross(){
   const s=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];
   return {topic:'Cross Product',
     q:\`\${vecR(u)} × \${vecR(v)} = ?\`,
-    a:vecR(s), d:[vecR([-s[0],-s[1],-s[2]]), vecR([u[0]*v[0],u[1]*v[1],u[2]*v[2]]), vecR([s[1],s[2],s[0]]), neg(u[0]*v[0]+u[1]*v[1]+u[2]*v[2])],
+    a:vecR(s),
+    d:[[vecR([-s[0],-s[1],-s[2]]),'that is v × u — swapping the order reverses the sign'],
+       [vecR([u[0]*v[0],u[1]*v[1],u[2]*v[2]]),'componentwise multiplication is not the cross product'],
+       [neg(u[0]*v[0]+u[1]*v[1]+u[2]*v[2]),'that is the dot product — a single number, not a vector'],
+       vecR([s[1],s[2],s[0]])],
     ex:\`Component by component: (u₂v₃−u₃v₂, u₃v₁−u₁v₃, u₁v₂−u₂v₁) = \${vecR(s)}. Unlike the dot product this returns a <i>vector</i>, and it is perpendicular to both inputs.\`};
 },
 rank(){
@@ -496,8 +978,17 @@ rank(){
   const truth=det!==0;
   return {topic:'Linear Independence',
     q:\`Are the columns of \${mat(A)} linearly independent?\`,
-    a: truth ? 'Yes — det ≠ 0' : 'No — one is a multiple of the other',
-    d:['Yes — det ≠ 0','No — one is a multiple of the other','Yes — they are both nonzero','Only when the matrix is square'],
+    fig:{kind:'plane', vecs:[{v:c1,col:'#5aa9e6',label:'col 1'},{v:c2,col:'#57cc7a',label:'col 2'}]},
+    figAnswer:{kind:'plane', para:truth,
+      caption: truth ? 'Two directions — together they span the plane.'
+                     : 'Both lie on one line, so they only ever span that line.',
+      vecs:[{v:c1,col:'#5aa9e6',label:'col 1'},{v:c2,col:'#57cc7a',label:'col 2'}]},
+    a: truth ? 'Yes — the determinant is not zero' : 'No — one column is a multiple of the other',
+    d:[ truth ? ['No — one column is a multiple of the other',\`no scalar turns one column into the other here; the determinant is \${neg(det)}, which is not zero\`]
+              : ['Yes — the determinant is not zero',\`the determinant is 0 here, so the columns are dependent\`],
+        ['Yes — both columns are nonzero','being nonzero is not enough; two nonzero vectors can still sit on the same line'],
+        ['Only square matrices can have independent columns','independence is defined for any collection of vectors, square or not'],
+        ['Only if the columns are perpendicular','perpendicular vectors are independent, but independence does not require right angles']],
     ex:\`Columns of a square matrix are independent exactly when the determinant is nonzero. Here det = \${neg(det)}, so they \${truth?'are independent and span the whole plane':'are dependent — the second column is just a scaled copy of the first, so together they only span a line'}.\`};
 },
 eigen2(){
@@ -505,9 +996,33 @@ eigen2(){
   const b=R.i(1,4);
   const A=[[l1,b],[0,l2]];                 // triangular ⇒ eigenvalues on diagonal
   return {topic:'Eigenvalues',
+    complexity:3,
+    codex:{rule:'Eigenvalues solve det(A − λI) = 0. For a triangular matrix they are simply the diagonal entries.',
+           eg:'[a b; 0 d] has eigenvalues a and d'},
+    motes:[
+      {q:\`What is det(A − λI) for \${mat(A)}?\`,
+       a:\`(\${neg(l1)} − λ)(\${neg(l2)} − λ)\`,
+       d:[[\`(\${neg(l1)} − λ)(\${neg(l2)} − λ) − \${b}\`,\`the \${b} multiplies a zero, so it contributes nothing\`],
+          [\`(\${neg(l1)} + λ)(\${neg(l2)} + λ)\`,'it is A − λI, so λ is subtracted'],
+          [\`\${neg(l1*l2)} − λ\`,'both diagonal entries carry their own λ']],
+       ex:\`Subtracting λ down the diagonal leaves a triangular matrix, whose determinant is just the diagonal product.\`},
+      {q:\`Solve (\${neg(l1)} − λ)(\${neg(l2)} − λ) = 0.\`,
+       a:\`λ = \${neg(Math.min(l1,l2))} and λ = \${neg(Math.max(l1,l2))}\`,
+       d:[[\`λ = \${neg(-l1)} and λ = \${neg(-l2)}\`,'a factor (a − λ) vanishes at λ = a, not −a'],
+          [\`λ = \${neg(l1+l2)}\`,'a product is zero when either factor is, giving two roots'],
+          [\`λ = \${neg(l1*l2)}\`,'that is the product of the roots, not a root'],
+          [\`λ = \${neg(b)}\`,'that is the off-diagonal entry, which does not affect a triangular matrix']],
+       ex:\`A product is zero when a factor is, so λ = \${neg(l1)} or λ = \${neg(l2)} — the diagonal entries.\`}
+    ],
     q:\`Eigenvalues of \${mat(A)}?\`,
     a:\`\${neg(Math.min(l1,l2))} and \${neg(Math.max(l1,l2))}\`,
-    d:[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`, \`\${neg(b)} and \${neg(0)}\`, \`\${neg(-l1)} and \${neg(-l2)}\`, \`\${neg(l1*l2)} only\`],
+    figAnswer:{kind:'grid', m:A, basis:false,
+      caption:'The arrows that keep their own line are the eigenvectors; how far they stretch is λ.',
+      vecs:[{v:[1,0],col:'#f2c14e',label:'λ='+neg(l1)}]},
+    d:[[\`\${neg(l1+l2)} and \${neg(l1*l2)}\`,'those are the trace and the determinant — related to the eigenvalues, but not them'],
+       [\`\${neg(-l1)} and \${neg(-l2)}\`,'the signs are flipped; solve (λ − a)(λ − d) = 0, not (λ + a)(λ + d) = 0'],
+       [\`\${neg(b)} and \${neg(0)}\`,'those are the off-diagonal entries, which do not set the eigenvalues of a triangular matrix'],
+       \`\${neg(l1*l2)} only\`],
     ex:\`This matrix is triangular (a zero below the diagonal), and a triangular matrix wears its eigenvalues on the diagonal: \${neg(l1)} and \${neg(l2)}. Check with the characteristic equation det(A − λI) = (\${neg(l1)} − λ)(\${neg(l2)} − λ) = 0. Eigenvalues tell you how much each special direction is stretched.\`};
 },
 proj(){
@@ -516,8 +1031,14 @@ proj(){
   const dp=u[0]*v[0]+u[1]*v[1];
   return {topic:'Scalar Projection',
     q:\`How much of u = \${vecR(u)} points along v = \${vecR(v)}?<br><span class="small">(the scalar projection u·v / ‖v‖)</span>\`,
+    fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    figAnswer:{kind:'plane', proj:true, caption:'Gold is u&rsquo;s shadow on the line through v.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
     a: frac(dp,t[2]),
-    d:[frac(dp,t[2]*t[2]), frac(t[2],dp), neg(dp), frac(-dp,t[2])],
+    d:[[frac(dp,t[2]*t[2]),'that divides by ‖v‖², which is the coefficient for the vector projection, not the scalar one'],
+       [neg(dp),'that is just u·v — it still needs dividing by the length of v'],
+       [frac(t[2],dp),'the fraction is upside down'],
+       frac(-dp,t[2])],
     ex:\`Scalar projection = u·v / ‖v‖. Here u·v = \${neg(dp)} and ‖v‖ = √(\${t[0]}²+\${t[1]}²) = \${t[2]}, giving \${frac(dp,t[2])}. It is the length of u's shadow cast onto the line through v.\`};
 },
 
@@ -528,16 +1049,27 @@ limPoly(){
   const s=evalPoly(t,a);
   return {topic:'Limit by Substitution',
     q:\`lim<sub>x→\${neg(a)}</sub> ( \${poly(t)} ) = ?\`,
-    a:neg(s), d:[neg(-s), neg(s+R.nz(-6,6)), neg(evalPoly(dPoly(t),a)), 'Does not exist'],
+    a:neg(s),
+    fig:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]],
+      caption:'A polynomial has no gaps, so the limit is just the value there.'},
+    d:[[neg(evalPoly(dPoly(t),a)),'that evaluates the derivative — a limit of a continuous function is plain substitution'],
+       ['Does not exist','polynomials are continuous everywhere, so this limit always exists'],
+       [neg(-s),'a sign slipped — watch the negative value being squared'],
+       neg(s+R.nz(-6,6))],
     ex:\`Polynomials are continuous everywhere, so you may simply plug in x = \${neg(a)}: \${t.map(([c,p])=>\`(\${neg(c)})(\${neg(a)})\${p?sup(p):'⁰'}\`).join(' + ')} = \${neg(s)}. Substitution only fails when it produces something like 0/0.\`};
 },
 limRational(){
-  const a=R.nz(1,6), extra=R.nz(-5,5);
-  // (x² − a²)/(x − a) → x + a
+  const a=R.nz(1,6);
   const s=2*a;
   return {topic:'Limit (0/0 form)',
     q:\`lim<sub>x→\${neg(a)}</sub> \${frac(\`x² − \${a*a}\`,\`x − \${a}\`)} = ?\`,
-    a:neg(s), d:[neg(a), '0', 'Does not exist', neg(a*a)],
+    a:neg(s),
+    fig:{kind:'numberline', at:a, hole:true, span:2,
+      caption:'The function is undefined at the hole — the limit asks where it is heading.'},
+    d:[[neg(a),\`that is x itself; after cancelling you are left with x + \${a}, not x\`],
+       ['0','both parts vanish, but their ratio does not — factor before you judge'],
+       ['Does not exist','the 0/0 form only means substitution is premature; factoring reveals a perfectly good limit'],
+       neg(a*a)],
     ex:\`Substituting gives 0/0, so factor first: x² − \${a*a} = (x − \${a})(x + \${a}). Cancel the (x − \${a}) and you're left with x + \${a}, which at x = \${a} equals \${neg(s)}. The hole in the graph doesn't affect the limit.\`};
 },
 limInf(){
@@ -546,12 +1078,20 @@ limInf(){
   if(k===1){
     return {topic:'Limit at Infinity',
       q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x² + \${R.i(1,9)}x\`,\`\${b}x² − \${R.i(1,9)}\`)} = ?\`,
-      a:frac(a,b), d:['0','∞',frac(b,a),neg(a-b)],
+      a:frac(a,b),
+      d:[['∞','top and bottom grow at the same rate, so the ratio stays finite'],
+         ['0','the numerator does not vanish — both sides grow like x²'],
+         [frac(b,a),'the ratio is upside down; it is the top leading coefficient over the bottom one'],
+         neg(a-b)],
       ex:\`When top and bottom have the same highest power, the limit is the ratio of those leading coefficients: \${a}/\${b}. Everything of lower degree becomes negligible once x is enormous.\`};
   }
   return {topic:'Limit at Infinity',
     q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x + \${R.i(1,9)}\`,\`\${b}x² + \${R.i(1,9)}\`)} = ?\`,
-    a:'0', d:['∞',frac(a,b),frac(b,a),'1'],
+    a:'0',
+    d:[['∞','the denominator grows faster, so the fraction shrinks rather than blows up'],
+       [frac(a,b),'that would be right if the powers matched, but the bottom is a whole power higher'],
+       ['1','the two sides grow at different rates, so the ratio never settles at 1'],
+       frac(b,a)],
     ex:\`The bottom grows like x² while the top only grows like x, so the denominator wins by a whole power of x and the fraction is crushed to 0.\`};
 },
 powerRule(d){
@@ -560,7 +1100,11 @@ powerRule(d){
   const dt=dPoly(t);
   return {topic:'Derivative (Power Rule)',
     q:\`\${frac('d','dx')} ( \${poly(t)} ) = ?\`,
-    a:poly(dt), d:[poly(t.map(([c,p])=>[c*p,p])), poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)), poly(dPoly(dt)), poly(t.map(([c,p])=>[c*(p+1),p+1]))],
+    a:poly(dt),
+    d:[[poly(t.map(([c,p])=>[c*p,p])),'the coefficients were multiplied by the power but the exponents never dropped'],
+       [poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)),'the exponents dropped but the coefficients were never multiplied by them'],
+       [poly(dPoly(dt)),'that is the second derivative — differentiated once too often'],
+       poly(t.map(([c,p])=>[c*(p+1),p+1]))],
     ex:\`Bring the power down and drop it by one: \${t.filter(x=>x[0]).map(([c,p])=>p===0?\`the constant \${neg(c)} → 0\`:\`\${neg(c)}x\${p===1?'':sup(p)} → \${neg(c*p)}\${p-1===0?'':'x'+(p-1===1?'':sup(p-1))}\`).join(', ')}. Result: \${poly(dt)}.\`};
 },
 evalDeriv(){
@@ -568,7 +1112,14 @@ evalDeriv(){
   const dt=dPoly(t), a=R.nz(-3,3), s=evalPoly(dt,a);
   return {topic:'Derivative at a Point',
     q:\`f(x) = \${poly(t)}<br>f′(\${neg(a)}) = ?\`,
-    a:neg(s), d:[neg(evalPoly(t,a)), neg(-s), neg(s+R.nz(-9,9)), neg(evalPoly(dPoly(dt),a))],
+    a:neg(s),
+    fig:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]]},
+    figAnswer:{kind:'curve', f:{poly:t}, lo:a-2.5, hi:a+2.5, pts:[[a]], tangent:a,
+      caption:'f′ at a point is the slope of that tangent.'},
+    d:[[neg(evalPoly(t,a)),'that is f(a) — the height of the curve, not its slope'],
+       [neg(evalPoly(dPoly(dt),a)),'that is f″(a), the second derivative'],
+       [neg(-s),'a sign slipped while substituting a negative value'],
+       neg(s+R.nz(-9,9))],
     ex:\`First differentiate: f′(x) = \${poly(dt)}. Then substitute x = \${neg(a)} to get \${neg(s)}. That number is the slope of the curve at that exact point — and the instantaneous rate of change.\`};
 },
 trigDeriv(){
@@ -578,50 +1129,137 @@ trigDeriv(){
   const a = which==='sin' ? \`\${k}cos(\${k}x)\` : \`−\${k}sin(\${k}x)\`;
   return {topic:'Derivative of Trig',
     q:\`\${frac('d','dx')} \${q} = ?\`,
-    a, d:[which==='sin'?\`cos(\${k}x)\`:\`−sin(\${k}x)\`, which==='sin'?\`−\${k}cos(\${k}x)\`:\`\${k}sin(\${k}x)\`, \`\${k}\${which}(\${k}x)\`, \`\${frac(1,k)}\${which==='sin'?'cos':'sin'}(\${k}x)\`],
+    a,
+    d:[[which==='sin'?\`cos(\${k}x)\`:\`−sin(\${k}x)\`,\`the chain rule was skipped — the inner \${k}x contributes a factor of \${k}\`],
+       [which==='sin'?\`−\${k}cos(\${k}x)\`:\`\${k}sin(\${k}x)\`,'the sign is wrong: sin differentiates to +cos, cos differentiates to −sin'],
+       [\`\${frac(1,k)}\${which==='sin'?'cos':'sin'}(\${k}x)\`,\`dividing by \${k} is what integrating does; differentiating multiplies by it\`],
+       \`\${k}\${which}(\${k}x)\`],
     ex:\`sin differentiates to cos, cos differentiates to −sin. The inner function \${k}x has derivative \${k}, and the chain rule says multiply by it — so the answer is \${a}.\`};
 },
 expLog(){
   const k=R.i(2,7);
   if(R.chance(.5)) return {topic:'Derivative of eˣ',
     q:\`\${frac('d','dx')} e<sup>\${k}x</sup> = ?\`,
-    a:\`\${k}e<sup>\${k}x</sup>\`, d:[\`e<sup>\${k}x</sup>\`,\`\${k}x·e<sup>\${k}x</sup>\`,\`\${frac(1,k)}e<sup>\${k}x</sup>\`,\`e<sup>\${k}</sup>\`],
+    a:\`\${k}e<sup>\${k}x</sup>\`,
+    d:[[\`e<sup>\${k}x</sup>\`,\`the chain rule was skipped — the inner \${k}x contributes a factor of \${k}\`],
+       [\`\${k}x·e<sup>\${k}x</sup>\`,'the exponent was brought down as if this were a power; exponentials do not behave that way'],
+       [\`\${frac(1,k)}e<sup>\${k}x</sup>\`,\`dividing by \${k} is what integrating does; differentiating multiplies by it\`],
+       \`e<sup>\${k}</sup>\`],
     ex:\`e<sup>u</sup> differentiates to e<sup>u</sup> times u′. With u = \${k}x, u′ = \${k}, so the answer is \${k}e<sup>\${k}x</sup>. The exponential is the one function that essentially reproduces itself.\`};
   return {topic:'Derivative of ln',
     q:\`\${frac('d','dx')} ln(\${k}x) = ?\`,
-    a:frac(1,'x'), d:[frac(1,k+'x'), frac(k,'x'), frac('1','ln x'), \`\${k}ln(x)\`],
+    a:frac(1,'x'),
+    d:[[frac(1,k+'x'),\`the chain rule gives \${k} on top, and it cancels the \${k} underneath — leaving 1/x\`],
+       [frac(k,'x'),\`the \${k} was applied on top without cancelling the \${k} in the denominator\`],
+       [\`\${k}ln(x)\`,'that is not a derivative at all — ln does not survive differentiation'],
+       frac('1','ln x')],
     ex:\`Chain rule: derivative of ln(u) is u′/u = \${k}/(\${k}x), and the \${k}s cancel to give 1/x. Interesting fact: ln(\${k}x) = ln \${k} + ln x, and the constant ln \${k} has derivative 0 — same answer.\`};
 },
 productRule(){
-  const a=R.nz(2,5), b=R.nz(-6,6), c=R.nz(2,5), e=R.nz(-6,6);
-  // (ax+b)(cx+e) → 2ac x + (ae+bc)
+  const a=R.nz(2,5), c=R.nz(2,5);
+  let b=R.nz(-6,6), e=R.nz(-6,6), guard=0;
+  // A zero constant term would collapse one distractor onto the answer.
+  while(a*e+b*c===0 && guard++<40){ b=R.nz(-6,6); e=R.nz(-6,6); }
+  if(a*e+b*c===0) e = e===6 ? 5 : e+1;
   const A=2*a*c, B=a*e+b*c;
   return {topic:'Product Rule',
+    complexity:3,
+    codex:{rule:'(fg)′ = f′g + fg′. Differentiate one factor at a time and add — never multiply the two derivatives.',
+           eg:'(2x+1)(3x−4) → 2(3x−4) + (2x+1)(3)'},
+    motes:[
+      {q:\`With f = \${poly([[a,1],[b,0]])}, what is f′?\`,
+       a:String(a),
+       d:[[\`\${a}x\`,'the x goes when you differentiate a linear term'],
+          [poly([[a,1],[b,0]]),'that is f itself, undifferentiated'],
+          ['0','only the constant differentiates to zero']],
+       ex:\`\${poly([[a,1],[b,0]])} differentiates to \${a}: the coefficient survives, the constant vanishes.\`},
+      {q:\`With g = \${poly([[c,1],[e,0]])}, what is g′?\`,
+       a:String(c),
+       d:[[\`\${c}x\`,'the x is lost when the power drops to zero'],
+          [poly([[c,1],[e,0]]),'that is g itself'],
+          ['1','the coefficient on x carries through']],
+       ex:\`Same rule: \${poly([[c,1],[e,0]])} differentiates to \${c}.\`},
+      {q:\`Now assemble f′g + fg′ = \${a}(\${poly([[c,1],[e,0]])}) + (\${poly([[a,1],[b,0]])})(\${c}).\`,
+       a:poly([[A,1],[B,0]]),
+       d:[[poly([[a*c,1],[b*e,0]]),'that multiplied the two derivatives instead of adding two products'],
+          [poly([[A,1],[-B,0]]),'the constant terms are added, not subtracted'],
+          [poly([[a*c,1],[0,0]]),'both cross terms contribute to the constant'],
+          [poly([[a+c,1],[b+e,0]]),'that added the factors instead of differentiating the product']],
+       ex:\`\${a}(\${poly([[c,1],[e,0]])}) gives \${poly([[a*c,1],[a*e,0]])}, and (\${poly([[a,1],[b,0]])})(\${c}) gives \${poly([[a*c,1],[b*c,0]])}. Adding them: \${poly([[A,1],[B,0]])}.\`}
+    ],
     q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})(\${poly([[c,1],[e,0]])}) = ?\`,
-    a:poly([[A,1],[B,0]]), d:[poly([[a*c,1],[b*e,0]]), poly([[a*c,1],[0,0]]), poly([[A,1],[-B,0]]), poly([[a+c,1],[b+e,0]])],
+    a:poly([[A,1],[B,0]]),
+    d:[[poly([[a*c,1],[b*e,0]]),'that multiplied the two derivatives together — the rule is f′g + fg′, not f′g′'],
+       [poly([[a+c,1],[b+e,0]]),'the two factors were added rather than differentiated as a product'],
+       [poly([[a*c,1],[0,0]]),'only one cross term survived; both f′g and fg′ contribute'],
+       poly([[A,1],[-B,0]])],
     ex:\`(fg)′ = f′g + fg′. Here f′ = \${a} and g′ = \${c}, so we get \${a}(\${poly([[c,1],[e,0]])}) + (\${poly([[a,1],[b,0]])})(\${c}) = \${poly([[A,1],[B,0]])}. Expanding first and differentiating gives the same thing — the rule just saves work when expanding is ugly.\`};
 },
 quotient(){
   const a=R.nz(2,6);
   return {topic:'Quotient Rule',
     q:\`\${frac('d','dx')} \${frac('x',\`x + \${a}\`)} = ?\`,
-    a:frac(a,\`(x + \${a})²\`), d:[frac(1,\`(x + \${a})²\`), frac(-a,\`(x + \${a})²\`), frac(\`2x + \${a}\`,\`(x + \${a})²\`), '1'],
+    a:frac(a,\`(x + \${a})²\`),
+    d:[[frac(-a,\`(x + \${a})²\`),'the numerator ran backwards; it is f′g − fg′, in that order'],
+       ['1','the derivative of a quotient is not the quotient of the derivatives'],
+       [frac(\`2x + \${a}\`,\`(x + \${a})²\`),'the x terms cancel in the numerator — recompute f′g − fg′'],
+       frac(1,\`(x + \${a})²\`)],
     ex:\`(f/g)′ = (f′g − fg′)/g². With f = x, g = x + \${a}: numerator = 1·(x + \${a}) − x·1 = \${a}. So the derivative is \${a}/(x + \${a})², which is always positive — the function is increasing everywhere it's defined.\`};
 },
 chainRule(){
-  const a=R.i(2,5), b=R.nz(-6,6), n=R.i(2,4);
+  const n=R.i(2,4), b=R.nz(-6,6);
+  // The inner coefficient must differ from the outer power, or the mote
+  // distractor "that is the outer power" collides with the correct answer.
+  let a=R.i(2,5), guard=0;
+  while(a===n && guard++<20) a=R.i(2,5);
+  if(a===n) a = n===5 ? 2 : n+1;
+  const inner=poly([[a,1],[b,0]]);
   return {topic:'Chain Rule',
-    q:\`\${frac('d','dx')} (\${poly([[a,1],[b,0]])})\${sup(n)} = ?\`,
-    a:\`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`,
-    d:[\`\${n}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${poly([[a,1],[b,0]])})\${sup(n)}\`, \`\${a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}\`, \`\${n*a}(\${a})\${sup(n-1)}\`],
-    ex:\`Outside first, then inside. The outer power gives \${n}(inner)\${sup(n-1)}; the inner function \${poly([[a,1],[b,0]])} has derivative \${a}. Multiply: \${n*a}(\${poly([[a,1],[b,0]])})\${sup(n-1)}. Forgetting that inner \${a} is the single most common calculus slip.\`};
+    complexity:3,
+    codex:{rule:'Differentiate the outside, leaving the inside alone, then multiply by the derivative of the inside.',
+           eg:\`(\${inner})\${sup(n)} → \${n}(\${inner})\${sup(n-1)} · \${a}\`},
+    motes:[
+      {q:\`In (\${inner})\${sup(n)}, what is the inner function?\`,
+       a:inner,
+       d:[[\`x\${sup(n)}\`,'that is the outer shape, not what sits inside it'],
+          [\`\${n}\`,'the power is the outer operation'],
+          ['x','the whole bracket is the inner function, not just x']],
+       ex:\`The bracket is the inside; raising to the \${n}th power is what is done to it.\`},
+      {q:\`Differentiate the inner function \${inner}.\`,
+       a:String(a),
+       d:[[String(n),'that is the outer power, not the inner derivative'],
+          [String(a*n),'that is the two factors already multiplied together'],
+          ['1','the coefficient on x survives differentiation']],
+       ex:\`\${inner} differentiates to \${a} — the constant vanishes and the coefficient remains.\`},
+      {q:\`Now assemble: \${n}(\${inner})\${sup(n-1)} × \${a} = ?\`,
+       a:\`\${n*a}(\${inner})\${sup(n-1)}\`,
+       d:[[\`\${n}(\${inner})\${sup(n-1)}\`,'the inner derivative was dropped at the last step'],
+          [\`\${n*a}(\${inner})\${sup(n)}\`,'the outer power was never reduced'],
+          [\`\${n*a}x\${sup(n-1)}\`,'the bracket stays intact inside the power']],
+       ex:\`Multiply the outer derivative by the inner one: \${n} × \${a} = \${n*a}, and the bracket keeps its reduced power.\`}
+    ],
+    q:\`\${frac('d','dx')} (\${inner})\${sup(n)} = ?\`,
+    a:\`\${n*a}(\${inner})\${sup(n-1)}\`,
+    d:[[\`\${n}(\${inner})\${sup(n-1)}\`,\`the inner derivative was forgotten — differentiating \${inner} gives \${a}\`],
+       [\`\${n*a}(\${inner})\${sup(n)}\`,'the outer power was never reduced by one'],
+       [\`\${a}(\${inner})\${sup(n-1)}\`,'the outer power was never brought down as a factor'],
+       \`\${n*a}(\${a})\${sup(n-1)}\`],
+    ex:\`Outside first, then inside. The outer power gives \${n}(inner)\${sup(n-1)}; the inner function \${inner} has derivative \${a}. Multiply: \${n*a}(\${inner})\${sup(n-1)}. Forgetting that inner \${a} is the single most common calculus slip.\`};
 },
 tangent(){
   const t=[[R.nz(1,4),2],[R.nz(-7,7),1],[R.i(-7,7),0]];
   const a=R.nz(-3,3), dt=dPoly(t), m=evalPoly(dt,a), y=evalPoly(t,a);
   return {topic:'Tangent Line',
     q:\`f(x) = \${poly(t)}<br>Slope of the tangent line at x = \${neg(a)}?\`,
-    a:neg(m), d:[neg(y), neg(-m), neg(m+R.nz(-6,6)), neg(evalPoly(t,a)+m)],
+    a:neg(m),
+    fig:{kind:'curve', f:{poly:t}, lo:a-3, hi:a+3, pts:[[a]],
+      caption:'The slope of the curve exactly at the marked point.'},
+    figAnswer:{kind:'curve', f:{poly:t}, lo:a-3, hi:a+3, pts:[[a]], tangent:a,
+      caption:'The tangent line just grazes the curve there.'},
+    d:[[neg(y),'that is f at that point — the height of the curve, not the slope of the tangent'],
+       [neg(-m),'a sign slipped while substituting'],
+       [neg(evalPoly(t,a)+m),'the function value and the slope were added together'],
+       neg(m+R.nz(-6,6))],
     ex:\`The tangent slope <i>is</i> the derivative. f′(x) = \${poly(dt)}, so f′(\${neg(a)}) = \${neg(m)}. (The full tangent line would be y − \${neg(y)} = \${neg(m)}(x − \${neg(a)}).)\`};
 },
 
@@ -631,7 +1269,10 @@ indefPower(){
   return {topic:'Indefinite Integral',
     q:\`∫ \${poly([[c,n]])} dx = ?\`,
     a:\`\${poly([[c/(n+1),n+1]])} + C\`,
-    d:[\`\${poly([[c,n+1]])} + C\`, \`\${poly([[c*n,n-1]])} + C\`, \`\${poly([[c/(n+1),n]])} + C\`, \`\${poly([[c*(n+1),n+1]])} + C\`],
+    d:[[\`\${poly([[c,n+1]])} + C\`,'the power went up but the coefficient was never divided by the new power'],
+       [\`\${poly([[c*n,n-1]])} + C\`,'that differentiates instead of integrating — the power went down'],
+       [\`\${poly([[c/(n+1),n]])} + C\`,'the coefficient was divided but the power never rose'],
+       \`\${poly([[c*(n+1),n+1]])} + C\`],
     ex:\`Reverse the power rule: raise the power by one, then divide by the new power. x\${sup(n)} → x\${sup(n+1)}/\${n+1}, so \${c}x\${sup(n)} → \${c/(n+1)}x\${sup(n+1)}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.\`};
 },
 defPoly(){
@@ -640,16 +1281,77 @@ defPoly(){
   const F=[[c/2,2],[b,1]];
   const s=evalPoly(F,hi)-evalPoly(F,0);
   return {topic:'Definite Integral',
+    complexity:3,
+    codex:{rule:'Antidifferentiate, evaluate at the top limit, then subtract the value at the bottom limit.',
+           eg:'∫ₐᵇ f = F(b) − F(a)'},
+    motes:[
+      {q:\`An antiderivative of \${poly(t)} is?\`,
+       a:poly(F),
+       d:[[poly([[c,2],[b,1]]),'the x² term must be divided by its new power, 2'],
+          [poly(t),'that is the integrand, unchanged'],
+          [poly([[c,0]]),'that differentiates rather than integrates']],
+       ex:\`Raise each power and divide by the new one: \${c}x → \${c/2}x², and \${neg(b)} → \${neg(b)}x.\`},
+      {q:\`Evaluate \${poly(F)} at x = \${hi}.\`,
+       a:neg(evalPoly(F,hi)),
+       d:[[neg(evalPoly(t,hi)),'that evaluates the integrand, not the antiderivative'],
+          [neg(evalPoly(F,hi)+1),'check the arithmetic once more'],
+          ['0','only the lower limit gives zero here']],
+       ex:\`Substituting x = \${hi} into \${poly(F)} gives \${neg(evalPoly(F,hi))} — the accumulated area up to the top limit.\`},
+      {q:\`F(\${hi}) − F(0) = \${neg(evalPoly(F,hi))} − ? \`,
+       a:'0',
+       d:[[neg(evalPoly(F,hi)),'that would subtract the top value from itself'],
+          [neg(hi),'substitute 0 into F, not the limit itself'],
+          [neg(b),'every term of F carries an x, so all of them vanish at 0']],
+       ex:\`Every term of \${poly(F)} has an x in it, so F(0) = 0 and the answer is just F(\${hi}).\`}
+    ],
     q:\`∫<sub>0</sub><sup>\${hi}</sup> (\${poly(t)}) dx = ?\`,
-    a:neg(s), d:[neg(evalPoly(t,hi)), neg(s+R.nz(-8,8)), neg(-s), neg(evalPoly(F,hi))],
+    a:neg(s),
+    fig:{kind:'region', f:{poly:t}, lo:0, hi:hi,
+      caption:'The shaded area is what the integral measures.'},
+    d:[[neg(evalPoly(t,hi)),'that evaluates the integrand at the top limit — you must antidifferentiate first'],
+       [neg(evalPoly([[c,2],[b,1]],hi)),\`the x² term was not divided by 2 when antidifferentiating\`],
+       [neg(-s),'the limits were subtracted the wrong way; it is F(top) − F(bottom)'],
+       neg(s+R.nz(-8,8))],
     ex:\`Antidifferentiate: F(x) = \${poly(F)}. Then the Fundamental Theorem says evaluate F at the top and subtract F at the bottom: F(\${hi}) − F(0) = \${neg(evalPoly(F,hi))} − \${neg(evalPoly(F,0))} = \${neg(s)}. That's the signed area under the curve.\`};
 },
 uSub(){
   const n=R.i(2,4), a=R.i(1,5);
   return {topic:'u-Substitution',
+    complexity:3,
+    codex:{rule:'Choose u so that its derivative already appears in the integrand; integrate in u, then substitute back.',
+           eg:\`∫2x(x²+\${a})\${sup(n)}dx → u = x²+\${a}, du = 2x dx → ∫u\${sup(n)}du\`},
+    motes:[
+      {q:\`∫ 2x(x² + \${a})\${sup(n)} dx — what should u be?\`,
+       a:\`u = x² + \${a}\`,
+       d:[[\`u = 2x\`,'that is the part that becomes du, not u'],
+          [\`u = (x² + \${a})\${sup(n)}\`,'u is the inner function, without the outer power'],
+          [\`u = x\`,'substituting u = x changes nothing']],
+       ex:\`Pick the inside of the awkward part. Here that is x² + \${a}, because its derivative 2x is sitting right there in the integrand.\`},
+      {q:\`With u = x² + \${a}, what is du?\`,
+       a:'du = 2x dx',
+       d:[['du = 2x',"du carries a dx — it is a differential, not a derivative"],
+          ['du = x dx','the derivative of x² is 2x, not x'],
+          [\`du = (2x + \${a}) dx\`,'the constant differentiates to zero']],
+       ex:\`Differentiate u = x² + \${a} to get du/dx = 2x, so du = 2x dx — exactly the rest of the integrand.\`},
+      {q:\`Rewrite ∫ 2x(x² + \${a})\${sup(n)} dx in terms of u.\`,
+       a:\`∫ u\${sup(n)} du\`,
+       d:[[\`∫ 2x u\${sup(n)} du\`,'the 2x has already been absorbed into du'],
+          [\`∫ u\${sup(n)} dx\`,'once you substitute, the variable of integration is u'],
+          [\`∫ u du\`,'the outer power stays']],
+       ex:\`The 2x dx becomes du and the bracket becomes u, leaving the much simpler ∫u\${sup(n)} du.\`},
+      {q:\`∫ u\${sup(n)} du = ?\`,
+       a:\`\${frac(1,n+1)}u\${sup(n+1)} + C\`,
+       d:[[\`\${frac(1,n)}u\${sup(n)} + C\`,'the power must rise by one first'],
+          [\`u\${sup(n+1)} + C\`,'the division by the new power is missing'],
+          [\`\${n}u\${sup(n-1)} + C\`,'that differentiates instead of integrating']],
+       ex:\`Reverse the power rule: raise the power, divide by the new power. Then put u = x² + \${a} back.\`}
+    ],
     q:\`∫ 2x(x² + \${a})\${sup(n)} dx = ?\`,
     a:\`\${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C\`,
-    d:[\`\${frac(1,n)}(x² + \${a})\${sup(n)} + C\`, \`2x(x² + \${a})\${sup(n+1)} + C\`, \`\${frac(1,n+1)}(x² + \${a})\${sup(n)} + C\`, \`(x² + \${a})\${sup(n+1)} + C\`],
+    d:[[\`\${frac(1,n)}(x² + \${a})\${sup(n)} + C\`,'the power was never raised by one'],
+       [\`2x(x² + \${a})\${sup(n+1)} + C\`,'the 2x was left in place, but it is exactly the du that gets consumed'],
+       [\`(x² + \${a})\${sup(n+1)} + C\`,'the division by the new power is missing'],
+       \`\${frac(1,n+1)}(x² + \${a})\${sup(n)} + C\`],
     ex:\`Let u = x² + \${a}; then du = 2x dx, which is exactly the rest of the integrand. The problem becomes ∫u\${sup(n)} du = u\${sup(n+1)}/\${n+1}. Substitute back to get \${frac(1,n+1)}(x² + \${a})\${sup(n+1)} + C.\`};
 },
 intTrig(){
@@ -658,7 +1360,11 @@ intTrig(){
   const a = which==='sin' ? \`−\${frac(1,k)}cos(\${k}x) + C\` : \`\${frac(1,k)}sin(\${k}x) + C\`;
   return {topic:'Integrating Trig',
     q:\`∫ \${which}(\${k}x) dx = ?\`,
-    a, d:[which==='sin'?\`\${frac(1,k)}cos(\${k}x) + C\`:\`−\${frac(1,k)}sin(\${k}x) + C\`, which==='sin'?\`−\${k}cos(\${k}x) + C\`:\`\${k}sin(\${k}x) + C\`, \`\${which}(\${k}x) + C\`, \`−\${which}(\${k}x) + C\`],
+    a,
+    d:[[which==='sin'?\`\${frac(1,k)}cos(\${k}x) + C\`:\`−\${frac(1,k)}sin(\${k}x) + C\`,'the sign is wrong: ∫sin = −cos and ∫cos = +sin'],
+       [which==='sin'?\`−\${k}cos(\${k}x) + C\`:\`\${k}sin(\${k}x) + C\`,\`multiplied by \${k} instead of divided — integrating undoes the chain rule, so you divide\`],
+       [\`\${which}(\${k}x) + C\`,'integrating swaps sin and cos; the function cannot come back unchanged'],
+       \`−\${which}(\${k}x) + C\`],
     ex:\`Antiderivatives run the derivative rules backwards: ∫sin = −cos, ∫cos = sin. Because the inside is \${k}x you must also divide by \${k} to undo the chain rule. Answer: \${a}.\`};
 },
 intExp(){
@@ -666,7 +1372,10 @@ intExp(){
   return {topic:'Integrating eˣ',
     q:\`∫ e<sup>\${k}x</sup> dx = ?\`,
     a:\`\${frac(1,k)}e<sup>\${k}x</sup> + C\`,
-    d:[\`e<sup>\${k}x</sup> + C\`,\`\${k}e<sup>\${k}x</sup> + C\`,\`\${frac(1,k+1)}e<sup>\${k+1}x</sup> + C\`,\`x·e<sup>\${k}x</sup> + C\`],
+    d:[[\`e<sup>\${k}x</sup> + C\`,\`the \${k} from the inner function was never divided out\`],
+       [\`\${k}e<sup>\${k}x</sup> + C\`,\`multiplied by \${k} instead of divided — that is what differentiating does\`],
+       [\`\${frac(1,k+1)}e<sup>\${k+1}x</sup> + C\`,'the exponent was raised as if this were the power rule; exponentials keep their exponent'],
+       [\`x·e<sup>\${k}x</sup> + C\`,'multiplying by x is what you do for a constant, not for an exponential']],
     ex:\`Differentiating e<sup>\${k}x</sup> multiplies by \${k}, so integrating must divide by \${k}. Check by differentiating the answer: \${frac(1,k)}·\${k}e<sup>\${k}x</sup> = e<sup>\${k}x</sup>. ✓\`};
 },
 area(){
@@ -675,7 +1384,14 @@ area(){
   const nice = Number.isInteger(s) ? String(s) : frac(a*a*a,3);
   return {topic:'Area Under a Curve',
     q:\`Area between y = x² and the x-axis from 0 to \${a}?\`,
-    a:nice, d:[String(a*a*a), frac(a*a,2), String(a*a*a*2), frac(a*a*a,2)],
+    a:nice,
+    fig:{kind:'region', f:{poly:[[1,2]]}, lo:0, hi:a},
+    figAnswer:{kind:'bars', f:{poly:[[1,2]]}, lo:0, hi:a, n:8,
+      caption:'Slice it finer and finer and the rectangles become the integral.'},
+    d:[[String(a*a*a),'the antiderivative x³/3 was used without dividing by 3'],
+       [frac(a*a,2),'that is the area under y = x, not y = x²'],
+       [frac(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
+       String(a*a*a*2)],
     ex:\`Area = ∫₀\${sup(a)} x² dx = [x³/3]₀\${sup(a)} = \${a}³/3 = \${a*a*a}/3. Notice it's a third of the \${a}×\${a*a} bounding rectangle — the parabola leaves two thirds empty.\`};
 },
 
@@ -685,7 +1401,11 @@ secondDeriv(){
   const d1=dPoly(t), d2=dPoly(d1);
   return {topic:'Second Derivative',
     q:\`f(x) = \${poly(t)}<br>f″(x) = ?\`,
-    a:poly(d2), d:[poly(d1), poly(dPoly(d2)), poly(t), poly(d1.map(([c,p])=>[c*2,p]))],
+    a:poly(d2),
+    d:[[poly(d1),'that is the first derivative — differentiate once more'],
+       [poly(dPoly(d2)),'that is the third derivative — one differentiation too many'],
+       [poly(t),'that is the original function, undifferentiated'],
+       poly(d1.map(([c,p])=>[c*2,p]))],
     ex:\`Differentiate twice. f′(x) = \${poly(d1)}, then f″(x) = \${poly(d2)}. The second derivative measures concavity — positive means the curve bends upward like a bowl.\`};
 },
 critical(){
@@ -694,22 +1414,837 @@ critical(){
   while((r2===r1 || r2===0) && guard++<30) r2=R.nz(-4,4);
   if(r2===r1||r2===0) r2 = r1===3?-3:3;
   const a=Math.min(r1,r2), b=Math.max(r1,r2);
-  // f'(x) = 3(x-a)(x-b)  ⇒ f(x)= x³ - 3/2(a+b)x² + 3abx
   return {topic:'Critical Points',
     q:\`f′(x) = 3(x \${a<0?'+':'−'} \${Math.abs(a)})(x \${b<0?'+':'−'} \${Math.abs(b)})<br>Where are the critical points?\`,
     a:\`x = \${neg(a)} and x = \${neg(b)}\`,
-    d:[\`x = \${neg(-a)} and x = \${neg(-b)}\`, \`x = 0 only\`, \`x = \${neg(a+b)}\`, \`x = \${neg(3)} and x = \${neg(a*b)}\`],
-    ex:\`Critical points are where the derivative is zero (or undefined). A product is zero when a factor is zero, so x = \${neg(a)} and x = \${neg(b)}. These are the candidates for peaks and valleys of f.\`};
+    d:[[\`x = \${neg(-a)} and x = \${neg(-b)}\`,'the signs are flipped — a factor (x − 3) vanishes at x = 3, not x = −3'],
+       ['x = 0 only','a product is zero wherever any factor is zero, and neither factor here vanishes at 0'],
+       [\`x = \${neg(a+b)}\`,'the two roots were added together instead of being read off separately'],
+       [\`x = 3 and x = \${neg(a*b)}\`,'the 3 out front is a coefficient, not a root — it never vanishes']],
+    ex:\`Critical points are where the derivative is zero (or fails to exist). A product is zero when a factor is zero, so x = \${neg(a)} and x = \${neg(b)}. These are the candidates for peaks and valleys of f.\`};
 },
 partial(){
   const a=R.nz(2,5), b=R.nz(2,5), c=R.nz(-6,6);
+  const sgn=c<0?'−':'+', ac=Math.abs(c);
   return {topic:'Partial Derivative',
-    q:\`f(x,y) = \${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}xy\${sup(3)}<br>∂f/∂x = ?\`,
-    a:\`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`,
-    d:[\`\${a}x² \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}xy \${c<0?'−':'+'} \${Math.abs(3*c)}xy²\`, \`\${2*a}x \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`, \`\${a}x²y \${c<0?'−':'+'} \${Math.abs(c)}y\${sup(3)}\`],
+    complexity:3,
+    codex:{rule:'For ∂/∂x, treat y as a frozen constant and differentiate as usual. y is held still, not set to zero.',
+           eg:'∂/∂x of 3x²y is 6xy — the y just comes along'},
+    motes:[
+      {q:\`Differentiating with respect to x, what happens to y?\`,
+       a:'it is held constant',
+       d:[['it becomes zero','constants multiply through; they do not vanish unless they stand alone'],
+          ['it is differentiated too','that would be the total derivative, not a partial one'],
+          ['it becomes 1','holding y fixed keeps its value, whatever it is']],
+       ex:'A partial derivative freezes every other variable and differentiates in one of them.'},
+      {q:\`∂/∂x of \${a}x²y = ?\`,
+       a:\`\${2*a}xy\`,
+       d:[[\`\${2*a}x\`,'y is a constant factor and stays'],
+          [\`\${a}x²\`,'the y stays and the power drops'],
+          [\`\${2*a}x²y\`,'the power must fall from 2 to 1']],
+       ex:\`x² → 2x, and the constant factor \${a}y rides along: \${2*a}xy.\`},
+      {q:\`∂/∂x of \${ac}xy\${sup(3)} = ?\`,
+       a:\`\${ac}y\${sup(3)}\`,
+       d:[[\`\${3*ac}xy²\`,'that differentiated with respect to y'],
+          [\`\${ac}xy\${sup(3)}\`,'the x had power 1, so differentiating removes it'],
+          ['0','the term contains x, so it does not vanish']],
+       ex:\`x to the first power differentiates to 1, leaving the constant factor \${ac}y³.\`}
+    ],
+    q:\`f(x,y) = \${a}x²y \${sgn} \${ac}xy\${sup(3)}<br>∂f/∂x = ?\`,
+    a:\`\${2*a}xy \${sgn} \${ac}y\${sup(3)}\`,
+    d:[[\`\${a}x² \${sgn} \${Math.abs(3*c)}xy²\`,'that differentiated with respect to y instead of x'],
+       [\`\${2*a}xy \${sgn} \${Math.abs(3*c)}xy²\`,'the first term is right, but the second was differentiated with respect to y'],
+       [\`\${2*a}x \${sgn} \${ac}y\${sup(3)}\`,'the y was dropped from the first term — y is held constant, not set to zero'],
+       [\`\${a}x²y \${sgn} \${ac}y\${sup(3)}\`,'the first term was never differentiated at all']],
     ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${neg(c)}xy³ → \${neg(c)}y³ (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
 },
 
+
+/* ---------- Realm 6 : Spectral Reach (advanced linear algebra) ---------- */
+charPoly(d){
+  const k=[4,6,8][d-1]||6;
+  let A, tr, dt;
+  do{
+    A=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
+    tr=A[0][0]+A[1][1]; dt=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    // Each guard keeps one distractor below from collapsing onto the answer.
+  }while(tr===0 || dt===0 || tr===dt || A[0][1]*A[1][0]===0);
+  const P=(b,c)=>poly([[1,2],[b,1],[c,0]],'λ');
+  return {topic:'Characteristic Polynomial',
+    codex:{rule:'For a 2×2, det(A − λI) = λ² − (trace)λ + (determinant). Its roots are the eigenvalues.',
+           eg:\`A = \${mat([[3,1],[2,4]])} → trace 7, det 10 → λ² − 7λ + 10 = (λ−2)(λ−5)\`},
+    q:\`det(A − λI) for A = \${mat(A)}?\`,
+    a:P(-tr, dt),
+    d:[[P(tr,dt),'the trace enters with a minus sign — it is λ² − (trace)λ + det'],
+       [P(-tr,-dt),'the determinant enters as itself, not negated'],
+       [P(-dt,tr),'the trace and the determinant have swapped places'],
+       [P(-tr, A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the determinant subtracts the two products; this one added them']],
+    ex:\`Subtracting λ down the diagonal gives \${mat([['a−λ','b'],['c','d−λ']])}, whose determinant is (\${neg(A[0][0])}−λ)(\${neg(A[1][1])}−λ) − (\${neg(A[0][1])})(\${neg(A[1][0])}). Multiply out and you always land on λ² − (trace)λ + det: trace \${neg(tr)}, determinant \${neg(dt)}, so \${P(-tr,dt)}. Its roots are the eigenvalues.\`};
+},
+eigenvec(d){
+  const k=[2,2,3][d-1]||2;
+  let p,q,lam,s,t,A,ans,ds;
+  do{
+    p=R.nz(-3,3); q=R.nz(-3,3); lam=R.nz(-4,4); s=R.nz(-k,k); t=R.nz(-k,k);
+    // A = λI + N where N kills ⟨p,q⟩, so ⟨p,q⟩ is an eigenvector by construction
+    // and the other eigenvalue is λ + (qs − pt), with eigenvector ⟨s,t⟩.
+    A=[[lam+q*s, -p*s],[q*t, lam-p*t]];
+    ans=[p,q];
+    ds=[[q,p],[-p,q],[s,t],[q,-p]];
+    // No distractor may be a scalar multiple of the answer — those would be
+    // eigenvectors too, and the question would have two right answers.
+  }while(q*s-p*t===0 || ds.some(v=>v[0]*ans[1]-v[1]*ans[0]===0)
+        || new Set([ans,...ds].map(v=>vecR(v))).size!==5);
+  return {topic:'Eigenvectors',
+    codex:{rule:'An eigenvector of A for λ is any non-zero v with Av = λv. Find it by solving (A − λI)v = 0.',
+           eg:'A − λI has determinant zero, so its rows are proportional — one row is all you need.'},
+    q:\`A = \${mat(A)} has λ = \${neg(lam)}.<br>Which vector is an eigenvector for it?\`,
+    a:vecR(ans),
+    d:[[vecR(ds[0]),'the components are swapped — check it against Av = λv'],
+       [vecR(ds[1]),'one sign is flipped, which turns it off the eigenline entirely'],
+       [vecR(ds[2]),\`that is the eigenvector for the other eigenvalue, λ = \${neg(lam+q*s-p*t)}\`],
+       [vecR(ds[3]),'that is a row of A − λI; the eigenvector is what that row annihilates, not the row itself']],
+    ex:\`A − λI = \${mat([[A[0][0]-lam,A[0][1]],[A[1][0],A[1][1]-lam]])}, and you want the vector it sends to zero. Check \${vecR(ans)}: top row gives (\${neg(A[0][0]-lam)})(\${neg(p)}) + (\${neg(A[0][1])})(\${neg(q)}) = 0. So A\${vecR(ans)} = \${neg(lam)}\${vecR(ans)} — the arrow keeps its own line and only changes length.\`};
+},
+diagonalisable(d){
+  const kind=R.pick(['distinct','distinct','defective','scalar','complex']);
+  const c=R.nz(-4,4), b=R.nz(1,5), e=R.nz(1,4);
+  let A, why;
+  if(kind==='distinct'){ const c2=(()=>{let v;do{v=R.nz(-4,4);}while(v===c);return v;})();
+    A=[[c,b],[0,c2]]; why=\`its eigenvalues are \${neg(Math.min(c,c2))} and \${neg(Math.max(c,c2))}\`; }
+  else if(kind==='defective'){ A=[[c,b],[0,c]]; why=\`its only eigenvalue is \${neg(c)}\`; }
+  else if(kind==='scalar'){ A=[[c,0],[0,c]]; why=\`it is \${neg(c)} times the identity\`; }
+  else { A=[[c,b],[-e,c]]; why=\`its eigenvalues are \${neg(c)} ± i√\${b*e}\`; }
+  const OPT={
+    distinct:'Yes — two different eigenvalues',
+    scalar:'Yes — it is already a multiple of the identity',
+    defective:'No — one repeated eigenvalue, and only one eigenvector direction',
+    complex:'No — its eigenvalues are not real'
+  };
+  const tr=A[0][0]+A[1][1], dt=A[0][0]*A[1][1]-A[0][1]*A[1][0], disc=tr*tr-4*dt;
+  const REASON={
+    distinct:\`the discriminant of the characteristic polynomial is \${neg(disc)}, so there are not two distinct real eigenvalues\`,
+    scalar:'a multiple of the identity has zeros off the diagonal, and this one does not',
+    defective:\`a repeated eigenvalue would need the discriminant to be zero; here it is \${neg(disc)}\`,
+    complex:\`complex eigenvalues need a negative discriminant; here it is \${neg(disc)}\`
+  };
+  return {topic:'Diagonalisability',
+    codex:{rule:'A 2×2 is diagonalisable when it has two independent eigenvectors: guaranteed by two distinct eigenvalues, and automatic for cI.',
+           eg:'A repeated eigenvalue with a non-zero off-diagonal entry is the one case that fails.'},
+    q:\`Is \${mat(A)} diagonalisable over the reals?\`,
+    a:OPT[kind],
+    d:Object.keys(OPT).filter(x=>x!==kind).map(x=>[OPT[x], REASON[x]]),
+    ex:\`Trace \${neg(tr)}, determinant \${neg(dt)}, so the discriminant is \${neg(tr)}² − 4(\${neg(dt)}) = \${neg(disc)}. Here \${why}. \${
+      kind==='distinct' ? 'Two distinct eigenvalues always give two independent eigenvectors, so it diagonalises.'
+      : kind==='scalar' ? 'A multiple of the identity is already diagonal — every vector is an eigenvector.'
+      : kind==='defective' ? 'The eigenvalue repeats but the matrix is not cI, so it has only a one-dimensional eigenspace and cannot be diagonalised.'
+      : 'A negative discriminant means the eigenvalues are a complex conjugate pair, so there is no real basis of eigenvectors.'}\`};
+},
+matPow(d){
+  const n = d>=3 ? 3 : 2;
+  let a,b,c,ans,ds;
+  do{
+    a=R.nz(-3,3); b=R.nz(-4,4); c=R.nz(-3,3);
+    const off = n===2 ? b*(a+c) : b*(a*a+a*c+c*c);
+    ans=[[Math.pow(a,n), off],[0, Math.pow(c,n)]];
+    ds=[[[Math.pow(a,n), Math.pow(b,n)],[0, Math.pow(c,n)]],   // entrywise
+        [[n*a, n*b],[0, n*c]],                                  // nA
+        [[Math.pow(a,n), b],[0, Math.pow(c,n)]],                // off-diagonal untouched
+        [[Math.pow(c,n), off],[0, Math.pow(a,n)]]];             // diagonal swapped
+  }while(a===c || new Set([ans,...ds].map(m=>mat(m))).size!==5);
+  const A=[[a,b],[0,c]];
+  return {topic:'Matrix Powers',
+    q:\`A = \${mat(A)}. A\${sup(n)} = ?\`,
+    a:mat(ans),
+    d:[[mat(ds[0]),'each entry was raised on its own — a matrix power is repeated matrix multiplication, not an entrywise one'],
+       [mat(ds[1]),\`that is \${n}A, scalar multiplication, not the \${n===2?'square':'cube'}\`],
+       [mat(ds[2]),'the off-diagonal entry does change: it collects a contribution from both diagonal entries'],
+       [mat(ds[3]),'the two diagonal entries have swapped places']],
+    ex:\`Multiply it out: A² = \${mat([[a*a, b*(a+c)],[0,c*c]])}, because the top-right entry is (\${neg(a)})(\${neg(b)}) + (\${neg(b)})(\${neg(c)}) = \${neg(b*(a+c))}.\${
+      n===3 ? \` Multiplying once more gives the top-right entry \${neg(b)}(\${neg(a)}² + \${neg(a)}·\${neg(c)} + \${neg(c)}²) = \${neg(b*(a*a+a*c+c*c))}.\` : ''
+    } The diagonal entries just power up, which is the one part of the entrywise guess that happens to be right.\`};
+},
+nullSpace(d){
+  let a,b,k;
+  do{ a=R.nz(-5,5); b=R.nz(-5,5); k=R.nz(-3,3); }while(Math.abs(a)===Math.abs(b));
+  const A=[[a,b],[k*a,k*b]];
+  return {topic:'Null Space',
+    q:\`Which non-zero vector v has \${mat(A)}v = \${vec([0,0])}?\`,
+    a:vecR([-b,a]),
+    d:[[vecR([a,b]),'that is the first row of A, not the direction it annihilates'],
+       [vecR([b,a]),'the components were swapped without the sign change that makes the dot product vanish'],
+       [vecR([a,-b]),'only one component changed sign — check that the first row really dots to zero'],
+       [vecR([0,0]),'the zero vector solves Av = 0 for every A, which is exactly why it is never the answer here']],
+    ex:\`Both rows are multiples of ⟨\${neg(a)}, \${neg(b)}⟩, so the whole question is: which arrow dots to zero with it? Swapping and flipping one sign does it — ⟨\${neg(-b)}, \${neg(a)}⟩ gives (\${neg(a)})(\${neg(-b)}) + (\${neg(b)})(\${neg(a)}) = 0. The null space is the line through that vector, and since it is more than just the origin, A is singular.\`};
+},
+rankNullity(d){
+  let m,n,r;
+  do{ m=R.i(3,6); n=R.i(3,8); r=R.i(1,Math.min(m,n)-1); }while(m===n || n-r===r);
+  return {topic:'Rank–Nullity',
+    codex:{rule:'rank + nullity = number of columns. Every column either adds a new direction to the image or a dimension to the null space.',
+           eg:'A 4×7 matrix of rank 3 has nullity 7 − 3 = 4.'},
+    q:\`A \${m}×\${n} matrix has rank \${r}.<br>What is the dimension of its null space?\`,
+    a:String(n-r),
+    d:[[String(m-r),\`that subtracts from the \${m} rows; the theorem counts the \${n} columns\`],
+       [String(n+r),'rank and nullity add to the number of columns, so nullity is a subtraction'],
+       [String(r),'that is the rank again — the nullity is what the columns have left over'],
+       [String(n),'that is every column; the ' + r + ' independent ones do not lie in the null space']],
+    ex:\`The theorem says rank + nullity = number of columns, and the number of columns is \${n}. So the nullity is \${n} − \${r} = \${n-r}. The row count \${m} never enters it: each of the \${n} columns either contributes a new direction to the image or a dimension of freedom to the null space.\`};
+},
+colSpace(d){
+  const want=R.i(1,3);
+  let A;
+  const det3=M=>M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])
+               -M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])
+               +M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+  const indep2=(v,w)=>v[0]*w[1]-v[1]*w[0]!==0 || v[0]*w[2]-v[2]*w[0]!==0 || v[1]*w[2]-v[2]*w[1]!==0;
+  if(want===1){
+    const v=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)], k=[1,R.nz(-2,2),R.nz(-2,2)];
+    A=k.map(c=>v.map(x=>c*x));
+  } else {
+    let v,w;
+    do{ v=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; w=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; }while(!indep2(v,w));
+    if(want===2){
+      const s=R.nz(-2,2), t=R.nz(-2,2);
+      A=[v,w,v.map((x,i)=>s*x+t*w[i])];
+    } else {
+      let u;
+      do{ u=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; A=[v,w,u]; }while(det3(A)===0);
+    }
+  }
+  const REASON={
+    0:'only the zero matrix has a zero-dimensional column space, and this one is not zero',
+    1:'that would mean every column is a multiple of a single one',
+    2:'two independent columns is not automatic — check whether a third adds a new direction',
+    3:'all three columns are present, but being present is not the same as being independent'
+  };
+  const ds=[0,1,2,3].filter(x=>x!==want).map(x=>[String(x),
+    x===3-want ? 'that is the dimension of the null space — rank and nullity add to 3, they are not the same number'
+               : REASON[x]]);
+  return {topic:'Column Space',
+    q:\`What is the dimension of the column space of \${mat(A)}?\`,
+    a:String(want),
+    d:ds,
+    ex:\`The column space is the span of the three columns, and its dimension is the rank. \${
+      want===1 ? 'Every row here is a multiple of the same vector, so every column is a multiple of the same vector too — the span is a single line.'
+      : want===2 ? 'The third row is a combination of the first two, so the matrix is singular and the columns span a plane rather than all of space.'
+      : 'The determinant is non-zero, so no column is a combination of the others and the three of them span all of ℝ³.'} Rank \${want} also fixes the nullity at \${3-want}.\`};
+},
+gramSchmidt(d){
+  let a,b,k,m,u1,u2,w,nn;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); k=R.nz(-3,3); m=R.nz(-3,3);
+    u1=[a,b]; u2=[k*a-m*b, k*b+m*a]; w=[-m*b, m*a]; nn=a*a+b*b;
+  }while(new Set([vecR(w),vecR(u2),vecR([k*a,k*b]),vecR([k*b,k*a]),vecR([m*b,-m*a])]).size!==5);
+  const dp=k*nn;
+  return {topic:'Gram–Schmidt',
+    complexity:3,
+    codex:{rule:'From each new vector subtract its projection onto the ones already fixed; what is left is orthogonal to all of them.',
+           eg:'w = u₂ − (u₂·u₁ / u₁·u₁)u₁, and w·u₁ = 0 by construction.'},
+    motes:[
+      {q:\`u₁ = \${vecR(u1)}, u₂ = \${vecR(u2)}.<br>What is u₂ · u₁?\`,
+       a:neg(dp),
+       d:[[neg(u2[0]*u1[1]+u2[1]*u1[0]),'the components were crossed — first pairs with first'],
+          [neg(u2[0]*u1[0]-u2[1]*u1[1]),'a dot product adds its two products; it does not subtract them'],
+          [neg(nn),'that is u₁ · u₁, which you will need next but not yet']],
+       ex:\`Multiply matching slots and add: (\${neg(u2[0])})(\${neg(a)}) + (\${neg(u2[1])})(\${neg(b)}) = \${neg(dp)}.\`},
+      {q:\`And what is u₁ · u₁?\`,
+       a:neg(nn),
+       d:[[neg(2*(a+b)),'that adds the components rather than squaring them'],
+          [neg(a*b),'u₁ · u₁ squares each component; it does not multiply them together'],
+          [neg(dp),'that was u₂ · u₁ from the previous step']],
+       ex:\`A vector dotted with itself is the sum of its squares: (\${neg(a)})² + (\${neg(b)})² = \${nn}. That is ‖u₁‖².\`},
+      {q:\`So what is the coefficient (u₂ · u₁)/(u₁ · u₁)?\`,
+       a:neg(k),
+       d:[[neg(dp),'that is only the numerator — it still has to be divided by ‖u₁‖²'],
+          [neg(nn),'that is the denominator on its own'],
+          [neg(-k),'the sign slipped; both parts keep the signs they were computed with']],
+       ex:\`\${neg(dp)} ÷ \${nn} = \${neg(k)}. That number says how many copies of u₁ hide inside u₂.\`},
+      {q:\`Finally: u₂ − (\${neg(k)})u₁ = ?\`,
+       a:vecR(w),
+       d:[[vecR([k*a,k*b]),'that is the projection you are subtracting, not what is left after subtracting it'],
+          [vecR(u2),'the subtraction has not happened yet'],
+          [vecR([m*b,-m*a]),'the subtraction ran the wrong way round']],
+       ex:\`\${vecR(u2)} − \${neg(k)}\${vecR(u1)} = \${vecR(w)}. Check it: \${vecR(w)} · \${vecR(u1)} = 0, so the leftover really is perpendicular to u₁.\`}
+    ],
+    q:\`u₁ = \${vecR(u1)}, u₂ = \${vecR(u2)}.<br>Gram–Schmidt: what is u₂ − proj<sub>u₁</sub>(u₂)?\`,
+    a:vecR(w),
+    d:[[vecR([k*a,k*b]),'that is the projection itself — the answer is what remains once you take it away'],
+       [vecR(u2),'that is u₂ untouched; the projection still has to come off'],
+       [vecR([k*b,k*a]),'the projection was built with the components of u₁ swapped'],
+       [vecR([m*b,-m*a]),'the subtraction ran backwards — it is u₂ minus the projection']],
+    ex:\`u₂ · u₁ = \${neg(dp)} and u₁ · u₁ = \${nn}, so the projection is (\${neg(dp)}/\${nn})u₁ = \${neg(k)}\${vecR(u1)} = \${vecR([k*a,k*b])}. Subtracting that from u₂ leaves \${vecR(w)}, and \${vecR(w)} · \${vecR(u1)} = 0 — which is the whole point: the leftover is perpendicular to what you already had.\`};
+},
+vecProj(d){
+  let a,b,k,m,v,u,pr;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); k=R.nz(-3,3); m=R.nz(-3,3);
+    v=[a,b]; u=[k*a-m*b, k*b+m*a]; pr=[k*a,k*b];
+  }while(new Set([vecR(pr),vecR([-m*b,m*a]),vecR([k*u[0],k*u[1]]),vecR([k*b,k*a]),vecR(u)]).size!==5);
+  const nn=a*a+b*b, dp=k*nn;
+  return {topic:'Vector Projection',
+    codex:{rule:'proj_v(u) = (u·v / v·v)·v. The result always points along v — the scalar only decides how far.',
+           eg:'u·v measures reach along v; dividing by v·v turns it into a multiple of v.'},
+    q:\`u = \${vecR(u)}, v = \${vecR(v)}.<br>proj<sub>v</sub>(u) = ?\`,
+    a:vecR(pr),
+    figAnswer:{kind:'plane', proj:true, caption:'Gold is the projection — it always lies along v.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    d:[[vecR([-m*b,m*a]),'that is the part of u perpendicular to v — what is left after projecting, not the projection'],
+       [vecR([k*u[0],k*u[1]]),'the coefficient multiplies v, not u: a shadow cast onto v must lie along v'],
+       [vecR([k*b,k*a]),"v's components got swapped before scaling"],
+       [neg(dp),'that is u · v, a number; the projection asked for is a vector']],
+    ex:\`u · v = \${neg(dp)} and v · v = \${nn}, so the coefficient is \${neg(dp)}/\${nn} = \${neg(k)}. Multiply that by v: \${neg(k)}\${vecR(v)} = \${vecR(pr)}. Notice the answer is a multiple of v — it has to be, because it is u's shadow on the line through v.\`};
+},
+unitVec(d){
+  const T=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[7,24,25],[20,21,29],[9,12,15],[12,16,20]];
+  const [x,y,n]=R.pick(T);
+  const a=x*R.pick([1,-1]), b=y*R.pick([1,-1]);
+  return {topic:'Unit Vectors',
+    codex:{rule:'A unit vector in the direction of v is v divided by its own length: v̂ = v/‖v‖. Direction survives, length becomes 1.',
+           eg:'⟨3, 4⟩ has length 5, so its unit vector is (1/5)⟨3, 4⟩.'},
+    q:\`v = \${vecR([a,b])}.<br>What is the unit vector in the direction of v?\`,
+    a:\`\${frac(1,n)}\${vecR([a,b])}\`,
+    d:[[\`\${frac(1,Math.abs(a)+Math.abs(b))}\${vecR([a,b])}\`,'the length is not the sum of the components — it is √(a² + b²)'],
+       [\`\${frac(1,n*n)}\${vecR([a,b])}\`,'that divides by ‖v‖², which leaves a length of 1/‖v‖ rather than 1'],
+       [\`\${frac(1,n)}\${vecR([b,a])}\`,'the components are swapped, which points somewhere else entirely'],
+       [vecR([a,b]),'that is v itself; a unit vector has to have length exactly 1']],
+    ex:\`‖v‖ = √((\${neg(a)})² + (\${neg(b)})²) = √\${a*a+b*b} = \${n}. Dividing by that gives \${frac(1,n)}\${vecR([a,b])}, whose length is \${n}/\${n} = 1. Dividing by the length is the only step — the direction never changes.\`};
+},
+angleVec(d){
+  const a=R.nz(-5,5), b=R.nz(-5,5);
+  const kind=R.pick(['0','45','90','135','180']);
+  const mul=R.i(2,3);                     // one factor for both components, or
+  const u = kind==='0'   ? [a*mul, b*mul] // the two vectors are not parallel
+
+          : kind==='45'  ? [a-b, a+b]
+          : kind==='90'  ? [-b, a]
+          : kind==='135' ? [-a-b, a-b]
+          :                [-a,-b];
+  const v=[a,b];
+  const dp=u[0]*v[0]+u[1]*v[1];
+  const cosT=dp/(Math.hypot(u[0],u[1])*Math.hypot(a,b));
+  const COS={'0':1,'45':Math.SQRT1_2,'90':0,'135':-Math.SQRT1_2,'180':-1};
+  const show=x=>(Math.round(x*100)/100).toFixed(2).replace('-','−');
+  return {topic:'Angle Between Vectors',
+    codex:{rule:'cos θ = (u·v)/(‖u‖‖v‖). The dot product alone gives the sign of the angle; the lengths turn it into a number between −1 and 1.',
+           eg:'u·v = 0 means θ = 90°, whatever the lengths are.'},
+    q:\`u = \${vecR(u)}, v = \${vecR(v)}.<br>What is the angle between them?\`,
+    a:\`\${kind}°\`,
+    d:Object.keys(COS).filter(x=>x!==kind).map(x=>[\`\${x}°\`,
+      \`\${x}° needs cos θ = \${show(COS[x])}; here u·v = \${neg(dp)} and the lengths give cos θ = \${show(cosT)}\`]),
+    ex:\`u · v = \${neg(dp)}, ‖u‖ = √\${u[0]*u[0]+u[1]*u[1]} and ‖v‖ = √\${a*a+b*b}. So cos θ = \${neg(dp)}/(√\${u[0]*u[0]+u[1]*u[1]}·√\${a*a+b*b}) = \${show(cosT)}, and the angle with that cosine is \${kind}°. \${
+      kind==='90' ? 'A dot product of zero is exactly what perpendicular means.'
+      : kind==='0' ? 'u is a positive multiple of v, so they point the same way.'
+      : kind==='180' ? 'u is a negative multiple of v, so they point exactly opposite ways.'
+      : 'The lengths matter here — the sign of the dot product alone would only tell you which side of 90° you are on.'}\`};
+},
+transMatrix(d){
+  const k=R.i(2,4);
+  const T=[
+    {nm:'a rotation by 90° anticlockwise', m:[[0,-1],[1,0]], does:'turns every arrow a quarter-turn anticlockwise'},
+    {nm:'a rotation by 180°',              m:[[-1,0],[0,-1]], does:'sends every arrow to its exact opposite'},
+    {nm:'a reflection in the x-axis',      m:[[1,0],[0,-1]], does:'flips the plane top to bottom'},
+    {nm:'a reflection in the y-axis',      m:[[-1,0],[0,1]], does:'flips the plane left to right'},
+    {nm:'a reflection in the line y = x',  m:[[0,1],[1,0]], does:'swaps the two coordinates'},
+    {nm:\`a horizontal shear of \${k}\`,      m:[[1,k],[0,1]], does:'slides points sideways in proportion to their height'},
+    {nm:\`a vertical shear of \${k}\`,        m:[[1,0],[k,1]], does:'slides points upward in proportion to their distance from the y-axis'},
+    {nm:\`a scaling by \${k}\`,               m:[[k,0],[0,k]], does:\`stretches everything by a factor of \${k} in both directions\`},
+    {nm:'a projection onto the x-axis',    m:[[1,0],[0,0]], does:'flattens the whole plane onto the x-axis'}
+  ];
+  const pick=R.pick(T);
+  const others=R.shuffle(T.filter(t=>t.nm!==pick.nm)).slice(0,4);
+  return {topic:'Transformation Matrices',
+    codex:{rule:'The columns of a transformation matrix are where î and ĵ land. Decide those two arrows and the matrix writes itself.',
+           eg:'A 90° anticlockwise turn sends î to ⟨0,1⟩ and ĵ to ⟨−1,0⟩, which are the columns of [[0,−1],[1,0]].'},
+    q:\`Which matrix performs \${pick.nm}?\`,
+    a:mat(pick.m),
+    figAnswer:{kind:'grid', m:pick.m, caption:\`This is what \${pick.nm} does to the unit square.\`},
+    d:others.map(t=>[mat(t.m), \`that matrix \${t.does}\`]),
+    ex:\`Read the columns as destinations. This matrix sends î = ⟨1, 0⟩ to \${vecR([pick.m[0][0],pick.m[1][0]])} and ĵ = ⟨0, 1⟩ to \${vecR([pick.m[0][1],pick.m[1][1]])}, which is exactly \${pick.nm}. Every 2×2 matrix is fully described by where it puts those two arrows.\`};
+},
+/* ---------- Realm 7 : Infinite Expanse (advanced calculus) ---------- */
+implicitDiff(d){
+  const a=R.i(1,4), b=R.i(1,4), c=R.i(6,30);
+  const nx = a===1?'x':a+'x', ny = b===1?'y':b+'y';
+  const noY = b===1 ? \`−\${nx}\` : \`−\${frac(nx, String(b))}\`;
+  return {topic:'Implicit Differentiation',
+    codex:{rule:'Differentiate both sides in x, writing dy/dx every time a y is differentiated, then solve for dy/dx.',
+           eg:'x² + y² = 25 → 2x + 2y·dy/dx = 0 → dy/dx = −x/y'},
+    q:\`\${a===1?'':a}x² + \${b===1?'':b}y² = \${c}.<br>Find \${frac('dy','dx')}.\`,
+    a:\`−\${frac(nx, ny)}\`,
+    d:[[\`\${frac(nx, ny)}\`,'the minus sign is lost — moving the x-term across the equals sign flips its sign'],
+       [\`−\${frac(ny, nx)}\`,'that is dx/dy; the fraction is upside down'],
+       [noY,'differentiating y² gives 2y·dy/dx, so a y stays in the denominator'],
+       [\`−\${frac(String(a), ny)}\`,'the x from differentiating x² was dropped along the way']],
+    ex:\`Differentiate every term with respect to x, remembering that y is a function of x: \${2*a}x + \${2*b}y·\${frac('dy','dx')} = 0. The y² term needs the chain rule, which is where the extra dy/dx comes from. Solving gives \${frac('dy','dx')} = −\${frac(2*a+'x', 2*b+'y')} = −\${frac(nx, ny)}. You never had to solve for y first.\`};
+},
+lhopital(d){
+  let k,m;
+  do{ k=R.i(2,7); m=R.i(2,7); }while(k===m);
+  const form=R.pick(['sin','exp','cos']);
+  const Q = form==='sin' ? \`lim<sub>x→0</sub> \${frac(\`sin(\${k}x)\`, \`\${m}x\`)}\`
+          : form==='exp' ? \`lim<sub>x→0</sub> \${frac(\`e<sup>\${k}x</sup> − 1\`, \`\${m}x\`)}\`
+          :                \`lim<sub>x→0</sub> \${frac(\`1 − cos(\${k}x)\`, \`\${m}x²\`)}\`;
+  const top = form==='cos' ? k*k : k;
+  const bot = form==='cos' ? 2*m : m;
+  return {topic:"L'Hôpital's Rule",
+    codex:{rule:"When a limit gives 0/0 or ∞/∞, differentiate the top and the bottom separately — not as a quotient — and try again.",
+           eg:'lim sin(3x)/(5x) → 3cos(3x)/5 → 3/5'},
+    q:\`\${Q} = ?\`,
+    a:rat(top,bot),
+    d:[[rat(bot,top),"the ratio is upside down — differentiate top and bottom, then divide top by bottom"],
+       ['0','a 0/0 form is not zero; it only means substituting was premature'],
+       ['1','both parts do go to zero, but not at the same rate — that rate is the whole answer'],
+       [rat(top*bot,1),'the two derivatives are divided, not multiplied together']],
+    ex:\`Substituting x = 0 gives 0/0, so differentiate top and bottom separately. \${
+      form==='sin' ? \`The top becomes \${k}cos(\${k}x) and the bottom \${m}, so the limit is \${k}cos(0)/\${m} = \${rat(k,m)}.\`
+      : form==='exp' ? \`The top becomes \${k}e<sup>\${k}x</sup> and the bottom \${m}, so at x = 0 the limit is \${k}/\${m} = \${rat(k,m)}.\`
+      : \`The top becomes \${k}sin(\${k}x) and the bottom \${2*m}x — still 0/0, so go again: \${k*k}cos(\${k}x) over \${2*m}, giving \${rat(k*k,2*m)}.\`
+    } The rule is about the ratio of the derivatives, never the derivative of the ratio.\`};
+},
+relatedRates(d){
+  if(R.chance(.5)){
+    const T=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15]];
+    const [x,y,L]=R.pick(T), v=R.i(2,4);
+    return {topic:'Related Rates',
+      codex:{rule:'Differentiate the relation between the quantities with respect to time, then substitute the instant you care about — never before.',
+             eg:'x² + y² = L² → 2x·x′ + 2y·y′ = 0'},
+      q:\`A \${L} m ladder leans on a wall. Its foot slides out at \${v} m/s.<br>When the foot is \${x} m from the wall, how fast is the top sliding down?\`,
+      a:\`\${rat(-x*v,y)} m/s\`,
+      d:[[\`\${rat(x*v,y)} m/s\`,'the top slides down while the foot slides out, so the rate has to come out negative'],
+         [\`\${rat(-y*v,x)} m/s\`,'x and y have swapped roles in x·x′ + y·y′ = 0'],
+         [\`\${rat(-v,1)} m/s\`,"that is the foot's given speed, not the top's"],
+         [\`\${rat(-x,y)} m/s\`,"the foot's speed never got multiplied in"]],
+      ex:\`The ladder length is fixed, so x² + y² = \${L*L} at all times. Differentiating in t gives 2x·x′ + 2y·y′ = 0, so y′ = −x·x′/y. When x = \${x}, y = √(\${L*L} − \${x*x}) = \${y}, and x′ = \${v}. That gives y′ = −\${x}·\${v}/\${y} = \${rat(-x*v,y)} m/s — negative, because the top is falling.\`};
+  }
+  const Rr=R.i(3,9), v=R.i(2,5);
+  return {topic:'Related Rates',
+    codex:{rule:'Differentiate the relation between the quantities with respect to time, then substitute the instant you care about — never before.',
+           eg:'A = πr² → dA/dt = 2πr·dr/dt'},
+    q:\`A circular ripple's radius grows at \${v} cm/s.<br>How fast is its area growing when r = \${Rr} cm?\`,
+    a:\`\${2*Rr*v}π cm²/s\`,
+    d:[[\`\${Rr*Rr*v}π cm²/s\`,'that is πr² times the radius rate — the area formula has to be differentiated first'],
+       [\`\${2*Rr}π cm²/s\`,'the rate at which the radius grows was dropped'],
+       [\`\${2*v}π cm²/s\`,'the radius at that instant was dropped'],
+       [\`\${2*Rr*v} cm²/s\`,'the π belongs to the area formula and stays in the answer']],
+    ex:\`A = πr², so differentiating in t gives \${frac('dA','dt')} = 2πr·\${frac('dr','dt')}. Substituting r = \${Rr} and dr/dt = \${v} gives 2π(\${Rr})(\${v}) = \${2*Rr*v}π cm²/s. Substituting r = \${Rr} *before* differentiating would have made A a constant and the answer zero — the order matters.\`};
+},
+optimisation(d){
+  if(R.chance(.5)){
+    const P=4*R.i(3,10);
+    return {topic:'Optimisation',
+      codex:{rule:'Write the quantity as a function of one variable using the constraint, then find where its derivative is zero.',
+             eg:'Three sides of fence: x + 2y = P, A = y(P − 2y), maximised at y = P/4.'},
+      q:\`You have \${P} m of fence for a rectangular pen against a straight river,<br>so only three sides need fencing. What is the largest possible area?\`,
+      a:\`\${P*P/8} m²\`,
+      d:[[\`\${P*P/16} m²\`,\`that is the best square with all four sides fenced; the free river side moves the optimum\`],
+         [\`\${P*P/4} m²\`,\`that is a square of side \${P/2} m, which would need \${2*P} m of fence\`],
+         [\`\${P/4} m²\`,'that is the width that achieves the maximum, not the area it achieves'],
+         [\`\${P*P/2} m²\`,'that is larger than any rectangle this much fence can enclose']],
+      ex:\`Let y be the two sides perpendicular to the river and x the side parallel to it. Then x + 2y = \${P} and A = xy = y(\${P} − 2y). Differentiating gives A′ = \${P} − 4y, zero at y = \${P/4}, so x = \${P/2}. The area is \${P/2} × \${P/4} = \${P*P/8} m². The pen is twice as wide as it is deep — the free side is exactly why it is not a square.\`};
+  }
+  const S=2*R.i(4,15);
+  return {topic:'Optimisation',
+    codex:{rule:'Write the quantity as a function of one variable using the constraint, then find where its derivative is zero.',
+           eg:'x + y = S, P = x(S − x), maximised at x = S/2.'},
+    q:\`Two positive numbers add to \${S}.<br>What is the largest their product can be?\`,
+    a:String(S*S/4),
+    d:[[String(S*S/2),'that is more than any pair adding to '+S+' can manage'],
+       [String(S/2),'that is each of the two numbers, not their product'],
+       [String(S*S/8),'that is half the true maximum — check the product at the balanced pair'],
+       [String(S*S),\`that is \${S}², which would need each number to be \${S}\`]],
+    ex:\`With x + y = \${S}, the product is P = x(\${S} − x) = \${S}x − x². Then P′ = \${S} − 2x, zero at x = \${S/2}, so y = \${S/2} as well and P = \${S/2} × \${S/2} = \${S*S/4}. P″ = −2 < 0 confirms it is a maximum. Equal shares always maximise a product with a fixed sum.\`};
+},
+inflection(d){
+  const a=R.pick([1,2,-1,-2]);
+  const x0=R.nz(-3,3);
+  const b=-3*a*x0, c=R.nz(-6,6), e=R.i(-5,5);
+  const t=[[a,3],[b,2],[c,1],[e,0]];
+  return {topic:'Inflection Points',
+    codex:{rule:'An inflection point is where f″ changes sign. For a cubic ax³ + bx² + cx + d that is the single point x = −b/(3a).',
+           eg:'f″ = 6ax + 2b, and 6ax + 2b = 0 gives x = −b/(3a).'},
+    q:\`f(x) = \${poly(t)}.<br>Where is its inflection point?\`,
+    a:\`x = \${neg(x0)}\`,
+    d:[[\`x = \${neg(-x0)}\`,'a sign slipped — solving 6ax + 2b = 0 gives x = −b/(3a), not +b/(3a)'],
+       [\`x = \${rat(3*x0,2)}\`,'that is −b/(2a), the vertex formula for a parabola, not where f″ vanishes'],
+       ['x = 0','f″ vanishes at the origin only when b = 0, and here b = '+neg(b)],
+       ['There is no inflection point','every cubic with a non-zero leading coefficient has exactly one']],
+    ex:\`f′(x) = \${poly(dPoly(t))} and f″(x) = \${poly(dPoly(dPoly(t)))}. Setting f″ = 0 gives \${neg(6*a)}x \${b>=0?'+':'−'} \${Math.abs(2*b)} = 0, so x = \${neg(x0)}. Because f″ is a straight line with non-zero slope it genuinely changes sign there, which is what makes it an inflection point rather than merely a zero of f″.\`};
+},
+invTrigDeriv(d){
+  const k=R.i(2,5), fn=R.pick(['asin','atan','acos']);
+  const root=\`√(1 − \${k*k}x²)\`;
+  const A = fn==='asin' ? frac(k, root)
+          : fn==='acos' ? \`−\${frac(k, root)}\`
+          :               frac(k, \`1 + \${k*k}x²\`);
+  const NM = fn==='asin' ? \`arcsin(\${k}x)\` : fn==='acos' ? \`arccos(\${k}x)\` : \`arctan(\${k}x)\`;
+  const d1 = fn==='atan' ? [frac(k, root),'that is the arcsin form; arctan has 1 + k²x² and no square root']
+                         : [frac(k, \`1 + \${k*k}x²\`),'that is the arctan form; arcsin and arccos carry a square root'];
+  const d2 = fn==='acos' ? [frac(k, root),'arccos decreases, so its derivative carries a minus sign']
+                         : [\`−\${A}\`,'that minus sign belongs to arccos, not to this one'];
+  return {topic:'Inverse Trig Derivatives',
+    codex:{rule:'d/dx arcsin u = u′/√(1−u²), arccos is the same with a minus, arctan is u′/(1+u²).',
+           eg:'d/dx arcsin(3x) = 3/√(1 − 9x²)'},
+    q:\`\${frac('d','dx')} \${NM} = ?\`,
+    a:A,
+    d:[d1, d2,
+       [fn==='atan'?frac(1, \`1 + \${k*k}x²\`):frac(1, root),\`the chain rule factor \${k} from the inside is missing\`],
+       [fn==='atan'?frac(k, \`1 − \${k*k}x²\`):frac(k, \`√(1 + \${k*k}x²)\`),'the sign inside is wrong — check the standard form carefully']],
+    ex:\`With u = \${k}x we have u′ = \${k}. \${
+      fn==='asin' ? \`Since d/dx arcsin u = u′/√(1 − u²), this is \${k}/√(1 − (\${k}x)²) = \${A}.\`
+      : fn==='acos' ? \`Since d/dx arccos u = −u′/√(1 − u²), this is −\${k}/√(1 − (\${k}x)²) = \${A}.\`
+      : \`Since d/dx arctan u = u′/(1 + u²), this is \${k}/(1 + (\${k}x)²) = \${A}.\`
+    } The k on top is the chain rule; the k² inside comes from squaring u.\`};
+},
+logDiff(d){
+  const k=R.i(1,3);
+  const pw = k===1 ? 'x' : \`\${k}x\`;
+  const A = k===1 ? \`x<sup>x</sup>(ln(x) + 1)\` : \`\${k}x<sup>\${pw}</sup>(ln(x) + 1)\`;
+  return {topic:'Logarithmic Differentiation',
+    complexity:3,
+    codex:{rule:'When the variable sits in both the base and the exponent, take ln of both sides, differentiate implicitly, then multiply back by y.',
+           eg:'y = xˣ → ln y = x ln x → y′/y = ln x + 1 → y′ = xˣ(ln x + 1)'},
+    motes:[
+      {q:\`y = x<sup>\${pw}</sup>. Take ln of both sides — what is ln y?\`,
+       a:\`\${k===1?'':k}x ln(x)\`,
+       d:[[\`ln(\${pw}) ln(x)\`,'the exponent comes down as a factor; it does not get its own logarithm'],
+          [\`\${pw} + ln(x)\`,'a power inside a log becomes a product, not a sum'],
+          [\`x<sup>\${pw}</sup>\`,'the logarithm has not been applied yet']],
+       ex:\`ln of a power brings the exponent down in front: ln(x^\${pw}) = \${k===1?'':k}x ln(x). That single move is what removes x from the exponent.\`},
+      {q:\`Differentiate both sides. What is \${frac('d','dx')}(\${k===1?'':k}x ln(x))?\`,
+       a:\`\${k===1?'':k}(ln(x) + 1)\`,
+       d:[[\`\${k===1?'':k}ln(x)\`,'the product rule also differentiates the x, which contributes a 1'],
+          [frac(k,'x'),'that differentiates only the ln and forgets the x in front'],
+          [\`\${k===1?'':k}x·\${frac(1,'x')}\`,'that is only the second half of the product rule']],
+       ex:\`Product rule on \${k===1?'':k}x·ln(x): \${k===1?'':k}·ln(x) + \${k===1?'':k}x·(1/x) = \${k===1?'':k}(ln(x) + 1).\`},
+      {q:\`The left side differentiates to \${frac('y′','y')}. Solve for y′.\`,
+       a:\`y′ = y·\${k===1?'':k}(ln(x) + 1)\`,
+       d:[[\`y′ = \${k===1?'':k}(ln(x) + 1)\`,'the y has to be multiplied back in — that is the whole point of the trick'],
+          [\`y′ = \${frac(k===1?'ln(x) + 1':k+'(ln(x) + 1)','y')}\`,'the y was divided rather than multiplied'],
+          [\`y′ = y + \${k===1?'':k}(ln(x) + 1)\`,'the two sides are multiplied by y, not added to it']],
+       ex:\`Multiply both sides by y. Then put back what y actually was, x^\${pw}, and the answer is in terms of x alone.\`}
+    ],
+    q:\`\${frac('d','dx')} x<sup>\${pw}</sup> = ?\`,
+    a:A,
+    d:[[k===1?\`x·x<sup>x − 1</sup>\`:\`\${pw}·x<sup>\${pw} − 1</sup>\`,'that is the power rule, which needs a constant exponent — here the exponent moves too'],
+       [k===1?\`x<sup>x</sup>ln(x)\`:\`\${k}x<sup>\${pw}</sup>ln(x)\`,'the +1 from differentiating the x in the exponent is missing'],
+       [\`x<sup>\${pw}</sup>\`,'that is exponential thinking, but the base is not constant either'],
+       [\`\${k===1?'':k}(ln(x) + 1)\`,'the factor of y — that is, of x^'+pw+' — never got multiplied back in']],
+    ex:\`Neither the power rule nor the exponential rule applies, because x appears in both places. Take logs: ln y = \${k===1?'':k}x ln(x). Differentiating gives y′/y = \${k===1?'':k}(ln(x) + 1), so y′ = y·\${k===1?'':k}(ln(x) + 1) = \${A}.\`};
+},
+byParts(d){
+  const a=R.i(2,4);
+  const E=\`e<sup>\${a}x</sup>\`;
+  return {topic:'Integration by Parts',
+    complexity:3,
+    codex:{rule:'∫u dv = uv − ∫v du. Choose u to be the part that gets simpler when you differentiate it.',
+           eg:'∫x eˣ dx: u = x (becomes 1), dv = eˣdx (integrates easily).'},
+    motes:[
+      {q:\`∫ x\${E} dx — which part should be u?\`,
+       a:'u = x',
+       d:[[\`u = \${E}\`,'differentiating that gets you nowhere; x is the part that simplifies'],
+          [\`u = x\${E}\`,'u is one factor, not the whole integrand'],
+          ['u = dx','dx is the differential, not a choice of u']],
+       ex:\`Pick u to be whatever gets simpler when differentiated. x becomes 1 and disappears; \${E} never simplifies, so it takes the dv role.\`},
+      {q:\`With u = x and dv = \${E} dx, what are du and v?\`,
+       a:\`du = dx, v = \${frac(1,a)}\${E}\`,
+       d:[[\`du = dx, v = \${E}\`,\`integrating \${E} divides by \${a}, it does not leave it unchanged\`],
+          [\`du = dx, v = \${a}\${E}\`,'that differentiates dv instead of integrating it'],
+          [\`du = x dx, v = \${frac(1,a)}\${E}\`,'du is the derivative of u = x, which is just dx']],
+       ex:\`u = x gives du = dx. Integrating dv = \${E} dx gives v = \${frac(1,a)}\${E}, because the chain rule leaves a factor of \${a} to divide out.\`},
+      {q:\`So what is uv?\`,
+       a:\`\${frac(1,a)}x\${E}\`,
+       d:[[\`x\${E}\`,\`the \${frac(1,a)} from integrating \${E} has been dropped\`],
+          [\`\${frac(1,a)}\${E}\`,'the u = x has been dropped from the product'],
+          [\`\${frac(1,a*a)}x\${E}\`,'divided by '+a+' twice; only the v step divides once']],
+       ex:\`uv is simply x times \${frac(1,a)}\${E} = \${frac(1,a)}x\${E}. That is the first half of the formula; the integral that remains is the second.\`},
+      {q:\`And ∫ v du = ∫ \${frac(1,a)}\${E} dx = ?\`,
+       a:\`\${frac(1,a*a)}\${E} + C\`,
+       d:[[\`\${frac(1,a)}\${E} + C\`,\`integrating \${E} again divides by another \${a}\`],
+          [\`\${frac(1,a)}x\${E} + C\`,'an x appeared from nowhere — du is dx, so this is a plain exponential integral'],
+          [\`\${a}\${E} + C\`,'that multiplies by '+a+' instead of dividing']],
+       ex:\`Integrating \${frac(1,a)}\${E} divides by \${a} once more, giving \${frac(1,a*a)}\${E}. Subtracting this from uv finishes the problem.\`}
+    ],
+    q:\`∫ x\${E} dx = ?\`,
+    a:\`\${frac(1,a)}x\${E} − \${frac(1,a*a)}\${E} + C\`,
+    d:[[\`\${frac(1,a)}x\${E} + \${frac(1,a*a)}\${E} + C\`,'the formula subtracts ∫v du; this one added it'],
+       [\`\${frac(1,a)}x\${E} + C\`,'the ∫v du term is missing entirely'],
+       [\`\${frac(1,2)}x²\${E} + C\`,'that integrates the two factors separately, which is not how products integrate'],
+       [\`\${frac(1,a)}\${E} − \${frac(1,a*a)}\${E} + C\`,'the x from uv has been dropped']],
+    ex:\`Take u = x and dv = \${E} dx, so du = dx and v = \${frac(1,a)}\${E}. Then ∫u dv = uv − ∫v du = \${frac(1,a)}x\${E} − ∫\${frac(1,a)}\${E} dx = \${frac(1,a)}x\${E} − \${frac(1,a*a)}\${E} + C. Differentiate it back and the two \${E} terms cancel, leaving exactly x\${E}.\`};
+},
+partialFrac(d){
+  let a,b,N;
+  do{ a=R.nz(-6,6); b=R.nz(-6,6); N=R.i(1,6); }
+  while(a===b || a+b===0 || Math.abs(a-b)===1 || N===Math.abs(a-b));
+  const den=\`(x \${a<0?'+':'−'} \${Math.abs(a)})(x \${b<0?'+':'−'} \${Math.abs(b)})\`;
+  return {topic:'Partial Fractions',
+    codex:{rule:'Cover up a factor and substitute its root into what is left; the number you get is that factor’s coefficient.',
+           eg:'For N/((x−a)(x−b)), covering (x−a) and putting x = a gives A = N/(a−b).'},
+    q:\`\${frac(N, den)} = \${frac('A',\`x \${a<0?'+':'−'} \${Math.abs(a)}\`)} + \${frac('B',\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)}.<br>What is A?\`,
+    a:rat(N, a-b),
+    d:[[rat(N, b-a),\`the sign is backwards — cover up (x \${a<0?'+':'−'} \${Math.abs(a)}) and put x = \${neg(a)}, which leaves \${neg(a)} − \${neg(b)} underneath\`],
+       [rat(N, a+b),'the two roots are subtracted, not added'],
+       [rat(a-b, N),'the fraction is upside down'],
+       [String(N),'that is the numerator itself; A is what survives after covering the factor up']],
+    ex:\`Multiply through by (x \${a<0?'+':'−'} \${Math.abs(a)}) and you get \${frac(N,\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)} = A + (that factor)·B. Now put x = \${neg(a)}: the B term vanishes and A = \${N}/(\${neg(a)} − \${neg(b)}) = \${rat(N,a-b)}. That shortcut is the cover-up method, and it works because the substitution kills every other term.\`};
+},
+improper(d){
+  const p = R.chance(.3) ? 1 : R.i(2,5);
+  const conv = p>1;
+  return {topic:'Improper Integrals',
+    codex:{rule:'∫₁^∞ x^(−p) dx converges to 1/(p−1) when p > 1 and diverges when p ≤ 1. Evaluate the limit, never the symbol ∞.',
+           eg:'∫₁^∞ x⁻² dx = [−1/x]₁^∞ = 1'},
+    q:\`∫<sub>1</sub><sup>∞</sup> \${frac(1, 'x'+(p===1?'':sup(p)))} dx = ?\`,
+    a: conv ? rat(1,p-1) : 'Diverges',
+    d: conv
+      ? [[rat(1,p),\`the antiderivative is x^(1−\${p})/(1−\${p}), which leaves \${p} − 1 underneath, not \${p}\`],
+         [rat(1,p+1),'the exponent was raised instead of lowered when antidifferentiating'],
+         ['0','the integrand tends to zero, but the area it accumulates does not have to'],
+         ['Diverges',\`for p > 1 the tail shrinks fast enough that the total area is finite\`]]
+      : [['1','that is 1/(p − 1) with p = 1, which divides by zero — the formula does not apply here'],
+         ['0','the integrand tends to zero, but the area it accumulates does not have to'],
+         [rat(1,2),'that is the value for p = 3, not for p = 1'],
+         ['ln 2','that is ∫₁² dx/x; here the upper limit runs off to infinity, and ln b has no ceiling']],
+    ex: conv
+      ? \`Take it as a limit: ∫₁^b x^(−\${p}) dx = [x^(\${1-p})/(\${1-p})]₁^b = \${frac(1,p-1)}(1 − b^(\${1-p})). As b → ∞ that last term vanishes because \${p} > 1, leaving \${rat(1,p-1)}. The bigger p is, the faster the tail dies and the smaller the total.\`
+      : \`The antiderivative of 1/x is ln x, not a power, so ∫₁^b dx/x = ln b — and ln b grows without bound. The area under 1/x past x = 1 is infinite even though the curve itself drops to zero. p = 1 is exactly the borderline case.\`};
+},
+avgValue(d){
+  const n=R.i(2,3), b=R.i(2,4);
+  const av=Math.pow(b,n)/(n+1);
+  return {topic:'Average Value',
+    codex:{rule:'The average value of f on [a,b] is (1/(b−a))∫ₐᵇ f — the total, divided by the width of the interval.',
+           eg:'Average of x² on [0,3] is (1/3)(27/3) = 3.'},
+    q:\`What is the average value of y = x\${sup(n)} on [0, \${b}]?\`,
+    a:rat(Math.pow(b,n), n+1),
+    d:[[rat(Math.pow(b,n+1), n+1),'that is the integral itself — the average still has to be divided by the width'],
+       [rat(Math.pow(b,n), 2),'that averages the two endpoint values, which is not the average of the function'],
+       [String(Math.pow(b,n)),\`that is f(\${b}), the largest value, reached only at the right-hand end\`],
+       [rat(Math.pow(b,n), 2*(n+1)),'divided by the width twice']],
+    ex:\`∫₀^\${b} x\${sup(n)} dx = \${b}\${sup(n+1)}/\${n+1} = \${rat(Math.pow(b,n+1),n+1)}. The interval has width \${b}, so the average is that divided by \${b}, which is \${rat(Math.pow(b,n),n+1)}\${Number.isInteger(av)?'':''}. Geometrically it is the height of the rectangle on [0, \${b}] with the same area as the region under the curve.\`};
+},
+volRev(d){
+  const n=R.i(1,2), b=R.i(2,4);
+  const p=2*n+1;
+  return {topic:'Volumes of Revolution',
+    codex:{rule:'Rotating y = f(x) about the x-axis sweeps discs of area πy², so V = π∫ₐᵇ y² dx.',
+           eg:'y = x on [0,3] sweeps a cone: π∫₀³x²dx = 9π.'},
+    q:\`y = x\${n===1?'':sup(n)} on [0, \${b}] is rotated about the x-axis.<br>What is the volume swept out?\`,
+    a:\`\${rat(Math.pow(b,p), p)}π\`,
+    d:[[\`\${rat(Math.pow(b,n+1), n+1)}π\`,'that integrates y rather than y² — a disc has area πy², so the square is essential'],
+       [\`\${rat(Math.pow(b,p), p)}\`,'the π from the area of each disc is missing'],
+       [\`\${rat(2*Math.pow(b,p), p)}π\`,'the disc area is πy², not 2πy² — that factor belongs to the shell method'],
+       [\`\${rat(Math.pow(b,2*n), 2*n)}π\`,'the power was not raised by one before dividing']],
+    ex:\`Each slice at position x is a disc of radius y = x\${n===1?'':sup(n)}, so its area is πx\${sup(2*n)} and V = π∫₀^\${b} x\${sup(2*n)} dx = π·\${b}\${sup(p)}/\${p} = \${rat(Math.pow(b,p),p)}π. Squaring the radius before integrating is the step that separates this from an area problem.\`};
+},
+riemannToInt(d){
+  const k=R.i(1,4);
+  return {topic:'Riemann Sums',
+    codex:{rule:'In a limit of sums, (b−a)/n is the dx and the sample point becomes x. Read off the interval from where the sample points run.',
+           eg:'Σ(i/n)²(1/n) → ∫₀¹x²dx, because i/n sweeps [0,1] and 1/n is the width.'},
+    q:\`lim<sub>n→∞</sub> <span style="font-size:18px">Σ</span><sub>i=1</sub><sup>n</sup> \${frac(1,'n')}(\${frac('i','n')})\${sup(k)}<br>Which integral is this?\`,
+    a:\`∫<sub>0</sub><sup>1</sup> x\${sup(k)} dx\`,
+    d:[[\`∫<sub>0</sub><sup>n</sup> x\${sup(k)} dx\`,'i/n runs from 0 to 1 however large n gets, so n never appears in the limits'],
+       [\`∫<sub>1</sub><sup>n</sup> x\${sup(k)} dx\`,'the index i runs from 1 to n, but the variable is i/n, which runs over [0, 1]'],
+       [\`∫<sub>0</sub><sup>1</sup> \${frac(1,'x')}x\${sup(k)} dx\`,'the 1/n is the width dx, not another factor inside the integrand'],
+       [rat(1,k+1),'that is the value the integral comes to, not the integral itself']],
+    ex:\`Match it to ∫ₐᵇ f(x)dx = lim Σ f(xᵢ)Δx. Here Δx = 1/n, so b − a = 1; the sample point is xᵢ = i/n, which sweeps from 0 up to 1; and f(xᵢ) = (i/n)\${sup(k)}, so f(x) = x\${sup(k)}. That gives ∫₀¹x\${sup(k)}dx, which evaluates to \${rat(1,k+1)} — but the question asked which integral, not its value.\`};
+},
+
+/* ---------- Realm 8 : Gradient Summit (multivariable & series) ---------- */
+gradient(d){
+  const k=[3,4,5][d-1]||4;
+  let a,b,c,x0,y0,fx,fy;
+  do{
+    a=R.nz(-k,k); b=R.nz(-k,k); c=R.nz(-k,k); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    fx=2*a*x0+b*y0; fy=b*x0+2*c*y0;
+  }while(new Set([vecR([fx,fy]),vecR([fy,fx]),vecR([2*a*x0,2*c*y0]),
+                  vecR([a*x0+b*y0, b*x0+c*y0]),vecR([fx,fx])]).size!==5);
+  return {topic:'Gradient Vector',
+    codex:{rule:'∇f stacks the partial derivatives into a vector: ⟨∂f/∂x, ∂f/∂y⟩. It points the way f increases fastest.',
+           eg:'f = x²y → ∇f = ⟨2xy, x²⟩'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'xy')}\${sgn(c,'y²')}<br>What is ∇f at (\${neg(x0)}, \${neg(y0)})?\`,
+    a:vecR([fx,fy]),
+    figAnswer:{kind:'plane', vecs:[{v:[fx,fy],col:'#f2c14e',label:'∇f'}],
+      caption:'∇f points uphill — the direction f climbs fastest from that point.'},
+    d:[[vecR([fy,fx]),'the two partials are in the wrong order — ∂f/∂x comes first'],
+       [vecR([2*a*x0,2*c*y0]),'the xy term was ignored, but it contributes to both partials'],
+       [vecR([a*x0+b*y0, b*x0+c*y0]),'the 2 from differentiating the squared terms is missing'],
+       [vecR([fx,fx]),'both slots hold ∂f/∂x; the second slot is the derivative in y']],
+    ex:\`Differentiate in x holding y still: ∂f/∂x = \${neg(2*a)}x + \${neg(b)}y, which at (\${neg(x0)}, \${neg(y0)}) is \${neg(fx)}. Then in y holding x still: ∂f/∂y = \${neg(b)}x + \${neg(2*c)}y = \${neg(fy)}. Stack them: ∇f = \${vecR([fx,fy])}. The xy term appears in both partials, which is exactly what a mixed term does.\`};
+},
+dirDeriv(d){
+  const T=[[3,4,5],[4,3,5],[5,12,13],[12,5,13],[8,15,17],[6,8,10]];
+  let a,b,x0,y0,p,q,n,fx,fy,dp;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    [p,q,n]=R.pick(T); p*=R.pick([1,-1]); q*=R.pick([1,-1]);
+    fx=2*a*x0; fy=2*b*y0; dp=fx*p+fy*q;
+  }while(dp===0 || p===q || fx===fy ||
+    new Set([rat(dp,n),neg(dp),rat(fx*q+fy*p,n),rat(dp,n*n),rat(-dp,n)]).size!==5);
+  return {topic:'Directional Derivative',
+    codex:{rule:'D_u f = ∇f · û, where û is the direction scaled to length 1. Skip the scaling and the answer is off by ‖v‖.',
+           eg:'∇f = ⟨3,4⟩ in direction ⟨3,4⟩: û = ⟨3/5,4/5⟩, so D_u f = (9+16)/5 = 5'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'y²')}, at the point (\${neg(x0)}, \${neg(y0)}).<br>What is the derivative in the direction \${vecR([p,q])}?\`,
+    a:rat(dp,n),
+    d:[[neg(dp),\`that is ∇f · \${vecR([p,q])}, but the direction has length \${n} and must be scaled to 1 first\`],
+       [rat(fx*q+fy*p,n),'the direction components are paired with the wrong partials'],
+       [rat(dp,n*n),\`divided by ‖v‖² = \${n*n} instead of ‖v‖ = \${n}\`],
+       [rat(-dp,n),'the sign is flipped — that is the rate in the opposite direction']],
+    ex:\`∇f = ⟨\${neg(2*a)}x, \${neg(2*b)}y⟩, which at (\${neg(x0)}, \${neg(y0)}) is \${vecR([fx,fy])}. The direction \${vecR([p,q])} has length √\${p*p+q*q} = \${n}, so û = (1/\${n})\${vecR([p,q])}. Then D_u f = \${vecR([fx,fy])} · û = (\${neg(fx)}·\${neg(p)} + \${neg(fy)}·\${neg(q)})/\${n} = \${rat(dp,n)}. Forgetting to normalise is the one mistake that scales the whole answer.\`};
+},
+chainMulti(d){
+  // Rendering helpers: a monomial in x and y, and a power of t, both written
+  // the way a person would write them (no 1t, no t¹, no x⁰).
+  const mono=(c,px,py)=>{
+    let out = (c===1 && (px||py)) ? '' : String(c);
+    if(px>0) out += 'x'+(px===1?'':sup(px));
+    if(py>0) out += 'y'+(py===1?'':sup(py));
+    return out || '1';
+  };
+  const tp=(c,p)=> p===0 ? String(c) : (c===1?'':String(c))+'t'+(p===1?'':sup(p));
+
+  let m,n,pp,qq,K,ok;
+  do{
+    m=R.i(1,3); n=R.i(1,3); pp=R.i(1,3); qq=R.i(1,3);
+    K=m*pp+n*qq;
+    ok = m*pp!==n*qq && K>=2
+      && new Set([tp(K,K-1),tp(1,K-1),tp(m*pp,K-1),tp(n*qq,K-1),tp(K,K)]).size===5
+      && new Set([mono(m,m-1,n),mono(1,m,n),mono(n,m,n-1),mono(m,m-1,0)]).size===4
+      && new Set([\`\${tp(pp,pp-1)} and \${tp(qq,qq-1)}\`,\`\${tp(1,pp)} and \${tp(1,qq)}\`,
+                  \`\${tp(pp,pp)} and \${tp(qq,qq)}\`,\`\${pp} and \${qq}\`]).size===4;
+  }while(!ok);
+  const Z=mono(1,m,n);
+  return {topic:'Multivariable Chain Rule',
+    complexity:3,
+    codex:{rule:'dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt) — one term for every route from t up to z, added together.',
+           eg:'z = x²y, x = t², y = t³ → 2xy·2t + x²·3t² = 7t⁶'},
+    motes:[
+      {q:\`z = \${Z}. What is ∂z/∂x?\`,
+       a:mono(m,m-1,n),
+       d:[[mono(1,m,n),'that is z itself — nothing has been differentiated yet'],
+          [mono(n,m,n-1),'that differentiated in y; this step holds y still'],
+          [mono(m,m-1,0),'the y factor is a constant here, so it stays rather than vanishing']],
+       ex:\`Hold y still and use the power rule on x: ∂z/∂x = \${mono(m,m-1,n)}. The y factor rides along untouched, because to ∂/∂x it is just a number.\`},
+      {q:\`With x = \${tp(1,pp)} and y = \${tp(1,qq)}, what are \${frac('dx','dt')} and \${frac('dy','dt')}?\`,
+       a:\`\${tp(pp,pp-1)} and \${tp(qq,qq-1)}\`,
+       d:[[\`\${tp(1,pp)} and \${tp(1,qq)}\`,'those are x and y themselves, not their derivatives'],
+          [\`\${tp(pp,pp)} and \${tp(qq,qq)}\`,'the power has to drop by one when you differentiate'],
+          [\`\${pp} and \${qq}\`,'the powers of t were dropped entirely']],
+       ex:\`Plain power rule on each: d/dt \${tp(1,pp)} = \${tp(pp,pp-1)} and d/dt \${tp(1,qq)} = \${tp(qq,qq-1)}.\`},
+      {q:\`How many terms does \${frac('dz','dt')} have?\`,
+       a:'Two — one for x and one for y',
+       d:[['One — whichever variable changes faster','both x and y depend on t, so both routes contribute'],
+          ['One — the two routes combine into a single product','the chain rule adds the routes; it does not multiply them'],
+          ['Four — every pairing of a partial with a derivative','there is one term per intermediate variable, not one per pairing']],
+       ex:\`z reaches t through x and through y, so there is one term for each route: dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt). Following only one of the two is the classic slip.\`}
+    ],
+    q:\`z = \${Z}, with x = \${tp(1,pp)} and y = \${tp(1,qq)}.<br>\${frac('dz','dt')} = ?\`,
+    a:tp(K,K-1),
+    d:[[tp(1,K-1),'the two chain-rule factors were dropped; each route contributes a multiplier'],
+       [tp(m*pp,K-1),'only the route through x was followed — y depends on t as well'],
+       [tp(n*qq,K-1),'only the route through y was followed — x depends on t as well'],
+       [tp(K,K),'the power was not reduced by one when differentiating']],
+    ex:\`Two routes, added. Through x: (∂z/∂x)(dx/dt) = \${mono(m,m-1,n)}·\${tp(pp,pp-1)}, which in t alone is \${tp(m*pp,K-1)}. Through y: (∂z/∂y)(dy/dt) = \${mono(n,m,n-1)}·\${tp(qq,qq-1)} = \${tp(n*qq,K-1)}. Adding them gives \${tp(K,K-1)}. As a check, substituting first makes z simply \${tp(1,K)}, whose derivative is the same thing.\`};
+},
+tangentPlane(d){
+  let a,b,x0,y0,z0,fx,fy;
+  do{
+    a=R.nz(-3,3); b=R.nz(-3,3); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    z0=a*x0*x0+b*y0*y0; fx=2*a*x0; fy=2*b*y0;
+  }while(fx===fy || fx===0 || fy===0 || z0===0);
+  const T=(c,v,at)=>\`\${c<0?'−':'+'} \${Math.abs(c)}(\${v} \${at<0?'+':'−'} \${Math.abs(at)})\`;
+  const P=(k,c1,c2)=>\`z = \${neg(k)} \${T(c1,'x',x0)} \${T(c2,'y',y0)}\`;
+  return {topic:'Tangent Planes',
+    codex:{rule:'z = f(a,b) + f_x(a,b)(x−a) + f_y(a,b)(y−b) — the height at the point, plus each slope times how far you have moved.',
+           eg:'It is the two-variable version of y = f(a) + f′(a)(x−a).'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'y²')}<br>What is the tangent plane at (\${neg(x0)}, \${neg(y0)})?\`,
+    a:P(z0,fx,fy),
+    d:[[P(z0,fy,fx),'the two slopes have swapped variables — f_x multiplies (x − a)'],
+       [P(z0,a*x0,b*y0),'the 2 from differentiating x² and y² is missing from both slopes'],
+       [P(0,fx,fy),\`the height at the point is missing; f(\${neg(x0)}, \${neg(y0)}) = \${neg(z0)}, not 0\`],
+       [P(z0,-fx,-fy),'both slopes have the wrong sign']],
+    ex:\`Three numbers build the plane. The height: f(\${neg(x0)}, \${neg(y0)}) = \${neg(z0)}. The slopes: f_x = \${neg(2*a)}x = \${neg(fx)} and f_y = \${neg(2*b)}y = \${neg(fy)} at that point. Assemble them as \${P(z0,fx,fy)}. Put x = \${neg(x0)} and y = \${neg(y0)} back in and the brackets vanish, leaving z = \${neg(z0)} — the plane really does touch the surface there.\`};
+},
+doubleInt(d){
+  const m=R.i(0,2), n=R.i(0,2), a=R.i(2,3), b=R.i(2,3);
+  const A=Math.pow(a,m+1), B=Math.pow(b,n+1);
+  // x⁰y⁰ is just 1, and x¹ is just x.
+  const pw=(v,p)=> p===0 ? '' : v+(p===1?'':sup(p));
+  const integrand = (pw('x',m)+pw('y',n)) || '1';
+  return {topic:'Double Integrals',
+    codex:{rule:'Over a rectangle, integrate one variable at a time; the other is a constant while you do. Order does not matter.',
+           eg:'∫₀²∫₀³ xy dy dx = (∫₀² x dx)(∫₀³ y dy) = 2·4.5 = 9'},
+    q:\`∫<sub>0</sub><sup>\${a}</sup> ∫<sub>0</sub><sup>\${b}</sup> \${integrand} dy dx = ?\`,
+    a:rat(A*B, (m+1)*(n+1)),
+    d:[[rat(Math.pow(a,m)*Math.pow(b,n), (m+1)*(n+1)),'the powers were not raised by one before dividing'],
+       [String(A*B),'both divisions by the new powers are missing'],
+       [rat(A*B, m+n+1),'the two denominators were added rather than multiplied'],
+       [rat(Math.pow(a,n+1)*Math.pow(b,m+1), (m+1)*(n+1)),'the two limits have been swapped between the variables']],
+    ex:\`Do the inner integral first, treating x as a constant: ∫₀<sup>\${b}</sup> \${pw('y',n)||'1'} dy = \${b}\${sup(n+1)}/\${n+1} = \${rat(B,n+1)}. That constant comes outside, leaving \${rat(B,n+1)}∫₀<sup>\${a}</sup> \${pw('x',m)||'1'} dx = \${rat(B,n+1)}·\${rat(A,m+1)} = \${rat(A*B,(m+1)*(n+1))}. Over a rectangle with a product integrand the two integrals simply multiply.\`};
+},
+geoSeries(d){
+  if(R.chance(.25)){
+    let r,a;
+    do{ r=R.i(2,4); a=R.i(1,5); }
+    while(new Set([rat(a,1-r),rat(a,r-1),String(a),'0']).size!==4);
+    return {topic:'Geometric Series',
+      codex:{rule:'Σ arⁿ from n = 0 converges to a/(1 − r) exactly when |r| < 1; otherwise the terms do not shrink and the sum runs away.',
+             eg:'1 + ½ + ¼ + … = 1/(1 − ½) = 2'},
+      q:\`\${a} + \${a*r} + \${a*r*r} + \${a*r*r*r} + ⋯ = ?\`,
+      a:'Diverges',
+      d:[[rat(a,1-r),\`that is a/(1 − r) applied with r = \${r}, but the formula only holds for |r| < 1\`],
+         [rat(a,r-1),'the same formula with the subtraction reversed — it still does not apply here'],
+         [String(a),'that is only the first term'],
+         ['0','the terms grow rather than shrink']],
+      ex:\`Each term is \${r} times the one before, so r = \${r} and |r| ≥ 1. The terms grow without bound, so the partial sums do too. The formula a/(1 − r) is not merely inconvenient here — it is invalid, and blindly applying it would give \${rat(a,1-r)}, a finite number for a sum that has none.\`};
+  }
+  let k,s,a;
+  do{ k=R.i(2,5); s=R.pick([1,-1]); a=R.i(1,6); }
+  while(new Set([rat(a*k,k-s),rat(a*k,k+s),String(a),rat(a*(k-s),k)]).size!==4);
+  // With r negative the series alternates, so write it with real minus signs
+  // rather than "+ −".
+  const terms=[0,1,2,3].map(i=>rat(a, Math.pow(k,i)))
+    .map((t,i)=> i===0 ? t : (s<0 && i%2 ? ' − ' : ' + ')+t);
+  return {topic:'Geometric Series',
+    codex:{rule:'Σ arⁿ from n = 0 converges to a/(1 − r) exactly when |r| < 1; otherwise the terms do not shrink and the sum runs away.',
+           eg:'1 + ½ + ¼ + … = 1/(1 − ½) = 2'},
+    q:\`\${terms.join('')} + ⋯ = ?<br><span class="small">(ratio r = \${rat(s,k)})</span>\`,
+    a:rat(a*k, k-s),
+    d:[[rat(a*k, k+s),'the sign of r slipped — the formula is a/(1 − r), so a negative r *adds* underneath'],
+       [String(a),'that is only the first term of the sum'],
+       [rat(a*(k-s), k),'the fraction is upside down — it is a/(1 − r), not a(1 − r)'],
+       ['Diverges',\`|r| = \${rat(1,k)} is less than 1, so the terms shrink fast enough to total something finite\`]],
+    ex:\`The first term is a = \${a} and the ratio is r = \${rat(s,k)}. Since |r| < 1 the series converges to a/(1 − r) = \${a}/(1 − \${rat(s,k)}) = \${a}/\${rat(k-s,k)} = \${rat(a*k,k-s)}. The whole infinite tail is worth only a finite amount because each term is a fixed fraction of the last.\`};
+},
+taylor(d){
+  const k=R.i(2,3), fn=R.pick(['exp','cos','ln']);   // k = 1 collapses two distractors onto the answer
+  const kx = k===1?'x':\`\${k}x\`;
+  const q2 = r => (r==='1' ? '' : r) + 'x²';        // 1x² is just x²
+  const A = fn==='exp' ? \`1 + \${kx} + \${q2(rat(k*k,2))}\`
+          : fn==='cos' ? \`1 − \${q2(rat(k*k,2))}\`
+          :              \`\${kx} − \${q2(rat(k*k,2))}\`;
+  const NM = fn==='exp' ? \`e<sup>\${kx}</sup>\` : fn==='cos' ? \`cos(\${kx})\` : \`ln(1 + \${kx})\`;
+  return {topic:'Taylor Polynomials',
+    codex:{rule:'The degree-n Taylor polynomial at 0 is Σ f⁽ᵏ⁾(0)xᵏ/k! — it matches the function’s value and first n derivatives there.',
+           eg:'eˣ ≈ 1 + x + x²/2, because every derivative of eˣ is 1 at x = 0.'},
+    q:\`What is the degree-2 Maclaurin polynomial of \${NM}?\`,
+    a:A,
+    d:[[fn==='exp' ? \`1 + \${kx} + \${q2(neg(k*k))}\` : fn==='cos' ? \`1 − \${q2(neg(k*k))}\` : \`\${kx} − \${q2(neg(k*k))}\`,
+        'the 2! from the quadratic term is missing — each term is divided by k factorial'],
+       [fn==='exp' ? \`1 + \${kx} + \${q2(rat(k,2))}\` : fn==='cos' ? \`1 − \${q2(rat(k,2))}\` : \`\${kx} − \${q2(rat(k,2))}\`,
+        'the chain rule squares the inside factor for the second derivative, so it is k², not k'],
+       [fn==='cos' ? \`1 + \${q2(rat(k*k,2))}\` : fn==='ln' ? \`\${kx} + \${q2(rat(k*k,2))}\` : \`1 − \${kx} + \${q2(rat(k*k,2))}\`,
+        'a sign is wrong — check the second derivative at 0 carefully'],
+       [fn==='exp' ? \`1 + \${kx}\` : fn==='cos' ? '1' : kx,
+        'that stops at degree 1; the question asks for degree 2']],
+    ex:\`Build it from derivatives at 0. \${
+      fn==='exp' ? \`f(0) = 1, f′ = \${k}e<sup>\${kx}</sup> so f′(0) = \${k}, and f″ = \${k*k}e<sup>\${kx}</sup> so f″(0) = \${k*k}.\`
+      : fn==='cos' ? \`f(0) = 1, f′ = −\${k}sin(\${kx}) so f′(0) = 0, and f″ = −\${k*k}cos(\${kx}) so f″(0) = −\${k*k}.\`
+      : \`f(0) = 0, f′ = \${k}/(1 + \${kx}) so f′(0) = \${k}, and f″ = −\${k*k}/(1 + \${kx})² so f″(0) = −\${k*k}.\`
+    } Then P₂(x) = f(0) + f′(0)x + f″(0)x²/2 = \${A}. The 2! underneath is what makes the second derivative come out right.\`};
+}
 };
 
 /* ------------------------------ topic metadata --------------------------- */
@@ -726,7 +2261,126 @@ const TOPIC_LABEL = {
   chainRule:'Chain Rule', tangent:'Tangent Lines',
   indefPower:'Indefinite Integrals', defPoly:'Definite Integrals', uSub:'u-Substitution',
   intTrig:'Integrating Trig', intExp:'Integrating eˣ', area:'Area Under Curves',
-  secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives'
+  secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives',
+  charPoly:'Characteristic Polynomial', eigenvec:'Eigenvectors', diagonalisable:'Diagonalisability',
+  matPow:'Matrix Powers', nullSpace:'Null Space', rankNullity:'Rank–Nullity',
+  colSpace:'Column Space', gramSchmidt:'Gram–Schmidt', vecProj:'Vector Projection',
+  unitVec:'Unit Vectors', angleVec:'Angle Between Vectors', transMatrix:'Transformation Matrices',
+  implicitDiff:'Implicit Differentiation', lhopital:"L'Hôpital's Rule", relatedRates:'Related Rates',
+  optimisation:'Optimisation', inflection:'Inflection Points', invTrigDeriv:'Inverse Trig Derivatives',
+  logDiff:'Logarithmic Differentiation', byParts:'Integration by Parts', partialFrac:'Partial Fractions',
+  improper:'Improper Integrals', avgValue:'Average Value', volRev:'Volumes of Revolution',
+  riemannToInt:'Riemann Sums',
+  gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
+  tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
+  taylor:'Taylor Polynomials'
+};
+
+/* Topics grouped into strands. Declared once and used by both the Training
+   picker and the Chronicle, so a topic can never be reachable in one and
+   invisible in the other. At seventy topics a flat list is a wall; these are
+   what the screens collapse into. */
+const STRANDS = [
+  ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
+  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
+  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
+  ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
+  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation']],
+  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
+];
+
+/* ------------------------------- mastery --------------------------------- */
+/* Per-topic mastery drives three things: which topic comes up next, how hard
+   the problem is, and what the Chronicle reports. The model is a plain
+   exponential moving average of recent outcomes plus a spaced-repetition
+   interval that stretches as a topic becomes solid.
+
+   A record is {c, w, m, seen, last}: lifetime correct/wrong for reporting,
+   mastery m in [0,1], and \`last\` = the value of qCount when the topic was
+   last asked.                                                              */
+const Mastery = {
+  rec(key){
+    const t=Game.s.topicStats;
+    return t[key] || (t[key]={c:0,w:0,m:0,seen:0,last:-999});
+  },
+  // \`weight\` scales how much an outcome moves mastery. A mote is one small step
+  // of a topic, so four of them must not count as four full answers — otherwise
+  // the scheduler believes you have mastered what you were merely walked through.
+  update(key, ok, weight){
+    const r=this.rec(key);
+    const was=r.m;
+    const w = weight===undefined ? 1 : weight;
+    r.seen += w;
+    if(ok) r.c+=w; else r.w+=w;
+    const alpha = (r.seen<4 ? 0.45 : 0.25) * w;
+    r.m = clamp(r.m + alpha*((ok?1:0) - r.m), 0, 1);
+    r.last = Game.s.qCount;
+    r.t = Date.now();                          // wall clock, for real spacing
+    // Crossing into "solid" is the moment worth celebrating: it is real learning.
+    // A latch rather than an edge test — the crossing and the minimum-exposure
+    // gate can otherwise be satisfied on different answers and never coincide.
+    let justMastered=false;
+    if(r.m>=0.85 && r.seen>=5 && !r.mastered){ r.mastered=1; justMastered=true; }
+    else if(r.m<0.6) r.mastered=0;            // it can be lost, and re-earned
+    return {mastered:justMastered, was};
+  },
+  // Within a session, spacing is counted in questions.
+  dueIn(r){ return 3 + Math.round(r.m*r.m*22); },
+  // Across sessions it has to be counted in days, or a topic answered
+  // yesterday is never "due" simply because few questions have passed.
+  dueDays(r){ return 1 + Math.round(r.m*r.m*6); },
+  daysSince(r){ return r.t ? (Date.now()-r.t)/864e5 : Infinity; },
+  overdue(key){
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return true;
+    return (Game.s.qCount - r.last) >= this.dueIn(r)
+        || this.daysSince(r) >= this.dueDays(r);
+  },
+  weight(key){
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return 5;                          // unseen: introduce it
+    const elapsed = Game.s.qCount - r.last;
+    if(elapsed < 2) return 0.05;                         // never ask twice in a row
+    const need = Math.pow(1-r.m, 2)*4 + 0.3;             // weak topics dominate
+    const due  = Math.min(elapsed/this.dueIn(r), 2.5);   // overdue within the session
+    const cal  = Math.min(this.daysSince(r)/this.dueDays(r), 2.5);  // and across days
+    return need * (0.4 + Math.max(due, cal));
+  },
+  pick(pool){
+    if(!pool.length) return null;
+    if(!Game.s) return R.pick(pool);
+    const ws=pool.map(k=>this.weight(k));
+    let t=ws.reduce((a,b)=>a+b,0)*R._r();
+    for(let i=0;i<pool.length;i++){ t-=ws[i]; if(t<=0) return pool[i]; }
+    return pool[pool.length-1];
+  },
+  // Ease off where a player is struggling; push harder where they are solid.
+  adjustDiff(key, base){
+    const r=Game.s&&Game.s.topicStats[key];
+    if(!r || r.seen<3) return Math.min(base,2);          // go gently on new material
+    if(r.m < 0.45) return 1;
+    if(r.m > 0.85) return clamp(base+1,1,3);
+    return base;
+  },
+  // Is this a weak topic being deliberately brought back?
+  isReview(key){
+    const r=Game.s&&Game.s.topicStats[key];
+    return !!(r && r.seen>=3 && r.m<0.6);
+  },
+  label(m){ return m>=0.85?'solid' : m>=0.6?'steady' : m>=0.35?'shaky' : 'weak'; },
+  colour(m){ return m>=0.85?'var(--green)' : m>=0.6?'var(--gold)' : 'var(--red)'; },
+  all(){
+    return Object.keys(TOPIC_LABEL)
+      .map(k=>({k, r:Game.s.topicStats[k]}))
+      .filter(x=>x.r && x.r.seen>0);
+  },
+  weakest(n){
+    return this.all().sort((a,b)=>a.r.m-b.r.m).slice(0,n).map(x=>x.k);
+  },
+  dueList(){
+    return this.all().filter(x=>this.overdue(x.k)).map(x=>x.k);
+  }
 };
 
 /* --------------------------- tome (lesson pages) ------------------------- */
@@ -747,6 +2401,12 @@ const TOME = [
   b:'f′(x) is the slope of the tangent line — how fast f changes right now. The power rule handles most of it: bring the exponent down, drop it by one. Then three combining rules: product (f′g + fg′), quotient ((f′g − fg′)/g²), and chain (outside derivative × inside derivative). The chain rule is the one people forget.'},
  {t:'🏺 The integral accumulates',
   b:'An integral adds up infinitely many infinitesimal slices, which geometrically is the area under a curve. Antidifferentiation reverses the power rule: raise the power, divide by the new power, add C. The Fundamental Theorem then ties both halves of calculus together: ∫ₐᵇ f = F(b) − F(a).'},
+ {t:'🌌 Subspaces: what a matrix keeps and what it loses',
+  b:'The column space is everything a matrix can reach — the span of its columns — and its dimension is the rank. The null space is everything the matrix crushes to zero. Rank–nullity says these two account for every column exactly once: rank + nullity = number of columns. A matrix that loses a direction has a non-trivial null space, a determinant of zero, and no inverse; those are three descriptions of the same failure.'},
+ {t:'📐 Projection is the shadow of one arrow on another',
+  b:'proj_v(u) = (u·v / v·v)·v — a multiple of v, so it always lies along v. What is left over, u − proj_v(u), is perpendicular to v by construction. Repeat that subtraction against each direction you have already fixed and you have Gram–Schmidt, which turns any basis into a right-angled one. Least squares, Fourier series and every regression you have ever run are this one idea in larger rooms.'},
+ {t:'♾️ Taming the infinite',
+  b:"L'Hôpital resolves a 0/0 by differentiating top and bottom separately — not as a quotient — because near the point each behaves like its own tangent line. An improper integral is handled the same way: replace ∞ with b, integrate, then take a limit. ∫₁^∞ x^(−p) dx converges exactly when p > 1, which is the borderline that decides an enormous number of questions about whether an infinite total is finite."},
  {t:'🔗 Where the two subjects meet',
   b:'Take a function of several variables and differentiate it with respect to each one in turn, holding the others still. Stack those partial derivatives into a vector and you have the gradient — a vector that points in the direction of steepest increase. Linear algebra supplies the vector, calculus supplies the slopes. Every neural network on Earth is trained by walking downhill along that vector.'}
 ];
@@ -759,7 +2419,10 @@ const WEAPONS = [
   {id:'w3', nm:'Determinant Cleaver',  ic:'🪓', dmg:27, crit:.12, cost:300,  ds:'Scales its damage by the area it sweeps.'},
   {id:'w4', nm:'Gradient Halberd',     ic:'🔱', dmg:35, crit:.15, cost:520,  ds:'Always finds the steepest path into armour.'},
   {id:'w5', nm:'Eigenblade',           ic:'⚔️', dmg:45, crit:.20, cost:850,  ds:'Cuts only along directions that do not turn.'},
-  {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'}
+  {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'},
+  {id:'w7', nm:'Spectral Edge',        ic:'⚔️', dmg:74, crit:.28, cost:2200, ds:'Cuts along every eigendirection at once.'},
+  {id:'w8', nm:'Limitless Glaive',     ic:'🔱', dmg:95, crit:.32, cost:3400, ds:'Its reach has no upper bound.'},
+  {id:'w9', nm:'Gradient Ascendant',   ic:'⚔️', dmg:122,crit:.36, cost:5200, ds:'Points, always, at the steepest way in.'}
 ];
 const ARMORS = [
   {id:'a0', nm:'Peasant Tunic',      ic:'👕', def:0,  hp:0,  cost:0,    ds:'Cloth. Purely decorative in a fight.'},
@@ -767,7 +2430,10 @@ const ARMORS = [
   {id:'a2', nm:'Chainmail Hauberk',  ic:'🛡️', def:4,  hp:20, cost:170,  ds:'Thousands of tiny rings, each doing its part.'},
   {id:'a3', nm:'Orthogonal Plate',   ic:'🛡️', def:7,  hp:35, cost:340,  ds:'Deflects blows at perfect right angles.'},
   {id:'a4', nm:'Identity Aegis',     ic:'🛡️', def:11, hp:55, cost:620,  ds:'Leaves you exactly as you were.'},
-  {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'}
+  {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'},
+  {id:'a6', nm:'Diagonal Ward',      ic:'🛡️', def:22, hp:110,cost:1700, ds:'In the right basis, every blow arrives head-on.'},
+  {id:'a7', nm:'Convergent Mail',    ic:'🛡️', def:29, hp:150,cost:2600, ds:'Each ring smaller than the last, and the sum is finite.'},
+  {id:'a8', nm:'Summit Regalia',     ic:'🛡️', def:37, hp:200,cost:4000, ds:'Worn only by those who reached the top of both paths.'}
 ];
 const ITEMS = {
   potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
@@ -778,6 +2444,10 @@ const ITEMS = {
 
 const REALMS = [
   {nm:'Vale of Vectors', col:'#57cc7a', sky:['#1e3b2c','#0d1a14'],
+   bg:{key:'vale', seed:11, sky:['#1d4a34','#123021','#0a1a12'],
+       far:'crags', farCol:'#11311f', near:'conifers', nearCol:'#07180f',
+       ground:['#1c3626','#08130d'], rim:'rgba(160,255,190,.16)', haze:'rgba(14,42,29,.82)',
+       glow:'#dff7e2', weather:'fireflies', accent:'#a8ffbe'},
    pool:['vecAdd','vecScale','dot','mag','vecCombo','orth'],
    foes:[
      {nm:'Meadow Slime', art:'slime', hp:52,  atk:9,  gold:22, xp:12, col:'#6fd39a'},
@@ -786,6 +2456,10 @@ const REALMS = [
      {nm:'The Vector Wyrm',art:'dragon',hp:165,atk:20,gold:110,xp:70, col:'#39c47a', boss:true}
    ]},
   {nm:'Matrix Marches', col:'#5aa9e6', sky:['#1b2c47','#0b1220'],
+   bg:{key:'marches', seed:23, sky:['#22405f','#152740','#080f1a'],
+       far:'crags', farCol:'#13263e', near:'towers', nearCol:'#091524',
+       ground:['#182c44','#070d16'], rim:'rgba(150,200,255,.16)', haze:'rgba(12,26,44,.82)',
+       glow:'#dbe9ff', weather:'rain', accent:'#9fc4e8'},
    pool:['matVec','det2','transpose','matMul','trace','solve2'],
    foes:[
      {nm:'Rank-One Skeleton', art:'skeleton',hp:120,atk:18, gold:52, xp:34, col:'#cfe3f5'},
@@ -794,6 +2468,10 @@ const REALMS = [
      {nm:'The Determinant Golem',art:'golem',hp:270,atk:33, gold:190,xp:120,col:'#4a7fc4', boss:true}
    ]},
   {nm:'Cliffs of Change', col:'#f2c14e', sky:['#4a2f1c','#180f0a'],
+   bg:{key:'cliffs', seed:37, sky:['#5f3818','#38200f','#150b06'],
+       far:'crags', farCol:'#3c2212', near:'crags', nearCol:'#20110a',
+       ground:['#3a2415','#120a05'], rim:'rgba(255,200,130,.18)', haze:'rgba(46,26,13,.82)',
+       glow:'#ffe6bd', weather:'embers', accent:'#ffb163'},
    pool:['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','tangent','productRule'],
    foes:[
      {nm:'Asymptote Wisp',  art:'wisp',  hp:190,atk:28, gold:88, xp:60, col:'#ffe08a'},
@@ -802,25 +2480,284 @@ const REALMS = [
      {nm:'The Tangent Wraith',art:'wraith',hp:390,atk:47,gold:280,xp:190,col:'#e8b13a', boss:true}
    ]},
   {nm:'Integral Abyss', col:'#a06bd6', sky:['#2c1b44','#0e0817'],
+   bg:{key:'abyss', seed:53, sky:['#37234f','#1f1333','#0b0715'],
+       far:'spires', farCol:'#261644', near:'spires', nearCol:'#140b26',
+       ground:['#271840','#0a0614'], rim:'rgba(200,160,255,.17)', haze:'rgba(26,15,44,.82)',
+       glow:'#e6d5ff', weather:'ash', accent:'#c9b6e8'},
    pool:['indefPower','defPoly','uSub','intTrig','intExp','area','chainRule','quotient'],
    foes:[
-     {nm:'Riemann Shade',   art:'wraith',hp:290,atk:42, gold:130,xp:100, col:'#c39af0'},
-     {nm:'Abyssal Chimera', art:'dragon',hp:340,atk:48, gold:155,xp:120, col:'#9a5fd4'},
-     {nm:'Constant of Dread',art:'wisp', hp:380,atk:54, gold:175,xp:135, col:'#b58af0'},
-     {nm:'The Lich of Limits',art:'lich',hp:540,atk:66, gold:400,xp:300, col:'#8e4ed6', boss:true}
+     {nm:'Riemann Shade',   art:'wraith',hp:315,atk:50, gold:130,xp:100, col:'#c39af0'},
+     {nm:'Abyssal Chimera', art:'dragon',hp:370,atk:57, gold:155,xp:120, col:'#9a5fd4'},
+     {nm:'Constant of Dread',art:'wisp', hp:415,atk:64, gold:175,xp:135, col:'#b58af0'},
+     {nm:'The Lich of Limits',art:'lich',hp:590,atk:77, gold:400,xp:300, col:'#8e4ed6', boss:true}
    ]},
   {nm:'Eigen Citadel', col:'#e5484d', sky:['#43202a','#150a0e'],
+   bg:{key:'citadel', seed:71, sky:['#53232c','#2e1219','#12070a'],
+       far:'crags', farCol:'#351621', near:'keep', nearCol:'#1c0b12',
+       ground:['#361a22','#100608'], rim:'rgba(255,170,180,.17)', haze:'rgba(40,16,22,.82)',
+       glow:'#ffdde1', weather:'snow', accent:'#ffe9ec'},
    pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule'],
    foes:[
      {nm:'Basis Knight',    art:'knightfoe',hp:420,atk:58, gold:200,xp:170, col:'#f08a8d'},
      {nm:'Nullspace Drake', art:'dragon',   hp:480,atk:66, gold:235,xp:200, col:'#d4585c'},
-     {nm:'Spectral Champion',art:'knightfoe',hp:540,atk:74,gold:270,xp:230, col:'#ff9ea1'},
+     {nm:'Resonant Champion',art:'knightfoe',hp:540,atk:74,gold:270,xp:230, col:'#ff9ea1'},
      {nm:'The Eigen Dragon',art:'dragon',   hp:820,atk:92, gold:650,xp:520, col:'#e5484d', boss:true}
+   ]},
+  {nm:'Spectral Reach', col:'#3fd6c4', sky:['#0f3a3c','#061618'],
+   bg:{key:'spectral', seed:89, sky:['#13484b','#0c2c30','#050f12'],
+       far:'prisms', farCol:'#0e3336', near:'spires', nearCol:'#06181b',
+       ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
+       glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
+   pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2'],
+   foes:[
+     {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
+     {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},
+     {nm:'Null Vector Shade',art:'wraith',   hp:790,atk:99, gold:380,xp:340, col:'#6fe8dc'},
+     {nm:'The Spectral Sovereign',art:'knightfoe',hp:1150,atk:118,gold:820,xp:640,col:'#2bbcae', boss:true}
+   ]},
+  {nm:'Infinite Expanse', col:'#7f8cff', sky:['#1c1f4a','#08091a'],
+   bg:{key:'expanse', seed:103, sky:['#242a63','#161a3f','#070818'],
+       far:'dunes', farCol:'#1c2050', near:'dunes', nearCol:'#0d1030',
+       ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
+       glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
+   pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv'],
+   foes:[
+     {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
+     {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
+     {nm:'Convergence Wyrm',  art:'dragon',  hp:1150,atk:154,gold:560,xp:530, col:'#94a0ff'},
+     {nm:'The Unbounded',     art:'lich',    hp:1650,atk:184,gold:1200,xp:1000,col:'#5f6de8', boss:true}
+   ]},
+  {nm:'Gradient Summit', col:'#ffb648', sky:['#3a2a10','#140d05'],
+   bg:{key:'summit', seed:127, sky:['#5a3f14','#33230d','#120c04'],
+       far:'crags', farCol:'#3e2b10', near:'prisms', nearCol:'#211608',
+       ground:['#3a2a11','#120b04'], rim:'rgba(255,210,130,.2)', haze:'rgba(40,28,10,.8)',
+       glow:'#fff0cd', weather:'shards', accent:'#ffcf7a'},
+   pool:['gradient','dirDeriv','chainMulti','tangentPlane','doubleInt','geoSeries','taylor',
+         'partial','vecProj','optimisation','byParts','eigenvec'],
+   foes:[
+     {nm:'Saddle Point Sentinel', art:'golem',    hp:1300,atk:182,gold:640,xp:600,  col:'#ffcf7a'},
+     {nm:'Steepest Descent',      art:'wraith',   hp:1450,atk:197,gold:720,xp:680,  col:'#ffb648'},
+     {nm:'Warden of Both Paths',  art:'knightfoe',hp:1600,atk:213,gold:820,xp:770,  col:'#ffd894'},
+     {nm:'The Gradient Itself',   art:'dragon',   hp:2300,atk:250,gold:1800,xp:1500,col:'#ff9c1f', boss:true}
    ]}
 ];
 
 /* -------------------------------- state ---------------------------------- */
-const SAVE_KEY = 'eigenrealm.v1';
+/* ------------------------------- knights ---------------------------------- */
+/* One browser, several people: a family iPad, a classroom laptop, a phone
+   passed around. Each player gets their own knight and their own save slot.
+   Everything still lives in this browser — this is separation, not accounts,
+   and nothing is sent anywhere. Carrying a knight to another device is done
+   with an explicit code (see Profiles.export).                              */
+const LEGACY_KEY = 'eigenrealm.v1';          // the save from before knights existed
+const ROSTER_KEY = 'eigenrealm.knights';
+const SLOT_PREFIX= 'eigenrealm.knight.';
+const CRESTS = ['⚔️','🛡️','🐉','🦅','🌙','🔥','⭐','🌿','🐺','👑','🗡️','🏹'];
+const CREST_COLS = ['#f2c14e','#5aa9e6','#57cc7a','#e5484d','#a06bd6','#3fd6c4','#ff9c3d','#7f8cff'];
+const NAME_PARTS = [['Ada','Bram','Cass','Dara','Eryn','Finn','Gale','Hale','Ivo','Juno','Kai','Lyra','Mira','Nox','Orin','Pax','Quill','Rune','Sable','Tor','Vega','Wren','Yara','Zeph'],
+                    ['the Bold','the Swift','the Keen','the Steady','the Bright','the Quiet','the Fierce','the True','of the Vale','of the Marches','of the Cliffs','of the Abyss','of the Citadel','of the Reach','of the Expanse','of the Summit']];
+
+const Profiles = {
+  r:null,                                     // {knights:[{id,nm,crest,col}], active, adopted}
+
+  load(){
+    try{ this.r=JSON.parse(localStorage.getItem(ROSTER_KEY)); }catch(e){ this.r=null; }
+    if(!this.r || !Array.isArray(this.r.knights)) this.r={knights:[], active:null, adopted:0};
+    this.adoptLegacy();
+    // An active id pointing at a deleted knight would silently start a new game.
+    if(this.r.active && !this.get(this.r.active)) this.r.active=null;
+    return this.r;
+  },
+  save(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(this.r)); }catch(e){} Vault.mirror(); },
+
+  /* A save written before knights existed becomes the first knight, so anyone
+     already playing keeps their place. The old key is left where it is as a
+     backup rather than moved — adoption is recorded on the roster instead. */
+  adoptLegacy(){
+    if(this.r.adopted) return;
+    this.r.adopted=1;
+    let raw=null;
+    try{ raw=localStorage.getItem(LEGACY_KEY); }catch(e){}
+    if(raw){
+      const k=this.make('Knight');
+      try{ localStorage.setItem(this.key(k.id), raw); }catch(e){}
+      this.r.active=k.id;
+    }
+    this.save();
+  },
+
+  key(id){ return SLOT_PREFIX+id; },
+  list(){ return this.r ? this.r.knights : []; },
+  get(id){ return this.list().find(k=>k.id===id)||null; },
+  active(){ return this.r ? this.get(this.r.active) : null; },
+  activeKey(){ return this.r && this.r.active ? this.key(this.r.active) : null; },
+
+  newId(){ return 'k'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); },
+  suggestName(){ return R.pick(NAME_PARTS[0])+' '+R.pick(NAME_PARTS[1]); },
+
+  make(nm, crest, col){
+    const used=this.list().length;
+    const k={id:this.newId(), nm:(nm||'Knight').slice(0,18),
+             crest:crest||CRESTS[used%CRESTS.length],
+             col:col||CREST_COLS[used%CREST_COLS.length]};
+    this.r.knights.push(k);
+    return k;
+  },
+  create(nm, crest, col){
+    const k=this.make(nm, crest, col);
+    this.r.active=k.id; this.save();
+    Game.s=Game.fresh(); Game.save();
+    return k;
+  },
+  select(id){ if(!this.get(id)) return false; this.r.active=id; this.save(); return Game.load(); },
+  rename(id, nm){ const k=this.get(id); if(k){ k.nm=String(nm||'').slice(0,18)||k.nm; this.save(); } },
+  remove(id){
+    this.r.knights=this.list().filter(k=>k.id!==id);
+    try{ localStorage.removeItem(this.key(id)); }catch(e){}
+    if(this.r.active===id){ this.r.active=null; Game.s=null; }
+    this.save();
+  },
+
+  /** A one-line summary for the roster, read without loading the save. */
+  peek(id){
+    try{
+      const raw=localStorage.getItem(this.key(id));
+      if(!raw) return null;
+      const g=JSON.parse(raw);
+      const total=REALMS.reduce((n,r)=>n+r.foes.length,0);
+      return {lvl:g.lvl||1, cleared:Object.keys(g.cleared||{}).length, total,
+              correct:(g.stats&&g.stats.correct)||0,
+              mastered:Object.values(g.topicStats||{}).filter(r=>r.m>=0.85).length};
+    }catch(e){ return null; }
+  },
+
+  /* Carrying a knight between devices. GitHub Pages serves static files and
+     stores nothing, so there is no account to sync with — the save travels as
+     a code the player copies across themselves. */
+  export(id){
+    try{
+      const k=this.get(id), raw=localStorage.getItem(this.key(id));
+      if(!k || !raw) return '';
+      return btoa(unescape(encodeURIComponent(JSON.stringify({v:1, nm:k.nm, crest:k.crest, col:k.col, s:raw}))));
+    }catch(e){ return ''; }
+  },
+  import(code){
+    let o;
+    try{ o=JSON.parse(decodeURIComponent(escape(atob(String(code).trim())))); }
+    catch(e){ return {ok:false, why:'That code could not be read. Copy the whole thing and try again.'}; }
+    if(!o || o.v!==1 || !o.s) return {ok:false, why:'That is not a knight code from this game.'};
+    try{ JSON.parse(o.s); }catch(e){ return {ok:false, why:'The save inside that code is damaged.'}; }
+    const k=this.make(o.nm||'Knight', o.crest, o.col);
+    try{ localStorage.setItem(this.key(k.id), o.s); }catch(e){ return {ok:false, why:'This browser would not store the save.'}; }
+    this.r.active=k.id; this.save(); Game.load();
+    return {ok:true, k};
+  }
+};
+
+/* -------------------------------- the vault ------------------------------- */
+/* localStorage is the first thing a browser throws away. Safari clears all
+   script-writable storage for a site left unvisited for about a week, and
+   every engine drops it under memory pressure — which would quietly delete a
+   knight somebody spent a month on, with no error and nothing to blame.
+
+   So every save is written twice: to localStorage, which is synchronous and
+   stays authoritative, and to IndexedDB, which is evicted later and less
+   eagerly. If localStorage ever comes back empty, the vault puts it back.
+   Both are best-effort; the game runs unchanged when neither is available. */
+const Vault = {
+  DB:'eigenrealm', STORE:'saves', db:null, dead:false, timer:null,
+
+  open(){
+    if(this.db) return Promise.resolve(this.db);
+    if(this.dead || typeof indexedDB==='undefined') return Promise.resolve(null);
+    return new Promise(res=>{
+      let rq;
+      try{ rq=indexedDB.open(this.DB, 1); }catch(e){ this.dead=true; return res(null); }
+      rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(this.STORE); }catch(e){} };
+      rq.onsuccess=()=>{ this.db=rq.result; res(this.db); };
+      rq.onerror=rq.onblocked=()=>{ this.dead=true; res(null); };
+    });
+  },
+
+  /** Every eigenrealm.* key, as a plain object. */
+  snapshot(){
+    const o={};
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(k && k.indexOf('eigenrealm.')===0) o[k]=localStorage.getItem(k);
+      }
+    }catch(e){}
+    return o;
+  },
+
+  /* Mirroring on every answer would be wasteful, so it trails the game by a
+     moment. Nothing waits on it. */
+  mirror(){
+    clearTimeout(this.timer);
+    this.timer=setTimeout(()=>this.writeNow(), 900);
+  },
+  writeNow(){
+    return this.open().then(db=>{
+      if(!db) return;
+      try{
+        const tx=db.transaction(this.STORE,'readwrite'), st=tx.objectStore(this.STORE);
+        st.put(this.snapshot(), 'all');
+        st.put(Date.now(), 'at');
+      }catch(e){}
+    }).catch(()=>{});
+  },
+  read(){
+    return this.open().then(db=>new Promise(res=>{
+      if(!db) return res(null);
+      try{
+        const rq=db.transaction(this.STORE,'readonly').objectStore(this.STORE).get('all');
+        rq.onsuccess=()=>res(rq.result||null);
+        rq.onerror=()=>res(null);
+      }catch(e){ res(null); }
+    })).catch(()=>null);
+  },
+
+  /** How many knights a stored roster describes. */
+  count(raw){
+    try{ const r=JSON.parse(raw); return (r && r.knights && r.knights.length)||0; }catch(e){ return 0; }
+  },
+
+  /* At boot: if this browser has no knights but the vault does, we were
+     cleared out — put them back and say so, because restoring in silence is
+     how a player learns not to trust their own progress.
+
+     The test that matters is how many knights each side holds, not whether
+     the roster key exists: booting writes an empty roster before this runs,
+     so an existence check would see it, conclude all was well, and overwrite
+     the backup with nothing. */
+  recover(){
+    return this.read().then(saved=>{
+      const stored = saved ? this.count(saved[ROSTER_KEY]) : 0;
+      let live=0;
+      try{ live=this.count(localStorage.getItem(ROSTER_KEY)); }catch(e){}
+      if(!stored || live){ this.writeNow(); return false; }
+      clearTimeout(this.timer);            // do not let an empty mirror land on top
+      let n=0;
+      for(const k in saved){ try{ localStorage.setItem(k, saved[k]); n++; }catch(e){} }
+      return n>0;
+    });
+  },
+
+  /* Ask the browser not to evict us. Chrome and Firefox honour this once a
+     site looks used; Safari does not implement it, which is exactly why the
+     home-screen route matters more there. */
+  persist(){
+    try{
+      if(navigator.storage && navigator.storage.persist) return navigator.storage.persist().catch(()=>false);
+    }catch(e){}
+    return Promise.resolve(false);
+  }
+};
+
+const SAVE_KEY = LEGACY_KEY;                 // kept for older code paths
 const Game = {
   s:null,
   fresh(){
@@ -832,17 +2769,68 @@ const Game = {
       cleared:{},          // "realm:index" -> true
       realm:0,
       stats:{wins:0, correct:0, wrong:0, best:0},
-      topicStats:{}        // topic -> {c, w}
+      qCount:0,            // questions answered ever; the clock for spaced repetition
+      arenaBest:0,         // deepest arena wave reached
+      streak:{days:0,last:null},   // consecutive days practised
+      bounties:[],         // three rotating goals
+      riteWins:{},         // ladders cleared per topic; drives scaffolding fade
+      daily:null,          // daily skirmish scores
+      titles:{},           // earned milestone ids
+      topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
   load(){
-    try{ const raw=localStorage.getItem(SAVE_KEY); if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); return true; } }
-    catch(e){}
+    try{
+      const slot=Profiles.activeKey();
+      if(!slot) return false;                  // nobody is playing yet
+      const raw=localStorage.getItem(slot);
+      if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); this.migrate(); return true; }
+    }catch(e){}
     return false;
   },
-  save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.s)); }catch(e){} },
-  hardReset(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); },
-  start(){ this.s=this.fresh(); this.save(); UI.go('s-map'); },
+  // Older saves stored only {c,w}; seed the mastery model from that history.
+  migrate(){
+    const t=this.s.topicStats||(this.s.topicStats={});
+    let total=0;
+    for(const k of Object.keys(t)){
+      const r=t[k];
+      r.c=r.c||0; r.w=r.w||0;
+      if(typeof r.seen!=='number') r.seen=r.c+r.w;
+      if(typeof r.m!=='number')    r.m = r.seen? r.c/r.seen : 0;
+      if(typeof r.last!=='number') r.last=-999;
+      if(typeof r.t!=='number') r.t=0;         // never seen on the wall clock
+      total+=r.seen;
+    }
+    // In normal play qCount and the sum of \`seen\` advance together, so a
+    // shortfall means this save predates the mastery model.
+    if(typeof this.s.qCount!=='number' || this.s.qCount<total) this.s.qCount=total;
+  },
+  save(){
+    const slot=Profiles.activeKey();
+    if(!slot || !this.s) return;
+    try{ localStorage.setItem(slot, JSON.stringify(this.s)); }catch(e){}
+    Vault.mirror();
+  },
+  // Erases this knight only — the others on this device are untouched.
+  hardReset(){
+    const id=Profiles.r && Profiles.r.active;
+    if(id) Profiles.remove(id); else { try{ localStorage.removeItem(LEGACY_KEY); }catch(e){} }
+    location.reload();
+  },
+  start(){
+    // A quest needs someone to go on it. First-time players get a knight made
+    // for them rather than a form to fill in.
+    if(!Profiles.active()){ Profiles.create(Profiles.suggestName()); }
+    else if(this.s && (this.s.lvl>1 || Object.keys(this.s.cleared).length || this.s.stats.correct)){
+      // On a shared device the big gold button is the easiest way to destroy
+      // somebody else's afternoon. Make it say so first.
+      const k=Profiles.active();
+      if(!confirm(\`Start over as \${k.nm}? Their level, gold and cleared realms are lost.\\n\\n\`
+                 +\`If you are a different player, cancel and choose "Switch knight" instead.\`)) return;
+    }
+    this.s=this.fresh(); this.touchStreak(); this.save();
+    UI.refreshTitle(); UI.go('s-map');
+  },
   rest(){
     const cost = 25 + this.s.lvl*5;
     if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return; }
@@ -850,45 +2838,170 @@ const Game = {
     this.s.gold-=cost; this.s.hp=this.s.maxHp; this.save(); UI.renderMap();
     UI.toast(\`🔥 Rested by the fire. Full health for \${cost} gold.\`);
   },
+  // Returns the new streak length if today is a fresh day, else null.
+  touchStreak(){
+    const st=this.s.streak||(this.s.streak={days:0,last:null});
+    const today=dayKey(new Date());
+    if(st.last===today) return null;
+    const yest=dayKey(new Date(Date.now()-864e5));
+    st.days = (st.last===yest) ? st.days+1 : 1;
+    st.last = today;
+    this.save();
+    return st.days;
+  },
   weapon(){ return WEAPONS.find(w=>w.id===this.s.weapon); },
   armor(){ return ARMORS.find(a=>a.id===this.s.armor); },
-  maxHp(){ return 100 + (this.s.lvl-1)*18 + this.armor().hp; },
+  maxHp(){
+    const base = 100 + (this.s.lvl-1)*18 + this.armor().hp;
+    const mul = (typeof Arena!=='undefined' && Arena.active) ? Arena.mods.hpMul : 1;
+    return Math.round(base*mul);
+  },
   xpNeeded(){ return 60 + (this.s.lvl-1)*45; },
   gainXp(n){
     this.s.xp += n;
     let ups=0;
     while(this.s.xp >= this.xpNeeded()){ this.s.xp -= this.xpNeeded(); this.s.lvl++; ups++; }
-    if(ups){ this.s.maxHp=this.maxHp(); this.s.hp=this.s.maxHp; }
+    if(ups){
+      const before=this.s.maxHp;
+      this.s.maxHp=this.maxHp();
+      // A free full heal every level would undo the arena's attrition.
+      if(typeof Arena!=='undefined' && Arena.active)
+        this.s.hp=Math.min(this.s.maxHp, this.s.hp + Math.max(0,this.s.maxHp-before));
+      else this.s.hp=this.s.maxHp;
+    }
     return ups;
   },
-  recordAnswer(topic, ok){
-    const t = this.s.topicStats[topic] || (this.s.topicStats[topic]={c:0,w:0});
-    if(ok){ t.c++; this.s.stats.correct++; } else { t.w++; this.s.stats.wrong++; }
+  // \`weight\` is forwarded to the mastery model: a ladder step counts for a
+  // fraction of a full answer. Dropping it here silently inflates mastery.
+  recordAnswer(topic, ok, weight){
+    if(ok) this.s.stats.correct++; else this.s.stats.wrong++;
+    const res=Mastery.update(topic, ok, weight);
+    this.s.qCount++;
+    return res;
   }
+};
+
+/* ------------------------------ preferences ------------------------------ */
+const PREF_KEY='eigenrealm.prefs';
+const Prefs = {
+  d:{sound:true, motion:true, haptics:true},
+  load(){
+    let stored=null;
+    try{ stored=localStorage.getItem(PREF_KEY); if(stored) Object.assign(this.d, JSON.parse(stored)); }catch(e){}
+    // Honour the OS setting the first time, before the player has chosen.
+    if(!stored && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) this.d.motion=false;
+  },
+  save(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(this.d)); }catch(e){} },
+  toggle(k){ this.d[k]=!this.d[k]; this.save(); if(k==='sound'&&this.d.sound) Sfx.good(0); UI.renderPrefs(); }
+};
+
+/* -------------------------------- haptics -------------------------------- */
+const Haptic = {
+  fire(pattern){
+    if(!Prefs.d.haptics || !navigator.vibrate) return;
+    try{ navigator.vibrate(pattern); }catch(e){}
+  },
+  tap(){ this.fire(12); },
+  hit(){ this.fire(22); },
+  crit(){ this.fire([28,40,55]); },
+  hurt(){ this.fire([50,30,50]); },
+  win(){ this.fire([30,50,30,50,90]); }
 };
 
 /* --------------------------------- audio --------------------------------- */
 const Sfx = {
-  ctx:null, on:true,
-  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ this.on=false; } } },
-  play(freq, dur, type, vol){
-    if(!this.on) return; this.init(); if(!this.ctx) return;
+  ctx:null, ok:true,
+  init(){ if(!this.ctx){ try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ this.ok=false; } } },
+  play(freq, dur, type, vol, when){
+    if(!this.ok || !Prefs.d.sound) return;
+    this.init(); if(!this.ctx) return;
     try{
+      const t=this.ctx.currentTime+(when||0);
       const o=this.ctx.createOscillator(), g=this.ctx.createGain();
-      o.type=type||'triangle'; o.frequency.value=freq;
-      g.gain.setValueAtTime(vol||.06, this.ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(.0001, this.ctx.currentTime+dur);
+      o.type=type||'triangle'; o.frequency.setValueAtTime(freq,t);
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(vol||.06, t+.012);
+      g.gain.exponentialRampToValueAtTime(.0001, t+dur);
       o.connect(g); g.connect(this.ctx.destination);
-      o.start(); o.stop(this.ctx.currentTime+dur);
+      o.start(t); o.stop(t+dur+.02);
     }catch(e){}
   },
-  hit(){ this.play(180,.18,'square',.07); setTimeout(()=>this.play(90,.2,'sawtooth',.05),40); },
-  hurt(){ this.play(120,.28,'sawtooth',.07); },
-  good(){ this.play(660,.09,'triangle',.06); setTimeout(()=>this.play(990,.14,'triangle',.05),80); },
-  bad(){ this.play(200,.22,'square',.05); },
-  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.play(f,.22,'triangle',.06),i*110)); },
-  coin(){ this.play(880,.07,'square',.05); setTimeout(()=>this.play(1320,.1,'square',.04),60); }
+  // A short downward sweep — used for impacts, which need weight rather than pitch.
+  thud(f0, f1, dur, type, vol){
+    if(!this.ok || !Prefs.d.sound) return;
+    this.init(); if(!this.ctx) return;
+    try{
+      const t=this.ctx.currentTime;
+      const o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type=type||'sawtooth';
+      o.frequency.setValueAtTime(f0,t);
+      o.frequency.exponentialRampToValueAtTime(Math.max(20,f1), t+dur);
+      g.gain.setValueAtTime(vol||.08,t);
+      g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(t); o.stop(t+dur+.02);
+    }catch(e){}
+  },
+  hit(){ this.thud(320,90,.16,'square',.07); this.play(140,.2,'sawtooth',.05,.02); },
+  crit(){ this.thud(520,70,.26,'sawtooth',.10); this.play(1200,.1,'square',.05); this.play(1600,.14,'triangle',.04,.06); },
+  hurt(){ this.thud(180,50,.3,'sawtooth',.08); },
+  slam(){ this.thud(240,40,.42,'sawtooth',.11); this.play(70,.35,'square',.06,.03); },
+  // Rising with the streak: the reward literally climbs as you build a combo.
+  good(combo){
+    const step=Math.min(combo||0, 14);
+    const base=590*Math.pow(1.0595, step);            // one semitone per hit
+    this.play(base,.09,'triangle',.055);
+    this.play(base*1.5,.13,'triangle',.045,.07);
+  },
+  bad(){ this.play(220,.14,'square',.05); this.play(165,.22,'square',.045,.1); },
+  milestone(){ [0,1,2,3].forEach(i=>this.play(523*Math.pow(1.26,i),.16,'triangle',.06,i*.06)); },
+  mastered(){ [523,659,784,1046,1318].forEach((f,i)=>this.play(f,.28,'triangle',.06,i*.08)); },
+  win(){ [523,659,784,1046].forEach((f,i)=>this.play(f,.22,'triangle',.06,i*.11)); },
+  level(){ [392,523,659,784,1046].forEach((f,i)=>this.play(f,.3,'triangle',.07,i*.09)); },
+  coin(n){ const t=(n||0)*.045; this.play(1050,.06,'square',.045,t); this.play(1560,.09,'square',.035,t+.05); },
+  chestShake(){ [0,.16,.32,.48].forEach((t,i)=>this.play(150+i*8,.07,'square',.035,t)); },
+  chestOpen(){ this.thud(420,120,.2,'square',.06); [784,988,1175].forEach((f,i)=>this.play(f,.2,'triangle',.055,i*.07)); },
+  heart(){ this.thud(96,44,.16,'sine',.13); this.thud(80,38,.13,'sine',.09,.19); }
 };
+
+/* ------------------------------ celebration ------------------------------ */
+/* One place to fire a full-screen callout. Every dopamine beat routes here so
+   reduced-motion and sound preferences are honoured in a single spot.       */
+const Celebrate = {
+  q:[], showing:false,
+  banner(text, sub, colour, sound){
+    // Keep the queue short: a stale "NICE!" arriving three hits later is worse
+    // than dropping it, because the callout should describe the current moment.
+    this.q.push({text, sub, colour, sound});
+    if(this.q.length>2) this.q.splice(0, this.q.length-2);
+    if(!this.showing) this._next();
+  },
+  _next(){
+    const item=this.q.shift();
+    if(!item){ this.showing=false; return; }
+    this.showing=true;
+    const el=document.getElementById('bigBanner');
+    el.innerHTML=\`<div class="bnr" style="--bc:\${item.colour||'var(--gold)'}">
+        <div class="bt">\${item.text}</div>\${item.sub?\`<div class="bs">\${item.sub}</div>\`:''}</div>\`;
+    el.classList.add('on');
+    if(item.sound) item.sound();
+    const hold = (Prefs.d.motion ? 950 : 620) / (this.q.length?1.6:1);   // catch up when stacked
+    setTimeout(()=>{ el.classList.remove('on'); setTimeout(()=>this._next(), 180); }, hold);
+  }
+};
+
+/* Animated number roll-up — watching a total climb is half the reward. */
+function countUp(el, to, dur, prefix){
+  if(!el) return;
+  if(!Prefs.d.motion){ el.textContent=(prefix||'')+to; return; }
+  const t0=performance.now(), from=0;
+  (function step(now){
+    const k=clamp((now-t0)/dur,0,1);
+    const eased=1-Math.pow(1-k,3);
+    el.textContent=(prefix||'')+Math.round(from+(to-from)*eased);
+    if(k<1) requestAnimationFrame(step);
+  })(t0);
+}
 
 /* ------------------------------- rendering -------------------------------- */
 const cv = document.getElementById('scene');
@@ -905,11 +3018,73 @@ function fitCanvas(){
 window.addEventListener('resize', fitCanvas);
 
 /* --- small drawing helpers --- */
+/* Sprites are drawn twice: once flat and dark at four offsets to lay down an
+   outline, then normally on top. SIL carries the outline colour, and every
+   fill in the sprite code routes through setFill/paint so the pass works
+   without duplicating any of the drawing logic. */
+let SIL = null;
+
+function setFill(c){ cx.fillStyle = SIL || c; }
+function setStroke(c){ cx.strokeStyle = SIL || c; }
+
+// A vertical gradient derived from the base colour: lit on top, falling to shadow.
+function paint(c,y,h){
+  if(SIL) return SIL;
+  if(typeof c!=='string') return c;
+  const g=cx.createLinearGradient(0,y,0,y+h);
+  g.addColorStop(0,   shadeCol(c, 30));
+  g.addColorStop(.52, c);
+  g.addColorStop(1,   shadeCol(c,-34));
+  return g;
+}
 function rr(x,y,w,h,r){ cx.beginPath(); cx.moveTo(x+r,y);
   cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r);
   cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath(); }
-function fillRR(x,y,w,h,r,c){ cx.fillStyle=c; rr(x,y,w,h,r); cx.fill(); }
-function circle(x,y,r,c){ cx.beginPath(); cx.arc(x,y,r,0,7); cx.fillStyle=c; cx.fill(); }
+function fillRR(x,y,w,h,r,c){ cx.fillStyle=paint(c,y,h); rr(x,y,w,h,r); cx.fill(); }
+function circle(x,y,r,c){
+  cx.beginPath(); cx.arc(x,y,r,0,7);
+  if(SIL) cx.fillStyle=SIL;
+  else{
+    const g=cx.createRadialGradient(x-r*.34,y-r*.4,r*.08,x,y,r*1.05);
+    g.addColorStop(0, shadeCol(c,46)); g.addColorStop(.55,c); g.addColorStop(1,shadeCol(c,-32));
+    cx.fillStyle=g;
+  }
+  cx.fill();
+}
+// Flat fill — for particles, where a gradient per dot is wasted work.
+function dot(x,y,r,c){ cx.beginPath(); cx.arc(x,y,r,0,7); cx.fillStyle=c; cx.fill(); }
+function toRGBA(hex,a){
+  const n=parseInt(hex.slice(1),16);
+  return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';
+}
+// Soft light. Auras and flames need a falloff to transparent, not a filled disc.
+function glow(x,y,r,c,a){
+  if(SIL) return;
+  const g=cx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,toRGBA(c,a)); g.addColorStop(.45,toRGBA(c,a*.42)); g.addColorStop(1,toRGBA(c,0));
+  cx.fillStyle=g; cx.beginPath(); cx.arc(x,y,r,0,7); cx.fill();
+}
+// Soft contact shadow that spreads as the sprite rises.
+function contactShadow(x,y,rx,lift){
+  if(SIL) return;
+  const k=clamp(1-lift/26,.55,1);
+  cx.save(); cx.globalAlpha=.5*k;
+  const g=cx.createRadialGradient(x,y,1,x,y,rx*k);
+  g.addColorStop(0,'rgba(0,0,0,.95)'); g.addColorStop(.65,'rgba(0,0,0,.45)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=g;
+  cx.beginPath(); cx.ellipse(x,y,rx*k,rx*k*.32,0,0,7); cx.fill();
+  cx.restore();
+}
+// Outline pass, then the real pass.
+function withOutline(drawAt){
+  SIL='#0a0812';
+  const o=2.7;
+  for(const [dx,dy] of [[-o,0],[o,0],[0,-o],[0,o]]){
+    cx.save(); cx.translate(dx,dy); drawAt(); cx.restore();
+  }
+  SIL=null;
+  drawAt();
+}
 
 /* --- knight (the player) --- */
 function drawKnight(x,y,s,lunge,hurt,dead){
@@ -919,7 +3094,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.scale(s,s);
 
   // shadow
-  cx.save(); cx.globalAlpha=.3; circle(0,4,34,'#000'); cx.restore();
+  contactShadow(0,4,36,0);
 
   const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
   const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
@@ -931,7 +3106,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   const sw = Math.sin(Anim.t*3)*6;
   cx.moveTo(-6,-72); cx.quadraticCurveTo(-46+sw,-30,-30+sw,10);
   cx.quadraticCurveTo(-10,4,6,-70);
-  cx.fillStyle=cape; cx.fill();
+  setFill(cape); cx.fill();
   cx.restore();
 
   // legs
@@ -943,8 +3118,8 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   // body
   fillRR(-24,-78,48,52,10,skin);
   // tabard
-  cx.fillStyle=cape; cx.fillRect(-9,-78,18,50);
-  cx.fillStyle='#f2c14e';
+  setFill(cape); cx.fillRect(-9,-78,18,50);
+  setFill('#f2c14e');
   cx.beginPath(); cx.moveTo(0,-66); cx.lineTo(6,-56); cx.lineTo(0,-46); cx.lineTo(-6,-56); cx.closePath(); cx.fill();
   // pauldrons
   circle(-26,-72,12,dark); circle(26,-72,12,dark);
@@ -952,30 +3127,30 @@ function drawKnight(x,y,s,lunge,hurt,dead){
 
   // helmet
   fillRR(-19,-118,38,40,13,skin);
-  cx.fillStyle='#1a1622'; cx.fillRect(-14,-106,28,8);
-  cx.fillStyle='#5ad1ff'; cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
+  setFill('#1a1622'); cx.fillRect(-14,-106,28,8);
+  setFill('#5ad1ff'); cx.fillRect(-12,-104,9,4); cx.fillRect(3,-104,9,4);
   // plume
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
   cx.quadraticCurveTo(10,-130,-2,-122);
-  cx.fillStyle='#e5484d'; cx.fill();
+  setFill('#e5484d'); cx.fill();
 
   // shield (left arm)
   cx.save(); cx.translate(-38,-58); cx.rotate(-0.15);
   cx.beginPath(); cx.moveTo(-14,-20); cx.lineTo(14,-20); cx.lineTo(14,8); cx.quadraticCurveTo(0,24,-14,8); cx.closePath();
-  cx.fillStyle='#3f6bb5'; cx.fill(); cx.lineWidth=3; cx.strokeStyle='#f2c14e'; cx.stroke();
-  cx.fillStyle='#f2c14e'; cx.font='bold 15px serif'; cx.textAlign='center'; cx.fillText('λ',0,2);
+  setFill('#3f6bb5'); cx.fill(); cx.lineWidth=3; setStroke('#f2c14e'); cx.stroke();
+  setFill('#f2c14e'); cx.font='bold 15px serif'; cx.textAlign='center'; cx.fillText('λ',0,2);
   cx.restore();
 
   // sword (right arm) — swings with the lunge
   cx.save();
   cx.translate(36,-58);
   cx.rotate(0.22 + lunge*2.2);   // rests clear of the helm, slashes forward
-  cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-6,9,20);          // grip
-  cx.fillStyle='#f2c14e'; cx.fillRect(-13,-10,28,7);        // crossguard
+  setFill('#6b5a3e'); cx.fillRect(-4,-6,9,20);          // grip
+  setFill('#f2c14e'); cx.fillRect(-13,-10,28,7);        // crossguard
   const g=cx.createLinearGradient(0,-70,0,-8);
   g.addColorStop(0,'#ffffff'); g.addColorStop(.5,'#dfe8f5'); g.addColorStop(1,'#93a3ba');
-  cx.fillStyle=g;
+  setFill(g);
   cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(4,-64); cx.lineTo(0,-74); cx.lineTo(-4,-64); cx.closePath(); cx.fill();
   cx.restore();
 
@@ -991,7 +3166,7 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
   const c = hurt>0 ? '#ffffff' : col;
   const bob = Math.sin(Anim.t*2.2)*4;
 
-  cx.save(); cx.globalAlpha=.3; circle(0,4,34,'#000'); cx.restore();
+  contactShadow(0,4,36,Math.abs(bob));
   cx.translate(0,bob);
 
   const shade = shadeCol(c,-40);
@@ -1001,7 +3176,7 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
     cx.save(); cx.scale(1/sq, sq);
     cx.beginPath(); cx.moveTo(-42,2);
     cx.quadraticCurveTo(-46,-64,0,-64); cx.quadraticCurveTo(46,-64,42,2);
-    cx.closePath(); cx.fillStyle=c; cx.fill();
+    cx.closePath(); setFill(c); cx.fill();
     cx.globalAlpha=.35; circle(-14,-40,9,'#fff'); cx.globalAlpha=1;
     circle(-14,-28,6,'#1a1622'); circle(14,-28,6,'#1a1622');
     circle(-15,-30,2.5,'#fff'); circle(13,-30,2.5,'#fff');
@@ -1011,20 +3186,20 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
     fillRR(-16,-34,13,36,5,shade); fillRR(3,-34,13,36,5,shade);
     fillRR(-24,-74,48,44,12,c);
     // ears
-    cx.beginPath(); cx.moveTo(-24,-92); cx.lineTo(-48,-104); cx.lineTo(-24,-78); cx.fillStyle=c; cx.fill();
+    cx.beginPath(); cx.moveTo(-24,-92); cx.lineTo(-48,-104); cx.lineTo(-24,-78); setFill(c); cx.fill();
     cx.beginPath(); cx.moveTo(24,-92); cx.lineTo(48,-104); cx.lineTo(24,-78); cx.fill();
     fillRR(-20,-108,40,34,11,c);
     circle(-10,-94,5,'#1a1622'); circle(10,-94,5,'#1a1622');
     circle(-11,-95,2,'#f2c14e'); circle(9,-95,2,'#f2c14e');
-    cx.fillStyle='#fff';
+    setFill('#fff');
     cx.beginPath(); cx.moveTo(-8,-84); cx.lineTo(-4,-76); cx.lineTo(0,-84); cx.closePath(); cx.fill();
     cx.beginPath(); cx.moveTo(2,-84); cx.lineTo(6,-76); cx.lineTo(10,-84); cx.closePath(); cx.fill();
     // club
     cx.save(); cx.translate(-32,-58); cx.rotate(0.5 - lunge*2.2);
-    cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-40,8,44); fillRR(-11,-56,22,20,7,'#8b7350'); cx.restore();
+    setFill('#6b5a3e'); cx.fillRect(-4,-40,8,44); fillRR(-11,-56,22,20,7,'#8b7350'); cx.restore();
   }
   else if(art==='skeleton'){
-    cx.strokeStyle=c; cx.lineWidth=7; cx.lineCap='round';
+    setStroke(c); cx.lineWidth=7; cx.lineCap='round';
     cx.beginPath(); cx.moveTo(0,-30); cx.lineTo(-14,2); cx.moveTo(0,-30); cx.lineTo(14,2); cx.stroke();
     cx.beginPath(); cx.moveTo(0,-30); cx.lineTo(0,-76); cx.stroke();
     for(let i=0;i<4;i++){ cx.beginPath(); cx.moveTo(-15,-70+i*11); cx.lineTo(15,-70+i*11); cx.stroke(); }
@@ -1032,38 +3207,35 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
     fillRR(-19,-112,38,36,13,c);
     circle(-9,-96,6,'#1a1622'); circle(9,-96,6,'#1a1622');
     circle(-9,-96,2.5,'#e5484d'); circle(9,-96,2.5,'#e5484d');
-    cx.fillStyle='#1a1622'; cx.fillRect(-8,-84,16,4);
+    setFill('#1a1622'); cx.fillRect(-8,-84,16,4);
     cx.save(); cx.translate(-30,-56); cx.rotate(0.4-lunge*2.2);
-    cx.fillStyle='#b9c6d6'; cx.fillRect(-3,-58,6,52); cx.fillRect(-12,-14,24,6); cx.restore();
+    setFill('#b9c6d6'); cx.fillRect(-3,-58,6,52); cx.fillRect(-12,-14,24,6); cx.restore();
   }
   else if(art==='golem'){
     fillRR(-30,-40,24,44,6,shade); fillRR(6,-40,24,44,6,shade);
     fillRR(-40,-104,80,68,14,c);
     fillRR(-52,-98,16,44,7,shade); fillRR(36,-98,16,44,7,shade);
-    cx.fillStyle='#1a1622'; cx.fillRect(-24,-88,18,9); cx.fillRect(6,-88,18,9);
+    setFill('#1a1622'); cx.fillRect(-24,-88,18,9); cx.fillRect(6,-88,18,9);
     circle(-15,-84,4,'#f2c14e'); circle(15,-84,4,'#f2c14e');
-    cx.strokeStyle=shade; cx.lineWidth=3;
+    setStroke(shade); cx.lineWidth=3;
     cx.beginPath(); cx.moveTo(-40,-64); cx.lineTo(40,-64); cx.moveTo(0,-104); cx.lineTo(0,-64); cx.stroke();
-    cx.fillStyle='rgba(255,255,255,.15)';
+    setFill('rgba(255,255,255,.15)');
     cx.fillRect(-34,-98,26,26);
   }
   else if(art==='wisp' || art==='wraith'){
     const a=Anim.t*2;
-    for(let i=3;i>0;i--){
-      cx.globalAlpha = .16*i;
-      circle(Math.sin(a+i)*7, -58+Math.cos(a+i)*7, 34+i*9, c);
-    }
+    glow(Math.sin(a)*5, -60+Math.cos(a)*5, 74, c, .5);
     cx.globalAlpha=1;
     cx.beginPath();
     cx.moveTo(-30,-58); cx.quadraticCurveTo(-34,-116,0,-116);
     cx.quadraticCurveTo(34,-116,30,-58);
     cx.quadraticCurveTo(20,-4,0,-14); cx.quadraticCurveTo(-20,-4,-30,-58);
-    cx.fillStyle=c; cx.fill();
+    setFill(c); cx.fill();
     circle(-11,-84,7,'#1a1622'); circle(11,-84,7,'#1a1622');
     circle(-11,-84,3,'#fff'); circle(11,-84,3,'#fff');
     if(art==='wraith'){
       cx.save(); cx.translate(-34,-70); cx.rotate(0.3-lunge*2);
-      cx.strokeStyle='#e8e8ff'; cx.lineWidth=4; cx.beginPath();
+      setStroke('#e8e8ff'); cx.lineWidth=4; cx.beginPath();
       cx.moveTo(0,0); cx.quadraticCurveTo(-24,-30,-8,-58); cx.stroke(); cx.restore();
     }
   }
@@ -1076,15 +3248,15 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
       cx.beginPath(); cx.moveTo(0,0);
       cx.quadraticCurveTo(sgn*54,-30,sgn*66,10);
       cx.quadraticCurveTo(sgn*34,-4,0,20); cx.closePath();
-      cx.fillStyle=shade; cx.fill(); cx.restore();
+      setFill(shade); cx.fill(); cx.restore();
     });
     cx.restore();
     fillRR(-22,-90,44,58,16,c);
     fillRR(-17,-122,34,34,12,c);
     cx.beginPath(); cx.moveTo(-16,-104); cx.lineTo(-34,-98); cx.lineTo(-16,-94); cx.closePath();
-    cx.fillStyle='#f2c14e'; cx.fill();
+    setFill('#f2c14e'); cx.fill();
     circle(-6,-108,5,'#1a1622'); circle(9,-108,5,'#1a1622');
-    cx.strokeStyle='#f2c14e'; cx.lineWidth=4; cx.lineCap='round';
+    setStroke('#f2c14e'); cx.lineWidth=4; cx.lineCap='round';
     cx.beginPath(); cx.moveTo(-9,-32); cx.lineTo(-13,2); cx.moveTo(9,-32); cx.lineTo(13,2); cx.stroke();
   }
   else if(art==='dragon'){
@@ -1094,12 +3266,12 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
       cx.beginPath(); cx.moveTo(0,0);
       cx.quadraticCurveTo(sgn*70,-56,sgn*92,-2);
       cx.quadraticCurveTo(sgn*52,-14,0,26); cx.closePath();
-      cx.fillStyle=shade; cx.fill(); cx.restore();
+      setFill(shade); cx.fill(); cx.restore();
     });
     // tail
     cx.beginPath(); cx.moveTo(26,-24);
     cx.quadraticCurveTo(78,-14,66,-64); cx.quadraticCurveTo(72,-26,26,-8);
-    cx.fillStyle=c; cx.fill();
+    setFill(c); cx.fill();
     fillRR(-28,-38,20,40,6,shade); fillRR(10,-38,20,40,6,shade);
     fillRR(-32,-100,64,64,18,c);
     // belly
@@ -1107,43 +3279,43 @@ function drawFoe(x,y,s,art,col,lunge,hurt,dead){
     // head
     cx.save(); cx.translate(-30,-112);
     fillRR(-26,-24,52,40,14,c);
-    cx.beginPath(); cx.moveTo(-26,-6); cx.lineTo(-52,4); cx.lineTo(-26,12); cx.closePath(); cx.fillStyle=c; cx.fill();
+    cx.beginPath(); cx.moveTo(-26,-6); cx.lineTo(-52,4); cx.lineTo(-26,12); cx.closePath(); setFill(c); cx.fill();
     // horns
-    cx.beginPath(); cx.moveTo(6,-24); cx.lineTo(16,-46); cx.lineTo(20,-22); cx.closePath(); cx.fillStyle='#f2c14e'; cx.fill();
+    cx.beginPath(); cx.moveTo(6,-24); cx.lineTo(16,-46); cx.lineTo(20,-22); cx.closePath(); setFill('#f2c14e'); cx.fill();
     cx.beginPath(); cx.moveTo(-8,-24); cx.lineTo(-2,-44); cx.lineTo(4,-22); cx.closePath(); cx.fill();
     circle(-10,-8,6,'#1a1622'); circle(-11,-9,2.5,'#f2c14e');
     cx.restore();
   }
   else if(art==='lich'){
-    for(let i=2;i>0;i--){ cx.globalAlpha=.14*i; circle(0,-70,50+i*12,c); }
+    glow(0,-70,82,c,.45);
     cx.globalAlpha=1;
     cx.beginPath(); cx.moveTo(-34,-40); cx.lineTo(-24,-108); cx.lineTo(24,-108); cx.lineTo(34,-40);
-    cx.quadraticCurveTo(0,-22,-34,-40); cx.closePath(); cx.fillStyle=c; cx.fill();
+    cx.quadraticCurveTo(0,-22,-34,-40); cx.closePath(); setFill(c); cx.fill();
     // hood
     cx.beginPath(); cx.moveTo(-26,-104); cx.quadraticCurveTo(0,-152,26,-104); cx.quadraticCurveTo(0,-118,-26,-104);
-    cx.fillStyle=shade; cx.fill();
+    setFill(shade); cx.fill();
     fillRR(-16,-130,32,30,11,'#e8e2f0');
     circle(-7,-116,5,'#1a1622'); circle(7,-116,5,'#1a1622');
     circle(-7,-116,2.5,'#7cf'); circle(7,-116,2.5,'#7cf');
     // staff
     cx.save(); cx.translate(-38,-60); cx.rotate(0.15-lunge*1.6);
-    cx.fillStyle='#4a3a5e'; cx.fillRect(-3,-70,6,86);
-    circle(0,-78,11,'#7cf'); cx.globalAlpha=.4; circle(0,-78,18,'#7cf'); cx.restore();
+    setFill('#4a3a5e'); cx.fillRect(-3,-70,6,86);
+    glow(0,-78,26,'#77ccff',.85); circle(0,-78,11,'#7cf'); cx.restore();
   }
   else if(art==='knightfoe'){
     fillRR(-20,-32,16,36,5,shade); fillRR(4,-32,16,36,5,shade);
     fillRR(-26,-80,52,52,11,c);
     circle(-28,-74,12,shade); circle(28,-74,12,shade);
     fillRR(-20,-120,40,42,13,c);
-    cx.fillStyle='#1a1622'; cx.fillRect(-15,-108,30,9);
-    cx.fillStyle='#e5484d'; cx.fillRect(-13,-106,10,5); cx.fillRect(3,-106,10,5);
+    setFill('#1a1622'); cx.fillRect(-15,-108,30,9);
+    setFill('#e5484d'); cx.fillRect(-13,-106,10,5); cx.fillRect(3,-106,10,5);
     cx.beginPath(); cx.moveTo(-6,-122); cx.lineTo(0,-142); cx.lineTo(6,-122); cx.closePath();
-    cx.fillStyle=shade; cx.fill();
+    setFill(shade); cx.fill();
     cx.save(); cx.translate(-34,-62); cx.rotate(0.5-lunge*2.3);
-    cx.fillStyle='#6b5a3e'; cx.fillRect(-4,-6,8,18);
-    cx.fillStyle='#c0c8d4'; cx.fillRect(-12,-10,25,6);
+    setFill('#6b5a3e'); cx.fillRect(-4,-6,8,18);
+    setFill('#c0c8d4'); cx.fillRect(-12,-10,25,6);
     cx.beginPath(); cx.moveTo(-6,-10); cx.lineTo(6,-10); cx.lineTo(0,-70); cx.closePath();
-    cx.fillStyle='#d8e0ec'; cx.fill(); cx.restore();
+    setFill('#d8e0ec'); cx.fill(); cx.restore();
   }
   cx.restore();
 }
@@ -1153,42 +3325,257 @@ function shadeCol(hex,amt){
   return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);
 }
 
-/* --- background --- */
-function drawBg(sky){
+/* ------------------------------ backgrounds ------------------------------- */
+/* Each realm owns a skyline, a ground tint and a weather system. The two
+   silhouette layers are painted once into offscreen canvases and then blitted
+   with parallax, so the per-frame cost is two draw calls rather than a few
+   hundred paths.                                                             */
+
+function seeded(seed){ let s=seed>>>0; return ()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; }; }
+
+function makeLayer(w,h,fn){
+  const c=document.createElement('canvas');
+  c.width=w; c.height=h;
+  fn(c.getContext('2d'), w, h);
+  return c;
+}
+
+/* --- skyline painters. Each fills from \`base\` downward. --- */
+const SKYLINE = {
+  conifers(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<30;i++){
+      const x=rnd()*w, ht=48+rnd()*96, wd=20+rnd()*24;
+      g.beginPath(); g.moveTo(x,base-ht*1.34);
+      g.lineTo(x+wd*.34,base-ht*.62); g.lineTo(x-wd*.34,base-ht*.62); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(x,base-ht);
+      g.lineTo(x+wd*.5,base); g.lineTo(x-wd*.5,base); g.closePath(); g.fill();
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  crags(g,w,h,col,rnd,base){
+    g.fillStyle=col; g.beginPath(); g.moveTo(0,h);
+    let x=0, y=base-40;
+    g.lineTo(0,y);
+    while(x<w){
+      const step=34+rnd()*70;
+      x+=step; y=base-30-rnd()*130;
+      g.lineTo(x-step*.5, y-rnd()*26);
+      g.lineTo(x, y);
+    }
+    g.lineTo(w,h); g.closePath(); g.fill();
+  },
+  towers(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<7;i++){
+      const x=rnd()*w, ht=90+rnd()*110, wd=34+rnd()*26;
+      g.fillRect(x,base-ht,wd,ht+(h-base));
+      for(let k=0;k<Math.floor(wd/12);k++) g.fillRect(x+k*12, base-ht-9, 7, 9);   // crenellations
+      g.beginPath(); g.moveTo(x-7,base-ht-9); g.lineTo(x+wd/2,base-ht-46);
+      g.lineTo(x+wd+7,base-ht-9); g.closePath(); g.fill();
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  spires(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<14;i++){
+      const x=rnd()*w, ht=70+rnd()*150, wd=9+rnd()*16, lean=(rnd()-.5)*26;
+      g.beginPath();
+      g.moveTo(x-wd/2,base); g.lineTo(x+wd/2,base);
+      g.quadraticCurveTo(x+wd/2+lean*.4, base-ht*.6, x+lean, base-ht);
+      g.quadraticCurveTo(x-wd/2+lean*.4, base-ht*.6, x-wd/2, base);
+      g.closePath(); g.fill();
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  keep(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<5;i++){
+      const x=rnd()*w, ht=70+rnd()*120, wd=70+rnd()*80;
+      g.fillRect(x,base-ht,wd,ht+(h-base));
+      for(let k=0;k<Math.floor(wd/18);k++) g.fillRect(x+k*18, base-ht-11, 11, 11);
+      const ax=x+wd/2;                                        // gate arch
+      g.beginPath(); g.moveTo(ax-13,base); g.lineTo(ax-13,base-26);
+      g.arc(ax,base-26,13,Math.PI,0); g.lineTo(ax+13,base); g.closePath();
+      g.globalCompositeOperation='destination-out'; g.fill();
+      g.globalCompositeOperation='source-over'; g.fillStyle=col;
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  // Tilted slabs, like light split through glass — the Spectral Reach.
+  prisms(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<11;i++){
+      const x=rnd()*w, ht=60+rnd()*140, wd=16+rnd()*30, lean=(rnd()-.5)*40;
+      g.beginPath();
+      g.moveTo(x,base); g.lineTo(x+wd,base);
+      g.lineTo(x+wd+lean, base-ht); g.lineTo(x+lean, base-ht);
+      g.closePath(); g.fill();
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  // Long shallow swells that never quite arrive — the Infinite Expanse.
+  dunes(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    g.beginPath(); g.moveTo(0,h); g.lineTo(0,base-20-rnd()*30);
+    for(let x=0;x<=w;x+=26){
+      g.quadraticCurveTo(x+13, base-30-rnd()*70, x+26, base-20-rnd()*46);
+    }
+    g.lineTo(w,h); g.closePath(); g.fill();
+  },
+  arcs(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    const ht=110, n=9, wd=w/n;
+    g.fillRect(0,base-ht,w,ht+(h-base));
+    g.globalCompositeOperation='destination-out';
+    for(let i=0;i<n;i++){
+      const ax=i*wd+wd/2;
+      g.beginPath(); g.moveTo(ax-wd*.3,base); g.lineTo(ax-wd*.3,base-52);
+      g.arc(ax,base-52,wd*.3,Math.PI,0); g.lineTo(ax+wd*.3,base); g.closePath(); g.fill();
+    }
+    g.globalCompositeOperation='source-over';
+    g.fillStyle=col;
+    for(let k=0;k<Math.floor(w/22);k++) g.fillRect(k*22, base-ht-10, 13, 10);
+  }
+};
+
+const BgLayers = {key:null, far:null, near:null};
+function buildLayers(bg){
+  if(BgLayers.key===bg.key) return;
+  const rndF=seeded(bg.seed), rndN=seeded(bg.seed*7+13);
+  BgLayers.far  = makeLayer(W,H,(g,w,h)=>SKYLINE[bg.far ](g,w,h,bg.farCol, rndF, H-150));
+  BgLayers.near = makeLayer(W,H,(g,w,h)=>SKYLINE[bg.near](g,w,h,bg.nearCol,rndN, H-118));
+  BgLayers.key=bg.key;
+}
+function blit(layer, offset){
+  const x=-(offset % W);
+  cx.drawImage(layer, x, 0);
+  cx.drawImage(layer, x+W, 0);
+}
+
+/* -------------------------------- weather --------------------------------- */
+const Weather = {
+  kind:null, p:[], accent:'#fff',
+  set(kind, accent){
+    if(this.kind===kind && this.accent===accent) return;
+    this.kind=kind; this.accent=accent; this.p=[];
+  },
+  cap(){ return Prefs.d.motion ? 46 : 0; },
+  spawn(){
+    const r=Math.random;
+    switch(this.kind){
+      case 'fireflies': return {x:r()*W, y:H-320+r()*250, vx:(r()-.5)*14, vy:(r()-.5)*10, r:1.6+r()*1.8, ph:r()*7, life:4+r()*5};
+      case 'embers':    return {x:r()*W, y:H-90+r()*40,  vx:(r()-.5)*22, vy:-24-r()*40, r:1.2+r()*1.9, ph:r()*7, life:3+r()*3};
+      case 'ash':       return {x:r()*W, y:-10,          vx:(r()-.5)*10, vy:12+r()*20,  r:1.1+r()*1.5, ph:r()*7, life:12};
+      case 'snow':      return {x:r()*W, y:-10,          vx:(r()-.5)*14, vy:22+r()*26,  r:1.2+r()*1.7, ph:r()*7, life:11};
+      case 'rain':      return {x:r()*W*1.3-W*.15, y:-20, vx:-90, vy:430+r()*130, r:1, ph:0, life:2, len:12+r()*10};
+      case 'dust':      return {x:r()*W, y:r()*H,        vx:(r()-.5)*8,  vy:-4-r()*8,   r:1+r()*1.6, ph:r()*7, life:6+r()*5};
+      case 'shards':    return {x:r()*W, y:r()*H,        vx:(r()-.5)*26, vy:-10-r()*22, r:1.1+r()*1.7, ph:r()*7, life:5+r()*4};
+      case 'motes':     return {x:r()*W, y:r()*H,        vx:(r()-.5)*6,  vy:(r()-.5)*6, r:1.3+r()*2.1, ph:r()*7, life:7+r()*7};
+    }
+    return null;
+  },
+  step(dt){
+    const cap=this.cap();
+    if(!this.kind || !cap){ if(this.p.length) this.p.length=0; return; }
+    while(this.p.length<cap){
+      const q=this.spawn(); if(!q) return;
+      q.age=Math.random()*q.life;
+      // advance along its own path so the field is already populated on the first frame
+      const t=Math.random()*3.2;
+      q.x+=q.vx*t; q.y+=q.vy*t;
+      if(q.y>H) q.y-=H+24;
+      if(q.y<-24) q.y+=H+24;
+      this.p.push(q);
+    }
+    for(const q of this.p){
+      q.age+=dt;
+      q.x+=q.vx*dt; q.y+=q.vy*dt; q.ph+=dt*2.2;
+      if(this.kind==='ash'||this.kind==='snow') q.x+=Math.sin(q.ph*.7)*12*dt;
+      if(this.kind==='embers') q.vy-=6*dt;
+      if(q.age>q.life || q.y>H+16 || q.y<-30 || q.x<-30 || q.x>W+30){
+        Object.assign(q, this.spawn(), {age:0});
+      }
+    }
+  },
+  draw(){
+    if(!this.kind || !this.p.length) return;
+    cx.save();
+    if(this.kind==='rain'){
+      cx.strokeStyle=this.accent; cx.lineWidth=1.3; cx.globalAlpha=.34;
+      cx.beginPath();
+      for(const q of this.p){ cx.moveTo(q.x,q.y); cx.lineTo(q.x-q.vx*.03, q.y-q.len); }
+      cx.stroke(); cx.restore(); return;
+    }
+    for(const q of this.p){
+      const fade=Math.min(1, q.age*2, (q.life-q.age)*2);
+      const pulse = (this.kind==='fireflies'||this.kind==='motes') ? .35+.65*Math.abs(Math.sin(q.ph)) : 1;
+      cx.globalAlpha=clamp(fade*pulse*(this.kind==='ash'?.5:.75),0,1);
+      if(this.kind==='fireflies'||this.kind==='embers'||this.kind==='shards'||this.kind==='motes'){
+        const a2=cx.globalAlpha; cx.globalAlpha=1;
+        glow(q.x,q.y,q.r*5,this.accent,a2*.5);
+        cx.globalAlpha=clamp(fade*pulse,0,1);
+      }
+      dot(q.x,q.y,q.r,this.accent);
+    }
+    cx.restore();
+  }
+};
+
+/* ------------------------------ the painter ------------------------------- */
+function drawBg(bg){
+  bg = bg || REALMS[0].bg;
+  // sky
   const g=cx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,sky[0]); g.addColorStop(1,sky[1]);
+  g.addColorStop(0,bg.sky[0]); g.addColorStop(.58,bg.sky[1]); g.addColorStop(1,bg.sky[2]);
   cx.fillStyle=g; cx.fillRect(0,0,W,H);
-  // moon
-  cx.save(); cx.globalAlpha=.5; circle(660,74,34,'#fff6d8');
-  cx.globalAlpha=.12; circle(660,74,62,'#fff6d8'); cx.restore();
-  // stars
-  cx.fillStyle='rgba(255,255,255,.5)';
-  for(let i=0;i<28;i++){
-    const x=(i*137)%W, y=(i*61)%180;
-    const tw=.4+.6*Math.abs(Math.sin(Anim.t*1.4+i));
-    cx.globalAlpha=tw*.6; cx.fillRect(x,y,2,2);
+
+  // moon and stars
+  if(bg.moon!==false){
+    cx.save();
+    glow(658,74,86,bg.glow,.22);
+    cx.globalAlpha=.6; dot(658,74,33,bg.glow);
+    cx.globalAlpha=.12; dot(650,67,24,'#ffffff');
+    cx.restore();
+  }
+  cx.fillStyle='rgba(255,255,255,.55)';
+  for(let i=0;i<26;i++){
+    const x=(i*151)%W, y=(i*67)%170;
+    cx.globalAlpha=(.35+.65*Math.abs(Math.sin(Anim.t*1.2+i)))*.5;
+    cx.fillRect(x,y,2,2);
   }
   cx.globalAlpha=1;
-  // far towers
-  cx.fillStyle='rgba(0,0,0,.35)';
-  [[60,150],[150,190],[300,165],[560,180],[720,155]].forEach(([x,h])=>{
-    cx.fillRect(x,H-120-h,52,h+120);
-    cx.beginPath(); cx.moveTo(x-8,H-120-h); cx.lineTo(x+26,H-150-h); cx.lineTo(x+60,H-120-h); cx.closePath(); cx.fill();
-  });
-  // ground
-  const gg=cx.createLinearGradient(0,H-120,0,H);
-  gg.addColorStop(0,'rgba(0,0,0,.45)'); gg.addColorStop(1,'rgba(0,0,0,.8)');
-  cx.fillStyle=gg; cx.fillRect(0,H-120,W,120);
-  cx.strokeStyle='rgba(255,255,255,.08)'; cx.lineWidth=2;
-  cx.beginPath(); cx.moveTo(0,H-120); cx.lineTo(W,H-120); cx.stroke();
+
+  // parallax skylines
+  buildLayers(bg);
+  blit(BgLayers.far,  Anim.t*2.2);
+  blit(BgLayers.near, Anim.t*6.5);
+
+  // horizon haze: separates the skyline from the field the fight happens on
+  const hz=cx.createLinearGradient(0,H-190,0,H-100);
+  hz.addColorStop(0,'rgba(0,0,0,0)'); hz.addColorStop(1,bg.haze);
+  cx.fillStyle=hz; cx.fillRect(0,H-190,W,90);
+
+  // ground — lit enough that sprites and their shadows read against it
+  const gy=H-120;
+  const gg=cx.createLinearGradient(0,gy,0,H);
+  gg.addColorStop(0,bg.ground[0]); gg.addColorStop(1,bg.ground[1]);
+  cx.fillStyle=gg; cx.fillRect(0,gy,W,120);
+  cx.strokeStyle=bg.rim; cx.lineWidth=2;
+  cx.beginPath(); cx.moveTo(0,gy); cx.lineTo(W,gy); cx.stroke();
+
   // torches
   [90,710].forEach(x=>{
-    cx.fillStyle='#4a3a2a'; cx.fillRect(x-4,H-190,8,72);
+    cx.fillStyle='#3a2c1e'; cx.fillRect(x-4,H-190,8,74);
     const fl=8+Math.sin(Anim.t*8+x)*3;
-    cx.save(); cx.globalAlpha=.85;
-    circle(x,H-196,fl,'#f2c14e'); cx.globalAlpha=.35; circle(x,H-198,fl*2.2,'#e07b39');
+    cx.save();
+    glow(x,H-196,fl*4.2,'#e07b39',.5);
+    cx.globalAlpha=.95; dot(x,H-196,fl,'#f2c14e');
+    cx.globalAlpha=1;   dot(x,H-198,fl*.5,'#fff3cf');
     cx.restore();
   });
+
+  Weather.draw();
 }
 
 /* --- animation driver --- */
@@ -1197,23 +3584,54 @@ const Anim = {
   pl:0, el:0,           // lunge amounts 0..1
   ph:0, eh:0,           // hurt flash timers
   shake:0,
+  hitstop:0,            // freeze-frame: the thing that makes a hit feel heavy
+  slow:1,               // time scale, dipped for a killing blow
+  cam:{z:1, fx:400, fy:230},
+  flash:0,
   floats:[], parts:[],
   pending:null,
-  reset(){ this.pl=this.el=this.ph=this.eh=this.shake=0; this.floats=[]; this.parts=[]; this.pending=null; },
+  reset(){
+    this.pl=this.el=this.ph=this.eh=this.shake=0;
+    this.hitstop=0; this.slow=1; this.flash=0; this.cam.z=1;
+    this.floats=[]; this.parts=[]; this.pending=null;
+  },
+  // Punch the camera toward a point, then let it drift back.
+  punch(x,y,z){ if(!Prefs.d.motion) return; this.cam.fx=x; this.cam.fy=y; this.cam.z=z; },
+  freeze(sec){ if(Prefs.d.motion) this.hitstop=Math.max(this.hitstop,sec); },
   float(x,y,txt,col,big){ this.floats.push({x,y,txt,col,life:1.2,big:!!big}); },
   burst(x,y,col,n){
-    for(let i=0;i<(n||18);i++){
+    let count=n||18;
+    if(!Prefs.d.motion) count=Math.min(count,6);
+    for(let i=0;i<count;i++){
       const a=Math.random()*Math.PI*2, sp=60+Math.random()*260;
       this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-70,life:.5+Math.random()*.5,col,r:2+Math.random()*4});
     }
   },
-  strike(who, dmg, crit){
+  // Gold coins arcing off a defeated foe.
+  coins(x,y,n){
+    const count=Prefs.d.motion?(n||14):4;
+    for(let i=0;i<count;i++){
+      const a=-Math.PI/2+(Math.random()-.5)*1.7, sp=180+Math.random()*260;
+      this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1+Math.random()*.6,col:'#f2c14e',r:3.5+Math.random()*2.5});
+    }
+  },
+  strike(who, dmg, crit, label, kill){
     // who: 'p' player attacks, 'e' enemy attacks
-    this.pending={who,dmg,crit,fired:false};
+    this.pending={who,dmg,crit,label,kill,fired:false};
     if(who==='p') this.pl=0.001; else this.el=0.001;
   },
   loop(ts){
-    const dt = Math.min(.05,(ts-Anim.last)/1000||.016); Anim.last=ts; Anim.t+=dt;
+    const real = Math.min(.05,(ts-Anim.last)/1000||.016); Anim.last=ts;
+    let dt = real;
+    if(Anim.hitstop>0){ Anim.hitstop-=real; dt*=0.05; }   // the freeze-frame
+    dt *= Anim.slow;
+    Anim.t+=dt;
+    // camera and time scale ease back to rest
+    Anim.cam.z += (1-Anim.cam.z)*Math.min(1, real*5);
+    Anim.slow  += (1-Anim.slow )*Math.min(1, real*1.6);
+    Anim.flash  = Math.max(0, Anim.flash - real*3.2);
+    const fl=document.getElementById('flash');
+    if(fl) fl.style.opacity=Anim.flash.toFixed(3);
     // lunges
     const step=(v)=> v>0 ? Math.min(1.0001, v+dt*3.2) : 0;
     if(Anim.pl>0){ Anim.pl=step(Anim.pl); if(Anim.pl>=1) Anim.pl=0; }
@@ -1228,14 +3646,33 @@ const Anim = {
       if(prog>=.42){
         P.fired=true;
         const tx = P.who==='p' ? 560 : 250;
-        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?30:18);
-        Anim.float(tx, H-230, (P.crit?'CRIT ':'')+'-'+P.dmg, P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
-        Anim.shake = P.crit?1.4:.9;
-        if(P.who==='p'){ Anim.eh=.35; Sfx.hit(); } else { Anim.ph=.35; Sfx.hurt(); }
+        const slam = P.label==='SLAM';
+        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?34:18);
+        Anim.float(tx, H-230, (P.label?P.label+' ':(P.crit?'CRIT ':''))+'-'+P.dmg,
+                   P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
+        Anim.shake = (P.crit?1.5:.9) * (Prefs.d.motion?1:.35);
+        Anim.freeze(P.crit?.13:.06);
+        Anim.punch(tx, H-200, P.crit?1.14:1.05);
+        if(P.crit) Anim.flash=.55;
+        if(P.kill){                                   // the killing blow gets the full treatment
+          Anim.slow=Prefs.d.motion?0.28:1;
+          Anim.freeze(.2); Anim.punch(tx,H-200,1.3);
+          Anim.flash=.8; Anim.shake=1.8*(Prefs.d.motion?1:.35);
+          Anim.coins(tx,H-190,16);
+        }
+        if(P.who==='p'){
+          Anim.eh=.35;
+          if(P.crit){ Sfx.crit(); Haptic.crit(); } else { Sfx.hit(); Haptic.hit(); }
+        } else {
+          Anim.ph=.35; Anim.flash=Math.max(Anim.flash,slam?.5:.28);
+          if(slam) Sfx.slam(); else Sfx.hurt();
+          Haptic.hurt();
+        }
       }
     }
 
     // particles / floats
+    Weather.step(dt);
     Anim.parts.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=620*dt; p.life-=dt; });
     Anim.parts=Anim.parts.filter(p=>p.life>0);
     Anim.floats.forEach(f=>{ f.y-=52*dt; f.life-=dt; });
@@ -1247,14 +3684,28 @@ const Anim = {
   draw(){
     const B=Battle;
     cx.save();
+    if(Anim.cam.z!==1){
+      cx.translate(Anim.cam.fx, Anim.cam.fy);
+      cx.scale(Anim.cam.z, Anim.cam.z);
+      cx.translate(-Anim.cam.fx, -Anim.cam.fy);
+    }
     if(Anim.shake>0){ cx.translate((Math.random()-.5)*Anim.shake*16,(Math.random()-.5)*Anim.shake*16); }
-    drawBg(B.realm ? B.realm.sky : ['#22183a','#0b0812']);
+    drawBg(B.realm ? B.realm.bg : null);
     const gy = H-120;
-    drawKnight(205, gy, 1.32, Anim.pl>0?Math.sin(Anim.pl*Math.PI):0, Anim.ph, B.over==='lose');
-    if(B.foe) drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
-                      Anim.el>0?Math.sin(Anim.el*Math.PI):0, Anim.eh, B.over==='win');
+    const pLunge=Anim.pl>0?Math.sin(Anim.pl*Math.PI):0;
+    withOutline(()=>drawKnight(205, gy, 1.32, pLunge, Anim.ph, B.over==='lose'));
+    if(B.foe && B.slamNext && !B.over){
+      const r=1+Math.sin(Anim.t*6)*.5;
+      cx.save(); cx.globalAlpha=.25+r*.2; cx.strokeStyle='#e5484d'; cx.lineWidth=3+r*2;
+      cx.beginPath(); cx.ellipse(605, gy-70, 74+r*8, 96+r*8, 0, 0, 7); cx.stroke(); cx.restore();
+    }
+    if(B.foe){
+      const eLunge=Anim.el>0?Math.sin(Anim.el*Math.PI):0;
+      withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
+                              eLunge, Anim.eh, B.over==='win'));
+    }
     // particles
-    Anim.parts.forEach(p=>{ cx.globalAlpha=clamp(p.life,0,1); circle(p.x,p.y,p.r,p.col); });
+    Anim.parts.forEach(p=>{ cx.globalAlpha=clamp(p.life,0,1); dot(p.x,p.y,p.r,p.col); });
     cx.globalAlpha=1;
     // floats
     Anim.floats.forEach(f=>{
@@ -1271,15 +3722,365 @@ const Anim = {
 };
 
 /* ------------------------------- questions -------------------------------- */
+/* A distractor is either a bare string or [text, "the mistake it represents"].
+   The tagged ones let the game name the error a player actually made. */
 function buildQuestion(key, diff){
   const gen = GEN[key];
   const p = gen(diff||1);
+  const why = {};
+  const ds = (p.d||[]).map(x=>{
+    if(Array.isArray(x)){ why[x[0]] = x[1]; return x[0]; }
+    return x;
+  });
   const ch=[p.a];
-  for(const x of R.shuffle(p.d)) if(ch.length<4 && !ch.includes(x)) ch.push(x);
+  for(const x of R.shuffle(ds)) if(ch.length<4 && !ch.includes(x)) ch.push(x);
   let guard=0;
   while(ch.length<4 && guard++<40){ const x=String(R.i(-25,25)); if(!ch.includes(x)) ch.push(x); }
-  return {key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, choices:R.shuffle(ch)};
+  delete why[p.a];                      // never explain the right answer as a mistake
+  return {
+    key, topic:p.topic, q:p.q, a:p.a, ex:p.ex, why, choices:R.shuffle(ch),
+    // Optional, and consumed by later work: how hard the topic is to hold in
+    // one piece, the ladder it breaks into, its one-card summary, a figure
+    // spec, and how the answer may be constructed rather than chosen.
+    complexity:p.complexity, motes:p.motes, codex:p.codex,
+    fig:p.fig, figAnswer:p.figAnswer, input:p.input
+  };
 }
+
+
+/* A mote's four choices. Numeric distractors can coincide with the answer on
+   particular draws, so the authored list is filtered and then padded — the same
+   treatment buildQuestion gives the parent question. The invariant that matters
+   is the rendered result: four distinct choices, one of them correct. */
+function buildMote(m){
+  if(m._choices) return m._choices;
+  const why={};
+  const ds=[];
+  for(const x of (m.d||[])){
+    const v=Array.isArray(x)?x[0]:x, reason=Array.isArray(x)?x[1]:null;
+    if(v===m.a || ds.includes(v)) continue;
+    if(reason) why[v]=reason;
+    ds.push(v);
+  }
+  const ch=[m.a];
+  for(const x of R.shuffle(ds)) if(ch.length<4) ch.push(x);
+  const n=Number(String(m.a).replace('−','-'));
+  let guard=0;
+  while(ch.length<4 && Number.isFinite(n) && guard++<60){
+    const cand=neg(n + R.nz(-9,9));
+    if(!ch.includes(cand)) ch.push(cand);
+  }
+  m._why=why;
+  m._choices=R.shuffle(ch);
+  return m._choices;
+}
+
+/* -------------------------------- figures --------------------------------- */
+/* Six data-driven diagram kinds. A generator declares \`fig\` (drawn beside the
+   question) and/or \`figAnswer\` (drawn in the explanation). Figures are painted
+   once into a static canvas — they must never join the battle's animation loop,
+   which is the obvious way to leak frames.
+
+   The rule that makes this teach rather than spoil: a question figure must be
+   answerable-from only by doing the mathematics. Draw u and v, never their sum;
+   the payoff picture belongs in figAnswer.                                    */
+
+const FIG_W = 320;
+// Each kind gets the shape it actually wants. Vector diagrams are square-ish,
+// so in a wide letterbox the drawing shrinks to a narrow central column with
+// dead air either side; a number line is the opposite and needs almost no
+// height at all. FIG_H is the height of the figure being drawn right now —
+// render() sets it before dispatching, and drawing is synchronous.
+const FIG_H_BY_KIND = {plane:196, grid:196, curve:152, region:152, bars:152, numberline:104};
+let FIG_H = 152;
+const FIG_COL = {
+  axis:'#6b5f92', grid:'rgba(140,125,190,.18)', ink:'#e8e2f5', dim:'#a99ccb',
+  a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', fill:'rgba(242,193,78,.22)'
+};
+
+// Every figure function is described by data so the spec stays serialisable.
+function figEval(f, x){
+  if(!f) return 0;
+  if(f.poly) return f.poly.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
+  switch(f.fn){
+    case 'sin': return Math.sin((f.k||1)*x);
+    case 'cos': return Math.cos((f.k||1)*x);
+    case 'exp': return Math.exp((f.k||1)*x);
+    case 'inv': return 1/((f.k||1)*x);
+    default: return 0;
+  }
+}
+
+const Figure = {
+  KINDS:['plane','grid','curve','region','bars','numberline'],
+
+  /** Paint \`spec\` into a fresh canvas appended to \`host\`. */
+  render(spec, host){
+    if(!host) return null;
+    host.innerHTML='';
+    if(!spec || !this.KINDS.includes(spec.kind)) return null;
+    FIG_H = FIG_H_BY_KIND[spec.kind] || 152;
+    const cv=document.createElement('canvas');
+    cv.className='fig';
+    const dpr=Math.min(window.devicePixelRatio||1, 2.5);
+    cv.width=Math.round(FIG_W*dpr); cv.height=Math.round(FIG_H*dpr);
+    cv.style.width='100%'; cv.style.height='auto';
+    const g=cv.getContext('2d');
+    g.setTransform(dpr,0,0,dpr,0,0);
+    try{ this[spec.kind](g, spec); }
+    catch(e){ return null; }
+    host.appendChild(cv);
+    if(spec.caption){
+      const cap=document.createElement('div');
+      cap.className='figcap'; cap.innerHTML=spec.caption;
+      host.appendChild(cap);
+    }
+    return cv;
+  },
+
+  /* ---- shared scaffolding ---- */
+  frame(g){
+    g.clearRect(0,0,FIG_W,FIG_H);
+    g.fillStyle='#171129'; g.fillRect(0,0,FIG_W,FIG_H);
+  },
+  arrow(g, x0,y0, x1,y1, col, label, wide){
+    g.strokeStyle=col; g.fillStyle=col; g.lineWidth=wide||2.4; g.lineCap='round';
+    g.beginPath(); g.moveTo(x0,y0); g.lineTo(x1,y1); g.stroke();
+    const a=Math.atan2(y1-y0, x1-x0), s=8;
+    g.beginPath();
+    g.moveTo(x1,y1);
+    g.lineTo(x1-s*Math.cos(a-0.42), y1-s*Math.sin(a-0.42));
+    g.lineTo(x1-s*Math.cos(a+0.42), y1-s*Math.sin(a+0.42));
+    g.closePath(); g.fill();
+    if(label){
+      g.font='bold 12px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+      const dx=(x1-x0), dy=(y1-y0), L=Math.hypot(dx,dy)||1;
+      g.fillText(label, x1 + dx/L*12, y1 + dy/L*12);
+    }
+  },
+
+  /* ---- 1. plane: vectors on axes ---- */
+  plane(g, s){
+    this.frame(g);
+    const span = s.span || Math.max(4, Math.ceil(Math.max(
+      ...(s.vecs||[{v:[1,1]}]).flatMap(o=>o.v.map(Math.abs))) * 1.25));
+    const cx0=FIG_W/2, cy0=FIG_H/2, k=Math.min(FIG_W,FIG_H)/(2.2*span);
+    const X=x=>cx0+x*k, Y=y=>cy0-y*k;
+
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    for(let i=-span;i<=span;i++){
+      g.beginPath(); g.moveTo(X(i),0); g.lineTo(X(i),FIG_H); g.stroke();
+      g.beginPath(); g.moveTo(0,Y(i)); g.lineTo(FIG_W,Y(i)); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.6;
+    g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+
+    // optional parallelogram spanned by the first two vectors
+    if(s.para && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      g.fillStyle=FIG_COL.fill;
+      g.beginPath();
+      g.moveTo(X(0),Y(0)); g.lineTo(X(u[0]),Y(u[1]));
+      g.lineTo(X(u[0]+v[0]),Y(u[1]+v[1])); g.lineTo(X(v[0]),Y(v[1]));
+      g.closePath(); g.fill();
+    }
+    // right-angle marker at the origin
+    if(s.right && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      const nu=Math.hypot(...u)||1, nv=Math.hypot(...v)||1, m=14;
+      const p1=[u[0]/nu*m/k, u[1]/nu*m/k], p2=[v[0]/nv*m/k, v[1]/nv*m/k];
+      g.strokeStyle=FIG_COL.c; g.lineWidth=2;
+      g.beginPath();
+      g.moveTo(X(p1[0]),Y(p1[1]));
+      g.lineTo(X(p1[0]+p2[0]),Y(p1[1]+p2[1]));
+      g.lineTo(X(p2[0]),Y(p2[1]));
+      g.stroke();
+    }
+    // projection drop-line
+    if(s.proj && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      const t=(u[0]*v[0]+u[1]*v[1])/((v[0]*v[0]+v[1]*v[1])||1);
+      const p=[v[0]*t, v[1]*t];
+      g.setLineDash([4,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(u[0]),Y(u[1])); g.lineTo(X(p[0]),Y(p[1])); g.stroke();
+      g.setLineDash([]);
+      // Gold, and deliberately unlabelled: the shadow lies along v, so a word
+      // set beside a short one would land on the very arrows it describes.
+      // Colour carries it instead — gold is the computed thing throughout —
+      // and the caption says which arrow is which.
+      this.arrow(g, X(0),Y(0), X(p[0]),Y(p[1]), FIG_COL.b, '', 3.4);
+    }
+    (s.vecs||[]).forEach(o=>this.arrow(g, X(0),Y(0), X(o.v[0]),Y(o.v[1]), o.col||FIG_COL.a, o.label));
+    // right-triangle legs, for length problems
+    if(s.legs && s.vecs && s.vecs.length){
+      const v=s.vecs[0].v;
+      g.setLineDash([5,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(v[0]),Y(0)); g.lineTo(X(v[0]),Y(v[1])); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle=FIG_COL.dim; g.font='bold 11px system-ui,sans-serif'; g.textAlign='center';
+      g.fillText(String(Math.abs(v[0])), X(v[0]/2), Y(0)+(v[1]>0?14:-6));
+      g.fillText(String(Math.abs(v[1])), X(v[0])+(v[0]>0?14:-14), Y(v[1]/2));
+    }
+  },
+
+  /* ---- 2. grid: what a matrix does to the plane ---- */
+  grid(g, s){
+    this.frame(g);
+    const M=s.m||[[1,0],[0,1]];
+    const T=(x,y)=>[M[0][0]*x+M[0][1]*y, M[1][0]*x+M[1][1]*y];
+    const c1=T(1,0), c2=T(0,1), c3=T(1,1);
+    // The span has to follow the matrix: a determinant of 40 throws the unit
+    // square right out of a frame sized for the identity. Everything that gets
+    // drawn — corners and arrows alike — votes on how far out the view reaches.
+    const reach=Math.max(1, ...[c1,c2,c3, ...(s.vecs||[]).map(o=>o.raw?o.v:T(o.v[0],o.v[1]))]
+      .flatMap(p=>[Math.abs(p[0]),Math.abs(p[1])]));
+    const span=s.span||Math.max(2.6, reach*1.18);
+    const cx0=FIG_W/2, cy0=FIG_H/2, k=Math.min(FIG_W,FIG_H)/(2.2*span);
+    const X=x=>cx0+x*k, Y=y=>cy0-y*k;
+
+    // the original lattice, faint, thinned out so the lines never crowd
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    const L=Math.ceil(span), step=Math.max(1, Math.round(span/5));
+    for(let i=-L;i<=L;i+=step){
+      g.beginPath(); g.moveTo(X(i),Y(-L)); g.lineTo(X(i),Y(L)); g.stroke();
+      g.beginPath(); g.moveTo(X(-L),Y(i)); g.lineTo(X(L),Y(i)); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
+    g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+
+    // the unit square, before and after
+    if(s.before!==false){
+      g.strokeStyle='rgba(169,156,203,.55)'; g.setLineDash([4,3]); g.lineWidth=1.6;
+      g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(1),Y(0)); g.lineTo(X(1),Y(1)); g.lineTo(X(0),Y(1));
+      g.closePath(); g.stroke(); g.setLineDash([]);
+    }
+    g.fillStyle=FIG_COL.fill;
+    g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(c1[0]),Y(c1[1]));
+    g.lineTo(X(c3[0]),Y(c3[1])); g.lineTo(X(c2[0]),Y(c2[1])); g.closePath(); g.fill();
+    g.strokeStyle=FIG_COL.b; g.lineWidth=2; g.stroke();
+
+    if(s.basis!==false){
+      this.arrow(g, X(0),Y(0), X(c1[0]),Y(c1[1]), FIG_COL.a, 'î');
+      this.arrow(g, X(0),Y(0), X(c2[0]),Y(c2[1]), FIG_COL.c, 'ĵ');
+    }
+    (s.vecs||[]).forEach(o=>{
+      const p=o.raw ? o.v : T(o.v[0],o.v[1]);
+      this.arrow(g, X(0),Y(0), X(p[0]),Y(p[1]), o.col||FIG_COL.d, o.label);
+    });
+  },
+
+  /* ---- 3/4/5. curve, shaded region, Riemann bars ---- */
+  plot(g, s, mode){
+    this.frame(g);
+    const lo = s.lo!==undefined ? s.lo : -3, hi = s.hi!==undefined ? s.hi : 3;
+    const pad = (hi-lo)*0.12;
+    const x0=lo-pad, x1=hi+pad;
+    const N=120;
+    let ymin=Infinity, ymax=-Infinity;
+    const ys=[];
+    for(let i=0;i<=N;i++){
+      const x=x0+(x1-x0)*i/N, y=figEval(s.f, x);
+      ys.push(y);
+      if(isFinite(y)){ ymin=Math.min(ymin,y); ymax=Math.max(ymax,y); }
+    }
+    if(!isFinite(ymin)||!isFinite(ymax)){ ymin=-1; ymax=1; }
+    if(ymax-ymin < 1e-6){ ymax+=1; ymin-=1; }
+    const yPad=(ymax-ymin)*0.18; ymin-=yPad; ymax+=yPad;
+    const X=x=>18+(x-x0)/(x1-x0)*(FIG_W-30);
+    const Y=y=>FIG_H-16-(y-ymin)/(ymax-ymin)*(FIG_H-30);
+
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    for(let i=0;i<=6;i++){
+      const gx=18+i*(FIG_W-30)/6;
+      g.beginPath(); g.moveTo(gx,6); g.lineTo(gx,FIG_H-10); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.5;
+    if(ymin<0 && ymax>0){ g.beginPath(); g.moveTo(10,Y(0)); g.lineTo(FIG_W-6,Y(0)); g.stroke(); }
+    if(x0<0 && x1>0){ g.beginPath(); g.moveTo(X(0),4); g.lineTo(X(0),FIG_H-8); g.stroke(); }
+
+    // shaded region between lo and hi
+    if(mode==='region'){
+      g.fillStyle=FIG_COL.fill;
+      g.beginPath(); g.moveTo(X(lo),Y(0));
+      for(let i=0;i<=N;i++){
+        const x=lo+(hi-lo)*i/N;
+        g.lineTo(X(x),Y(figEval(s.f,x)));
+      }
+      g.lineTo(X(hi),Y(0)); g.closePath(); g.fill();
+    }
+    // Riemann rectangles
+    if(mode==='bars'){
+      const n=s.n||6, w=(hi-lo)/n;
+      g.fillStyle='rgba(90,169,230,.28)'; g.strokeStyle=FIG_COL.a; g.lineWidth=1.2;
+      for(let i=0;i<n;i++){
+        const xa=lo+i*w, ym=figEval(s.f, xa+w/2);
+        const top=Y(ym), base=Y(0);
+        g.fillRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
+        g.strokeRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
+      }
+    }
+
+    g.strokeStyle=FIG_COL.b; g.lineWidth=2.4; g.lineJoin='round';
+    g.beginPath();
+    for(let i=0;i<=N;i++){
+      const x=x0+(x1-x0)*i/N, y=ys[i];
+      if(!isFinite(y)) continue;
+      if(i===0) g.moveTo(X(x),Y(y)); else g.lineTo(X(x),Y(y));
+    }
+    g.stroke();
+
+    // tangent line at a point
+    if(s.tangent!==undefined){
+      const a=s.tangent, h=1e-4;
+      const ya=figEval(s.f,a), m=(figEval(s.f,a+h)-figEval(s.f,a-h))/(2*h);
+      g.strokeStyle=FIG_COL.d; g.lineWidth=2; g.setLineDash([6,4]);
+      g.beginPath();
+      g.moveTo(X(x0), Y(ya+m*(x0-a)));
+      g.lineTo(X(x1), Y(ya+m*(x1-a)));
+      g.stroke(); g.setLineDash([]);
+    }
+    (s.pts||[]).forEach(p=>{
+      const x=p[0], y=p.length>1?p[1]:figEval(s.f,x);
+      g.fillStyle=p[2]||FIG_COL.d;
+      g.beginPath(); g.arc(X(x),Y(y),4.5,0,7); g.fill();
+      g.strokeStyle='#171129'; g.lineWidth=1.5; g.stroke();
+    });
+  },
+  curve(g,s){ this.plot(g,s,'curve'); },
+  region(g,s){ this.plot(g,s,'region'); },
+  bars(g,s){ this.plot(g,s,'bars'); },
+
+  /* ---- 6. numberline: approaching a point ---- */
+  numberline(g, s){
+    this.frame(g);
+    const a=s.at||0, span=s.span||3;
+    const X=x=>FIG_W/2+(x-a)/span*(FIG_W/2-26);
+    const y=FIG_H/2;
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=2;
+    g.beginPath(); g.moveTo(12,y); g.lineTo(FIG_W-12,y); g.stroke();
+
+    g.fillStyle=FIG_COL.dim; g.font='bold 11px system-ui,sans-serif'; g.textAlign='center';
+    for(let i=-2;i<=2;i++){
+      const t=a+i*span/2;
+      g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
+      g.beginPath(); g.moveTo(X(t),y-5); g.lineTo(X(t),y+5); g.stroke();
+      g.fillText(String(+t.toFixed(2)).replace('-','−'), X(t), y+20);
+    }
+    // approach arrows from both sides
+    this.arrow(g, X(a-span*0.78), y-26, X(a-span*0.14), y-26, FIG_COL.a, '');
+    this.arrow(g, X(a+span*0.78), y-26, X(a+span*0.14), y-26, FIG_COL.c, '');
+    // an open circle marks a value the function never reaches
+    g.lineWidth=2.4;
+    g.strokeStyle = s.hole ? FIG_COL.b : FIG_COL.d;
+    g.beginPath(); g.arc(X(a), y, 5.5, 0, 7);
+    if(s.hole){ g.fillStyle='#171129'; g.fill(); g.stroke(); }
+    else { g.fillStyle=FIG_COL.d; g.fill(); }
+    g.fillStyle=FIG_COL.ink; g.font='bold 12px system-ui,sans-serif';
+    g.fillText(s.label||('x → '+String(a).replace('-','−')), X(a), y-44);
+  }
+};
 
 /* -------------------------------- battle ---------------------------------- */
 const Battle = {
@@ -1288,26 +4089,78 @@ const Battle = {
   qStart:0, timer:null, rage:false, answered:false, cur:null, usedFeather:false,
 
   begin(ri, fi){
+    this.mode='campaign';
     this.realm=REALMS[ri]; this.ri=ri; this.fi=fi;
-    const f=this.realm.foes[fi];
+    this._start(this.realm.foes[fi]);
+  },
+  beginDaily(){
+    this.mode='daily';
+    this.realm=REALMS[0]; this.ri=0; this.fi=2;
+    this._start({nm:'Straw Knight', art:'knightfoe', col:'#c9b8a0',
+                 hp:999999, atk:0, gold:0, xp:0, dummy:true});
+  },
+  beginArena(foe, wave){
+    this.mode='arena';
+    this.realm=Arena.realm; this.ri=0; this.fi=Math.min(6, wave);
+    this._start(foe);
+  },
+  _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
+    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
+    this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
+    this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
+    const bg=this.realm.bg;
+    if(bg) Weather.set(bg.weather, bg.accent);
     Anim.reset();
     UI.go('s-battle');
     fitCanvas(); Anim.go();
     this.updateBars();
     this.nextQuestion();
   },
+  // Weapon and armour as they stand right now, including any arena boons.
+  wStats(){
+    const w=Game.weapon(), m=this.mode==='arena'?Arena.mods:null;
+    return {dmg:w.dmg*(m?m.dmg:1), crit:w.crit+(m?m.crit:0)};
+  },
+  defStat(){ return Game.armor().def + (this.mode==='arena'?Arena.mods.def:0); },
 
   updateBars(){
     const g=Game.s;
-    document.getElementById('pHp').style.width  = clamp(g.hp/g.maxHp*100,0,100)+'%';
-    document.getElementById('eHp').style.width  = clamp(this.ehp/this.emax*100,0,100)+'%';
+    const pPct=clamp(g.hp/g.maxHp*100,0,100), ePct=clamp(this.ehp/this.emax*100,0,100);
+    document.getElementById('pHp').style.width  = pPct+'%';
+    document.getElementById('eHp').style.width  = ePct+'%';
+    document.getElementById('pGhost').style.width = pPct+'%';   // trails behind, showing the wound
+    document.getElementById('eGhost').style.width = ePct+'%';
     document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
     document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
-    document.getElementById('foeName').textContent = (this.foe.boss?'👑 ':'')+this.foe.nm;
-    document.getElementById('comboTxt').textContent = \`Combo ×\${(1+this.combo*.15).toFixed(2)}  ·  streak \${this.combo}\`;
+    this.tension(g.hp/g.maxHp);
+    const pips = this.slamNext ? '⚡ WIND-UP'
+      : '●'.repeat(this.charge)+'○'.repeat(Math.max(0,this.chargeMax-this.charge));
+    document.getElementById('foeName').innerHTML =
+      (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
+    document.getElementById('comboTxt').textContent =
+      (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
+      (this.mode==='daily' ? \`🗡️ \${Math.min(Daily.n+1,Daily.LEN)}/\${Daily.LEN}  ·  \${Daily.score} pts  ·  \` : '') +
+      \`Combo ×\${(1+Math.min(this.combo,7)*.15).toFixed(2)}  ·  streak \${this.combo}\`;
+    const ct=document.getElementById('comboTxt');
+    ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
+    ct.classList.toggle('blaze', this.combo>=8);
+    const fb=document.getElementById('fleeBtn');
+    if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings' : '🏃 Retreat';
     this.renderPowers();
+  },
+
+  // A red pulse that quickens as health falls — the most visceral feedback a game has.
+  tension(frac){
+    const v=document.getElementById('vignette');
+    if(!v) return;
+    const low = frac<0.3 && !this.over && Game.s.hp>0;
+    v.classList.toggle('on', low);
+    v.classList.toggle('crit', frac<0.15 && low);
+    if(low) v.style.setProperty('--vi', clamp(1-frac/0.3, .25, 1).toFixed(2));
+    if(low && !this._wasLow) Sfx.heart();
+    this._wasLow = low;
   },
 
   renderPowers(){
@@ -1350,45 +4203,171 @@ const Battle = {
     this.answered=false;
     const ex=document.getElementById('explain');
     ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
-    const pool=this.realm.pool;
-    let key=R.pick(pool);
-    // bosses occasionally reach back into earlier realms
-    if(this.foe.boss && R.chance(.3) && this.ri>0) key=R.pick(REALMS[R.i(0,this.ri-1)].pool);
-    const diff = clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+    let key, diff;
+    if(this.mode==='daily'){
+      // Fixed pool, fixed difficulty, seeded draw — the run has to be identical
+      // on every device, which rules out mastery weighting entirely.
+      key = R.pick(DAILY_POOL);
+      diff = 2;
+    } else {
+      // Topic choice is weighted by mastery: weak and overdue topics surface more.
+      let pool=this.realm.pool;
+      if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
+      key=Mastery.pick(pool);
+      const base = this.mode==='arena' ? 3
+                 : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
+      diff = Mastery.adjustDiff(key, base);
+    }
+    this.curDiff = diff;
     this.cur = buildQuestion(key, diff);
-    document.getElementById('qtopic').textContent = this.cur.topic;
-    document.getElementById('qbox').innerHTML = this.cur.q;
-    const box=document.getElementById('choices'); box.innerHTML='';
-    this.cur.choices.forEach(c=>{
-      const b=document.createElement('button');
-      b.className='btn choice'; b.innerHTML=c;
-      if(c===this.cur.a) b.dataset.correct='1';
-      b.onclick=()=>this.answer(b,c);
-      box.appendChild(b);
-    });
+    // A complex topic arrives as a ladder until it has been cleared enough
+    // times; after that the whole problem is offered for far more damage.
+    this.rite = null;
+    if(this.mode!=='daily' && this.cur.complexity===3 && Array.isArray(this.cur.motes)
+       && this.cur.motes.length && !Rite.graduated(key)){
+      this.rite = {motes:this.cur.motes, i:0, clean:0, trail:[], parent:this.cur};
+    }
+    this.unassisted = !this.rite && this.cur.complexity===3 && Rite.graduated(key);
+    const tg=document.getElementById('telegraph');
+    if(this.slamNext){
+      tg.style.display='block';
+      tg.innerHTML=\`⚡ <b>\${this.foe.nm}</b> is winding up — answer correctly to brace the blow!\`;
+    } else tg.style.display='none';
+    this.renderStep();
+    if(Game.s.hp/Game.s.maxHp < 0.3) Sfx.heart();
     this.qStart=performance.now();
     this.startTimer();
     this.renderPowers();
   },
 
+  // Windows scale with difficulty so that working carefully still earns the
+  // bonus. A hard problem you reason through in twenty seconds was not slow.
+  speedWindows(){
+    const d=this.curDiff||2;
+    return d>=3 ? [16000,32000] : d===2 ? [12000,24000] : [8000,16000];
+  },
+  speedMult(el){
+    const [a,b]=this.speedWindows();
+    return el<a ? 1.5 : el<b ? 1.2 : 1.0;
+  },
+  // Nothing animates while a question is unanswered: the countdown bar was the
+  // only moving thing on screen during the moment that needs concentration.
   startTimer(){
     clearInterval(this.timer);
     const bar=document.getElementById('timeBar');
-    const LIMIT=22000;
-    this.timer=setInterval(()=>{
-      const el=performance.now()-this.qStart;
-      const pct=clamp(100-el/LIMIT*100,0,100);
-      bar.style.width=pct+'%';
-      document.getElementById('speedTxt').textContent =
-        el<7000 ? '⚡ Swift strike ×1.5' : el<14000 ? '✦ Steady strike ×1.2' : 'Measured strike ×1.0';
-      if(pct<=0) clearInterval(this.timer);
-    },100);
+    if(bar) bar.style.width='0%';
+    document.getElementById('speedTxt').textContent='';
+  },
+
+  // What the player is actually being asked right now: a ladder step, or the
+  // whole problem once the scaffolding has faded.
+  step(){
+    return this.rite ? this.rite.motes[this.rite.i] : this.cur;
+  },
+
+  renderStep(){
+    const st=this.step();
+    const rb=document.getElementById('riteBar'), tr=document.getElementById('riteTrail');
+    if(this.rite){
+      const n=this.rite.motes.length;
+      rb.style.display='flex';
+      rb.innerHTML='Rite &nbsp;'+this.rite.trail.map(ok=>\`<span class="rp \${ok?'done':'miss'}"></span>\`).join('')
+        + \`<span class="rp now"></span>\`
+        + '<span class="rp"></span>'.repeat(Math.max(0,n-this.rite.i-1))
+        + \`&nbsp; \${this.rite.i+1}/\${n}\`;
+      tr.style.display = this.rite.trail.length ? 'block' : 'none';
+      tr.innerHTML = this.rite.steps ? this.rite.steps.map((x,i)=>\`\${i+1}. <b>\${x}</b>\`).join('<br>') : '';
+    } else { rb.style.display='none'; tr.style.display='none'; }
+
+    document.getElementById('qtopic').innerHTML = this.cur.topic +
+      (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
+      (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
+
+    // Codex chip
+    const head=document.getElementById('qhead');
+    const old=head.querySelector('.qchip'); if(old) old.remove();
+    if(Codex.has(this.cur)){
+      const chip=document.createElement('span');
+      chip.className='qchip'; chip.textContent='?';
+      chip.title='Peek at the rule';
+      chip.onclick=()=>this.peek();
+      head.appendChild(chip);
+    }
+
+    document.getElementById('qbox').innerHTML = st.q;
+    // A question figure must never reveal the answer; the payoff picture is
+    // held back for the explanation.
+    Figure.render(st.fig || (st===this.cur ? this.cur.fig : null), document.getElementById('qfig'));
+    const box=document.getElementById('choices'); box.innerHTML='';
+    const choices = st===this.cur ? this.cur.choices : buildMote(st);
+    choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===st.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+    this.renderPerfect();
+  },
+
+  // Motes carry raw distractors; shuffle them into four choices on the spot.
+  peek(){
+    const costs=Codex.costsCombo(this.cur.key);
+    Codex.open(this.cur, ()=>{
+      if(costs && this.combo>0){
+        this.combo=0;
+        UI.toast('The rule is yours — your combo is not.');
+        this.updateBars();
+      }
+    });
+  },
+
+  // Perfect Strike: build a numeric answer instead of picking one, for triple
+  // damage. Only offered where the answer is a plain integer, which is the
+  // honest boundary of what a keypad can express.
+  canPerfect(){
+    const st=this.step();
+    return this.mode!=='daily' && !this.answered && /^−?\\d+$/.test(String(st.a));
+  },
+  renderPerfect(){
+    const p=document.getElementById('pstrike');
+    if(!this.canPerfect()){ p.style.display='none'; p.innerHTML=''; return; }
+    p.style.display='';
+    p.innerHTML=\`<div class="pbtn" id="pgo">⚔ Perfect Strike — build it yourself, ×3 damage</div>\`;
+    document.getElementById('pgo').onclick=()=>this.openPad();
+  },
+  openPad(){
+    this.padVal='';
+    document.getElementById('choices').innerHTML='';
+    const p=document.getElementById('pstrike');
+    p.innerHTML=\`<div id="pad">
+      <div id="padVal">—</div>
+      \${[1,2,3,4,5,6,7,8,9].map(n=>\`<button data-k="\${n}">\${n}</button>\`).join('')}
+      <button data-k="−">±</button><button data-k="0">0</button><button data-k="⌫">⌫</button>
+      <button data-k="ok" class="btn gold" style="grid-column:1/-1;padding:13px">Strike</button>
+    </div>\`;
+    p.querySelectorAll('#pad button').forEach(b=>{
+      b.onclick=()=>this.pad(b.dataset.k);
+    });
+  },
+  pad(k){
+    if(k==='⌫') this.padVal=this.padVal.slice(0,-1);
+    else if(k==='−') this.padVal = this.padVal.startsWith('−') ? this.padVal.slice(1) : '−'+this.padVal;
+    else if(k==='ok'){
+      if(!this.padVal || this.padVal==='−') return;
+      this.perfect=true;
+      this.answer(null, this.padVal);
+      return;
+    }
+    else this.padVal += k;
+    document.getElementById('padVal').textContent = this.padVal || '—';
   },
 
   answer(btn, choice){
     if(this.answered) return;
     this.answered=true; clearInterval(this.timer);
-    const ok = choice===this.cur.a;
+    const st = this.step();
+    const ok = choice===st.a;
     const el = performance.now()-this.qStart;
     document.querySelectorAll('#choices .choice').forEach(b=>{
       b.onclick=null;
@@ -1396,42 +4375,150 @@ const Battle = {
       else if(b===btn) b.classList.add('wrong');
       else b.classList.add('faded');
     });
-    Game.recordAnswer(this.cur.key, ok);
+    document.getElementById('pstrike').style.display='none';
 
+    // A ladder step is one small piece of a topic, so it moves mastery by a
+    // fraction; the parent problem still counts in full.
+    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length) : 1;
+    this.lastMastery = Game.recordAnswer(this.cur.key, ok, weight);
+
+    // --- a step of a Rite: teach, chip in a little damage, move on ---
+    if(this.rite){
+      const r=this.rite;
+      r.trail.push(ok);
+      r.steps = r.steps || [];
+      r.steps.push(\`\${st.q.replace(/<[^>]+>/g,' ').trim().slice(0,44)} → \${ok?st.a:'<span style="color:var(--red)">'+st.a+'</span>'}\`);
+      if(ok){
+        r.clean++;
+        this.combo++;
+        const chip=Math.max(3, Math.round(this.wStats().dmg*0.25));
+        this.ehp=Math.max(0,this.ehp-chip);
+        Anim.strike('p', chip, false, 'STEP');
+        Sfx.good(this.combo);
+      } else {
+        Anim.float(560, H-250, 'MISSTEP', '#ff8b8b');
+        Sfx.bad();
+      }
+      Game.save();
+      setTimeout(()=>this.updateBars(),380);
+      this.showExplain(ok, choice, st);
+      return;
+    }
+
+    Haptic.tap();
+
+    if(this.mode==='daily'){
+      this.combo = ok ? this.combo+1 : 0;
+      const pts=Daily.award(ok, el, this.combo);
+      if(ok){
+        this.ehp=Math.max(0,this.ehp-1);
+        Anim.strike('p', pts, this.combo>=5, 'PTS');
+        Sfx.good(this.combo); this.comboBeat();
+      } else { Anim.strike('e', 0, false, 'MISS'); Sfx.bad(); }
+      Game.save();
+      setTimeout(()=>this.updateBars(),420);
+      this.showExplain(ok, choice);
+      return;
+    }
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
-      const w=Game.weapon();
-      const speed = el<7000?1.5 : el<14000?1.2 : 1.0;
+      const w=this.wStats();
+      const speed = this.speedMult(el);
       const comboMul = 1 + Math.min(this.combo,7)*.15;
       const crit = R.chance(w.crit + this.combo*0.02);
-      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1);
+      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1);
+      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1) * bonus;
       dmg = Math.round(dmg * (0.9+Math.random()*0.2));
       this.rage=false;
+      if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
+      else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
-      Anim.strike('p',dmg,crit);
-      Sfx.good();
+      Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      Sfx.good(this.combo);                       // pitch climbs with the streak
+      this.comboBeat();
+      Bounty.bump('solve',1);
+      Bounty.bump('topic',1,this.cur.key);
+      Bounty.bump('streak',this.combo);
+      if(crit) Bounty.bump('crit',1);
     } else {
+      if(this.perfect) this.combo=0;               // a missed Perfect Strike costs the streak
       this.combo=0;
-      const def=Game.armor().def;
+      const def=this.defStat();
       let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       Sfx.bad();
+      this.missed++;
     }
+    // Crossing a topic into "solid" is the payoff the whole game is built around.
+    if(this.lastMastery && this.lastMastery.mastered){
+      setTimeout(()=>Celebrate.banner('MASTERED', TOPIC_LABEL[this.cur.key]||this.cur.topic,
+        'var(--green)', ()=>{Sfx.mastered(); Haptic.win();}), 700);
+    }
+
+    // The foe fights on its own clock: it winds up over a few turns and then
+    // slams regardless of your answer. A correct answer braces the blow rather
+    // than avoiding it, so armour and draughts always matter.
+    const [sa,sb]=this.speedWindows();
+    document.getElementById('speedTxt').textContent = ok
+      ? (el<sa ? '⚡ Swift strike ×1.5' : el<sb ? '✦ Steady strike ×1.2' : 'Measured strike ×1.0')
+      : '';
+    this.perfect=false; this.finisher=1;
+    this.lastSlam=0; this.lastBraced=ok;
+    if(this.slamNext){
+      this.slamNext=false;
+      const raw=this.foe.atk*1.7*(ok?0.35:1);
+      this.lastSlam=Math.max(3, Math.round(raw - this.defStat()));
+      Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
+      const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
+      setTimeout(()=>{
+        if(this.over || this.token!==tok) return;
+        Anim.strike('e', amt, true, 'SLAM');
+        Sfx.hurt();
+        setTimeout(()=>this.updateBars(),420);
+      }, delay);
+    } else if(++this.charge >= this.chargeMax){
+      this.charge=0; this.slamNext=true;
+    }
+
     Game.save();
     setTimeout(()=>this.updateBars(),420);
-    this.showExplain(ok);
+    this.showExplain(ok, choice);
   },
 
-  showExplain(ok){
+  // Streak milestones: escalating callouts so a hot run feels like one.
+  comboBeat(){
+    const c=this.combo;
+    const M={3:['NICE!','three in a row'],5:['ON FIRE!','×1.75 damage'],
+             8:['UNSTOPPABLE!','×2.05 damage — the cap'],12:['LEGENDARY!','twelve straight'],
+             16:['IMMORTAL!','sixteen straight'],25:['GODLIKE!','twenty-five straight']};
+    const hit = M[c] || (c>25 && c%10===0 ? ['GODLIKE ×'+Math.floor(c/10),c+' straight'] : null);
+    if(hit) Celebrate.banner(hit[0], hit[1], c>=8?'#ff9c3d':'var(--gold)', ()=>{Sfx.milestone(); Haptic.win();});
+  },
+
+  showExplain(ok, picked, st){
+    st = st || this.cur;
+    const inRite = st !== this.cur;
+    const why = inRite ? (st._why||{}) : this.cur.why;
+    const miss = !ok && why[picked];
     const e=document.getElementById('explain');
+    const head = inRite
+      ? (ok ? '✔️ Step taken.' : '✕ Not that step.')
+      : (ok ? '⚔️ A clean strike!' : '🩸 The blow lands on you.');
+    // A wrong answer is exactly when the rule is worth restating.
+    const rule = (!ok && this.cur.codex)
+      ? \`<div class="cxinline"><b>The rule</b><br>\${this.cur.codex.rule}</div>\` : '';
     e.style.display='block';
     e.innerHTML =
-      \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${ok?'⚔️ A clean strike!':'🩸 The blow lands on you.'}</div>\`+
-      (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${this.cur.a}</b>.</div>\`)+
-      \`<div>\${this.cur.ex}</div>\`+
-      \`<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>\`;
+      \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${head}</div>\`+
+      (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
+      (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+
+      (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
+      \`<div>\${st.ex}</div>\`+ rule +
+      \`<div id="afig"></div>\`+
+      \`<button class="btn gold" style="margin-top:10px" id="contBtn">\${inRite?'Next step ▶':'Continue ▶'}</button>\`;
+    Figure.render(st.figAnswer || (st===this.cur ? this.cur.figAnswer : null), document.getElementById('afig'));
     const btn=document.getElementById('contBtn');
     btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
     e.scrollIntoView({behavior:'smooth',block:'nearest'});
@@ -1439,6 +4526,32 @@ const Battle = {
 
   afterTurn(){
     if(this.over) return;                       // battle already resolved
+    // Mid-ladder: advance to the next step without ending the turn.
+    if(this.rite){
+      const r=this.rite;
+      r.i++;
+      if(r.i < r.motes.length){
+        this.answered=false;
+        const ex=document.getElementById('explain'); ex.style.display='none'; ex.innerHTML='';
+        this.qStart=performance.now();
+        this.renderStep();
+        return;
+      }
+      // Ladder finished: the parent problem lands as one scaled blow.
+      const clean=r.clean, total=r.motes.length;
+      Rite.record(this.cur.key, clean===total);
+      this.finisher = 1 + 1.6*(clean/total);
+      this.rite=null;
+      this.answered=false;                       // answer() guards on this
+      this.qStart=performance.now()-999999;      // the finisher is not a speed test
+      this.answer(null, this.cur.a);             // the assembled solution strikes
+      return;
+    }
+    if(this.mode==='daily'){
+      Daily.n++;
+      if(Daily.n>=Daily.LEN){ this.over='daily'; clearInterval(this.timer); Daily.finish(); return; }
+      this.nextQuestion(); return;
+    }
     if(this.ehp<=0){ this.win(); return; }
     if(Game.s.hp<=0){
       if(Game.s.items.feather>0 && !this.usedFeather){
@@ -1457,26 +4570,25 @@ const Battle = {
 
   win(){
     if(this.over) return;
+    this.tension(1);
     this.over='win'; clearInterval(this.timer);
     Anim.burst(610,H-190,this.foe.col,42); Sfx.win();
+    if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.cleared(f);},1100); return; }
     const g=Game.s;
     const key=this.ri+':'+this.fi;
     const first=!g.cleared[key];
     g.cleared[key]=true; g.stats.wins++;
+    Bounty.bump('wins',1);
+    if(this.missed===0) Bounty.bump('flaw',1);
     const gold=Math.round(this.foe.gold*(first?1:0.45));
     const xp=Math.round(this.foe.xp*(first?1:0.4));
     g.gold+=gold;
     const ups=Game.gainXp(xp);
 
-    // loot
-    let loot=null;
-    if(R.chance(this.foe.boss?1:.42)){
-      const roll=Math.random();
-      if(roll<.5){ g.items.potion++; loot=\`\${ITEMS.potion.ic} a Healing Draught\`; }
-      else if(roll<.78){ g.items.insight++; loot=\`\${ITEMS.insight.ic} a Sage's Insight\`; }
-      else if(roll<.95){ g.items.rage++; loot=\`\${ITEMS.rage.ic} a Berserker Rune\`; }
-      else { g.items.feather++; loot=\`\${ITEMS.feather.ic} a Phoenix Feather\`; }
-    }
+    // loot — rolled now, revealed by the chest once the victory panel is up
+    const drop = R.chance(this.foe.boss?1:.5)
+      ? Loot.roll({boss:this.foe.boss, tier:Math.min(6, this.ri+2)}) : null;
+    const loot = drop ? \`<span style="color:\${RARITY[drop.rar].col}">\${drop.ic} \${drop.nm}</span>\` : null;
     // boss unlocks the next realm
     let unlocked=null;
     if(this.foe.boss && first && this.ri+1<REALMS.length) unlocked=REALMS[this.ri+1].nm;
@@ -1491,8 +4603,8 @@ const Battle = {
           <div class="sub" style="margin-top:6px">\${this.foe.nm} falls before your blade.</div>
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
-            <div class="coin">+\${gold} gold</div>
-            <div style="color:var(--blue)">+\${xp} experience</div>
+            <div class="coin">+<span id="rGold">0</span> gold</div>
+            <div style="color:var(--blue)">+<span id="rXp">0</span> experience</div>
             \${loot?\`<div style="color:var(--purple)">Looted \${loot}</div>\`:''}
             \${ups?\`<div style="color:var(--gold)">⬆️ Level \${g.lvl}! Health restored to \${g.maxHp}.</div>\`:''}
             \${unlocked?\`<div style="color:var(--green)">🗺️ \${unlocked} now lies open.</div>\`:''}
@@ -1503,13 +4615,23 @@ const Battle = {
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
         <button class="btn ghost" onclick="UI.go('s-shop')">🏪 Visit the Smithy</button>\`;
+      if(drop) setTimeout(()=>Chest.open(drop), 700);
+      countUp(document.getElementById('rGold'), gold, 900);
+      countUp(document.getElementById('rXp'),   xp,   900);
+      for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
+      Haptic.win();
+      if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
+      Titles.check();
+      if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
       Anim.stop();
     },1200);
   },
 
   lose(){
     if(this.over) return;
+    this.tension(1);
     this.over='lose'; clearInterval(this.timer); Sfx.hurt();
+    if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     const g=Game.s;
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
@@ -1533,9 +4655,562 @@ const Battle = {
   },
 
   flee(){
-    clearInterval(this.timer); this.over='flee'; Anim.stop();
+    clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1);
+    if(this.mode==='arena'){ Arena.retire(); return; }
     UI.go('s-map');
     UI.toast('🏃 You slip away into the trees.');
+  }
+};
+
+/* -------------------------------- titles --------------------------------- */
+/* Milestones worth chasing. Most are tied to actually learning something
+   rather than merely grinding, so the reward tracks the point of the game.  */
+const TITLES = [
+  {id:'first',    ic:'⚔️', nm:'First Blood',     ds:'Win your first battle',        t:g=>g.stats.wins>=1},
+  {id:'squire',   ic:'🛡️', nm:'Squire',          ds:'Solve 50 riddles',             t:g=>g.stats.correct>=50},
+  {id:'errant',   ic:'🐎', nm:'Knight-Errant',   ds:'Solve 250 riddles',            t:g=>g.stats.correct>=250},
+  {id:'scholar',  ic:'📚', nm:'Scholar',         ds:'Solve 1000 riddles',           t:g=>g.stats.correct>=1000},
+  {id:'form',     ic:'🔥', nm:'Perfect Form',    ds:'Reach a streak of 15',         t:g=>g.stats.best>=15},
+  {id:'realm',    ic:'🗺️', nm:'Realm Walker',    ds:'Clear an entire realm',
+    t:g=>REALMS.some((r,ri)=>r.foes.every((f,fi)=>g.cleared[ri+':'+fi]))},
+  {id:'dragon',   ic:'🐉', nm:'Dragonslayer',    ds:'Fell the Eigen Dragon',
+    // Pinned to the Citadel by name, not by index: adding realms after it used
+    // to hand this one out three realms early.
+    t:g=>{const i=REALMS.findIndex(r=>r.bg.key==='citadel');
+          return i>=0 && !!g.cleared[i+':'+(REALMS[i].foes.length-1)];}},
+  {id:'ascend',   ic:'🌌', nm:'Ascendant',       ds:'Clear the final realm',
+    t:g=>!!g.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]},
+  {id:'arena10',  ic:'🏟️', nm:'Gladiator',       ds:'Reach arena wave 10',          t:g=>(g.arenaBest||0)>=10},
+  {id:'arena20',  ic:'👑', nm:'Arena Champion',  ds:'Reach arena wave 20',          t:g=>(g.arenaBest||0)>=20},
+  {id:'poly',     ic:'🧠', nm:'Polymath',        ds:'Master 10 topics',
+    t:()=>Mastery.all().filter(x=>x.r.m>=0.85).length>=10},
+  {id:'magister', ic:'✨', nm:'Grand Magister',  ds:'Master every topic in the game',
+    t:()=>Mastery.all().filter(x=>x.r.m>=0.85).length>=Object.keys(TOPIC_LABEL).length},
+  {id:'devoted',  ic:'📅', nm:'Devoted',         ds:'Practise seven days running',
+    t:g=>(g.streak&&g.streak.days)>=7}
+];
+
+const Titles = {
+  check(){
+    const g=Game.s; if(!g) return;
+    g.titles=g.titles||{};
+    let got=false;
+    for(const t of TITLES){
+      if(g.titles[t.id]) continue;
+      let earned=false;
+      try{ earned=!!t.t(g); }catch(e){}
+      if(earned){
+        g.titles[t.id]=1; got=true;
+        Celebrate.banner(t.ic+' '+t.nm, t.ds, 'var(--gold)', ()=>{Sfx.mastered(); Haptic.win();});
+      }
+    }
+    if(got) Game.save();
+  },
+  count(){ const g=Game.s; return g&&g.titles ? Object.keys(g.titles).length : 0; },
+  latest(){
+    const g=Game.s; if(!g||!g.titles) return null;
+    const owned=TITLES.filter(t=>g.titles[t.id]);
+    return owned.length? owned[owned.length-1] : null;
+  }
+};
+
+/* Local-date key, so the streak rolls over at the player's midnight. */
+function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+
+/* --------------------------------- codex ---------------------------------- */
+/* One card per topic: the rule in a sentence and a worked scrap. Free to peek
+   while a topic is new, then it costs combo — cheap enough to use, expensive
+   enough to matter.                                                          */
+const Codex = {
+  FREE_SIGHTS: 6,
+  costsCombo(key){
+    const r = Game.s && Game.s.topicStats[key];
+    return !!(r && r.seen >= this.FREE_SIGHTS);
+  },
+  has(cur){ return !!(cur && cur.codex); },
+  open(cur, onClose){
+    if(!this.has(cur)) return;
+    const free = !this.costsCombo(cur.key);
+    const el=document.getElementById('codex');
+    el.innerHTML=\`<div class="cxbox">
+        <div class="cxk">\${cur.topic}</div>
+        <div class="cxrule">\${cur.codex.rule}</div>
+        \${cur.codex.eg?\`<div class="cxeg">\${cur.codex.eg}</div>\`:''}
+        <div class="small" style="margin-top:10px">\${free
+          ? 'Free while this topic is still new to you.'
+          : 'Peeking costs your combo.'}</div>
+        <button class="btn gold" id="cxclose" style="margin-top:10px">Back to the fight</button>
+      </div>\`;
+    el.classList.add('on');
+    document.getElementById('cxclose').onclick=()=>{
+      el.classList.remove('on');
+      if(onClose) onClose(free);
+    };
+    Sfx.coin(0);
+  }
+};
+
+/* ---------------------------------- rite ---------------------------------- */
+/* A complex topic arrives as a ladder of five-second steps that chain into a
+   combo and end in a finisher. Four fast wins read better than one hard
+   question, and they happen to be how procedure is actually learnt.          */
+const Rite = {
+  // How many clean ladders before the game offers the whole problem instead.
+  GRADUATE: 3,
+  graduated(key){
+    const g=Game.s; if(!g) return false;
+    const r=g.topicStats[key];
+    return (g.riteWins && g.riteWins[key] || 0) >= this.GRADUATE && r && r.m >= 0.7;
+  },
+  record(key, clean){
+    const g=Game.s;
+    g.riteWins = g.riteWins || {};
+    if(clean) g.riteWins[key] = (g.riteWins[key]||0) + 1;
+    Game.save();
+  }
+};
+
+/* --------------------------------- loot ---------------------------------- */
+/* A drop used to be a 42% roll printing one line of text. It is now a rarity
+   roll with a reveal, and rare tiers can drop gear — which until now was only
+   ever bought, so the shop was the sole source of upgrades.                  */
+const RARITY = {
+  common:    {nm:'Common',    col:'#9aa6b5'},
+  uncommon:  {nm:'Uncommon',  col:'#57cc7a'},
+  rare:      {nm:'Rare',      col:'#5aa9e6'},
+  epic:      {nm:'Epic',      col:'#a06bd6'},
+  legendary: {nm:'Legendary', col:'#f2c14e'}
+};
+
+const Loot = {
+  // Gear the player does not yet own, capped so realm one cannot drop the best blade.
+  gearPool(tier){
+    const out=[];
+    WEAPONS.forEach((w,i)=>{ if(i>0 && i<=tier && !Game.s.owned[w.id]) out.push(w); });
+    ARMORS .forEach((a,i)=>{ if(i>0 && i<=tier && !Game.s.owned[a.id]) out.push(a); });
+    return out;
+  },
+  rollRarity(luck){
+    const w=[['common',100],['uncommon',46*luck],['rare',19*luck],['epic',5.5*luck],['legendary',1.3*luck]];
+    let t=w.reduce((s,x)=>s+x[1],0)*Math.random();
+    for(const [id,v] of w){ t-=v; if(t<=0) return id; }
+    return 'common';
+  },
+  roll(ctx){
+    const luck = ctx.boss ? 2.6 : 1;
+    let rar = this.rollRarity(luck);
+    if(ctx.boss && rar==='common') rar='uncommon';     // a boss always gives something
+    const pool = this.gearPool(ctx.tier);
+
+    // The high tiers hand over gear whenever any is still unowned.
+    if((rar==='rare'||rar==='epic'||rar==='legendary') && pool.length){
+      const idx = rar==='legendary' ? pool.length-1
+                : rar==='epic'      ? Math.min(pool.length-1, Math.floor(pool.length*0.66))
+                : Math.floor(Math.random()*pool.length);
+      const g = pool[idx];
+      const isWeapon = WEAPONS.indexOf(g)>=0;
+      return {rar, ic:g.ic, nm:g.nm, ds:g.ds, tagNew:true,
+        apply(){
+          Game.s.owned[g.id]=1;
+          if(isWeapon) Game.s.weapon=g.id;
+          else { Game.s.armor=g.id; Game.s.maxHp=Game.maxHp(); Game.s.hp=Math.min(Game.s.maxHp,Game.s.hp+g.hp); }
+        }};
+    }
+    if(rar==='legendary'||rar==='epic'){                     // nothing left to find — pay out
+      const n = rar==='legendary'?2:1;
+      return {rar, ic:'🪶', nm:n>1?'Phoenix Feathers':'Phoenix Feather',
+        ds:'Revives you once at half health.', count:n,
+        apply(){ Game.s.items.feather+=n; }};
+    }
+    if(rar==='rare'){
+      const gold = 120 + ctx.tier*70;
+      return {rar, ic:'💰', nm:'Buried Purse', ds:gold+' gold, and a rune besides.',
+        apply(){ Game.s.gold+=gold; Game.s.items.rage++; }};
+    }
+    if(rar==='uncommon'){
+      const pick=R.pick(['potions','insight','rage']);
+      if(pick==='potions') return {rar, ic:'🧪', nm:'Draughts ×2', ds:'Two Healing Draughts.',
+        apply(){ Game.s.items.potion+=2; }};
+      if(pick==='insight') return {rar, ic:'🔮', nm:"Sage's Insight ×2", ds:'Burns away two wrong answers.',
+        apply(){ Game.s.items.insight+=2; }};
+      return {rar, ic:'🔥', nm:'Berserker Rune', ds:'Next correct strike deals 2.5× damage.',
+        apply(){ Game.s.items.rage++; }};
+    }
+    return R.chance(.5)
+      ? {rar, ic:'🧪', nm:'Healing Draught', ds:'Restores 45% of your health.', apply(){ Game.s.items.potion++; }}
+      : {rar, ic:'🔮', nm:"Sage's Insight", ds:'Burns away two wrong answers.', apply(){ Game.s.items.insight++; }};
+  }
+};
+
+/* The reveal. Chest shakes, bursts in the rarity colour, card sweeps in. */
+const Chest = {
+  pending:null, after:null,
+  open(item, after){
+    // The reveal is deferred by a beat, and the player may have moved on in the
+    // meantime — advancing an arena wave, say. Never open over a live fight.
+    const now=document.querySelector('.screen.on');
+    if(!now || now.id!=='s-result'){ item.apply(); Game.save(); if(after) after(); return; }
+    // A second drop must not silently discard the first.
+    if(this.pending){ this.pending.apply(); Game.save(); }
+    this.pending=item; this.after=after||null;
+    const col=RARITY[item.rar].col;
+    const el=document.getElementById('chest');
+    el.style.setProperty('--rc', col);
+    el.innerHTML=\`<div class="cbox">
+        <div class="clid" id="clid">🎁</div>
+        <div class="cburst" id="cburst"></div>
+        <div class="ccard" id="ccard">
+          <div class="crar">\${RARITY[item.rar].nm}</div>
+          <div class="cic">\${item.ic}</div>
+          <div class="cnm">\${item.nm}\${item.tagNew?' <span class="cnew">NEW</span>':''}</div>
+          <div class="cds">\${item.ds}</div>
+        </div>
+        <button class="btn gold" id="cbtn" style="display:none;max-width:16rem;margin:14px auto 0">Collect</button>
+      </div>\`;
+    el.classList.add('on');
+    document.getElementById('cbtn').onclick=()=>this.close();
+    Sfx.chestShake();
+    const wait = Prefs.d.motion ? 780 : 220;
+    setTimeout(()=>this.burst(), wait);
+  },
+  burst(){
+    const el=document.getElementById('chest'); if(!el.classList.contains('on')) return;
+    document.getElementById('clid').classList.add('pop');
+    document.getElementById('cburst').classList.add('go');
+    document.getElementById('ccard').classList.add('go');
+    document.getElementById('cbtn').style.display='';
+    const rar=this.pending.rar;
+    if(rar==='legendary'||rar==='epic'){ Sfx.mastered(); Haptic.win(); }
+    else { Sfx.chestOpen(); Haptic.hit(); }
+  },
+  close(){
+    const el=document.getElementById('chest');
+    el.classList.remove('on');
+    const it=this.pending, cb=this.after;
+    this.pending=null; this.after=null;
+    if(it){ it.apply(); Game.save(); }
+    if(cb) cb();
+  }
+};
+
+/* ------------------------------- bounties -------------------------------- */
+/* Three rotating goals so a session always has a reason beyond the next node.
+   Completing one pays out and immediately rolls a replacement.              */
+const BOUNTY_KINDS = [
+  {id:'wins',   mk:()=>({n:R.i(2,4)}),
+   txt:b=>\`Win \${b.n} battles\`,                              gold:b=>70*b.n},
+  {id:'streak', mk:()=>({n:R.pick([8,12,16])}), peak:true,
+   txt:b=>\`Reach a streak of \${b.n}\`,                        gold:b=>20*b.n},
+  {id:'crit',   mk:()=>({n:R.i(4,9)}),
+   txt:b=>\`Land \${b.n} critical strikes\`,                    gold:b=>32*b.n},
+  {id:'flaw',   mk:()=>({n:R.i(1,2)}),
+   txt:b=>\`Win \${b.n} fight\${b.n>1?'s':''} without a single miss\`, gold:b=>170*b.n},
+  {id:'solve',  mk:()=>({n:R.i(15,30)}),
+   txt:b=>\`Solve \${b.n} riddles\`,                            gold:b=>7*b.n},
+  {id:'topic',  mk:()=>({n:R.i(4,8), k:R.pick(Object.keys(TOPIC_LABEL))}),
+   txt:b=>\`Solve \${b.n} × \${TOPIC_LABEL[b.k]||b.k}\`,         gold:b=>18*b.n}
+];
+
+const Bounty = {
+  kind(id){ return BOUNTY_KINDS.find(k=>k.id===id); },
+  ensure(){
+    const g=Game.s; if(!g) return;
+    g.bounties = g.bounties || [];
+    let guard=0;
+    while(g.bounties.length<3 && guard++<30) g.bounties.push(this.make(g.bounties));
+  },
+  make(existing){
+    let kind, guard=0;
+    do{ kind=R.pick(BOUNTY_KINDS); } while(existing.some(b=>b.id===kind.id) && guard++<25);
+    const b=Object.assign({id:kind.id, p:0}, kind.mk());
+    b.gold=kind.gold(b);
+    return b;
+  },
+  txt(b){ const k=this.kind(b.id); return k?k.txt(b):''; },
+  // Counters accumulate; 'streak' instead records a high-water mark.
+  bump(id, amount, meta){
+    const g=Game.s; if(!g||!g.bounties) return;
+    let done=false;
+    for(const b of g.bounties){
+      if(b.id!==id || b.p>=b.n) continue;
+      if(id==='topic' && meta!==b.k) continue;
+      const k=this.kind(id);
+      b.p = k && k.peak ? Math.max(b.p, amount) : Math.min(b.n, b.p+amount);
+      if(b.p>=b.n) done=true;
+    }
+    if(done) this.claim();
+  },
+  claim(){
+    const g=Game.s;
+    const done=g.bounties.filter(b=>b.p>=b.n);
+    if(!done.length) return;
+    const gold=done.reduce((s,b)=>s+b.gold,0);
+    g.gold+=gold;
+    g.bounties=g.bounties.filter(b=>b.p<b.n);
+    this.ensure();
+    Game.save();
+    Celebrate.banner('BOUNTY CLAIMED', '+'+gold+' gold', 'var(--gold)',
+      ()=>{Sfx.milestone(); Haptic.win();});
+  },
+  // The cheapest thing you cannot yet afford — a visible next step.
+  nextUnlock(){
+    const g=Game.s; if(!g) return null;
+    const all=WEAPONS.concat(ARMORS).filter(x=>x.cost>0 && !g.owned[x.id]);
+    all.sort((a,b)=>a.cost-b.cost);
+    return all[0]||null;
+  }
+};
+
+/* ---------------------------- daily skirmish ------------------------------ */
+/* Twelve questions from a seed derived from the date, so the run is the same
+   everywhere that day and a score means something. No health, no death — the
+   only thing at stake is the number.                                        */
+// Realms one to four: varied, but stops short of the hardest set so a daily is
+// approachable for someone who has not finished the campaign.
+const DAILY_POOL = REALMS.slice(0,4).reduce((a,r)=>a.concat(r.pool), []);
+
+const Daily = {
+  LEN:12,
+  seedFor(d){ d=d||new Date(); return (d.getFullYear()*10000 + (d.getMonth()+1)*100 + d.getDate())>>>0; },
+  today(){ return dayKey(new Date()); },
+  state(){
+    const g=Game.s;
+    g.daily = g.daily || {day:null, best:0, runs:0, allTimeBest:0};
+    if(g.daily.day!==this.today()){ g.daily.day=this.today(); g.daily.best=0; g.daily.runs=0; }
+    return g.daily;
+  },
+  start(){
+    this.state();
+    this.score=0; this.n=0;
+    R.seed(this.seedFor());
+    Battle.beginDaily();
+  },
+  // Points reward accuracy first, then speed, then the streak.
+  award(ok, ms, combo){
+    if(!ok) return 0;
+    const speed = ms<6000?1.5 : ms<12000?1.25 : ms<22000?1.05 : 1;
+    const pts=Math.round(100*speed*(1+Math.min(combo,10)*0.06));
+    this.score+=pts;
+    return pts;
+  },
+  finish(){
+    R.unseed();
+    const st=this.state();
+    st.runs++;
+    const record = this.score>st.best;
+    if(record) st.best=this.score;
+    if(this.score>(st.allTimeBest||0)) st.allTimeBest=this.score;
+    Game.save();
+    Titles.check();
+    Anim.stop();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">🗡️</div>
+      <div class="panel center">
+        <h1 style="font-size:22px">Daily Skirmish</h1>
+        <div class="sub" style="margin-top:6px">\${this.LEN} riddles, the same for everyone today.</div>
+        <hr>
+        <div style="font-size:34px;font-weight:900;color:var(--gold)" id="dScore">0</div>
+        <div class="small">points</div>
+        \${record?'<div style="color:var(--green);font-weight:800;margin-top:8px">🏅 Best of the day!</div>':
+          \`<div class="small" style="margin-top:8px">Today's best: \${st.best}</div>\`}
+        <hr>
+        <div class="small">All-time best: \${st.allTimeBest} · runs today: \${st.runs}</div>
+      </div>
+      <button class="btn gold" onclick="Daily.start()">↻ Run it again</button>
+      <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
+      <div style="height:20px"></div>\`;
+    countUp(document.getElementById('dScore'), this.score, 1100);
+    if(record){ Celebrate.banner('NEW BEST', this.score+' points', 'var(--gold)', ()=>{Sfx.mastered(); Haptic.win();}); }
+    else Sfx.win();
+  }
+};
+
+/* -------------------------------- arena ---------------------------------- */
+/* Endless mode, unlocked once the Eigen Dragon falls. Waves scale, you never
+   heal for free, and the run ends when you do. Problems are drawn from every
+   topic in the game, still weighted by mastery — so the deeper you push, the
+   more it hunts for your weak spots.                                        */
+const ARENA_ADJ = ['Spectral','Nullspace','Divergent','Singular','Recursive','Asymptotic',
+  'Orthogonal','Degenerate','Infinite','Convergent','Transposed','Unbounded','Nilpotent'];
+const ARENA_NOUN = ['Revenant','Warden','Colossus','Serpent','Harbinger','Devourer',
+  'Sentinel','Phantom','Behemoth','Aberration','Tyrant','Herald'];
+const ARENA_ART = ['slime','goblin','skeleton','golem','wisp','harpy','wraith','dragon','lich','knightfoe'];
+const ARENA_COL = ['#e5484d','#a06bd6','#5aa9e6','#57cc7a','#f2c14e','#e07b39','#6fd3c4','#f06bb0'];
+
+/* Run-scoped boons, drafted three at a time. They stack. */
+const BOONS = [
+  {ic:'🩸', nm:'Vigour',     ds:'+25% maximum health, and heal that much now',
+   go(){ const b=Game.s.maxHp; Arena.mods.hpMul*=1.25; Game.s.maxHp=Game.maxHp();
+         Game.s.hp=Math.min(Game.s.maxHp, Game.s.hp+(Game.s.maxHp-b)); }},
+  {ic:'⚔️', nm:'Whetstone',  ds:'+25% weapon damage for this run',
+   go(){ Arena.mods.dmg += .25; }},
+  {ic:'🛡️', nm:'Bulwark',    ds:'+7 defence for this run',
+   go(){ Arena.mods.def += 7; }},
+  {ic:'🔥', nm:'Fury',       ds:'+12% critical chance for this run',
+   go(){ Arena.mods.crit += .12; }},
+  {ic:'⏳', nm:'Tempo',      ds:'foes need one extra turn to wind up',
+   go(){ Arena.mods.charge += 1; }},
+  {ic:'🧪', nm:'Supplies',   ds:'+3 Healing Draughts',
+   go(){ Game.s.items.potion += 3; }},
+  {ic:'🔮', nm:'Foresight',  ds:'+3 Sage\\'s Insights',
+   go(){ Game.s.items.insight += 3; }},
+  {ic:'💰', nm:'Avarice',    ds:'+60% gold from this run',
+   go(){ Arena.mods.gold += .6; }},
+  {ic:'❤️‍🩹', nm:'Second Wind', ds:'restore health to full right now',
+   go(){ Game.s.hp = Game.s.maxHp; }},
+  {ic:'🪶', nm:'Plumage',    ds:'+1 Phoenix Feather',
+   go(){ Game.s.items.feather += 1; }}
+];
+
+const Arena = {
+  active:false, wave:0, earned:0, mods:null,
+  realm:{nm:'The Arena', col:'#f2c14e', sky:['#4a2410','#0d0705'], pool:null,
+    bg:{key:'arena', seed:97, sky:['#5a3616','#33200d','#120a04'],
+        far:'towers', farCol:'#3c2612', near:'arcs', nearCol:'#22150a',
+        ground:['#422913','#140c05'], rim:'rgba(255,210,140,.2)', haze:'rgba(44,27,12,.82)',
+        glow:'#ffeccd', weather:'dust', accent:'#f2c14e'}},
+
+  unlocked(){ return !!(Game.s && Game.s.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]); },
+
+  /* What an endless run draws from. Mastery.weight deliberately over-weights
+     unseen topics so a curated realm pool introduces its new material — but
+     pointed at all seventy topics that same rule turns the arena into a run of
+     things you have never been taught. So the arena asks what you have met,
+     and only falls back to everything if you have barely met anything. */
+  pool(){
+    const all=Object.keys(TOPIC_LABEL);
+    const met=all.filter(k=>{ const r=Game.s.topicStats[k]; return r && r.seen>0; });
+    return met.length>=12 ? met : all;
+  },
+
+  start(){
+    this.active=true; this.wave=0; this.earned=0;
+    this.mods={dmg:1, def:0, crit:0, gold:1, charge:0, hpMul:1};
+    this.realm.pool = this.pool();
+    Game.s.maxHp = Game.maxHp();
+    Game.s.hp = Game.s.maxHp;          // you enter fresh; you will not be topped up again
+    Game.save();
+    this.nextWave();
+  },
+
+  foeFor(w){
+    const champion = w%5===0;
+    const hp  = Math.round((200 + w*95) * (champion?1.7:1));
+    const atk = Math.round(30 * Math.pow(1.085, w-1) * (champion?1.25:1));
+    return {
+      nm:(champion?'':R.pick(ARENA_ADJ)+' ')+R.pick(ARENA_NOUN),
+      art:R.pick(ARENA_ART), col:R.pick(ARENA_COL),
+      hp, atk, boss:champion,
+      gold:Math.round((50 + w*18)*(champion?2:1)),
+      xp:Math.round((30 + w*10)*(champion?2:1))
+    };
+  },
+
+  nextWave(){
+    this.wave++;
+    Battle.beginArena(this.foeFor(this.wave), this.wave);
+  },
+
+  // Called by Battle.win() when a wave falls.
+  cleared(foe){
+    const gold=Math.round(foe.gold*this.mods.gold);
+    Game.s.gold += gold; this.earned += gold;
+    const ups=Game.gainXp(foe.xp);
+    let healed=0;
+    if(this.wave%5===0){                      // a breather after each champion
+      healed=Math.round(Game.s.maxHp*.25);
+      Game.s.hp=Math.min(Game.s.maxHp, Game.s.hp+healed);
+    }
+    if(this.wave>(Game.s.arenaBest||0)) Game.s.arenaBest=this.wave;
+    Bounty.bump('wins',1);
+    if(Battle.missed===0) Bounty.bump('flaw',1);
+    Game.save();
+
+    const drop = R.chance(foe.boss?1:.34)
+      ? Loot.roll({boss:foe.boss, tier:Math.min(6, 2+Math.floor(this.wave/4))}) : null;
+    if(drop) setTimeout(()=>Chest.open(drop), 700);
+    const draft = this.wave%3===0 ? R.shuffle(BOONS).slice(0,3) : null;
+    this.pending = draft;
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">\${foe.boss?'👑':'⚔️'}</div>
+      <div class="panel center">
+        <h1 style="font-size:20px">Wave \${this.wave} cleared</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} falls. The gate grinds open again.</div>
+        <hr>
+        <div style="font-size:15px;font-weight:800;line-height:1.8">
+          <div class="coin">+<span id="aGold">0</span> gold</div>
+          <div style="color:var(--blue)">+<span id="aXp">0</span> experience</div>
+          \${ups?\`<div style="color:var(--gold)">⬆️ Level \${Game.s.lvl}!</div>\`:''}
+          \${healed?\`<div style="color:var(--green)">🩹 The crowd throws down a poultice: +\${healed} health</div>\`:''}
+        </div>
+        <hr>
+        <div class="small">❤️ \${Math.round(Game.s.hp)}/\${Game.s.maxHp} · 🪙 \${this.earned} earned this run · best wave \${Game.s.arenaBest}</div>
+      </div>
+      \${draft?\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">Choose a boon</h2>
+        <div class="sub" style="margin-bottom:6px">It lasts the rest of the run.</div>
+        \${draft.map((b,i)=>\`<button class="btn" onclick="Arena.take(\${i})">
+          <span style="font-size:18px">\${b.ic}</span> <b>\${b.nm}</b>
+          <span class="small" style="font-weight:400"><br>\${b.ds}</span></button>\`).join('')}
+      </div>\`
+      :\`<button class="btn gold" onclick="Arena.nextWave()">⚔️ Wave \${this.wave+1} →</button>
+        <button class="btn ghost" onclick="Arena.retire()">🚪 Retire with your winnings</button>\`}
+      <div style="height:20px"></div>\`;
+    countUp(document.getElementById('aGold'), gold, 800);
+    countUp(document.getElementById('aXp'), foe.xp, 800);
+    for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
+    Haptic.win();
+    if(ups) Celebrate.banner('LEVEL '+Game.s.lvl, 'Maximum health now '+Game.s.maxHp, 'var(--gold)', ()=>Sfx.level());
+    if(this.wave%5===0) Celebrate.banner('WAVE '+this.wave, 'champion felled', '#ff9c3d', ()=>Sfx.milestone());
+    Titles.check();
+  },
+
+  take(i){
+    const b=this.pending&&this.pending[i];
+    if(!b) return;
+    this.pending=null;
+    b.go(); Game.save(); Sfx.win();
+    UI.toast(\`\${b.ic} \${b.nm} claimed.\`);
+    this.nextWave();
+  },
+
+  // Called by Battle.lose().
+  ended(foe){
+    this.active=false;
+    const record = this.wave >= (Game.s.arenaBest||0);
+    Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
+    Game.s.maxHp=Game.maxHp();                 // drop any Vigour stacking
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=\`
+      <div class="center crest">💀</div>
+      <div class="panel center">
+        <h1 style="font-size:20px;color:var(--red)">The Arena claims you</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} ends your run on wave \${this.wave}.</div>
+        <hr>
+        <div style="font-size:16px;font-weight:800;line-height:1.9">
+          <div>Waves survived: <span style="color:var(--gold)">\${this.wave-1}</span></div>
+          <div class="coin">\${this.earned} gold carried out</div>
+          \${record?'<div style="color:var(--green)">🏅 A new record!</div>':\`<div class="small">Best: wave \${Game.s.arenaBest}</div>\`}
+        </div>
+        <hr>
+        <div class="sub">You keep every coin. The gold is yours whether you walk out or are carried.</div>
+      </div>
+      <button class="btn gold" onclick="Arena.start()">↻ Enter again</button>
+      <button class="btn" onclick="UI.go('s-shop')">🏪 Spend it at the Smithy</button>
+      <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
+      <div style="height:20px"></div>\`;
+  },
+
+  retire(){
+    this.active=false;
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-map');
+    UI.toast(\`🚪 Retired on wave \${this.wave} with \${this.earned} gold.\`);
   }
 };
 
@@ -1544,6 +5219,7 @@ const UI = {
   hist:[],
   go(id, noPush){
     const cur=document.querySelector('.screen.on');
+    if(cur && cur.id!==id && Prefs.d.motion) this.glint();
     if(cur && cur.id!==id && !noPush) this.hist.push(cur.id);
     document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id));
     window.scrollTo(0,0);
@@ -1553,8 +5229,33 @@ const UI = {
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
+    if(id==='s-prefs') this.renderPrefs();
   },
   back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
+
+  /** Redraw the parts of the title screen that depend on who is playing. */
+  refreshTitle(){
+    const k=Profiles.active(), n=Profiles.list().length;
+    const row=document.getElementById('knightRow');
+    row.innerHTML = k
+      ? \`<div class="center" style="margin-bottom:8px">
+           <span class="knightchip" onclick="Knights.open()">
+             <span style="color:\${k.col}">\${k.crest}</span>
+             <span>\${Knights.esc(k.nm)}</span>
+             <span class="small" style="opacity:.75">\${n>1?'· switch':'· knights'}</span></span></div>\`
+      : (n ? \`<div class="center" style="margin-bottom:8px">
+           <span class="knightchip" onclick="Knights.open()">🛡️ <span>Choose your knight</span></span></div>\` : '');
+    const has=!!(k && Game.s);
+    document.getElementById('btnContinue').style.display = has ? '' : 'none';
+    document.getElementById('resetRow').style.display = has ? '' : 'none';
+    document.getElementById('btnBegin').textContent = has ? '⚔️ Start a new quest' : '⚔️ Begin the Quest';
+  },
+  glint(){
+    const w=document.getElementById('wipe'); if(!w) return;
+    w.classList.remove('go'); void w.offsetWidth;      // restart the animation
+    w.classList.add('go');
+    setTimeout(()=>w.classList.remove('go'), 380);
+  },
   toast(msg){
     const d=document.createElement('div'); d.className='toast'; d.innerHTML=msg;
     document.body.appendChild(d);
@@ -1562,9 +5263,31 @@ const UI = {
   },
   hud(){
     const g=Game.s;
-    const pct=Math.round(g.xp/Game.xpNeeded()*100);
-    return \`<span>🛡️ Lv \${g.lvl}</span><span>❤️ \${Math.round(g.hp)}/\${g.maxHp}</span>
-            <span class="sp"></span><span class="coin">🪙 \${g.gold}</span><span class="small">XP \${pct}%</span>\`;
+    const pct=clamp(Math.round(g.xp/Game.xpNeeded()*100),0,100);
+    const days=(g.streak&&g.streak.days)||0;
+    return \`<span>🛡️ \${g.lvl}</span><span>❤️ \${Math.round(g.hp)}/\${g.maxHp}</span>
+            \${days>1?\`<span title="day streak">🔥 \${days}</span>\`:''}
+            <span class="sp"></span>
+            <span class="xpwrap"><div class="xptrack"><div style="width:\${pct}%"></div></div></span>
+            <span class="coin">🪙 \${g.gold}</span>\`;
+  },
+  renderPrefs(){
+    const row=(k,ic,nm,ds)=>\`<div class="pref \${Prefs.d[k]?'on':''}" onclick="Prefs.toggle('\${k}')">
+        <div style="font-size:20px">\${ic}</div>
+        <div style="flex:1"><div style="font-weight:800;font-size:14px">\${nm}</div>
+        <div class="small">\${ds}</div></div><div class="sw"><i></i></div></div>\`;
+    document.getElementById('prefList').innerHTML=\`
+      <div class="panel"><h2>⚙️ Settings</h2>
+        \${row('sound','🔊','Sound','Strikes, streak tones and fanfares')}
+        \${row('motion','✨','Full motion','Screen shake, hit-stop, particles and slow-motion')}
+        \${row('haptics','📳','Haptics','Vibration on hits, where the device supports it')}
+      </div>
+      <div class="panel"><h2>🏅 Titles</h2>
+        <div class="sub" style="margin-bottom:6px">\${Titles.count()} of \${TITLES.length} earned.</div>
+        \${TITLES.map(t=>{const got=Game.s&&Game.s.titles&&Game.s.titles[t.id];
+          return \`<span class="medal \${got?'got':''}">\${got?t.ic:'🔒'} \${t.nm}
+            <span class="small" style="font-weight:400">— \${t.ds}</span></span>\`;}).join('')}
+      </div>\`;
   },
   renderMap(){
     if(!Game.s) return;
@@ -1572,7 +5295,32 @@ const UI = {
     Game.s.hp=Math.min(Game.s.hp,Game.s.maxHp);
     ['hud','hud2','hud3'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=this.hud();});
     const g=Game.s, list=document.getElementById('mapList');
-    let out='';
+    Bounty.ensure();
+    const st=Daily.state(), nx=Bounty.nextUnlock();
+    let out=\`<div class="panel" style="padding:11px">
+      <div class="node" style="margin:0 0 8px" onclick="Daily.start()">
+        <div class="ico" style="font-size:24px">🗡️</div>
+        <div style="flex:1">
+          <div class="nm">Daily Skirmish \${st.best?\`<span class="tag g">best \${st.best}</span>\`:'<span class="tag">new today</span>'}</div>
+          <div class="dt">\${Daily.LEN} riddles from today's seed · same for everyone</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>
+      <div class="small" style="margin:8px 0 4px;font-weight:800;color:var(--gold)">📜 Bounties</div>
+      \${g.bounties.map(b=>{
+        const pct=Math.round(b.p/b.n*100);
+        return \`<div style="margin:6px 0">
+          <div style="display:flex;justify-content:space-between;font-size:12px">
+            <span>\${Bounty.txt(b)}</span>
+            <span class="coin">🪙 \${b.gold} <span class="small">\${b.p}/\${b.n}</span></span></div>
+          <div class="track thin"><div class="fill" style="width:\${pct}%;background:var(--gold)"></div></div>
+        </div>\`;}).join('')}
+      \${nx?\`<hr><div style="display:flex;justify-content:space-between;font-size:12px">
+          <span>Next unlock: <b>\${nx.ic} \${nx.nm}</b></span>
+          <span class="coin">\${g.gold}/\${nx.cost}</span></div>
+        <div class="track thin"><div class="fill" style="width:\${clamp(g.gold/nx.cost*100,0,100)}%;background:linear-gradient(90deg,#5aa9e6,#a06bd6)"></div></div>\`
+        :'<hr><div class="small">Every weapon and every plate is yours.</div>'}
+    </div>\`;
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
@@ -1593,6 +5341,19 @@ const UI = {
         </div>\`;
       });
     });
+    // The Arena sits past the campaign, opened by the last boss.
+    const aOpen=Arena.unlocked(), best=g.arenaBest||0;
+    out+=\`<div class="realmhdr"><span class="dot" style="background:var(--gold)"></span>
+          <h2 style="color:var(--gold)">The Arena</h2>\${aOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.</div>
+      <div class="node \${aOpen?'':'locked'}" onclick="Arena.start()">
+        <div class="ico" style="font-size:24px">🏟️</div>
+        <div style="flex:1">
+          <div class="nm">Endless Waves \${best?\`<span class="tag g">best: wave \${best}</span>\`:''}</div>
+          <div class="dt">\${aOpen?'Scaling foes · boons every 3 waves · a breather every 5':'Defeat the Eigen Dragon to open the gates'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">\${aOpen?'▶':'🔒'}</div>
+      </div>\`;
     list.innerHTML=out;
   },
   renderShop(){
@@ -1638,7 +5399,11 @@ const UI = {
   renderGear(){
     const g=Game.s, w=Game.weapon(), a=Game.armor();
     const acc=g.stats.correct+g.stats.wrong;
-    const rows=Object.entries(g.topicStats).sort((x,y)=>(y[1].c+y[1].w)-(x[1].c+x[1].w));
+    const rows=Object.entries(g.topicStats).filter(([k,v])=>v.seen>0).sort((x,y)=>x[1].m-y[1].m);
+    const solid=rows.filter(([k,v])=>v.m>=0.85).length;
+    const shaky=rows.filter(([k,v])=>v.m<0.6).length;
+    const dueN=Mastery.dueList().length;
+    const untouched=Object.keys(TOPIC_LABEL).length-rows.length;
     document.getElementById('hud3').innerHTML=this.hud();
     document.getElementById('gearList').innerHTML=\`
       <div class="panel"><h2>🎒 Your Gear</h2>
@@ -1655,16 +5420,49 @@ const UI = {
         <div class="sub">Battles won: <b>\${g.stats.wins}</b> · Riddles solved: <b>\${g.stats.correct}</b> ·
         Accuracy: <b>\${acc?Math.round(g.stats.correct/acc*100):0}%</b> · Best streak: <b>\${g.stats.best}</b></div>
         <hr>
-        <div class="small" style="margin-bottom:6px">Where you are strong and where you bleed:</div>
-        \${rows.length?rows.map(([k,v])=>{
-          const tot=v.c+v.w, p=Math.round(v.c/tot*100);
-          const col=p>=80?'var(--green)':p>=55?'var(--gold)':'var(--red)';
-          return \`<div style="margin:5px 0">
-            <div style="display:flex;justify-content:space-between;font-size:12px">
-              <span>\${TOPIC_LABEL[k]||k}</span><span style="color:\${col}">\${p}% <span class="small">(\${tot})</span></span></div>
-            <div class="track thin"><div class="fill" style="width:\${p}%;background:\${col}"></div></div></div>\`;
-        }).join(''):'<div class="small">No riddles answered yet.</div>'}
+        <div class="small" style="margin-bottom:6px">
+          Mastery, weakest first. The game uses this to choose what to ask you next.<br>
+          <b style="color:var(--green)">\${solid} solid</b> ·
+          <b style="color:var(--red)">\${shaky} need work</b> ·
+          <b style="color:var(--purple)">\${dueN} due for review</b>\${untouched?\` · \${untouched} not yet seen\`:''}
+        </div>
+        \${rows.length?UI.chronicleBody(rows):'<div class="small">No riddles answered yet.</div>'}
+        \${rows.length?\`<button class="btn sm" style="margin-top:10px"
+           onclick="UI.go('s-train');Train.startPool('weak')">⚠️ Drill my weakest topics</button>\`:''}
       </div>\`;
+  },
+  /** One bar per topic is a wall at seventy. Show the handful that actually
+      need work, then the rest folded into their strands. */
+  chronicleBody(rows){
+    const seen=new Map(rows);
+    const bar=(k,v)=>{
+      const pct=Math.round(v.m*100), col=Mastery.colour(v.m), due=Mastery.overdue(k);
+      return \`<div style="margin:6px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;gap:6px">
+          <span>\${TOPIC_LABEL[k]||k}\${due?' <span class="rev">⟳ due</span>':''}</span>
+          <span style="color:\${col};white-space:nowrap">\${Mastery.label(v.m)} \${pct}%
+            <span class="small">(\${v.c}/\${v.seen})</span></span></div>
+        <div class="track thin"><div class="fill" style="width:\${pct}%;background:\${col}"></div></div></div>\`;
+    };
+    // rows arrive weakest first, so the head of the list is the useful part
+    const focus=rows.slice(0,5);
+    return \`<div class="small" style="color:var(--gold);margin-top:4px">Needs you most</div>
+      \${focus.map(([k,v])=>bar(k,v)).join('')}
+      <hr>
+      \${STRANDS.map(([nm,keys])=>{
+        const mine=keys.filter(k=>seen.has(k));
+        if(!mine.length) return '';
+        const avg=mine.reduce((a,k)=>a+seen.get(k).m,0)/mine.length;
+        const weak=mine.filter(k=>seen.get(k).m<0.6).length;
+        const unseen=keys.length-mine.length;
+        return \`<details class="strand">
+          <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
+            <span class="sbadge\${weak?' warn':''}" style="color:\${weak?'':Mastery.colour(avg)}">\${
+              weak? weak+' need work' : Math.round(avg*100)+'%'}</span></summary>
+          <div class="strandBody">\${mine.map(k=>bar(k,seen.get(k))).join('')}
+            \${unseen?\`<div class="small">\${unseen} not yet seen in this strand</div>\`:''}</div>
+        </details>\`;
+      }).join('')}\`;
   },
   renderTome(){
     document.getElementById('tomeList').innerHTML =
@@ -1700,24 +5498,58 @@ const Shop = {
 
 /* ------------------------------- training --------------------------------- */
 const Train = {
-  key:null, c:0, w:0, cur:null,
+  pool:[], title:'', c:0, w:0, cur:null,
   renderPick(){
     document.getElementById('trainRun').style.display='none';
     document.getElementById('trainPick').style.display='';
     document.getElementById('trainBack').style.display='';
-    const groups=[
-      ['Vectors',['vecAdd','vecScale','vecCombo','dot','mag','orth']],
-      ['Matrices',['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','rank','eigen2','cross','proj']],
-      ['Limits & Derivatives',['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','secondDeriv','critical','partial']],
-      ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area']]
-    ];
-    document.getElementById('trainPick').innerHTML = groups.map(([nm,keys])=>
-      \`<div class="panel"><h2 style="font-size:15px;color:var(--gold)">\${nm}</h2>
-        \${keys.map(k=>\`<button class="btn sm" onclick="Train.start('\${k}')">\${TOPIC_LABEL[k]}</button>\`).join('')}
-      </div>\`).join('');
+    const groups=STRANDS;
+    // Adaptive drills, offered first — they need no decision from the player.
+    const weak = Game.s ? Mastery.weakest(6) : [];
+    const due  = Game.s ? Mastery.dueList()  : [];
+    let head = '<div class="panel"><h2 style="font-size:15px;color:var(--gold)">Sharpen where it counts</h2>';
+    if(weak.length){
+      head += \`<button class="btn sm" onclick="Train.startPool('weak')">⚠️ Drill my weakest
+        <span class="small" style="font-weight:400"><br>\${weak.slice(0,4).map(k=>TOPIC_LABEL[k]).join(' · ')}\${weak.length>4?' …':''}</span></button>\`;
+    }
+    if(due.length){
+      head += \`<button class="btn sm" onclick="Train.startPool('due')">⟳ Review what's due
+        <span class="small" style="font-weight:400"><br>\${due.length} topic\${due.length>1?'s':''} ready to come back</span></button>\`;
+    }
+    if(!weak.length && !due.length){
+      head += '<div class="sub">Answer a few riddles anywhere and the game will start tracking which topics need work.</div>';
+    }
+    head += '</div>';
+
+    document.getElementById('trainPick').innerHTML = head +
+      \`<div class="panel"><h2 style="font-size:15px;color:var(--gold)">Every topic</h2>
+        <div class="sub" style="margin-bottom:2px">Tap a strand to open it.</div>
+        \${groups.map(([nm,keys])=>{
+          const weak=keys.filter(k=>{const r=Game.s&&Game.s.topicStats[k]; return r&&r.seen&&r.m<0.6;}).length;
+          return \`<details class="strand" ontoggle="Train.soleOpen(this)">
+            <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
+              <span class="sbadge\${weak?' warn':''}">\${weak?weak+' need work':keys.length+' topics'}</span></summary>
+            <div class="strandBody">\${keys.map(k=>{
+              const r=Game.s&&Game.s.topicStats[k];
+              const tag = r&&r.seen ? \`<span class="mtag" style="color:\${Mastery.colour(r.m)}">\${Mastery.label(r.m)}</span>\` : '';
+              return \`<button class="btn sm" onclick="Train.startPool('\${k}')">\${TOPIC_LABEL[k]}\${tag}</button>\`;
+            }).join('')}</div></details>\`;
+        }).join('')}
+      </div>\`;
   },
-  start(k){
-    this.key=k; this.c=0; this.w=0;
+  /* One strand open at a time, pulled to the top of the screen. Without this
+     the list grows under your thumb and the topic you wanted walks away. */
+  soleOpen(el){
+    if(!el.open) return;
+    for(const o of document.querySelectorAll('#trainPick details.strand')) if(o!==el) o.open=false;
+    el.scrollIntoView({block:'start', behavior:'smooth'});
+  },
+  startPool(what){
+    if(what==='weak'){ this.pool=Mastery.weakest(6); this.title='Weakest topics'; }
+    else if(what==='due'){ this.pool=Mastery.dueList(); this.title='Due for review'; }
+    else { this.pool=[what]; this.title=TOPIC_LABEL[what]; }
+    if(!this.pool.length){ UI.toast('Nothing to drill yet — play a few rounds first.'); return; }
+    this.c=0; this.w=0;
     document.getElementById('trainPick').style.display='none';
     document.getElementById('trainBack').style.display='none';
     document.getElementById('trainRun').style.display='';
@@ -1725,8 +5557,12 @@ const Train = {
   },
   next(){
     document.getElementById('tExplain').style.display='none';
-    this.cur=buildQuestion(this.key, R.i(1,3));
-    document.getElementById('tTopic').textContent=this.cur.topic;
+    const key = this.pool.length>1 ? Mastery.pick(this.pool) : this.pool[0];
+    const diff = Game.s ? Mastery.adjustDiff(key, 2) : R.i(1,3);
+    this.cur=buildQuestion(key, diff);
+    document.getElementById('tTopic').innerHTML =
+      (this.pool.length>1 ? this.title+' — ' : '') + this.cur.topic +
+      (Game.s&&Mastery.isReview(key) ? ' <span class="rev">⟳ review</span>' : '');
     document.getElementById('tQ').innerHTML=this.cur.q;
     const box=document.getElementById('tChoices'); box.innerHTML='';
     this.cur.choices.forEach(c=>{
@@ -1748,9 +5584,11 @@ const Train = {
     if(ok){ this.c++; Sfx.good(); } else { this.w++; Sfx.bad(); }
     if(Game.s){ Game.recordAnswer(this.cur.key, ok); Game.save(); }
     const e=document.getElementById('tExplain');
+    const miss = !ok && this.cur.why[choice];
     e.style.display='block';
     e.innerHTML=\`<div style="font-weight:900;color:\${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
         \${ok?'Correct.':'Not quite — the answer was <span style="color:var(--gold)">'+this.cur.a+'</span>.'}</div>
+      \${miss?\`<div class="miss">You chose <b>\${choice}</b>: \${miss}.</div>\`:''}
       <div>\${this.cur.ex}</div>
       <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>\`;
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
@@ -1758,15 +5596,238 @@ const Train = {
   quit(){ this.renderPick(); }
 };
 
+/* -------------------------------- keeping -------------------------------- */
+/* Everything about not losing a knight: installing the game so the browser
+   stops treating its storage as disposable, and nudging a backup once there
+   is something worth backing up. */
+const Keep = {
+  KEY:'eigenrealm.keep',
+  d:{hintSeen:0, lastBackup:0, dismissed:0},
+
+  load(){
+    try{ Object.assign(this.d, JSON.parse(localStorage.getItem(this.KEY))||{}); }catch(e){}
+  },
+  save(){ try{ localStorage.setItem(this.KEY, JSON.stringify(this.d)); }catch(e){} },
+
+  installed(){
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+  },
+  isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); },
+
+  /* Registers the worker and watches for a newer one. A single-file game
+     cached aggressively would otherwise pin players to whatever build they
+     first opened. */
+  register(){
+    if(!('serviceWorker' in navigator)) return;
+    if(location.protocol!=='http:' && location.protocol!=='https:') return;   // file:// has no workers
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound', ()=>{
+        const w=reg.installing;
+        if(!w) return;
+        w.addEventListener('statechange', ()=>{
+          // A worker reaching "installed" while one is already in charge means
+          // this is an update rather than a first run.
+          if(w.state==='installed' && navigator.serviceWorker.controller) Keep.offerUpdate(w);
+        });
+      });
+    }).catch(()=>{});
+    let reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(reloading) return; reloading=true; location.reload();
+    });
+  },
+  offerUpdate(worker){
+    const el=document.getElementById('updateBar');
+    el.innerHTML=\`<span>A new version is ready.</span>
+      <button class="btn sm gold" style="width:auto;margin:0;padding:8px 14px" id="updGo">Reload</button>
+      <span class="kbd" id="updNo">Later</span>\`;
+    el.classList.add('on');
+    document.getElementById('updGo').onclick=()=>{ worker.postMessage('skipWaiting'); };
+    document.getElementById('updNo').onclick=()=>el.classList.remove('on');
+  },
+
+  /* iOS has no install prompt to hook, so this is the only way to say it.
+     Held back until the player has actually won something — nobody installs
+     an app they have not decided they like. */
+  maybeHint(){
+    if(this.installed() || this.d.dismissed) return;
+    if(location.protocol!=='http:' && location.protocol!=='https:') return;
+    const g=Game.s;
+    if(!g || g.stats.wins<1) return;
+    this.d.hintSeen++; this.save();
+    if(this.d.hintSeen>3) return;                     // said three times, then let it go
+    const how = this.isIOS()
+      ? 'Tap <b>Share</b> below, then <b>Add to Home Screen</b>.'
+      : 'Use your browser menu, then <b>Install</b> or <b>Add to Home screen</b>.';
+    const el=document.getElementById('updateBar');
+    el.innerHTML=\`<span style="flex:1">🛡️ <b>Keep your knights safe.</b> \${how}
+      <br><span class="small">Browsers clear the storage of sites they think are unused. An installed game is exempt.</span></span>
+      <span class="kbd" id="hintNo">Not now</span>\`;
+    el.classList.add('on');
+    document.getElementById('hintNo').onclick=()=>{
+      el.classList.remove('on');
+      if(this.d.hintSeen>=3){ this.d.dismissed=1; this.save(); }
+    };
+  },
+
+  /** After a boss falls — the natural pause, and the moment progress is worth keeping. */
+  maybeBackup(){
+    if(!Game.s || Game.s.stats.wins<4) return;
+    const days=(Date.now()-(this.d.lastBackup||0))/86400000;
+    if(days<14) return;
+    this.d.lastBackup=Date.now(); this.save();
+    UI.toast('Worth backing up — <b>Switch knight → 📤 Move</b> keeps a copy.');
+  }
+};
+
+/* ------------------------------ knight roster ----------------------------- */
+/* The only screen in the game that asks for typing, and even then the name
+   comes prefilled — tap the die to rerol, or just accept it. */
+const Knights = {
+  open(){ UI.go('s-knights'); this.render(); },
+
+  render(){
+    const list=Profiles.list(), act=Profiles.r.active;
+    document.getElementById('knightList').innerHTML =
+      \`<div class="panel">
+        \${list.length ? list.map(k=>{
+          const p=Profiles.peek(k.id);
+          const on = k.id===act;
+          return \`<div class="item\${on?' equipped':''}" style="align-items:center">
+            <div class="ic" style="color:\${k.col}">\${k.crest}</div>
+            <div style="flex:1;min-width:0">
+              <div class="nm">\${this.esc(k.nm)}\${on?' <span class="mtag" style="color:var(--gold)">playing</span>':''}</div>
+              <div class="ds">\${p ? \`Level \${p.lvl} · \${p.cleared}/\${p.total} nodes · \${p.mastered} topic\${p.mastered===1?'':'s'} mastered\`
+                                  : 'A fresh start'}</div>
+            </div>
+            \${on?'':\`<button class="btn sm" style="width:auto;margin:0;padding:8px 12px"
+                       onclick="Knights.pick('\${k.id}')">Play</button>\`}
+          </div>
+          <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap">
+            <span class="kbd" onclick="Knights.rename('\${k.id}')">✏️ Rename</span>
+            <span class="kbd" onclick="Knights.carry('\${k.id}')">📤 Move</span>
+            <span class="kbd" onclick="Knights.erase('\${k.id}')">🗑 Erase</span>
+          </div>\`;
+        }).join('<hr>') : '<div class="sub">No knights yet.</div>'}
+      </div>
+      <div class="panel">
+        <button class="btn gold" onclick="Knights.newKnight()">＋ New knight</button>
+        <button class="btn ghost" onclick="Knights.paste()">📜 Bring a knight from another device</button>
+      </div>\`;
+  },
+  esc(s){ return String(s).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); },
+
+  pick(id){
+    if(!Profiles.select(id)){ Game.s=Game.fresh(); Game.save(); }
+    UI.toast('Playing as '+Profiles.active().nm);
+    UI.go('s-title'); UI.refreshTitle();
+  },
+
+  newKnight(){
+    const nm=prompt('Name your knight', Profiles.suggestName());
+    if(nm===null) return;
+    const k=Profiles.create(nm.trim()||'Knight');
+    UI.toast('Welcome, '+k.nm);
+    UI.go('s-title'); UI.refreshTitle();
+  },
+  rename(id){
+    const k=Profiles.get(id); if(!k) return;
+    const nm=prompt('Rename this knight', k.nm);
+    if(nm===null) return;
+    Profiles.rename(id, nm.trim());
+    this.render(); UI.refreshTitle();
+  },
+  erase(id){
+    const k=Profiles.get(id); if(!k) return;
+    if(!confirm('Erase '+k.nm+' for good? Their progress cannot be recovered.')) return;
+    Profiles.remove(id);
+    if(document.getElementById('s-knights').classList.contains('on')) this.render();
+    UI.refreshTitle();
+  },
+
+  /* No server sits behind this game, so a knight travels as a code the player
+     copies from one device and pastes into the other. */
+  carry(id){
+    const code=Profiles.export(id);
+    if(!code){ UI.toast('Nothing to carry yet.'); return; }
+    const el=document.getElementById('codeBox');
+    el.innerHTML=\`<div class="cxbox">
+      <div class="cxk">Carry \${this.esc(Profiles.get(id).nm)}</div>
+      <div class="small">Copy this code, then open the game on the other device and choose
+        <b>Bring a knight from another device</b>. It is a snapshot — progress made here afterwards will not follow.</div>
+      <textarea id="codeOut" readonly>\${code}</textarea>
+      <button class="btn gold" id="codeCopy">Copy the code</button>
+      <button class="btn ghost" onclick="Knights.closeCode()">Close</button>
+    </div>\`;
+    el.classList.add('on');
+    document.getElementById('codeCopy').onclick=()=>{
+      const t=document.getElementById('codeOut');
+      t.select(); t.setSelectionRange(0, 999999);
+      let ok=false;
+      try{ ok=document.execCommand('copy'); }catch(e){}
+      if(navigator.clipboard) navigator.clipboard.writeText(code).catch(()=>{});
+      UI.toast(ok?'Copied — paste it on the other device.':'Select the code and copy it.');
+    };
+  },
+  paste(){
+    const el=document.getElementById('codeBox');
+    el.innerHTML=\`<div class="cxbox">
+      <div class="cxk">Bring a knight here</div>
+      <div class="small">Paste the code from the other device.</div>
+      <textarea id="codeIn" placeholder="Paste the knight code"></textarea>
+      <button class="btn gold" id="codeGo">Bring them in</button>
+      <button class="btn ghost" onclick="Knights.closeCode()">Cancel</button>
+    </div>\`;
+    el.classList.add('on');
+    document.getElementById('codeGo').onclick=()=>{
+      const res=Profiles.import(document.getElementById('codeIn').value);
+      if(!res.ok){ UI.toast(res.why); return; }
+      this.closeCode(); this.render(); UI.refreshTitle();
+      UI.toast(res.k.nm+' has arrived.');
+    };
+  },
+  closeCode(){ const el=document.getElementById('codeBox'); el.classList.remove('on'); el.innerHTML=''; },
+  eraseActive(){ const k=Profiles.active(); if(k) this.erase(k.id); }
+};
+
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
+  Prefs.load();
+  Keep.load();
+  Keep.register();
+  Profiles.load();
   if(Game.load()){
-    document.getElementById('btnContinue').style.display='';
-    document.getElementById('resetRow').style.display='';
+    const days=Game.touchStreak();
+    const st=Game.s.streak||{days:0};
+    document.getElementById('streakRow').innerHTML = st.days>0
+      ? \`<div class="streakbox"><div class="n">\${st.days}</div>
+         <div><div style="font-weight:800;font-size:14px">day\${st.days===1?'':'s'} in a row</div>
+         <div class="small">\${st.days>1?'Keep the fire lit — come back tomorrow.':'A streak begins.'}</div></div></div>\`
+      : '';
+    if(days && days>1) setTimeout(()=>Celebrate.banner('🔥 '+days+' DAY STREAK','welcome back','#ff9c3d',
+      ()=>{Sfx.milestone(); Haptic.win();}), 400);
+    Titles.check();
   }
+  UI.refreshTitle();
+
+  // If the browser cleared localStorage out from under us, the vault has a
+  // copy. Recovery runs after the first paint so a cold start is never held up.
+  Vault.recover().then(back=>{
+    if(!back) return;
+    Profiles.load();
+    if(Game.load()) Titles.check();
+    UI.refreshTitle();
+    UI.toast('Your knights were restored from this device\\u2019s backup.');
+  }).catch(()=>{});
+  Vault.persist();
+  setTimeout(()=>Keep.maybeHint(), 1200);
+
   fitCanvas();
-  document.addEventListener('touchstart',()=>Sfx.init(),{once:true});
-  document.addEventListener('click',()=>Sfx.init(),{once:true});
+  const wake=()=>Sfx.init();
+  document.addEventListener('touchstart',wake,{once:true});
+  document.addEventListener('click',wake,{once:true});
   // prevent iOS double-tap zoom on rapid answering
   let lastTouch=0;
   document.addEventListener('touchend',e=>{
@@ -1794,18 +5855,23 @@ if (fm.fileExists(savePath)) {
 // to Scriptable whenever it changes.
 const BRIDGE = `
 (function(){
-  var KEY = "eigenrealm.v1";
+  // Progress is spread across several keys now — the knight roster and one
+  // save slot per knight — so the bridge carries the whole namespace rather
+  // than a single key.
   var seed = ${JSON.stringify(restored)};
   try {
-    if (seed && seed !== "null" && !localStorage.getItem(KEY)) {
-      localStorage.setItem(KEY, seed);
+    var all = seed && seed !== "null" ? JSON.parse(seed) : null;
+    if (all && typeof all === "object") {
+      // Older builds stored the bare save string under one key; accept both.
+      if (typeof all === "string" || all.hp !== undefined) {
+        if (!localStorage.getItem("eigenrealm.v1")) localStorage.setItem("eigenrealm.v1", seed);
+      } else {
+        for (var k in all) if (Object.prototype.hasOwnProperty.call(all, k)) {
+          if (localStorage.getItem(k) === null) localStorage.setItem(k, all[k]);
+        }
+      }
     }
   } catch(e) {}
-  // Mirror every write back out so the native side can persist it.
-  window.__lastSave = null;
-  setInterval(function(){
-    try { window.__lastSave = localStorage.getItem(KEY); } catch(e) {}
-  }, 1000);
 })();
 `;
 
@@ -1817,7 +5883,9 @@ await wv.present(true);
 // After the player closes the view, write their progress to disk.
 try {
   const finalSave = await wv.evaluateJavaScript(
-    'completion(localStorage.getItem("eigenrealm.v1"))', true
+    'completion(JSON.stringify(Object.keys(localStorage)' +
+    '.filter(function(k){return k.indexOf("eigenrealm.") === 0;})' +
+    '.reduce(function(o,k){o[k]=localStorage.getItem(k);return o;}, {})))', true
   );
   if (finalSave) fm.writeString(savePath, finalSave);
 } catch (e) {
