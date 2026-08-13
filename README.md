@@ -12,7 +12,8 @@ Runs in any browser and as an offline iOS **Scriptable** script.
 ## Play it
 
 ### In a browser
-Open `index.html`. That's the whole thing.
+Play it live at **https://neffer77.github.io/linear-algebra-game/** — or open `index.html`
+locally. That's the whole thing.
 
 To play from your phone's browser over your network:
 
@@ -398,3 +399,20 @@ The generators were also checked by:
   real ink rather than an empty frame, that none overflows its column, and that a full
   32-node campaign holds steady at one battle canvas with at most two figures alive —
   no leaked canvases.
+
+---
+
+## Deployment
+
+Every push to `main` publishes to https://neffer77.github.io/linear-algebra-game/ via
+`.github/workflows/pages.yml`, which runs `validate → build → deploy`:
+
+- **validate** — syntax-checks JavaScript, confirms `index.html` has no missing local
+  asset references, and regenerates `scriptable/KnightsOfTheEigenrealm.js` to verify the
+  committed copy is not stale. A commit that fails any of these never reaches the site.
+- **build** — stages `index.html`, `README.md`, and `scriptable/` into the published
+  artifact, plus `.nojekyll` and a `build-info.json` stamped with the commit SHA.
+- **deploy** — publishes the artifact to GitHub Pages.
+
+Because the Scriptable file is generated, the sync check is what keeps the iOS build from
+silently falling behind `index.html` when someone forgets to run `node build-scriptable.js`.
