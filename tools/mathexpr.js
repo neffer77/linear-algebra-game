@@ -60,7 +60,12 @@ function tokenize(src) {
     const c = src[i];
     if (/[0-9.]/.test(c)) {
       let j = i; while (j < src.length && /[0-9.]/.test(src[j])) j++;
-      out.push({ k: 'num', v: parseFloat(src.slice(i, j)) }); i = j; continue;
+      const v = parseFloat(src.slice(i, j));
+      // A lone '.' — a sentence's full stop swept in with the expression —
+      // parses to NaN, and a NaN silently *skips* every downstream check
+      // rather than failing one. Refuse it here, loudly.
+      if (!isFinite(v)) throw new Error(`not a number: ${JSON.stringify(src.slice(i, j))} in ${JSON.stringify(src)}`);
+      out.push({ k: 'num', v }); i = j; continue;
     }
     if (/[A-Za-z]/.test(c)) {
       let j = i; while (j < src.length && /[A-Za-z]/.test(src[j])) j++;

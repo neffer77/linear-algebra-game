@@ -175,6 +175,13 @@ function mats(html) {
     return cols[0].map((_, r) => cols.map(c => c[r]));
   });
 }
+/** Every ⟨a, b⟩ in a string, as number pairs. */
+function vecsOf(html) {
+  return [...String(html).replace(/<[^>]+>/g, '')
+    .matchAll(/⟨\s*(−?-?\d+)\s*,\s*(−?-?\d+)\s*⟩/g)]
+    .map(m => [num(m[1]), num(m[2])]);
+}
+const vecOf1 = html => vecsOf(html)[0] || null;
 const det2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
 const det3 = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
                - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
@@ -204,7 +211,124 @@ const ALGEBRA = {
                               [A[1][0] * v[0][0] + A[1][1] * v[1][0]]], s); },
   // The inverse is displayed as (1/det)·adj, so verify A·adj = det·I.
   inv2:   p => { const M = mats(p.q)[0], adj = mats(p.a)[0], d = det2(M);
-                 return same(mm(M, adj, 2), [[d, 0], [0, d]]); }
+                 return same(mm(M, adj, 2), [[d, 0], [0, d]]); },
+
+  /* --- Spectral Reach --- */
+
+  // λ is just a variable: swap it for x and evaluate both sides.
+  charPoly: p => {
+    const M = mats(p.q)[0], tr = M[0][0] + M[1][1], dt = det2(M);
+    const f = compile(String(p.a).replace(/λ/g, 'x'));
+    algebraChecks += 4;
+    return [-2, -0.5, 1.3, 4].every(x => close(f({ x }), x * x - tr * x + dt, 1e-9));
+  },
+
+  // Av = λv, checked against the matrix as rendered.
+  eigenvec: p => {
+    const A = mats(p.q)[0], v = vecOf(p.a);
+    const lam = num(p.q.match(/λ = (−?-?\d+)/)[1]);
+    return v && A[0][0] * v[0] + A[0][1] * v[1] === lam * v[0]
+             && A[1][0] * v[0] + A[1][1] * v[1] === lam * v[1];
+  },
+
+  matPow: p => {
+    const A = mats(p.q)[0], got = mats(p.a)[0];
+    const n = p.q.includes('³') ? 3 : 2;
+    let P = [[1, 0], [0, 1]];
+    for (let i = 0; i < n; i++) P = mm(P, A, 2);
+    return same(P, got);
+  },
+
+  nullSpace: p => {
+    const A = mats(p.q)[0], v = vecOf(p.a);
+    return v && (v[0] || v[1])
+      && A[0][0] * v[0] + A[0][1] * v[1] === 0
+      && A[1][0] * v[0] + A[1][1] * v[1] === 0;
+  },
+
+  // Rank by elimination over the rationals, computed independently of the
+  // construction the generator used to guarantee it.
+  colSpace: p => {
+    const M = mats(p.q)[0].map(r => r.slice());
+    let rank = 0;
+    for (let c = 0; c < 3 && rank < 3; c++) {
+      let piv = -1;
+      for (let r = rank; r < 3; r++) if (Math.abs(M[r][c]) > 1e-9) { piv = r; break; }
+      if (piv < 0) continue;
+      [M[rank], M[piv]] = [M[piv], M[rank]];
+      for (let r = 0; r < 3; r++) if (r !== rank && Math.abs(M[r][c]) > 1e-9) {
+        const f = M[r][c] / M[rank][c];
+        for (let k = 0; k < 3; k++) M[r][k] -= f * M[rank][k];
+      }
+      rank++;
+    }
+    return rank === num(p.a);
+  },
+
+  rankNullity: p => {
+    const m = p.q.match(/A (\d+)×(\d+) matrix has rank (\d+)/);
+    return num(p.a) === +m[2] - +m[3];
+  },
+
+  diagonalisable: p => {
+    const A = mats(p.q)[0], tr = A[0][0] + A[1][1], disc = tr * tr - 4 * det2(A);
+    const scalar = A[0][1] === 0 && A[1][0] === 0 && A[0][0] === A[1][1];
+    const want = scalar ? 'Yes — it is already a multiple of the identity'
+      : disc > 0 ? 'Yes — two different eigenvalues'
+      : disc < 0 ? 'No — its eigenvalues are not real'
+      : 'No — one repeated eigenvalue, and only one eigenvector direction';
+    return p.a === want;
+  },
+
+  // The columns are where î and ĵ land, so each named map has one matrix.
+  transMatrix: p => {
+    const M = mats(p.a)[0], k = +(p.q.match(/(?:shear of|scaling by) (\d+)/) || [0, 0])[1];
+    const WANT = {
+      'a rotation by 90° anticlockwise': [[0, -1], [1, 0]],
+      'a rotation by 180°': [[-1, 0], [0, -1]],
+      'a reflection in the x-axis': [[1, 0], [0, -1]],
+      'a reflection in the y-axis': [[-1, 0], [0, 1]],
+      'a reflection in the line y = x': [[0, 1], [1, 0]],
+      [`a horizontal shear of ${k}`]: [[1, k], [0, 1]],
+      [`a vertical shear of ${k}`]: [[1, 0], [k, 1]],
+      [`a scaling by ${k}`]: [[k, 0], [0, k]],
+      'a projection onto the x-axis': [[1, 0], [0, 0]]
+    };
+    const nm = p.q.match(/Which matrix performs (.*?)\?$/)[1];
+    return !!WANT[nm] && same(WANT[nm], M);
+  },
+
+  // proj lies along v, and u − proj is perpendicular to it.
+  vecProj: p => {
+    const [u, v] = vecsOf(p.q), pr = vecOf1(p.a);
+    return pr && u[0] * v[1] - u[1] * v[0] === (u[0] - pr[0]) * v[1] - (u[1] - pr[1]) * v[0]
+      && pr[0] * v[1] - pr[1] * v[0] === 0
+      && (u[0] - pr[0]) * v[0] + (u[1] - pr[1]) * v[1] === 0;
+  },
+
+  // The leftover must be orthogonal to u₁ and differ from u₂ by a multiple of it.
+  gramSchmidt: p => {
+    const [u1, u2] = vecsOf(p.q), w = vecOf1(p.a);
+    if (!w) return false;
+    const dropped = [u2[0] - w[0], u2[1] - w[1]];
+    return w[0] * u1[0] + w[1] * u1[1] === 0
+      && dropped[0] * u1[1] - dropped[1] * u1[0] === 0;
+  },
+
+  unitVec: p => {
+    const [v] = vecsOf(p.q), [w] = vecsOf(p.a);
+    const den = num(String(p.a).match(/<span class="frac"><span>1<\/span><span>(−?-?\d+)<\/span>/)[1]);
+    return close((w[0] * w[0] + w[1] * w[1]) / (den * den), 1, 1e-12)
+      && v[0] * w[1] - v[1] * w[0] === 0;
+  },
+
+  angleVec: p => {
+    const [u, v] = vecsOf(p.q);
+    const deg = +String(p.a).match(/(\d+)°/)[1];
+    const cos = (u[0] * v[0] + u[1] * v[1]) /
+                (Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1]));
+    return close(cos, Math.cos(deg * Math.PI / 180), 1e-9);
+  }
 };
 for (const [key, check] of Object.entries(ALGEBRA)) {
   for (let i = 0; i < REPS * 3; i++) {
@@ -327,6 +451,176 @@ const ANALYSIS = {
                       }
                       covered.add('partial'); }
 };
+
+/* --- Infinite Expanse: each answer checked against the mathematics itself,
+   never against the formula the generator used to produce it. --- */
+const numDeriv = (f, x, h) => (f(x + (h || 1e-5)) - f(x - (h || 1e-5))) / (2 * (h || 1e-5));
+const nums = (str, re) => [...String(str).matchAll(re)].map(m => m.slice(1).map(num));
+const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+/** Plain text with unicode superscripts flattened back to digits. */
+const flat = s => String(s).replace(/<[^>]+>/g, '').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, c => String(SUPS.indexOf(c)));
+/** An expression lifted out of a sentence, without the sentence's full stop. */
+const expr = s => String(s).replace(/\.\s*$/, '');
+
+Object.assign(ANALYSIS, {
+  // Differentiate the curve itself — y(x) = √((c − ax²)/b) — and compare.
+  implicitDiff: p => {
+    const m = p.q.replace(/<[^>]+>/g, '').match(/^(\d*)x² \+ (\d*)y² = (\d+)/);
+    const a = m[1] === '' ? 1 : +m[1], b = m[2] === '' ? 1 : +m[2], c = +m[3];
+    const y = x => Math.sqrt((c - a * x * x) / b);
+    const f = compile(p.a);
+    const x0 = 0.4 * Math.sqrt(c / a);
+    const want = numDeriv(y, x0), got = f({ x: x0, y: y(x0) });
+    analysisChecks++;
+    if (!close(got, want, 1e-4)) fail('analysis', 'implicitDiff', `at x=${x0}: answer ${got}, curve slope ${want}`);
+    covered.add('implicitDiff');
+  },
+
+  // Evaluate the original quotient just short of the limit point.
+  lhopital: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    let f, m;
+    if ((m = t.match(/sin\((\d+)x\)(\d+)x/))) f = x => Math.sin(m[1] * x) / (m[2] * x);
+    else if ((m = t.match(/e(\d+)x − 1(\d+)x/))) f = x => (Math.exp(m[1] * x) - 1) / (m[2] * x);
+    else { m = t.match(/1 − cos\((\d+)x\)(\d+)x²/); f = x => (1 - Math.cos(m[1] * x)) / (m[2] * x * x); }
+    const a = compile(p.a);
+    analysisChecks++;
+    if (!close(a({}), f(1e-5), 1e-4)) fail('analysis', 'lhopital', `${t}: answer ${a({})}, numeric ${f(1e-5)}`);
+    covered.add('lhopital');
+  },
+
+  relatedRates: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    const a = compile(String(p.a).replace(/π/g, 'pi').replace(/ (m|cm)[²]?\/s/, ''));
+    let want;
+    if (t.includes('ladder')) {
+      const [[L, v, x]] = nums(t, /A (\d+) m ladder .*? at (\d+) m\/s.*?foot is (\d+) m/gs);
+      want = -x * v / Math.sqrt(L * L - x * x);
+    } else {
+      const [[v, r]] = nums(t, /at (\d+) cm\/s.*?r = (\d+) cm/gs);
+      want = 2 * Math.PI * r * v;
+    }
+    analysisChecks++;
+    if (!close(a({}), want, 1e-9)) fail('analysis', 'relatedRates', `${t}: answer ${a({})}, expected ${want}`);
+    covered.add('relatedRates');
+  },
+
+  // Maximise the objective by dense sampling rather than by the formula.
+  optimisation: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    let obj, lo, hi;
+    if (t.includes('fence')) {
+      const P = +t.match(/have (\d+) m of fence/)[1];
+      obj = y => y * (P - 2 * y); lo = 0; hi = P / 2;
+    } else {
+      const S = +t.match(/numbers add to (\d+)/)[1];
+      obj = x => x * (S - x); lo = 0; hi = S;
+    }
+    let best = -Infinity;
+    for (let i = 0; i <= 200000; i++) best = Math.max(best, obj(lo + (hi - lo) * i / 200000));
+    const got = compile(String(p.a).replace(/ m²/, ''))({});
+    analysisChecks++;
+    if (!close(got, best, 1e-5)) fail('analysis', 'optimisation', `${t}: answer ${got}, sampled max ${best}`);
+    covered.add('optimisation');
+  },
+
+  // f″ must vanish there and genuinely change sign across it.
+  inflection: p => {
+    const f = compile(expr(p.q.match(/f\(x\) = (.*?)<br>/)[1]));
+    const x0 = num(String(p.a).match(/x = (−?-?\d+)/)[1]);
+    const dd = x => (f({ x: x + 1e-3 }) - 2 * f({ x }) + f({ x: x - 1e-3 })) / 1e-6;
+    analysisChecks += 2;
+    if (!close(dd(x0), 0, 1e-3)) fail('analysis', 'inflection', `f″(${x0}) = ${dd(x0)}, not 0`);
+    if (dd(x0 - 1) * dd(x0 + 1) >= 0) fail('analysis', 'inflection', `f″ does not change sign across ${x0}`);
+    covered.add('inflection');
+  },
+
+  invTrigDeriv: p => {
+    const m = p.q.replace(/<[^>]+>/g, '').match(/arc(sin|cos|tan)\((\d+)x\)/);
+    const k = +m[2];
+    const g = m[1] === 'sin' ? Math.asin : m[1] === 'cos' ? Math.acos : Math.atan;
+    const a = compile(p.a);
+    for (const x of [-0.13, 0.07, 0.16]) {
+      const want = numDeriv(t => g(k * t), x), got = a({ x });
+      analysisChecks++;
+      if (!close(got, want, 1e-4)) { fail('analysis', 'invTrigDeriv', `arc${m[1]}(${k}x) at ${x}: answer ${got}, numeric ${want}`); return; }
+    }
+    covered.add('invTrigDeriv');
+  },
+
+  logDiff: p => {
+    const k = +(p.q.replace(/<[^>]+>/g, '').match(/x(\d*)x/) || [0, ''])[1] || 1;
+    const a = compile(p.a);
+    for (const x of [0.6, 1.4, 2.3]) {
+      const want = numDeriv(t => Math.pow(t, k * t), x), got = a({ x });
+      analysisChecks++;
+      if (!close(got, want, 1e-4)) { fail('analysis', 'logDiff', `d/dx x^(${k}x) at ${x}: answer ${got}, numeric ${want}`); return; }
+    }
+    covered.add('logDiff');
+  },
+
+  byParts: p => integCheck('byParts', integrand(p.q), p.a),
+
+  // A must make the two partial fractions add back up to the original.
+  partialFrac: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    const m = t.match(/^(\d+)\(x ([+−]) (\d+)\)\(x ([+−]) (\d+)\)/);
+    const N = +m[1], a = (m[2] === '−' ? 1 : -1) * +m[3], b = (m[4] === '−' ? 1 : -1) * +m[5];
+    const A = compile(p.a)({}), B = N / (b - a);
+    for (const x of [0.37, 2.9, -3.4]) {
+      if (Math.abs(x - a) < 0.2 || Math.abs(x - b) < 0.2) continue;
+      const lhs = N / ((x - a) * (x - b)), rhs = A / (x - a) + B / (x - b);
+      analysisChecks++;
+      if (!close(lhs, rhs, 1e-9)) { fail('analysis', 'partialFrac', `${t}: A = ${A} does not reproduce the original at x = ${x}`); return; }
+    }
+    covered.add('partialFrac');
+  },
+
+  improper: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    const pw = +(flat(p.q).match(/1x(\d*) dx/)[1] || 1);
+    analysisChecks++;
+    if (pw === 1) {
+      if (p.a !== 'Diverges') fail('analysis', 'improper', `p = 1 diverges, answer says ${p.a}`);
+    } else {
+      // ∫₁^B x^(−p) dx, with B large enough that the tail is below tolerance.
+      const B = 1e7, want = (1 - Math.pow(B, 1 - pw)) / (pw - 1);
+      const got = compile(p.a)({});
+      if (!close(got, want, 1e-6)) fail('analysis', 'improper', `p = ${pw}: answer ${got}, numeric ${want}`);
+    }
+    covered.add('improper');
+  },
+
+  avgValue: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    const [[n, b]] = nums(flat(p.q), /y = x(\d) on \[0, (\d+)\]/g);
+    const want = simpson(({ x }) => Math.pow(x, n), 0, b) / b;
+    valueCheck('avgValue', want, p.a, 1e-6);
+  },
+
+  volRev: p => {
+    const t = p.q.replace(/<[^>]+>/g, '');
+    const m = flat(p.q).match(/y = x(\d?) on \[0, (\d+)\]/);
+    const n = m[1] === '' ? 1 : +m[1], b = +m[2];
+    const want = Math.PI * simpson(({ x }) => Math.pow(x, 2 * n), 0, b);
+    valueCheck('volRev', want, String(p.a).replace(/π/g, 'pi'), 1e-6);
+  },
+
+  // The stated integral must actually equal the limit of the sum.
+  riemannToInt: p => {
+    const k = +flat(p.q).match(/in\)(\d)/)[1];
+    const m = String(p.a).match(/∫<sub>(\d+)<\/sub><sup>(\d+)<\/sup> x(\S*) dx/);
+    if (!m) { fail('analysis', 'riemannToInt', `answer is not an integral: ${p.a}`); return; }
+    const lo = +m[1], hi = +m[2], pw = +(flat(m[3]) || 1);
+    const N = 200000;
+    let sum = 0;
+    for (let i = 1; i <= N; i++) sum += Math.pow(i / N, k) / N;
+    const want = simpson(({ x }) => Math.pow(x, pw), lo, hi);
+    analysisChecks++;
+    if (!close(sum, want, 1e-4)) fail('analysis', 'riemannToInt', `sum → ${sum}, but the stated integral is ${want}`);
+    covered.add('riemannToInt');
+  }
+});
 for (const [key, check] of Object.entries(ANALYSIS)) {
   for (let i = 0; i < REPS; i++) {
     const p = GEN[key](2);
@@ -348,6 +642,14 @@ console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(),
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
+{
+  // Name the gap rather than leaving it to arithmetic: these are the answers
+  // that are not scalars or matrices — judgements, sets of roots, prose — and
+  // so rest on the structural and algebraic layers instead.
+  const done = new Set([...covered, ...Object.keys(ALGEBRA)]);
+  const gap = Object.keys(GEN).filter(k => !done.has(k));
+  if (gap.length) console.log(`    not numerically checked: ${gap.join(', ')}`);
+}
 if (seenComplexity.size) {
   console.log(`  generators with mote ladders ${pad(seenComplexity.size, 8)}`);
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);

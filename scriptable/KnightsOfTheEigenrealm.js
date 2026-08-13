@@ -601,6 +601,10 @@ function poly(terms,v='x'){
   });
   return s;
 }
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){const t=b;b=a%b;a=t;}return a||1;};
+// A fraction in lowest terms, rendered as a plain integer when it divides out.
+const rat=(n,dm)=>{ if(dm<0){n=-n;dm=-dm;} const g=gcd(n,dm); n/=g; dm/=g;
+  return dm===1 ? neg(n) : frac(n,dm); };
 const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
 
@@ -1399,6 +1403,598 @@ partial(){
     ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${neg(c)}xy³ → \${neg(c)}y³ (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
 },
 
+
+/* ---------- Realm 6 : Spectral Reach (advanced linear algebra) ---------- */
+charPoly(d){
+  const k=[4,6,8][d-1]||6;
+  let A, tr, dt;
+  do{
+    A=[[R.nz(-k,k),R.nz(-k,k)],[R.nz(-k,k),R.nz(-k,k)]];
+    tr=A[0][0]+A[1][1]; dt=A[0][0]*A[1][1]-A[0][1]*A[1][0];
+    // Each guard keeps one distractor below from collapsing onto the answer.
+  }while(tr===0 || dt===0 || tr===dt || A[0][1]*A[1][0]===0);
+  const P=(b,c)=>poly([[1,2],[b,1],[c,0]],'λ');
+  return {topic:'Characteristic Polynomial',
+    codex:{rule:'For a 2×2, det(A − λI) = λ² − (trace)λ + (determinant). Its roots are the eigenvalues.',
+           eg:\`A = \${mat([[3,1],[2,4]])} → trace 7, det 10 → λ² − 7λ + 10 = (λ−2)(λ−5)\`},
+    q:\`det(A − λI) for A = \${mat(A)}?\`,
+    a:P(-tr, dt),
+    d:[[P(tr,dt),'the trace enters with a minus sign — it is λ² − (trace)λ + det'],
+       [P(-tr,-dt),'the determinant enters as itself, not negated'],
+       [P(-dt,tr),'the trace and the determinant have swapped places'],
+       [P(-tr, A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the determinant subtracts the two products; this one added them']],
+    ex:\`Subtracting λ down the diagonal gives \${mat([['a−λ','b'],['c','d−λ']])}, whose determinant is (\${neg(A[0][0])}−λ)(\${neg(A[1][1])}−λ) − (\${neg(A[0][1])})(\${neg(A[1][0])}). Multiply out and you always land on λ² − (trace)λ + det: trace \${neg(tr)}, determinant \${neg(dt)}, so \${P(-tr,dt)}. Its roots are the eigenvalues.\`};
+},
+eigenvec(d){
+  const k=[2,2,3][d-1]||2;
+  let p,q,lam,s,t,A,ans,ds;
+  do{
+    p=R.nz(-3,3); q=R.nz(-3,3); lam=R.nz(-4,4); s=R.nz(-k,k); t=R.nz(-k,k);
+    // A = λI + N where N kills ⟨p,q⟩, so ⟨p,q⟩ is an eigenvector by construction
+    // and the other eigenvalue is λ + (qs − pt), with eigenvector ⟨s,t⟩.
+    A=[[lam+q*s, -p*s],[q*t, lam-p*t]];
+    ans=[p,q];
+    ds=[[q,p],[-p,q],[s,t],[q,-p]];
+    // No distractor may be a scalar multiple of the answer — those would be
+    // eigenvectors too, and the question would have two right answers.
+  }while(q*s-p*t===0 || ds.some(v=>v[0]*ans[1]-v[1]*ans[0]===0)
+        || new Set([ans,...ds].map(v=>vecR(v))).size!==5);
+  return {topic:'Eigenvectors',
+    codex:{rule:'An eigenvector of A for λ is any non-zero v with Av = λv. Find it by solving (A − λI)v = 0.',
+           eg:'A − λI has determinant zero, so its rows are proportional — one row is all you need.'},
+    q:\`A = \${mat(A)} has λ = \${neg(lam)}.<br>Which vector is an eigenvector for it?\`,
+    a:vecR(ans),
+    d:[[vecR(ds[0]),'the components are swapped — check it against Av = λv'],
+       [vecR(ds[1]),'one sign is flipped, which turns it off the eigenline entirely'],
+       [vecR(ds[2]),\`that is the eigenvector for the other eigenvalue, λ = \${neg(lam+q*s-p*t)}\`],
+       [vecR(ds[3]),'that is a row of A − λI; the eigenvector is what that row annihilates, not the row itself']],
+    ex:\`A − λI = \${mat([[A[0][0]-lam,A[0][1]],[A[1][0],A[1][1]-lam]])}, and you want the vector it sends to zero. Check \${vecR(ans)}: top row gives (\${neg(A[0][0]-lam)})(\${neg(p)}) + (\${neg(A[0][1])})(\${neg(q)}) = 0. So A\${vecR(ans)} = \${neg(lam)}\${vecR(ans)} — the arrow keeps its own line and only changes length.\`};
+},
+diagonalisable(d){
+  const kind=R.pick(['distinct','distinct','defective','scalar','complex']);
+  const c=R.nz(-4,4), b=R.nz(1,5), e=R.nz(1,4);
+  let A, why;
+  if(kind==='distinct'){ const c2=(()=>{let v;do{v=R.nz(-4,4);}while(v===c);return v;})();
+    A=[[c,b],[0,c2]]; why=\`its eigenvalues are \${neg(Math.min(c,c2))} and \${neg(Math.max(c,c2))}\`; }
+  else if(kind==='defective'){ A=[[c,b],[0,c]]; why=\`its only eigenvalue is \${neg(c)}\`; }
+  else if(kind==='scalar'){ A=[[c,0],[0,c]]; why=\`it is \${neg(c)} times the identity\`; }
+  else { A=[[c,b],[-e,c]]; why=\`its eigenvalues are \${neg(c)} ± i√\${b*e}\`; }
+  const OPT={
+    distinct:'Yes — two different eigenvalues',
+    scalar:'Yes — it is already a multiple of the identity',
+    defective:'No — one repeated eigenvalue, and only one eigenvector direction',
+    complex:'No — its eigenvalues are not real'
+  };
+  const tr=A[0][0]+A[1][1], dt=A[0][0]*A[1][1]-A[0][1]*A[1][0], disc=tr*tr-4*dt;
+  const REASON={
+    distinct:\`the discriminant of the characteristic polynomial is \${neg(disc)}, so there are not two distinct real eigenvalues\`,
+    scalar:'a multiple of the identity has zeros off the diagonal, and this one does not',
+    defective:\`a repeated eigenvalue would need the discriminant to be zero; here it is \${neg(disc)}\`,
+    complex:\`complex eigenvalues need a negative discriminant; here it is \${neg(disc)}\`
+  };
+  return {topic:'Diagonalisability',
+    codex:{rule:'A 2×2 is diagonalisable when it has two independent eigenvectors: guaranteed by two distinct eigenvalues, and automatic for cI.',
+           eg:'A repeated eigenvalue with a non-zero off-diagonal entry is the one case that fails.'},
+    q:\`Is \${mat(A)} diagonalisable over the reals?\`,
+    a:OPT[kind],
+    d:Object.keys(OPT).filter(x=>x!==kind).map(x=>[OPT[x], REASON[x]]),
+    ex:\`Trace \${neg(tr)}, determinant \${neg(dt)}, so the discriminant is \${neg(tr)}² − 4(\${neg(dt)}) = \${neg(disc)}. Here \${why}. \${
+      kind==='distinct' ? 'Two distinct eigenvalues always give two independent eigenvectors, so it diagonalises.'
+      : kind==='scalar' ? 'A multiple of the identity is already diagonal — every vector is an eigenvector.'
+      : kind==='defective' ? 'The eigenvalue repeats but the matrix is not cI, so it has only a one-dimensional eigenspace and cannot be diagonalised.'
+      : 'A negative discriminant means the eigenvalues are a complex conjugate pair, so there is no real basis of eigenvectors.'}\`};
+},
+matPow(d){
+  const n = d>=3 ? 3 : 2;
+  let a,b,c,ans,ds;
+  do{
+    a=R.nz(-3,3); b=R.nz(-4,4); c=R.nz(-3,3);
+    const off = n===2 ? b*(a+c) : b*(a*a+a*c+c*c);
+    ans=[[Math.pow(a,n), off],[0, Math.pow(c,n)]];
+    ds=[[[Math.pow(a,n), Math.pow(b,n)],[0, Math.pow(c,n)]],   // entrywise
+        [[n*a, n*b],[0, n*c]],                                  // nA
+        [[Math.pow(a,n), b],[0, Math.pow(c,n)]],                // off-diagonal untouched
+        [[Math.pow(c,n), off],[0, Math.pow(a,n)]]];             // diagonal swapped
+  }while(a===c || new Set([ans,...ds].map(m=>mat(m))).size!==5);
+  const A=[[a,b],[0,c]];
+  return {topic:'Matrix Powers',
+    q:\`A = \${mat(A)}. A\${sup(n)} = ?\`,
+    a:mat(ans),
+    d:[[mat(ds[0]),'each entry was raised on its own — a matrix power is repeated matrix multiplication, not an entrywise one'],
+       [mat(ds[1]),\`that is \${n}A, scalar multiplication, not the \${n===2?'square':'cube'}\`],
+       [mat(ds[2]),'the off-diagonal entry does change: it collects a contribution from both diagonal entries'],
+       [mat(ds[3]),'the two diagonal entries have swapped places']],
+    ex:\`Multiply it out: A² = \${mat([[a*a, b*(a+c)],[0,c*c]])}, because the top-right entry is (\${neg(a)})(\${neg(b)}) + (\${neg(b)})(\${neg(c)}) = \${neg(b*(a+c))}.\${
+      n===3 ? \` Multiplying once more gives the top-right entry \${neg(b)}(\${neg(a)}² + \${neg(a)}·\${neg(c)} + \${neg(c)}²) = \${neg(b*(a*a+a*c+c*c))}.\` : ''
+    } The diagonal entries just power up, which is the one part of the entrywise guess that happens to be right.\`};
+},
+nullSpace(d){
+  let a,b,k;
+  do{ a=R.nz(-5,5); b=R.nz(-5,5); k=R.nz(-3,3); }while(Math.abs(a)===Math.abs(b));
+  const A=[[a,b],[k*a,k*b]];
+  return {topic:'Null Space',
+    q:\`Which non-zero vector v has \${mat(A)}v = \${vec([0,0])}?\`,
+    a:vecR([-b,a]),
+    d:[[vecR([a,b]),'that is the first row of A, not the direction it annihilates'],
+       [vecR([b,a]),'the components were swapped without the sign change that makes the dot product vanish'],
+       [vecR([a,-b]),'only one component changed sign — check that the first row really dots to zero'],
+       [vecR([0,0]),'the zero vector solves Av = 0 for every A, which is exactly why it is never the answer here']],
+    ex:\`Both rows are multiples of ⟨\${neg(a)}, \${neg(b)}⟩, so the whole question is: which arrow dots to zero with it? Swapping and flipping one sign does it — ⟨\${neg(-b)}, \${neg(a)}⟩ gives (\${neg(a)})(\${neg(-b)}) + (\${neg(b)})(\${neg(a)}) = 0. The null space is the line through that vector, and since it is more than just the origin, A is singular.\`};
+},
+rankNullity(d){
+  let m,n,r;
+  do{ m=R.i(3,6); n=R.i(3,8); r=R.i(1,Math.min(m,n)-1); }while(m===n || n-r===r);
+  return {topic:'Rank–Nullity',
+    codex:{rule:'rank + nullity = number of columns. Every column either adds a new direction to the image or a dimension to the null space.',
+           eg:'A 4×7 matrix of rank 3 has nullity 7 − 3 = 4.'},
+    q:\`A \${m}×\${n} matrix has rank \${r}.<br>What is the dimension of its null space?\`,
+    a:String(n-r),
+    d:[[String(m-r),\`that subtracts from the \${m} rows; the theorem counts the \${n} columns\`],
+       [String(n+r),'rank and nullity add to the number of columns, so nullity is a subtraction'],
+       [String(r),'that is the rank again — the nullity is what the columns have left over'],
+       [String(n),'that is every column; the ' + r + ' independent ones do not lie in the null space']],
+    ex:\`The theorem says rank + nullity = number of columns, and the number of columns is \${n}. So the nullity is \${n} − \${r} = \${n-r}. The row count \${m} never enters it: each of the \${n} columns either contributes a new direction to the image or a dimension of freedom to the null space.\`};
+},
+colSpace(d){
+  const want=R.i(1,3);
+  let A;
+  const det3=M=>M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])
+               -M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])
+               +M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+  const indep2=(v,w)=>v[0]*w[1]-v[1]*w[0]!==0 || v[0]*w[2]-v[2]*w[0]!==0 || v[1]*w[2]-v[2]*w[1]!==0;
+  if(want===1){
+    const v=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)], k=[1,R.nz(-2,2),R.nz(-2,2)];
+    A=k.map(c=>v.map(x=>c*x));
+  } else {
+    let v,w;
+    do{ v=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; w=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; }while(!indep2(v,w));
+    if(want===2){
+      const s=R.nz(-2,2), t=R.nz(-2,2);
+      A=[v,w,v.map((x,i)=>s*x+t*w[i])];
+    } else {
+      let u;
+      do{ u=[R.nz(-3,3),R.nz(-3,3),R.nz(-3,3)]; A=[v,w,u]; }while(det3(A)===0);
+    }
+  }
+  const REASON={
+    0:'only the zero matrix has a zero-dimensional column space, and this one is not zero',
+    1:'that would mean every column is a multiple of a single one',
+    2:'two independent columns is not automatic — check whether a third adds a new direction',
+    3:'all three columns are present, but being present is not the same as being independent'
+  };
+  const ds=[0,1,2,3].filter(x=>x!==want).map(x=>[String(x),
+    x===3-want ? 'that is the dimension of the null space — rank and nullity add to 3, they are not the same number'
+               : REASON[x]]);
+  return {topic:'Column Space',
+    q:\`What is the dimension of the column space of \${mat(A)}?\`,
+    a:String(want),
+    d:ds,
+    ex:\`The column space is the span of the three columns, and its dimension is the rank. \${
+      want===1 ? 'Every row here is a multiple of the same vector, so every column is a multiple of the same vector too — the span is a single line.'
+      : want===2 ? 'The third row is a combination of the first two, so the matrix is singular and the columns span a plane rather than all of space.'
+      : 'The determinant is non-zero, so no column is a combination of the others and the three of them span all of ℝ³.'} Rank \${want} also fixes the nullity at \${3-want}.\`};
+},
+gramSchmidt(d){
+  let a,b,k,m,u1,u2,w,nn;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); k=R.nz(-3,3); m=R.nz(-3,3);
+    u1=[a,b]; u2=[k*a-m*b, k*b+m*a]; w=[-m*b, m*a]; nn=a*a+b*b;
+  }while(new Set([vecR(w),vecR(u2),vecR([k*a,k*b]),vecR([k*b,k*a]),vecR([m*b,-m*a])]).size!==5);
+  const dp=k*nn;
+  return {topic:'Gram–Schmidt',
+    complexity:3,
+    codex:{rule:'From each new vector subtract its projection onto the ones already fixed; what is left is orthogonal to all of them.',
+           eg:'w = u₂ − (u₂·u₁ / u₁·u₁)u₁, and w·u₁ = 0 by construction.'},
+    motes:[
+      {q:\`u₁ = \${vecR(u1)}, u₂ = \${vecR(u2)}.<br>What is u₂ · u₁?\`,
+       a:neg(dp),
+       d:[[neg(u2[0]*u1[1]+u2[1]*u1[0]),'the components were crossed — first pairs with first'],
+          [neg(u2[0]*u1[0]-u2[1]*u1[1]),'a dot product adds its two products; it does not subtract them'],
+          [neg(nn),'that is u₁ · u₁, which you will need next but not yet']],
+       ex:\`Multiply matching slots and add: (\${neg(u2[0])})(\${neg(a)}) + (\${neg(u2[1])})(\${neg(b)}) = \${neg(dp)}.\`},
+      {q:\`And what is u₁ · u₁?\`,
+       a:neg(nn),
+       d:[[neg(2*(a+b)),'that adds the components rather than squaring them'],
+          [neg(a*b),'u₁ · u₁ squares each component; it does not multiply them together'],
+          [neg(dp),'that was u₂ · u₁ from the previous step']],
+       ex:\`A vector dotted with itself is the sum of its squares: (\${neg(a)})² + (\${neg(b)})² = \${nn}. That is ‖u₁‖².\`},
+      {q:\`So what is the coefficient (u₂ · u₁)/(u₁ · u₁)?\`,
+       a:neg(k),
+       d:[[neg(dp),'that is only the numerator — it still has to be divided by ‖u₁‖²'],
+          [neg(nn),'that is the denominator on its own'],
+          [neg(-k),'the sign slipped; both parts keep the signs they were computed with']],
+       ex:\`\${neg(dp)} ÷ \${nn} = \${neg(k)}. That number says how many copies of u₁ hide inside u₂.\`},
+      {q:\`Finally: u₂ − (\${neg(k)})u₁ = ?\`,
+       a:vecR(w),
+       d:[[vecR([k*a,k*b]),'that is the projection you are subtracting, not what is left after subtracting it'],
+          [vecR(u2),'the subtraction has not happened yet'],
+          [vecR([m*b,-m*a]),'the subtraction ran the wrong way round']],
+       ex:\`\${vecR(u2)} − \${neg(k)}\${vecR(u1)} = \${vecR(w)}. Check it: \${vecR(w)} · \${vecR(u1)} = 0, so the leftover really is perpendicular to u₁.\`}
+    ],
+    q:\`u₁ = \${vecR(u1)}, u₂ = \${vecR(u2)}.<br>Gram–Schmidt: what is u₂ − proj<sub>u₁</sub>(u₂)?\`,
+    a:vecR(w),
+    d:[[vecR([k*a,k*b]),'that is the projection itself — the answer is what remains once you take it away'],
+       [vecR(u2),'that is u₂ untouched; the projection still has to come off'],
+       [vecR([k*b,k*a]),'the projection was built with the components of u₁ swapped'],
+       [vecR([m*b,-m*a]),'the subtraction ran backwards — it is u₂ minus the projection']],
+    ex:\`u₂ · u₁ = \${neg(dp)} and u₁ · u₁ = \${nn}, so the projection is (\${neg(dp)}/\${nn})u₁ = \${neg(k)}\${vecR(u1)} = \${vecR([k*a,k*b])}. Subtracting that from u₂ leaves \${vecR(w)}, and \${vecR(w)} · \${vecR(u1)} = 0 — which is the whole point: the leftover is perpendicular to what you already had.\`};
+},
+vecProj(d){
+  let a,b,k,m,v,u,pr;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); k=R.nz(-3,3); m=R.nz(-3,3);
+    v=[a,b]; u=[k*a-m*b, k*b+m*a]; pr=[k*a,k*b];
+  }while(new Set([vecR(pr),vecR([-m*b,m*a]),vecR([k*u[0],k*u[1]]),vecR([k*b,k*a]),vecR(u)]).size!==5);
+  const nn=a*a+b*b, dp=k*nn;
+  return {topic:'Vector Projection',
+    codex:{rule:'proj_v(u) = (u·v / v·v)·v. The result always points along v — the scalar only decides how far.',
+           eg:'u·v measures reach along v; dividing by v·v turns it into a multiple of v.'},
+    q:\`u = \${vecR(u)}, v = \${vecR(v)}.<br>proj<sub>v</sub>(u) = ?\`,
+    a:vecR(pr),
+    figAnswer:{kind:'plane', proj:true, caption:'Gold is the projection — it always lies along v.',
+      vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
+    d:[[vecR([-m*b,m*a]),'that is the part of u perpendicular to v — what is left after projecting, not the projection'],
+       [vecR([k*u[0],k*u[1]]),'the coefficient multiplies v, not u: a shadow cast onto v must lie along v'],
+       [vecR([k*b,k*a]),"v's components got swapped before scaling"],
+       [neg(dp),'that is u · v, a number; the projection asked for is a vector']],
+    ex:\`u · v = \${neg(dp)} and v · v = \${nn}, so the coefficient is \${neg(dp)}/\${nn} = \${neg(k)}. Multiply that by v: \${neg(k)}\${vecR(v)} = \${vecR(pr)}. Notice the answer is a multiple of v — it has to be, because it is u's shadow on the line through v.\`};
+},
+unitVec(d){
+  const T=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[7,24,25],[20,21,29],[9,12,15],[12,16,20]];
+  const [x,y,n]=R.pick(T);
+  const a=x*R.pick([1,-1]), b=y*R.pick([1,-1]);
+  return {topic:'Unit Vectors',
+    codex:{rule:'A unit vector in the direction of v is v divided by its own length: v̂ = v/‖v‖. Direction survives, length becomes 1.',
+           eg:'⟨3, 4⟩ has length 5, so its unit vector is (1/5)⟨3, 4⟩.'},
+    q:\`v = \${vecR([a,b])}.<br>What is the unit vector in the direction of v?\`,
+    a:\`\${frac(1,n)}\${vecR([a,b])}\`,
+    d:[[\`\${frac(1,Math.abs(a)+Math.abs(b))}\${vecR([a,b])}\`,'the length is not the sum of the components — it is √(a² + b²)'],
+       [\`\${frac(1,n*n)}\${vecR([a,b])}\`,'that divides by ‖v‖², which leaves a length of 1/‖v‖ rather than 1'],
+       [\`\${frac(1,n)}\${vecR([b,a])}\`,'the components are swapped, which points somewhere else entirely'],
+       [vecR([a,b]),'that is v itself; a unit vector has to have length exactly 1']],
+    ex:\`‖v‖ = √((\${neg(a)})² + (\${neg(b)})²) = √\${a*a+b*b} = \${n}. Dividing by that gives \${frac(1,n)}\${vecR([a,b])}, whose length is \${n}/\${n} = 1. Dividing by the length is the only step — the direction never changes.\`};
+},
+angleVec(d){
+  const a=R.nz(-5,5), b=R.nz(-5,5);
+  const kind=R.pick(['0','45','90','135','180']);
+  const mul=R.i(2,3);                     // one factor for both components, or
+  const u = kind==='0'   ? [a*mul, b*mul] // the two vectors are not parallel
+
+          : kind==='45'  ? [a-b, a+b]
+          : kind==='90'  ? [-b, a]
+          : kind==='135' ? [-a-b, a-b]
+          :                [-a,-b];
+  const v=[a,b];
+  const dp=u[0]*v[0]+u[1]*v[1];
+  const cosT=dp/(Math.hypot(u[0],u[1])*Math.hypot(a,b));
+  const COS={'0':1,'45':Math.SQRT1_2,'90':0,'135':-Math.SQRT1_2,'180':-1};
+  const show=x=>(Math.round(x*100)/100).toFixed(2).replace('-','−');
+  return {topic:'Angle Between Vectors',
+    codex:{rule:'cos θ = (u·v)/(‖u‖‖v‖). The dot product alone gives the sign of the angle; the lengths turn it into a number between −1 and 1.',
+           eg:'u·v = 0 means θ = 90°, whatever the lengths are.'},
+    q:\`u = \${vecR(u)}, v = \${vecR(v)}.<br>What is the angle between them?\`,
+    a:\`\${kind}°\`,
+    d:Object.keys(COS).filter(x=>x!==kind).map(x=>[\`\${x}°\`,
+      \`\${x}° needs cos θ = \${show(COS[x])}; here u·v = \${neg(dp)} and the lengths give cos θ = \${show(cosT)}\`]),
+    ex:\`u · v = \${neg(dp)}, ‖u‖ = √\${u[0]*u[0]+u[1]*u[1]} and ‖v‖ = √\${a*a+b*b}. So cos θ = \${neg(dp)}/(√\${u[0]*u[0]+u[1]*u[1]}·√\${a*a+b*b}) = \${show(cosT)}, and the angle with that cosine is \${kind}°. \${
+      kind==='90' ? 'A dot product of zero is exactly what perpendicular means.'
+      : kind==='0' ? 'u is a positive multiple of v, so they point the same way.'
+      : kind==='180' ? 'u is a negative multiple of v, so they point exactly opposite ways.'
+      : 'The lengths matter here — the sign of the dot product alone would only tell you which side of 90° you are on.'}\`};
+},
+transMatrix(d){
+  const k=R.i(2,4);
+  const T=[
+    {nm:'a rotation by 90° anticlockwise', m:[[0,-1],[1,0]], does:'turns every arrow a quarter-turn anticlockwise'},
+    {nm:'a rotation by 180°',              m:[[-1,0],[0,-1]], does:'sends every arrow to its exact opposite'},
+    {nm:'a reflection in the x-axis',      m:[[1,0],[0,-1]], does:'flips the plane top to bottom'},
+    {nm:'a reflection in the y-axis',      m:[[-1,0],[0,1]], does:'flips the plane left to right'},
+    {nm:'a reflection in the line y = x',  m:[[0,1],[1,0]], does:'swaps the two coordinates'},
+    {nm:\`a horizontal shear of \${k}\`,      m:[[1,k],[0,1]], does:'slides points sideways in proportion to their height'},
+    {nm:\`a vertical shear of \${k}\`,        m:[[1,0],[k,1]], does:'slides points upward in proportion to their distance from the y-axis'},
+    {nm:\`a scaling by \${k}\`,               m:[[k,0],[0,k]], does:\`stretches everything by a factor of \${k} in both directions\`},
+    {nm:'a projection onto the x-axis',    m:[[1,0],[0,0]], does:'flattens the whole plane onto the x-axis'}
+  ];
+  const pick=R.pick(T);
+  const others=R.shuffle(T.filter(t=>t.nm!==pick.nm)).slice(0,4);
+  return {topic:'Transformation Matrices',
+    codex:{rule:'The columns of a transformation matrix are where î and ĵ land. Decide those two arrows and the matrix writes itself.',
+           eg:'A 90° anticlockwise turn sends î to ⟨0,1⟩ and ĵ to ⟨−1,0⟩, which are the columns of [[0,−1],[1,0]].'},
+    q:\`Which matrix performs \${pick.nm}?\`,
+    a:mat(pick.m),
+    figAnswer:{kind:'grid', m:pick.m, caption:\`This is what \${pick.nm} does to the unit square.\`},
+    d:others.map(t=>[mat(t.m), \`that matrix \${t.does}\`]),
+    ex:\`Read the columns as destinations. This matrix sends î = ⟨1, 0⟩ to \${vecR([pick.m[0][0],pick.m[1][0]])} and ĵ = ⟨0, 1⟩ to \${vecR([pick.m[0][1],pick.m[1][1]])}, which is exactly \${pick.nm}. Every 2×2 matrix is fully described by where it puts those two arrows.\`};
+},
+/* ---------- Realm 7 : Infinite Expanse (advanced calculus) ---------- */
+implicitDiff(d){
+  const a=R.i(1,4), b=R.i(1,4), c=R.i(6,30);
+  const nx = a===1?'x':a+'x', ny = b===1?'y':b+'y';
+  const noY = b===1 ? \`−\${nx}\` : \`−\${frac(nx, String(b))}\`;
+  return {topic:'Implicit Differentiation',
+    codex:{rule:'Differentiate both sides in x, writing dy/dx every time a y is differentiated, then solve for dy/dx.',
+           eg:'x² + y² = 25 → 2x + 2y·dy/dx = 0 → dy/dx = −x/y'},
+    q:\`\${a===1?'':a}x² + \${b===1?'':b}y² = \${c}.<br>Find \${frac('dy','dx')}.\`,
+    a:\`−\${frac(nx, ny)}\`,
+    d:[[\`\${frac(nx, ny)}\`,'the minus sign is lost — moving the x-term across the equals sign flips its sign'],
+       [\`−\${frac(ny, nx)}\`,'that is dx/dy; the fraction is upside down'],
+       [noY,'differentiating y² gives 2y·dy/dx, so a y stays in the denominator'],
+       [\`−\${frac(String(a), ny)}\`,'the x from differentiating x² was dropped along the way']],
+    ex:\`Differentiate every term with respect to x, remembering that y is a function of x: \${2*a}x + \${2*b}y·\${frac('dy','dx')} = 0. The y² term needs the chain rule, which is where the extra dy/dx comes from. Solving gives \${frac('dy','dx')} = −\${frac(2*a+'x', 2*b+'y')} = −\${frac(nx, ny)}. You never had to solve for y first.\`};
+},
+lhopital(d){
+  let k,m;
+  do{ k=R.i(2,7); m=R.i(2,7); }while(k===m);
+  const form=R.pick(['sin','exp','cos']);
+  const Q = form==='sin' ? \`lim<sub>x→0</sub> \${frac(\`sin(\${k}x)\`, \`\${m}x\`)}\`
+          : form==='exp' ? \`lim<sub>x→0</sub> \${frac(\`e<sup>\${k}x</sup> − 1\`, \`\${m}x\`)}\`
+          :                \`lim<sub>x→0</sub> \${frac(\`1 − cos(\${k}x)\`, \`\${m}x²\`)}\`;
+  const top = form==='cos' ? k*k : k;
+  const bot = form==='cos' ? 2*m : m;
+  return {topic:"L'Hôpital's Rule",
+    codex:{rule:"When a limit gives 0/0 or ∞/∞, differentiate the top and the bottom separately — not as a quotient — and try again.",
+           eg:'lim sin(3x)/(5x) → 3cos(3x)/5 → 3/5'},
+    q:\`\${Q} = ?\`,
+    a:rat(top,bot),
+    d:[[rat(bot,top),"the ratio is upside down — differentiate top and bottom, then divide top by bottom"],
+       ['0','a 0/0 form is not zero; it only means substituting was premature'],
+       ['1','both parts do go to zero, but not at the same rate — that rate is the whole answer'],
+       [rat(top*bot,1),'the two derivatives are divided, not multiplied together']],
+    ex:\`Substituting x = 0 gives 0/0, so differentiate top and bottom separately. \${
+      form==='sin' ? \`The top becomes \${k}cos(\${k}x) and the bottom \${m}, so the limit is \${k}cos(0)/\${m} = \${rat(k,m)}.\`
+      : form==='exp' ? \`The top becomes \${k}e<sup>\${k}x</sup> and the bottom \${m}, so at x = 0 the limit is \${k}/\${m} = \${rat(k,m)}.\`
+      : \`The top becomes \${k}sin(\${k}x) and the bottom \${2*m}x — still 0/0, so go again: \${k*k}cos(\${k}x) over \${2*m}, giving \${rat(k*k,2*m)}.\`
+    } The rule is about the ratio of the derivatives, never the derivative of the ratio.\`};
+},
+relatedRates(d){
+  if(R.chance(.5)){
+    const T=[[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15]];
+    const [x,y,L]=R.pick(T), v=R.i(2,4);
+    return {topic:'Related Rates',
+      codex:{rule:'Differentiate the relation between the quantities with respect to time, then substitute the instant you care about — never before.',
+             eg:'x² + y² = L² → 2x·x′ + 2y·y′ = 0'},
+      q:\`A \${L} m ladder leans on a wall. Its foot slides out at \${v} m/s.<br>When the foot is \${x} m from the wall, how fast is the top sliding down?\`,
+      a:\`\${rat(-x*v,y)} m/s\`,
+      d:[[\`\${rat(x*v,y)} m/s\`,'the top slides down while the foot slides out, so the rate has to come out negative'],
+         [\`\${rat(-y*v,x)} m/s\`,'x and y have swapped roles in x·x′ + y·y′ = 0'],
+         [\`\${rat(-v,1)} m/s\`,"that is the foot's given speed, not the top's"],
+         [\`\${rat(-x,y)} m/s\`,"the foot's speed never got multiplied in"]],
+      ex:\`The ladder length is fixed, so x² + y² = \${L*L} at all times. Differentiating in t gives 2x·x′ + 2y·y′ = 0, so y′ = −x·x′/y. When x = \${x}, y = √(\${L*L} − \${x*x}) = \${y}, and x′ = \${v}. That gives y′ = −\${x}·\${v}/\${y} = \${rat(-x*v,y)} m/s — negative, because the top is falling.\`};
+  }
+  const Rr=R.i(3,9), v=R.i(2,5);
+  return {topic:'Related Rates',
+    codex:{rule:'Differentiate the relation between the quantities with respect to time, then substitute the instant you care about — never before.',
+           eg:'A = πr² → dA/dt = 2πr·dr/dt'},
+    q:\`A circular ripple's radius grows at \${v} cm/s.<br>How fast is its area growing when r = \${Rr} cm?\`,
+    a:\`\${2*Rr*v}π cm²/s\`,
+    d:[[\`\${Rr*Rr*v}π cm²/s\`,'that is πr² times the radius rate — the area formula has to be differentiated first'],
+       [\`\${2*Rr}π cm²/s\`,'the rate at which the radius grows was dropped'],
+       [\`\${2*v}π cm²/s\`,'the radius at that instant was dropped'],
+       [\`\${2*Rr*v} cm²/s\`,'the π belongs to the area formula and stays in the answer']],
+    ex:\`A = πr², so differentiating in t gives \${frac('dA','dt')} = 2πr·\${frac('dr','dt')}. Substituting r = \${Rr} and dr/dt = \${v} gives 2π(\${Rr})(\${v}) = \${2*Rr*v}π cm²/s. Substituting r = \${Rr} *before* differentiating would have made A a constant and the answer zero — the order matters.\`};
+},
+optimisation(d){
+  if(R.chance(.5)){
+    const P=4*R.i(3,10);
+    return {topic:'Optimisation',
+      codex:{rule:'Write the quantity as a function of one variable using the constraint, then find where its derivative is zero.',
+             eg:'Three sides of fence: x + 2y = P, A = y(P − 2y), maximised at y = P/4.'},
+      q:\`You have \${P} m of fence for a rectangular pen against a straight river,<br>so only three sides need fencing. What is the largest possible area?\`,
+      a:\`\${P*P/8} m²\`,
+      d:[[\`\${P*P/16} m²\`,\`that is the best square with all four sides fenced; the free river side moves the optimum\`],
+         [\`\${P*P/4} m²\`,\`that is a square of side \${P/2} m, which would need \${2*P} m of fence\`],
+         [\`\${P/4} m²\`,'that is the width that achieves the maximum, not the area it achieves'],
+         [\`\${P*P/2} m²\`,'that is larger than any rectangle this much fence can enclose']],
+      ex:\`Let y be the two sides perpendicular to the river and x the side parallel to it. Then x + 2y = \${P} and A = xy = y(\${P} − 2y). Differentiating gives A′ = \${P} − 4y, zero at y = \${P/4}, so x = \${P/2}. The area is \${P/2} × \${P/4} = \${P*P/8} m². The pen is twice as wide as it is deep — the free side is exactly why it is not a square.\`};
+  }
+  const S=2*R.i(4,15);
+  return {topic:'Optimisation',
+    codex:{rule:'Write the quantity as a function of one variable using the constraint, then find where its derivative is zero.',
+           eg:'x + y = S, P = x(S − x), maximised at x = S/2.'},
+    q:\`Two positive numbers add to \${S}.<br>What is the largest their product can be?\`,
+    a:String(S*S/4),
+    d:[[String(S*S/2),'that is more than any pair adding to '+S+' can manage'],
+       [String(S/2),'that is each of the two numbers, not their product'],
+       [String(S*S/8),'that is half the true maximum — check the product at the balanced pair'],
+       [String(S*S),\`that is \${S}², which would need each number to be \${S}\`]],
+    ex:\`With x + y = \${S}, the product is P = x(\${S} − x) = \${S}x − x². Then P′ = \${S} − 2x, zero at x = \${S/2}, so y = \${S/2} as well and P = \${S/2} × \${S/2} = \${S*S/4}. P″ = −2 < 0 confirms it is a maximum. Equal shares always maximise a product with a fixed sum.\`};
+},
+inflection(d){
+  const a=R.pick([1,2,-1,-2]);
+  const x0=R.nz(-3,3);
+  const b=-3*a*x0, c=R.nz(-6,6), e=R.i(-5,5);
+  const t=[[a,3],[b,2],[c,1],[e,0]];
+  return {topic:'Inflection Points',
+    codex:{rule:'An inflection point is where f″ changes sign. For a cubic ax³ + bx² + cx + d that is the single point x = −b/(3a).',
+           eg:'f″ = 6ax + 2b, and 6ax + 2b = 0 gives x = −b/(3a).'},
+    q:\`f(x) = \${poly(t)}.<br>Where is its inflection point?\`,
+    a:\`x = \${neg(x0)}\`,
+    d:[[\`x = \${neg(-x0)}\`,'a sign slipped — solving 6ax + 2b = 0 gives x = −b/(3a), not +b/(3a)'],
+       [\`x = \${rat(3*x0,2)}\`,'that is −b/(2a), the vertex formula for a parabola, not where f″ vanishes'],
+       ['x = 0','f″ vanishes at the origin only when b = 0, and here b = '+neg(b)],
+       ['There is no inflection point','every cubic with a non-zero leading coefficient has exactly one']],
+    ex:\`f′(x) = \${poly(dPoly(t))} and f″(x) = \${poly(dPoly(dPoly(t)))}. Setting f″ = 0 gives \${neg(6*a)}x \${b>=0?'+':'−'} \${Math.abs(2*b)} = 0, so x = \${neg(x0)}. Because f″ is a straight line with non-zero slope it genuinely changes sign there, which is what makes it an inflection point rather than merely a zero of f″.\`};
+},
+invTrigDeriv(d){
+  const k=R.i(2,5), fn=R.pick(['asin','atan','acos']);
+  const root=\`√(1 − \${k*k}x²)\`;
+  const A = fn==='asin' ? frac(k, root)
+          : fn==='acos' ? \`−\${frac(k, root)}\`
+          :               frac(k, \`1 + \${k*k}x²\`);
+  const NM = fn==='asin' ? \`arcsin(\${k}x)\` : fn==='acos' ? \`arccos(\${k}x)\` : \`arctan(\${k}x)\`;
+  const d1 = fn==='atan' ? [frac(k, root),'that is the arcsin form; arctan has 1 + k²x² and no square root']
+                         : [frac(k, \`1 + \${k*k}x²\`),'that is the arctan form; arcsin and arccos carry a square root'];
+  const d2 = fn==='acos' ? [frac(k, root),'arccos decreases, so its derivative carries a minus sign']
+                         : [\`−\${A}\`,'that minus sign belongs to arccos, not to this one'];
+  return {topic:'Inverse Trig Derivatives',
+    codex:{rule:'d/dx arcsin u = u′/√(1−u²), arccos is the same with a minus, arctan is u′/(1+u²).',
+           eg:'d/dx arcsin(3x) = 3/√(1 − 9x²)'},
+    q:\`\${frac('d','dx')} \${NM} = ?\`,
+    a:A,
+    d:[d1, d2,
+       [fn==='atan'?frac(1, \`1 + \${k*k}x²\`):frac(1, root),\`the chain rule factor \${k} from the inside is missing\`],
+       [fn==='atan'?frac(k, \`1 − \${k*k}x²\`):frac(k, \`√(1 + \${k*k}x²)\`),'the sign inside is wrong — check the standard form carefully']],
+    ex:\`With u = \${k}x we have u′ = \${k}. \${
+      fn==='asin' ? \`Since d/dx arcsin u = u′/√(1 − u²), this is \${k}/√(1 − (\${k}x)²) = \${A}.\`
+      : fn==='acos' ? \`Since d/dx arccos u = −u′/√(1 − u²), this is −\${k}/√(1 − (\${k}x)²) = \${A}.\`
+      : \`Since d/dx arctan u = u′/(1 + u²), this is \${k}/(1 + (\${k}x)²) = \${A}.\`
+    } The k on top is the chain rule; the k² inside comes from squaring u.\`};
+},
+logDiff(d){
+  const k=R.i(1,3);
+  const pw = k===1 ? 'x' : \`\${k}x\`;
+  const A = k===1 ? \`x<sup>x</sup>(ln(x) + 1)\` : \`\${k}x<sup>\${pw}</sup>(ln(x) + 1)\`;
+  return {topic:'Logarithmic Differentiation',
+    complexity:3,
+    codex:{rule:'When the variable sits in both the base and the exponent, take ln of both sides, differentiate implicitly, then multiply back by y.',
+           eg:'y = xˣ → ln y = x ln x → y′/y = ln x + 1 → y′ = xˣ(ln x + 1)'},
+    motes:[
+      {q:\`y = x<sup>\${pw}</sup>. Take ln of both sides — what is ln y?\`,
+       a:\`\${k===1?'':k}x ln(x)\`,
+       d:[[\`ln(\${pw}) ln(x)\`,'the exponent comes down as a factor; it does not get its own logarithm'],
+          [\`\${pw} + ln(x)\`,'a power inside a log becomes a product, not a sum'],
+          [\`x<sup>\${pw}</sup>\`,'the logarithm has not been applied yet']],
+       ex:\`ln of a power brings the exponent down in front: ln(x^\${pw}) = \${k===1?'':k}x ln(x). That single move is what removes x from the exponent.\`},
+      {q:\`Differentiate both sides. What is \${frac('d','dx')}(\${k===1?'':k}x ln(x))?\`,
+       a:\`\${k===1?'':k}(ln(x) + 1)\`,
+       d:[[\`\${k===1?'':k}ln(x)\`,'the product rule also differentiates the x, which contributes a 1'],
+          [frac(k,'x'),'that differentiates only the ln and forgets the x in front'],
+          [\`\${k===1?'':k}x·\${frac(1,'x')}\`,'that is only the second half of the product rule']],
+       ex:\`Product rule on \${k===1?'':k}x·ln(x): \${k===1?'':k}·ln(x) + \${k===1?'':k}x·(1/x) = \${k===1?'':k}(ln(x) + 1).\`},
+      {q:\`The left side differentiates to \${frac('y′','y')}. Solve for y′.\`,
+       a:\`y′ = y·\${k===1?'':k}(ln(x) + 1)\`,
+       d:[[\`y′ = \${k===1?'':k}(ln(x) + 1)\`,'the y has to be multiplied back in — that is the whole point of the trick'],
+          [\`y′ = \${frac(k===1?'ln(x) + 1':k+'(ln(x) + 1)','y')}\`,'the y was divided rather than multiplied'],
+          [\`y′ = y + \${k===1?'':k}(ln(x) + 1)\`,'the two sides are multiplied by y, not added to it']],
+       ex:\`Multiply both sides by y. Then put back what y actually was, x^\${pw}, and the answer is in terms of x alone.\`}
+    ],
+    q:\`\${frac('d','dx')} x<sup>\${pw}</sup> = ?\`,
+    a:A,
+    d:[[k===1?\`x·x<sup>x − 1</sup>\`:\`\${pw}·x<sup>\${pw} − 1</sup>\`,'that is the power rule, which needs a constant exponent — here the exponent moves too'],
+       [k===1?\`x<sup>x</sup>ln(x)\`:\`\${k}x<sup>\${pw}</sup>ln(x)\`,'the +1 from differentiating the x in the exponent is missing'],
+       [\`x<sup>\${pw}</sup>\`,'that is exponential thinking, but the base is not constant either'],
+       [\`\${k===1?'':k}(ln(x) + 1)\`,'the factor of y — that is, of x^'+pw+' — never got multiplied back in']],
+    ex:\`Neither the power rule nor the exponential rule applies, because x appears in both places. Take logs: ln y = \${k===1?'':k}x ln(x). Differentiating gives y′/y = \${k===1?'':k}(ln(x) + 1), so y′ = y·\${k===1?'':k}(ln(x) + 1) = \${A}.\`};
+},
+byParts(d){
+  const a=R.i(2,4);
+  const E=\`e<sup>\${a}x</sup>\`;
+  return {topic:'Integration by Parts',
+    complexity:3,
+    codex:{rule:'∫u dv = uv − ∫v du. Choose u to be the part that gets simpler when you differentiate it.',
+           eg:'∫x eˣ dx: u = x (becomes 1), dv = eˣdx (integrates easily).'},
+    motes:[
+      {q:\`∫ x\${E} dx — which part should be u?\`,
+       a:'u = x',
+       d:[[\`u = \${E}\`,'differentiating that gets you nowhere; x is the part that simplifies'],
+          [\`u = x\${E}\`,'u is one factor, not the whole integrand'],
+          ['u = dx','dx is the differential, not a choice of u']],
+       ex:\`Pick u to be whatever gets simpler when differentiated. x becomes 1 and disappears; \${E} never simplifies, so it takes the dv role.\`},
+      {q:\`With u = x and dv = \${E} dx, what are du and v?\`,
+       a:\`du = dx, v = \${frac(1,a)}\${E}\`,
+       d:[[\`du = dx, v = \${E}\`,\`integrating \${E} divides by \${a}, it does not leave it unchanged\`],
+          [\`du = dx, v = \${a}\${E}\`,'that differentiates dv instead of integrating it'],
+          [\`du = x dx, v = \${frac(1,a)}\${E}\`,'du is the derivative of u = x, which is just dx']],
+       ex:\`u = x gives du = dx. Integrating dv = \${E} dx gives v = \${frac(1,a)}\${E}, because the chain rule leaves a factor of \${a} to divide out.\`},
+      {q:\`So what is uv?\`,
+       a:\`\${frac(1,a)}x\${E}\`,
+       d:[[\`x\${E}\`,\`the \${frac(1,a)} from integrating \${E} has been dropped\`],
+          [\`\${frac(1,a)}\${E}\`,'the u = x has been dropped from the product'],
+          [\`\${frac(1,a*a)}x\${E}\`,'divided by '+a+' twice; only the v step divides once']],
+       ex:\`uv is simply x times \${frac(1,a)}\${E} = \${frac(1,a)}x\${E}. That is the first half of the formula; the integral that remains is the second.\`},
+      {q:\`And ∫ v du = ∫ \${frac(1,a)}\${E} dx = ?\`,
+       a:\`\${frac(1,a*a)}\${E} + C\`,
+       d:[[\`\${frac(1,a)}\${E} + C\`,\`integrating \${E} again divides by another \${a}\`],
+          [\`\${frac(1,a)}x\${E} + C\`,'an x appeared from nowhere — du is dx, so this is a plain exponential integral'],
+          [\`\${a}\${E} + C\`,'that multiplies by '+a+' instead of dividing']],
+       ex:\`Integrating \${frac(1,a)}\${E} divides by \${a} once more, giving \${frac(1,a*a)}\${E}. Subtracting this from uv finishes the problem.\`}
+    ],
+    q:\`∫ x\${E} dx = ?\`,
+    a:\`\${frac(1,a)}x\${E} − \${frac(1,a*a)}\${E} + C\`,
+    d:[[\`\${frac(1,a)}x\${E} + \${frac(1,a*a)}\${E} + C\`,'the formula subtracts ∫v du; this one added it'],
+       [\`\${frac(1,a)}x\${E} + C\`,'the ∫v du term is missing entirely'],
+       [\`\${frac(1,2)}x²\${E} + C\`,'that integrates the two factors separately, which is not how products integrate'],
+       [\`\${frac(1,a)}\${E} − \${frac(1,a*a)}\${E} + C\`,'the x from uv has been dropped']],
+    ex:\`Take u = x and dv = \${E} dx, so du = dx and v = \${frac(1,a)}\${E}. Then ∫u dv = uv − ∫v du = \${frac(1,a)}x\${E} − ∫\${frac(1,a)}\${E} dx = \${frac(1,a)}x\${E} − \${frac(1,a*a)}\${E} + C. Differentiate it back and the two \${E} terms cancel, leaving exactly x\${E}.\`};
+},
+partialFrac(d){
+  let a,b,N;
+  do{ a=R.nz(-6,6); b=R.nz(-6,6); N=R.i(1,6); }
+  while(a===b || a+b===0 || Math.abs(a-b)===1 || N===Math.abs(a-b));
+  const den=\`(x \${a<0?'+':'−'} \${Math.abs(a)})(x \${b<0?'+':'−'} \${Math.abs(b)})\`;
+  return {topic:'Partial Fractions',
+    codex:{rule:'Cover up a factor and substitute its root into what is left; the number you get is that factor’s coefficient.',
+           eg:'For N/((x−a)(x−b)), covering (x−a) and putting x = a gives A = N/(a−b).'},
+    q:\`\${frac(N, den)} = \${frac('A',\`x \${a<0?'+':'−'} \${Math.abs(a)}\`)} + \${frac('B',\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)}.<br>What is A?\`,
+    a:rat(N, a-b),
+    d:[[rat(N, b-a),\`the sign is backwards — cover up (x \${a<0?'+':'−'} \${Math.abs(a)}) and put x = \${neg(a)}, which leaves \${neg(a)} − \${neg(b)} underneath\`],
+       [rat(N, a+b),'the two roots are subtracted, not added'],
+       [rat(a-b, N),'the fraction is upside down'],
+       [String(N),'that is the numerator itself; A is what survives after covering the factor up']],
+    ex:\`Multiply through by (x \${a<0?'+':'−'} \${Math.abs(a)}) and you get \${frac(N,\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)} = A + (that factor)·B. Now put x = \${neg(a)}: the B term vanishes and A = \${N}/(\${neg(a)} − \${neg(b)}) = \${rat(N,a-b)}. That shortcut is the cover-up method, and it works because the substitution kills every other term.\`};
+},
+improper(d){
+  const p = R.chance(.3) ? 1 : R.i(2,5);
+  const conv = p>1;
+  return {topic:'Improper Integrals',
+    codex:{rule:'∫₁^∞ x^(−p) dx converges to 1/(p−1) when p > 1 and diverges when p ≤ 1. Evaluate the limit, never the symbol ∞.',
+           eg:'∫₁^∞ x⁻² dx = [−1/x]₁^∞ = 1'},
+    q:\`∫<sub>1</sub><sup>∞</sup> \${frac(1, 'x'+(p===1?'':sup(p)))} dx = ?\`,
+    a: conv ? rat(1,p-1) : 'Diverges',
+    d: conv
+      ? [[rat(1,p),\`the antiderivative is x^(1−\${p})/(1−\${p}), which leaves \${p} − 1 underneath, not \${p}\`],
+         [rat(1,p+1),'the exponent was raised instead of lowered when antidifferentiating'],
+         ['0','the integrand tends to zero, but the area it accumulates does not have to'],
+         ['Diverges',\`for p > 1 the tail shrinks fast enough that the total area is finite\`]]
+      : [['1','that is 1/(p − 1) with p = 1, which divides by zero — the formula does not apply here'],
+         ['0','the integrand tends to zero, but the area it accumulates does not have to'],
+         [rat(1,2),'that is the value for p = 3, not for p = 1'],
+         ['ln 2','that is ∫₁² dx/x; here the upper limit runs off to infinity, and ln b has no ceiling']],
+    ex: conv
+      ? \`Take it as a limit: ∫₁^b x^(−\${p}) dx = [x^(\${1-p})/(\${1-p})]₁^b = \${frac(1,p-1)}(1 − b^(\${1-p})). As b → ∞ that last term vanishes because \${p} > 1, leaving \${rat(1,p-1)}. The bigger p is, the faster the tail dies and the smaller the total.\`
+      : \`The antiderivative of 1/x is ln x, not a power, so ∫₁^b dx/x = ln b — and ln b grows without bound. The area under 1/x past x = 1 is infinite even though the curve itself drops to zero. p = 1 is exactly the borderline case.\`};
+},
+avgValue(d){
+  const n=R.i(2,3), b=R.i(2,4);
+  const av=Math.pow(b,n)/(n+1);
+  return {topic:'Average Value',
+    codex:{rule:'The average value of f on [a,b] is (1/(b−a))∫ₐᵇ f — the total, divided by the width of the interval.',
+           eg:'Average of x² on [0,3] is (1/3)(27/3) = 3.'},
+    q:\`What is the average value of y = x\${sup(n)} on [0, \${b}]?\`,
+    a:rat(Math.pow(b,n), n+1),
+    d:[[rat(Math.pow(b,n+1), n+1),'that is the integral itself — the average still has to be divided by the width'],
+       [rat(Math.pow(b,n), 2),'that averages the two endpoint values, which is not the average of the function'],
+       [String(Math.pow(b,n)),\`that is f(\${b}), the largest value, reached only at the right-hand end\`],
+       [rat(Math.pow(b,n), 2*(n+1)),'divided by the width twice']],
+    ex:\`∫₀^\${b} x\${sup(n)} dx = \${b}\${sup(n+1)}/\${n+1} = \${rat(Math.pow(b,n+1),n+1)}. The interval has width \${b}, so the average is that divided by \${b}, which is \${rat(Math.pow(b,n),n+1)}\${Number.isInteger(av)?'':''}. Geometrically it is the height of the rectangle on [0, \${b}] with the same area as the region under the curve.\`};
+},
+volRev(d){
+  const n=R.i(1,2), b=R.i(2,4);
+  const p=2*n+1;
+  return {topic:'Volumes of Revolution',
+    codex:{rule:'Rotating y = f(x) about the x-axis sweeps discs of area πy², so V = π∫ₐᵇ y² dx.',
+           eg:'y = x on [0,3] sweeps a cone: π∫₀³x²dx = 9π.'},
+    q:\`y = x\${n===1?'':sup(n)} on [0, \${b}] is rotated about the x-axis.<br>What is the volume swept out?\`,
+    a:\`\${rat(Math.pow(b,p), p)}π\`,
+    d:[[\`\${rat(Math.pow(b,n+1), n+1)}π\`,'that integrates y rather than y² — a disc has area πy², so the square is essential'],
+       [\`\${rat(Math.pow(b,p), p)}\`,'the π from the area of each disc is missing'],
+       [\`\${rat(2*Math.pow(b,p), p)}π\`,'the disc area is πy², not 2πy² — that factor belongs to the shell method'],
+       [\`\${rat(Math.pow(b,2*n), 2*n)}π\`,'the power was not raised by one before dividing']],
+    ex:\`Each slice at position x is a disc of radius y = x\${n===1?'':sup(n)}, so its area is πx\${sup(2*n)} and V = π∫₀^\${b} x\${sup(2*n)} dx = π·\${b}\${sup(p)}/\${p} = \${rat(Math.pow(b,p),p)}π. Squaring the radius before integrating is the step that separates this from an area problem.\`};
+},
+riemannToInt(d){
+  const k=R.i(1,4);
+  return {topic:'Riemann Sums',
+    codex:{rule:'In a limit of sums, (b−a)/n is the dx and the sample point becomes x. Read off the interval from where the sample points run.',
+           eg:'Σ(i/n)²(1/n) → ∫₀¹x²dx, because i/n sweeps [0,1] and 1/n is the width.'},
+    q:\`lim<sub>n→∞</sub> <span style="font-size:18px">Σ</span><sub>i=1</sub><sup>n</sup> \${frac(1,'n')}(\${frac('i','n')})\${sup(k)}<br>Which integral is this?\`,
+    a:\`∫<sub>0</sub><sup>1</sup> x\${sup(k)} dx\`,
+    d:[[\`∫<sub>0</sub><sup>n</sup> x\${sup(k)} dx\`,'i/n runs from 0 to 1 however large n gets, so n never appears in the limits'],
+       [\`∫<sub>1</sub><sup>n</sup> x\${sup(k)} dx\`,'the index i runs from 1 to n, but the variable is i/n, which runs over [0, 1]'],
+       [\`∫<sub>0</sub><sup>1</sup> \${frac(1,'x')}x\${sup(k)} dx\`,'the 1/n is the width dx, not another factor inside the integrand'],
+       [rat(1,k+1),'that is the value the integral comes to, not the integral itself']],
+    ex:\`Match it to ∫ₐᵇ f(x)dx = lim Σ f(xᵢ)Δx. Here Δx = 1/n, so b − a = 1; the sample point is xᵢ = i/n, which sweeps from 0 up to 1; and f(xᵢ) = (i/n)\${sup(k)}, so f(x) = x\${sup(k)}. That gives ∫₀¹x\${sup(k)}dx, which evaluates to \${rat(1,k+1)} — but the question asked which integral, not its value.\`};
+}
 };
 
 /* ------------------------------ topic metadata --------------------------- */
@@ -1415,7 +2011,16 @@ const TOPIC_LABEL = {
   chainRule:'Chain Rule', tangent:'Tangent Lines',
   indefPower:'Indefinite Integrals', defPoly:'Definite Integrals', uSub:'u-Substitution',
   intTrig:'Integrating Trig', intExp:'Integrating eˣ', area:'Area Under Curves',
-  secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives'
+  secondDeriv:'Second Derivatives', critical:'Critical Points', partial:'Partial Derivatives',
+  charPoly:'Characteristic Polynomial', eigenvec:'Eigenvectors', diagonalisable:'Diagonalisability',
+  matPow:'Matrix Powers', nullSpace:'Null Space', rankNullity:'Rank–Nullity',
+  colSpace:'Column Space', gramSchmidt:'Gram–Schmidt', vecProj:'Vector Projection',
+  unitVec:'Unit Vectors', angleVec:'Angle Between Vectors', transMatrix:'Transformation Matrices',
+  implicitDiff:'Implicit Differentiation', lhopital:"L'Hôpital's Rule", relatedRates:'Related Rates',
+  optimisation:'Optimisation', inflection:'Inflection Points', invTrigDeriv:'Inverse Trig Derivatives',
+  logDiff:'Logarithmic Differentiation', byParts:'Integration by Parts', partialFrac:'Partial Fractions',
+  improper:'Improper Integrals', avgValue:'Average Value', volRev:'Volumes of Revolution',
+  riemannToInt:'Riemann Sums'
 };
 
 /* ------------------------------- mastery --------------------------------- */
@@ -1529,6 +2134,12 @@ const TOME = [
   b:'f′(x) is the slope of the tangent line — how fast f changes right now. The power rule handles most of it: bring the exponent down, drop it by one. Then three combining rules: product (f′g + fg′), quotient ((f′g − fg′)/g²), and chain (outside derivative × inside derivative). The chain rule is the one people forget.'},
  {t:'🏺 The integral accumulates',
   b:'An integral adds up infinitely many infinitesimal slices, which geometrically is the area under a curve. Antidifferentiation reverses the power rule: raise the power, divide by the new power, add C. The Fundamental Theorem then ties both halves of calculus together: ∫ₐᵇ f = F(b) − F(a).'},
+ {t:'🌌 Subspaces: what a matrix keeps and what it loses',
+  b:'The column space is everything a matrix can reach — the span of its columns — and its dimension is the rank. The null space is everything the matrix crushes to zero. Rank–nullity says these two account for every column exactly once: rank + nullity = number of columns. A matrix that loses a direction has a non-trivial null space, a determinant of zero, and no inverse; those are three descriptions of the same failure.'},
+ {t:'📐 Projection is the shadow of one arrow on another',
+  b:'proj_v(u) = (u·v / v·v)·v — a multiple of v, so it always lies along v. What is left over, u − proj_v(u), is perpendicular to v by construction. Repeat that subtraction against each direction you have already fixed and you have Gram–Schmidt, which turns any basis into a right-angled one. Least squares, Fourier series and every regression you have ever run are this one idea in larger rooms.'},
+ {t:'♾️ Taming the infinite',
+  b:"L'Hôpital resolves a 0/0 by differentiating top and bottom separately — not as a quotient — because near the point each behaves like its own tangent line. An improper integral is handled the same way: replace ∞ with b, integrate, then take a limit. ∫₁^∞ x^(−p) dx converges exactly when p > 1, which is the borderline that decides an enormous number of questions about whether an infinite total is finite."},
  {t:'🔗 Where the two subjects meet',
   b:'Take a function of several variables and differentiate it with respect to each one in turn, holding the others still. Stack those partial derivatives into a vector and you have the gradient — a vector that points in the direction of steepest increase. Linear algebra supplies the vector, calculus supplies the slopes. Every neural network on Earth is trained by walking downhill along that vector.'}
 ];
@@ -1541,7 +2152,9 @@ const WEAPONS = [
   {id:'w3', nm:'Determinant Cleaver',  ic:'🪓', dmg:27, crit:.12, cost:300,  ds:'Scales its damage by the area it sweeps.'},
   {id:'w4', nm:'Gradient Halberd',     ic:'🔱', dmg:35, crit:.15, cost:520,  ds:'Always finds the steepest path into armour.'},
   {id:'w5', nm:'Eigenblade',           ic:'⚔️', dmg:45, crit:.20, cost:850,  ds:'Cuts only along directions that do not turn.'},
-  {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'}
+  {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'},
+  {id:'w7', nm:'Spectral Edge',        ic:'⚔️', dmg:74, crit:.28, cost:2200, ds:'Cuts along every eigendirection at once.'},
+  {id:'w8', nm:'Limitless Glaive',     ic:'🔱', dmg:95, crit:.32, cost:3400, ds:'Its reach has no upper bound.'}
 ];
 const ARMORS = [
   {id:'a0', nm:'Peasant Tunic',      ic:'👕', def:0,  hp:0,  cost:0,    ds:'Cloth. Purely decorative in a fight.'},
@@ -1549,7 +2162,9 @@ const ARMORS = [
   {id:'a2', nm:'Chainmail Hauberk',  ic:'🛡️', def:4,  hp:20, cost:170,  ds:'Thousands of tiny rings, each doing its part.'},
   {id:'a3', nm:'Orthogonal Plate',   ic:'🛡️', def:7,  hp:35, cost:340,  ds:'Deflects blows at perfect right angles.'},
   {id:'a4', nm:'Identity Aegis',     ic:'🛡️', def:11, hp:55, cost:620,  ds:'Leaves you exactly as you were.'},
-  {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'}
+  {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'},
+  {id:'a6', nm:'Diagonal Ward',      ic:'🛡️', def:22, hp:110,cost:1700, ds:'In the right basis, every blow arrives head-on.'},
+  {id:'a7', nm:'Convergent Mail',    ic:'🛡️', def:29, hp:150,cost:2600, ds:'Each ring smaller than the last, and the sum is finite.'}
 ];
 const ITEMS = {
   potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
@@ -1602,10 +2217,10 @@ const REALMS = [
        glow:'#e6d5ff', weather:'ash', accent:'#c9b6e8'},
    pool:['indefPower','defPoly','uSub','intTrig','intExp','area','chainRule','quotient'],
    foes:[
-     {nm:'Riemann Shade',   art:'wraith',hp:290,atk:42, gold:130,xp:100, col:'#c39af0'},
-     {nm:'Abyssal Chimera', art:'dragon',hp:340,atk:48, gold:155,xp:120, col:'#9a5fd4'},
-     {nm:'Constant of Dread',art:'wisp', hp:380,atk:54, gold:175,xp:135, col:'#b58af0'},
-     {nm:'The Lich of Limits',art:'lich',hp:540,atk:66, gold:400,xp:300, col:'#8e4ed6', boss:true}
+     {nm:'Riemann Shade',   art:'wraith',hp:315,atk:50, gold:130,xp:100, col:'#c39af0'},
+     {nm:'Abyssal Chimera', art:'dragon',hp:370,atk:57, gold:155,xp:120, col:'#9a5fd4'},
+     {nm:'Constant of Dread',art:'wisp', hp:415,atk:64, gold:175,xp:135, col:'#b58af0'},
+     {nm:'The Lich of Limits',art:'lich',hp:590,atk:77, gold:400,xp:300, col:'#8e4ed6', boss:true}
    ]},
   {nm:'Eigen Citadel', col:'#e5484d', sky:['#43202a','#150a0e'],
    bg:{key:'citadel', seed:71, sky:['#53232c','#2e1219','#12070a'],
@@ -1616,8 +2231,34 @@ const REALMS = [
    foes:[
      {nm:'Basis Knight',    art:'knightfoe',hp:420,atk:58, gold:200,xp:170, col:'#f08a8d'},
      {nm:'Nullspace Drake', art:'dragon',   hp:480,atk:66, gold:235,xp:200, col:'#d4585c'},
-     {nm:'Spectral Champion',art:'knightfoe',hp:540,atk:74,gold:270,xp:230, col:'#ff9ea1'},
+     {nm:'Resonant Champion',art:'knightfoe',hp:540,atk:74,gold:270,xp:230, col:'#ff9ea1'},
      {nm:'The Eigen Dragon',art:'dragon',   hp:820,atk:92, gold:650,xp:520, col:'#e5484d', boss:true}
+   ]},
+  {nm:'Spectral Reach', col:'#3fd6c4', sky:['#0f3a3c','#061618'],
+   bg:{key:'spectral', seed:89, sky:['#13484b','#0c2c30','#050f12'],
+       far:'prisms', farCol:'#0e3336', near:'spires', nearCol:'#06181b',
+       ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
+       glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
+   pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2'],
+   foes:[
+     {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
+     {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},
+     {nm:'Null Vector Shade',art:'wraith',   hp:790,atk:99, gold:380,xp:340, col:'#6fe8dc'},
+     {nm:'The Spectral Sovereign',art:'knightfoe',hp:1150,atk:118,gold:820,xp:640,col:'#2bbcae', boss:true}
+   ]},
+  {nm:'Infinite Expanse', col:'#7f8cff', sky:['#1c1f4a','#08091a'],
+   bg:{key:'expanse', seed:103, sky:['#242a63','#161a3f','#070818'],
+       far:'dunes', farCol:'#1c2050', near:'dunes', nearCol:'#0d1030',
+       ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
+       glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
+   pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv'],
+   foes:[
+     {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
+     {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
+     {nm:'Convergence Wyrm',  art:'dragon',  hp:1150,atk:154,gold:560,xp:530, col:'#94a0ff'},
+     {nm:'The Unbounded',     art:'lich',    hp:1650,atk:184,gold:1200,xp:1000,col:'#5f6de8', boss:true}
    ]}
 ];
 
@@ -2242,6 +2883,27 @@ const SKYLINE = {
     }
     g.fillRect(0,base,w,h-base);
   },
+  // Tilted slabs, like light split through glass — the Spectral Reach.
+  prisms(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    for(let i=0;i<11;i++){
+      const x=rnd()*w, ht=60+rnd()*140, wd=16+rnd()*30, lean=(rnd()-.5)*40;
+      g.beginPath();
+      g.moveTo(x,base); g.lineTo(x+wd,base);
+      g.lineTo(x+wd+lean, base-ht); g.lineTo(x+lean, base-ht);
+      g.closePath(); g.fill();
+    }
+    g.fillRect(0,base,w,h-base);
+  },
+  // Long shallow swells that never quite arrive — the Infinite Expanse.
+  dunes(g,w,h,col,rnd,base){
+    g.fillStyle=col;
+    g.beginPath(); g.moveTo(0,h); g.lineTo(0,base-20-rnd()*30);
+    for(let x=0;x<=w;x+=26){
+      g.quadraticCurveTo(x+13, base-30-rnd()*70, x+26, base-20-rnd()*46);
+    }
+    g.lineTo(w,h); g.closePath(); g.fill();
+  },
   arcs(g,w,h,col,rnd,base){
     g.fillStyle=col;
     const ht=110, n=9, wd=w/n;
@@ -2289,6 +2951,8 @@ const Weather = {
       case 'snow':      return {x:r()*W, y:-10,          vx:(r()-.5)*14, vy:22+r()*26,  r:1.2+r()*1.7, ph:r()*7, life:11};
       case 'rain':      return {x:r()*W*1.3-W*.15, y:-20, vx:-90, vy:430+r()*130, r:1, ph:0, life:2, len:12+r()*10};
       case 'dust':      return {x:r()*W, y:r()*H,        vx:(r()-.5)*8,  vy:-4-r()*8,   r:1+r()*1.6, ph:r()*7, life:6+r()*5};
+      case 'shards':    return {x:r()*W, y:r()*H,        vx:(r()-.5)*26, vy:-10-r()*22, r:1.1+r()*1.7, ph:r()*7, life:5+r()*4};
+      case 'motes':     return {x:r()*W, y:r()*H,        vx:(r()-.5)*6,  vy:(r()-.5)*6, r:1.3+r()*2.1, ph:r()*7, life:7+r()*7};
     }
     return null;
   },
@@ -2326,9 +2990,9 @@ const Weather = {
     }
     for(const q of this.p){
       const fade=Math.min(1, q.age*2, (q.life-q.age)*2);
-      const pulse = this.kind==='fireflies' ? .35+.65*Math.abs(Math.sin(q.ph)) : 1;
+      const pulse = (this.kind==='fireflies'||this.kind==='motes') ? .35+.65*Math.abs(Math.sin(q.ph)) : 1;
       cx.globalAlpha=clamp(fade*pulse*(this.kind==='ash'?.5:.75),0,1);
-      if(this.kind==='fireflies'||this.kind==='embers'){
+      if(this.kind==='fireflies'||this.kind==='embers'||this.kind==='shards'||this.kind==='motes'){
         const a2=cx.globalAlpha; cx.globalAlpha=1;
         glow(q.x,q.y,q.r*5,this.accent,a2*.5);
         cx.globalAlpha=clamp(fade*pulse,0,1);
@@ -3489,7 +4153,13 @@ const TITLES = [
   {id:'form',     ic:'🔥', nm:'Perfect Form',    ds:'Reach a streak of 15',         t:g=>g.stats.best>=15},
   {id:'realm',    ic:'🗺️', nm:'Realm Walker',    ds:'Clear an entire realm',
     t:g=>REALMS.some((r,ri)=>r.foes.every((f,fi)=>g.cleared[ri+':'+fi]))},
-  {id:'dragon',   ic:'🐉', nm:'Dragonslayer',    ds:'Fell the Eigen Dragon',        t:g=>!!g.cleared['4:3']},
+  {id:'dragon',   ic:'🐉', nm:'Dragonslayer',    ds:'Fell the Eigen Dragon',
+    // Pinned to the Citadel by name, not by index: adding realms after it used
+    // to hand this one out three realms early.
+    t:g=>{const i=REALMS.findIndex(r=>r.bg.key==='citadel');
+          return i>=0 && !!g.cleared[i+':'+(REALMS[i].foes.length-1)];}},
+  {id:'ascend',   ic:'🌌', nm:'Ascendant',       ds:'Clear the final realm',
+    t:g=>!!g.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]},
   {id:'arena10',  ic:'🏟️', nm:'Gladiator',       ds:'Reach arena wave 10',          t:g=>(g.arenaBest||0)>=10},
   {id:'arena20',  ic:'👑', nm:'Arena Champion',  ds:'Reach arena wave 20',          t:g=>(g.arenaBest||0)>=20},
   {id:'poly',     ic:'🧠', nm:'Polymath',        ds:'Master 10 topics',
@@ -4261,10 +4931,12 @@ const Train = {
     document.getElementById('trainPick').style.display='';
     document.getElementById('trainBack').style.display='';
     const groups=[
-      ['Vectors',['vecAdd','vecScale','vecCombo','dot','mag','orth']],
-      ['Matrices',['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','rank','eigen2','cross','proj']],
-      ['Limits & Derivatives',['limPoly','limRational','limInf','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','secondDeriv','critical','partial']],
-      ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area']]
+      ['Vectors',['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
+      ['Matrices',['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
+      ['Eigen & Subspaces',['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
+      ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
+      ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt']],
+      ['Applications',['secondDeriv','critical','inflection','partial','relatedRates','optimisation']]
     ];
     // Adaptive drills, offered first — they need no decision from the player.
     const weak = Game.s ? Mastery.weakest(6) : [];
