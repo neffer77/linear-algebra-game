@@ -27,8 +27,9 @@ npx http-server . -p 8080     # then visit http://<your-ip>:8080
 3. In Scriptable, tap **+**, paste, and name it *Knights of the Eigenrealm*.
 4. Tap **▶** to play.
 
-The game is embedded inside that file, so it runs fully offline. Progress is written to
-Scriptable's local storage when you close the view, so it survives app restarts.
+The game is embedded inside that file, so it runs fully offline. Progress — every knight on
+the device — is written to Scriptable's local storage when you close the view, so it
+survives app restarts.
 
 **One-tap launch from the home screen:** open the Shortcuts app → new shortcut → add the
 *Run Script* action → pick this script → then *Add to Home Screen*.
@@ -43,8 +44,8 @@ node build-scriptable.js
 
 ## How the game works
 
-Everything is clicking. The only typing you will ever do is your own name, and the game
-doesn't even ask for that.
+Everything is clicking. The only typing anywhere is naming your knight, and even that comes
+prefilled — tap through it and you need never touch a keyboard again.
 
 **Combat.** Each turn presents one problem with four tappable answers.
 
@@ -132,6 +133,19 @@ screen. Armour adds both flat damage reduction and maximum health.
 | 🔮 Sage's Insight | Burns away two wrong answers |
 | 🔥 Berserker Rune | Next correct strike deals 2.5× damage |
 | 🪶 Phoenix Feather | Automatically revives you once at half health |
+
+**🛡️ Knights (save profiles).** Several people can share one browser — a family iPad, a
+classroom laptop, a phone passed around — and each keeps their own knight with their own
+save. A name is suggested for you, so the only screen that asks for typing doesn't insist
+on it. The big gold button asks before starting over, because on a shared device it is the
+easiest way to wipe somebody else's afternoon.
+
+Saves live in this browser's local storage and nothing is sent anywhere; the game has no
+server and no accounts. That also means one person's progress does not follow them between
+devices on its own — **📤 Move** produces a code you copy into the game on the other device,
+which brings a snapshot of that knight across. Anyone who was already playing before knights
+existed keeps their progress: the old save is adopted as the first knight, and the original
+is left in place as a backup rather than moved.
 
 **Losing** costs 15% of your gold and nothing else. You keep every item, level, and piece
 of gear. Death is a speed bump, not a wall.
@@ -259,6 +273,7 @@ Inside `index.html` the code is organised as:
 | `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
 | `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
+| `Profiles`, `Knights` | one save slot per player on a shared browser, plus the code that carries a knight to another device |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
@@ -350,6 +365,11 @@ The generators were also checked by:
   distance needed to get to each topic's row — including the tap that opens its strand.
   The worst case is 1.1 viewports in the Training picker and 1.5 in the Chronicle; a flat
   list of all seventy would run to 6.3.
+- **Save isolation on a shared browser** — two knights kept apart through switching back
+  and forth, erasing one leaving the other intact, a pre-profiles save adopted without loss,
+  a knight carried to an empty browser by code, and a corrupted code refused rather than
+  overwriting anything. Plus the shared-device footgun itself: cancelling the "start over"
+  prompt has to leave the save untouched.
 - **Layout at six viewports** from a 320px iPhone SE to a 768px iPad and 844×390 landscape,
   asserting no horizontal overflow, no tap target under 32px, and that the largest
   full-screen callouts still fit — including at the peak of their overshooting pop

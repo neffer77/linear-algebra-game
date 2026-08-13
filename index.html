@@ -374,6 +374,15 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* Collapsible strand. At seventy topics the flat list was a wall of buttons;
    these headers keep every screen to one thumb-reach, and opening one closes
    the rest so the list never grows underneath your thumb. */
+#codeBox{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
+  padding:18px; background:rgba(8,5,16,.78); backdrop-filter:blur(3px)}
+#codeBox.on{display:flex}
+#codeBox textarea{width:100%; height:96px; margin:8px 0; padding:10px; border-radius:10px;
+  border:1px solid var(--edge); background:#0f0a1c; color:var(--ink); font:12px/1.45 ui-monospace,Menlo,monospace;
+  resize:none; -webkit-user-select:text; user-select:text}
+.knightchip{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
+  border:1px solid var(--edge); background:rgba(255,255,255,.05); font-weight:700; font-size:13px;
+  min-height:36px; cursor:pointer}
 details.strand{border-top:1px solid var(--edge)}
 details.strand:first-of-type{border-top:0}
 details.strand>summary{list-style:none; cursor:pointer; min-height:44px; padding:10px 2px;
@@ -403,11 +412,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <h1>Knights of the Eigenrealm</h1>
       <div class="sub" style="margin-top:6px">Battle foes with linear algebra &amp; calculus.<br>Solve to strike. Miss and bleed.</div>
     </div>
+    <div id="knightRow"></div>
     <div class="panel">
-      <button class="btn gold" onclick="Game.start()">⚔️ Begin the Quest</button>
+      <button class="btn gold" onclick="Game.start()" id="btnBegin">⚔️ Begin the Quest</button>
       <button class="btn" onclick="UI.go('s-map')" id="btnContinue" style="display:none">🏰 Continue Journey</button>
       <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
       <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
+      <button class="btn ghost" onclick="Knights.open()">🛡️ Switch knight</button>
       <button class="btn ghost" onclick="UI.go('s-prefs')">⚙️ Settings &amp; Titles</button>
     </div>
     <div class="panel sub">
@@ -419,8 +430,17 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div id="streakRow"></div>
     <div class="center small" id="resetRow" style="display:none">
-      <span class="kbd" onclick="Game.hardReset()">Erase save</span>
+      <span class="kbd" onclick="Knights.eraseActive()">Erase this knight</span>
     </div>
+  </div>
+
+  <!-- ============ KNIGHTS ============ -->
+  <div class="screen" id="s-knights">
+    <div class="panel"><h2>🛡️ Who is playing?</h2>
+      <div class="sub">Each knight keeps their own progress on this device.<br>
+        <b style="color:var(--gold)">📤 Move</b> copies a knight to a different device or browser.</div></div>
+    <div id="knightList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
   </div>
 
   <!-- ============ MAP ============ -->
@@ -541,6 +561,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div id="wipe"><i></i></div>
   <div id="chest"></div>
   <div id="codex"></div>
+  <div id="codeBox"></div>
 </div>
 
 <script>
@@ -2487,7 +2508,118 @@ const REALMS = [
 ];
 
 /* -------------------------------- state ---------------------------------- */
-const SAVE_KEY = 'eigenrealm.v1';
+/* ------------------------------- knights ---------------------------------- */
+/* One browser, several people: a family iPad, a classroom laptop, a phone
+   passed around. Each player gets their own knight and their own save slot.
+   Everything still lives in this browser — this is separation, not accounts,
+   and nothing is sent anywhere. Carrying a knight to another device is done
+   with an explicit code (see Profiles.export).                              */
+const LEGACY_KEY = 'eigenrealm.v1';          // the save from before knights existed
+const ROSTER_KEY = 'eigenrealm.knights';
+const SLOT_PREFIX= 'eigenrealm.knight.';
+const CRESTS = ['⚔️','🛡️','🐉','🦅','🌙','🔥','⭐','🌿','🐺','👑','🗡️','🏹'];
+const CREST_COLS = ['#f2c14e','#5aa9e6','#57cc7a','#e5484d','#a06bd6','#3fd6c4','#ff9c3d','#7f8cff'];
+const NAME_PARTS = [['Ada','Bram','Cass','Dara','Eryn','Finn','Gale','Hale','Ivo','Juno','Kai','Lyra','Mira','Nox','Orin','Pax','Quill','Rune','Sable','Tor','Vega','Wren','Yara','Zeph'],
+                    ['the Bold','the Swift','the Keen','the Steady','the Bright','the Quiet','the Fierce','the True','of the Vale','of the Marches','of the Cliffs','of the Abyss','of the Citadel','of the Reach','of the Expanse','of the Summit']];
+
+const Profiles = {
+  r:null,                                     // {knights:[{id,nm,crest,col}], active, adopted}
+
+  load(){
+    try{ this.r=JSON.parse(localStorage.getItem(ROSTER_KEY)); }catch(e){ this.r=null; }
+    if(!this.r || !Array.isArray(this.r.knights)) this.r={knights:[], active:null, adopted:0};
+    this.adoptLegacy();
+    // An active id pointing at a deleted knight would silently start a new game.
+    if(this.r.active && !this.get(this.r.active)) this.r.active=null;
+    return this.r;
+  },
+  save(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(this.r)); }catch(e){} },
+
+  /* A save written before knights existed becomes the first knight, so anyone
+     already playing keeps their place. The old key is left where it is as a
+     backup rather than moved — adoption is recorded on the roster instead. */
+  adoptLegacy(){
+    if(this.r.adopted) return;
+    this.r.adopted=1;
+    let raw=null;
+    try{ raw=localStorage.getItem(LEGACY_KEY); }catch(e){}
+    if(raw){
+      const k=this.make('Knight');
+      try{ localStorage.setItem(this.key(k.id), raw); }catch(e){}
+      this.r.active=k.id;
+    }
+    this.save();
+  },
+
+  key(id){ return SLOT_PREFIX+id; },
+  list(){ return this.r ? this.r.knights : []; },
+  get(id){ return this.list().find(k=>k.id===id)||null; },
+  active(){ return this.r ? this.get(this.r.active) : null; },
+  activeKey(){ return this.r && this.r.active ? this.key(this.r.active) : null; },
+
+  newId(){ return 'k'+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); },
+  suggestName(){ return R.pick(NAME_PARTS[0])+' '+R.pick(NAME_PARTS[1]); },
+
+  make(nm, crest, col){
+    const used=this.list().length;
+    const k={id:this.newId(), nm:(nm||'Knight').slice(0,18),
+             crest:crest||CRESTS[used%CRESTS.length],
+             col:col||CREST_COLS[used%CREST_COLS.length]};
+    this.r.knights.push(k);
+    return k;
+  },
+  create(nm, crest, col){
+    const k=this.make(nm, crest, col);
+    this.r.active=k.id; this.save();
+    Game.s=Game.fresh(); Game.save();
+    return k;
+  },
+  select(id){ if(!this.get(id)) return false; this.r.active=id; this.save(); return Game.load(); },
+  rename(id, nm){ const k=this.get(id); if(k){ k.nm=String(nm||'').slice(0,18)||k.nm; this.save(); } },
+  remove(id){
+    this.r.knights=this.list().filter(k=>k.id!==id);
+    try{ localStorage.removeItem(this.key(id)); }catch(e){}
+    if(this.r.active===id){ this.r.active=null; Game.s=null; }
+    this.save();
+  },
+
+  /** A one-line summary for the roster, read without loading the save. */
+  peek(id){
+    try{
+      const raw=localStorage.getItem(this.key(id));
+      if(!raw) return null;
+      const g=JSON.parse(raw);
+      const total=REALMS.reduce((n,r)=>n+r.foes.length,0);
+      return {lvl:g.lvl||1, cleared:Object.keys(g.cleared||{}).length, total,
+              correct:(g.stats&&g.stats.correct)||0,
+              mastered:Object.values(g.topicStats||{}).filter(r=>r.m>=0.85).length};
+    }catch(e){ return null; }
+  },
+
+  /* Carrying a knight between devices. GitHub Pages serves static files and
+     stores nothing, so there is no account to sync with — the save travels as
+     a code the player copies across themselves. */
+  export(id){
+    try{
+      const k=this.get(id), raw=localStorage.getItem(this.key(id));
+      if(!k || !raw) return '';
+      return btoa(unescape(encodeURIComponent(JSON.stringify({v:1, nm:k.nm, crest:k.crest, col:k.col, s:raw}))));
+    }catch(e){ return ''; }
+  },
+  import(code){
+    let o;
+    try{ o=JSON.parse(decodeURIComponent(escape(atob(String(code).trim())))); }
+    catch(e){ return {ok:false, why:'That code could not be read. Copy the whole thing and try again.'}; }
+    if(!o || o.v!==1 || !o.s) return {ok:false, why:'That is not a knight code from this game.'};
+    try{ JSON.parse(o.s); }catch(e){ return {ok:false, why:'The save inside that code is damaged.'}; }
+    const k=this.make(o.nm||'Knight', o.crest, o.col);
+    try{ localStorage.setItem(this.key(k.id), o.s); }catch(e){ return {ok:false, why:'This browser would not store the save.'}; }
+    this.r.active=k.id; this.save(); Game.load();
+    return {ok:true, k};
+  }
+};
+
+const SAVE_KEY = LEGACY_KEY;                 // kept for older code paths
 const Game = {
   s:null,
   fresh(){
@@ -2511,7 +2643,9 @@ const Game = {
   },
   load(){
     try{
-      const raw=localStorage.getItem(SAVE_KEY);
+      const slot=Profiles.activeKey();
+      if(!slot) return false;                  // nobody is playing yet
+      const raw=localStorage.getItem(slot);
       if(raw){ this.s=Object.assign(this.fresh(),JSON.parse(raw)); this.migrate(); return true; }
     }catch(e){}
     return false;
@@ -2533,9 +2667,31 @@ const Game = {
     // shortfall means this save predates the mastery model.
     if(typeof this.s.qCount!=='number' || this.s.qCount<total) this.s.qCount=total;
   },
-  save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(this.s)); }catch(e){} },
-  hardReset(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} location.reload(); },
-  start(){ this.s=this.fresh(); this.touchStreak(); this.save(); UI.go('s-map'); },
+  save(){
+    const slot=Profiles.activeKey();
+    if(!slot || !this.s) return;
+    try{ localStorage.setItem(slot, JSON.stringify(this.s)); }catch(e){}
+  },
+  // Erases this knight only — the others on this device are untouched.
+  hardReset(){
+    const id=Profiles.r && Profiles.r.active;
+    if(id) Profiles.remove(id); else { try{ localStorage.removeItem(LEGACY_KEY); }catch(e){} }
+    location.reload();
+  },
+  start(){
+    // A quest needs someone to go on it. First-time players get a knight made
+    // for them rather than a form to fill in.
+    if(!Profiles.active()){ Profiles.create(Profiles.suggestName()); }
+    else if(this.s && (this.s.lvl>1 || Object.keys(this.s.cleared).length || this.s.stats.correct)){
+      // On a shared device the big gold button is the easiest way to destroy
+      // somebody else's afternoon. Make it say so first.
+      const k=Profiles.active();
+      if(!confirm(`Start over as ${k.nm}? Their level, gold and cleared realms are lost.\n\n`
+                 +`If you are a different player, cancel and choose "Switch knight" instead.`)) return;
+    }
+    this.s=this.fresh(); this.touchStreak(); this.save();
+    UI.refreshTitle(); UI.go('s-map');
+  },
   rest(){
     const cost = 25 + this.s.lvl*5;
     if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return; }
@@ -4936,6 +5092,24 @@ const UI = {
     if(id==='s-prefs') this.renderPrefs();
   },
   back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
+
+  /** Redraw the parts of the title screen that depend on who is playing. */
+  refreshTitle(){
+    const k=Profiles.active(), n=Profiles.list().length;
+    const row=document.getElementById('knightRow');
+    row.innerHTML = k
+      ? `<div class="center" style="margin-bottom:8px">
+           <span class="knightchip" onclick="Knights.open()">
+             <span style="color:${k.col}">${k.crest}</span>
+             <span>${Knights.esc(k.nm)}</span>
+             <span class="small" style="opacity:.75">${n>1?'· switch':'· knights'}</span></span></div>`
+      : (n ? `<div class="center" style="margin-bottom:8px">
+           <span class="knightchip" onclick="Knights.open()">🛡️ <span>Choose your knight</span></span></div>` : '');
+    const has=!!(k && Game.s);
+    document.getElementById('btnContinue').style.display = has ? '' : 'none';
+    document.getElementById('resetRow').style.display = has ? '' : 'none';
+    document.getElementById('btnBegin').textContent = has ? '⚔️ Start a new quest' : '⚔️ Begin the Quest';
+  },
   glint(){
     const w=document.getElementById('wipe'); if(!w) return;
     w.classList.remove('go'); void w.offsetWidth;      // restart the animation
@@ -5282,12 +5456,121 @@ const Train = {
   quit(){ this.renderPick(); }
 };
 
+/* ------------------------------ knight roster ----------------------------- */
+/* The only screen in the game that asks for typing, and even then the name
+   comes prefilled — tap the die to rerol, or just accept it. */
+const Knights = {
+  open(){ UI.go('s-knights'); this.render(); },
+
+  render(){
+    const list=Profiles.list(), act=Profiles.r.active;
+    document.getElementById('knightList').innerHTML =
+      `<div class="panel">
+        ${list.length ? list.map(k=>{
+          const p=Profiles.peek(k.id);
+          const on = k.id===act;
+          return `<div class="item${on?' equipped':''}" style="align-items:center">
+            <div class="ic" style="color:${k.col}">${k.crest}</div>
+            <div style="flex:1;min-width:0">
+              <div class="nm">${this.esc(k.nm)}${on?' <span class="mtag" style="color:var(--gold)">playing</span>':''}</div>
+              <div class="ds">${p ? `Level ${p.lvl} · ${p.cleared}/${p.total} nodes · ${p.mastered} topic${p.mastered===1?'':'s'} mastered`
+                                  : 'A fresh start'}</div>
+            </div>
+            ${on?'':`<button class="btn sm" style="width:auto;margin:0;padding:8px 12px"
+                       onclick="Knights.pick('${k.id}')">Play</button>`}
+          </div>
+          <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap">
+            <span class="kbd" onclick="Knights.rename('${k.id}')">✏️ Rename</span>
+            <span class="kbd" onclick="Knights.carry('${k.id}')">📤 Move</span>
+            <span class="kbd" onclick="Knights.erase('${k.id}')">🗑 Erase</span>
+          </div>`;
+        }).join('<hr>') : '<div class="sub">No knights yet.</div>'}
+      </div>
+      <div class="panel">
+        <button class="btn gold" onclick="Knights.newKnight()">＋ New knight</button>
+        <button class="btn ghost" onclick="Knights.paste()">📜 Bring a knight from another device</button>
+      </div>`;
+  },
+  esc(s){ return String(s).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); },
+
+  pick(id){
+    if(!Profiles.select(id)){ Game.s=Game.fresh(); Game.save(); }
+    UI.toast('Playing as '+Profiles.active().nm);
+    UI.go('s-title'); UI.refreshTitle();
+  },
+
+  newKnight(){
+    const nm=prompt('Name your knight', Profiles.suggestName());
+    if(nm===null) return;
+    const k=Profiles.create(nm.trim()||'Knight');
+    UI.toast('Welcome, '+k.nm);
+    UI.go('s-title'); UI.refreshTitle();
+  },
+  rename(id){
+    const k=Profiles.get(id); if(!k) return;
+    const nm=prompt('Rename this knight', k.nm);
+    if(nm===null) return;
+    Profiles.rename(id, nm.trim());
+    this.render(); UI.refreshTitle();
+  },
+  erase(id){
+    const k=Profiles.get(id); if(!k) return;
+    if(!confirm('Erase '+k.nm+' for good? Their progress cannot be recovered.')) return;
+    Profiles.remove(id);
+    if(document.getElementById('s-knights').classList.contains('on')) this.render();
+    UI.refreshTitle();
+  },
+
+  /* No server sits behind this game, so a knight travels as a code the player
+     copies from one device and pastes into the other. */
+  carry(id){
+    const code=Profiles.export(id);
+    if(!code){ UI.toast('Nothing to carry yet.'); return; }
+    const el=document.getElementById('codeBox');
+    el.innerHTML=`<div class="cxbox">
+      <div class="cxk">Carry ${this.esc(Profiles.get(id).nm)}</div>
+      <div class="small">Copy this code, then open the game on the other device and choose
+        <b>Bring a knight from another device</b>. It is a snapshot — progress made here afterwards will not follow.</div>
+      <textarea id="codeOut" readonly>${code}</textarea>
+      <button class="btn gold" id="codeCopy">Copy the code</button>
+      <button class="btn ghost" onclick="Knights.closeCode()">Close</button>
+    </div>`;
+    el.classList.add('on');
+    document.getElementById('codeCopy').onclick=()=>{
+      const t=document.getElementById('codeOut');
+      t.select(); t.setSelectionRange(0, 999999);
+      let ok=false;
+      try{ ok=document.execCommand('copy'); }catch(e){}
+      if(navigator.clipboard) navigator.clipboard.writeText(code).catch(()=>{});
+      UI.toast(ok?'Copied — paste it on the other device.':'Select the code and copy it.');
+    };
+  },
+  paste(){
+    const el=document.getElementById('codeBox');
+    el.innerHTML=`<div class="cxbox">
+      <div class="cxk">Bring a knight here</div>
+      <div class="small">Paste the code from the other device.</div>
+      <textarea id="codeIn" placeholder="Paste the knight code"></textarea>
+      <button class="btn gold" id="codeGo">Bring them in</button>
+      <button class="btn ghost" onclick="Knights.closeCode()">Cancel</button>
+    </div>`;
+    el.classList.add('on');
+    document.getElementById('codeGo').onclick=()=>{
+      const res=Profiles.import(document.getElementById('codeIn').value);
+      if(!res.ok){ UI.toast(res.why); return; }
+      this.closeCode(); this.render(); UI.refreshTitle();
+      UI.toast(res.k.nm+' has arrived.');
+    };
+  },
+  closeCode(){ const el=document.getElementById('codeBox'); el.classList.remove('on'); el.innerHTML=''; },
+  eraseActive(){ const k=Profiles.active(); if(k) this.erase(k.id); }
+};
+
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
   Prefs.load();
+  Profiles.load();
   if(Game.load()){
-    document.getElementById('btnContinue').style.display='';
-    document.getElementById('resetRow').style.display='';
     const days=Game.touchStreak();
     const st=Game.s.streak||{days:0};
     document.getElementById('streakRow').innerHTML = st.days>0
@@ -5299,6 +5582,7 @@ const Train = {
       ()=>{Sfx.milestone(); Haptic.win();}), 400);
     Titles.check();
   }
+  UI.refreshTitle();
   fitCanvas();
   const wake=()=>Sfx.init();
   document.addEventListener('touchstart',wake,{once:true});
