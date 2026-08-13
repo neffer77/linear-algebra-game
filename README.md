@@ -141,6 +141,18 @@ save. A name is suggested for you, so the only screen that asks for typing doesn
 on it. The big gold button asks before starting over, because on a shared device it is the
 easiest way to wipe somebody else's afternoon.
 
+**Saves are written twice.** Browsers treat local storage as disposable — Safari clears a
+site's storage after roughly a week without a visit, and any engine will drop it under
+pressure. So every save also goes to IndexedDB, which is evicted later and less eagerly. If
+local storage ever comes back empty the game restores from that copy and says so, rather
+than presenting a fresh start as if nothing happened.
+
+**Install it and the question mostly goes away.** Added to the home screen, the game is a
+standalone web app and is not subject to that sweep — which is the real reason to install,
+ahead of the full-screen chrome and offline play that come with it. The game offers the
+hint once you have won a fight, drops it after three refusals, and never shows it if you
+have already installed.
+
 Saves live in this browser's local storage and nothing is sent anywhere; the game has no
 server and no accounts. That also means one person's progress does not follow them between
 devices on its own — **📤 Move** produces a code you copy into the game on the other device,
@@ -260,6 +272,8 @@ Verified free of horizontal overflow and undersized tap targets at 320×568, 375
 
 ```
 index.html                             the entire game — open this to play
+manifest.webmanifest, sw.js            make it installable and playable offline
+icons/                                 generated; run tools/make-icons.js
 build-scriptable.js                    packages index.html into the iOS script
 scriptable/KnightsOfTheEigenrealm.js   generated; paste into Scriptable
 ```
@@ -275,6 +289,8 @@ Inside `index.html` the code is organised as:
 | `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
 | `Profiles`, `Knights` | one save slot per player on a shared browser, plus the code that carries a knight to another device |
+| `Vault` | the second copy of every save, in IndexedDB, and the recovery that puts it back |
+| `Keep` | service-worker registration, the update prompt, and the install nudge |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
@@ -366,6 +382,15 @@ The generators were also checked by:
   distance needed to get to each topic's row — including the tap that opens its strand.
   The worst case is 1.1 viewports in the Training picker and 1.5 in the Chronicle; a flat
   list of all seventy would run to 6.3.
+- **The progressive web app, over real HTTP from a subdirectory** — the same shape as a
+  GitHub project page. Asserts the worker registers at the right scope, the manifest parses
+  and every icon it names returns 200, the shell precaches, and the game still loads and
+  plays with the network switched off. A second test deploys a new build behind a running
+  player and asserts they are told, that reloading lands them on it, and that the old cache
+  is swept up.
+- **Recovery from an evicted browser** — play, wipe local storage the way Safari would,
+  reload, and assert both knights come back with their levels and cleared nodes intact,
+  while a genuinely fresh browser stays fresh rather than inventing a save.
 - **Save isolation on a shared browser** — two knights kept apart through switching back
   and forth, erasing one leaving the other intact, a pre-profiles save adopted without loss,
   a knight carried to an empty browser by code, and a corrupted code refused rather than
@@ -399,6 +424,30 @@ The generators were also checked by:
   real ink rather than an empty frame, that none overflows its column, and that a full
   32-node campaign holds steady at one battle canvas with at most two figures alive —
   no leaked canvases.
+
+---
+
+## Installing it
+
+Served over http(s) the game is a progressive web app: a manifest, an app icon and a
+service worker that precaches the single HTML file. That buys three things, in the order
+they matter:
+
+1. **Storage that survives.** A home-screen web app is exempt from the storage sweep that
+   would otherwise delete a knight left alone for a week.
+2. **Offline play**, the same property the Scriptable build exists to provide, without
+   needing Scriptable.
+3. Full-screen chrome and an app icon.
+
+The icons are drawn rather than stored — `node tools/make-icons.js` renders the crest with
+canvas code and exports the PNGs, so the app icon cannot drift from the game's palette.
+Opened straight off disk there is no worker and no manifest; those requests 404 and the
+game is otherwise unaffected.
+
+A single-file game cached aggressively could pin players to whatever build they first
+opened, so the deploy stamps `sw.js` with the commit SHA. That guarantees a byte-different
+worker per deploy, which is what makes a browser notice an update at all; the page then
+offers **A new version is ready → Reload** rather than swapping the game out mid-fight.
 
 ---
 

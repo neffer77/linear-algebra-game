@@ -4,7 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Eigenrealm">
 <meta name="theme-color" content="#120d1c">
+<meta name="description" content="A turn-based knight battler where the combat system is linear algebra and calculus.">
+<!-- Both are optional: opened straight off disk these 404 and the game is
+     unaffected. Served over http(s) they make it installable, which is what
+     keeps saves out of reach of Safari's seven-day storage sweep. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
 <title>Knights of the Eigenrealm</title>
 <style>
 :root{
@@ -374,6 +383,14 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* Collapsible strand. At seventy topics the flat list was a wall of buttons;
    these headers keep every screen to one thumb-reach, and opening one closes
    the rest so the list never grows underneath your thumb. */
+/* One bar, two jobs: "a new version is ready" and "install me so your saves
+   survive". Both are interruptions, so both sit out of the way at the bottom
+   and are dismissible. */
+#updateBar{position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom));
+  z-index:55; display:none; align-items:center; gap:10px; padding:11px 13px;
+  border-radius:12px; border:1px solid var(--edge); background:#241b3d;
+  box-shadow:0 10px 30px rgba(0,0,0,.5); font-size:13px; line-height:1.4}
+#updateBar.on{display:flex}
 #codeBox{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
   padding:18px; background:rgba(8,5,16,.78); backdrop-filter:blur(3px)}
 #codeBox.on{display:flex}
@@ -562,6 +579,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div id="chest"></div>
   <div id="codex"></div>
   <div id="codeBox"></div>
+  <div id="updateBar"></div>
 </div>
 
 <script>
@@ -2533,7 +2551,7 @@ const Profiles = {
     if(this.r.active && !this.get(this.r.active)) this.r.active=null;
     return this.r;
   },
-  save(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(this.r)); }catch(e){} },
+  save(){ try{ localStorage.setItem(ROSTER_KEY, JSON.stringify(this.r)); }catch(e){} Vault.mirror(); },
 
   /* A save written before knights existed becomes the first knight, so anyone
      already playing keeps their place. The old key is left where it is as a
@@ -2619,6 +2637,107 @@ const Profiles = {
   }
 };
 
+/* -------------------------------- the vault ------------------------------- */
+/* localStorage is the first thing a browser throws away. Safari clears all
+   script-writable storage for a site left unvisited for about a week, and
+   every engine drops it under memory pressure — which would quietly delete a
+   knight somebody spent a month on, with no error and nothing to blame.
+
+   So every save is written twice: to localStorage, which is synchronous and
+   stays authoritative, and to IndexedDB, which is evicted later and less
+   eagerly. If localStorage ever comes back empty, the vault puts it back.
+   Both are best-effort; the game runs unchanged when neither is available. */
+const Vault = {
+  DB:'eigenrealm', STORE:'saves', db:null, dead:false, timer:null,
+
+  open(){
+    if(this.db) return Promise.resolve(this.db);
+    if(this.dead || typeof indexedDB==='undefined') return Promise.resolve(null);
+    return new Promise(res=>{
+      let rq;
+      try{ rq=indexedDB.open(this.DB, 1); }catch(e){ this.dead=true; return res(null); }
+      rq.onupgradeneeded=()=>{ try{ rq.result.createObjectStore(this.STORE); }catch(e){} };
+      rq.onsuccess=()=>{ this.db=rq.result; res(this.db); };
+      rq.onerror=rq.onblocked=()=>{ this.dead=true; res(null); };
+    });
+  },
+
+  /** Every eigenrealm.* key, as a plain object. */
+  snapshot(){
+    const o={};
+    try{
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(k && k.indexOf('eigenrealm.')===0) o[k]=localStorage.getItem(k);
+      }
+    }catch(e){}
+    return o;
+  },
+
+  /* Mirroring on every answer would be wasteful, so it trails the game by a
+     moment. Nothing waits on it. */
+  mirror(){
+    clearTimeout(this.timer);
+    this.timer=setTimeout(()=>this.writeNow(), 900);
+  },
+  writeNow(){
+    return this.open().then(db=>{
+      if(!db) return;
+      try{
+        const tx=db.transaction(this.STORE,'readwrite'), st=tx.objectStore(this.STORE);
+        st.put(this.snapshot(), 'all');
+        st.put(Date.now(), 'at');
+      }catch(e){}
+    }).catch(()=>{});
+  },
+  read(){
+    return this.open().then(db=>new Promise(res=>{
+      if(!db) return res(null);
+      try{
+        const rq=db.transaction(this.STORE,'readonly').objectStore(this.STORE).get('all');
+        rq.onsuccess=()=>res(rq.result||null);
+        rq.onerror=()=>res(null);
+      }catch(e){ res(null); }
+    })).catch(()=>null);
+  },
+
+  /** How many knights a stored roster describes. */
+  count(raw){
+    try{ const r=JSON.parse(raw); return (r && r.knights && r.knights.length)||0; }catch(e){ return 0; }
+  },
+
+  /* At boot: if this browser has no knights but the vault does, we were
+     cleared out — put them back and say so, because restoring in silence is
+     how a player learns not to trust their own progress.
+
+     The test that matters is how many knights each side holds, not whether
+     the roster key exists: booting writes an empty roster before this runs,
+     so an existence check would see it, conclude all was well, and overwrite
+     the backup with nothing. */
+  recover(){
+    return this.read().then(saved=>{
+      const stored = saved ? this.count(saved[ROSTER_KEY]) : 0;
+      let live=0;
+      try{ live=this.count(localStorage.getItem(ROSTER_KEY)); }catch(e){}
+      if(!stored || live){ this.writeNow(); return false; }
+      clearTimeout(this.timer);            // do not let an empty mirror land on top
+      let n=0;
+      for(const k in saved){ try{ localStorage.setItem(k, saved[k]); n++; }catch(e){} }
+      return n>0;
+    });
+  },
+
+  /* Ask the browser not to evict us. Chrome and Firefox honour this once a
+     site looks used; Safari does not implement it, which is exactly why the
+     home-screen route matters more there. */
+  persist(){
+    try{
+      if(navigator.storage && navigator.storage.persist) return navigator.storage.persist().catch(()=>false);
+    }catch(e){}
+    return Promise.resolve(false);
+  }
+};
+
 const SAVE_KEY = LEGACY_KEY;                 // kept for older code paths
 const Game = {
   s:null,
@@ -2671,6 +2790,7 @@ const Game = {
     const slot=Profiles.activeKey();
     if(!slot || !this.s) return;
     try{ localStorage.setItem(slot, JSON.stringify(this.s)); }catch(e){}
+    Vault.mirror();
   },
   // Erases this knight only — the others on this device are untouched.
   hardReset(){
@@ -4483,6 +4603,7 @@ const Battle = {
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
       Titles.check();
+      if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
       Anim.stop();
     },1200);
   },
@@ -5456,6 +5577,92 @@ const Train = {
   quit(){ this.renderPick(); }
 };
 
+/* -------------------------------- keeping -------------------------------- */
+/* Everything about not losing a knight: installing the game so the browser
+   stops treating its storage as disposable, and nudging a backup once there
+   is something worth backing up. */
+const Keep = {
+  KEY:'eigenrealm.keep',
+  d:{hintSeen:0, lastBackup:0, dismissed:0},
+
+  load(){
+    try{ Object.assign(this.d, JSON.parse(localStorage.getItem(this.KEY))||{}); }catch(e){}
+  },
+  save(){ try{ localStorage.setItem(this.KEY, JSON.stringify(this.d)); }catch(e){} },
+
+  installed(){
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;
+  },
+  isIOS(){ return /iPad|iPhone|iPod/.test(navigator.userAgent)
+        || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1); },
+
+  /* Registers the worker and watches for a newer one. A single-file game
+     cached aggressively would otherwise pin players to whatever build they
+     first opened. */
+  register(){
+    if(!('serviceWorker' in navigator)) return;
+    if(location.protocol!=='http:' && location.protocol!=='https:') return;   // file:// has no workers
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      reg.addEventListener('updatefound', ()=>{
+        const w=reg.installing;
+        if(!w) return;
+        w.addEventListener('statechange', ()=>{
+          // A worker reaching "installed" while one is already in charge means
+          // this is an update rather than a first run.
+          if(w.state==='installed' && navigator.serviceWorker.controller) Keep.offerUpdate(w);
+        });
+      });
+    }).catch(()=>{});
+    let reloading=false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(reloading) return; reloading=true; location.reload();
+    });
+  },
+  offerUpdate(worker){
+    const el=document.getElementById('updateBar');
+    el.innerHTML=`<span>A new version is ready.</span>
+      <button class="btn sm gold" style="width:auto;margin:0;padding:8px 14px" id="updGo">Reload</button>
+      <span class="kbd" id="updNo">Later</span>`;
+    el.classList.add('on');
+    document.getElementById('updGo').onclick=()=>{ worker.postMessage('skipWaiting'); };
+    document.getElementById('updNo').onclick=()=>el.classList.remove('on');
+  },
+
+  /* iOS has no install prompt to hook, so this is the only way to say it.
+     Held back until the player has actually won something — nobody installs
+     an app they have not decided they like. */
+  maybeHint(){
+    if(this.installed() || this.d.dismissed) return;
+    if(location.protocol!=='http:' && location.protocol!=='https:') return;
+    const g=Game.s;
+    if(!g || g.stats.wins<1) return;
+    this.d.hintSeen++; this.save();
+    if(this.d.hintSeen>3) return;                     // said three times, then let it go
+    const how = this.isIOS()
+      ? 'Tap <b>Share</b> below, then <b>Add to Home Screen</b>.'
+      : 'Use your browser menu, then <b>Install</b> or <b>Add to Home screen</b>.';
+    const el=document.getElementById('updateBar');
+    el.innerHTML=`<span style="flex:1">🛡️ <b>Keep your knights safe.</b> ${how}
+      <br><span class="small">Browsers clear the storage of sites they think are unused. An installed game is exempt.</span></span>
+      <span class="kbd" id="hintNo">Not now</span>`;
+    el.classList.add('on');
+    document.getElementById('hintNo').onclick=()=>{
+      el.classList.remove('on');
+      if(this.d.hintSeen>=3){ this.d.dismissed=1; this.save(); }
+    };
+  },
+
+  /** After a boss falls — the natural pause, and the moment progress is worth keeping. */
+  maybeBackup(){
+    if(!Game.s || Game.s.stats.wins<4) return;
+    const days=(Date.now()-(this.d.lastBackup||0))/86400000;
+    if(days<14) return;
+    this.d.lastBackup=Date.now(); this.save();
+    UI.toast('Worth backing up — <b>Switch knight → 📤 Move</b> keeps a copy.');
+  }
+};
+
 /* ------------------------------ knight roster ----------------------------- */
 /* The only screen in the game that asks for typing, and even then the name
    comes prefilled — tap the die to rerol, or just accept it. */
@@ -5569,6 +5776,8 @@ const Knights = {
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
   Prefs.load();
+  Keep.load();
+  Keep.register();
   Profiles.load();
   if(Game.load()){
     const days=Game.touchStreak();
@@ -5583,6 +5792,19 @@ const Knights = {
     Titles.check();
   }
   UI.refreshTitle();
+
+  // If the browser cleared localStorage out from under us, the vault has a
+  // copy. Recovery runs after the first paint so a cold start is never held up.
+  Vault.recover().then(back=>{
+    if(!back) return;
+    Profiles.load();
+    if(Game.load()) Titles.check();
+    UI.refreshTitle();
+    UI.toast('Your knights were restored from this device\u2019s backup.');
+  }).catch(()=>{});
+  Vault.persist();
+  setTimeout(()=>Keep.maybeHint(), 1200);
+
   fitCanvas();
   const wake=()=>Sfx.init();
   document.addEventListener('touchstart',wake,{once:true});
