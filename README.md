@@ -121,7 +121,7 @@ no death; the only thing at stake is the number. Best of the day and all-time ar
 **Near death.** Below a third health a red vignette pulses at heartbeat tempo and a low
 thump plays on each new question. Below a sixth, it quickens.
 
-**Gear** — 9 weapons and 8 armour sets, bought at the Smithy and equipped from the Gear
+**Gear** — 10 weapons and 9 armour sets, bought at the Smithy and equipped from the Gear
 screen. Armour adds both flat damage reduction and maximum health.
 
 **Relics** (usable mid-fight, one tap):
@@ -143,9 +143,10 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 12 / 16 / 25 fire escalating callouts. Rewards roll up rather than appearing. Every one of
 these can be turned off — see Settings.
 
-**🏟️ The Arena** opens once the Eigen Dragon falls. Endless waves drawn from *every* topic
-in the game, scaling until they kill you. There is no free healing between waves — only a
-poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
+**🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
+have actually met — with seventy in the game, drawing from all of them would build a run
+out of material you had never been taught — scaling until they kill you. There is no free
+healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
 slower enemy wind-up, richer purses). You keep every coin you earn whether you retire on
 your own terms or are carried out, and your deepest wave is recorded.
@@ -162,7 +163,7 @@ measure of your accuracy rather than your gear:
 
 ---
 
-## The seven realms
+## The eight realms
 
 Each realm draws its problems from its own topic pool, and difficulty scales with how deep
 into the realm you are. Bosses occasionally reach back into earlier realms, so nothing
@@ -177,8 +178,9 @@ stays forgotten.
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
 | 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums |
+| 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**63 problem generators** in total, each producing randomised problems at three difficulty
+**70 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -192,27 +194,34 @@ The game is built so that losing teaches you as much as winning.
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
-- **Figures you can read at a glance** — nineteen topics carry a drawn diagram beside the
+- **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
   question, and a second one beside the explanation. The split is deliberate: the question
   figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
   there; the parallelogram and the resultant only appear once you have answered. A
   determinant question draws nothing, and then shows you the unit square turned into the
   parallelogram whose area is the answer. Six kinds cover it — the plane, a transformed
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
-- **📖 Tome of Lore** — twelve short pages covering the conceptual spine of both subjects,
+- **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Two adaptive drills sit at the top: **Drill my weakest** pulls from your six worst
   topics, and **Review what's due** pulls whatever the spaced-repetition schedule says has
   gone stale. Neither requires you to know what you're bad at.
-- **📜 Chronicle** (on the Gear screen) — per-topic mastery bars, weakest first, labelled
-  weak / shaky / steady / solid, with a running count of what needs work and what is due.
+- **📜 Chronicle** (on the Gear screen) — the five topics that need you most, in full, then
+  the other sixty-five folded into their strands. Each strand shows either its average
+  mastery or how many of its topics need work, so you can see where you stand without
+  reading seventy bars.
+- **Seventy topics that stay reachable.** Both the Chronicle and the Training picker group
+  topics into seven strands you tap open; opening one closes the rest and pulls it to the
+  top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
+  topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
+  seventy runs to 6.3.
 - **The loudest celebration in the game is for learning, not looting.** When a topic
   crosses into mastery you get a full-screen MASTERED callout and a fanfare — the same
   treatment a level-up gets. It fires once per topic, and can be lost and re-earned if
   your accuracy on it falls away.
-- **Titles** — twelve milestones, most tied to understanding rather than grinding
-  (*Polymath* for ten topics mastered, *Grand Magister* for all 63), plus a daily practice
+- **Titles** — thirteen milestones, most tied to understanding rather than grinding
+  (*Polymath* for ten topics mastered, *Grand Magister* for all 70), plus a daily practice
   streak, because spaced practice is how this material actually sticks.
 
 ---
@@ -244,8 +253,9 @@ Inside `index.html` the code is organised as:
 
 | Section | Role |
 |---|---|
-| `GEN` | the 63 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
+| `GEN` | the 70 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
+| `STRANDS` | the seven strands topics are grouped into; the Training picker and the Chronicle both fold into them |
 | `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
 | `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
@@ -271,8 +281,8 @@ Sprites are drawn twice — once flat and dark at four offsets to lay down an ou
 normally on top — over gradient fills, radial highlights and a contact shadow that spreads
 as a sprite rises. Each realm owns a skyline, a ground tint and a weather system:
 fireflies in the Vale, rain over the Marches, rising embers on the Cliffs, falling ash in
-the Abyss, snow on the Citadel, rising shards in the Reach, drifting motes in the Expanse
-and gold dust in the Arena. The two silhouette layers are
+the Abyss, snow on the Citadel, rising shards in the Reach and on the Summit, drifting
+motes in the Expanse and gold dust in the Arena. The two silhouette layers are
 painted once into offscreen canvases and blitted with parallax, so the per-frame cost is
 two draw calls rather than a few hundred paths. Measured at 61 fps with weather and
 outlines running; particle systems drop to zero under reduced motion.
@@ -316,24 +326,30 @@ structure (four unique choices, answer present, misconceptions substantial), alg
 integrals differentiated back to their integrand so the `+ C` cancels, definite integrals
 against Simpson's rule, limits by direct evaluation).
 
-**51 of 63 generators are independently verified against the mathematics**, up from 8 when
-the harness could only parse polynomials. Every one of the 25 topics added with Spectral
-Reach and Infinite Expanse is in that number, and each is checked against the mathematics
-rather than against the formula that produced it: an eigenvector is fed back through its
+**58 of 70 generators are independently verified against the mathematics**, up from 8 when
+the harness could only parse polynomials. Every one of the 32 topics added with Spectral
+Reach, Infinite Expanse and Gradient Summit is in that number, and each is checked against
+the mathematics rather than against the formula that produced it: an eigenvector is fed back through its
 own matrix, a rank is recomputed by elimination, an optimum is found by dense sampling, an
 implicit derivative is compared against the slope of the curve itself, and a Riemann sum is
-summed for 200,000 terms and matched to the integral the answer claims. The remaining
+summed for 200,000 terms and matched to the integral the answer claims. A tangent plane
+must share the surface's height *and* both of its slopes at the point; a Taylor polynomial
+must match the function's value, slope and curvature at zero. The remaining
 twelve have answers that are not scalar expressions — yes/no judgements, sets of roots,
 prose — and the harness now names them in its report rather than leaving the gap to
 arithmetic. Mote ladders are checked the same way, on the choices a player is actually
-shown rather than the authored list — 42,000 rendered steps per run.
+shown rather than the authored list — 45,600 rendered steps per run.
 
 The generators were also checked by:
 
-- **75,000 generated problems** across all 63 generators at every difficulty, asserting
+- **84,000 generated problems** across all 70 generators at every difficulty, asserting
   four unique choices, the answer present among them, and no malformed output.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
+- **Reachability of every one of the 70 topics** at 320×568, measured as the scroll
+  distance needed to get to each topic's row — including the tap that opens its strand.
+  The worst case is 1.1 viewports in the Training picker and 1.5 in the Chronicle; a flat
+  list of all seventy would run to 6.3.
 - **Layout at six viewports** from a 320px iPhone SE to a 768px iPad and 844×390 landscape,
   asserting no horizontal overflow, no tap target under 32px, and that the largest
   full-screen callouts still fit — including at the peak of their overshooting pop
@@ -345,20 +361,20 @@ The generators were also checked by:
   learner with known per-topic skill: weak topics drew 3.8× the airtime of mastered ones,
   the mastery model tracked true skill to within 5% mean error, mastered topics still
   resurfaced rather than starving, and back-to-back repeats stayed near 2%.
-- **36,000 calculus checks** — derivatives against centred finite differences, definite
+- **41,000 calculus checks** — derivatives against centred finite differences, definite
   integrals against Simpson's rule, and limits against numeric evaluation.
 - **Every realm's difficulty curve**, simulated by running the real combat code with a
   player of known accuracy and the gear that realm's gold could actually have bought, 40
-  runs per cell. Across all seven realms perfect play always clears, 60% accuracy usually
+  runs per cell. Across all eight realms perfect play always clears, 60% accuracy usually
   does not, and accuracy beats gear everywhere. The simulation is also what found that the
   Integral Abyss had been *easier* than the Cliffs before it — an inversion that predated
   these realms and is now flattened.
-- **37,200 figure specs**, checked for a known kind, the fields that kind cannot draw
+- **38,400 figure specs**, checked for a known kind, the fields that kind cannot draw
   without, a domain the function is actually defined over, and — for question figures —
   that they do not give the answer away. That last check earned its keep immediately: it
   found that scalar multiplication could roll a scalar of 1, asking "1 · v = ?" over a
   picture of v, and that a linear combination could land back on one of its own inputs.
-- **1,116 figures rendered in a headless browser at 320px**, asserting every one carries
+- **1,152 figures rendered in a headless browser at 320px**, asserting every one carries
   real ink rather than an empty frame, that none overflows its column, and that a full
-  28-node campaign holds steady at one battle canvas with at most two figures alive —
+  32-node campaign holds steady at one battle canvas with at most two figures alive —
   no leaked canvases.

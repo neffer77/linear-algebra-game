@@ -390,6 +390,21 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
   border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
 .cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
+/* Collapsible strand. At seventy topics the flat list was a wall of buttons;
+   these headers keep every screen to one thumb-reach, and opening one closes
+   the rest so the list never grows underneath your thumb. */
+details.strand{border-top:1px solid var(--edge)}
+details.strand:first-of-type{border-top:0}
+details.strand>summary{list-style:none; cursor:pointer; min-height:44px; padding:10px 2px;
+  display:flex; align-items:center; gap:8px; font-weight:700; font-size:14px}
+details.strand>summary::-webkit-details-marker{display:none}
+details.strand>summary .sname{flex:1}
+details.strand>summary .schev{color:var(--dim); transition:transform .18s ease}
+details.strand[open]>summary .schev{transform:rotate(90deg)}
+.sbadge{font-size:11px; font-weight:700; padding:2px 7px; border-radius:999px;
+  background:rgba(255,255,255,.06); color:var(--dim)}
+.sbadge.warn{background:rgba(229,72,77,.16); color:#ff9b9e}
+.strandBody{padding-bottom:6px}
 .fig{display:block; width:100%; height:auto; border-radius:10px; margin:8px 0 2px;
   border:1px solid var(--edge); background:#171129;}
 .figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
@@ -605,6 +620,8 @@ const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){const t=b;b=a%b;a=t;}retu
 // A fraction in lowest terms, rendered as a plain integer when it divides out.
 const rat=(n,dm)=>{ if(dm<0){n=-n;dm=-dm;} const g=gcd(n,dm); n/=g; dm/=g;
   return dm===1 ? neg(n) : frac(n,dm); };
+// " + 3xy" or " − xy" — so a negative coefficient never renders as "+ −3xy".
+const sgn=(c,body)=>\` \${c<0?'−':'+'} \${Math.abs(c)===1&&body?'':Math.abs(c)}\${body}\`;
 const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
 
@@ -1994,6 +2011,200 @@ riemannToInt(d){
        [\`∫<sub>0</sub><sup>1</sup> \${frac(1,'x')}x\${sup(k)} dx\`,'the 1/n is the width dx, not another factor inside the integrand'],
        [rat(1,k+1),'that is the value the integral comes to, not the integral itself']],
     ex:\`Match it to ∫ₐᵇ f(x)dx = lim Σ f(xᵢ)Δx. Here Δx = 1/n, so b − a = 1; the sample point is xᵢ = i/n, which sweeps from 0 up to 1; and f(xᵢ) = (i/n)\${sup(k)}, so f(x) = x\${sup(k)}. That gives ∫₀¹x\${sup(k)}dx, which evaluates to \${rat(1,k+1)} — but the question asked which integral, not its value.\`};
+},
+
+/* ---------- Realm 8 : Gradient Summit (multivariable & series) ---------- */
+gradient(d){
+  const k=[3,4,5][d-1]||4;
+  let a,b,c,x0,y0,fx,fy;
+  do{
+    a=R.nz(-k,k); b=R.nz(-k,k); c=R.nz(-k,k); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    fx=2*a*x0+b*y0; fy=b*x0+2*c*y0;
+  }while(new Set([vecR([fx,fy]),vecR([fy,fx]),vecR([2*a*x0,2*c*y0]),
+                  vecR([a*x0+b*y0, b*x0+c*y0]),vecR([fx,fx])]).size!==5);
+  return {topic:'Gradient Vector',
+    codex:{rule:'∇f stacks the partial derivatives into a vector: ⟨∂f/∂x, ∂f/∂y⟩. It points the way f increases fastest.',
+           eg:'f = x²y → ∇f = ⟨2xy, x²⟩'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'xy')}\${sgn(c,'y²')}<br>What is ∇f at (\${neg(x0)}, \${neg(y0)})?\`,
+    a:vecR([fx,fy]),
+    figAnswer:{kind:'plane', vecs:[{v:[fx,fy],col:'#f2c14e',label:'∇f'}],
+      caption:'∇f points uphill — the direction f climbs fastest from that point.'},
+    d:[[vecR([fy,fx]),'the two partials are in the wrong order — ∂f/∂x comes first'],
+       [vecR([2*a*x0,2*c*y0]),'the xy term was ignored, but it contributes to both partials'],
+       [vecR([a*x0+b*y0, b*x0+c*y0]),'the 2 from differentiating the squared terms is missing'],
+       [vecR([fx,fx]),'both slots hold ∂f/∂x; the second slot is the derivative in y']],
+    ex:\`Differentiate in x holding y still: ∂f/∂x = \${neg(2*a)}x + \${neg(b)}y, which at (\${neg(x0)}, \${neg(y0)}) is \${neg(fx)}. Then in y holding x still: ∂f/∂y = \${neg(b)}x + \${neg(2*c)}y = \${neg(fy)}. Stack them: ∇f = \${vecR([fx,fy])}. The xy term appears in both partials, which is exactly what a mixed term does.\`};
+},
+dirDeriv(d){
+  const T=[[3,4,5],[4,3,5],[5,12,13],[12,5,13],[8,15,17],[6,8,10]];
+  let a,b,x0,y0,p,q,n,fx,fy,dp;
+  do{
+    a=R.nz(-4,4); b=R.nz(-4,4); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    [p,q,n]=R.pick(T); p*=R.pick([1,-1]); q*=R.pick([1,-1]);
+    fx=2*a*x0; fy=2*b*y0; dp=fx*p+fy*q;
+  }while(dp===0 || p===q || fx===fy ||
+    new Set([rat(dp,n),neg(dp),rat(fx*q+fy*p,n),rat(dp,n*n),rat(-dp,n)]).size!==5);
+  return {topic:'Directional Derivative',
+    codex:{rule:'D_u f = ∇f · û, where û is the direction scaled to length 1. Skip the scaling and the answer is off by ‖v‖.',
+           eg:'∇f = ⟨3,4⟩ in direction ⟨3,4⟩: û = ⟨3/5,4/5⟩, so D_u f = (9+16)/5 = 5'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'y²')}, at the point (\${neg(x0)}, \${neg(y0)}).<br>What is the derivative in the direction \${vecR([p,q])}?\`,
+    a:rat(dp,n),
+    d:[[neg(dp),\`that is ∇f · \${vecR([p,q])}, but the direction has length \${n} and must be scaled to 1 first\`],
+       [rat(fx*q+fy*p,n),'the direction components are paired with the wrong partials'],
+       [rat(dp,n*n),\`divided by ‖v‖² = \${n*n} instead of ‖v‖ = \${n}\`],
+       [rat(-dp,n),'the sign is flipped — that is the rate in the opposite direction']],
+    ex:\`∇f = ⟨\${neg(2*a)}x, \${neg(2*b)}y⟩, which at (\${neg(x0)}, \${neg(y0)}) is \${vecR([fx,fy])}. The direction \${vecR([p,q])} has length √\${p*p+q*q} = \${n}, so û = (1/\${n})\${vecR([p,q])}. Then D_u f = \${vecR([fx,fy])} · û = (\${neg(fx)}·\${neg(p)} + \${neg(fy)}·\${neg(q)})/\${n} = \${rat(dp,n)}. Forgetting to normalise is the one mistake that scales the whole answer.\`};
+},
+chainMulti(d){
+  // Rendering helpers: a monomial in x and y, and a power of t, both written
+  // the way a person would write them (no 1t, no t¹, no x⁰).
+  const mono=(c,px,py)=>{
+    let out = (c===1 && (px||py)) ? '' : String(c);
+    if(px>0) out += 'x'+(px===1?'':sup(px));
+    if(py>0) out += 'y'+(py===1?'':sup(py));
+    return out || '1';
+  };
+  const tp=(c,p)=> p===0 ? String(c) : (c===1?'':String(c))+'t'+(p===1?'':sup(p));
+
+  let m,n,pp,qq,K,ok;
+  do{
+    m=R.i(1,3); n=R.i(1,3); pp=R.i(1,3); qq=R.i(1,3);
+    K=m*pp+n*qq;
+    ok = m*pp!==n*qq && K>=2
+      && new Set([tp(K,K-1),tp(1,K-1),tp(m*pp,K-1),tp(n*qq,K-1),tp(K,K)]).size===5
+      && new Set([mono(m,m-1,n),mono(1,m,n),mono(n,m,n-1),mono(m,m-1,0)]).size===4
+      && new Set([\`\${tp(pp,pp-1)} and \${tp(qq,qq-1)}\`,\`\${tp(1,pp)} and \${tp(1,qq)}\`,
+                  \`\${tp(pp,pp)} and \${tp(qq,qq)}\`,\`\${pp} and \${qq}\`]).size===4;
+  }while(!ok);
+  const Z=mono(1,m,n);
+  return {topic:'Multivariable Chain Rule',
+    complexity:3,
+    codex:{rule:'dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt) — one term for every route from t up to z, added together.',
+           eg:'z = x²y, x = t², y = t³ → 2xy·2t + x²·3t² = 7t⁶'},
+    motes:[
+      {q:\`z = \${Z}. What is ∂z/∂x?\`,
+       a:mono(m,m-1,n),
+       d:[[mono(1,m,n),'that is z itself — nothing has been differentiated yet'],
+          [mono(n,m,n-1),'that differentiated in y; this step holds y still'],
+          [mono(m,m-1,0),'the y factor is a constant here, so it stays rather than vanishing']],
+       ex:\`Hold y still and use the power rule on x: ∂z/∂x = \${mono(m,m-1,n)}. The y factor rides along untouched, because to ∂/∂x it is just a number.\`},
+      {q:\`With x = \${tp(1,pp)} and y = \${tp(1,qq)}, what are \${frac('dx','dt')} and \${frac('dy','dt')}?\`,
+       a:\`\${tp(pp,pp-1)} and \${tp(qq,qq-1)}\`,
+       d:[[\`\${tp(1,pp)} and \${tp(1,qq)}\`,'those are x and y themselves, not their derivatives'],
+          [\`\${tp(pp,pp)} and \${tp(qq,qq)}\`,'the power has to drop by one when you differentiate'],
+          [\`\${pp} and \${qq}\`,'the powers of t were dropped entirely']],
+       ex:\`Plain power rule on each: d/dt \${tp(1,pp)} = \${tp(pp,pp-1)} and d/dt \${tp(1,qq)} = \${tp(qq,qq-1)}.\`},
+      {q:\`How many terms does \${frac('dz','dt')} have?\`,
+       a:'Two — one for x and one for y',
+       d:[['One — whichever variable changes faster','both x and y depend on t, so both routes contribute'],
+          ['One — the two routes combine into a single product','the chain rule adds the routes; it does not multiply them'],
+          ['Four — every pairing of a partial with a derivative','there is one term per intermediate variable, not one per pairing']],
+       ex:\`z reaches t through x and through y, so there is one term for each route: dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt). Following only one of the two is the classic slip.\`}
+    ],
+    q:\`z = \${Z}, with x = \${tp(1,pp)} and y = \${tp(1,qq)}.<br>\${frac('dz','dt')} = ?\`,
+    a:tp(K,K-1),
+    d:[[tp(1,K-1),'the two chain-rule factors were dropped; each route contributes a multiplier'],
+       [tp(m*pp,K-1),'only the route through x was followed — y depends on t as well'],
+       [tp(n*qq,K-1),'only the route through y was followed — x depends on t as well'],
+       [tp(K,K),'the power was not reduced by one when differentiating']],
+    ex:\`Two routes, added. Through x: (∂z/∂x)(dx/dt) = \${mono(m,m-1,n)}·\${tp(pp,pp-1)}, which in t alone is \${tp(m*pp,K-1)}. Through y: (∂z/∂y)(dy/dt) = \${mono(n,m,n-1)}·\${tp(qq,qq-1)} = \${tp(n*qq,K-1)}. Adding them gives \${tp(K,K-1)}. As a check, substituting first makes z simply \${tp(1,K)}, whose derivative is the same thing.\`};
+},
+tangentPlane(d){
+  let a,b,x0,y0,z0,fx,fy;
+  do{
+    a=R.nz(-3,3); b=R.nz(-3,3); x0=R.nz(-3,3); y0=R.nz(-3,3);
+    z0=a*x0*x0+b*y0*y0; fx=2*a*x0; fy=2*b*y0;
+  }while(fx===fy || fx===0 || fy===0 || z0===0);
+  const T=(c,v,at)=>\`\${c<0?'−':'+'} \${Math.abs(c)}(\${v} \${at<0?'+':'−'} \${Math.abs(at)})\`;
+  const P=(k,c1,c2)=>\`z = \${neg(k)} \${T(c1,'x',x0)} \${T(c2,'y',y0)}\`;
+  return {topic:'Tangent Planes',
+    codex:{rule:'z = f(a,b) + f_x(a,b)(x−a) + f_y(a,b)(y−b) — the height at the point, plus each slope times how far you have moved.',
+           eg:'It is the two-variable version of y = f(a) + f′(a)(x−a).'},
+    q:\`f(x, y) = \${poly([[a,2]])}\${sgn(b,'y²')}<br>What is the tangent plane at (\${neg(x0)}, \${neg(y0)})?\`,
+    a:P(z0,fx,fy),
+    d:[[P(z0,fy,fx),'the two slopes have swapped variables — f_x multiplies (x − a)'],
+       [P(z0,a*x0,b*y0),'the 2 from differentiating x² and y² is missing from both slopes'],
+       [P(0,fx,fy),\`the height at the point is missing; f(\${neg(x0)}, \${neg(y0)}) = \${neg(z0)}, not 0\`],
+       [P(z0,-fx,-fy),'both slopes have the wrong sign']],
+    ex:\`Three numbers build the plane. The height: f(\${neg(x0)}, \${neg(y0)}) = \${neg(z0)}. The slopes: f_x = \${neg(2*a)}x = \${neg(fx)} and f_y = \${neg(2*b)}y = \${neg(fy)} at that point. Assemble them as \${P(z0,fx,fy)}. Put x = \${neg(x0)} and y = \${neg(y0)} back in and the brackets vanish, leaving z = \${neg(z0)} — the plane really does touch the surface there.\`};
+},
+doubleInt(d){
+  const m=R.i(0,2), n=R.i(0,2), a=R.i(2,3), b=R.i(2,3);
+  const A=Math.pow(a,m+1), B=Math.pow(b,n+1);
+  // x⁰y⁰ is just 1, and x¹ is just x.
+  const pw=(v,p)=> p===0 ? '' : v+(p===1?'':sup(p));
+  const integrand = (pw('x',m)+pw('y',n)) || '1';
+  return {topic:'Double Integrals',
+    codex:{rule:'Over a rectangle, integrate one variable at a time; the other is a constant while you do. Order does not matter.',
+           eg:'∫₀²∫₀³ xy dy dx = (∫₀² x dx)(∫₀³ y dy) = 2·4.5 = 9'},
+    q:\`∫<sub>0</sub><sup>\${a}</sup> ∫<sub>0</sub><sup>\${b}</sup> \${integrand} dy dx = ?\`,
+    a:rat(A*B, (m+1)*(n+1)),
+    d:[[rat(Math.pow(a,m)*Math.pow(b,n), (m+1)*(n+1)),'the powers were not raised by one before dividing'],
+       [String(A*B),'both divisions by the new powers are missing'],
+       [rat(A*B, m+n+1),'the two denominators were added rather than multiplied'],
+       [rat(Math.pow(a,n+1)*Math.pow(b,m+1), (m+1)*(n+1)),'the two limits have been swapped between the variables']],
+    ex:\`Do the inner integral first, treating x as a constant: ∫₀<sup>\${b}</sup> \${pw('y',n)||'1'} dy = \${b}\${sup(n+1)}/\${n+1} = \${rat(B,n+1)}. That constant comes outside, leaving \${rat(B,n+1)}∫₀<sup>\${a}</sup> \${pw('x',m)||'1'} dx = \${rat(B,n+1)}·\${rat(A,m+1)} = \${rat(A*B,(m+1)*(n+1))}. Over a rectangle with a product integrand the two integrals simply multiply.\`};
+},
+geoSeries(d){
+  if(R.chance(.25)){
+    let r,a;
+    do{ r=R.i(2,4); a=R.i(1,5); }
+    while(new Set([rat(a,1-r),rat(a,r-1),String(a),'0']).size!==4);
+    return {topic:'Geometric Series',
+      codex:{rule:'Σ arⁿ from n = 0 converges to a/(1 − r) exactly when |r| < 1; otherwise the terms do not shrink and the sum runs away.',
+             eg:'1 + ½ + ¼ + … = 1/(1 − ½) = 2'},
+      q:\`\${a} + \${a*r} + \${a*r*r} + \${a*r*r*r} + ⋯ = ?\`,
+      a:'Diverges',
+      d:[[rat(a,1-r),\`that is a/(1 − r) applied with r = \${r}, but the formula only holds for |r| < 1\`],
+         [rat(a,r-1),'the same formula with the subtraction reversed — it still does not apply here'],
+         [String(a),'that is only the first term'],
+         ['0','the terms grow rather than shrink']],
+      ex:\`Each term is \${r} times the one before, so r = \${r} and |r| ≥ 1. The terms grow without bound, so the partial sums do too. The formula a/(1 − r) is not merely inconvenient here — it is invalid, and blindly applying it would give \${rat(a,1-r)}, a finite number for a sum that has none.\`};
+  }
+  let k,s,a;
+  do{ k=R.i(2,5); s=R.pick([1,-1]); a=R.i(1,6); }
+  while(new Set([rat(a*k,k-s),rat(a*k,k+s),String(a),rat(a*(k-s),k)]).size!==4);
+  // With r negative the series alternates, so write it with real minus signs
+  // rather than "+ −".
+  const terms=[0,1,2,3].map(i=>rat(a, Math.pow(k,i)))
+    .map((t,i)=> i===0 ? t : (s<0 && i%2 ? ' − ' : ' + ')+t);
+  return {topic:'Geometric Series',
+    codex:{rule:'Σ arⁿ from n = 0 converges to a/(1 − r) exactly when |r| < 1; otherwise the terms do not shrink and the sum runs away.',
+           eg:'1 + ½ + ¼ + … = 1/(1 − ½) = 2'},
+    q:\`\${terms.join('')} + ⋯ = ?<br><span class="small">(ratio r = \${rat(s,k)})</span>\`,
+    a:rat(a*k, k-s),
+    d:[[rat(a*k, k+s),'the sign of r slipped — the formula is a/(1 − r), so a negative r *adds* underneath'],
+       [String(a),'that is only the first term of the sum'],
+       [rat(a*(k-s), k),'the fraction is upside down — it is a/(1 − r), not a(1 − r)'],
+       ['Diverges',\`|r| = \${rat(1,k)} is less than 1, so the terms shrink fast enough to total something finite\`]],
+    ex:\`The first term is a = \${a} and the ratio is r = \${rat(s,k)}. Since |r| < 1 the series converges to a/(1 − r) = \${a}/(1 − \${rat(s,k)}) = \${a}/\${rat(k-s,k)} = \${rat(a*k,k-s)}. The whole infinite tail is worth only a finite amount because each term is a fixed fraction of the last.\`};
+},
+taylor(d){
+  const k=R.i(2,3), fn=R.pick(['exp','cos','ln']);   // k = 1 collapses two distractors onto the answer
+  const kx = k===1?'x':\`\${k}x\`;
+  const q2 = r => (r==='1' ? '' : r) + 'x²';        // 1x² is just x²
+  const A = fn==='exp' ? \`1 + \${kx} + \${q2(rat(k*k,2))}\`
+          : fn==='cos' ? \`1 − \${q2(rat(k*k,2))}\`
+          :              \`\${kx} − \${q2(rat(k*k,2))}\`;
+  const NM = fn==='exp' ? \`e<sup>\${kx}</sup>\` : fn==='cos' ? \`cos(\${kx})\` : \`ln(1 + \${kx})\`;
+  return {topic:'Taylor Polynomials',
+    codex:{rule:'The degree-n Taylor polynomial at 0 is Σ f⁽ᵏ⁾(0)xᵏ/k! — it matches the function’s value and first n derivatives there.',
+           eg:'eˣ ≈ 1 + x + x²/2, because every derivative of eˣ is 1 at x = 0.'},
+    q:\`What is the degree-2 Maclaurin polynomial of \${NM}?\`,
+    a:A,
+    d:[[fn==='exp' ? \`1 + \${kx} + \${q2(neg(k*k))}\` : fn==='cos' ? \`1 − \${q2(neg(k*k))}\` : \`\${kx} − \${q2(neg(k*k))}\`,
+        'the 2! from the quadratic term is missing — each term is divided by k factorial'],
+       [fn==='exp' ? \`1 + \${kx} + \${q2(rat(k,2))}\` : fn==='cos' ? \`1 − \${q2(rat(k,2))}\` : \`\${kx} − \${q2(rat(k,2))}\`,
+        'the chain rule squares the inside factor for the second derivative, so it is k², not k'],
+       [fn==='cos' ? \`1 + \${q2(rat(k*k,2))}\` : fn==='ln' ? \`\${kx} + \${q2(rat(k*k,2))}\` : \`1 − \${kx} + \${q2(rat(k*k,2))}\`,
+        'a sign is wrong — check the second derivative at 0 carefully'],
+       [fn==='exp' ? \`1 + \${kx}\` : fn==='cos' ? '1' : kx,
+        'that stops at degree 1; the question asks for degree 2']],
+    ex:\`Build it from derivatives at 0. \${
+      fn==='exp' ? \`f(0) = 1, f′ = \${k}e<sup>\${kx}</sup> so f′(0) = \${k}, and f″ = \${k*k}e<sup>\${kx}</sup> so f″(0) = \${k*k}.\`
+      : fn==='cos' ? \`f(0) = 1, f′ = −\${k}sin(\${kx}) so f′(0) = 0, and f″ = −\${k*k}cos(\${kx}) so f″(0) = −\${k*k}.\`
+      : \`f(0) = 0, f′ = \${k}/(1 + \${kx}) so f′(0) = \${k}, and f″ = −\${k*k}/(1 + \${kx})² so f″(0) = −\${k*k}.\`
+    } Then P₂(x) = f(0) + f′(0)x + f″(0)x²/2 = \${A}. The 2! underneath is what makes the second derivative come out right.\`};
 }
 };
 
@@ -2020,8 +2231,25 @@ const TOPIC_LABEL = {
   optimisation:'Optimisation', inflection:'Inflection Points', invTrigDeriv:'Inverse Trig Derivatives',
   logDiff:'Logarithmic Differentiation', byParts:'Integration by Parts', partialFrac:'Partial Fractions',
   improper:'Improper Integrals', avgValue:'Average Value', volRev:'Volumes of Revolution',
-  riemannToInt:'Riemann Sums'
+  riemannToInt:'Riemann Sums',
+  gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
+  tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
+  taylor:'Taylor Polynomials'
 };
+
+/* Topics grouped into strands. Declared once and used by both the Training
+   picker and the Chronicle, so a topic can never be reachable in one and
+   invisible in the other. At seventy topics a flat list is a wall; these are
+   what the screens collapse into. */
+const STRANDS = [
+  ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
+  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
+  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
+  ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
+  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation']],
+  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
+];
 
 /* ------------------------------- mastery --------------------------------- */
 /* Per-topic mastery drives three things: which topic comes up next, how hard
@@ -2154,7 +2382,8 @@ const WEAPONS = [
   {id:'w5', nm:'Eigenblade',           ic:'⚔️', dmg:45, crit:.20, cost:850,  ds:'Cuts only along directions that do not turn.'},
   {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'},
   {id:'w7', nm:'Spectral Edge',        ic:'⚔️', dmg:74, crit:.28, cost:2200, ds:'Cuts along every eigendirection at once.'},
-  {id:'w8', nm:'Limitless Glaive',     ic:'🔱', dmg:95, crit:.32, cost:3400, ds:'Its reach has no upper bound.'}
+  {id:'w8', nm:'Limitless Glaive',     ic:'🔱', dmg:95, crit:.32, cost:3400, ds:'Its reach has no upper bound.'},
+  {id:'w9', nm:'Gradient Ascendant',   ic:'⚔️', dmg:122,crit:.36, cost:5200, ds:'Points, always, at the steepest way in.'}
 ];
 const ARMORS = [
   {id:'a0', nm:'Peasant Tunic',      ic:'👕', def:0,  hp:0,  cost:0,    ds:'Cloth. Purely decorative in a fight.'},
@@ -2164,7 +2393,8 @@ const ARMORS = [
   {id:'a4', nm:'Identity Aegis',     ic:'🛡️', def:11, hp:55, cost:620,  ds:'Leaves you exactly as you were.'},
   {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'},
   {id:'a6', nm:'Diagonal Ward',      ic:'🛡️', def:22, hp:110,cost:1700, ds:'In the right basis, every blow arrives head-on.'},
-  {id:'a7', nm:'Convergent Mail',    ic:'🛡️', def:29, hp:150,cost:2600, ds:'Each ring smaller than the last, and the sum is finite.'}
+  {id:'a7', nm:'Convergent Mail',    ic:'🛡️', def:29, hp:150,cost:2600, ds:'Each ring smaller than the last, and the sum is finite.'},
+  {id:'a8', nm:'Summit Regalia',     ic:'🛡️', def:37, hp:200,cost:4000, ds:'Worn only by those who reached the top of both paths.'}
 ];
 const ITEMS = {
   potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
@@ -2259,6 +2489,19 @@ const REALMS = [
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
      {nm:'Convergence Wyrm',  art:'dragon',  hp:1150,atk:154,gold:560,xp:530, col:'#94a0ff'},
      {nm:'The Unbounded',     art:'lich',    hp:1650,atk:184,gold:1200,xp:1000,col:'#5f6de8', boss:true}
+   ]},
+  {nm:'Gradient Summit', col:'#ffb648', sky:['#3a2a10','#140d05'],
+   bg:{key:'summit', seed:127, sky:['#5a3f14','#33230d','#120c04'],
+       far:'crags', farCol:'#3e2b10', near:'prisms', nearCol:'#211608',
+       ground:['#3a2a11','#120b04'], rim:'rgba(255,210,130,.2)', haze:'rgba(40,28,10,.8)',
+       glow:'#fff0cd', weather:'shards', accent:'#ffcf7a'},
+   pool:['gradient','dirDeriv','chainMulti','tangentPlane','doubleInt','geoSeries','taylor',
+         'partial','vecProj','optimisation','byParts','eigenvec'],
+   foes:[
+     {nm:'Saddle Point Sentinel', art:'golem',    hp:1300,atk:182,gold:640,xp:600,  col:'#ffcf7a'},
+     {nm:'Steepest Descent',      art:'wraith',   hp:1450,atk:197,gold:720,xp:680,  col:'#ffb648'},
+     {nm:'Warden of Both Paths',  art:'knightfoe',hp:1600,atk:213,gold:820,xp:770,  col:'#ffd894'},
+     {nm:'The Gradient Itself',   art:'dragon',   hp:2300,atk:250,gold:1800,xp:1500,col:'#ff9c1f', boss:true}
    ]}
 ];
 
@@ -4553,10 +4796,21 @@ const Arena = {
 
   unlocked(){ return !!(Game.s && Game.s.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]); },
 
+  /* What an endless run draws from. Mastery.weight deliberately over-weights
+     unseen topics so a curated realm pool introduces its new material — but
+     pointed at all seventy topics that same rule turns the arena into a run of
+     things you have never been taught. So the arena asks what you have met,
+     and only falls back to everything if you have barely met anything. */
+  pool(){
+    const all=Object.keys(TOPIC_LABEL);
+    const met=all.filter(k=>{ const r=Game.s.topicStats[k]; return r && r.seen>0; });
+    return met.length>=12 ? met : all;
+  },
+
   start(){
     this.active=true; this.wave=0; this.earned=0;
     this.mods={dmg:1, def:0, crit:0, gold:1, charge:0, hpMul:1};
-    this.realm.pool = Object.keys(TOPIC_LABEL);
+    this.realm.pool = this.pool();
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = Game.s.maxHp;          // you enter fresh; you will not be topped up again
     Game.save();
@@ -4877,19 +5131,43 @@ const UI = {
           <b style="color:var(--red)">\${shaky} need work</b> ·
           <b style="color:var(--purple)">\${dueN} due for review</b>\${untouched?\` · \${untouched} not yet seen\`:''}
         </div>
-        \${rows.length?rows.map(([k,v])=>{
-          const pct=Math.round(v.m*100), col=Mastery.colour(v.m);
-          const due=Mastery.overdue(k);
-          return \`<div style="margin:6px 0">
-            <div style="display:flex;justify-content:space-between;font-size:12px">
-              <span>\${TOPIC_LABEL[k]||k}\${due?' <span class="rev">⟳ due</span>':''}</span>
-              <span style="color:\${col}">\${Mastery.label(v.m)} \${pct}%
-                <span class="small">(\${v.c}/\${v.seen})</span></span></div>
-            <div class="track thin"><div class="fill" style="width:\${pct}%;background:\${col}"></div></div></div>\`;
-        }).join(''):'<div class="small">No riddles answered yet.</div>'}
+        \${rows.length?UI.chronicleBody(rows):'<div class="small">No riddles answered yet.</div>'}
         \${rows.length?\`<button class="btn sm" style="margin-top:10px"
            onclick="UI.go('s-train');Train.startPool('weak')">⚠️ Drill my weakest topics</button>\`:''}
       </div>\`;
+  },
+  /** One bar per topic is a wall at seventy. Show the handful that actually
+      need work, then the rest folded into their strands. */
+  chronicleBody(rows){
+    const seen=new Map(rows);
+    const bar=(k,v)=>{
+      const pct=Math.round(v.m*100), col=Mastery.colour(v.m), due=Mastery.overdue(k);
+      return \`<div style="margin:6px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;gap:6px">
+          <span>\${TOPIC_LABEL[k]||k}\${due?' <span class="rev">⟳ due</span>':''}</span>
+          <span style="color:\${col};white-space:nowrap">\${Mastery.label(v.m)} \${pct}%
+            <span class="small">(\${v.c}/\${v.seen})</span></span></div>
+        <div class="track thin"><div class="fill" style="width:\${pct}%;background:\${col}"></div></div></div>\`;
+    };
+    // rows arrive weakest first, so the head of the list is the useful part
+    const focus=rows.slice(0,5);
+    return \`<div class="small" style="color:var(--gold);margin-top:4px">Needs you most</div>
+      \${focus.map(([k,v])=>bar(k,v)).join('')}
+      <hr>
+      \${STRANDS.map(([nm,keys])=>{
+        const mine=keys.filter(k=>seen.has(k));
+        if(!mine.length) return '';
+        const avg=mine.reduce((a,k)=>a+seen.get(k).m,0)/mine.length;
+        const weak=mine.filter(k=>seen.get(k).m<0.6).length;
+        const unseen=keys.length-mine.length;
+        return \`<details class="strand">
+          <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
+            <span class="sbadge\${weak?' warn':''}" style="color:\${weak?'':Mastery.colour(avg)}">\${
+              weak? weak+' need work' : Math.round(avg*100)+'%'}</span></summary>
+          <div class="strandBody">\${mine.map(k=>bar(k,seen.get(k))).join('')}
+            \${unseen?\`<div class="small">\${unseen} not yet seen in this strand</div>\`:''}</div>
+        </details>\`;
+      }).join('')}\`;
   },
   renderTome(){
     document.getElementById('tomeList').innerHTML =
@@ -4930,14 +5208,7 @@ const Train = {
     document.getElementById('trainRun').style.display='none';
     document.getElementById('trainPick').style.display='';
     document.getElementById('trainBack').style.display='';
-    const groups=[
-      ['Vectors',['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
-      ['Matrices',['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
-      ['Eigen & Subspaces',['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
-      ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
-      ['Integrals',['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt']],
-      ['Applications',['secondDeriv','critical','inflection','partial','relatedRates','optimisation']]
-    ];
+    const groups=STRANDS;
     // Adaptive drills, offered first — they need no decision from the player.
     const weak = Game.s ? Mastery.weakest(6) : [];
     const due  = Game.s ? Mastery.dueList()  : [];
@@ -4955,14 +5226,28 @@ const Train = {
     }
     head += '</div>';
 
-    document.getElementById('trainPick').innerHTML = head + groups.map(([nm,keys])=>
-      \`<div class="panel"><h2 style="font-size:15px;color:var(--gold)">\${nm}</h2>
-        \${keys.map(k=>{
-          const r=Game.s&&Game.s.topicStats[k];
-          const tag = r&&r.seen ? \`<span class="mtag" style="color:\${Mastery.colour(r.m)}">\${Mastery.label(r.m)}</span>\` : '';
-          return \`<button class="btn sm" onclick="Train.startPool('\${k}')">\${TOPIC_LABEL[k]}\${tag}</button>\`;
+    document.getElementById('trainPick').innerHTML = head +
+      \`<div class="panel"><h2 style="font-size:15px;color:var(--gold)">Every topic</h2>
+        <div class="sub" style="margin-bottom:2px">Tap a strand to open it.</div>
+        \${groups.map(([nm,keys])=>{
+          const weak=keys.filter(k=>{const r=Game.s&&Game.s.topicStats[k]; return r&&r.seen&&r.m<0.6;}).length;
+          return \`<details class="strand" ontoggle="Train.soleOpen(this)">
+            <summary><span class="schev">▸</span><span class="sname">\${nm}</span>
+              <span class="sbadge\${weak?' warn':''}">\${weak?weak+' need work':keys.length+' topics'}</span></summary>
+            <div class="strandBody">\${keys.map(k=>{
+              const r=Game.s&&Game.s.topicStats[k];
+              const tag = r&&r.seen ? \`<span class="mtag" style="color:\${Mastery.colour(r.m)}">\${Mastery.label(r.m)}</span>\` : '';
+              return \`<button class="btn sm" onclick="Train.startPool('\${k}')">\${TOPIC_LABEL[k]}\${tag}</button>\`;
+            }).join('')}</div></details>\`;
         }).join('')}
-      </div>\`).join('');
+      </div>\`;
+  },
+  /* One strand open at a time, pulled to the top of the screen. Without this
+     the list grows under your thumb and the topic you wanted walks away. */
+  soleOpen(el){
+    if(!el.open) return;
+    for(const o of document.querySelectorAll('#trainPick details.strand')) if(o!==el) o.open=false;
+    el.scrollIntoView({block:'start', behavior:'smooth'});
   },
   startPool(what){
     if(what==='weak'){ this.pool=Mastery.weakest(6); this.title='Weakest topics'; }

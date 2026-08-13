@@ -621,6 +621,130 @@ Object.assign(ANALYSIS, {
     covered.add('riemannToInt');
   }
 });
+
+/* --- Gradient Summit: two variables, so the checks differentiate and
+   integrate in both of them rather than trusting either formula. --- */
+const dx2 = (f, x, y) => (f(x + 1e-5, y) - f(x - 1e-5, y)) / 2e-5;
+const dy2 = (f, x, y) => (f(x, y + 1e-5) - f(x, y - 1e-5)) / 2e-5;
+/** Read a·x² ± b·xy ± c·y² back out of a rendered surface, coefficients and
+    all. An absent term is 0; a bare sign means 1. Throwing on a shape this
+    does not recognise is deliberate — the harness reports it as a failure
+    rather than quietly checking against the wrong surface. */
+function quadratic(line) {
+  const L = flat(line).replace(/\s/g, '');
+  const co = (m, dflt) => {
+    if (!m) return dflt;
+    const t = m[1].replace('+', '');
+    return t === '' ? 1 : t === '−' ? -1 : num(t);
+  };
+  const a = co(L.match(/^([+−]?\d*)x2/), null);
+  if (a === null) throw new Error(`no x² term in ${JSON.stringify(L)}`);
+  return { a, b: co(L.match(/([+−]\d*)xy/), 0), c: co(L.match(/([+−]\d*)y2/), 0) };
+}
+
+Object.assign(ANALYSIS, {
+  gradient: p => {
+    const { a, b, c } = quadratic(p.q.match(/f\(x, y\) = (.*?)<br>/)[1]);
+    const [x0, y0] = flat(p.q).match(/at \((−?-?\d+), (−?-?\d+)\)/).slice(1).map(num);
+    const f = (x, y) => a * x * x + b * x * y + c * y * y;
+    const g = vecOf1(p.a);
+    analysisChecks += 2;
+    if (!close(g[0], dx2(f, x0, y0), 1e-5)) fail('analysis', 'gradient', `∂f/∂x at (${x0},${y0}): answer ${g[0]}, numeric ${dx2(f, x0, y0)}`);
+    if (!close(g[1], dy2(f, x0, y0), 1e-5)) fail('analysis', 'gradient', `∂f/∂y at (${x0},${y0}): answer ${g[1]}, numeric ${dy2(f, x0, y0)}`);
+    covered.add('gradient');
+  },
+
+  dirDeriv: p => {
+    const { a, c: b } = quadratic(p.q.match(/f\(x, y\) = (.*?),/)[1]);
+    const [x0, y0] = flat(p.q).match(/point \((−?-?\d+), (−?-?\d+)\)/).slice(1).map(num);
+    const [u] = vecsOf(p.q.split('direction')[1]);
+    const f = (x, y) => a * x * x + b * y * y;
+    const n = Math.hypot(u[0], u[1]);
+    // The definition itself: the limit of the difference quotient along u.
+    const h = 1e-5;
+    const want = (f(x0 + h * u[0] / n, y0 + h * u[1] / n) - f(x0 - h * u[0] / n, y0 - h * u[1] / n)) / (2 * h);
+    const got = compile(p.a)({});
+    analysisChecks++;
+    if (!close(got, want, 1e-4)) fail('analysis', 'dirDeriv', `answer ${got}, directional limit ${want}`);
+    covered.add('dirDeriv');
+  },
+
+  chainMulti: p => {
+    const t = flat(p.q);
+    const m = +(t.match(/z = x(\d?)y/)[1] || 1), n = +(t.match(/y(\d?),/)[1] || 1);
+    const pp = +(t.match(/x = t(\d?) /)[1] || 1), qq = +(t.match(/y = t(\d?)\./)[1] || 1);
+    const z = tt => Math.pow(Math.pow(tt, pp), m) * Math.pow(Math.pow(tt, qq), n);
+    const a = compile(String(p.a).replace(/t/g, 'x'));   // flat() would eat the exponent
+    for (const x of [1.3, 2.1]) {
+      const want = numDeriv(z, x, 1e-6), got = a({ x });
+      analysisChecks++;
+      if (!close(got, want, 1e-3)) { fail('analysis', 'chainMulti', `dz/dt at t=${x}: answer ${got}, numeric ${want}`); return; }
+    }
+    covered.add('chainMulti');
+  },
+
+  // The plane must share the surface's height and both its slopes at the point.
+  tangentPlane: p => {
+    const { a, c: b } = quadratic(p.q.match(/f\(x, y\) = (.*?)<br>/)[1]);
+    const [x0, y0] = flat(p.q).match(/at \((−?-?\d+), (−?-?\d+)\)/).slice(1).map(num);
+    const M = flat(p.a).match(/^z = (−?-?\d+) ([+−]) (\d+)\(x [+−] \d+\) ([+−]) (\d+)\(y [+−] \d+\)$/);
+    if (!M) { fail('analysis', 'tangentPlane', `unreadable plane: ${flat(p.a)}`); return; }
+    const z0 = num(M[1]), cx = (M[2] === '−' ? -1 : 1) * +M[3], cy = (M[4] === '−' ? -1 : 1) * +M[5];
+    const f = (x, y) => a * x * x + b * y * y;
+    analysisChecks += 3;
+    if (!close(z0, f(x0, y0), 1e-9)) fail('analysis', 'tangentPlane', `height ${z0} ≠ f(${x0},${y0}) = ${f(x0, y0)}`);
+    if (!close(cx, dx2(f, x0, y0), 1e-5)) fail('analysis', 'tangentPlane', `x-slope ${cx} ≠ ${dx2(f, x0, y0)}`);
+    if (!close(cy, dy2(f, x0, y0), 1e-5)) fail('analysis', 'tangentPlane', `y-slope ${cy} ≠ ${dy2(f, x0, y0)}`);
+    covered.add('tangentPlane');
+  },
+
+  doubleInt: p => {
+    const t = flat(p.q);
+    const [a, b] = [+t.match(/∫0(\d)/g)[0].slice(-1), +t.match(/∫0(\d)/g)[1].slice(-1)];
+    const body = t.match(/<sup>\d<\/sup> (.*?) dy dx/) ? null : t.match(/\d (.*?) dy dx/)[1];
+    const m = body === '1' ? 0 : +((body.match(/x(\d?)/) || [0, ''])[1] || (body.includes('x') ? 1 : 0));
+    const n = body === '1' ? 0 : +((body.match(/y(\d?)/) || [0, ''])[1] || (body.includes('y') ? 1 : 0));
+    // Iterated Simpson in both variables.
+    const inner = x => simpson(({ x: y }) => Math.pow(x, m) * Math.pow(y, n), 0, b, 400);
+    const want = simpson(({ x }) => inner(x), 0, a, 400);
+    valueCheck('doubleInt', want, p.a, 1e-6);
+  },
+
+  geoSeries: p => {
+    const t = flat(p.q);
+    const rm = t.match(/ratio r = (.*?)\)/);
+    if (!rm) {                                   // the divergent branch
+      analysisChecks++;
+      if (p.a !== 'Diverges') fail('analysis', 'geoSeries', `growing series answered ${p.a}`);
+      covered.add('geoSeries'); return;
+    }
+    // The ratio is a fraction, so the capture has to run to the ")</span>".
+    const r = compile(p.q.match(/ratio r = (.*?)\)<\/span>/)[1])({});
+    // Terms are joined with " + " / " − ", and a fraction never contains either,
+    // so the first term is everything before the first separator.
+    const first = compile(p.q.split('<br>')[0].split(/ [+−] /)[0])({});
+    let sum = 0, term = first;
+    for (let i = 0; i < 4000; i++) { sum += term; term *= r; }
+    valueCheck('geoSeries', sum, p.a, 1e-6);
+  },
+
+  taylor: p => {
+    const t = flat(p.q);
+    const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
+    const k = +(t.match(/(\d)x/) || [0, 1])[1];
+    const g = t.includes('cos') ? x => Math.cos(k * x)
+            : t.includes('ln')  ? x => Math.log(1 + k * x)
+            :                     x => Math.exp(k * x);
+    const P = compile(p.a);
+    analysisChecks += 3;
+    // A degree-2 Taylor polynomial matches value, slope and curvature at 0.
+    const d2 = f => (f(1e-3) - 2 * f(0) + f(-1e-3)) / 1e-6;
+    if (!close(P({ x: 0 }), g(0), 1e-6)) fail('analysis', 'taylor', `P(0) = ${P({ x: 0 })}, f(0) = ${g(0)}`);
+    if (!close(numDeriv(x => P({ x }), 0), numDeriv(g, 0), 1e-4)) fail('analysis', 'taylor', `P′(0) ≠ f′(0)`);
+    if (!close(d2(x => P({ x })), d2(g), 1e-3)) fail('analysis', 'taylor', `P″(0) = ${d2(x => P({ x }))}, f″(0) = ${d2(g)}`);
+    covered.add('taylor');
+  }
+});
 for (const [key, check] of Object.entries(ANALYSIS)) {
   for (let i = 0; i < REPS; i++) {
     const p = GEN[key](2);
