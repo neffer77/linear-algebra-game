@@ -1,0 +1,104 @@
+name: Deploy Knights of the Eigenrealm to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  # Never cancel a deploy that is already publishing - a cancelled deploy can
+  # leave the live site on a half-uploaded artifact.
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # scriptable/ is excluded because it is generated output, and it uses
+      # top-level await that only parses under module detection. The sync
+      # check below regenerates it from index.html, which is the real guard.
+      - name: Check JavaScript syntax
+        run: |
+          find . -type f -name '*.js' -not -path './node_modules/*' -not -path './scriptable/*' \
+            -print0 | sort -z | xargs -0 -r -n1 node --check
+
+      - name: Verify index.html is self-contained
+        run: |
+          node -e '
+          const fs = require("fs");
+          const html = fs.readFileSync("index.html", "utf8");
+          const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m => m[1]);
+          const local = refs.filter(r => !/^(https?:|data:|#|mailto:)/.test(r));
+          const missing = local.filter(r => !fs.existsSync(r.split("?")[0]));
+          if (missing.length) {
+            console.error("Missing local assets: " + missing.join(", "));
+            process.exit(1);
+          }
+          console.log(`index.html OK (${(html.length / 1024).toFixed(1)} KB, ${local.length} local refs)`);
+          '
+
+      # scriptable/KnightsOfTheEigenrealm.js is generated from index.html. The
+      # README asks contributors to regenerate it by hand, which is easy to
+      # forget, so fail the build when the committed copy has drifted.
+      - name: Check Scriptable build is in sync with index.html
+        run: |
+          node build-scriptable.js
+          if ! git diff --quiet -- scriptable/; then
+            echo "::error::scriptable/KnightsOfTheEigenrealm.js is stale. Run 'node build-scriptable.js' and commit the result."
+            git diff --stat -- scriptable/
+            exit 1
+          fi
+          echo "Scriptable build matches index.html"
+
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          # Turn Pages on for the repo if it is not already enabled.
+          enablement: true
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp index.html README.md _site/
+          # Served so players can copy the iOS script straight from the site.
+          cp -r scriptable _site/
+          # Pages runs Jekyll over the artifact unless told not to.
+          touch _site/.nojekyll
+          cat > _site/build-info.json <<JSON
+          {
+            "version": "$(git rev-parse --short HEAD)",
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "ref": "${GITHUB_REF_NAME}"
+          }
+          JSON
+          echo "Built _site ($(find _site -type f | wc -l) files)"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
