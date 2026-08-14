@@ -5271,6 +5271,7 @@ const Battle = {
         Anim.float(560, H-250, 'MISSTEP', '#ff8b8b');
         Sfx.bad();
       }
+      this.settleMs = 620;                      // a ladder step is a small blow
       Game.save();
       setTimeout(()=>this.updateBars(),380);
       this.showExplain(ok, choice, st);
@@ -5307,6 +5308,10 @@ const Battle = {
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
       Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      // A bigger blow is a longer blow: a crit throws half again as many
+      // sparks, and a killing one drops into slow motion, which stretches the
+      // whole thing. revealScroll waits this out before moving the page.
+      this.settleMs = this.ehp<=0 ? 1750 : (crit ? 1150 : 820);
       Sfx.good(this.combo);                       // pitch climbs with the streak
       this.comboBeat();
       Bounty.bump('solve',1);
@@ -5320,6 +5325,7 @@ const Battle = {
       let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
+      this.settleMs = 820;
       Sfx.bad();
       this.missed++;
     }
@@ -5344,6 +5350,7 @@ const Battle = {
       this.lastSlam=Math.max(3, Math.round(raw - this.defStat()));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
+      this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
       setTimeout(()=>{
         if(this.over || this.token!==tok) return;
         Anim.strike('e', amt, true, 'SLAM');
@@ -5393,10 +5400,47 @@ const Battle = {
     Figure.render(st.figAnswer || (st===this.cur ? this.cur.figAnswer : null), document.getElementById('afig'));
     const btn=document.getElementById('contBtn');
     btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
-    e.scrollIntoView({behavior:'smooth',block:'nearest'});
+    this.revealScroll(e);
+  },
+
+  /* The blow lands on the canvas near the top of the screen; the explanation
+     opens below the choices, near the bottom. On a phone there is no room for
+     both — bringing the explanation up used to take the fight off screen
+     within a tenth of a second, which is the whole time the strike had to be
+     seen in. So they take turns: the page holds still while the blow plays
+     out, then glides down to the reading.
+
+     Where there is room for both, nothing waits. And if the player scrolls
+     themselves, that is them saying they would rather read now, so the queued
+     scroll is dropped rather than yanking the page out from under them. */
+  revealScroll(el){
+    this.clearReveal();
+    const tok=this.token;
+    const go=()=>{ this.clearReveal();
+                   if(this.token===tok && !this.over) el.scrollIntoView({behavior:'smooth',block:'nearest'}); };
+
+    const scene=document.getElementById('sceneWrap');
+    const s=scene && scene.getBoundingClientRect();
+    const drop=Math.max(0, el.getBoundingClientRect().bottom - window.innerHeight);
+    // Would getting the explanation on screen take the fight off it?
+    const hides = s && (s.bottom - drop) < s.height*0.55;
+    if(!hides || !Prefs.d.motion){ go(); return; }   // nothing to watch, or room for both
+
+    const cancel=()=>this.clearReveal();
+    // Deliberate gestures only — a plain scroll event also fires for our own
+    // smooth scrolling and for the page settling after the panel opens.
+    addEventListener('touchstart', cancel, {passive:true});
+    addEventListener('wheel', cancel, {passive:true});
+    this._revealOff=()=>{ removeEventListener('touchstart',cancel); removeEventListener('wheel',cancel); };
+    this._revealT=setTimeout(go, Math.min(1800, this.settleMs||820));
+  },
+  clearReveal(){
+    clearTimeout(this._revealT); this._revealT=0;
+    if(this._revealOff){ this._revealOff(); this._revealOff=null; }
   },
 
   afterTurn(){
+    this.clearReveal();
     if(this.over) return;                       // battle already resolved
     // Mid-ladder: advance to the next step without ending the turn.
     if(this.rite){
