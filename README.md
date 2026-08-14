@@ -169,8 +169,14 @@ is left in place as a backup rather than moved.
 **Losing** costs 15% of your gold and nothing else. You keep every item, level, and piece
 of gear. Death is a speed bump, not a wall.
 
-**Game feel.** Hits land with a freeze-frame, a camera punch and a screen flash; the
-killing blow adds slow-motion and a shower of coins. Health bars leave a white trail
+**Game feel.** A landed blow is four things arriving together and decaying at different
+rates, which is what reads as force: a slash crescent sweeping through the point of
+contact, a shockwave ring, sparks that streak along their own velocity and cool from white
+through gold to ember, and star glints that pop late so the moment keeps sparkling after
+the bang. A crit adds radiating rays; a killing blow adds slow-motion and a shower of
+coins. Colour says whose blow it was before the numbers land — gold when you strike, red
+when you are struck. All of it sits behind a freeze-frame, a camera punch and a screen
+flash. Health bars leave a white trail
 showing the wound you just took. The tone that plays on a correct answer climbs a semitone
 per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 / 5 / 8 /
 12 / 16 / 25 fire escalating callouts. Rewards roll up rather than appearing. Every one of

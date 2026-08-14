@@ -3623,11 +3623,12 @@ const Anim = {
   cam:{z:1, fx:400, fy:230},
   flash:0,
   floats:[], parts:[],
+  rings:[], arcs:[], rays:[],      // impact decoration, drawn over the sprites
   pending:null,
   reset(){
     this.pl=this.el=this.ph=this.eh=this.shake=0;
     this.hitstop=0; this.slow=1; this.flash=0; this.cam.z=1;
-    this.floats=[]; this.parts=[]; this.pending=null;
+    this.floats=[]; this.parts=[]; this.rings=[]; this.arcs=[]; this.rays=[]; this.pending=null;
   },
   // Punch the camera toward a point, then let it drift back.
   punch(x,y,z){ if(!Prefs.d.motion) return; this.cam.fx=x; this.cam.fy=y; this.cam.z=z; },
@@ -3640,6 +3641,70 @@ const Anim = {
       const a=Math.random()*Math.PI*2, sp=60+Math.random()*260;
       this.parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-70,life:.5+Math.random()*.5,col,r:2+Math.random()*4});
     }
+  },
+
+  /* ----------------------------- impact effects ---------------------------
+     A hit used to be a spray of round dots. It is now four things that arrive
+     together and decay at different rates, which is what reads as force: a
+     slash arc through the point of contact, a shockwave ring, sparks that
+     streak along their own velocity, and star glints that pop late so the
+     moment keeps sparkling after the bang.
+
+     Everything here is decoration. Under reduced motion the counts collapse
+     and the arc and trail are skipped entirely, leaving a hit that still
+     registers without anything flying about.                                */
+
+  // white-hot at birth, cooling through gold to ember as it dies
+  SPARK:['#ffffff','#fff6d5','#ffd166','#f2c14e','#ff8a3d'],
+  HURT :['#ffffff','#ffd7d7','#ff8b8b','#e5484d','#8e1f24'],
+  ramp(pal, t){ return pal[clamp(Math.floor((1-t)*pal.length),0,pal.length-1)]; },
+
+  CAP:260,                     // hard ceiling on live particles
+  room(){ return Math.max(0, this.CAP - this.parts.length); },
+
+  sparks(x,y,dir,n,hurt){
+    if(!Prefs.d.motion) n=Math.min(n,5);
+    n=Math.min(n, this.room());
+    for(let i=0;i<n;i++){
+      // biased along the direction of the blow, with a wide scatter
+      const a=(dir>0?0:Math.PI) + (Math.random()-.5)*2.5;
+      const sp=140+Math.random()*520;
+      this.parts.push({k:'spark', x, y, vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-120,
+        life:.32+Math.random()*.42, max:.74, hurt:!!hurt, w:1+Math.random()*2.2});
+    }
+  },
+  glints(x,y,n,hurt){
+    if(!Prefs.d.motion) n=Math.min(n,3);
+    n=Math.min(n, this.room());
+    for(let i=0;i<n;i++){
+      const a=Math.random()*Math.PI*2, d=8+Math.random()*70;
+      this.parts.push({k:'star', x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
+        vx:Math.cos(a)*22, vy:Math.sin(a)*22-30,
+        life:.55+Math.random()*.55, max:1.1, size:6+Math.random()*13,
+        rot:Math.random()*Math.PI, hurt:!!hurt, delay:Math.random()*.3});
+    }
+  },
+  ring(x,y,col,r0,r1,w){ this.rings.push({x,y,r:r0,r1,life:.42,max:.42,col,w}); },
+  arc(x,y,dir,len,col,w){
+    if(!Prefs.d.motion) return;
+    this.arcs.push({x,y,dir,len,col,w,life:.3,max:.3,tilt:(Math.random()-.5)*.4});
+  },
+
+  /** Everything that fires at the moment of contact. */
+  impact(x,y,dir,crit,kill,hurt){
+    const pal = hurt?this.HURT:this.SPARK;
+    // Colour is what tells you whose blow this was, before the numbers land.
+    this.arc(x,y,dir,(crit?118:88)*(kill?1.35:1), hurt?pal[2]:pal[1], crit?9:6);
+    this.ring(x,y,pal[2], crit?14:10, crit?150:104, crit?5:3.5);
+    if(kill) this.ring(x,y,'#ffffff',18,230,7);
+    this.sparks(x,y,dir, crit?34:20, hurt);
+    this.glints(x,y, crit?12:7, hurt);
+    if(crit) this.starburst(x,y,pal[1],kill?16:10);
+  },
+  // Radial rays, for a crit — the one moment worth shouting about.
+  starburst(x,y,col,n){
+    if(!Prefs.d.motion) return;
+    this.rays.push({x,y,col,n,life:.3,max:.3,rot:Math.random()*Math.PI});
   },
   // Gold coins arcing off a defeated foe.
   coins(x,y,n){
@@ -3679,9 +3744,9 @@ const Anim = {
       const prog = P.who==='p' ? Anim.pl : Anim.el;
       if(prog>=.42){
         P.fired=true;
-        const tx = P.who==='p' ? 560 : 250;
+        const tx = P.who==='p' ? 588 : 232;   // on the sprite, not short of it
         const slam = P.label==='SLAM';
-        Anim.burst(tx, H-190, P.crit?'#f2c14e':'#ffffff', P.crit?34:18);
+        Anim.impact(tx, H-190, P.who==='p'?1:-1, P.crit, P.kill, P.who!=='p');
         Anim.float(tx, H-230, (P.label?P.label+' ':(P.crit?'CRIT ':''))+'-'+P.dmg,
                    P.who==='p'?'#ffd166':'#ff8b8b', P.crit);
         Anim.shake = (P.crit?1.5:.9) * (Prefs.d.motion?1:.35);
@@ -3707,8 +3772,30 @@ const Anim = {
 
     // particles / floats
     Weather.step(dt);
-    Anim.parts.forEach(p=>{ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=620*dt; p.life-=dt; });
+    Anim.parts.forEach(p=>{
+      if(p.k==='star'){                       // glints drift and twinkle, they do not fall
+        if(p.delay>0){ p.delay-=dt; return; }
+        p.x+=p.vx*dt; p.y+=p.vy*dt; p.vx*=0.94; p.vy*=0.94; p.life-=dt; return;
+      }
+      p.x+=p.vx*dt; p.y+=p.vy*dt;
+      if(p.k==='spark'){ p.vy+=980*dt; p.vx*=0.965; p.vy*=0.965; }   // air drag on a spark
+      else p.vy+=620*dt;
+      p.life-=dt;
+    });
     Anim.parts=Anim.parts.filter(p=>p.life>0);
+    for(const r of Anim.rings){ r.life-=dt; r.r += (r.r1-r.r)*Math.min(1,dt*9); }
+    Anim.rings=Anim.rings.filter(r=>r.life>0);
+    for(const a of Anim.arcs) a.life-=dt;
+    Anim.arcs=Anim.arcs.filter(a=>a.life>0);
+    for(const r of Anim.rays) r.life-=dt;
+    Anim.rays=Anim.rays.filter(r=>r.life>0);
+
+    // Sparks off the blade while the lunge is still travelling, so the hit is
+    // led into rather than arriving from nowhere.
+    if(Prefs.d.motion && Anim.parts.length<220){
+      if(Anim.pl>.16 && Anim.pl<.5) Anim.sparks(300+Anim.pl*230, H-215, 1, 2, false);
+      if(Anim.el>.16 && Anim.el<.5) Anim.sparks(520-Anim.el*230, H-215, -1, 2, true);
+    }
     Anim.floats.forEach(f=>{ f.y-=52*dt; f.life-=dt; });
     Anim.floats=Anim.floats.filter(f=>f.life>0);
 
@@ -3738,8 +3825,91 @@ const Anim = {
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                               eLunge, Anim.eh, B.over==='win'));
     }
-    // particles
-    Anim.parts.forEach(p=>{ cx.globalAlpha=clamp(p.life,0,1); dot(p.x,p.y,p.r,p.col); });
+    // ---- impact decoration, over the sprites ----
+    cx.save();
+    cx.lineCap='round';
+    // shockwave rings
+    for(const r of Anim.rings){
+      const t=r.life/r.max;
+      cx.globalAlpha=t*t*0.85;
+      cx.strokeStyle=r.col; cx.lineWidth=r.w*t;
+      cx.beginPath(); cx.ellipse(r.x, r.y, r.r, r.r*0.62, 0, 0, 7); cx.stroke();
+    }
+    // The slash: a filled crescent that sweeps through the target. Drawn from
+    // a centre set back along the blow, so the bright edge crosses what was
+    // hit rather than ringing it — a stroked circle here read as a second
+    // shockwave, not as a blade.
+    for(const a of Anim.arcs){
+      const t=a.life/a.max, g=1-t;
+      // Centre sits almost a full radius back on the attacker's side, so the
+      // outer edge passes through the point of contact and the crescent reads
+      // as a blade crossing the target rather than a hoop around it.
+      const R=a.len*(1.22+g*0.45), Ri=R*(0.90-t*0.06);
+      const half=0.62*(0.5+t*0.5);
+      cx.save();
+      cx.translate(a.x - a.dir*R*0.94, a.y);
+      cx.rotate(a.tilt - a.dir*0.55 + (g-0.5)*0.55*a.dir);   // a diagonal swing
+      cx.scale(a.dir,1);
+      // fades out toward both tips, brightest through the middle of the sweep
+      const sp=R*Math.sin(half);
+      const grd=cx.createLinearGradient(0,-sp,0,sp);
+      grd.addColorStop(0,   'rgba(255,255,255,0)');
+      grd.addColorStop(0.5, a.col);
+      grd.addColorStop(1,   'rgba(255,255,255,0)');
+      cx.globalAlpha=Math.min(1,t*1.5); cx.fillStyle=grd;
+      cx.beginPath();
+      cx.arc(0,0,R,-half,half);
+      cx.arc(0,0,Ri,half,-half,true);
+      cx.closePath(); cx.fill();
+      // a hot leading edge along the outside of the sweep
+      cx.globalAlpha=Math.min(1,t*1.4); cx.strokeStyle='#ffffff'; cx.lineWidth=Math.max(1.5,a.w*0.7*t);
+      cx.beginPath(); cx.arc(0,0,R,-half,half); cx.stroke();
+      cx.restore();
+    }
+    // crit rays
+    for(const r of Anim.rays){
+      const t=r.life/r.max, g=1-t;
+      cx.globalAlpha=t*t*1.0; cx.strokeStyle=r.col; cx.lineWidth=5*t;
+      cx.save(); cx.translate(r.x,r.y); cx.rotate(r.rot);
+      for(let i=0;i<r.n;i++){
+        const a=i/r.n*Math.PI*2, i0=26+g*70, i1=i0+40+g*90;
+        cx.beginPath(); cx.moveTo(Math.cos(a)*i0,Math.sin(a)*i0*.7);
+        cx.lineTo(Math.cos(a)*i1,Math.sin(a)*i1*.7); cx.stroke();
+      }
+      cx.restore();
+    }
+    cx.restore();
+
+    // ---- particles ----
+    cx.save(); cx.lineCap='round';
+    Anim.parts.forEach(p=>{
+      const t=clamp(p.life/(p.max||1),0,1);
+      if(p.k==='spark'){
+        const col=Anim.ramp(p.hurt?Anim.HURT:Anim.SPARK, t);
+        cx.globalAlpha=Math.min(1,t*1.6);
+        cx.strokeStyle=col; cx.lineWidth=p.w*t;
+        cx.beginPath(); cx.moveTo(p.x,p.y);
+        cx.lineTo(p.x-p.vx*0.022, p.y-p.vy*0.022);   // a streak along its own path
+        cx.stroke();
+      } else if(p.k==='star'){
+        if(p.delay>0) return;
+        // pop out fast, linger, shrink away
+        const pop=Math.sin(Math.min(1,(1-t)*3.2)*Math.PI*0.5), sz=p.size*pop*(0.35+t*0.65);
+        const col=p.hurt?'#ffd7d7':'#fff6d5';
+        cx.globalAlpha=t;
+        glow(p.x,p.y,sz*2.4,col,.45*t);
+        cx.strokeStyle=col; cx.lineWidth=Math.max(1,sz*0.22);
+        cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot);
+        for(let i=0;i<2;i++){
+          cx.beginPath(); cx.moveTo(-sz,0); cx.lineTo(sz,0); cx.stroke();
+          cx.rotate(Math.PI/2);
+        }
+        cx.restore();
+      } else {
+        cx.globalAlpha=clamp(p.life,0,1); dot(p.x,p.y,p.r,p.col);
+      }
+    });
+    cx.restore();
     cx.globalAlpha=1;
     // floats
     Anim.floats.forEach(f=>{
