@@ -402,6 +402,35 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* Collapsible strand. At seventy topics the flat list was a wall of buttons;
    these headers keep every screen to one thumb-reach, and opening one closes
    the rest so the list never grows underneath your thumb. */
+/* ---- scratch pad ---- */
+/* Sits over the answers rather than beside them: at 320px there is no room for
+   both, and a calculator you have to scroll to is a calculator you do not use. */
+#calcBtn{position:fixed; right:10px; bottom:calc(12px + env(safe-area-inset-bottom));
+  z-index:52; width:52px; height:52px; border-radius:50%; font-size:23px; line-height:1;
+  border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45);
+  box-shadow:0 5px 14px rgba(0,0,0,.45); cursor:pointer}
+#calcBtn:active{transform:translateY(2px)}
+#calcPanel{position:fixed; inset:0; z-index:58; display:none; align-items:flex-end;
+  background:rgba(8,5,16,.55)}
+#calcPanel.on{display:flex}
+.calcbox{width:100%; padding:12px 12px calc(12px + env(safe-area-inset-bottom));
+  border-radius:16px 16px 0 0; background:var(--panel); border-top:1px solid var(--edge);
+  box-shadow:0 -12px 34px rgba(0,0,0,.5)}
+.calchead{display:flex; align-items:center; justify-content:space-between;
+  font-weight:800; font-size:13px; color:var(--gold); margin-bottom:6px}
+#calcEx{min-height:30px; text-align:right; font-size:22px; font-weight:800; letter-spacing:1px;
+  font-family:var(--serif); overflow-x:auto; white-space:nowrap}
+#calcRes{min-height:22px; text-align:right; font-size:16px; font-weight:800; color:var(--gold);
+  margin-bottom:8px; font-family:var(--serif)}
+#calcKeys{display:grid; grid-template-columns:repeat(4,1fr); gap:7px}
+#calcKeys button{min-height:46px; font-size:18px; font-weight:900; border-radius:11px;
+  border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink);
+  box-shadow:0 3px 0 #150e28; cursor:pointer}
+#calcKeys button:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28}
+#calcKeys button.eq{grid-column:span 3; background:linear-gradient(180deg,var(--gold),var(--gold2));
+  color:#241a05}
+#calcKeys button.clr{color:#ff9b9e}
+
 /* One bar, two jobs: "a new version is ready" and "install me so your saves
    survive". Both are interruptions, so both sit out of the way at the bottom
    and are dismissible. */
@@ -599,6 +628,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div id="codex"></div>
   <div id="codeBox"></div>
   <div id="updateBar"></div>
+  <button id="calcBtn" onclick="Calc.shown?Calc.close():Calc.open()" style="display:none"
+          aria-label="Scratch pad calculator">🧮</button>
+  <div id="calcPanel"></div>
 </div>
 
 <script>
@@ -2884,7 +2916,7 @@ const Game = {
 /* ------------------------------ preferences ------------------------------ */
 const PREF_KEY='eigenrealm.prefs';
 const Prefs = {
-  d:{sound:true, motion:true, haptics:true},
+  d:{sound:true, motion:true, haptics:true, calc:true},
   load(){
     let stored=null;
     try{ stored=localStorage.getItem(PREF_KEY); if(stored) Object.assign(this.d, JSON.parse(stored)); }catch(e){}
@@ -2892,7 +2924,9 @@ const Prefs = {
     if(!stored && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) this.d.motion=false;
   },
   save(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(this.d)); }catch(e){} },
-  toggle(k){ this.d[k]=!this.d[k]; this.save(); if(k==='sound'&&this.d.sound) Sfx.good(0); UI.renderPrefs(); }
+  toggle(k){ this.d[k]=!this.d[k]; this.save(); if(k==='sound'&&this.d.sound) Sfx.good(0);
+    if(k==='calc') Calc.syncButton();
+    UI.renderPrefs(); }
 };
 
 /* -------------------------------- haptics -------------------------------- */
@@ -5229,6 +5263,7 @@ const UI = {
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
+    Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
   back(){ const p=this.hist.pop()||'s-title'; this.go(p, true); },
@@ -5281,6 +5316,7 @@ const UI = {
         \${row('sound','🔊','Sound','Strikes, streak tones and fanfares')}
         \${row('motion','✨','Full motion','Screen shake, hit-stop, particles and slow-motion')}
         \${row('haptics','📳','Haptics','Vibration on hits, where the device supports it')}
+        \${row('calc','🧮','Scratch pad','A calculator during fights, for the arithmetic the question is not about')}
       </div>
       <div class="panel"><h2>🏅 Titles</h2>
         <div class="sub" style="margin-bottom:6px">\${Titles.count()} of \${TITLES.length} earned.</div>
@@ -5594,6 +5630,148 @@ const Train = {
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
   quit(){ this.renderPick(); }
+};
+
+/* ------------------------------- calculator ------------------------------- */
+/* A scratch pad for arithmetic. The game tests whether you know that ‖v‖ is
+   √(a² + b²) — not whether you can square 24 in your head — so this carries no
+   penalty and costs no combo. The Codex charges combo because it hands you the
+   method; this hands you nothing but a sum.
+
+   eval() is never used. The only characters this understands are the ones its
+   own keypad can produce, and anything it cannot parse simply shows no result. */
+const Calc = {
+  ex:'', shown:false,
+
+  tokens(s){
+    const t=[]; let i=0;
+    while(i<s.length){
+      const c=s[i];
+      if(/[0-9.]/.test(c)){
+        let j=i; while(j<s.length && /[0-9.]/.test(s[j])) j++;
+        const run=s.slice(i,j);
+        // parseFloat stops at the second dot, so "1..2" would quietly become 1.
+        // The whole run has to be a number, or this is not an expression.
+        if(!/^(\\d+(\\.\\d*)?|\\.\\d+)$/.test(run)) return null;
+        const v=parseFloat(run);
+        if(!isFinite(v)) return null;
+        t.push({k:'n', v}); i=j; continue;
+      }
+      if('+−×÷()²√'.indexOf(c)>=0){ t.push({k:c}); i++; continue; }
+      return null;
+    }
+    return t;
+  },
+
+  /** The value of an expression, or null when it is not (yet) a whole one. */
+  evaluate(str){
+    const t=this.tokens(str);
+    if(!t || !t.length) return null;
+    let p=0, bad=false;
+    const peek=()=>t[p];
+    const eat=k=>{ if(peek() && peek().k===k){ p++; return true; } return false; };
+
+    const atom=()=>{
+      const x=peek();
+      if(!x){ bad=true; return 0; }
+      if(x.k==='n'){ p++; return x.v; }
+      if(eat('(')){ const v=expr(); if(!eat(')')) bad=true; return v; }
+      bad=true; p++; return 0;
+    };
+    const power=()=>{ let v=atom(); while(eat('²')) v=v*v; return v; };
+    const unary=()=>{
+      if(eat('−')) return -unary();
+      if(eat('√')){ const v=unary(); if(v<0){ bad=true; return 0; } return Math.sqrt(v); }
+      return power();
+    };
+    const term=()=>{
+      let v=unary();
+      for(;;){
+        if(eat('×')) v*=unary();
+        else if(eat('÷')){ const d=unary(); if(d===0){ bad=true; return 0; } v/=d; }
+        // 2(3+4) and 2√9 read as products, the way they do on paper
+        else if(peek() && (peek().k==='(' || peek().k==='√')) v*=unary();
+        else break;
+      }
+      return v;
+    };
+    const expr=()=>{
+      let v=term();
+      for(;;){ if(eat('+')) v+=term(); else if(eat('−')) v-=term(); else break; }
+      return v;
+    };
+
+    const v=expr();
+    if(bad || p!==t.length || !isFinite(v)) return null;
+    return v;
+  },
+
+  fmt(v){
+    if(v===null) return '';
+    if(Number.isInteger(v) && Math.abs(v)<1e15) return String(v).replace('-','−');
+    return String(parseFloat(v.toPrecision(10))).replace('-','−');   // fits a phone
+  },
+
+  KEYS:[['x²','²'],['√','√'],['(','('],[')',')'],
+        ['7','7'],['8','8'],['9','9'],['÷','÷'],
+        ['4','4'],['5','5'],['6','6'],['×','×'],
+        ['1','1'],['2','2'],['3','3'],['−','−'],
+        ['C','C'],['0','0'],['.','.'],['+','+'],
+        ['⌫','⌫'],['=','=']],
+
+  /** Shown only where a scratch sum is plausibly wanted. */
+  relevant(){
+    const on=document.querySelector('.screen.on');
+    return !!on && (on.id==='s-battle' || on.id==='s-train');
+  },
+  syncButton(){
+    const b=document.getElementById('calcBtn');
+    if(!b) return;
+    b.style.display = (Prefs.d.calc!==false && this.relevant()) ? '' : 'none';
+    if(!this.relevant() && this.shown) this.close();
+  },
+
+  open(){
+    this.shown=true;
+    const el=document.getElementById('calcPanel');
+    el.innerHTML=\`<div class="calcbox">
+      <div class="calchead"><span>🧮 Scratch pad</span>
+        <span class="kbd" id="calcX">Close</span></div>
+      <div id="calcEx">&nbsp;</div>
+      <div id="calcRes">&nbsp;</div>
+      <div id="calcKeys">\${this.KEYS.map(([label,k])=>
+        \`<button data-k="\${k}"\${k==='='?' class="eq"':''}\${k==='C'?' class="clr"':''}>\${label}</button>\`).join('')}</div>
+    </div>\`;
+    el.classList.add('on');
+    document.getElementById('calcX').onclick=()=>this.close();
+    el.querySelectorAll('#calcKeys button').forEach(b=>{ b.onclick=()=>this.key(b.dataset.k); });
+    this.render();
+  },
+  close(){
+    this.shown=false;
+    const el=document.getElementById('calcPanel');
+    el.classList.remove('on'); el.innerHTML='';
+  },
+
+  key(k){
+    if(k==='C') this.ex='';
+    else if(k==='⌫') this.ex=this.ex.slice(0,-1);
+    else if(k==='='){
+      const v=this.evaluate(this.ex);
+      // Carry the result forward, so a running calculation can continue from it.
+      if(v!==null) this.ex=this.fmt(v).replace('−','-').replace('-','−');
+    }
+    else if(this.ex.length<40) this.ex+=k;
+    Haptic.tap();
+    this.render();
+  },
+  render(){
+    const e=document.getElementById('calcEx'), r=document.getElementById('calcRes');
+    if(!e) return;
+    e.textContent = this.ex || '\\u00a0';
+    const v=this.evaluate(this.ex);
+    r.innerHTML = v===null ? '&nbsp;' : '= '+this.fmt(v);
+  }
 };
 
 /* -------------------------------- keeping -------------------------------- */
