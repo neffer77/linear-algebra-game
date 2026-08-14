@@ -752,6 +752,111 @@ for (const [key, check] of Object.entries(ANALYSIS)) {
   }
 }
 
+/* ------------------------------------------------------------- knight codes */
+/* A knight code is the one thing this game emits that has to be readable by a
+   *different copy* of the game, possibly a different build of it. So the two
+   things that would silently corrupt one are pinned here.
+                                                                              */
+let codeNotes = null;
+(function checkCodes() {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b));
+  const out = {};
+  try {
+    new Function('exports',
+      script.slice(0, script.indexOf('/* ------------------------------ topic metadata')) +
+      cut('const TOPIC_LABEL', 'const STRANDS') +
+      cut('const B32 =', 'const Profiles = {') +
+      ';exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;')(out);
+  } catch (e) {
+    return fail('codes', 'load', `could not load the codec: ${e.message}`);
+  }
+  const { Codec, QR, TOPIC_LABEL } = out;
+
+  /* 1. The topic list is what the mastery half of a code is indexed by, and a
+        code carries a 16-bit fingerprint of it. Changing the list is allowed —
+        a code from before is then read with its topic history dropped and a
+        message saying so, which is the designed behaviour. But it should never
+        happen by accident, so the list is pinned. If this fails and the change
+        was deliberate, update the two numbers below. */
+  const PINNED = { count: 70, sig: 0x502a };
+  const keys = Object.keys(TOPIC_LABEL);
+  if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
+    fail('codes', 'topics',
+      `the topic list changed (${keys.length} topics, signature 0x${Codec.sig().toString(16)}; ` +
+      `pinned at ${PINNED.count} and 0x${PINNED.sig.toString(16)}). Knight codes already in the ` +
+      `wild will import without their topic history. If that is intended, update PINNED in tools/verify.js.`);
+  }
+
+  /* 2. base32 has to be exactly reversible, or a code is a coin toss.
+        Every length mod 5 leaves a different number of bits over into the last
+        character, and whether a mistake there is visible depends on the actual
+        bit values — an arithmetic pattern can walk straight past a real fault.
+        So each length is tried with many different byte patterns. */
+  let seed = 12345;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) >>> 8 & 255;
+  let b32Bad = 0;
+  for (let n = 0; n <= 40 && !b32Bad; n++) {
+    for (let trial = 0; trial < 60; trial++) {
+      const b = [];
+      for (let i = 0; i < n; i++) b.push(rnd());
+      if (JSON.stringify(Codec.unb32(Codec.b32(b))) !== JSON.stringify(b)) {
+        fail('codes', 'base32', `${n} bytes did not survive the round trip (${b.join(',')})`);
+        b32Bad = 1; break;
+      }
+    }
+  }
+  // all-zero and all-ones are the patterns an arithmetic sequence never reaches
+  for (const fillN of [1, 2, 3, 4, 6, 7, 9, 11]) for (const fill of [0, 255]) {
+    const b = new Array(fillN).fill(fill);
+    if (JSON.stringify(Codec.unb32(Codec.b32(b))) !== JSON.stringify(b))
+      fail('codes', 'base32', `${fillN} bytes of ${fill} did not survive the round trip`);
+  }
+  // and the separators a player might introduce by copying it out of an email
+  const sample = Codec.b32([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  if (JSON.stringify(Codec.unb32(sample.replace(/(.{4})/g, '$1 ').trim())) !==
+      JSON.stringify(Codec.unb32(sample)))
+    fail('codes', 'base32', 'spaces inside a code changed what it decoded to');
+
+  /* 3. The QR encoder was checked module-for-module against an independent
+        implementation across versions 1–25, at every mask. That cannot run
+        here without a dependency, so the symbols it produced are pinned by
+        hash instead: these detect a regression, having already been shown
+        correct once. */
+  const fnv = m => {
+    let x = 0x811c9dc5;
+    for (let i = 0; i < m.length; i++) { x ^= m[i]; x = (x + ((x << 1) + (x << 4) + (x << 7) + (x << 8) + (x << 24))) >>> 0; }
+    return x >>> 0;
+  };
+  const URL_PREFIX = 'https://neffer77.github.io/linear-algebra-game/#k=';
+  const B32RUN = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const GOLDEN = [
+    { nm: 'alnum, one block', segs: [{ mode: 'alnum', text: 'HELLO WORLD' }], v: 1, mask: 7, h: 0x5395e5a1 },
+    { nm: 'a short code', segs: [{ mode: 'alnum', text: 'KE1-' + B32RUN.repeat(8) }], v: 8, mask: 4, h: 0x8ebc5191 },
+    { nm: 'digits, two groups', segs: [{ mode: 'alnum', text: '0123456789'.repeat(40) }], v: 11, mask: 0, h: 0xa090a2f5 },
+    { nm: 'a carry link', segs: [{ mode: 'byte', data: Codec.utf8(URL_PREFIX) },
+                                 { mode: 'alnum', text: 'KE1-' + B32RUN.repeat(25) }], v: 17, mask: 1, h: 0x668572e6 }
+  ];
+  for (const g of GOLDEN) {
+    const r = QR.matrix(g.segs);
+    if (!r) { fail('codes', 'qr', `${g.nm}: did not fit in any version`); continue; }
+    if (r.v !== g.v || r.mask !== g.mask || fnv(r.m) !== g.h)
+      fail('codes', 'qr', `${g.nm}: got version ${r.v} mask ${r.mask} hash 0x${fnv(r.m).toString(16)}, ` +
+                          `expected version ${g.v} mask ${g.mask} hash 0x${g.h.toString(16)}`);
+    if (r.size !== 17 + 4 * r.v) fail('codes', 'qr', `${g.nm}: size ${r.size} does not match version ${r.v}`);
+  }
+
+  /* 4. A carry link at the size a maxed-out save reaches must still fit, with
+        room to spare, in a symbol a phone camera can read off a screen. */
+  const big = QR.matrix([{ mode: 'byte', data: Codec.utf8(URL_PREFIX) },
+                         { mode: 'alnum', text: 'KE1-' + B32RUN.repeat(32) }]);   // 1024 chars
+  if (!big) fail('codes', 'qr', 'a 1024-character code does not fit in any supported version');
+  else if (big.v > 20) fail('codes', 'qr', `a 1024-character code needs version ${big.v}, which is too dense to scan`);
+
+  codeNotes = { topics: keys.length, sig: Codec.sig(), worst: big && big.size };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -781,6 +886,10 @@ if (seenComplexity.size) {
 if (figKeys.size) {
   console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
   console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);
+}
+if (codeNotes) {
+  console.log(`  knight codes: topics       ${pad(codeNotes.topics, 10)}  (signature 0x${codeNotes.sig.toString(16)})`);
+  console.log(`    QR symbols pinned                      (worst case ${codeNotes.worst}×${codeNotes.worst} modules)`);
 }
 console.log('─'.repeat(58));
 

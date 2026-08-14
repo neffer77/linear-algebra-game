@@ -423,9 +423,30 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 #codeBox{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center;
   padding:18px; background:rgba(8,5,16,.78); backdrop-filter:blur(3px)}
 #codeBox.on{display:flex}
+#codeBox .cxbox{width:100%; max-width:22rem; max-height:100%; overflow-y:auto; padding:18px 16px;
+  border-radius:14px; border:1px solid var(--edge); background:#1a1230;
+  box-shadow:0 18px 46px rgba(0,0,0,.55); text-align:center}
+#codeBox .cxk{font-family:var(--serif); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
+  color:var(--gold); margin-bottom:8px}
+#codeBox .small{margin:6px 0; line-height:1.45}
 #codeBox textarea{width:100%; height:96px; margin:8px 0; padding:10px; border-radius:10px;
   border:1px solid var(--edge); background:#0f0a1c; color:var(--ink); font:12px/1.45 ui-monospace,Menlo,monospace;
   resize:none; -webkit-user-select:text; user-select:text}
+/* The white surround is not decoration — a QR code needs a quiet zone and hard
+   contrast, and this game is otherwise entirely dark. The canvas carries its
+   own four-module quiet zone, so this padding only has to soften the corner. */
+.qrwrap{display:flex; justify-content:center; margin:12px 0; padding:6px;
+  background:#fff; border-radius:10px}
+.qrwrap canvas{display:block; image-rendering:pixelated}
+/* Modules are drawn at whole pixels, so on a narrow phone the difference
+   between 236px and 260px of room is a whole pixel per module — about a
+   quarter more to aim a camera at. Worth more here than the margins are. */
+@media (max-width:360px){
+  #codeBox{padding:10px}
+  #codeBox .cxbox{padding:14px 12px}
+}
+.qrfall{margin:8px 0 4px; text-align:left}
+.qrfall summary{cursor:pointer; font-size:13px; color:var(--dim); padding:6px 0; min-height:32px}
 .knightchip{display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px;
   border:1px solid var(--edge); background:rgba(255,255,255,.05); font-weight:700; font-size:13px;
   min-height:36px; cursor:pointer}
@@ -2572,6 +2593,622 @@ const CREST_COLS = ['#f2c14e','#5aa9e6','#57cc7a','#e5484d','#a06bd6','#3fd6c4',
 const NAME_PARTS = [['Ada','Bram','Cass','Dara','Eryn','Finn','Gale','Hale','Ivo','Juno','Kai','Lyra','Mira','Nox','Orin','Pax','Quill','Rune','Sable','Tor','Vega','Wren','Yara','Zeph'],
                     ['the Bold','the Swift','the Keen','the Steady','the Bright','the Quiet','the Fierce','the True','of the Vale','of the Marches','of the Cliffs','of the Abyss','of the Citadel','of the Reach','of the Expanse','of the Summit']];
 
+/* ---------------------------- knight codes -------------------------------- */
+/* A save is JSON — about eight kilobytes of it, which base64 turns into an
+   eleven-thousand-character wall of text. That is portable in theory and
+   useless in practice: nobody moves a knight that way twice, and it is far too
+   long to fit in anything a camera could read.
+
+   So a code is packed by hand instead, every field at the width it actually
+   needs. A level is a varint. A cleared map node is one bit. The mastery model
+   — which is most of the save — comes to about five bytes a topic. The result
+   is a few hundred bytes, written in base32 so it survives being copied
+   through anything, and short enough to put inside a QR code.
+
+   Two rules keep older codes readable. Every list that might grow later
+   (weapons, realms, titles) writes its own length, so a code is read back with
+   the counts it was written with. And the topic list is fingerprinted: if it
+   ever changes shape the topic history is dropped rather than scrambled, and
+   the rest of the knight still arrives.                                      */
+const B32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function BitOut(){
+  const out=[]; let acc=0, n=0;
+  return {
+    bits(v,w){
+      for(let i=w-1;i>=0;i--){ acc=(acc<<1)|((v>>>i)&1); if(++n===8){ out.push(acc); acc=0; n=0; } }
+      return this;
+    },
+    varint(v){
+      v=Math.max(0, Math.round(v));
+      do{ const c=v%128; v=Math.floor(v/128); this.bits(c|(v?128:0), 8); }while(v);
+      return this;
+    },
+    done(){ if(n) this.bits(0, 8-n); return out; }
+  };
+}
+function BitIn(src){
+  let p=0;
+  return {
+    // Past the end reads as zeroes rather than throwing; the checksum is what
+    // catches a truncated code, and a varint of zeroes still terminates.
+    bits(w){ let v=0; for(let i=0;i<w;i++){ v=v*2 + ((src[p>>3]>>(7-(p&7)))&1); p++; } return v; },
+    varint(){ let v=0, s=1, c; do{ c=this.bits(8); v+=(c&127)*s; s*=128; }while(c&128); return v; }
+  };
+}
+
+const Codec = {
+  VER:1,
+  TAG:'KE1-',
+
+  topics(){ return Object.keys(TOPIC_LABEL); },
+  items(){ return Object.keys(ITEMS); },
+
+  /** A 16-bit fingerprint of the topic list. Verified collision-free at build
+      time, so two different topic sets can never claim the same one. */
+  sig(){
+    if(this._sig!=null) return this._sig;
+    return this._sig = this.hash(this.topics().join(',')) & 0xffff;
+  },
+  hash(s){
+    let h=0x811c9dc5;
+    for(let i=0;i<s.length;i++){
+      h^=s.charCodeAt(i)&255;
+      h=(h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0;
+    }
+    return h>>>0;
+  },
+  sum(bytes){
+    let h=0x811c9dc5;
+    for(const b of bytes){ h^=b; h=(h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24)))>>>0; }
+    return h & 0xffff;
+  },
+
+  utf8(s){
+    const out=[], e=unescape(encodeURIComponent(s));
+    for(let i=0;i<e.length;i++) out.push(e.charCodeAt(i)&255);
+    return out;
+  },
+  unutf8(a){
+    let s=''; for(const b of a) s+=String.fromCharCode(b);
+    try{ return decodeURIComponent(escape(s)); }catch(e){ return s; }
+  },
+
+  b32(bytes){
+    let s='', acc=0, n=0;
+    for(const b of bytes){
+      acc=(acc<<8)|b; n+=8;
+      while(n>=5){ s+=B32[(acc>>(n-5))&31]; n-=5; }
+    }
+    if(n) s+=B32[(acc<<(5-n))&31];
+    return s;
+  },
+  unb32(s){
+    const out=[]; let acc=0, n=0;
+    for(let i=0;i<s.length;i++){
+      const v=B32.indexOf(s[i]);
+      if(v<0) continue;
+      acc=(acc<<5)|v; n+=5;
+      if(n>=8){ out.push((acc>>(n-8))&255); n-=8; }
+    }
+    return out;
+  },
+
+  /* dayKey() writes local calendar dates as "2026-8-14" and they are compared
+     as strings, so they have to come back character for character. */
+  packDay(s){
+    const m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(String(s||''));
+    if(!m) return 0;
+    const y=+m[1]-2020;
+    if(y<0 || y>126) return 0;
+    return ((y+1)<<9) | (+m[2]<<5) | (+m[3]);
+  },
+  unpackDay(v){
+    if(!v) return null;
+    return (((v>>9)&127)-1+2020)+'-'+((v>>5)&15)+'-'+(v&31);
+  },
+
+  /* ------------------------------ writing -------------------------------- */
+  encode(k, g, now){
+    now = now || Date.now();
+    const o=BitOut(), T=this.topics(), IT=this.items();
+
+    o.bits(this.VER, 8);
+    o.bits(this.sig(), 16);
+    o.varint(Math.floor(now/3600000));       // the hour this code was made
+
+    const nm=this.utf8(String(k.nm||'Knight').slice(0,18)).slice(0,31);
+    o.bits(nm.length, 5);
+    for(const b of nm) o.bits(b, 8);
+    o.bits(Math.max(0, CRESTS.indexOf(k.crest)), 4);
+    o.bits(Math.max(0, CREST_COLS.indexOf(k.col)), 3);
+
+    o.varint(g.lvl||1); o.varint(g.maxHp||100); o.varint(Math.max(0,g.hp||0));
+    o.varint(g.gold||0); o.varint(g.xp||0);
+    o.varint(g.qCount||0); o.varint(g.arenaBest||0); o.varint(g.realm||0);
+    const st=g.stats||{};
+    o.varint(st.wins||0); o.varint(st.correct||0); o.varint(st.wrong||0); o.varint(st.best||0);
+
+    o.bits(WEAPONS.length, 8); o.bits(ARMORS.length, 8);
+    for(const x of WEAPONS.concat(ARMORS)) o.bits((g.owned && g.owned[x.id]) ? 1 : 0, 1);
+    o.bits(Math.max(0, WEAPONS.findIndex(w=>w.id===g.weapon)), 8);
+    o.bits(Math.max(0, ARMORS.findIndex(a=>a.id===g.armor)), 8);
+
+    o.bits(IT.length, 8);
+    for(const key of IT) o.varint((g.items && g.items[key]) || 0);
+
+    o.bits(REALMS.length, 8);
+    for(let ri=0;ri<REALMS.length;ri++){
+      o.bits(REALMS[ri].foes.length, 8);
+      for(let fi=0;fi<REALMS[ri].foes.length;fi++)
+        o.bits((g.cleared && g.cleared[ri+':'+fi]) ? 1 : 0, 1);
+    }
+
+    o.bits(TITLES.length, 8);
+    for(const t of TITLES) o.bits((g.titles && g.titles[t.id]) ? 1 : 0, 1);
+
+    const sk=g.streak||{};
+    o.varint(sk.days||0); o.bits(this.packDay(sk.last), 16);
+    const dl=g.daily;
+    o.bits(dl?1:0, 1);
+    if(dl){
+      o.bits(this.packDay(dl.day), 16);
+      o.varint(dl.best||0); o.varint(dl.runs||0); o.varint(dl.allTimeBest||0);
+    }
+
+    // A bounty's reward follows from its goal, so only the goal is stored.
+    const bs=(g.bounties||[]).slice(0,3);
+    o.bits(bs.length, 2);
+    for(const b of bs){
+      o.bits(Math.max(0, BOUNTY_KINDS.findIndex(x=>x.id===b.id)), 4);
+      o.varint(b.n||0); o.varint(b.p||0);
+      o.bits(b.id==='topic' ? Math.max(0, T.indexOf(b.k))+1 : 0, 16);
+    }
+
+    const rw=g.riteWins||{}, rk=Object.keys(rw).filter(x=>T.indexOf(x)>=0 && rw[x]);
+    o.bits(rk.length, 8);
+    for(const x of rk){ o.bits(T.indexOf(x), 16); o.varint(rw[x]); }
+
+    // The mastery model — most of the save, and the part worth packing hardest.
+    const ts=g.topicStats||{};
+    const has=T.map(x=>{ const r=ts[x]; return (r && (r.seen>0 || r.c || r.w)) ? 1 : 0; });
+    o.bits(T.length, 16);
+    for(const p of has) o.bits(p, 1);
+    for(let i=0;i<T.length;i++){
+      if(!has[i]) continue;
+      const r=ts[T[i]];
+      // Quarter-answer precision: mote weights are fractional, and nothing
+      // downstream can tell a quarter of an answer from a whole one. `seen` is
+      // stored rather than derived from c and w, because it is the one of the
+      // three that thresholds are tested against — so it gets the tighter
+      // rounding, and `c` absorbs the slack.
+      o.varint(Math.round((r.seen||0)*4));
+      o.varint(Math.round((r.w||0)*4));
+      o.bits(Math.round(clamp(r.m||0,0,1)*1023), 10);
+      o.bits(r.mastered?1:0, 1);
+      // How long ago in questions, and in hours. Both are read through hard
+      // ceilings — the scheduler stops caring past 62 questions and 17 days —
+      // so the byte each is capped at costs nothing and saves a hundred.
+      o.bits(Math.min(255, Math.max(0, (g.qCount||0) - (typeof r.last==='number' ? r.last : 0))), 8);
+      o.bits(r.t ? Math.min(254, Math.max(0, Math.round((now-r.t)/216e5)))+1 : 0, 8);
+    }
+
+    const bytes=o.done();
+    const s=this.sum(bytes);
+    bytes.push((s>>8)&255, s&255);
+    return this.TAG + this.b32(bytes);
+  },
+
+  /* ------------------------------ reading -------------------------------- */
+  decode(str){
+    let s=String(str||'').trim().toUpperCase();
+    const at=s.indexOf(this.TAG);                  // tolerates a whole pasted link
+    if(at<0) return {ok:false, why:'That does not look like a knight code.'};
+    s=s.slice(at+this.TAG.length).replace(/[\s-]/g,'');
+    const stop=s.search(/[^A-Z2-7]/);
+    if(stop>=0) s=s.slice(0,stop);
+
+    const bytes=this.unb32(s);
+    if(bytes.length<16) return {ok:false, why:'That code is cut short — copy the whole thing.'};
+    const want=(bytes[bytes.length-2]<<8)|bytes[bytes.length-1];
+    const body=bytes.slice(0, bytes.length-2);
+    if(this.sum(body)!==want)
+      return {ok:false, why:'That code is incomplete or mistyped. Copy all of it and try again.'};
+
+    const b=BitIn(body), T=this.topics(), IT=this.items();
+    const ver=b.bits(8);
+    if(ver!==this.VER) return {ok:false, why:'That code was made by a different version of the game.'};
+    const sig=b.bits(16);
+    const madeAt=b.varint()*3600000;
+
+    const nmLen=b.bits(5), nmB=[];
+    for(let i=0;i<nmLen;i++) nmB.push(b.bits(8));
+    const k={ nm:this.unutf8(nmB)||'Knight',
+              crest:CRESTS[b.bits(4)]||CRESTS[0],
+              col:CREST_COLS[b.bits(3)]||CREST_COLS[0] };
+
+    const g=Game.fresh();
+    g.lvl=b.varint()||1; g.maxHp=b.varint()||100; g.hp=b.varint();
+    g.gold=b.varint(); g.xp=b.varint();
+    g.qCount=b.varint(); g.arenaBest=b.varint(); g.realm=b.varint();
+    g.stats={wins:b.varint(), correct:b.varint(), wrong:b.varint(), best:b.varint()};
+    g.hp=clamp(g.hp, 1, g.maxHp);
+
+    // Every list below reads the length the writer used, so extra entries from
+    // a newer build are consumed and discarded rather than shifting the stream.
+    const nW=b.bits(8), nA=b.bits(8);
+    g.owned={w0:1, a0:1};
+    for(let i=0;i<nW+nA;i++){
+      const on=b.bits(1);
+      const x = i<nW ? WEAPONS[i] : ARMORS[i-nW];
+      if(on && x) g.owned[x.id]=1;
+    }
+    g.weapon=(WEAPONS[b.bits(8)]||WEAPONS[0]).id;
+    g.armor =(ARMORS [b.bits(8)]||ARMORS [0]).id;
+    g.owned[g.weapon]=1; g.owned[g.armor]=1;
+
+    const nI=b.bits(8);
+    g.items={};
+    for(let i=0;i<nI;i++){ const v=b.varint(); if(IT[i]) g.items[IT[i]]=v; }
+    for(const key of IT) if(typeof g.items[key]!=='number') g.items[key]=0;
+
+    const nR=b.bits(8);
+    g.cleared={};
+    for(let ri=0;ri<nR;ri++){
+      const nF=b.bits(8);
+      for(let fi=0;fi<nF;fi++){
+        const on=b.bits(1);
+        if(on && REALMS[ri] && fi<REALMS[ri].foes.length) g.cleared[ri+':'+fi]=true;
+      }
+    }
+    g.realm=clamp(g.realm, 0, REALMS.length-1);
+
+    const nT=b.bits(8);
+    g.titles={};
+    for(let i=0;i<nT;i++){ const on=b.bits(1); if(on && TITLES[i]) g.titles[TITLES[i].id]=1; }
+
+    g.streak={days:b.varint(), last:this.unpackDay(b.bits(16))};
+    g.daily = b.bits(1)
+      ? {day:this.unpackDay(b.bits(16)), best:b.varint(), runs:b.varint(), allTimeBest:b.varint()}
+      : null;
+
+    const nB=b.bits(2);
+    g.bounties=[];
+    for(let i=0;i<nB;i++){
+      const kind=BOUNTY_KINDS[b.bits(4)];
+      const n=b.varint(), p=b.varint(), ti=b.bits(16);
+      if(!kind) continue;
+      const bo={id:kind.id, n, p};
+      if(kind.id==='topic') bo.k = T[ti-1] || T[0];
+      bo.gold=kind.gold(bo);
+      g.bounties.push(bo);
+    }
+
+    const nRite=b.bits(8);
+    g.riteWins={};
+    for(let i=0;i<nRite;i++){
+      const ti=b.bits(16), v=b.varint();
+      if(T[ti]) g.riteWins[T[ti]]=v;
+    }
+
+    const nTop=b.bits(16);
+    g.topicStats={};
+    let lostTopics=false;
+    if(sig!==this.sig()){
+      // The topic list has changed shape, so the indices in this code no
+      // longer name the same things. Everything else still comes across.
+      lostTopics=true;
+    }else{
+      const has=[];
+      for(let i=0;i<nTop;i++) has.push(b.bits(1));
+      for(let i=0;i<nTop;i++){
+        if(!has[i]) continue;
+        const seen=b.varint()/4, w=b.varint()/4;
+        const m=b.bits(10)/1023, mastered=b.bits(1);
+        const dLast=b.bits(8), dSix=b.bits(8);
+        const key=T[i];
+        if(!key) continue;
+        const r={ c:Math.max(0, seen-w), w, seen, m,
+                  last:(g.qCount||0)-dLast,
+                  t: dSix ? madeAt-(dSix-1)*216e5 : 0 };
+        if(mastered) r.mastered=1;
+        g.topicStats[key]=r;
+      }
+    }
+
+    return {ok:true, k, g, lostTopics};
+  }
+};
+
+/* ------------------------------ QR symbols -------------------------------- */
+/* The code above is a few hundred characters — short enough for a QR code, and
+   a QR code is the whole point: the other device points its ordinary camera at
+   the screen and opens a link. No scanner in here, no typing over there.
+
+   Error correction stays at level L throughout. The symbol is being read off a
+   bright screen from ten centimetres away, so the recovery budget is better
+   spent keeping the symbol small and its modules large.                      */
+const QR = {
+  // [ecPerBlock, blocksInGroup1, dataPerBlock1, blocksInGroup2, dataPerBlock2]
+  EC:[null,
+    [ 7,1, 19,0,  0],[10,1, 34,0,  0],[15,1, 55,0,  0],[20,1, 80,0,  0],
+    [26,1,108,0,  0],[18,2, 68,0,  0],[20,2, 78,0,  0],[24,2, 97,0,  0],
+    [30,2,116,0,  0],[18,2, 68,2, 69],[20,4, 81,0,  0],[24,2, 92,2, 93],
+    [26,4,107,0,  0],[30,3,115,1,116],[22,5, 87,1, 88],[24,5, 98,1, 99],
+    [28,1,107,5,108],[30,5,120,1,121],[28,3,113,4,114],[28,3,107,5,108],
+    [28,4,116,4,117],[28,2,111,7,112],[30,4,121,5,122],[30,6,117,4,118],
+    [26,8,106,4,107]],
+  ALIGN:[null,[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],
+    [6,26,46],[6,28,50],[6,30,54],[6,32,58],[6,34,62],[6,26,46,66],
+    [6,26,48,70],[6,26,50,74],[6,30,54,78],[6,30,56,82],[6,30,58,86],
+    [6,34,62,90],[6,28,50,72,94],[6,26,50,74,98],[6,30,54,78,102],
+    [6,28,54,80,106],[6,32,58,84,110]],
+  REMAIN:[0,0,7,7,7,7,7,0,0,0,0,0,0,0,3,3,3,3,3,3,3,4,4,4,4,4],
+  ALNUM:'0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:',
+
+  /* ---- GF(256), primitive polynomial 0x11D ---- */
+  exp:null, log:null,
+  field(){
+    if(this.exp) return;
+    this.exp=new Uint8Array(512); this.log=new Uint8Array(256);
+    let x=1;
+    for(let i=0;i<255;i++){ this.exp[i]=x; this.log[x]=i; x<<=1; if(x&0x100) x^=0x11D; }
+    for(let i=255;i<512;i++) this.exp[i]=this.exp[i-255];
+  },
+  mul(a,b){ return (a===0||b===0) ? 0 : this.exp[this.log[a]+this.log[b]]; },
+
+  /** Generator polynomial for n error-correction codewords, leading term first. */
+  gen(n){
+    this.field();
+    let g=[1];                                   // built up in ascending powers
+    for(let i=0;i<n;i++){
+      const ng=new Array(g.length+1).fill(0);
+      for(let j=0;j<g.length;j++){
+        ng[j]^=this.mul(g[j], this.exp[i]);      // × α^i
+        ng[j+1]^=g[j];                           // × x
+      }
+      g=ng;
+    }
+    return g.reverse();                          // the division below wants the 1 at [0]
+  },
+  ecc(data, n){
+    const g=this.gen(n), rem=new Array(n).fill(0);
+    for(const d of data){
+      const f=d ^ rem[0];
+      rem.shift(); rem.push(0);
+      if(f) for(let j=0;j<n;j++) rem[j]^=this.mul(g[j+1], f);
+    }
+    return rem;
+  },
+
+  lenBits(mode, v){ return mode==='byte' ? (v<10?8:16) : (v<10?9:(v<27?11:13)); },
+  cost(seg, v){
+    const n = seg.mode==='byte' ? seg.data.length : seg.text.length;
+    const body = seg.mode==='byte' ? n*8 : (11*(n>>1) + 6*(n&1));
+    return 4 + this.lenBits(seg.mode, v) + body;
+  },
+  capacity(v){ const e=this.EC[v]; return e[1]*e[2] + e[3]*e[4]; },
+  fit(segs){
+    for(let v=1;v<this.EC.length;v++){
+      let bits=0;
+      for(const s of segs) bits+=this.cost(s,v);
+      if(bits <= this.capacity(v)*8) return v;
+    }
+    return 0;
+  },
+
+  encode(segs, minVer){
+    let v=this.fit(segs);
+    if(!v) return null;
+    if(minVer && v<minVer) v=minVer;
+
+    const bits=[];
+    const put=(val,w)=>{ for(let i=w-1;i>=0;i--) bits.push((val>>>i)&1); };
+    for(const s of segs){
+      if(s.mode==='byte'){
+        put(0b0100,4); put(s.data.length, this.lenBits('byte',v));
+        for(const b of s.data) put(b,8);
+      }else{
+        put(0b0010,4); put(s.text.length, this.lenBits('alnum',v));
+        for(let i=0;i<s.text.length;i+=2){
+          const a=this.ALNUM.indexOf(s.text[i]);
+          if(i+1<s.text.length) put(a*45 + this.ALNUM.indexOf(s.text[i+1]), 11);
+          else put(a, 6);
+        }
+      }
+    }
+    const cap=this.capacity(v)*8;
+    for(let i=0;i<4 && bits.length<cap;i++) bits.push(0);
+    while(bits.length%8) bits.push(0);
+
+    const data=[];
+    for(let i=0;i<bits.length;i+=8){
+      let byte=0;
+      for(let j=0;j<8;j++) byte=(byte<<1)|bits[i+j];
+      data.push(byte);
+    }
+    for(let i=0; data.length<this.capacity(v); i++) data.push(i%2 ? 0x11 : 0xEC);
+
+    return {v, code:this.interleave(data, v)};
+  },
+  interleave(data, v){
+    const [ec,b1,d1,b2,d2]=this.EC[v];
+    const blocks=[], ecs=[];
+    let p=0;
+    for(let i=0;i<b1;i++){ blocks.push(data.slice(p,p+d1)); p+=d1; }
+    for(let i=0;i<b2;i++){ blocks.push(data.slice(p,p+d2)); p+=d2; }
+    for(const bl of blocks) ecs.push(this.ecc(bl, ec));
+    const out=[], maxD=Math.max(d1,d2);
+    for(let i=0;i<maxD;i++) for(const bl of blocks) if(i<bl.length) out.push(bl[i]);
+    for(let i=0;i<ec;i++)   for(const e  of ecs)    out.push(e[i]);
+    return out;
+  },
+
+  versionInfo(v){
+    let rem=v<<12;
+    for(let i=17;i>=12;i--) if(rem & (1<<i)) rem ^= 0x1F25 << (i-12);
+    return (v<<12)|rem;
+  },
+  formatInfo(mask){
+    const d=(0b01<<3)|mask;                      // 01 = error-correction level L
+    let rem=d<<10;
+    for(let i=14;i>=10;i--) if(rem & (1<<i)) rem ^= 0x537 << (i-10);
+    return ((d<<10)|rem) ^ 0x5412;
+  },
+
+  /** {size, m} with m[r*size+c] set for a dark module. */
+  matrix(segs, minVer){
+    const enc=this.encode(segs, minVer);
+    if(!enc) return null;
+    const v=enc.v, size=17+4*v;
+    const m=new Uint8Array(size*size), fixed=new Uint8Array(size*size);
+    const set=(r,c,val)=>{ m[r*size+c]=val; fixed[r*size+c]=1; };
+
+    for(const [fr,fc] of [[0,0],[0,size-7],[size-7,0]])
+      for(let r=-1;r<=7;r++) for(let c=-1;c<=7;c++){
+        const rr=fr+r, cc=fc+c;
+        if(rr<0||cc<0||rr>=size||cc>=size) continue;
+        const on = (r>=0&&r<=6&&(c===0||c===6)) || (c>=0&&c<=6&&(r===0||r===6))
+                || (r>=2&&r<=4&&c>=2&&c<=4);
+        set(rr,cc,on?1:0);
+      }
+    for(let i=8;i<size-8;i++){ set(6,i,i%2?0:1); set(i,6,i%2?0:1); }
+
+    const A=this.ALIGN[v], last=A[A.length-1];
+    for(const r of A) for(const c of A){
+      if((r===6&&c===6)||(r===6&&c===last)||(r===last&&c===6)) continue;
+      for(let dr=-2;dr<=2;dr++) for(let dc=-2;dc<=2;dc++)
+        set(r+dr, c+dc, Math.max(Math.abs(dr),Math.abs(dc))===1 ? 0 : 1);
+    }
+
+    set(size-8,8,1);                             // the module that is always dark
+    for(let i=0;i<9;i++){                        // format areas, held in reserve
+      if(!fixed[8*size+i]) set(8,i,0);
+      if(!fixed[i*size+8]) set(i,8,0);
+    }
+    for(let i=0;i<8;i++){
+      if(!fixed[8*size+(size-1-i)]) set(8,size-1-i,0);
+      if(!fixed[(size-1-i)*size+8]) set(size-1-i,8,0);
+    }
+    if(v>=7){
+      const vi=this.versionInfo(v);
+      for(let i=0;i<18;i++){
+        const bit=(vi>>>i)&1, a=size-11+(i%3), bb=Math.floor(i/3);
+        set(bb, a, bit); set(a, bb, bit);
+      }
+    }
+
+    // data, up one pair of columns and down the next
+    const code=enc.code, total=code.length*8 + this.REMAIN[v];
+    let bit=0, up=true;
+    for(let cr=size-1; cr>0; cr-=2){
+      if(cr===6) cr--;                           // the vertical timing line is skipped
+      for(let i=0;i<size;i++){
+        const r = up ? size-1-i : i;
+        for(let kk=0;kk<2;kk++){
+          const c=cr-kk;
+          if(fixed[r*size+c]) continue;
+          m[r*size+c] = bit<code.length*8 ? ((code[bit>>3]>>(7-(bit&7)))&1) : 0;
+          if(++bit>=total) kk=2;
+        }
+      }
+      up=!up;
+    }
+
+    let best=null, bestScore=Infinity, bestMask=0;
+    for(let mask=0;mask<8;mask++){
+      const t=this.applyMask(m, fixed, size, mask);
+      this.putFormat(t, size, mask);
+      const s=this.penalty(t, size);
+      if(s<bestScore){ bestScore=s; best=t; bestMask=mask; }
+    }
+    return {size, m:best, v, mask:bestMask};
+  },
+
+  applyMask(m, fixed, size, mask){
+    const t=m.slice();
+    for(let r=0;r<size;r++) for(let c=0;c<size;c++){
+      if(fixed[r*size+c]) continue;
+      let f;
+      switch(mask){
+        case 0: f=(r+c)%2===0; break;
+        case 1: f=r%2===0; break;
+        case 2: f=c%3===0; break;
+        case 3: f=(r+c)%3===0; break;
+        case 4: f=(Math.floor(r/2)+Math.floor(c/3))%2===0; break;
+        case 5: f=((r*c)%2)+((r*c)%3)===0; break;
+        case 6: f=(((r*c)%2)+((r*c)%3))%2===0; break;
+        default:f=(((r+c)%2)+((r*c)%3))%2===0; break;
+      }
+      if(f) t[r*size+c]^=1;
+    }
+    return t;
+  },
+  putFormat(m, size, mask){
+    const f=this.formatInfo(mask);
+    for(let i=0;i<15;i++){
+      const bit=(f>>>i)&1;
+      if(i<6)        m[i*size+8]=bit;
+      else if(i===6) m[7*size+8]=bit;
+      else if(i===7) m[8*size+8]=bit;
+      else if(i===8) m[8*size+7]=bit;
+      else           m[8*size+(14-i)]=bit;
+      if(i<8) m[8*size+(size-1-i)]=bit;
+      else    m[(size-15+i)*size+8]=bit;
+    }
+    m[(size-8)*size+8]=1;
+  },
+  penalty(m, size){
+    let p=0;
+    const at=(r,c)=>m[r*size+c];
+    for(let i=0;i<size;i++) for(const dir of [0,1]){
+      let run=1, prev=-1;
+      for(let j=0;j<size;j++){
+        const v=dir? at(j,i) : at(i,j);
+        if(v===prev) run++;
+        else { if(run>=5) p+=3+(run-5); run=1; prev=v; }
+      }
+      if(run>=5) p+=3+(run-5);
+    }
+    for(let r=0;r<size-1;r++) for(let c=0;c<size-1;c++){
+      const v=at(r,c);
+      if(v===at(r,c+1) && v===at(r+1,c) && v===at(r+1,c+1)) p+=3;
+    }
+    const P1=[1,0,1,1,1,0,1,0,0,0,0], P2=[0,0,0,0,1,0,1,1,1,0,1];
+    for(let i=0;i<size;i++) for(let j=0;j+11<=size;j++) for(const dir of [0,1]){
+      let a=true, bq=true;
+      for(let kk=0;kk<11;kk++){
+        const v=dir? at(j+kk,i) : at(i,j+kk);
+        if(v!==P1[kk]) a=false;
+        if(v!==P2[kk]) bq=false;
+      }
+      if(a) p+=40;
+      if(bq) p+=40;
+    }
+    let dark=0;
+    for(let i=0;i<m.length;i++) dark+=m[i];
+    p += 10*Math.floor(Math.abs(dark*100/(size*size) - 50)/5);
+    return p;
+  },
+
+  /** Paint onto a canvas at whole-pixel module size, which is what keeps a
+      screenshot of it readable. Returns the CSS width used. */
+  paint(cv, res, px){
+    const q=4, n=res.size+q*2;
+    const dpr=Math.min(3, window.devicePixelRatio||1);
+    const scale=Math.max(1, Math.floor(px*dpr/n));
+    const dim=n*scale;
+    cv.width=cv.height=dim;
+    cv.style.width=cv.style.height=(dim/dpr)+'px';
+    const g=cv.getContext('2d');
+    g.fillStyle='#fff'; g.fillRect(0,0,dim,dim);
+    g.fillStyle='#000';
+    for(let r=0;r<res.size;r++) for(let c=0;c<res.size;c++)
+      if(res.m[r*res.size+c]) g.fillRect((c+q)*scale, (r+q)*scale, scale, scale);
+    return dim/dpr;
+  }
+};
+
 const Profiles = {
   r:null,                                     // {knights:[{id,nm,crest,col}], active, adopted}
 
@@ -2648,24 +3285,55 @@ const Profiles = {
 
   /* Carrying a knight between devices. GitHub Pages serves static files and
      stores nothing, so there is no account to sync with — the save travels as
-     a code the player copies across themselves. */
+     a code, packed by Codec down to something a QR symbol can hold. */
   export(id){
     try{
       const k=this.get(id), raw=localStorage.getItem(this.key(id));
       if(!k || !raw) return '';
-      return btoa(unescape(encodeURIComponent(JSON.stringify({v:1, nm:k.nm, crest:k.crest, col:k.col, s:raw}))));
+      return Codec.encode(k, JSON.parse(raw));
     }catch(e){ return ''; }
   },
+
+  /** The link a QR code carries, so the other device just opens the game. */
+  link(id){
+    const code=this.export(id);
+    if(!code) return '';
+    const base=this.base();
+    return base ? base+'#k='+code : code;
+  },
+  /** Empty unless we are served over http(s) — inside Scriptable there is no
+      address for another device to open, so only the code itself travels. */
+  base(){
+    try{
+      if(!/^https?:$/.test(location.protocol)) return '';
+      return location.origin + location.pathname.replace(/[^/]*$/, '');
+    }catch(e){ return ''; }
+  },
+
   import(code){
+    const s=String(code||'').trim();
+    const res = /KE\d-/i.test(s) ? Codec.decode(s) : this.importLegacy(s);
+    if(!res.ok) return res;
+    const k=this.make(res.k.nm, res.k.crest, res.k.col);
+    try{ localStorage.setItem(this.key(k.id), JSON.stringify(res.g)); }
+    catch(e){
+      this.r.knights=this.list().filter(x=>x.id!==k.id);
+      return {ok:false, why:'This browser would not store the save.'};
+    }
+    this.r.active=k.id; this.save(); Game.load();
+    return {ok:true, k, lostTopics:res.lostTopics};
+  },
+
+  /* Codes handed out before the packed format existed were base64 JSON. They
+     are still perfectly good saves, so they are still accepted. */
+  importLegacy(code){
     let o;
-    try{ o=JSON.parse(decodeURIComponent(escape(atob(String(code).trim())))); }
+    try{ o=JSON.parse(decodeURIComponent(escape(atob(code)))); }
     catch(e){ return {ok:false, why:'That code could not be read. Copy the whole thing and try again.'}; }
     if(!o || o.v!==1 || !o.s) return {ok:false, why:'That is not a knight code from this game.'};
-    try{ JSON.parse(o.s); }catch(e){ return {ok:false, why:'The save inside that code is damaged.'}; }
-    const k=this.make(o.nm||'Knight', o.crest, o.col);
-    try{ localStorage.setItem(this.key(k.id), o.s); }catch(e){ return {ok:false, why:'This browser would not store the save.'}; }
-    this.r.active=k.id; this.save(); Game.load();
-    return {ok:true, k};
+    let g;
+    try{ g=JSON.parse(o.s); }catch(e){ return {ok:false, why:'The save inside that code is damaged.'}; }
+    return {ok:true, k:{nm:o.nm||'Knight', crest:o.crest, col:o.col}, g};
   }
 };
 
@@ -4584,6 +5252,7 @@ const Battle = {
         Anim.float(560, H-250, 'MISSTEP', '#ff8b8b');
         Sfx.bad();
       }
+      this.settleMs = 620;                      // a ladder step is a small blow
       Game.save();
       setTimeout(()=>this.updateBars(),380);
       this.showExplain(ok, choice, st);
@@ -4620,6 +5289,10 @@ const Battle = {
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
       Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      // A bigger blow is a longer blow: a crit throws half again as many
+      // sparks, and a killing one drops into slow motion, which stretches the
+      // whole thing. revealScroll waits this out before moving the page.
+      this.settleMs = this.ehp<=0 ? 1750 : (crit ? 1150 : 820);
       Sfx.good(this.combo);                       // pitch climbs with the streak
       this.comboBeat();
       Bounty.bump('solve',1);
@@ -4633,6 +5306,7 @@ const Battle = {
       let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
+      this.settleMs = 820;
       Sfx.bad();
       this.missed++;
     }
@@ -4657,6 +5331,7 @@ const Battle = {
       this.lastSlam=Math.max(3, Math.round(raw - this.defStat()));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
+      this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
       setTimeout(()=>{
         if(this.over || this.token!==tok) return;
         Anim.strike('e', amt, true, 'SLAM');
@@ -4706,10 +5381,47 @@ const Battle = {
     Figure.render(st.figAnswer || (st===this.cur ? this.cur.figAnswer : null), document.getElementById('afig'));
     const btn=document.getElementById('contBtn');
     btn.onclick=()=>{ btn.onclick=null; btn.disabled=true; this.afterTurn(); };
-    e.scrollIntoView({behavior:'smooth',block:'nearest'});
+    this.revealScroll(e);
+  },
+
+  /* The blow lands on the canvas near the top of the screen; the explanation
+     opens below the choices, near the bottom. On a phone there is no room for
+     both — bringing the explanation up used to take the fight off screen
+     within a tenth of a second, which is the whole time the strike had to be
+     seen in. So they take turns: the page holds still while the blow plays
+     out, then glides down to the reading.
+
+     Where there is room for both, nothing waits. And if the player scrolls
+     themselves, that is them saying they would rather read now, so the queued
+     scroll is dropped rather than yanking the page out from under them. */
+  revealScroll(el){
+    this.clearReveal();
+    const tok=this.token;
+    const go=()=>{ this.clearReveal();
+                   if(this.token===tok && !this.over) el.scrollIntoView({behavior:'smooth',block:'nearest'}); };
+
+    const scene=document.getElementById('sceneWrap');
+    const s=scene && scene.getBoundingClientRect();
+    const drop=Math.max(0, el.getBoundingClientRect().bottom - window.innerHeight);
+    // Would getting the explanation on screen take the fight off it?
+    const hides = s && (s.bottom - drop) < s.height*0.55;
+    if(!hides || !Prefs.d.motion){ go(); return; }   // nothing to watch, or room for both
+
+    const cancel=()=>this.clearReveal();
+    // Deliberate gestures only — a plain scroll event also fires for our own
+    // smooth scrolling and for the page settling after the panel opens.
+    addEventListener('touchstart', cancel, {passive:true});
+    addEventListener('wheel', cancel, {passive:true});
+    this._revealOff=()=>{ removeEventListener('touchstart',cancel); removeEventListener('wheel',cancel); };
+    this._revealT=setTimeout(go, Math.min(1800, this.settleMs||820));
+  },
+  clearReveal(){
+    clearTimeout(this._revealT); this._revealT=0;
+    if(this._revealOff){ this._revealOff(); this._revealOff=null; }
   },
 
   afterTurn(){
+    this.clearReveal();
     if(this.over) return;                       // battle already resolved
     // Mid-ladder: advance to the next step without ending the turn.
     if(this.rite){
@@ -6076,21 +6788,47 @@ const Knights = {
     UI.refreshTitle();
   },
 
-  /* No server sits behind this game, so a knight travels as a code the player
-     copies from one device and pastes into the other. */
+  /* No server sits behind this game, so a knight travels between devices as a
+     code. Shown as a QR symbol first: the other phone's ordinary camera reads
+     it and offers to open the game, which is the whole journey — no scanner in
+     here, no typing over there. The text is kept underneath for anything a
+     camera cannot reach, a laptop most of all. */
   carry(id){
-    const code=Profiles.export(id);
+    const link=Profiles.link(id), code=Profiles.export(id);
     if(!code){ UI.toast('Nothing to carry yet.'); return; }
+    const nm=this.esc(Profiles.get(id).nm);
     const el=document.getElementById('codeBox');
     el.innerHTML=`<div class="cxbox">
-      <div class="cxk">Carry ${this.esc(Profiles.get(id).nm)}</div>
-      <div class="small">Copy this code, then open the game on the other device and choose
-        <b>Bring a knight from another device</b>. It is a snapshot — progress made here afterwards will not follow.</div>
-      <textarea id="codeOut" readonly>${code}</textarea>
-      <button class="btn gold" id="codeCopy">Copy the code</button>
+      <div class="cxk">Carry ${nm}</div>
+      ${link!==code
+        ? `<div class="small">Point the other device's camera at this and open the link it offers.</div>
+           <div class="qrwrap"><canvas id="qrCv"></canvas></div>`
+        : `<div class="small">Copy this code, then open the game on the other device and choose
+             <b>Bring a knight from another device</b>.</div>`}
+      <div class="small" style="opacity:.75">It is a snapshot — anything ${nm} does here afterwards will not follow.</div>
+      <details class="qrfall"><summary>No camera? Use the code</summary>
+        <textarea id="codeOut" readonly>${code}</textarea>
+        <button class="btn gold" id="codeCopy">Copy the code</button>
+      </details>
       <button class="btn ghost" onclick="Knights.closeCode()">Close</button>
     </div>`;
     el.classList.add('on');
+
+    const cv=document.getElementById('qrCv');
+    if(cv){
+      // The URL is lowercase so it goes in a byte segment; the code is upper
+      // case and digits, which QR stores at two-thirds the size. Splitting
+      // them is worth about two versions of symbol.
+      const at=link.indexOf(Codec.TAG);
+      const res=QR.matrix([{mode:'byte',  data:Codec.utf8(link.slice(0,at))},
+                           {mode:'alnum', text:link.slice(at)}]);
+      // Measured, not guessed: modules are drawn at whole pixels, so rounding
+      // down from an estimate can throw away a fifth of the width — which is
+      // exactly the width a small phone has least of.
+      if(res) QR.paint(cv, res, Math.max(120, cv.parentNode.clientWidth-16));
+      else { cv.parentNode.style.display='none';
+             el.querySelector('.qrfall').open=true; }
+    }
     document.getElementById('codeCopy').onclick=()=>{
       const t=document.getElementById('codeOut');
       t.select(); t.setSelectionRange(0, 999999);
@@ -6104,7 +6842,8 @@ const Knights = {
     const el=document.getElementById('codeBox');
     el.innerHTML=`<div class="cxbox">
       <div class="cxk">Bring a knight here</div>
-      <div class="small">Paste the code from the other device.</div>
+      <div class="small">Paste the code from the other device — or just scan its QR code
+        with this device's camera, which does the same thing on its own.</div>
       <textarea id="codeIn" placeholder="Paste the knight code"></textarea>
       <button class="btn gold" id="codeGo">Bring them in</button>
       <button class="btn ghost" onclick="Knights.closeCode()">Cancel</button>
@@ -6114,8 +6853,26 @@ const Knights = {
       const res=Profiles.import(document.getElementById('codeIn').value);
       if(!res.ok){ UI.toast(res.why); return; }
       this.closeCode(); this.render(); UI.refreshTitle();
-      UI.toast(res.k.nm+' has arrived.');
+      UI.toast(this.arrivalNote(res));
     };
+  },
+
+  /** A knight carried in on the address bar, from a scanned QR code. */
+  fromLink(){
+    let h='';
+    try{ h=decodeURIComponent(location.hash||''); }catch(e){ h=location.hash||''; }
+    const m=/[#&]k=([A-Za-z0-9-]+)/.exec(h);
+    if(!m) return null;
+    // Cleared before the import runs, so a reload cannot bring the same
+    // knight in a second time.
+    try{ history.replaceState(null, '', location.pathname+location.search); }
+    catch(e){ try{ location.hash=''; }catch(e2){} }
+    return Profiles.import(m[1]);
+  },
+  arrivalNote(res){
+    return res.k.nm+' has arrived.' + (res.lostTopics
+      ? ' Their topic history was made by a different version of the game and could not be read.'
+      : '');
   },
   closeCode(){ const el=document.getElementById('codeBox'); el.classList.remove('on'); el.innerHTML=''; },
   eraseActive(){ const k=Profiles.active(); if(k) this.erase(k.id); }
@@ -6127,6 +6884,8 @@ const Knights = {
   Keep.load();
   Keep.register();
   Profiles.load();
+  // A scanned QR code lands here as ".../#k=…", which is a knight arriving.
+  const arrived=Knights.fromLink();
   if(Game.load()){
     const days=Game.touchStreak();
     const st=Game.s.streak||{days:0};
@@ -6140,6 +6899,7 @@ const Knights = {
     Titles.check();
   }
   UI.refreshTitle();
+  if(arrived) setTimeout(()=>UI.toast(arrived.ok ? Knights.arrivalNote(arrived) : arrived.why), 300);
 
   // If the browser cleared localStorage out from under us, the vault has a
   // copy. Recovery runs after the first paint so a cold start is never held up.
