@@ -86,6 +86,12 @@ scrap. A `?` sits beside the topic name — free to peek while a topic is still 
 and after that it costs your combo. Get one wrong and the rule appears in the explanation
 alongside the diagnosis.
 
+**🧮 Scratch pad.** A calculator sits one tap away during any fight, with `x²`, `√`,
+brackets and a live result. It costs nothing and no combo, because the game is testing
+whether you know that ‖v‖ is √(a² + b²) — not whether you can square 24 in your head. The
+Codex charges combo because it hands you the *method*; this hands you a sum. Turn it off in
+Settings if you would rather do it all in your head.
+
 **⚔ Perfect Strike.** Where an answer is a plain number you can decline the four choices and
 build it on a keypad instead, for **×3 damage**, with a miss costing the combo. Generation
 rather than recognition, offered as a risk you may take rather than a friction everyone
@@ -262,6 +268,7 @@ Reachable from the title screen and the map (⚙️).
 | 🔊 Sound | All synthesised audio. Off by default is never assumed — it respects your choice. |
 | ✨ Full motion | Screen shake, hit-stop, camera punch, slow-motion and particle volume. Turning it off keeps the game fully playable and legible; it defaults to off if your OS asks for reduced motion. |
 | 📳 Haptics | Vibration on hits and rewards, where the device supports it. |
+| 🧮 Scratch pad | The in-fight calculator. On by default. |
 
 Verified free of horizontal overflow and undersized tap targets at 320×568, 375×667,
 390×844, 414×896, 768×1024 and 844×390 (landscape).
@@ -291,6 +298,7 @@ Inside `index.html` the code is organised as:
 | `Profiles`, `Knights` | one save slot per player on a shared browser, plus the code that carries a knight to another device |
 | `Vault` | the second copy of every save, in IndexedDB, and the recovery that puts it back |
 | `Keep` | service-worker registration, the update prompt, and the install nudge |
+| `Calc` | the scratch pad: a keypad and a small expression evaluator that never calls `eval` |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
@@ -382,6 +390,10 @@ The generators were also checked by:
   distance needed to get to each topic's row — including the tap that opens its strand.
   The worst case is 1.1 viewports in the Training picker and 1.5 in the Chronicle; a flat
   list of all seventy would run to 6.3.
+- **The scratch pad's arithmetic**, against 22 expressions with known values — squares,
+  roots, precedence, unary minus, implicit multiplication, floating point — plus eleven
+  malformed ones it has to refuse rather than guess at. That second list caught `1..2`
+  quietly evaluating to 1, because `parseFloat` stops at the second dot.
 - **The progressive web app, over real HTTP from a subdirectory** — the same shape as a
   GitHub project page. Asserts the worker registers at the right scope, the manifest parses
   and every icon it names returns 200, the shell precaches, and the game still loads and
