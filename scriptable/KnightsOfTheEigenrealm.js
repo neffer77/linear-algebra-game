@@ -3432,24 +3432,55 @@ const Vault = {
     try{ const r=JSON.parse(raw); return (r && r.knights && r.knights.length)||0; }catch(e){ return 0; }
   },
 
-  /* At boot: if this browser has no knights but the vault does, we were
-     cleared out — put them back and say so, because restoring in silence is
-     how a player learns not to trust their own progress.
+  /** The revision a stored save carries, or 0 for anything unreadable or from
+      before the counter existed. This is what lets recover() tell newer from
+      older when the two stores disagree. */
+  revOf(raw){
+    try{ const g=JSON.parse(raw); return (g && typeof g.rev==='number') ? g.rev : 0; }
+    catch(e){ return 0; }
+  },
 
-     The test that matters is how many knights each side holds, not whether
-     the roster key exists: booting writes an empty roster before this runs,
-     so an existence check would see it, conclude all was well, and overwrite
-     the backup with nothing. */
+  /* At boot, reconcile this device against its backup — a knight at a time, by
+     the write counter, so the newest copy of each always wins. Restoring in
+     silence is how a player learns not to trust their own progress, so the
+     caller says so when anything comes back.
+
+     The old rule was all-or-nothing: put everything back only if the device
+     held no knights at all. That missed the case where one slot was evicted
+     while the roster and the other knights survived — the lost knight stayed
+     lost. Now each slot stands on its own, and a backup that is genuinely
+     newer than the live copy (a crash between the two writes, a half-cleared
+     store) is allowed to win. */
   recover(){
     return this.read().then(saved=>{
-      const stored = saved ? this.count(saved[ROSTER_KEY]) : 0;
-      let live=0;
-      try{ live=this.count(localStorage.getItem(ROSTER_KEY)); }catch(e){}
-      if(!stored || live){ this.writeNow(); return false; }
-      clearTimeout(this.timer);            // do not let an empty mirror land on top
-      let n=0;
-      for(const k in saved){ try{ localStorage.setItem(k, saved[k]); n++; }catch(e){} }
-      return n>0;
+      if(!saved){ this.writeNow(); return false; }
+      clearTimeout(this.timer);            // hold any pending mirror until the merge is done
+      let restored=0;
+
+      // The roster itself only comes back on a true wipe: an intact roster that
+      // merely lost a slot still names the knight, so restoring the slot below
+      // is enough, and booting writes an empty roster before this runs — so the
+      // test is how many knights each side holds, never whether the key exists.
+      let liveRoster=null;
+      try{ liveRoster=localStorage.getItem(ROSTER_KEY); }catch(e){}
+      if(this.count(saved[ROSTER_KEY]) > this.count(liveRoster)){
+        try{ localStorage.setItem(ROSTER_KEY, saved[ROSTER_KEY]); restored++; }catch(e){}
+      }
+
+      // Each knight slot: take the backup when the device is missing it, or
+      // holds a strictly older revision.
+      for(const key in saved){
+        if(key.indexOf(SLOT_PREFIX)!==0) continue;
+        const backup=saved[key];
+        let live=null;
+        try{ live=localStorage.getItem(key); }catch(e){}
+        if(live==null || this.revOf(backup) > this.revOf(live)){
+          try{ localStorage.setItem(key, backup); restored++; }catch(e){}
+        }
+      }
+
+      this.writeNow();                     // persist the reconciled state as the new backup
+      return restored>0;
     });
   },
 
