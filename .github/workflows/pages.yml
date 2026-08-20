@@ -76,6 +76,13 @@ jobs:
           fi
           echo "Scriptable build matches index.html"
 
+      # The generators are checked against the maths they claim to teach, and
+      # the knight codec is checked for a round-trip fixpoint and backward
+      # compatibility — the guard that a save format change cannot silently
+      # corrupt a knight. No dependencies to install; verify.js is self-contained.
+      - name: Run the verification suite
+        run: npm test
+
   build:
     needs: validate
     runs-on: ubuntu-latest
