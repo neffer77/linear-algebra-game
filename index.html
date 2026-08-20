@@ -5978,6 +5978,52 @@ const ARENA_NOUN = ['Revenant','Warden','Colossus','Serpent','Harbinger','Devour
 const ARENA_ART = ['slime','goblin','skeleton','golem','wisp','harpy','wraith','dragon','lich','knightfoe'];
 const ARENA_COL = ['#e5484d','#a06bd6','#5aa9e6','#57cc7a','#f2c14e','#e07b39','#6fd3c4','#f06bb0'];
 
+/* The wave engine: the pure "what does step N of an endless run look like"
+   maths, lifted out of Arena so the escalation curve lives in one config object
+   and a room's policy — the Arena is the first — only has to point at it. It
+   owns nothing UI: rewards, healing, boons and screens stay with the room that
+   consumes a wave. Kept deterministic under the seeded RNG, and its R.pick call
+   order is load-bearing (it must match a foe's recorded appearance), so the
+   picks below stay in name → art → colour order. */
+const WaveEngine = {
+  /* What an endless run draws from. Mastery.weight deliberately over-weights
+     unseen topics so a curated realm pool introduces its new material — but
+     pointed at all seventy topics that same rule turns a run into things you
+     have never been taught. So we ask what the player has met, and only fall
+     back to everything if they have barely met anything. */
+  pool(stats){
+    const all = Object.keys(TOPIC_LABEL);
+    const met = all.filter(k=>{ const r=stats[k]; return r && r.seen>0; });
+    return met.length>=12 ? met : all;
+  },
+
+  /* The foe for step `n` (1-based), shaped by escalation curve `c`. */
+  foe(n, c){
+    const champion = n % c.championEvery === 0;
+    const hp  = Math.round((c.hp0  + n*c.hpPer)  * (champion?c.champHp:1));
+    const atk = Math.round(c.atk0 * Math.pow(c.atkGrow, n-1) * (champion?c.champAtk:1));
+    return {
+      nm:(champion?'':R.pick(c.adj)+' ')+R.pick(c.noun),
+      art:R.pick(c.art), col:R.pick(c.col),
+      hp, atk, boss:champion,
+      gold:Math.round((c.gold0 + n*c.goldPer)*(champion?c.champReward:1)),
+      xp:Math.round((c.xp0 + n*c.xpPer)*(champion?c.champReward:1))
+    };
+  }
+};
+
+/* The Arena's escalation curve. Every wave is a champion when it lands on a
+   multiple of championEvery; champions hit the multipliers below. */
+const ARENA_WAVES = {
+  championEvery:5,
+  hp0:200,  hpPer:95,  champHp:1.7,
+  atk0:30,  atkGrow:1.085, champAtk:1.25,
+  gold0:50, goldPer:18,
+  xp0:30,   xpPer:10,
+  champReward:2,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* Run-scoped boons, drafted three at a time. They stack. */
 const BOONS = [
   {ic:'🩸', nm:'Vigour',     ds:'+25% maximum health, and heal that much now',
@@ -6013,16 +6059,9 @@ const Arena = {
 
   unlocked(){ return !!(Game.s && Game.s.cleared[(REALMS.length-1)+':'+(REALMS[REALMS.length-1].foes.length-1)]); },
 
-  /* What an endless run draws from. Mastery.weight deliberately over-weights
-     unseen topics so a curated realm pool introduces its new material — but
-     pointed at all seventy topics that same rule turns the arena into a run of
-     things you have never been taught. So the arena asks what you have met,
-     and only falls back to everything if you have barely met anything. */
-  pool(){
-    const all=Object.keys(TOPIC_LABEL);
-    const met=all.filter(k=>{ const r=Game.s.topicStats[k]; return r && r.seen>0; });
-    return met.length>=12 ? met : all;
-  },
+  /* What an endless run draws from — the wave engine decides, from what this
+     knight has met. */
+  pool(){ return WaveEngine.pool(Game.s.topicStats); },
 
   start(){
     this.active=true; this.wave=0; this.earned=0;
@@ -6034,18 +6073,7 @@ const Arena = {
     this.nextWave();
   },
 
-  foeFor(w){
-    const champion = w%5===0;
-    const hp  = Math.round((200 + w*95) * (champion?1.7:1));
-    const atk = Math.round(30 * Math.pow(1.085, w-1) * (champion?1.25:1));
-    return {
-      nm:(champion?'':R.pick(ARENA_ADJ)+' ')+R.pick(ARENA_NOUN),
-      art:R.pick(ARENA_ART), col:R.pick(ARENA_COL),
-      hp, atk, boss:champion,
-      gold:Math.round((50 + w*18)*(champion?2:1)),
-      xp:Math.round((30 + w*10)*(champion?2:1))
-    };
-  },
+  foeFor(w){ return WaveEngine.foe(w, ARENA_WAVES); },
 
   nextWave(){
     this.wave++;
