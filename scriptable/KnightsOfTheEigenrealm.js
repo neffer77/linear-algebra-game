@@ -365,8 +365,8 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   box-shadow:0 0 34px -8px var(--gold);}
 #codex .cxk{font-family:var(--serif); font-size:12px; letter-spacing:.18em; text-transform:uppercase;
   color:var(--gold); margin-bottom:8px;}
-#codex .cxrule{font-size:16px; line-height:1.55; font-weight:700;}
-#codex .cxeg{margin-top:10px; padding:9px 11px; border-radius:8px; background:#171129;
+#codex .cxrule,.cxrule{font-size:16px; line-height:1.55; font-weight:700;}
+#codex .cxeg,.cxeg{margin-top:10px; padding:9px 11px; border-radius:8px; background:#171129;
   border-left:3px solid var(--gold-dk); font-size:14px; line-height:1.6; color:var(--dim);}
 
 /* ---- rite ---- */
@@ -590,6 +590,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-result">
     <div style="height:20px"></div>
     <div id="resultBody"></div>
+  </div>
+
+  <!-- ============ LOCK ============ -->
+  <div class="screen" id="s-lock">
+    <div style="height:20px"></div>
+    <div id="lockBody"></div>
   </div>
 
   <!-- ============ SHOP ============ -->
@@ -2494,7 +2500,10 @@ const ITEMS = {
   potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
   insight:{nm:"Sage's Insight",  ic:'🔮', cost:55,  ds:'Burns away two wrong answers.'},
   rage:{nm:'Berserker Rune',    ic:'🔥', cost:70,  ds:'Your next correct strike deals 2.5× damage.'},
-  feather:{nm:'Phoenix Feather',ic:'🪶', cost:200, ds:'Automatically revives you once at half health.'}
+  feather:{nm:'Phoenix Feather',ic:'🪶', cost:200, ds:'Automatically revives you once at half health.'},
+  // Appended last on purpose: the knight codec maps items by position, so a new
+  // consumable must not shift the ones an existing code already encoded.
+  pick:{nm:'Iron Lockpick',    ic:'🔧', cost:30,  ds:'Cracks a locked chest in the Deep. Snaps on a wrong answer.'}
 };
 
 const REALMS = [
@@ -3506,7 +3515,7 @@ const Game = {
       rev:0,               // write counter — bumped every save; the newest copy wins a conflict
       weapon:'w0', armor:'a0',
       owned:{w0:1,a0:1},
-      items:{potion:2, insight:1, rage:0, feather:0},
+      items:{potion:2, insight:1, rage:0, feather:0, pick:3},
       cleared:{},          // "realm:index" -> true
       realm:0,
       stats:{wins:0, correct:0, wrong:0, best:0},
@@ -3532,6 +3541,9 @@ const Game = {
   // Older saves stored only {c,w}; seed the mastery model from that history.
   migrate(){
     if(typeof this.s.rev!=='number') this.s.rev=0;   // saves from before the counter start at zero
+    // Saves made before lockpicks existed get a starter set, so the Deep's
+    // first locked chest is always attemptable rather than a dead end.
+    if(this.s.items && typeof this.s.items.pick!=='number') this.s.items.pick=3;
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -6238,6 +6250,154 @@ const RoomKinds = {
         : { status:'failed',  quality:0, topics:[], yield:{} }));
     },
   },
+
+  // A locked chest: one riddle stands between you and the hoard. No foe, so it
+  // can never kill you — it either opens or costs you a pick. The topic is
+  // drawn the way the quiz draws one (weighted by what you are weak on and
+  // overdue for), so the room is not perfectly seed-pure like the monster; but
+  // within a single descent each depth is built once, so a run stays stable.
+  lock: {
+    build(rng, depth){
+      const pool = WaveEngine.pool(Game.s.topicStats);
+      const key  = Mastery.pick(pool);
+      const base = clamp(1 + Math.floor(depth/3), 1, 3);
+      const diff = Mastery.adjustDiff(key, base);
+      const q    = buildQuestion(key, diff);
+      // A cracked chest pays a touch more than the fight it replaces — it cost
+      // a pick to reach, and it carried the risk of snapping one for nothing.
+      return { kind:'lock', q, yield:{ gold:Math.round(60+depth*20), xp:Math.round(30+depth*10) } };
+    },
+    // Non-combat: the lock draws its own screen and reports exactly once.
+    enter(spec, ctx, done){ Lock.begin(spec, ctx, done); },
+  },
+};
+
+/* -------------------------------- the lock -------------------------------- */
+/* The lock room's UI half. It owns nothing about the run — it grades one riddle
+   and hands the shell a single outcome. Mastery is written the instant the
+   answer lands (ADR-004): a fumble deep in a run still taught you the topic and
+   still moved the schedule, even though the fall takes the gold. */
+const Lock = {
+  spec:null, ctx:null, done:null, resolved:false,
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done; this.resolved=false;
+    UI.go('s-lock');
+    const r=Game.s.topicStats[spec.q.key];
+    const firstContact = !(r && r.seen>0);
+    // First sight of a topic is taught before it is tested — you never snap a
+    // pick on something the game never showed you.
+    if(firstContact && spec.q.codex) this.study(); else this.tumblers();
+  },
+
+  study(){
+    const q=this.spec.q, c=q.codex;
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">🗝️</div>
+      <div class="panel">
+        <h2 style="font-size:19px">An unfamiliar lock</h2>
+        <div class="sub">You have not met <b>\${q.topic}</b> before. Study the mechanism — the first sight is free.</div>
+        <hr>
+        <div class="cxrule">\${c.rule}</div>
+        \${c.eg?\`<div class="cxeg">\${c.eg}</div>\`:''}
+      </div>
+      <button class="btn gold" id="lockStudied">🔍 Feel for the tumblers →</button>
+      <div style="height:16px"></div>\`;
+    document.getElementById('lockStudied').onclick=()=>this.tumblers();
+  },
+
+  tumblers(){
+    const q=this.spec.q, g=Game.s, picks=g.items.pick||0;
+    if(picks<1){ this.noPicks(); return; }
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">🧰</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">⛏️ Depth \${this.ctx.depth}</span>
+          <span class="pill">🔧 picks ×\${picks}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A locked chest · \${q.topic}</h2>
+        <div class="sub">Set the right tumbler and it springs open. Force the wrong one and your pick snaps.</div>
+        <hr>
+        <div id="lockQ" style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        <div id="lockFig"></div>
+        <div id="lockChoices" style="margin-top:10px"></div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>\`;
+    Figure.render(q.fig, document.getElementById('lockFig'));
+    const box=document.getElementById('lockChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.attempt(b,c);
+      box.appendChild(b);
+    });
+  },
+
+  attempt(btn, choice){
+    if(this.resolved) return;
+    const q=this.spec.q, g=Game.s, ok=(choice===q.a);
+    document.querySelectorAll('#lockChoices .choice').forEach(b=>{
+      b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    // Mastery moves either way, written now — the point of a per-room write.
+    Game.recordAnswer(q.key, ok, 1);
+    if(ok){
+      const y=this.spec.yield;
+      Game.save();
+      this.finish({ status:'cleared', quality:1, topics:[q.key], yield:y, lock:{opened:true} },
+        \`<div class="center crest">🎉</div>
+         <div class="panel center">
+           <h2 style="color:var(--green)">The lock springs open</h2>
+           <div class="sub">\${q.ex||''}</div>
+           <hr>
+           <div style="font-weight:800;line-height:1.9">
+             <div class="coin">🎒 +\${y.gold} gold</div>
+             <div style="color:var(--blue)">✦ +\${y.xp} experience</div>
+           </div>
+         </div>\`);
+    } else {
+      g.items.pick=Math.max(0,(g.items.pick||0)-1);
+      Game.save();
+      const slip=q.why[choice]||'that tumbler was not the one';
+      this.finish({ status:'cleared', quality:0, topics:[q.key], yield:{}, lock:{opened:false, snapped:true} },
+        \`<div class="center crest">🔧💥</div>
+         <div class="panel center">
+           <h2 style="color:var(--red)">Your pick snaps</h2>
+           <div class="sub">\${slip}</div>
+           <hr>
+           <div class="small">The setting was <b>\${q.a}</b>. \${q.ex||''}</div>
+           <div class="small" style="margin-top:8px">🔧 picks remaining ×\${g.items.pick}</div>
+         </div>\`);
+    }
+  },
+
+  noPicks(){
+    const q=this.spec.q;
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">🔒</div>
+      <div class="panel center">
+        <h2>A locked chest, and no picks</h2>
+        <div class="sub">This one guards <b>\${q.topic}</b>. Smith or buy lockpicks at the Smithy and the Deep's chests open to you.</div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>\`;
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{}, lock:{opened:false, snapped:false} }, '');
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut');
+    out.innerHTML=html+\`<button class="btn gold" id="lockGo" style="margin-top:12px">Onward →</button>\`;
+    document.getElementById('lockGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    if(outcome.lock && outcome.lock.opened){ Sfx.coin(); Haptic.win(); }
+    else if(outcome.lock && outcome.lock.snapped){ Sfx.bad(); Haptic.hurt(); }
+  }
 };
 
 /* ------------------------------- the Dungeon ------------------------------ */
@@ -6276,7 +6436,10 @@ const Dungeon = {
     this.run.depth++;
     const depth = this.run.depth;
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
-    const kind = RoomKinds.monster;    // First Cave: every room is a fight
+    // Depth 1 always opens on a fight; after that a locked chest surfaces now
+    // and then. The roll is part of the seeded build, so a run's rooms are laid
+    // out the same way every time it is replayed from its seed.
+    const kind = (depth>=2 && R.chance(.34)) ? RoomKinds.lock : RoomKinds.monster;
     const spec = kind.build(R, depth);
     R.unseed();
     this.cur = { kind, spec };
@@ -6300,13 +6463,21 @@ const Dungeon = {
   },
 
   fork(outcome){
-    const foe=this.cur.spec.foe, u=this.run.unbanked, g=Game.s;
+    const sp=this.cur.spec, u=this.run.unbanked, g=Game.s;
+    // A room may be a fight or a locked chest; the fork reads the same either
+    // way, so describe whichever this was.
+    const lock=sp.kind==='lock', opened=lock && outcome.lock && outcome.lock.opened;
+    const icon = lock ? (opened?'🎁':'🧰') : (sp.foe.boss?'👑':'⛏️');
+    const line = lock
+      ? (opened ? 'The chest gives up its hoard. A passage drops away into the dark.'
+                : 'The chest stays shut. A passage drops away into the dark.')
+      : \`\${sp.foe.nm} falls. A passage drops away into the dark.\`;
     UI.go('s-result');
     document.getElementById('resultBody').innerHTML=\`
-      <div class="center crest">\${foe.boss?'👑':'⛏️'}</div>
+      <div class="center crest">\${icon}</div>
       <div class="panel center">
         <h1 style="font-size:20px">Depth \${this.run.depth} cleared</h1>
-        <div class="sub" style="margin-top:6px">\${foe.nm} falls. A passage drops away into the dark.</div>
+        <div class="sub" style="margin-top:6px">\${line}</div>
         <hr>
         <div style="font-size:15px;font-weight:800;line-height:1.8">
           <div class="coin">🎒 \${u.gold} gold carried</div>
