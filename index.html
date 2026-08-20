@@ -5000,6 +5000,15 @@ const Battle = {
     this.realm=Arena.realm; this.ri=0; this.fi=Math.min(6, wave);
     this._start(foe);
   },
+  // A dungeon room's fight. The shell hands in the foe and a callback that
+  // takes just won/lost — the room kind turns that into the outcome the
+  // Dungeon applies. Battle never touches the save here; the shell does.
+  beginDungeon(foe, done){
+    this.mode='dungeon';
+    this.realm=Dungeon.realm; this.ri=0; this.fi=Math.min(6, Dungeon.run.depth);
+    this._roomDone=done;
+    this._start(foe);
+  },
   _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
@@ -5037,13 +5046,15 @@ const Battle = {
       (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
+      (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
       (this.mode==='daily' ? `🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}  ·  ${Daily.score} pts  ·  ` : '') +
       `Combo ×${(1+Math.min(this.combo,7)*.15).toFixed(2)}  ·  streak ${this.combo}`;
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
     const fb=document.getElementById('fleeBtn');
-    if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings' : '🏃 Retreat';
+    if(fb) fb.textContent = this.mode==='arena' ? '🚪 Retire with your winnings'
+      : this.mode==='dungeon' ? '🚪 Climb out with your haul' : '🏃 Retreat';
     this.renderPowers();
   },
 
@@ -5514,6 +5525,7 @@ const Battle = {
     this.over='win'; clearInterval(this.timer);
     Anim.burst(610,H-190,this.foe.col,42); Sfx.win();
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.cleared(f);},1100); return; }
+    if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(true);},1100); return; }
     const g=Game.s;
     const key=this.ri+':'+this.fi;
     const first=!g.cleared[key];
@@ -5572,6 +5584,7 @@ const Battle = {
     this.tension(1);
     this.over='lose'; clearInterval(this.timer); Sfx.hurt();
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
+    if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
@@ -5597,6 +5610,7 @@ const Battle = {
   flee(){
     clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1);
     if(this.mode==='arena'){ Arena.retire(); return; }
+    if(this.mode==='dungeon'){ Dungeon.leave(true); return; }
     UI.go('s-map');
     UI.toast('🏃 You slip away into the trees.');
   }
@@ -6182,6 +6196,157 @@ const Arena = {
   }
 };
 
+/* ------------------------------ room contract ----------------------------- */
+/* A room kind is a table entry, the way generators and figure kinds already
+   are. The shell (Dungeon, below) only ever calls these — it never looks
+   inside a kind, so adding a kind is adding an entry. See the Room Contract
+   design note. First Cave ships the monster kind here; the lock room lands in
+   the next slice. build() is pure and seeded: the same (seed, depth) always
+   builds the same room, which is what makes a run reproducible. */
+const RoomKinds = {
+  monster: {
+    // Pure. Given the seeded stream and how deep we are, describe the room.
+    build(rng, depth){
+      return { kind:'monster', foe: WaveEngine.foe(depth, ARENA_WAVES) };
+    },
+    // Take the screen, play the fight out, then report an outcome exactly once.
+    // The room decides nothing about the save or the map — it hands the shell
+    // an outcome and the shell applies it.
+    enter(spec, ctx, done){
+      Battle.beginDungeon(spec.foe, won => done(won
+        ? { status:'cleared', quality:1, topics:[],
+            yield:{ gold:spec.foe.gold, xp:spec.foe.xp } }
+        : { status:'failed',  quality:0, topics:[], yield:{} }));
+    },
+  },
+};
+
+/* ------------------------------- the Dungeon ------------------------------ */
+/* Policy #2 over the shared engine — the endless Arena was #1. The Arena keeps
+   every coin whether you walk out or are carried; the Deep does the opposite,
+   and that difference is the whole game here. What you win stays UNBANKED,
+   riding on the run: leave and it is yours, fall and it is gone. So every
+   cleared room is a fork — press deeper for a bigger pot, or climb out now. */
+const Dungeon = {
+  active:false, run:null, cur:null,
+  realm:{nm:'The Deep', col:'#6a44b0', sky:['#160f22','#080510'], pool:null,
+    bg:{key:'deep', seed:53, sky:['#1c1430','#120b22','#070410'],
+        far:'towers', farCol:'#241a3a', near:'arcs', nearCol:'#150e28',
+        ground:['#241636','#0b0616'], rim:'rgba(180,139,236,.2)', haze:'rgba(24,16,44,.84)',
+        glow:'#d9c4ff', weather:'dust', accent:'#b48bec'}},
+
+  // Opened once the campaign's first realm boss has fallen — reachable well
+  // before the Arena, since the Deep is the core loop, not the victory lap.
+  unlocked(){ return !!(Game.s && Game.s.cleared['0:'+(REALMS[0].foes.length-1)]); },
+
+  descend(){
+    const seed = ((Date.now() ^ Math.floor(Math.random()*0xffffffff)) >>> 0) || 1;
+    this.run = { setting:'deep', seed, depth:0, unbanked:{ gold:0, xp:0 } };
+    this.active = true;
+    this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
+    Game.s.maxHp = Game.maxHp();
+    Game.s.hp = Game.s.maxHp;          // you enter whole; the Deep does not heal you
+    Game.save();
+    this.nextRoom();
+  },
+
+  // Build the next room from (seed, depth) and enter it. The seeded stream is
+  // only live while the room is being BUILT — combat rolls afterwards stay
+  // genuinely random, so you cannot memorise a fight, only its foe.
+  nextRoom(){
+    this.run.depth++;
+    const depth = this.run.depth;
+    R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
+    const kind = RoomKinds.monster;    // First Cave: every room is a fight
+    const spec = kind.build(R, depth);
+    R.unseed();
+    this.cur = { kind, spec };
+    const ctx = { run:this.run, depth, setting:this.run.setting,
+                  rng:R, canDie:true, resume:null };
+    kind.enter(spec, ctx, outcome => this.resolve(outcome));
+  },
+
+  // The shell owns everything between rooms: staging the yield, the fork,
+  // banking, and ending the run on death.
+  resolve(outcome){
+    if(outcome.status==='cleared'){
+      const y=outcome.yield||{};
+      this.run.unbanked.gold += y.gold||0;
+      this.run.unbanked.xp   += y.xp||0;
+      Game.save();
+      this.fork(outcome);
+    } else {
+      this.died(outcome);        // canDie run — a fall forfeits the unbanked pot
+    }
+  },
+
+  fork(outcome){
+    const foe=this.cur.spec.foe, u=this.run.unbanked, g=Game.s;
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=`
+      <div class="center crest">${foe.boss?'👑':'⛏️'}</div>
+      <div class="panel center">
+        <h1 style="font-size:20px">Depth ${this.run.depth} cleared</h1>
+        <div class="sub" style="margin-top:6px">${foe.nm} falls. A passage drops away into the dark.</div>
+        <hr>
+        <div style="font-size:15px;font-weight:800;line-height:1.8">
+          <div class="coin">🎒 ${u.gold} gold carried</div>
+          <div style="color:var(--blue)">✦ ${u.xp} experience carried</div>
+        </div>
+        <hr>
+        <div class="small">❤️ ${Math.round(g.hp)}/${g.maxHp} · this haul is <b>at risk</b> until you climb out</div>
+      </div>
+      <button class="btn gold" onclick="Dungeon.nextRoom()">⛏️ Press on — Depth ${this.run.depth+1} →</button>
+      <button class="btn ghost" onclick="Dungeon.leave()">🚪 Climb out with ${u.gold} gold</button>
+      <div style="height:20px"></div>`;
+    Haptic.win();
+  },
+
+  // Bank the pot and return to the surface. `midFight` is true when the player
+  // fled a room instead of clearing it — the loot is the same, the flavour isn't.
+  leave(midFight){
+    if(!this.active) return;
+    this.active=false;
+    const u=this.run.unbanked;
+    Game.s.gold += u.gold;
+    const ups = Game.gainXp(u.xp);
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-map');
+    UI.toast(`🚪 ${midFight?'Fled':'Climbed out'} of the Deep at depth ${this.run.depth} with ${u.gold} gold.`);
+    if(ups) Celebrate.banner('LEVEL '+Game.s.lvl, 'Maximum health now '+Game.s.maxHp, 'var(--gold)', ()=>Sfx.level());
+    Titles.check();
+  },
+
+  died(){
+    const foe=this.cur.spec.foe, lost=this.run.unbanked.gold, depth=this.run.depth;
+    this.active=false;
+    Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    Game.save();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=`
+      <div class="center crest">💀</div>
+      <div class="panel center">
+        <h1 style="font-size:20px;color:var(--red)">The Deep keeps you</h1>
+        <div class="sub" style="margin-top:6px">${foe.nm} ends your descent at depth ${depth}.</div>
+        <hr>
+        <div style="font-size:16px;font-weight:800;line-height:1.9">
+          <div>Depths cleared: <span style="color:var(--gold)">${depth-1}</span></div>
+          <div style="color:var(--red)">🎒 ${lost} unbanked gold lost to the dark</div>
+        </div>
+        <hr>
+        <div class="sub">Bank your haul next time — nothing you carry survives a fall.</div>
+      </div>
+      <button class="btn gold" onclick="Dungeon.descend()">↻ Descend again</button>
+      <button class="btn" onclick="UI.go('s-shop')">🏪 Spend what you banked</button>
+      <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
+      <div style="height:20px"></div>`;
+  }
+};
+
 /* ---------------------------------- UI ------------------------------------ */
 const UI = {
   hist:[],
@@ -6311,6 +6476,19 @@ const UI = {
         </div>`;
       });
     });
+    // The Deep — the core run loop, opened by the first realm's boss.
+    const dOpen=Dungeon.unlocked();
+    out+=`<div class="realmhdr"><span class="dot" style="background:#b48bec"></span>
+          <h2 style="color:#b48bec">The Deep</h2>${dOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">A seeded descent. Every haul rides unbanked until you climb out — press deeper for more, but a fall loses it all.</div>
+      <div class="node ${dOpen?'':'locked'}" onclick="Dungeon.descend()">
+        <div class="ico" style="font-size:24px">⛏️</div>
+        <div style="flex:1">
+          <div class="nm">Descend the Deep</div>
+          <div class="dt">${dOpen?'Scaling rooms · press-on / leave · your haul is at risk':'Clear the first realm to find the shaft'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">${dOpen?'▶':'🔒'}</div>
+      </div>`;
     // The Arena sits past the campaign, opened by the last boss.
     const aOpen=Arena.unlocked(), best=g.arenaBest||0;
     out+=`<div class="realmhdr"><span class="dot" style="background:var(--gold)"></span>
