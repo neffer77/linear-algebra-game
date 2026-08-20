@@ -602,6 +602,8 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-prefs">
     <div id="prefList"></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <!-- Which build this is, so a bug report can name it. -->
+    <div id="buildStamp" class="small center" style="opacity:.5;margin-top:14px"></div>
     <div style="height:20px"></div>
   </div>
 
@@ -6919,11 +6921,27 @@ const Knights = {
   eraseActive(){ const k=Profiles.active(); if(k) this.erase(k.id); }
 };
 
+/* Which build is running, shown in Settings so a bug report can name it. The
+   build writes build-info.json next to index.html and stamps the worker with
+   the same commit; the service worker's cache serves it offline, so the number
+   shown always matches the build actually installed. file:// and Scriptable
+   have no such file, and read as a local build. */
+function stampBuild(){
+  const el=document.getElementById('buildStamp');
+  if(!el) return;
+  const show=v=>{ el.textContent='build '+v+' · save format v'+Codec.VER; };
+  if(!/^https?:$/.test(location.protocol)){ show('local'); return; }
+  fetch('build-info.json').then(r=>r.ok?r.json():null).then(j=>{
+    show(j && j.version ? j.version+(j.builtAt?(' · '+j.builtAt.slice(0,10)):'') : 'unknown');
+  }).catch(()=>show('unknown'));
+}
+
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
   Prefs.load();
   Keep.load();
   Keep.register();
+  stampBuild();
   Profiles.load();
   // A scanned QR code lands here as ".../#k=…", which is a knight arriving.
   const arrived=Knights.fromLink();
