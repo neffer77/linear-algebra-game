@@ -762,17 +762,27 @@ let codeNotes = null;
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b));
+  // encode/decode reach for the game's data tables and Game.fresh(), so pull
+  // those in too and stub Game — that lets a whole knight round-trip here, not
+  // just base32. arr() grabs a `const NAME = [ … ];` array whose entries may
+  // themselves contain `];`, by anchoring on the closer on its own line.
+  const arr = a => { const i = script.indexOf(a); return script.slice(i, script.indexOf('\n];', i) + 3); };
   const out = {};
   try {
     new Function('exports',
       script.slice(0, script.indexOf('/* ------------------------------ topic metadata')) +
       cut('const TOPIC_LABEL', 'const STRANDS') +
+      cut('const WEAPONS =', 'const B32 =') +
+      arr('const TITLES = [') + ';' +
+      arr('const BOUNTY_KINDS = [') + ';' +
       cut('const B32 =', 'const Profiles = {') +
-      ';exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;')(out);
+      ';var Game={fresh:()=>({topicStats:{}})};' +
+      'exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;' +
+      'exports.CRESTS=CRESTS;exports.CREST_COLS=CREST_COLS;exports.REALMS=REALMS;')(out);
   } catch (e) {
     return fail('codes', 'load', `could not load the codec: ${e.message}`);
   }
-  const { Codec, QR, TOPIC_LABEL } = out;
+  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS } = out;
 
   /* 1. The topic list is what the mastery half of a code is indexed by, and a
         code carries a 16-bit fingerprint of it. Changing the list is allowed —
@@ -818,6 +828,62 @@ let codeNotes = null;
   if (JSON.stringify(Codec.unb32(sample.replace(/(.{4})/g, '$1 ').trim())) !==
       JSON.stringify(Codec.unb32(sample)))
     fail('codes', 'base32', 'spaces inside a code changed what it decoded to');
+
+  /* 2b. A whole knight has to survive encode → decode → re-encode unchanged,
+         or a save could corrupt on export/import with nothing to catch it. The
+         codec is lossy by design — mastery is quantised — so the property is a
+         fixpoint: once a save has been through the codec, encoding it again is
+         byte-for-byte identical. The write counter (`rev`, added for the
+         newest-wins referee) and the fields a player would notice must come
+         back exactly, and codes from the previous format must still read. */
+  const RT_T = Object.keys(TOPIC_LABEL);
+  let rs = 987654321;
+  const rr = n => (rs = (rs * 1103515245 + 12345) & 0x7fffffff) % n;
+  const NOW = 1734500000000;
+  let rtBad = 0;
+  for (let trial = 0; trial < 40 && !rtBad; trial++) {
+    const k = { nm: 'Knight ' + trial, crest: CRESTS[rr(CRESTS.length)], col: CREST_COLS[rr(CREST_COLS.length)] };
+    const g = {
+      lvl: rr(30) + 1, maxHp: 100 + rr(200), hp: 1 + rr(99), gold: rr(99999), xp: rr(5000),
+      qCount: rr(600), arenaBest: rr(40), realm: rr(6), rev: rr(9999),
+      stats: { wins: rr(300), correct: rr(2000), wrong: rr(500), best: rr(20) },
+      weapon: 'w0', armor: 'a0', owned: { w0: 1, a0: 1 },
+      items: { potion: rr(9), insight: rr(9), rage: rr(9), feather: rr(9) },
+      cleared: {}, titles: {}, streak: { days: rr(60), last: '2026-8-' + (1 + rr(28)) },
+      daily: null, bounties: [], riteWins: {}, topicStats: {}
+    };
+    REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { if (rr(4) === 0) g.cleared[ri + ':' + fi] = 1; }));
+    for (let i = 0; i < RT_T.length; i++) if (rr(3) === 0)
+      g.topicStats[RT_T[i]] = { w: rr(10), m: rr(1000) / 1000, seen: 1 + rr(40), last: rr(600), t: NOW - rr(20) * 864e5 };
+
+    // Fidelity: the fields a player would notice, and the write counter, must
+    // survive the first pass exactly. Stability: the codec quantises, so the
+    // first pass may normalise un-gridded inputs — but from then on it is a
+    // fixpoint, so a second and third pass must be byte-for-byte identical.
+    const c1 = Codec.encode(k, g, NOW);
+    if (c1.indexOf(Codec.TAG) !== 0) { fail('codes', 'roundtrip', `trial ${trial}: encode did not tag the code`); rtBad = 1; break; }
+    const d1 = Codec.decode(c1);
+    if (!d1.ok) { fail('codes', 'roundtrip', `trial ${trial}: a fresh code would not decode (${d1.why})`); rtBad = 1; break; }
+    for (const f of ['lvl', 'maxHp', 'gold', 'xp', 'qCount', 'arenaBest', 'realm', 'rev'])
+      if (d1.g[f] !== g[f]) { fail('codes', 'roundtrip', `trial ${trial}: ${f} changed (${g[f]} → ${d1.g[f]})`); rtBad = 1; break; }
+    if (rtBad) break;
+    if (Object.keys(d1.g.cleared).length !== Object.keys(g.cleared).length) {
+      fail('codes', 'roundtrip', `trial ${trial}: cleared count changed`); rtBad = 1; break;
+    }
+    const c2 = Codec.encode(k, d1.g, NOW), d2 = Codec.decode(c2);
+    if (!d2.ok) { fail('codes', 'roundtrip', `trial ${trial}: a re-encoded code would not decode (${d2.why})`); rtBad = 1; break; }
+    const c3 = Codec.encode(k, d2.g, NOW);
+    if (c2 !== c3) { fail('codes', 'roundtrip', `trial ${trial}: the codec did not reach a fixpoint`); rtBad = 1; break; }
+  }
+
+  /* A code written by the previous format (v1, before the write counter) must
+     still import, with the counter defaulting to zero — pinned from a real v1
+     code so a regression in backward compatibility is caught. */
+  const V1 = 'KE1-AFICVDNUDVRJWS4RAKRSXG5DXMVWGYNAPDABMCWANLQDQQBA4AQWWUASOCIKBGACAAAAACAGAIAAIEAJQCIAQAEABAAIACAAQANYAACA6DQAAAENESJESJESJESJESJAAGNKAAJEBSBJIABEQENDVAAESAIVEUAASIAFD2QACJAM6MKAAJEBB25IABEQCMKFAAESAAR4UAASIDEXCQACJAI4ZKAAJEARUNIABEQALQVAAESAYOWUAASICEKCQACJAE3GKAAJEABOBIABEQGKWVAAESAR6WUAASIBD5KQACJAAZSKAAJEBRHVIABEQEJ5FAAESAJ3OUAAQNCF';
+  const dv1 = Codec.decode(V1);
+  if (!dv1.ok) fail('codes', 'compat', `a v1 code no longer decodes (${dv1.why})`);
+  else if (dv1.g.rev !== 0) fail('codes', 'compat', `a v1 code decoded with rev ${dv1.g.rev}, expected 0`);
+  else if (dv1.g.lvl !== 7) fail('codes', 'compat', `a v1 code decoded with lvl ${dv1.g.lvl}, expected 7`);
 
   /* 3. The QR encoder was checked module-for-module against an independent
         implementation across versions 1–25, at every mask. That cannot run

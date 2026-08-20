@@ -2657,8 +2657,12 @@ function BitIn(src){
 }
 
 const Codec = {
-  VER:1,
-  TAG:'KE1-',
+  // The version byte inside a code is authoritative; the TAG is only the
+  // human-facing family prefix. decode() accepts any KE<digit>- prefix and
+  // reads the real version from the first byte, so codes made by an earlier
+  // build still import.
+  VER:2,
+  TAG:'KE2-',
 
   topics(){ return Object.keys(TOPIC_LABEL); },
   items(){ return Object.keys(ITEMS); },
@@ -2735,6 +2739,7 @@ const Codec = {
     o.bits(this.VER, 8);
     o.bits(this.sig(), 16);
     o.varint(Math.floor(now/3600000));       // the hour this code was made
+    o.varint(Math.max(0, Math.round(g.rev||0)));  // v2: monotonic write counter — the newest copy wins
 
     const nm=this.utf8(String(k.nm||'Knight').slice(0,18)).slice(0,31);
     o.bits(nm.length, 5);
@@ -2821,9 +2826,9 @@ const Codec = {
   /* ------------------------------ reading -------------------------------- */
   decode(str){
     let s=String(str||'').trim().toUpperCase();
-    const at=s.indexOf(this.TAG);                  // tolerates a whole pasted link
-    if(at<0) return {ok:false, why:'That does not look like a knight code.'};
-    s=s.slice(at+this.TAG.length).replace(/[\\s-]/g,'');
+    const tag=/KE(\\d)-/.exec(s);                    // any family prefix; tolerates a whole pasted link
+    if(!tag) return {ok:false, why:'That does not look like a knight code.'};
+    s=s.slice(tag.index+tag[0].length).replace(/[\\s-]/g,'');
     const stop=s.search(/[^A-Z2-7]/);
     if(stop>=0) s=s.slice(0,stop);
 
@@ -2836,9 +2841,10 @@ const Codec = {
 
     const b=BitIn(body), T=this.topics(), IT=this.items();
     const ver=b.bits(8);
-    if(ver!==this.VER) return {ok:false, why:'That code was made by a different version of the game.'};
+    if(ver<1 || ver>this.VER) return {ok:false, why:'That code was made by a newer version of the game.'};
     const sig=b.bits(16);
     const madeAt=b.varint()*3600000;
+    const rev=ver>=2 ? b.varint() : 0;             // v1 codes carry no write counter
 
     const nmLen=b.bits(5), nmB=[];
     for(let i=0;i<nmLen;i++) nmB.push(b.bits(8));
@@ -2847,6 +2853,7 @@ const Codec = {
               col:CREST_COLS[b.bits(3)]||CREST_COLS[0] };
 
     const g=Game.fresh();
+    g.rev=rev;
     g.lvl=b.varint()||1; g.maxHp=b.varint()||100; g.hp=b.varint();
     g.gold=b.varint(); g.xp=b.varint();
     g.qCount=b.varint(); g.arenaBest=b.varint(); g.realm=b.varint();
@@ -3463,6 +3470,7 @@ const Game = {
   fresh(){
     return {
       hp:100, maxHp:100, gold:0, xp:0, lvl:1,
+      rev:0,               // write counter — bumped every save; the newest copy wins a conflict
       weapon:'w0', armor:'a0',
       owned:{w0:1,a0:1},
       items:{potion:2, insight:1, rage:0, feather:0},
@@ -3490,6 +3498,7 @@ const Game = {
   },
   // Older saves stored only {c,w}; seed the mastery model from that history.
   migrate(){
+    if(typeof this.s.rev!=='number') this.s.rev=0;   // saves from before the counter start at zero
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -3508,6 +3517,7 @@ const Game = {
   save(){
     const slot=Profiles.activeKey();
     if(!slot || !this.s) return;
+    this.s.rev=(this.s.rev||0)+1;       // every write advances the counter, so a later save always wins
     try{ localStorage.setItem(slot, JSON.stringify(this.s)); }catch(e){}
     Vault.mirror();
   },
