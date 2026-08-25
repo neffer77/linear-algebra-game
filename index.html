@@ -353,10 +353,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 /* ---- rite ---- */
 #riteBar{display:flex; align-items:center; gap:6px; justify-content:center; margin-bottom:8px;
   font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--dim);}
-#riteBar .rp{width:12px; height:12px; border-radius:50%; border:2px solid var(--edge); background:#171129;}
-#riteBar .rp.done{background:var(--green); border-color:var(--green);}
-#riteBar .rp.miss{background:var(--red); border-color:var(--red);}
-#riteBar .rp.now{border-color:var(--gold); box-shadow:0 0 8px var(--gold);}
+.rp{display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid var(--edge); background:#171129;}
+.rp.done{background:var(--green); border-color:var(--green);}
+.rp.miss{background:var(--red); border-color:var(--red);}
+.rp.now{border-color:var(--gold); box-shadow:0 0 8px var(--gold);}
 #riteTrail{font-size:12px; color:var(--dim); line-height:1.7; margin-bottom:6px;}
 #riteTrail b{color:var(--ink);}
 .qchip{display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:34px;
@@ -480,9 +480,10 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div class="sub" style="margin-top:6px">Battle foes with linear algebra &amp; calculus.<br>Solve to strike. Miss and bleed.</div>
     </div>
     <div id="knightRow"></div>
+    <div id="titleState"></div>
     <div class="panel">
-      <button class="btn gold" onclick="Game.start()" id="btnBegin">⚔️ Begin the Quest</button>
       <button class="btn" onclick="UI.go('s-map')" id="btnContinue" style="display:none">🏰 Continue Journey</button>
+      <button class="btn gold" onclick="Game.start()" id="btnBegin">⚔️ Begin the Quest</button>
       <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
       <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
       <button class="btn ghost" onclick="Knights.open()">🛡️ Switch knight</button>
@@ -577,6 +578,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-lock">
     <div style="height:20px"></div>
     <div id="lockBody"></div>
+  </div>
+
+  <!-- ============ OPENING ============ -->
+  <div class="screen" id="s-opening">
+    <div style="height:20px"></div>
+    <div id="openBody"></div>
   </div>
 
   <!-- ============ SHOP ============ -->
@@ -3508,6 +3515,9 @@ const Game = {
       daily:null,          // daily skirmish scores
       titles:{},           // earned milestone ids
       run:null,            // mid-descent checkpoint, or null between runs (see Dungeon)
+      firstRun:0,          // has this knight finished the cellar? gates the map
+      seenOpening:0,       // has the three-card opening been shown?
+      metRoom:{},          // room kinds this knight has been introduced to
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -3528,6 +3538,16 @@ const Game = {
     if(this.s.items && typeof this.s.items.pick!=='number') this.s.items.pick=3;
     // A checkpoint written by a build that did not have them reads as no run.
     if(typeof this.s.run==='undefined') this.s.run=null;
+    if(!this.s.metRoom) this.s.metRoom={};
+    // Anyone already playing has long since earned the map and does not get
+    // sent to the cellar or read an opening they have been past for weeks.
+    if(typeof this.s.firstRun!=='number'){
+      const played = this.s.lvl>1 || Object.keys(this.s.cleared||{}).length
+                  || (this.s.stats && this.s.stats.correct);
+      this.s.firstRun = played ? 1 : 0;
+      if(played){ this.s.seenOpening=1; this.s.metRoom.monster=1; }
+    }
+    if(typeof this.s.seenOpening!=='number') this.s.seenOpening=0;
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -3568,7 +3588,11 @@ const Game = {
                  +`If you are a different player, cancel and choose "Switch knight" instead.`)) return;
     }
     this.s=this.fresh(); this.touchStreak(); this.save();
-    UI.refreshTitle(); UI.go('s-map');
+    UI.refreshTitle();
+    // A cold start reads the three cards and then goes straight down to the
+    // cellar. No map, no shop, no lore beyond those cards — the first thing a
+    // new knight does is answer a question and hit something with the answer.
+    Opening.play(()=>Quartermaster.open());
   },
   rest(){
     const cost = 25 + this.s.lvl*5;
@@ -6053,6 +6077,35 @@ const ARENA_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The cellar under the Keep — where a new knight is sent, and the only place
+   in the game tuned so that losing is not really on the table. A fresh knight
+   swings for nine, so these fall in three or four answers, and they hit for
+   six against a hundred health: you would have to miss sixteen in a row. */
+const CELLAR_WAVES = {
+  championEvery:99,                        // nothing down here wears a crown
+  hp0:22,  hpPer:12, champHp:1,
+  atk0:6,  atkGrow:1.05, champAtk:1,
+  gold0:20, goldPer:8,
+  xp0:18,   xpPer:6,
+  champReward:1,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
+/* A descent's setting: the curve it draws foes from, how its rooms are laid
+   out, and whether it can kill you. The Deep runs forever on a seeded roll;
+   the cellar is three rooms on a fixed plan with a chest in the middle, and it
+   cannot end in a death — a first run has to finish, or it has taught nothing. */
+const SETTINGS = {
+  deep: {
+    key:'deep', nm:'The Deep', waves:ARENA_WAVES,
+    canDie:true, rooms:0, lockChance:.34
+  },
+  cellar: {
+    key:'cellar', nm:'the cellar', waves:CELLAR_WAVES,
+    canDie:false, rooms:3, plan:['monster','lock','monster']
+  }
+};
+
 /* Run-scoped boons, drafted three at a time. They stack. */
 const BOONS = [
   {ic:'🩸', nm:'Vigour',     ds:'+25% maximum health, and heal that much now',
@@ -6221,8 +6274,8 @@ const Arena = {
 const RoomKinds = {
   monster: {
     // Pure. Given the seeded stream and how deep we are, describe the room.
-    build(rng, depth){
-      return { kind:'monster', foe: WaveEngine.foe(depth, ARENA_WAVES) };
+    build(rng, depth, set){
+      return { kind:'monster', foe: WaveEngine.foe(depth, (set||SETTINGS.deep).waves) };
     },
     // Take the screen, play the fight out, then report an outcome exactly once.
     // The room decides nothing about the save or the map — it hands the shell
@@ -6241,10 +6294,11 @@ const RoomKinds = {
   // overdue for), so the room is not perfectly seed-pure like the monster; but
   // within a single descent each depth is built once, so a run stays stable.
   lock: {
-    build(rng, depth){
+    build(rng, depth, set){
       const pool = WaveEngine.pool(Game.s.topicStats);
       const key  = Mastery.pick(pool);
-      const base = clamp(1 + Math.floor(depth/3), 1, 3);
+      // The cellar's chest is a teaching chest: it never asks a hard one.
+      const base = (set && set.key==='cellar') ? 1 : clamp(1 + Math.floor(depth/3), 1, 3);
       const diff = Mastery.adjustDiff(key, base);
       const q    = buildQuestion(key, diff);
       // A cracked chest pays a touch more than the fight it replaces — it cost
@@ -6384,6 +6438,119 @@ const Lock = {
   }
 };
 
+/* -------------------------------- the opening ----------------------------- */
+/* Why arithmetic hurts a dragon, in three sentences. A game about practice
+   cannot open on screens of invented history — nobody reads it and it delays
+   the first question — but the conceit does need an answer, or a player who
+   thinks the maths is arbitrary will treat it as arbitrary. Twenty seconds,
+   skippable in one tap, and kept in the Tome to be read again. */
+const OPENING = [
+  {ic:'⚖️', t:'The realm balances',
+   b:'The Eigenrealm holds together because its quantities balance — every length, every angle, every rate agreeing with every other.'},
+  {ic:'🐉', t:'Where it stops, something goes wrong',
+   b:'Where they stop balancing, something crawls out of the gap: a slime that will not sum, a wyrm whose determinant has collapsed.'},
+  {ic:'⚔️', t:'A blade that resolves',
+   b:'A knight’s blade does not cut. It <b>resolves</b> — and that is why the only weapon that works down here is the mathematics itself.'}
+];
+const Opening = {
+  i:0, after:null,
+  /* Show the cards, then run `after`. Already seen? Straight through. */
+  play(after){
+    this.after=after;
+    if(Game.s && Game.s.seenOpening){ this.done(); return; }
+    this.i=0; UI.go('s-opening'); this.card();
+  },
+  // Re-read from the Tome: the same cards, ending back where you were.
+  reread(){ this.after=()=>UI.go('s-tome'); this.i=0; UI.go('s-opening'); this.card(); },
+  card(){
+    const c=OPENING[this.i], last=this.i===OPENING.length-1;
+    document.getElementById('openBody').innerHTML=`
+      <div class="center crest">${c.ic}</div>
+      <div class="panel center">
+        <div class="row" style="justify-content:center;gap:6px;margin-bottom:10px">
+          ${OPENING.map((x,j)=>`<span class="rp ${j<this.i?'done':j===this.i?'now':''}"></span>`).join('')}
+        </div>
+        <h1 style="font-size:19px;color:var(--gold)">${c.t}</h1>
+        <div class="sub" style="margin-top:10px;font-size:15px;line-height:1.65">${c.b}</div>
+      </div>
+      <button class="btn gold" id="openNext">${last?'Take up the blade →':'Go on →'}</button>
+      <div class="center" style="margin-top:8px">
+        <span class="kbd" id="openSkip">Skip the tale</span>
+      </div>
+      <div style="height:20px"></div>`;
+    document.getElementById('openNext').onclick=()=>{
+      if(last) this.done(); else { this.i++; this.card(); }
+    };
+    document.getElementById('openSkip').onclick=()=>this.done();
+  },
+  done(){
+    if(Game.s && !Game.s.seenOpening){ Game.s.seenOpening=1; Game.save(); }
+    const go=this.after; this.after=null;
+    if(go) go(); else UI.go('s-map');
+  }
+};
+
+/* ----------------------------- the quartermaster -------------------------- */
+/* The only person at the Keep when a new knight arrives, and the shortest path
+   from a cold start to a first fight. She hands over a blade and points at the
+   cellar stairs; the map stays shut until the knight comes back up them. */
+const Quartermaster = {
+  open(){
+    UI.go('s-opening');
+    document.getElementById('openBody').innerHTML=`
+      <div class="center crest">🗝️</div>
+      <div class="panel">
+        <h2 style="font-size:18px;color:var(--gold)">The quartermaster</h2>
+        <div class="sub" style="margin-top:8px;font-size:15px;line-height:1.65">
+          “New, are you. Everyone starts the same way — down the stairs, three rooms,
+          nothing in them that can finish you. There is a chest in the middle; here are
+          picks for it.<br><br>
+          Come back up and the realms are yours to walk.”
+        </div>
+        <hr>
+        <div class="row" style="flex-wrap:wrap;justify-content:center">
+          <span class="pill">🗡️ Rusted Trainer</span>
+          <span class="pill">🧪 Healing Draught ×2</span>
+          <span class="pill">🔧 Lockpick ×3</span>
+        </div>
+      </div>
+      <button class="btn gold" id="qmGo">🕯️ Down to the cellar →</button>
+      <div style="height:20px"></div>`;
+    document.getElementById('qmGo').onclick=()=>Dungeon.descend('cellar');
+  }
+};
+
+/* ------------------------------ meeting a room ---------------------------- */
+/* The first time a knight meets a kind of room, the game says what the verb is
+   before asking them to perform it. Once each, per knight, and never again —
+   this is onboarding, not a tooltip that nags forever. */
+const ROOM_INTRO = {
+  monster: {ic:'⚔️', t:'Something is in the way',
+    b:'Answer the riddle and your knight strikes; miss and it strikes you. Faster answers hit harder, and a wrong one always shows you why before you move on.'},
+  lock: {ic:'🧰', t:'A locked chest',
+    b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'}
+};
+const RoomIntro = {
+  needed(kindName){
+    return !!(ROOM_INTRO[kindName] && Game.s && !(Game.s.metRoom||{})[kindName]);
+  },
+  show(kindName, go){
+    const c=ROOM_INTRO[kindName];
+    if(!c){ go(); return; }
+    Game.s.metRoom=Game.s.metRoom||{}; Game.s.metRoom[kindName]=1; Game.save();
+    UI.go('s-opening');
+    document.getElementById('openBody').innerHTML=`
+      <div class="center crest">${c.ic}</div>
+      <div class="panel center">
+        <h1 style="font-size:19px;color:var(--gold)">${c.t}</h1>
+        <div class="sub" style="margin-top:10px;font-size:15px;line-height:1.65">${c.b}</div>
+      </div>
+      <button class="btn gold" id="introGo">Ready →</button>
+      <div style="height:20px"></div>`;
+    document.getElementById('introGo').onclick=go;
+  }
+};
+
 /* ------------------------------- the Dungeon ------------------------------ */
 /* Policy #2 over the shared engine — the endless Arena was #1. The Arena keeps
    every coin whether you walk out or are carried; the Deep does the opposite,
@@ -6402,9 +6569,13 @@ const Dungeon = {
   // before the Arena, since the Deep is the core loop, not the victory lap.
   unlocked(){ return !!(Game.s && Game.s.cleared['0:'+(REALMS[0].foes.length-1)]); },
 
-  descend(){
+  // Which setting this descent is in — the Deep unless the cellar says otherwise.
+  set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
+
+  descend(setting){
+    const key = SETTINGS[setting] ? setting : 'deep';
     const seed = ((Date.now() ^ Math.floor(Math.random()*0xffffffff)) >>> 0) || 1;
-    this.run = { setting:'deep', seed, depth:0, unbanked:{ gold:0, xp:0 } };
+    this.run = { setting:key, seed, depth:0, unbanked:{ gold:0, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
     Game.s.maxHp = Game.maxHp();
@@ -6461,31 +6632,84 @@ const Dungeon = {
   nextRoom(){
     this.run.depth++;
     const depth = this.run.depth;
+    const set = this.set();
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
-    // Depth 1 always opens on a fight; after that a locked chest surfaces now
-    // and then. The roll is part of the seeded build, so a run's rooms are laid
-    // out the same way every time it is replayed from its seed.
-    const kind = (depth>=2 && R.chance(.34)) ? RoomKinds.lock : RoomKinds.monster;
-    const spec = kind.build(R, depth);
+    // A setting with a plan lays its rooms out by hand — the cellar puts a
+    // chest in the middle so a first run is guaranteed to meet one. Otherwise
+    // depth one opens on a fight and a locked chest surfaces now and then, on a
+    // roll that is part of the seeded build, so a run replays identically.
+    const name = set.plan ? set.plan[depth-1]
+               : (depth>=2 && R.chance(set.lockChance)) ? 'lock' : 'monster';
+    const kind = RoomKinds[name] || RoomKinds.monster;
+    const spec = kind.build(R, depth, set);
     R.unseed();
     this.cur = { kind, spec };
-    const ctx = { run:this.run, depth, setting:this.run.setting,
-                  rng:R, canDie:true, resume:null };
-    kind.enter(spec, ctx, outcome => this.resolve(outcome));
+    const ctx = { run:this.run, depth, setting:set.key,
+                  rng:R, canDie:set.canDie, resume:null };
+    const go = () => kind.enter(spec, ctx, outcome => this.resolve(outcome));
+    // Say what this kind of room asks of you, the first time you meet one.
+    if(RoomIntro.needed(name)) RoomIntro.show(name, go); else go();
   },
 
   // The shell owns everything between rooms: staging the yield, the fork,
   // banking, and ending the run on death.
   resolve(outcome){
+    const set=this.set();
+    if(outcome.status!=='cleared' && !set.canDie){
+      // A setting that cannot kill you: the foe breaks off instead. You keep
+      // what you carried and the run goes on, because a first run that ends in
+      // a death screen has taught the player only that they should not have
+      // tried. They are put back on their feet, not healed to full.
+      Game.s.hp=Math.max(Math.round(Game.s.maxHp*.5), Math.round(Game.s.hp));
+      outcome={ status:'cleared', quality:0, topics:outcome.topics||[], yield:{}, brokeOff:true };
+    }
     if(outcome.status==='cleared'){
       const y=outcome.yield||{};
       this.run.unbanked.gold += y.gold||0;
       this.run.unbanked.xp   += y.xp||0;
       this.checkpoint(this.run.depth);   // this depth is behind you now
-      this.fork(outcome);
+      // A run of fixed length is over when its last room falls — there is no
+      // fork to offer, so it banks itself and walks you back up.
+      if(set.rooms && this.run.depth>=set.rooms) this.finishRun(outcome);
+      else this.fork(outcome);
     } else {
       this.died(outcome);        // canDie run — a fall forfeits the unbanked pot
     }
+  },
+
+  /* The end of a fixed-length run. Everything carried is banked — you walked
+     out of the last room, which is the same thing as climbing the stairs. */
+  finishRun(outcome){
+    const u={gold:this.run.unbanked.gold, xp:this.run.unbanked.xp};
+    const set=this.set(), depth=this.run.depth;
+    this.active=false;
+    Game.s.gold += u.gold;
+    const ups=Game.gainXp(u.xp);
+    Game.s.maxHp=Game.maxHp();
+    Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    this.clearRun();
+    Game.s.firstRun=1;                 // the cellar is behind them; the map opens
+    Game.save();
+    UI.go('s-result');
+    document.getElementById('resultBody').innerHTML=`
+      <div class="center crest">🏰</div>
+      <div class="panel center">
+        <h1 style="font-size:20px;color:var(--gold)">Back up the stairs</h1>
+        <div class="sub" style="margin-top:6px">${depth} rooms of ${set.nm}, and you walked out of all of them.</div>
+        <hr>
+        <div style="font-size:15px;font-weight:800;line-height:1.8">
+          <div class="coin">🎒 ${u.gold} gold banked</div>
+          <div style="color:var(--blue)">✦ ${u.xp} experience</div>
+        </div>
+        <hr>
+        <div class="sub">That is the whole game: answer to strike, and choose when to walk out.
+          The realms above are open to you now — and the Deep, when you are ready, runs as far as you dare.</div>
+      </div>
+      <button class="btn gold" onclick="UI.go('s-map')">🗺️ To the map →</button>
+      <div style="height:20px"></div>`;
+    Haptic.win(); Sfx.win();
+    if(ups) setTimeout(()=>Celebrate.banner('LEVEL '+Game.s.lvl,'Maximum health now '+Game.s.maxHp,'var(--gold)',()=>Sfx.level()), 600);
+    Titles.check();
   },
 
   fork(outcome){
@@ -6597,10 +6821,36 @@ const UI = {
              <span class="small" style="opacity:.75">${n>1?'· switch':'· knights'}</span></span></div>`
       : (n ? `<div class="center" style="margin-bottom:8px">
            <span class="knightchip" onclick="Knights.open()">🛡️ <span>Choose your knight</span></span></div>` : '');
+    /* The title card has three states and should look like it: nobody here
+       yet, a knight safe at the Keep, or a knight parked in the middle of a
+       cave. The third one has to say what is at stake, because the whole point
+       of a saved run is that walking back into it is a decision. */
     const has=!!(k && Game.s);
-    document.getElementById('btnContinue').style.display = has ? '' : 'none';
+    const pend=has ? Dungeon.pending() : null;
+    const begin=document.getElementById('btnBegin'), cont=document.getElementById('btnContinue');
+    const line=document.getElementById('titleState');
+    cont.style.display = has ? '' : 'none';
     document.getElementById('resetRow').style.display = has ? '' : 'none';
-    document.getElementById('btnBegin').textContent = has ? '⚔️ Start a new quest' : '⚔️ Begin the Quest';
+    begin.textContent = has ? '⚔️ Start a new quest' : '⚔️ Begin the Quest';
+    begin.className = has ? 'btn ghost' : 'btn gold';
+    if(!has){
+      cont.style.display='none';
+      line.innerHTML='';
+    } else if(pend){
+      const set=SETTINGS[pend.setting||'deep']||SETTINGS.deep;
+      cont.className='btn gold';
+      cont.innerHTML=`🕯️ Return to ${set.nm} — room ${(pend.done||0)+1}`;
+      cont.setAttribute('onclick','Dungeon.resume()');
+      line.innerHTML=`<div class="panel center" style="padding:9px">
+        <div class="small">❤️ ${pend.hp} health · 🎒 <b class="coin">${pend.gold||0} gold</b> carried and not yet banked</div></div>`;
+    } else {
+      const st=Game.s.streak||{days:0};
+      cont.className='btn gold';
+      cont.innerHTML=`🏰 Continue as ${Knights.esc(k.nm)}`;
+      cont.setAttribute('onclick',"UI.go('s-map')");
+      line.innerHTML=`<div class="panel center" style="padding:9px">
+        <div class="small">Level ${Game.s.lvl} · 🪙 ${Game.s.gold} gold${st.days>1?` · 🔥 ${st.days} day streak`:''}</div></div>`;
+    }
   },
   glint(){
     const w=document.getElementById('wipe'); if(!w) return;
@@ -6695,6 +6945,18 @@ const UI = {
       });
     });
     // The Deep — the core run loop, opened by the first realm's boss.
+    // A knight who never finished the cellar is offered it back, at the top,
+    // before anything else — but the map is not locked behind it. Someone who
+    // walked out early should be able to get on with the game.
+    if(!g.firstRun && !Dungeon.pending()) out=`
+      <div class="node" style="border-color:var(--gold-dk)" onclick="Quartermaster.open()">
+        <div class="ico" style="font-size:24px">🗝️</div>
+        <div style="flex:1">
+          <div class="nm">The quartermaster is waiting</div>
+          <div class="dt">Three rooms in the cellar — nothing down there can finish you</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>` + out;
     const dOpen=Dungeon.unlocked(), pend=Dungeon.pending();
     out+=`<div class="realmhdr"><span class="dot" style="background:#b48bec"></span>
           <h2 style="color:#b48bec">The Deep</h2>${dOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
@@ -6847,7 +7109,14 @@ const UI = {
       }).join('')}`;
   },
   renderTome(){
+    // The opening is skippable, so it has to live somewhere it can be found
+    // again — this is that somewhere.
     document.getElementById('tomeList').innerHTML =
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📜 Why a blade of mathematics</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">The tale you were told at the gate, in three cards.</div>
+         <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
+       </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
   }
@@ -7277,6 +7546,13 @@ const Knights = {
      here, no typing over there. The text is kept underneath for anything a
      camera cannot reach, a laptop most of all. */
   carry(id){
+    // A code is a snapshot of a knight, and a descent in flight is not part of
+    // it — carrying one mid-run would strand the unbanked haul on this device
+    // with nothing to say so. A knight is finished or parked before they travel.
+    if(Profiles.r && id===Profiles.r.active && Dungeon.pending()){
+      UI.toast('Climb out of the Deep first — a descent cannot travel with you.');
+      return;
+    }
     const link=Profiles.link(id), code=Profiles.export(id);
     if(!code){ UI.toast('Nothing to carry yet.'); return; }
     const nm=this.esc(Profiles.get(id).nm);
