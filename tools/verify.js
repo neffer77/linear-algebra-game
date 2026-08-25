@@ -848,7 +848,7 @@ let codeNotes = null;
       qCount: rr(600), arenaBest: rr(40), realm: rr(6), rev: rr(9999),
       stats: { wins: rr(300), correct: rr(2000), wrong: rr(500), best: rr(20) },
       weapon: 'w0', armor: 'a0', owned: { w0: 1, a0: 1 },
-      items: { potion: rr(9), insight: rr(9), rage: rr(9), feather: rr(9) },
+      items: { potion: rr(9), insight: rr(9), rage: rr(9), feather: rr(9), pick: rr(9) },
       cleared: {}, titles: {}, streak: { days: rr(60), last: '2026-8-' + (1 + rr(28)) },
       daily: null, bounties: [], riteWins: {}, topicStats: {}
     };
@@ -920,7 +920,48 @@ let codeNotes = null;
   if (!big) fail('codes', 'qr', 'a 1024-character code does not fit in any supported version');
   else if (big.v > 20) fail('codes', 'qr', `a 1024-character code needs version ${big.v}, which is too dense to scan`);
 
-  codeNotes = { topics: keys.length, sig: Codec.sig(), worst: big && big.size };
+  /* 4b. That 1024 is an assumption about how large a real save gets, and every
+         new item or topic pushes on it. So measure a real one rather than trust
+         the assumption: a knight who has met every topic, owns every piece of
+         gear, has cleared every foe, and has two thousand attempts on each of
+         the seventy topics — every one of them WRONG, which is the shape that
+         encodes largest, since `w` is stored and `c` is derived.
+
+         That is roughly 140,000 questions answered, far past any real player,
+         and it still lands on version 19 with a version to spare. The format
+         holds this flat for an enormous range because the per-topic recency
+         fields are capped at a byte each; the only unbounded parts are the two
+         attempt varints, which widen from two bytes to three at 4,096 attempts
+         on a single topic (about 287,000 questions answered). If a future field
+         pushes the common case up a version, this is the test that says so. */
+  const HEAVY = 2000;
+  const maxG = {
+    lvl: 99, maxHp: 9999, hp: 9999, gold: 9999999, xp: 999999,
+    qCount: HEAVY * Object.keys(TOPIC_LABEL).length,
+    arenaBest: 999, realm: REALMS.length - 1, rev: 999999,
+    stats: { wins: 99999, correct: 999999, wrong: 999999, best: 999 },
+    weapon: 'w0', armor: 'a0', owned: {}, items: {},
+    cleared: {}, titles: {}, streak: { days: 9999, last: '2026-12-31' },
+    daily: null, bounties: [], riteWins: {}, topicStats: {}
+  };
+  for (const it of Codec.items()) maxG.items[it] = 999;
+  REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { maxG.cleared[ri + ':' + fi] = 1; }));
+  for (const k of Object.keys(TOPIC_LABEL))
+    maxG.topicStats[k] = { c: 0, w: HEAVY, m: 0.999, seen: HEAVY, last: 0, t: NOW - 900 * 864e5 };
+  const maxCode = Codec.encode({ nm: 'Maximilian the Unabbreviated', crest: CRESTS[0], col: CREST_COLS[0] }, maxG, NOW);
+  const maxDec = Codec.decode(maxCode);
+  if (!maxDec.ok) fail('codes', 'qr', `the heaviest realistic knight would not decode (${maxDec.why})`);
+  else if (maxDec.g.lvl !== 99 || maxDec.g.gold !== 9999999)
+    fail('codes', 'qr', 'the heaviest realistic knight did not survive its own round trip');
+  if (maxCode.length > 1024)
+    fail('codes', 'qr', `the heaviest realistic knight encodes to ${maxCode.length} characters, past the 1024 the ceiling above assumes`);
+  const maxQR = QR.matrix([{ mode: 'byte', data: Codec.utf8(URL_PREFIX) },
+                           { mode: 'alnum', text: maxCode }]);
+  if (!maxQR) fail('codes', 'qr', 'the heaviest realistic knight does not fit in any supported version');
+  else if (maxQR.v > 20) fail('codes', 'qr', `the heaviest realistic knight needs version ${maxQR.v}, which is too dense to scan`);
+
+  codeNotes = { topics: keys.length, sig: Codec.sig(), worst: big && big.size,
+                maxChars: maxCode.length, maxSize: maxQR && maxQR.size, maxQ: maxG.qCount };
 })();
 
 /* ----------------------------------------------------------------- report */
@@ -956,6 +997,7 @@ if (figKeys.size) {
 if (codeNotes) {
   console.log(`  knight codes: topics       ${pad(codeNotes.topics, 10)}  (signature 0x${codeNotes.sig.toString(16)})`);
   console.log(`    QR symbols pinned                      (worst case ${codeNotes.worst}×${codeNotes.worst} modules)`);
+  console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → ${codeNotes.maxSize}×${codeNotes.maxSize} modules`);
 }
 console.log('─'.repeat(58));
 

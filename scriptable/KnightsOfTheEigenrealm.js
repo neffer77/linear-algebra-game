@@ -3526,6 +3526,7 @@ const Game = {
       riteWins:{},         // ladders cleared per topic; drives scaffolding fade
       daily:null,          // daily skirmish scores
       titles:{},           // earned milestone ids
+      run:null,            // mid-descent checkpoint, or null between runs (see Dungeon)
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -3544,6 +3545,8 @@ const Game = {
     // Saves made before lockpicks existed get a starter set, so the Deep's
     // first locked chest is always attemptable rather than a dead end.
     if(this.s.items && typeof this.s.items.pick!=='number') this.s.items.pick=3;
+    // A checkpoint written by a build that did not have them reads as no run.
+    if(typeof this.s.run==='undefined') this.s.run=null;
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -6425,8 +6428,50 @@ const Dungeon = {
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = Game.s.maxHp;          // you enter whole; the Deep does not heal you
-    Game.save();
+    this.checkpoint(0);                // nothing cleared yet; a resume starts at room one
     this.nextRoom();
+  },
+
+  /* The mid-run checkpoint (ADR-002). Everything needed to rebuild a descent is
+     {seed, done, bank} — the rooms themselves are a pure function of (seed,
+     depth), so they are never stored, only replayed. \`done\` counts depths
+     CLEARED, not the room you are standing in: quit inside room four and the
+     checkpoint still reads three, so resuming re-enters room four rather than
+     paying you for it twice. Health rides along so a resume cannot launder a
+     wounded knight into a fresh one. Written once per room — a tiny payload on
+     a path that is already saving. */
+  checkpoint(done){
+    Game.s.run = { seed:this.run.seed, done, setting:this.run.setting,
+                   gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
+                   hp:Math.round(Game.s.hp) };
+    Game.save();
+  },
+  clearRun(){ Game.s.run = null; },
+
+  // Is there a descent waiting to be picked back up?
+  pending(){ const r=Game.s && Game.s.run; return (r && typeof r.seed==='number') ? r : null; },
+
+  /* Walk back into a saved descent. The room is rebuilt from (seed, depth), so
+     what you re-enter is the same room you left, down to the foe's name. */
+  resume(){
+    const r=this.pending();
+    if(!r) return;
+    this.run = { setting:r.setting||'deep', seed:r.seed, depth:r.done||0,
+                 unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
+    this.active = true;
+    this.realm.pool = WaveEngine.pool(Game.s.topicStats);
+    Game.s.maxHp = Game.maxHp();
+    Game.s.hp = clamp(r.hp||Game.s.maxHp, 1, Game.s.maxHp);
+    this.nextRoom();                   // steps depth to done+1: the room you were in
+  },
+
+  // Walking away from a saved descent without finishing it. The pot is forfeit,
+  // exactly as a fall would forfeit it — abandoning is not a free climb out.
+  abandon(){
+    const r=this.pending(); if(!r) return;
+    this.clearRun(); Game.save();
+    UI.renderMap();
+    UI.toast(\`⛏️ The descent is abandoned — \${r.gold||0} unbanked gold left to the dark.\`);
   },
 
   // Build the next room from (seed, depth) and enter it. The seeded stream is
@@ -6455,7 +6500,7 @@ const Dungeon = {
       const y=outcome.yield||{};
       this.run.unbanked.gold += y.gold||0;
       this.run.unbanked.xp   += y.xp||0;
-      Game.save();
+      this.checkpoint(this.run.depth);   // this depth is behind you now
       this.fork(outcome);
     } else {
       this.died(outcome);        // canDie run — a fall forfeits the unbanked pot
@@ -6502,6 +6547,7 @@ const Dungeon = {
     const ups = Game.gainXp(u.xp);
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    this.clearRun();                   // banked and done; there is nothing to resume
     Game.save();
     UI.go('s-map');
     UI.toast(\`🚪 \${midFight?'Fled':'Climbed out'} of the Deep at depth \${this.run.depth} with \${u.gold} gold.\`);
@@ -6515,6 +6561,7 @@ const Dungeon = {
     Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    this.clearRun();                   // the run is over; the checkpoint dies with it
     Game.save();
     UI.go('s-result');
     document.getElementById('resultBody').innerHTML=\`
@@ -6667,15 +6714,31 @@ const UI = {
       });
     });
     // The Deep — the core run loop, opened by the first realm's boss.
-    const dOpen=Dungeon.unlocked();
+    const dOpen=Dungeon.unlocked(), pend=Dungeon.pending();
     out+=\`<div class="realmhdr"><span class="dot" style="background:#b48bec"></span>
           <h2 style="color:#b48bec">The Deep</h2>\${dOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">A seeded descent. Every haul rides unbanked until you climb out — press deeper for more, but a fall loses it all.</div>
+      <div class="small" style="margin:2px 0 4px">A seeded descent. Every haul rides unbanked until you climb out — press deeper for more, but a fall loses it all.</div>\`;
+    // A descent left in progress is the first thing offered — the pot is still
+    // riding on it, and the room is rebuilt exactly as it was left.
+    if(dOpen && pend) out+=\`
+      <div class="node" onclick="Dungeon.resume()" style="border-color:#b48bec">
+        <div class="ico" style="font-size:24px">🕯️</div>
+        <div style="flex:1">
+          <div class="nm">Resume the descent <span class="tag g">depth \${(pend.done||0)+1}</span></div>
+          <div class="dt">🎒 \${pend.gold||0} gold still at risk · ❤️ \${pend.hp}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>
+      <div class="center" style="margin:-2px 0 6px">
+        <span class="kbd" onclick="event.stopPropagation();Dungeon.abandon()">✖ Abandon it (the haul is lost)</span>
+      </div>\`;
+    out+=\`
       <div class="node \${dOpen?'':'locked'}" onclick="Dungeon.descend()">
         <div class="ico" style="font-size:24px">⛏️</div>
         <div style="flex:1">
-          <div class="nm">Descend the Deep</div>
-          <div class="dt">\${dOpen?'Scaling rooms · press-on / leave · your haul is at risk':'Clear the first realm to find the shaft'}</div>
+          <div class="nm">\${pend?'Start a new descent':'Descend the Deep'}</div>
+          <div class="dt">\${!dOpen?'Clear the first realm to find the shaft'
+                            :pend?'Abandons the descent you left behind':'Scaling rooms · press-on / leave · your haul is at risk'}</div>
         </div>
         <div style="font-size:20px;color:var(--dim)">\${dOpen?'▶':'🔒'}</div>
       </div>\`;
