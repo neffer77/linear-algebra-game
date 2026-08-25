@@ -2353,17 +2353,32 @@ const Mastery = {
     const t=Game.s.topicStats;
     return t[key] || (t[key]={c:0,w:0,m:0,seen:0,last:-999});
   },
-  // `weight` scales how much an outcome moves mastery. A mote is one small step
-  // of a topic, so four of them must not count as four full answers — otherwise
-  // the scheduler believes you have mastered what you were merely walked through.
-  update(key, ok, weight){
+  /* The write. One graded answer nudges m toward its result on an exponential
+     moving average, with two deliberate asymmetries.
+
+     The learning rate α = w/(2 + seen) shrinks as evidence piles up, so the
+     first answers on a topic move the needle and later ones only confirm it.
+     A plain running average would let a long-ago streak of luck dominate
+     forever; an EMA forgets old evidence at a controlled rate, which is what
+     "how well do you know this now" has to mean. It is also two numbers rather
+     than a history, which is why a topic costs 22 bits in a save and not a log.
+
+     And a miss pulls all the way to zero while a hit only pulls to `quality`,
+     because forgetting is cheaper than learning.
+
+     `weight` scales how much an outcome counts. A mote is one small step of a
+     topic, so four of them must not count as four full answers — otherwise the
+     scheduler believes you have mastered what you were merely walked through. */
+  update(key, ok, weight, quality){
     const r=this.rec(key);
     const was=r.m;
     const w = weight===undefined ? 1 : weight;
+    const target = ok ? clamp(quality===undefined?1:quality, 0, 1) : 0;
+    // α is read off the evidence BEFORE this answer joins it.
+    const alpha = clamp(w/(2 + (r.seen||0)), 0, 1);
     r.seen += w;
     if(ok) r.c+=w; else r.w+=w;
-    const alpha = (r.seen<4 ? 0.45 : 0.25) * w;
-    r.m = clamp(r.m + alpha*((ok?1:0) - r.m), 0, 1);
+    r.m = clamp(r.m + alpha*(target - r.m), 0, 1);
     r.last = Game.s.qCount;
     r.t = Date.now();                          // wall clock, for real spacing
     // Crossing into "solid" is the moment worth celebrating: it is real learning.
@@ -2380,42 +2395,122 @@ const Mastery = {
   // yesterday is never "due" simply because few questions have passed.
   dueDays(r){ return 1 + Math.round(r.m*r.m*6); },
   daysSince(r){ return r.t ? (Date.now()-r.t)/864e5 : Infinity; },
+
+  /* The fade. What is stored never moves while you are away; what the game
+     READS is an effective mastery that decays with time since you last saw the
+     topic. Nothing new is written to the save — the fade is derived at read
+     time from the two fields already there.
+
+     Retention is exp(−days / strength), and strength is 2·seen days — it grows
+     with how often you have met the topic. That single line is what makes the
+     review intervals double on their own, because the point where retention
+     has fallen by the same amount moves out every time seen doubles —
+
+         seen 1 → 2 days,  2 → 4 days,  4 → 8 days,  8 → 16 days
+
+     — so the scheduler never needs a calendar of its own. It watches effective
+     mastery fall and surfaces the topic when it does. A solid, often-met topic
+     barely moves — forty sightings puts its half-life out past a month; a
+     shaky one seen once falls to nothing inside a week. */
+  strength(r){ return 2*Math.max(1, r.seen||0); },
+  retention(r){
+    const d=this.daysSince(r);
+    if(!isFinite(d)) return 0;
+    return Math.exp(-d / this.strength(r));
+  },
+  // Effective mastery: what every reader below should ask for, rather than the
+  // raw stored number, which only says how well you knew it the day you left.
+  eff(key){
+    const r=Game.s && Game.s.topicStats[key];
+    if(!r || !r.seen) return 0;
+    return clamp((r.m||0) * this.retention(r), 0, 1);
+  },
+
   overdue(key){
     const r=Game.s.topicStats[key];
     if(!r || !r.seen) return true;
     return (Game.s.qCount - r.last) >= this.dueIn(r)
         || this.daysSince(r) >= this.dueDays(r);
   },
-  weight(key){
-    const r=Game.s.topicStats[key];
-    if(!r || !r.seen) return 5;                          // unseen: introduce it
-    const elapsed = Game.s.qCount - r.last;
-    if(elapsed < 2) return 0.05;                         // never ask twice in a row
-    const need = Math.pow(1-r.m, 2)*4 + 0.3;             // weak topics dominate
-    const due  = Math.min(elapsed/this.dueIn(r), 2.5);   // overdue within the session
-    const cal  = Math.min(this.daysSince(r)/this.dueDays(r), 2.5);  // and across days
-    return need * (0.4 + Math.max(due, cal));
+
+  /* The pick. Every candidate is scored by urgency, and the room takes a
+     weighted sample rather than the argmax — always serving the single most
+     urgent topic is predictable and reads as nagging, while a sample keeps the
+     variety that makes a run feel like a run.
+
+     Three signals, and their weights are the real tuning knobs: whether this
+     game feels like drilling weaknesses, honouring the schedule, or staying in
+     theme.
+       gap        how far effective mastery is from solid — drill the weak
+       staleness  how far past its review point the topic has drifted
+       relevance  whether this room's setting is about this topic
+
+     Unseen topics carry a deliberate premium so breadth gets introduced, and
+     the topic just asked is excluded outright: interleaving is most of why
+     spacing works, and asking the same thing twice running undoes it. */
+  W_GAP:3.0, W_STALE:1.6, W_RELEVANCE:1.2, W_FLOOR:0.25, W_UNSEEN:5,
+  _last:null,
+  urgency(key, prefer){
+    const r=Game.s && Game.s.topicStats[key];
+    if(!r || !r.seen) return this.W_UNSEEN;                  // unseen: introduce it
+    const gap  = 1 - this.eff(key);                          // 0 solid … 1 forgotten
+    const byQ  = Math.min((Game.s.qCount - r.last)/this.dueIn(r), 2.5);
+    const byDay= Math.min(this.daysSince(r)/this.dueDays(r), 2.5);
+    const stale= Math.max(byQ, byDay);
+    const rel  = (prefer && prefer.length) ? (prefer.indexOf(key)>=0 ? 1 : 0) : 0;
+    return this.W_FLOOR
+         + this.W_GAP*gap*gap                                // weak topics dominate
+         + this.W_STALE*stale
+         + this.W_RELEVANCE*rel;
   },
-  pick(pool){
-    if(!pool.length) return null;
+  // Kept for callers that want the raw score of one topic.
+  weight(key){ return this.urgency(key); },
+  /* `pure` is for callers building under a seed — a dungeon room, which has to
+     rebuild identically when a saved run is resumed. The no-repeat rule is
+     session state that a fresh page does not have, so consulting it there would
+     make a resumed room draw a different topic than the one you walked out of. */
+  pick(pool, prefer, pure){
+    if(!pool || !pool.length) return null;
     if(!Game.s) return R.pick(pool);
-    const ws=pool.map(k=>this.weight(k));
-    let t=ws.reduce((a,b)=>a+b,0)*R._r();
-    for(let i=0;i<pool.length;i++){ t-=ws[i]; if(t<=0) return pool[i]; }
-    return pool[pool.length-1];
+    // Never ask the same topic twice running, unless it is the only one there is.
+    let cand = (!pure && pool.length>1) ? pool.filter(k=>k!==this._last) : pool.slice();
+    if(!cand.length) cand = pool.slice();
+    const ws=cand.map(k=>this.urgency(k, prefer));
+    const total=ws.reduce((a,b)=>a+b,0);
+    let hit=cand[cand.length-1];
+    if(total>0){
+      let t=total*R._r();
+      for(let i=0;i<cand.length;i++){ t-=ws[i]; if(t<=0){ hit=cand[i]; break; } }
+    } else hit=R.pick(cand);
+    if(!pure) this._last=hit;
+    return hit;
   },
-  // Ease off where a player is struggling; push harder where they are solid.
+
+  /* Difficulty, read off the same number. Ease off where a player is
+     struggling and push where they are solid — and because this reads
+     EFFECTIVE mastery, a topic you have not touched in a fortnight comes back
+     gently instead of at the level you left it. */
   adjustDiff(key, base){
     const r=Game.s&&Game.s.topicStats[key];
     if(!r || r.seen<3) return Math.min(base,2);          // go gently on new material
-    if(r.m < 0.45) return 1;
-    if(r.m > 0.85) return clamp(base+1,1,3);
+    const m=this.eff(key);
+    if(m < 0.45) return 1;
+    if(m > 0.85) return clamp(base+1,1,3);
     return base;
+  },
+
+  /* Teaching verbosity, read off the same number: help is 1 − mastery, in
+     bands. 3 is a topic you are lost in and 0 is one you own. This is what
+     decides whether the rule is free to look at and whether a hard topic
+     arrives as a ladder or in one piece. */
+  help(key){
+    const m=this.eff(key);
+    return m>=0.85 ? 0 : m>=0.6 ? 1 : m>=0.35 ? 2 : 3;
   },
   // Is this a weak topic being deliberately brought back?
   isReview(key){
     const r=Game.s&&Game.s.topicStats[key];
-    return !!(r && r.seen>=3 && r.m<0.6);
+    return !!(r && r.seen>=3 && this.eff(key)<0.6);
   },
   label(m){ return m>=0.85?'solid' : m>=0.6?'steady' : m>=0.35?'shaky' : 'weak'; },
   colour(m){ return m>=0.85?'var(--green)' : m>=0.6?'var(--gold)' : 'var(--red)'; },
@@ -5156,10 +5251,16 @@ const Battle = {
       key = R.pick(DAILY_POOL);
       diff = 2;
     } else {
-      // Topic choice is weighted by mastery: weak and overdue topics surface more.
+      // Topic choice is weighted by urgency: weak, faded and overdue topics
+      // surface more. In the wide pools — the Deep and the Arena draw on
+      // everything you have met — the realm you are working through is passed
+      // as the relevance signal, so a descent reinforces the material the
+      // campaign is currently teaching instead of ranging at random.
       let pool=this.realm.pool;
       if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
-      key=Mastery.pick(pool);
+      const wide = this.mode==='arena' || this.mode==='dungeon';
+      const prefer = wide && REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null;
+      key=Mastery.pick(pool, prefer);
       const base = this.mode==='arena' ? 3
                  : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
       diff = Mastery.adjustDiff(key, base);
@@ -5715,10 +5816,14 @@ function dayKey(d){ return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
    while a topic is new, then it costs combo — cheap enough to use, expensive
    enough to matter.                                                          */
 const Codex = {
-  FREE_SIGHTS: 6,
+  /* Peeking at the rule is free while you still need the help, and costs your
+     combo once you do not. Banding it on mastery rather than on a count of
+     sightings means a topic you have let go cold offers its rule freely again
+     — which is the honest answer to "have I been taught this yet". */
   costsCombo(key){
     const r = Game.s && Game.s.topicStats[key];
-    return !!(r && r.seen >= this.FREE_SIGHTS);
+    if(!r || !r.seen) return false;                 // never charge for a first meeting
+    return Mastery.help(key) <= 1;                  // steady or solid: you know this
   },
   has(cur){ return !!(cur && cur.codex); },
   open(cur, onClose){
@@ -5750,10 +5855,15 @@ const Codex = {
 const Rite = {
   // How many clean ladders before the game offers the whole problem instead.
   GRADUATE: 3,
+  /* Graduating off the ladder is not permanent. It is earned by clean ladders
+     AND held by effective mastery, so a topic you graduated from and then left
+     alone for a month arrives as a ladder again — the scaffolding comes back
+     exactly when the memory of the procedure has gone. */
   graduated(key){
     const g=Game.s; if(!g) return false;
     const r=g.topicStats[key];
-    return (g.riteWins && g.riteWins[key] || 0) >= this.GRADUATE && r && r.m >= 0.7;
+    return (g.riteWins && g.riteWins[key] || 0) >= this.GRADUATE
+        && r && Mastery.eff(key) >= 0.7;
   },
   record(key, clean){
     const g=Game.s;
@@ -6039,7 +6149,7 @@ const ARENA_COL = ['#e5484d','#a06bd6','#5aa9e6','#57cc7a','#f2c14e','#e07b39','
    order is load-bearing (it must match a foe's recorded appearance), so the
    picks below stay in name → art → colour order. */
 const WaveEngine = {
-  /* What an endless run draws from. Mastery.weight deliberately over-weights
+  /* What an endless run draws from. Mastery.urgency deliberately over-weights
      unseen topics so a curated realm pool introduces its new material — but
      pointed at all seventy topics that same rule turns a run into things you
      have never been taught. So we ask what the player has met, and only fall
@@ -6296,7 +6406,8 @@ const RoomKinds = {
   lock: {
     build(rng, depth, set){
       const pool = WaveEngine.pool(Game.s.topicStats);
-      const key  = Mastery.pick(pool);
+      // Built under the room seed, so this pick must be pure — see Mastery.pick.
+      const key  = Mastery.pick(pool, REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null, true);
       // The cellar's chest is a teaching chest: it never asks a hard one.
       const base = (set && set.key==='cellar') ? 1 : clamp(1 + Math.floor(depth/3), 1, 3);
       const diff = Mastery.adjustDiff(key, base);
@@ -7080,11 +7191,18 @@ const UI = {
   chronicleBody(rows){
     const seen=new Map(rows);
     const bar=(k,v)=>{
-      const pct=Math.round(v.m*100), col=Mastery.colour(v.m), due=Mastery.overdue(k);
+      // The bar shows EFFECTIVE mastery — what you know now, not what you knew
+      // the day you last practised — so the fade is something a player can see
+      // rather than only feel in the questions they are given. Where the two
+      // differ enough to matter, the gap is named rather than left mysterious.
+      const eff=Mastery.eff(k), pct=Math.round(eff*100);
+      const col=Mastery.colour(eff), due=Mastery.overdue(k);
+      const faded = (v.m-eff) >= 0.08;
       return `<div style="margin:6px 0">
         <div style="display:flex;justify-content:space-between;font-size:12px;gap:6px">
           <span>${TOPIC_LABEL[k]||k}${due?' <span class="rev">⟳ due</span>':''}</span>
-          <span style="color:${col};white-space:nowrap">${Mastery.label(v.m)} ${pct}%
+          <span style="color:${col};white-space:nowrap">${Mastery.label(eff)} ${pct}%
+            ${faded?`<span class="small" style="opacity:.7" title="It fades while you are away">↓ from ${Math.round(v.m*100)}%</span>`:''}
             <span class="small">(${v.c}/${v.seen})</span></span></div>
         <div class="track thin"><div class="fill" style="width:${pct}%;background:${col}"></div></div></div>`;
     };
