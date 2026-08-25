@@ -83,8 +83,28 @@ jobs:
       - name: Run the verification suite
         run: npm test
 
+  # The verification suite above checks what can be checked without a browser.
+  # These drive the real index.html in Chromium, because the run loop, the save
+  # referee, the opening, and the scheduler only exist once the page is running.
+  # Split from validate so a browser problem is never mistaken for a game one.
+  playthrough:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Play the game
+        run: npm run test:play
+
   build:
-    needs: validate
+    needs: [validate, playthrough]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
