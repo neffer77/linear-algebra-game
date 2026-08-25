@@ -53,16 +53,44 @@ module.exports = {
     });
     t.ok('Arena.foeFor is exactly WaveEngine.foe over the arena curve', same);
 
-    // The cellar must be gentler than the Deep at the same depth, or the
-    // tutorial is not a tutorial.
+    /* The three curves must stay ordered: the cellar is a tutorial, the Deep
+       opens after one realm, the Arena after all eight. Pointing any of them at
+       another's numbers is the bug tools/balance.js was written to catch. */
     const curves = await t.ev(() => {
-      R.seed(1); const deep = WaveEngine.foe(3, ARENA_WAVES); R.unseed();
-      R.seed(1); const cellar = WaveEngine.foe(3, CELLAR_WAVES); R.unseed();
-      return { deep, cellar };
+      const at = (d, c) => { R.seed(1); const f = WaveEngine.foe(d, c); R.unseed(); return f; };
+      return { cellar: at(3, CELLAR_WAVES), deep: at(3, DEEP_WAVES), arena: at(3, ARENA_WAVES),
+               deepIsDeeps: SETTINGS.deep.waves === DEEP_WAVES,
+               cellarIsCellars: SETTINGS.cellar.waves === CELLAR_WAVES };
     });
-    t.ok('a cellar foe is far weaker than a Deep foe at the same depth',
-      curves.cellar.hp < curves.deep.hp / 4 && curves.cellar.atk < curves.deep.atk / 4,
-      JSON.stringify(curves));
+    t.ok('the cellar is gentler than the Deep',
+      curves.cellar.hp < curves.deep.hp && curves.cellar.atk < curves.deep.atk, JSON.stringify(curves));
+    t.ok('the Deep is gentler than the Arena — it opens seven realms earlier',
+      curves.deep.hp < curves.arena.hp && curves.deep.atk < curves.arena.atk, JSON.stringify(curves));
     t.ok('nothing in the cellar wears a crown', curves.cellar.boss === false);
+    t.ok('each setting uses its own curve', curves.deepIsDeeps && curves.cellarIsCellars);
+
+    /* The combat arithmetic, pinned. It was lifted out of Battle so the balance
+       harness plays the same sums a player meets; these hold the extraction to
+       the numbers it replaced. */
+    const c = await t.ev(() => ({
+      combo0: Combat.comboMul(0), combo3: Combat.comboMul(3), capped: Combat.comboMul(20),
+      plain: Combat.strike(10, 1.0, 0, false, false, 1, 1),
+      swift: Combat.strike(10, 1.5, 0, false, false, 1, 1),
+      crit: Combat.strike(10, 1.0, 0, true, false, 1, 1),
+      streak: Combat.strike(10, 1.0, 4, false, false, 1, 1),
+      hit: Combat.foeHit(30, 7, 1), floor: Combat.foeHit(3, 99, 1),
+      slam: Combat.slam(30, 7, false), braced: Combat.slam(30, 7, true)
+    }));
+    t.eq('no streak is no bonus', c.combo0, 1);
+    t.eq('a streak of three is ×1.45', c.combo3, 1.45);
+    t.eq('and the streak caps at seven', c.capped, 2.05);
+    t.eq('a plain strike is the weapon', c.plain, 10);
+    t.eq('a swift one is half again', c.swift, 15);
+    t.eq('a critical one is double', c.crit, 20);
+    t.eq('a streak of four is ×1.6', c.streak, 16);
+    t.eq('armour subtracts from a blow', c.hit, 23);
+    t.eq('but a blow always lands', c.floor, 4);
+    t.eq('a slam is 1.7× the foe, less armour', c.slam, 44);
+    t.eq('bracing one takes most of it away', c.braced, 11);
   }
 };

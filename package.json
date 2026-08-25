@@ -8,7 +8,8 @@
     "test:quick": "node tools/verify.js --reps 60",
     "test:play": "node tools/play.js",
     "test:all": "npm test && npm run test:play",
-    "build": "node build-scriptable.js"
+    "build": "node build-scriptable.js",
+    "balance": "node tools/balance.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

@@ -103,6 +103,12 @@ jobs:
       - name: Play the game
         run: npm run test:play
 
+      # The Deep's press-on-or-leave fork is only a decision if the depth worth
+      # banking at rises with how good the player is. This plays thousands of
+      # runs at five accuracy levels and fails if that spread flattens.
+      - name: Check the fork still rewards skill
+        run: npm run balance
+
   build:
     needs: [validate, playthrough]
     runs-on: ubuntu-latest

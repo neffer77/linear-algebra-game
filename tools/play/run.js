@@ -100,6 +100,28 @@ module.exports = {
     t.ok('and abandoning banks nothing — walking away is not climbing out',
       endings.abandonBanksNothing);
 
+    /* --- what a fall costs ---
+       The Dials are explicit that a death costs you this RUN, never your
+       character: the unbanked pile and nothing else. Gear and banked gold are
+       what make coming back worth it. */
+    const fall = await t.ev(() => {
+      Game.s.gold = 1000; Game.s.weapon = 'w2'; Game.s.owned = { w0: 1, a0: 1, w2: 1 };
+      const lvl = Game.s.lvl, xp = Game.s.xp;
+      Dungeon.descend('deep');
+      Dungeon.resolve({ status: 'cleared', quality: 1, topics: [], yield: { gold: 450, xp: 90 } });
+      const carried = Dungeon.run.unbanked.gold;
+      Dungeon.died({ status: 'failed' });
+      return { carried, gold: Game.s.gold, weapon: Game.s.weapon, owned: Game.s.owned.w2,
+               lvl: Game.s.lvl, xpMoved: Game.s.xp !== xp, lvlMoved: Game.s.lvl !== lvl,
+               hp: Game.s.hp, maxHp: Game.s.maxHp };
+    });
+    t.ok('a fall forfeits the unbanked pile', fall.carried === 450);
+    t.eq('but never touches banked gold', fall.gold, 1000);
+    t.ok('nor your gear', fall.weapon === 'w2' && fall.owned === 1, JSON.stringify(fall));
+    t.ok('nor the level you earned', !fall.lvlMoved && !fall.xpMoved, JSON.stringify(fall));
+    t.ok('and leaves you alive to come back', fall.hp > 0 && fall.hp <= fall.maxHp,
+      JSON.stringify(fall));
+
     // --- a knight code carries no run ---
     const carried = await t.ev(() => {
       Dungeon.descend('deep');

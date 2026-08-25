@@ -387,6 +387,37 @@ The `wave` suite pins a hash on purpose: any change to the escalation numbers or
 RNG call order will fail it. That is a balance change, so update the pin *and* say so
 in the commit rather than treating it as noise.
 
+### The dials
+
+```bash
+npm run balance             # the sweep, and its acceptance properties
+npm run balance -- --sweep  # search the curve space for settings that hold
+```
+
+After every cleared room the Deep asks: press deeper, or climb out with what you
+carry? That is only a decision if the arithmetic can go either way — the player is
+weighing `E[next room's loot] > P(wipe) × what you'd lose`. The property that makes it
+an expression of *skill* is that the **break-even depth** — the deepest point still
+worth pressing to — must rise with accuracy. If a 40% player and a 95% player should
+both bank at depth four, the fork is a formality.
+
+`tools/balance.js` plays thousands of runs at five accuracy levels and reads that depth
+out of the results, driving `Combat` and `WaveEngine` from `index.html` so there is no
+second copy of the damage formula to drift. It currently reports:
+
+| accuracy | break-even | banked | always presses on, falls at |
+| --- | --- | --- | --- |
+| 40% | depth 3 | 140 | 4.1 |
+| 55% | depth 4 | 273 | 5.5 |
+| 70% | depth 5 | 409 | 7.2 |
+| 85% | depth 8 | 1011 | 10.8 |
+| 95% | depth 12 | 1940 | 14.8 |
+
+This is what caught the Deep shipping with the *Arena's* foe curve — 295 health and 30
+attack at depth one, against a knight who has just cleared one realm and swings for
+fourteen. `DEEP_WAVES` exists because of this harness, and CI runs it so a curve edit
+that flattens the spread fails the build.
+
 `tools/mathexpr.js` compiles the game's *display HTML* — nested fraction spans, `<sup>`
 powers, unicode superscripts, U+2212 minus — back into evaluable expressions, which is
 what lets an answer be checked numerically at all. `tools/verify.js` runs three layers:

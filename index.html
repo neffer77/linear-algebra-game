@@ -5113,6 +5113,32 @@ const Figure = {
 };
 
 /* -------------------------------- battle ---------------------------------- */
+/* -------------------------------- combat maths ---------------------------- */
+/* The arithmetic of a blow, with nothing in it that touches the screen or the
+   clock. Battle owns the fight; this owns the numbers — which means the balance
+   harness can play thousands of runs against exactly the sums a player meets,
+   instead of a second copy of them that drifts. Every random draw is passed in
+   rather than taken here, so a simulated run is reproducible from a seed.     */
+const Combat = {
+  // A streak multiplies damage, capped at seven so a hot run cannot run away.
+  comboMul(combo){ return 1 + Math.min(combo,7)*.15; },
+
+  /* One answered-correctly strike. `jitter` is the ±10% spread on every blow,
+     `bonus` folds in Perfect Strike, unassisted and rite-finisher multipliers. */
+  strike(dmg, speed, combo, crit, rage, bonus, jitter){
+    return Math.round(dmg * speed * this.comboMul(combo)
+                    * (crit?2:1) * (rage?2.5:1) * (bonus||1) * jitter);
+  },
+  // The foe's answer to a miss. Armour subtracts, but a blow always lands.
+  foeHit(atk, def, jitter){ return Math.max(4, Math.round(atk*jitter - def)); },
+  /* The wind-up blow, which arrives on the foe's own clock whatever you
+     answered — a correct answer braces it rather than avoiding it, which is
+     why armour and draughts always matter. */
+  slam(atk, def, braced){
+    return Math.max(3, Math.round(atk*1.7*(braced?0.35:1) - def));
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -5182,7 +5208,7 @@ const Battle = {
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
       (this.mode==='daily' ? `🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}  ·  ${Daily.score} pts  ·  ` : '') +
-      `Combo ×${(1+Math.min(this.combo,7)*.15).toFixed(2)}  ·  streak ${this.combo}`;
+      `Combo ×${Combat.comboMul(this.combo).toFixed(2)}  ·  streak ${this.combo}`;
     const ct=document.getElementById('comboTxt');
     ct.classList.toggle('hot',   this.combo>=3 && this.combo<8);
     ct.classList.toggle('blaze', this.combo>=8);
@@ -5473,11 +5499,10 @@ const Battle = {
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
       const w=this.wStats();
       const speed = this.speedMult(el);
-      const comboMul = 1 + Math.min(this.combo,7)*.15;
       const crit = R.chance(w.crit + this.combo*0.02);
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1);
-      let dmg = w.dmg * speed * comboMul * (crit?2:1) * (this.rage?2.5:1) * bonus;
-      dmg = Math.round(dmg * (0.9+Math.random()*0.2));
+      const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
+                                0.9 + Math.random()*0.2);
       this.rage=false;
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
@@ -5496,8 +5521,7 @@ const Battle = {
     } else {
       if(this.perfect) this.combo=0;               // a missed Perfect Strike costs the streak
       this.combo=0;
-      const def=this.defStat();
-      let dmg=Math.max(4, Math.round((this.foe.atk*(0.85+Math.random()*0.3)) - def));
+      const dmg=Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       this.settleMs = 820;
@@ -5521,8 +5545,7 @@ const Battle = {
     this.lastSlam=0; this.lastBraced=ok;
     if(this.slamNext){
       this.slamNext=false;
-      const raw=this.foe.atk*1.7*(ok?0.35:1);
-      this.lastSlam=Math.max(3, Math.round(raw - this.defStat()));
+      this.lastSlam=Combat.slam(this.foe.atk, this.defStat(), ok);
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
@@ -6187,6 +6210,31 @@ const ARENA_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Deep's own curve, and NOT the Arena's — which is the mistake this
+   replaces. The Arena opens after the last realm boss, for a knight in the best
+   gear in the game; the Deep opens after the FIRST, for one in a shortsword and
+   a leather jerkin. Pointing the Deep at ARENA_WAVES meant a depth-one foe with
+   295 health and 30 attack against a knight who swings for fourteen and has a
+   hundred and forty-six health: unplayable, and nobody noticed because nothing
+   measured it.
+
+   These numbers come out of tools/balance.js, which plays thousands of runs at
+   five accuracy levels and reads the break-even depth — the deepest point still
+   worth pressing to — out of the results. The property they are chosen for is
+   that break-even RISES with accuracy: a 40% player banks around depth three
+   while a 95% player can justify pressing to twelve. That spread is what makes
+   the press-on-or-leave fork an expression of skill rather than a formality,
+   and `npm run balance` fails if a change to these flattens it. */
+const DEEP_WAVES = {
+  championEvery:5,
+  hp0:40,  hpPer:18, champHp:1.7,
+  atk0:8,  atkGrow:1.06, champAtk:1.25,
+  gold0:50, goldPer:18,
+  xp0:30,   xpPer:10,
+  champReward:2,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* The cellar under the Keep — where a new knight is sent, and the only place
    in the game tuned so that losing is not really on the table. A fresh knight
    swings for nine, so these fall in three or four answers, and they hit for
@@ -6207,7 +6255,7 @@ const CELLAR_WAVES = {
    cannot end in a death — a first run has to finish, or it has taught nothing. */
 const SETTINGS = {
   deep: {
-    key:'deep', nm:'The Deep', waves:ARENA_WAVES,
+    key:'deep', nm:'The Deep', waves:DEEP_WAVES,
     canDie:true, rooms:0, lockChance:.34
   },
   cellar: {
