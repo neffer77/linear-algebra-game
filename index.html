@@ -3613,6 +3613,7 @@ const Game = {
       firstRun:0,          // has this knight finished the cellar? gates the map
       seenOpening:0,       // has the three-card opening been shown?
       metRoom:{},          // room kinds this knight has been introduced to
+      loadout:['ward','sight','steady'],   // skill abilities carried into a fight
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -3643,6 +3644,8 @@ const Game = {
       if(played){ this.s.seenOpening=1; this.s.metRoom.monster=1; }
     }
     if(typeof this.s.seenOpening!=='number') this.s.seenOpening=0;
+    // Saves from before skills existed get the starting three.
+    if(!Array.isArray(this.s.loadout)) this.s.loadout=['ward','sight','steady'];
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -5171,6 +5174,11 @@ const Battle = {
   },
   _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
+    // Skill abilities recharge every fight — they are what you know, not what
+    // you own, so they cannot be hoarded or run out for good.
+    this.skillLeft={};
+    for(const a of Loadout.chosen()) this.skillLeft[a.id]=Loadout.charges(a);
+    this.wardUp=false; this.steadyUp=false;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
     this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
@@ -5238,10 +5246,43 @@ const Battle = {
       d.className='pw'+(enabled?'':' off'); d.innerHTML=label;
       d.onclick=fn; bar.appendChild(d);
     };
+    /* Skill abilities come first: they are what this knight KNOWS, and they
+       cost nothing but the learning. An ability at zero charges still shows,
+       greyed and labelled with its band — seeing "weak · 0" beside a skill is
+       how a player learns that studying the strand is what fills it. */
+    for(const a of Loadout.chosen()){
+      const left=(this.skillLeft && this.skillLeft[a.id]) || 0;
+      add('skill-'+a.id, `${a.ic} ${a.nm} ×${left}`,
+          left>0 && a.ready(), ()=>Battle.useSkill(a.id));
+    }
     add('potion', `${ITEMS.potion.ic} Draught ×${it.potion}`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
     add('insight',`${ITEMS.insight.ic} Insight ×${it.insight}`, it.insight>0 && !this.answered, ()=>Battle.useInsight());
     add('rage',   `${ITEMS.rage.ic} Rune ×${it.rage}`, it.rage>0 && !this.rage, ()=>Battle.useRage());
     if(it.feather>0) add('feather', `${ITEMS.feather.ic} Feather ×${it.feather}`, false, ()=>{});
+  },
+
+  /* A raised Ward halves the next blow that actually lands, whichever kind it
+     is — an ordinary strike or a wind-up slam — and is spent doing it. */
+  spendWard(dmg){
+    if(!this.wardUp) return dmg;
+    this.wardUp=false;
+    const cut=Math.max(1, Math.round(dmg/2));
+    Anim.float(560, H-260, 'WARDED', '#8ad4ff');
+    setTimeout(()=>this.renderPowers(), 60);
+    return cut;
+  },
+
+  /* Spend one use of a skill ability. Charges are per fight and come from
+     mastery, so this never touches the save — what it costs is knowledge you
+     already had, not an item you owned. */
+  useSkill(id){
+    const a=Loadout.byId(id);
+    if(!a || !this.skillLeft || (this.skillLeft[id]||0)<1) return;
+    if(!a.ready()) return;
+    this.skillLeft[id]--;
+    a.go();
+    Sfx.coin(0); Haptic.tap();
+    this.renderPowers();
   },
 
   usePotion(){
@@ -5519,9 +5560,16 @@ const Battle = {
       Bounty.bump('streak',this.combo);
       if(crit) Bounty.bump('crit',1);
     } else {
-      if(this.perfect) this.combo=0;               // a missed Perfect Strike costs the streak
-      this.combo=0;
-      const dmg=Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3);
+      // Steady Hand spends itself here, holding the streak through one miss.
+      if(this.steadyUp){
+        this.steadyUp=false;
+        Anim.float(560, H-290, 'STEADY', '#c9b7ff');
+      } else {
+        if(this.perfect) this.combo=0;             // a missed Perfect Strike costs the streak
+        this.combo=0;
+      }
+      let dmg=Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3);
+      dmg=this.spendWard(dmg);
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       this.settleMs = 820;
@@ -5545,7 +5593,7 @@ const Battle = {
     this.lastSlam=0; this.lastBraced=ok;
     if(this.slamNext){
       this.slamNext=false;
-      this.lastSlam=Combat.slam(this.foe.atk, this.defStat(), ok);
+      this.lastSlam=this.spendWard(Combat.slam(this.foe.atk, this.defStat(), ok));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
@@ -5893,6 +5941,89 @@ const Rite = {
     g.riteWins = g.riteWins || {};
     if(clean) g.riteWins[key] = (g.riteWins[key]||0) + 1;
     Game.save();
+  }
+};
+
+/* ------------------------------ skills & loadout -------------------------- */
+/* The link that turns knowing the maths into something you press in a fight.
+
+   A skill's abilities are NOT bought. You carry as many uses as your mastery
+   of the skill's own branch of mathematics earns you, and they come back every
+   fight — so the way to have more is to learn more, which is the whole claim
+   the game is making. The bands are Dial Three's:
+
+       weak  0 uses      shaky 1        steady 2        solid 3
+
+   The one rule that keeps this from becoming a shortcut, straight out of the
+   Faces and Loadouts note: no ability may reduce the number of questions in a
+   fight. They make the same practice more survivable, or more learnable —
+   never shorter. That is why none of these deals damage.
+
+   Each ability draws on a STRAND rather than a single topic: a skill is a body
+   of mathematics, not one question type. The strands here are the closest the
+   present curriculum comes to each skill's real branch — Spellcraft is vector
+   fields, Scrying is power laws, Smithing is allocation — and they will be
+   re-pointed at the skill's own topics when its setting is built. */
+const SKILL_ABILITIES = [
+  {id:'ward', nm:'Ward', ic:'🌀', skill:'Spellcraft', strand:'Vectors',
+   ds:'Halves the next blow that lands on you.',
+   ready(){ return !Battle.wardUp; },
+   go(){ Battle.wardUp=true; UI.toast('🌀 A field folds around you.'); }},
+
+  {id:'sight', nm:'Second Sight', ic:'👁️', skill:'Scrying', strand:'Limits & Derivatives',
+   ds:'Read the rule for this topic without paying your combo.',
+   ready(){ return Codex.has(Battle.cur) && !Battle.answered; },
+   go(){ Codex.open(Battle.cur, ()=>{}); }},          // opened free: no combo cost
+
+  {id:'steady', nm:'Steady Hand', ic:'🪨', skill:'Smithing', strand:'Applications',
+   ds:'Your next wrong answer will not break your streak.',
+   ready(){ return !Battle.steadyUp && Battle.combo>0; },
+   go(){ Battle.steadyUp=true; UI.toast('🪨 Your grip settles.'); }}
+];
+
+const Loadout = {
+  SLOTS: 3,
+  byId(id){ return SKILL_ABILITIES.find(a=>a.id===id) || null; },
+  topicsOf(a){ const s=STRANDS.find(x=>x[0]===a.strand); return s ? s[1] : []; },
+
+  /* How well this knight knows the skill behind an ability: the mean of
+     EFFECTIVE mastery across its strand, so a skill fades with the maths it is
+     made of. Topics never met count as zero — a strand you have only dipped
+     into does not read as mastered. */
+  reach(a){
+    const t=this.topicsOf(a);
+    if(!t.length || !Game.s) return 0;
+    let sum=0;
+    for(const k of t) sum += Mastery.eff(k);
+    return sum/t.length;
+  },
+  // Dial Three's bands, and the only place charge counts are decided.
+  charges(a){
+    const m=this.reach(a);
+    return m>=0.85 ? 3 : m>=0.6 ? 2 : m>=0.35 ? 1 : 0;
+  },
+  band(a){ const m=this.reach(a); return Mastery.label(m); },
+
+  chosen(){
+    const g=Game.s;
+    if(!g) return [];
+    if(!Array.isArray(g.loadout)) g.loadout=[];
+    return g.loadout.map(id=>this.byId(id)).filter(Boolean);
+  },
+  has(id){ return (Game.s.loadout||[]).indexOf(id)>=0; },
+  // Tapping a chosen ability drops it; tapping another takes the oldest slot's
+  // place once all three are full, so a player is never stuck having to unequip.
+  toggle(id){
+    const g=Game.s;
+    g.loadout = Array.isArray(g.loadout) ? g.loadout : [];
+    const i=g.loadout.indexOf(id);
+    if(i>=0) g.loadout.splice(i,1);
+    else {
+      g.loadout.push(id);
+      while(g.loadout.length > this.SLOTS) g.loadout.shift();
+    }
+    Game.save();
+    UI.renderGear();
   }
 };
 
@@ -7199,6 +7330,40 @@ const UI = {
     document.getElementById('shopList').innerHTML=out.join('');
     document.getElementById('hud2').innerHTML=this.hud();
   },
+  /* The loadout, and the point of it: every row says how many uses it grants
+     AND why — the strand it draws on and how well that strand is known. A
+     player who wants more Wards is told, on the same line, that the way to get
+     them is to get better at vectors. */
+  loadoutPanel(){
+    const chosen=Loadout.chosen().map(a=>a.id);
+    const rows=SKILL_ABILITIES.map(ab=>{
+      const on=chosen.indexOf(ab.id)>=0, n=Loadout.charges(ab), band=Loadout.band(ab);
+      const pct=Math.round(Loadout.reach(ab)*100);
+      const col=Mastery.colour(Loadout.reach(ab));
+      return `<div class="item ${on?'equipped':''}" style="cursor:pointer" onclick="Loadout.toggle('${ab.id}')">
+        <div class="ic">${ab.ic}</div>
+        <div style="flex:1">
+          <div class="nm">${ab.nm}
+            <span class="tag">${n} use${n===1?'':'s'}</span></div>
+          <div class="ds">${ab.ds}</div>
+          <div class="ds" style="margin-top:3px">
+            ${ab.skill} · draws on <b>${ab.strand}</b> ·
+            <span style="color:${col}">${band} ${pct}%</span>
+          </div>
+        </div>
+        <span class="pill">${on?'carried':'carry'}</span>
+      </div>`;
+    }).join('');
+    return `<div class="panel"><h2>🕸️ Skills</h2>
+      <div class="sub">Three carried into every fight. Uses are not bought — they come
+        from how well you know the mathematics behind them, and refill each fight.
+        <b>${chosen.length}/${Loadout.SLOTS}</b> carried.</div>
+      ${rows}
+      <div class="small" style="margin-top:8px;opacity:.75">
+        weak · 0 &nbsp; shaky · 1 &nbsp; steady · 2 &nbsp; solid · 3
+      </div>
+    </div>`;
+  },
   renderGear(){
     const g=Game.s, w=Game.weapon(), a=Game.armor();
     const acc=g.stats.correct+g.stats.wrong;
@@ -7219,6 +7384,7 @@ const UI = {
           ${Object.entries(ITEMS).map(([k,it])=>`<span class="pill">${it.ic} ${g.items[k]}</span>`).join('')}
         </div>
       </div>
+      ${this.loadoutPanel()}
       <div class="panel"><h2>📜 Chronicle</h2>
         <div class="sub">Battles won: <b>${g.stats.wins}</b> · Riddles solved: <b>${g.stats.correct}</b> ·
         Accuracy: <b>${acc?Math.round(g.stats.correct/acc*100):0}%</b> · Best streak: <b>${g.stats.best}</b></div>

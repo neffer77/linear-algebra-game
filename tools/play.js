@@ -23,7 +23,8 @@ const SUITES = [
   require('./play/lock'),        // P3
   require('./play/run'),         // P4
   require('./play/frontdoor'),   // P5
-  require('./play/adapt')        // P6
+  require('./play/adapt'),       // P6
+  require('./play/skills')       // S1
 ];
 
 function arg(flag) {

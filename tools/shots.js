@@ -102,6 +102,13 @@ const SCENES = [
                 });
                 Game.s.qCount = 400; UI.go('s-gear'); } },
 
+  { name: 'skills', note: 'the loadout — uses come from what you know',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={};
+                set('Vectors',0.95); set('Limits & Derivatives',0.68); set('Applications',0.4);
+                UI.go('s-gear'); } },
+
   { name: 'tome', note: 'the tale is re-readable here',
     go: () => { UI.go('s-tome'); } },
 
