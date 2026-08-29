@@ -24,7 +24,8 @@ const SUITES = [
   require('./play/run'),         // P4
   require('./play/frontdoor'),   // P5
   require('./play/adapt'),       // P6
-  require('./play/skills')       // S1
+  require('./play/skills'),      // S1
+  require('./play/chain')        // S2
 ];
 
 function arg(flag) {

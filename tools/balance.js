@@ -87,15 +87,25 @@ function simulate({ accuracies, runs, maxDepth, waves, knight }) {
     let pot = 0, depth = 0;
     while (depth < bankAt) {
       depth++;
-      // Rooms are laid out by the same seeded roll the real Dungeon uses.
+      /* Rooms are laid out by the same seeded roll the real Dungeon uses —
+         kept in step with Dungeon.nextRoom by hand, because the shell picks
+         its kind inline. If a room kind is added there and not here, this
+         harness quietly starts measuring a game nobody is playing. */
       R.seed(((seed ^ (depth * 2654435761)) >>> 0) || 1);
       const isLock = depth >= 2 && R.chance(set.lockChance);
+      const isSeam = !isLock && depth >= 2 && R.chance(set.seamChance || 0);
       const foe = WaveEngine.foe(depth, CURVE);
       R.unseed();
       if (isLock) {
         // A chest is one riddle: no foe, so it cannot kill you. It pays the
         // lock room's yield when answered, and nothing when fumbled.
         if (rnd() < acc) pot += Math.round(60 + depth * 20);
+        continue;
+      }
+      if (isSeam) {
+        // A seam yields ore, not gold, so it adds nothing to the pot at risk —
+        // but it also cannot kill you, which is what makes it matter here: it
+        // is a free room, and free rooms make pressing on cheaper.
         continue;
       }
       const left = fightRoom(st, foe, acc, rnd);

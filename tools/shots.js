@@ -88,6 +88,16 @@ const SCENES = [
                 Game.s.firstRun = 1; Game.s.gold = 640; Game.s.lvl = 4;
                 UI.go('s-map'); } },
 
+  { name: 'seam', note: 'Delving — how deep do you mean to cut?',
+    go: () => { Game.s.metRoom = { monster:1, lock:1, seam:1 }; Game.s.mats={ore:12,essence:3};
+                R.seed(11); const spec = RoomKinds.seam.build(R, 6, SETTINGS.deep); R.unseed();
+                Seam.begin(spec, { depth: 6 }, () => {}); } },
+
+  { name: 'forge', note: 'the Keep spends what the Deep gave up',
+    go: () => { Game.s.gold = 900; Game.s.mats = { ore: 26, essence: 9 };
+                Game.s.runes = { r_edge: 1 };
+                UI.go('s-shop'); } },
+
   { name: 'shop', note: 'the Smithy, lockpicks included',
     go: () => { Game.s.gold = 900; UI.go('s-shop'); } },
 

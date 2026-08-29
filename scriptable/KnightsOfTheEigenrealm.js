@@ -2585,7 +2585,10 @@ const WEAPONS = [
   {id:'w6', nm:'Integral Greatsword',  ic:'🗡️', dmg:58, crit:.24, cost:1400, ds:'Accumulates every wound it has ever dealt.'},
   {id:'w7', nm:'Spectral Edge',        ic:'⚔️', dmg:74, crit:.28, cost:2200, ds:'Cuts along every eigendirection at once.'},
   {id:'w8', nm:'Limitless Glaive',     ic:'🔱', dmg:95, crit:.32, cost:3400, ds:'Its reach has no upper bound.'},
-  {id:'w9', nm:'Gradient Ascendant',   ic:'⚔️', dmg:122,crit:.36, cost:5200, ds:'Points, always, at the steepest way in.'}
+  {id:'w9', nm:'Gradient Ascendant',   ic:'⚔️', dmg:122,crit:.36, cost:5200, ds:'Points, always, at the steepest way in.'},
+  // Forged from ore, never sold. Appended last so older knight codes, which
+  // carry a shorter list, still map every entry to the right slot.
+  {id:'wD', nm:'Deepsteel Edge',       ic:'⚔️', dmg:30, crit:.14, cost:0, forge:true, ds:'Ore, folded until it holds an edge no coin can buy.'}
 ];
 const ARMORS = [
   {id:'a0', nm:'Peasant Tunic',      ic:'👕', def:0,  hp:0,  cost:0,    ds:'Cloth. Purely decorative in a fight.'},
@@ -2596,7 +2599,10 @@ const ARMORS = [
   {id:'a5', nm:'Laplace Bulwark',    ic:'🛡️', def:16, hp:80, cost:1050, ds:'Expands to meet whatever strikes it.'},
   {id:'a6', nm:'Diagonal Ward',      ic:'🛡️', def:22, hp:110,cost:1700, ds:'In the right basis, every blow arrives head-on.'},
   {id:'a7', nm:'Convergent Mail',    ic:'🛡️', def:29, hp:150,cost:2600, ds:'Each ring smaller than the last, and the sum is finite.'},
-  {id:'a8', nm:'Summit Regalia',     ic:'🛡️', def:37, hp:200,cost:4000, ds:'Worn only by those who reached the top of both paths.'}
+  {id:'a8', nm:'Summit Regalia',     ic:'🛡️', def:37, hp:200,cost:4000, ds:'Worn only by those who reached the top of both paths.'},
+  // Forged from ore, never sold. Appended last so older knight codes,
+  // which carry a shorter list, still map every entry to the right slot.
+  {id:'aD', nm:'Deepsteel Plate',    ic:'🛡️', def:24, hp:120,cost:0, forge:true, ds:'Beaten from ore the Deep gave up. No coin buys it.'}
 ];
 const ITEMS = {
   potion:{nm:'Healing Draught', ic:'🧪', cost:40,  ds:'Restores 45% of your maximum health.'},
@@ -2607,6 +2613,33 @@ const ITEMS = {
   // consumable must not shift the ones an existing code already encoded.
   pick:{nm:'Iron Lockpick',    ic:'🔧', cost:30,  ds:'Cracks a locked chest in the Deep. Snaps on a wrong answer.'}
 };
+
+/* Smithing's bench. Ore buys the one consumable the chain needs — lockpicks —
+   and two pieces of gear that are simply not for sale: gold cannot reach them
+   at any price, which is what makes a seam worth cutting. */
+const FORGE = [
+  {id:'f_picks', ic:'🔧', ore:4, nm:'A batch of lockpicks',
+   ds:'Three picks, beaten out of ore. Buy as often as you like.'},
+  {id:'f_blade', ic:'⚔️', ore:22, nm:'Deepsteel Edge',
+   ds:'30 damage, 14% crit — years ahead of what your purse could reach.',
+   owned:g=>!!g.owned.wD},
+  {id:'f_plate', ic:'🛡️', ore:30, nm:'Deepsteel Plate',
+   ds:'24 defence, +120 health — plate a new knight could not afford.',
+   owned:g=>!!g.owned.aD}
+];
+
+/* Enchanting's end of the chain. A rune is bought once with essence and never
+   spent again — the one permanent thing the Deep can give you, as against gear
+   which gold already buys and charges which mastery already grants. Kept few
+   and small on purpose: a rune should tilt a run, never decide it. */
+const RUNES = [
+  {id:'r_edge',  nm:'Rune of the Edge',   ic:'🜛', cost:6,
+   ds:'+6% critical chance, always.'},
+  {id:'r_hide',  nm:'Rune of the Hide',   ic:'🜃', cost:8,
+   ds:'+3 defence, always.'},
+  {id:'r_depth', nm:'Rune of the Deep',   ic:'🜄', cost:14,
+   ds:'One extra use of every skill you carry.'}
+];
 
 const REALMS = [
   {nm:'Vale of Vectors', col:'#57cc7a', sky:['#1e3b2c','#0d1a14'],
@@ -2774,8 +2807,8 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:2,
-  TAG:'KE2-',
+  VER:3,
+  TAG:'KE3-',
 
   topics(){ return Object.keys(TOPIC_LABEL); },
   items(){ return Object.keys(ITEMS); },
@@ -2930,6 +2963,14 @@ const Codec = {
       o.bits(r.t ? Math.min(254, Math.max(0, Math.round((now-r.t)/216e5)))+1 : 0, 8);
     }
 
+    // v3: what the Deep gave up and what the Keep made of it. Appended last so
+    // that a v1 or v2 code — which simply ends here — still reads in full.
+    const mt=g.mats||{};
+    o.varint(Math.max(0, Math.round(mt.ore||0)));
+    o.varint(Math.max(0, Math.round(mt.essence||0)));
+    o.bits(RUNES.length, 8);
+    for(const rn of RUNES) o.bits((g.runes && g.runes[rn.id]) ? 1 : 0, 1);
+
     const bytes=o.done();
     const s=this.sum(bytes);
     bytes.push((s>>8)&255, s&255);
@@ -3053,6 +3094,17 @@ const Codec = {
         if(mastered) r.mastered=1;
         g.topicStats[key]=r;
       }
+    }
+
+    // v3 and later carry materials and runes; older codes predate both, and a
+    // knight arriving from one simply starts the chain with empty pockets.
+    g.mats={ore:0, essence:0};
+    g.runes={};
+    if(ver>=3){
+      g.mats.ore=b.varint();
+      g.mats.essence=b.varint();
+      const nRu=b.bits(8);
+      for(let i=0;i<nRu;i++){ const on=b.bits(1); if(on && RUNES[i]) g.runes[RUNES[i].id]=1; }
     }
 
     return {ok:true, k, g, lostTopics};
@@ -3633,6 +3685,8 @@ const Game = {
       seenOpening:0,       // has the three-card opening been shown?
       metRoom:{},          // room kinds this knight has been introduced to
       loadout:['ward','sight','steady'],   // skill abilities carried into a fight
+      mats:{ore:0, essence:0},             // what the Deep gives up; the Keep spends it
+      runes:{},                            // permanent enchantments, id -> 1
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
   },
@@ -3665,6 +3719,10 @@ const Game = {
     if(typeof this.s.seenOpening!=='number') this.s.seenOpening=0;
     // Saves from before skills existed get the starting three.
     if(!Array.isArray(this.s.loadout)) this.s.loadout=['ward','sight','steady'];
+    if(!this.s.mats) this.s.mats={ore:0, essence:0};
+    if(typeof this.s.mats.ore!=='number') this.s.mats.ore=0;
+    if(typeof this.s.mats.essence!=='number') this.s.mats.essence=0;
+    if(!this.s.runes) this.s.runes={};
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
     for(const k of Object.keys(t)){
@@ -5196,7 +5254,7 @@ const Battle = {
     // Skill abilities recharge every fight — they are what you know, not what
     // you own, so they cannot be hoarded or run out for good.
     this.skillLeft={};
-    for(const a of Loadout.chosen()) this.skillLeft[a.id]=Loadout.charges(a);
+    for(const a of Loadout.chosen()) this.skillLeft[a.id]=Loadout.charges(a)+Runes.spare();
     this.wardUp=false; this.steadyUp=false;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
@@ -5213,9 +5271,10 @@ const Battle = {
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
     const w=Game.weapon(), m=this.mode==='arena'?Arena.mods:null;
-    return {dmg:w.dmg*(m?m.dmg:1), crit:w.crit+(m?m.crit:0)};
+    return {dmg:w.dmg*(m?m.dmg:1),
+            crit:w.crit + (m?m.crit:0) + Runes.crit()};
   },
-  defStat(){ return Game.armor().def + (this.mode==='arena'?Arena.mods.def:0); },
+  defStat(){ return Game.armor().def + (this.mode==='arena'?Arena.mods.def:0) + Runes.def(); },
 
   updateBars(){
     const g=Game.s;
@@ -6000,6 +6059,55 @@ const SKILL_ABILITIES = [
    go(){ Battle.steadyUp=true; UI.toast('🪨 Your grip settles.'); }}
 ];
 
+/* Smithing, at the bench. Ore is spent here and nowhere else, which is what
+   closes the loop: seams in the Deep give it up, and it comes back as the picks
+   that open the Deep's chests. */
+const Forge = {
+  make(id){
+    const f=FORGE.find(x=>x.id===id), g=Game.s;
+    if(!f) return;
+    if(f.owned && f.owned(g)) return;
+    if((g.mats.ore||0) < f.ore){
+      UI.toast(\`That needs \${f.ore} ore — cut a seam in the Deep.\`);
+      return;
+    }
+    g.mats.ore -= f.ore;
+    if(id==='f_picks'){ g.items.pick += 3; UI.toast('🔧 Three picks, still warm.'); }
+    if(id==='f_blade'){ g.owned.wD=1; g.weapon='wD'; UI.toast('⚔️ Deepsteel Edge — forged and drawn.'); }
+    if(id==='f_plate'){
+      g.owned.aD=1; g.armor='aD';
+      g.maxHp=Game.maxHp(); g.hp=Math.min(g.maxHp, g.hp+120);
+      UI.toast('🛡️ Deepsteel Plate — forged and worn.');
+    }
+    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+  }
+};
+
+/* Enchanting, read from the other side: what the runes you wear are worth.
+   Every rune is a flat, always-on number, so the answer is a sum and there is
+   no order to get wrong. */
+const Runes = {
+  worn(id){ return !!(Game.s && Game.s.runes && Game.s.runes[id]); },
+  crit(){ return this.worn('r_edge') ? 0.06 : 0; },
+  def(){ return this.worn('r_hide') ? 3 : 0; },
+  spare(){ return this.worn('r_depth') ? 1 : 0; },
+  count(){ return RUNES.filter(r=>this.worn(r.id)).length; },
+  // Bought once, with essence, and never spent again.
+  buy(id){
+    const r=RUNES.find(x=>x.id===id), g=Game.s;
+    if(!r || this.worn(id)) return;
+    if((g.mats.essence||0) < r.cost){
+      UI.toast(\`That needs \${r.cost} essence — chests in the Deep give it up.\`);
+      return;
+    }
+    g.mats.essence -= r.cost;
+    g.runes[id]=1;
+    Sfx.mastered ? Sfx.mastered() : Sfx.win();
+    Haptic.win(); Game.save(); UI.renderShop();
+    Celebrate.banner(r.nm.toUpperCase(), r.ds, 'var(--gold)', ()=>{});
+  }
+};
+
 const Loadout = {
   SLOTS: 3,
   byId(id){ return SKILL_ABILITIES.find(a=>a.id===id) || null; },
@@ -6406,7 +6514,7 @@ const CELLAR_WAVES = {
 const SETTINGS = {
   deep: {
     key:'deep', nm:'The Deep', waves:DEEP_WAVES,
-    canDie:true, rooms:0, lockChance:.34
+    canDie:true, rooms:0, lockChance:.26, seamChance:.24
   },
   cellar: {
     key:'cellar', nm:'the cellar', waves:CELLAR_WAVES,
@@ -6617,6 +6725,164 @@ const RoomKinds = {
     // Non-combat: the lock draws its own screen and reports exactly once.
     enter(spec, ctx, done){ Lock.begin(spec, ctx, done); },
   },
+
+  /* An ore seam — Delving. The room asks how deep you mean to cut before you
+     start, and you must answer that many riddles WITHOUT a miss to take
+     anything at all. It is the run's own press-on-or-leave fork in miniature,
+     over one room and thirty seconds, which is the cheapest way to teach the
+     shape of the decision the whole Deep is built on. No foe, so like a chest
+     it can never end a run — the only thing at risk is the ore. */
+  seam: {
+    build(rng, depth, set){
+      const pool = WaveEngine.pool(Game.s.topicStats);
+      const base = (set && set.key==='cellar') ? 1 : clamp(1 + Math.floor(depth/4), 1, 3);
+      // Three questions drawn now, so the seam is the same seam on a resume.
+      const qs=[];
+      for(let i=0;i<3;i++){
+        const key = Mastery.pick(pool, REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null, true);
+        qs.push(buildQuestion(key, Mastery.adjustDiff(key, base)));
+      }
+      return { kind:'seam', qs, depth };
+    },
+    enter(spec, ctx, done){ Seam.begin(spec, ctx, done); },
+  },
+};
+
+/* -------------------------------- the seam -------------------------------- */
+/* Delving's UI half. Owns nothing about the run: it grades between one and
+   three riddles and hands the shell a single outcome. */
+const Seam = {
+  spec:null, ctx:null, done:null, resolved:false, want:0, at:0, got:0,
+  // Ore for cutting \`n\` deep, at this depth. Superlinear on purpose — the
+  // third question is worth far more than the first, or nobody would risk it.
+  yieldFor(n, depth){ return Math.round(n*n * (1 + depth*0.35)); },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done;
+    this.resolved=false; this.at=0; this.got=0; this.want=0;
+    UI.go('s-lock');                       // the same plain non-combat screen
+    this.choose();
+  },
+
+  choose(){
+    const d=this.ctx.depth;
+    // The sub-label sits on a gold ground when the option is the risky one, so
+    // it takes an explicit dark ink rather than the page's dim grey.
+    const opt=n=>\`<button class="btn \${n===1?'':'gold'}" onclick="Seam.cut(\${n})">
+        ⛏️ \${n} seam\${n===1?'':'s'} — \${this.yieldFor(n,d)} ore
+        <span style="font-size:12px;font-weight:700;margin-left:6px;
+                     color:\${n===1?'var(--dim)':'rgba(40,26,4,.72)'}"
+        >\${n===1?'one riddle':n+' in a row, no misses'}</span>
+      </button>\`;
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">⛰️</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">⛏️ Depth \${d}</span>
+          <span class="pill">🪨 ore ×\${Game.s.mats.ore}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">An ore seam</h2>
+        <div class="sub">Say how deep you mean to cut. Cut deeper and the seam gives up
+          far more — but a single wrong answer collapses it and you carry nothing out.</div>
+      </div>
+      \${opt(1)}\${opt(2)}\${opt(3)}
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Seam.walkAway()">Leave the seam alone</span>
+      </div>
+      <div style="height:16px"></div>\`;
+  },
+
+  cut(n){ this.want=n; this.at=0; this.ask(); },
+
+  ask(){
+    const q=this.spec.qs[this.at];
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">⛰️</div>
+      <div class="panel">
+        <div class="row" style="justify-content:center;gap:6px;display:flex;margin-bottom:8px">
+          \${this.spec.qs.slice(0,this.want).map((x,i)=>
+            \`<span class="rp \${i<this.at?'done':i===this.at?'now':''}"></span>\`).join('')}
+        </div>
+        <h2 style="font-size:17px">\${q.topic} <span class="tag">\${this.at+1}/\${this.want}</span></h2>
+        <div class="sub">\${this.yieldFor(this.want,this.ctx.depth)} ore rides on cutting all \${this.want} clean.</div>
+        <hr>
+        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        <div id="seamFig"></div>
+        <div id="seamChoices" style="margin-top:10px"></div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>\`;
+    Figure.render(q.fig, document.getElementById('seamFig'));
+    const box=document.getElementById('seamChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+  },
+
+  answer(btn, choice){
+    if(this.resolved) return;
+    const q=this.spec.qs[this.at], ok=(choice===q.a);
+    document.querySelectorAll('#seamChoices .choice').forEach(b=>{
+      b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);       // the seam teaches either way
+
+    if(!ok){
+      Game.save();
+      this.finish({ status:'cleared', quality:0, topics:[q.key], yield:{},
+                    seam:{ore:0, cut:this.want, at:this.at+1} },
+        \`<div class="center crest">🪨💢</div>
+         <div class="panel center">
+           <h2 style="color:var(--red)">The seam collapses</h2>
+           <div class="sub">\${q.why[choice]||'that was not the line of the rock'}</div>
+           <hr>
+           <div class="small">The answer was <b>\${q.a}</b>. \${q.ex||''}</div>
+           <div class="small" style="margin-top:8px">You cut \${this.at} of \${this.want} before it gave way.</div>
+         </div>\`);
+      return;
+    }
+    this.at++;
+    if(this.at < this.want){ setTimeout(()=>this.ask(), 650); return; }
+
+    const ore=this.yieldFor(this.want, this.ctx.depth);
+    Game.s.mats.ore += ore;
+    this.got=ore;
+    Game.save();
+    this.finish({ status:'cleared', quality:1, topics:this.spec.qs.slice(0,this.want).map(x=>x.key),
+                  yield:{}, seam:{ore, cut:this.want, at:this.want} },
+      \`<div class="center crest">🪨✨</div>
+       <div class="panel center">
+         <h2 style="color:var(--green)">The seam gives</h2>
+         <div class="sub">\${this.want} clean cut\${this.want===1?'':'s'}, and the rock opens.</div>
+         <hr>
+         <div style="font-weight:800;line-height:1.9">🪨 +\${ore} ore</div>
+         <div class="small" style="margin-top:6px">Ore is smithed at the Keep — into picks, and into gear gold cannot buy.</div>
+       </div>\`);
+  },
+
+  walkAway(){
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{}, seam:{ore:0, cut:0, at:0} },
+      \`<div class="center crest">⛰️</div>
+       <div class="panel center"><h2>You leave the seam</h2>
+       <div class="sub">The rock keeps what it has.</div></div>\`);
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+\`<button class="btn gold" id="seamGo" style="margin-top:12px">Onward →</button>\`;
+    document.getElementById('seamGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    if(outcome.seam && outcome.seam.ore>0){ Sfx.coin(); Haptic.win(); }
+    else if(outcome.seam && outcome.seam.cut>0){ Sfx.bad(); Haptic.hurt(); }
+  }
 };
 
 /* -------------------------------- the lock -------------------------------- */
@@ -6694,8 +6960,12 @@ const Lock = {
     Game.recordAnswer(q.key, ok, 1);
     if(ok){
       const y=this.spec.yield;
+      // Lockpicking's own material: arcane residue off a lock that gave way
+      // cleanly. This is the far end of the chain — essence buys runes.
+      const ess = 1 + Math.floor((this.ctx.depth||1)/4);
+      Game.s.mats.essence += ess;
       Game.save();
-      this.finish({ status:'cleared', quality:1, topics:[q.key], yield:y, lock:{opened:true} },
+      this.finish({ status:'cleared', quality:1, topics:[q.key], yield:y, lock:{opened:true, essence:ess} },
         \`<div class="center crest">🎉</div>
          <div class="panel center">
            <h2 style="color:var(--green)">The lock springs open</h2>
@@ -6704,7 +6974,9 @@ const Lock = {
            <div style="font-weight:800;line-height:1.9">
              <div class="coin">🎒 +\${y.gold} gold</div>
              <div style="color:var(--blue)">✦ +\${y.xp} experience</div>
+             <div style="color:#b48bec">🜄 +\${ess} essence</div>
            </div>
+           <div class="small" style="margin-top:6px">Essence is enchanted at the Keep, into runes you keep for good.</div>
          </div>\`);
     } else {
       g.items.pick=Math.max(0,(g.items.pick||0)-1);
@@ -6836,6 +7108,8 @@ const Quartermaster = {
 const ROOM_INTRO = {
   monster: {ic:'⚔️', t:'Something is in the way',
     b:'Answer the riddle and your knight strikes; miss and it strikes you. Faster answers hit harder, and a wrong one always shows you why before you move on.'},
+  seam: {ic:'⛰️', t:'An ore seam',
+    b:'Say how deep you mean to cut before you start. Deeper pays far more, but every riddle must land — one miss and the seam collapses with nothing in your hands.'},
   lock: {ic:'🧰', t:'A locked chest',
     b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'}
 };
@@ -6948,7 +7222,8 @@ const Dungeon = {
     // depth one opens on a fight and a locked chest surfaces now and then, on a
     // roll that is part of the seeded build, so a run replays identically.
     const name = set.plan ? set.plan[depth-1]
-               : (depth>=2 && R.chance(set.lockChance)) ? 'lock' : 'monster';
+               : (depth>=2 && R.chance(set.lockChance)) ? 'lock'
+               : (depth>=2 && R.chance(set.seamChance||0)) ? 'seam' : 'monster';
     const kind = RoomKinds[name] || RoomKinds.monster;
     const spec = kind.build(R, depth, set);
     R.unseed();
@@ -7313,7 +7588,7 @@ const UI = {
     const g=Game.s, out=[];
     const buy=(kind,id,cost,owned)=>\`onclick="Shop.buy('\${kind}','\${id}',\${cost})"\`;
     out.push('<div class="panel"><h2>⚔️ Weapons</h2>');
-    WEAPONS.forEach(w=>{
+    WEAPONS.filter(w=>!w.forge).forEach(w=>{
       const owned=!!g.owned[w.id], eq=g.weapon===w.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
         <div class="ic">\${w.ic}</div>
@@ -7325,7 +7600,7 @@ const UI = {
       </div>\`);
     });
     out.push('</div><div class="panel"><h2>🛡️ Armour</h2>');
-    ARMORS.forEach(a=>{
+    ARMORS.filter(a=>!a.forge).forEach(a=>{
       const owned=!!g.owned[a.id], eq=g.armor===a.id;
       out.push(\`<div class="item \${eq?'equipped':''}">
         <div class="ic">\${a.ic}</div>
@@ -7334,6 +7609,38 @@ const UI = {
         \${eq?'<span class="pill">equipped</span>':
           owned?\`<button class="btn sm" style="width:auto" onclick="Shop.equip('a','\${a.id}')">Equip</button>\`:
           \`<button class="btn sm gold" style="width:auto" \${buy('a',a.id,a.cost)}>🪙 \${a.cost}</button>\`}
+      </div>\`);
+    });
+    /* Smithing and Enchanting: the Keep's half of the chain. Neither takes
+       gold — they take what the Deep gave up, which is the point. A player who
+       never descends can still buy everything above; a player who does gets
+       things gold cannot reach. */
+    out.push(\`</div><div class="panel"><h2>🔨 The Forge</h2>
+      <div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
+        <b>🪨 \${g.mats.ore}</b>.</div>\`);
+    FORGE.forEach(f=>{
+      const done = f.owned && f.owned(g);
+      const can = !done && g.mats.ore >= f.ore;
+      out.push(\`<div class="item \${done?'equipped':''}">
+        <div class="ic">\${f.ic}</div>
+        <div style="flex:1"><div class="nm">\${f.nm}</div><div class="ds">\${f.ds}</div></div>
+        \${done ? '<span class="pill">forged</span>'
+               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                    onclick="Forge.make('\${f.id}')">🪨 \${f.ore}</button>\`}
+      </div>\`);
+    });
+    out.push(\`</div><div class="panel"><h2>🜄 The Rune Bench</h2>
+      <div class="sub">Enchanting spends <b>essence</b>, which comes only from chests
+        opened cleanly. You hold <b>🜄 \${g.mats.essence}</b>. A rune is bought once and
+        kept for good.</div>\`);
+    RUNES.forEach(r=>{
+      const worn=Runes.worn(r.id), can=!worn && g.mats.essence>=r.cost;
+      out.push(\`<div class="item \${worn?'equipped':''}">
+        <div class="ic">\${r.ic}</div>
+        <div style="flex:1"><div class="nm">\${r.nm}</div><div class="ds">\${r.ds}</div></div>
+        \${worn ? '<span class="pill">worn</span>'
+               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                    onclick="Runes.buy('\${r.id}')">🜄 \${r.cost}</button>\`}
       </div>\`);
     });
     out.push('</div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>');

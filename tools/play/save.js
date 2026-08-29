@@ -33,8 +33,11 @@ module.exports = {
                lvl: back.ok && back.g.lvl, gold: back.ok && back.g.gold,
                rev: back.ok && back.g.rev, savedRev: Game.s.rev };
     });
-    t.eq('the codec is at version 2', codec.ver, 2);
-    t.eq('codes are tagged KE2-', codec.head, 'KE2-');
+    /* The format version. Bump it here ON PURPOSE when the save gains a field,
+       and add a case below proving the previous version still reads — those
+       two together are the whole backward-compatibility contract. */
+    t.eq('the codec is at version 3', codec.ver, 3);
+    t.eq('codes are tagged KE3-', codec.head, 'KE3-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);
@@ -50,11 +53,19 @@ module.exports = {
              + 'ASIBD5KQACJAAZSKAAJEBRHVIABEQEJ5FAAESAJ3OUAAQNCF';
     const v1 = await t.ev(code => {
       const d = Codec.decode(code);
-      return { ok: d.ok, why: d.why, rev: d.ok ? d.g.rev : null, lvl: d.ok ? d.g.lvl : null };
+      return { ok: d.ok, why: d.why, rev: d.ok ? d.g.rev : null, lvl: d.ok ? d.g.lvl : null,
+               mats: d.ok ? d.g.mats : null, runes: d.ok ? d.g.runes : null };
     }, V1);
     t.ok('a version 1 code still decodes — an old QR must not stop working', v1.ok, v1.why);
     t.eq('it reads as revision zero, from before the counter existed', v1.rev, 0);
     t.eq('and its knight comes back intact', v1.lvl, 7);
+    /* Everything added since v1 has to read as empty rather than as garbage.
+       This is what proves the version gate around the newer fields works: the
+       decoder must not try to read materials off the end of an older code. */
+    t.ok('a knight from before materials arrives with empty pockets, not garbage',
+      v1.mats && v1.mats.ore === 0 && v1.mats.essence === 0, JSON.stringify(v1.mats));
+    t.ok('and wearing no runes', v1.runes && Object.keys(v1.runes).length === 0,
+      JSON.stringify(v1.runes));
 
     /* --- the referee: newest wins, per knight ---
        The vault mirrors localStorage wholesale, so a doctored backup is planted
