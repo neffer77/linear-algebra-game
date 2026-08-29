@@ -36,7 +36,7 @@ function arg(flag, dflt) {
 
 /* Everything below runs INSIDE the page, so it can call the game's own
  * functions. It is written as one string-free function passed to evaluate. */
-function simulate({ accuracies, runs, maxDepth, waves, knight }) {
+function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges }) {
   /* A seeded stream of our own, so a sweep is reproducible and never touches
      the game's R (which the page uses for its own draws). */
   const mkRng = s => { let x = (s >>> 0) || 1;
@@ -150,6 +150,63 @@ function simulate({ accuracies, runs, maxDepth, waves, knight }) {
       const r = descend(acc, s * 31337 + 7, maxDepth);
       if (r.died) fell += r.depth; else { survivedAll++; fell += maxDepth; }
     }
+
+    /* What Scrying is worth. A player who can bail out of a bad room can safely
+       AIM deeper than one who cannot, so the honest measurement is not "does the
+       same plan earn more" but "does the best plan change" — the break-even
+       depth, swept again for a player carrying Farsight.
+
+       The reading itself is the one a player actually gets: how many blows the
+       next foe would need to fell them. Below four, they climb out. Note that
+       information may always be ignored, so a foresight player can never do
+       worse than a blind one at the same bank depth; what the sweep shows is
+       how much deeper it becomes rational to go. */
+    function scryRun(acc, seed, bankAt) {
+      const rnd = mkRng(seed);
+      const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def };
+      let pot = 0, depth = 0, turned = false;
+      /* Charges are the whole balance of this ability. A knight solid in the
+         Sanctum's mathematics carries three readings for an ENTIRE descent, not
+         one per fork — so foresight informs a few decisions, and the rest of
+         the run is still judgement. Simulating unlimited scrying turns the fork
+         into an algorithm (a 97% bail rate) and badly overstates what the
+         ability is worth; this is the number that matters most here. */
+      let charges = scryCharges;
+      while (depth < bankAt) {
+        const next = depth + 1;
+        R.seed(((seed ^ (next * 2654435761)) >>> 0) || 1);
+        const nLock = next >= 2 && R.chance(set.lockChance);
+        const nSeam = !nLock && next >= 2 && R.chance(set.seamChance || 0);
+        const nFoe = WaveEngine.foe(next, CURVE);
+        R.unseed();
+        // A player spends a reading when they feel the risk, not at random.
+        const worried = st.hp < BASE.maxHp * 0.6;
+        if (!nLock && !nSeam && charges > 0 && worried) {
+          charges--;
+          const per = Math.max(1, nFoe.atk - BASE.def);
+          if (Math.floor(st.hp / per) <= 3) { turned = true; break; }
+        }
+        depth = next;
+        if (nLock) { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
+        if (nSeam) continue;
+        if (fightRoom(st, nFoe, acc, rnd) === null) return { banked: 0, depth, died: true, turned };
+        pot += nFoe.gold;
+      }
+      return { banked: pot, depth, died: false, turned };
+    }
+
+    const scryCurve = [];
+    for (let d = 1; d <= maxDepth; d++) {
+      let total = 0, turned = 0, reach = 0;
+      for (let s = 0; s < runs; s++) {
+        const r = scryRun(acc, s * 7919 + d * 104729 + 1, d);
+        total += r.banked; reach += r.depth; if (r.turned) turned++;
+      }
+      scryCurve.push({ d, ev: total / runs, turned: turned / runs, reach: reach / runs });
+    }
+    let scryBest = scryCurve[0];
+    for (const p of scryCurve) if (p.ev > scryBest.ev) scryBest = p;
+
     out.levels.push({
       acc,
       breakEven: best.d,
@@ -157,6 +214,9 @@ function simulate({ accuracies, runs, maxDepth, waves, knight }) {
       deathAtBreakEven: curve[best.d - 1].deathRate,
       greedyMeanDepth: fell / runs,
       greedySurvivedAll: survivedAll / runs,
+      scryBreakEven: scryBest.d,
+      scryEv: scryBest.ev,
+      scryTurned: scryBest.turned,
       curve: curve.map(p => ({ d: p.d, ev: Math.round(p.ev), death: +p.deathRate.toFixed(3) }))
     });
   }
@@ -178,6 +238,16 @@ function judge(res) {
                `${(worst.greedySurvivedAll * 100).toFixed(0)}% of the time — the Deep is too soft`);
   if (best.greedyMeanDepth <= worst.greedyMeanDepth)
     fails.push('a strong player gets no deeper than a weak one before falling');
+  // Scrying must beat pressing on blind, or it is decoration in a slot that
+  // could hold something that works.
+  for (const x of L) {
+    if (x.scryEv < x.bestEv * 0.98)
+      fails.push(`at ${Math.round(x.acc * 100)}% accuracy Farsight banks ${Math.round(x.scryEv)} ` +
+                 `against ${x.bestEv} blind — information the player may ignore should never cost them`);
+  }
+  if (!L.some(x => x.scryBreakEven > x.breakEven))
+    fails.push('seeing one room ahead never makes it rational to go deeper — ' +
+               'foresight is decoration in a slot that could hold something that works');
   if (best.breakEven < 3)
     fails.push(`even a ${best.acc * 100}% player banks at depth ${best.breakEven} — ` +
                'there is no run to speak of');
@@ -212,7 +282,7 @@ function judge(res) {
     const good = [];
     for (const waves of grid) {
       const r = await page.evaluate(simulate,
-        { accuracies: ACCURACIES, runs, maxDepth, waves, knight });
+        { accuracies: ACCURACIES, runs, maxDepth, waves, knight, scryCharges: 3 });
       const fails = judge(r);
       if (!fails.length) {
         const depths = r.levels.map(x => x.breakEven);
@@ -237,7 +307,7 @@ function judge(res) {
 
   const t0 = Date.now();
   const res = await page.evaluate(simulate,
-    { accuracies: ACCURACIES, runs, maxDepth, waves: null, knight });
+    { accuracies: ACCURACIES, runs, maxDepth, waves: null, knight, scryCharges: arg('--scry', 3) });
   await browser.close();
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
 
@@ -248,16 +318,17 @@ function judge(res) {
     console.log(`  the knight the Deep opens for: ${res.base.gear}`);
     console.log(`  ${res.base.maxHp} health · ${res.base.dmg} damage · ${res.base.def} defence`);
     console.log(`  ${runs} runs per accuracy level, to depth ${maxDepth}\n`);
-    console.log('  accuracy   break-even   banked   wipe risk   always-press-on');
-    console.log('  ────────   ──────────   ──────   ─────────   ───────────────');
+    console.log('  accuracy   break-even   banked      with Farsight: aims   banks   bails');
+    console.log('  ────────   ──────────   ──────      ───────────────────   ─────   ─────');
     for (const L of res.levels) {
       console.log(
         `     ${(L.acc * 100).toFixed(0).padStart(3)}%` +
         `       depth ${String(L.breakEven).padStart(2)}` +
         `   ${String(L.bestEv).padStart(6)}` +
-        `      ${(L.deathAtBreakEven * 100).toFixed(0).padStart(3)}%` +
-        `        falls at ${L.greedyMeanDepth.toFixed(1)}` +
-        (L.greedySurvivedAll > 0.02 ? ` (${(L.greedySurvivedAll * 100).toFixed(0)}% reach the floor)` : ''));
+        `` +
+        `             depth ${String(L.scryBreakEven).padStart(2)}` +
+        `  ${String(Math.round(L.scryEv)).padStart(6)}` +
+        `   ${(L.scryTurned * 100).toFixed(0).padStart(3)}%`);
     }
     console.log('');
   }

@@ -5235,7 +5235,10 @@ const Battle = {
     // Skill abilities recharge every fight — they are what you know, not what
     // you own, so they cannot be hoarded or run out for good.
     this.skillLeft={};
-    for(const a of Loadout.chosen()) this.skillLeft[a.id]=Loadout.charges(a)+Runes.spare();
+    for(const a of Loadout.chosen()){
+      if(a.where==='fork') continue;            // those are the run's, not the fight's
+      this.skillLeft[a.id]=Loadout.charges(a)+Runes.spare();
+    }
     this.wardUp=false; this.steadyUp=false;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
@@ -5310,6 +5313,7 @@ const Battle = {
        greyed and labelled with its band — seeing "weak · 0" beside a skill is
        how a player learns that studying the strand is what fills it. */
     for(const a of Loadout.chosen()){
+      if(a.where==='fork') continue;            // spent at the fork, not in here
       const left=(this.skillLeft && this.skillLeft[a.id]) || 0;
       add('skill-'+a.id, `${a.ic} ${a.nm} ×${left}`,
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
@@ -5385,7 +5389,10 @@ const Battle = {
       let pool=this.realm.pool;
       if(this.foe.boss && R.chance(.3) && this.ri>0) pool=REALMS[R.i(0,this.ri-1)].pool;
       const wide = this.mode==='arena' || this.mode==='dungeon';
-      const prefer = wide && REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null;
+      const setNow = this.mode==='dungeon' ? Dungeon.set() : null;
+      const prefer = !wide ? null
+                   : (settingTopics(setNow) ||
+                      (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null));
       key=Mastery.pick(pool, prefer);
       const base = this.mode==='arena' ? 3
                  : clamp(1 + Math.floor(this.fi/2) + (this.foe.boss?1:0), 1, 3);
@@ -6037,7 +6044,18 @@ const SKILL_ABILITIES = [
   {id:'steady', nm:'Steady Hand', ic:'🪨', skill:'Smithing', strand:'Applications',
    ds:'Your next wrong answer will not break your streak.',
    ready(){ return !Battle.steadyUp && Battle.combo>0; },
-   go(){ Battle.steadyUp=true; UI.toast('🪨 Your grip settles.'); }}
+   go(){ Battle.steadyUp=true; UI.toast('🪨 Your grip settles.'); }},
+
+  /* The first Foresight ability, and the only one so far used OUTSIDE a fight.
+     It is spent at the fork, where the decision actually is — which is why its
+     charges last a whole descent rather than refilling every room. Knowing what
+     is below is the strongest thing a skill can give you, so it has to be
+     scarce in the place it matters. */
+  {id:'farsight', nm:'Farsight', ic:'🔭', skill:'Scrying', strand:'Multivariable & Series',
+   where:'fork',
+   ds:'At the fork, look one room down before you choose.',
+   ready(){ return Dungeon.active && !Dungeon.scried; },
+   go(){ Dungeon.scry(); }}
 ];
 
 /* Smithing, at the bench. Ore is spent here and nowhere else, which is what
@@ -6088,6 +6106,20 @@ const Runes = {
     Celebrate.banner(r.nm.toUpperCase(), r.ds, 'var(--gold)', ()=>{});
   }
 };
+
+/* A setting's own mathematics, flattened into a topic list. This is what makes
+   the Sanctum feel like the Sanctum: its rooms prefer fields, flows and series,
+   without ever excluding the rest — the scheduler treats it as a nudge, which
+   is exactly the "relevance" signal it already weighs. */
+function settingTopics(set){
+  if(!set || !set.strands) return null;
+  const out=[];
+  for(const name of set.strands){
+    const st=STRANDS.find(x=>x[0]===name);
+    if(st) out.push(...st[1]);
+  }
+  return out.length ? out : null;
+}
 
 const Loadout = {
   SLOTS: 3,
@@ -6488,6 +6520,19 @@ const CELLAR_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Sanctum's curve. A shorter expedition than the Deep and a sharper one:
+   its foes hit harder for their health, because the Sanctum is entered on
+   purpose by a knight who already has a run behind them, not stumbled into. */
+const SANCTUM_WAVES = {
+  championEvery:4,
+  hp0:55,  hpPer:24, champHp:1.6,
+  atk0:11, atkGrow:1.07, champAtk:1.3,
+  gold0:35, goldPer:14,
+  xp0:40,   xpPer:14,
+  champReward:2,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
    out, and whether it can kill you. The Deep runs forever on a seeded roll;
    the cellar is three rooms on a fixed plan with a chest in the middle, and it
@@ -6500,6 +6545,18 @@ const SETTINGS = {
   cellar: {
     key:'cellar', nm:'the cellar', waves:CELLAR_WAVES,
     canDie:false, rooms:3, plan:['monster','lock','monster']
+  },
+  /* The Sanctum: six rooms, fixed, and every one of them drawn from the
+     mathematics of fields and flows and things that grow without bound. It is
+     where Scrying is practised, which is the only reason it pays essence
+     rather than gold — you come here to get better at reading what is ahead,
+     and the reward is the material that buys permanence. */
+  sanctum: {
+    key:'sanctum', nm:'the Sanctum', waves:SANCTUM_WAVES,
+    canDie:true, rooms:6,
+    plan:['monster','seam','monster','lock','monster','monster'],
+    strands:['Multivariable & Series','Eigen & Subspaces','Integrals'],
+    essencePerRoom:1
   }
 };
 
@@ -6694,7 +6751,9 @@ const RoomKinds = {
     build(rng, depth, set){
       const pool = WaveEngine.pool(Game.s.topicStats);
       // Built under the room seed, so this pick must be pure — see Mastery.pick.
-      const key  = Mastery.pick(pool, REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null, true);
+      const prefer = settingTopics(set) ||
+                     (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null);
+      const key  = Mastery.pick(pool, prefer, true);
       // The cellar's chest is a teaching chest: it never asks a hard one.
       const base = (set && set.key==='cellar') ? 1 : clamp(1 + Math.floor(depth/3), 1, 3);
       const diff = Mastery.adjustDiff(key, base);
@@ -6717,10 +6776,12 @@ const RoomKinds = {
     build(rng, depth, set){
       const pool = WaveEngine.pool(Game.s.topicStats);
       const base = (set && set.key==='cellar') ? 1 : clamp(1 + Math.floor(depth/4), 1, 3);
+      const prefer = settingTopics(set) ||
+                     (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null);
       // Three questions drawn now, so the seam is the same seam on a resume.
       const qs=[];
       for(let i=0;i<3;i++){
-        const key = Mastery.pick(pool, REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null, true);
+        const key = Mastery.pick(pool, prefer, true);
         qs.push(buildQuestion(key, Mastery.adjustDiff(key, base)));
       }
       return { kind:'seam', qs, depth };
@@ -7132,9 +7193,67 @@ const Dungeon = {
   // Opened once the campaign's first realm boss has fallen — reachable well
   // before the Arena, since the Deep is the core loop, not the victory lap.
   unlocked(){ return !!(Game.s && Game.s.cleared['0:'+(REALMS[0].foes.length-1)]); },
+  // The Sanctum opens one realm later than the Deep: it is a second place to
+  // go, not a first, and it should arrive when a knight already has a habit.
+  sanctumOpen(){ return !!(Game.s && REALMS[1] && Game.s.cleared['1:'+(REALMS[1].foes.length-1)]); },
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
+
+  /* Foresight, and the reason it is rationed by the descent rather than by the
+     room: what it buys is a DECISION, and a decision you can re-buy every time
+     it comes round is not one. Charges are taken once, at the mouth. */
+  armForesight(){
+    this.forkLeft={};
+    for(const a of Loadout.chosen())
+      if(a.where==='fork') this.forkLeft[a.id]=Loadout.charges(a)+Runes.spare();
+    this.scried=null;
+  },
+  forkCharges(id){ return (this.forkLeft && this.forkLeft[id]) || 0; },
+
+  /* What the next room is, built exactly as nextRoom would build it — the same
+     seed, the same roll — so what you are shown is what you will meet. It is
+     rebuilt rather than remembered, which keeps foresight honest: there is no
+     second copy of the layout that could disagree with the real one. */
+  peek(depth){
+    const set=this.set();
+    R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
+    const name = set.plan ? set.plan[depth-1]
+               : (depth>=2 && R.chance(set.lockChance)) ? 'lock'
+               : (depth>=2 && R.chance(set.seamChance||0)) ? 'seam' : 'monster';
+    const kind = RoomKinds[name] || RoomKinds.monster;
+    let foe=null;
+    if(name==='monster') foe=WaveEngine.foe(depth, set.waves);
+    R.unseed();
+    return {name, foe};
+  },
+
+  /* Spend a Farsight charge. The reading names the room and, for a fight, how
+     it stands against the health you are actually carrying — a number the
+     player would otherwise have to hold in their head. */
+  scry(){
+    if(!this.active || this.scried) return;
+    if(this.forkCharges('farsight')<1){ UI.toast('No Farsight left this descent.'); return; }
+    this.forkLeft.farsight--;
+    const next=this.peek(this.run.depth+1);
+    let line;
+    if(next.name==='monster'){
+      const f=next.foe, hp=Game.s.hp;
+      // How many blows it can land before you fall, at its own attack rate.
+      const per=Math.max(1, f.atk - Game.armor().def);
+      const blows=Math.floor(hp/per);
+      const read = blows<=3 ? 'it would take you apart' : blows<=6 ? 'it would hurt' : 'you can take it';
+      line = `<b>${f.nm}</b>${f.boss?' — a champion':''}. ${f.hp} health, striking for about ${f.atk}.
+              At your ${Math.round(hp)} health that is ${blows} blows before you fall — ${read}.`;
+    } else if(next.name==='lock'){
+      line = `A <b>locked chest</b>. No foe. You carry ${Game.s.items.pick} pick${Game.s.items.pick===1?'':'s'}.`;
+    } else {
+      line = `An <b>ore seam</b>. No foe — only the ore is at risk.`;
+    }
+    this.scried={ name:next.name, line };
+    Sfx.coin(0); Haptic.tap();
+    this.fork(this.lastOutcome||{});          // redraw the fork, now with the reading
+  },
 
   descend(setting){
     const key = SETTINGS[setting] ? setting : 'deep';
@@ -7142,6 +7261,7 @@ const Dungeon = {
     this.run = { setting:key, seed, depth:0, unbanked:{ gold:0, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
+    this.armForesight();
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = Game.s.maxHp;          // you enter whole; the Deep does not heal you
     this.checkpoint(0);                // nothing cleared yet; a resume starts at room one
@@ -7176,6 +7296,11 @@ const Dungeon = {
                  unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);
+    // A resumed descent gets its foresight back. The checkpoint is deliberately
+    // {seed, depth, bank, health} and nothing else, so spent charges are not
+    // carried across a reload — the alternative is a field in every save for a
+    // thing that only matters for the next thirty seconds.
+    this.armForesight();
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = clamp(r.hp||Game.s.maxHp, 1, Game.s.maxHp);
     this.nextRoom();                   // steps depth to done+1: the room you were in
@@ -7195,6 +7320,7 @@ const Dungeon = {
   // genuinely random, so you cannot memorise a fight, only its foe.
   nextRoom(){
     this.run.depth++;
+    this.scried=null;                 // a reading was about this room; it is now behind you
     const depth = this.run.depth;
     const set = this.set();
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
@@ -7232,6 +7358,10 @@ const Dungeon = {
       const y=outcome.yield||{};
       this.run.unbanked.gold += y.gold||0;
       this.run.unbanked.xp   += y.xp||0;
+      // The Sanctum pays in essence for every room you get through, banked with
+      // the rest — so a fall there costs the essence too.
+      if(set.essencePerRoom)
+        this.run.unbanked.essence = (this.run.unbanked.essence||0) + set.essencePerRoom;
       this.checkpoint(this.run.depth);   // this depth is behind you now
       // A run of fixed length is over when its last room falls — there is no
       // fork to offer, so it banks itself and walks you back up.
@@ -7245,10 +7375,12 @@ const Dungeon = {
   /* The end of a fixed-length run. Everything carried is banked — you walked
      out of the last room, which is the same thing as climbing the stairs. */
   finishRun(outcome){
-    const u={gold:this.run.unbanked.gold, xp:this.run.unbanked.xp};
+    const u={gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
+             essence:this.run.unbanked.essence||0};
     const set=this.set(), depth=this.run.depth;
     this.active=false;
     Game.s.gold += u.gold;
+    if(u.essence) Game.s.mats.essence += u.essence;
     const ups=Game.gainXp(u.xp);
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
@@ -7265,6 +7397,7 @@ const Dungeon = {
         <div style="font-size:15px;font-weight:800;line-height:1.8">
           <div class="coin">🎒 ${u.gold} gold banked</div>
           <div style="color:var(--blue)">✦ ${u.xp} experience</div>
+          ${u.essence?`<div style="color:#b48bec">🜄 ${u.essence} essence</div>`:''}
         </div>
         <hr>
         <div class="sub">That is the whole game: answer to strike, and choose when to walk out.
@@ -7278,15 +7411,26 @@ const Dungeon = {
   },
 
   fork(outcome){
+    this.lastOutcome=outcome;
     const sp=this.cur.spec, u=this.run.unbanked, g=Game.s;
-    // A room may be a fight or a locked chest; the fork reads the same either
-    // way, so describe whichever this was.
-    const lock=sp.kind==='lock', opened=lock && outcome.lock && outcome.lock.opened;
-    const icon = lock ? (opened?'🎁':'🧰') : (sp.foe.boss?'👑':'⛏️');
-    const line = lock
-      ? (opened ? 'The chest gives up its hoard. A passage drops away into the dark.'
-                : 'The chest stays shut. A passage drops away into the dark.')
-      : `${sp.foe.nm} falls. A passage drops away into the dark.`;
+    /* The fork reads the same whatever the room was, so it has to be able to
+       describe every kind — and a kind added without a line here used to reach
+       for a foe that a chest or a seam does not have. Written as a table so the
+       next kind is an entry rather than another branch to forget. */
+    const PASSAGE = 'A passage drops away into the dark.';
+    let icon='⛏️', line=PASSAGE;
+    if(sp.kind==='lock'){
+      const opened = outcome.lock && outcome.lock.opened;
+      icon = opened?'🎁':'🧰';
+      line = (opened ? 'The chest gives up its hoard. ' : 'The chest stays shut. ') + PASSAGE;
+    } else if(sp.kind==='seam'){
+      const ore = (outcome.seam && outcome.seam.ore) || 0;
+      icon = ore?'🪨':'⛰️';
+      line = (ore ? `The seam gives up ${ore} ore. ` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.foe){
+      icon = sp.foe.boss?'👑':'⛏️';
+      line = `${sp.foe.nm} falls. ${PASSAGE}`;
+    }
     UI.go('s-result');
     document.getElementById('resultBody').innerHTML=`
       <div class="center crest">${icon}</div>
@@ -7297,14 +7441,38 @@ const Dungeon = {
         <div style="font-size:15px;font-weight:800;line-height:1.8">
           <div class="coin">🎒 ${u.gold} gold carried</div>
           <div style="color:var(--blue)">✦ ${u.xp} experience carried</div>
+          ${u.essence?`<div style="color:#b48bec">🜄 ${u.essence} essence carried</div>`:''}
         </div>
         <hr>
         <div class="small">❤️ ${Math.round(g.hp)}/${g.maxHp} · this haul is <b>at risk</b> until you climb out</div>
       </div>
+      ${this.foresightBlock()}
       <button class="btn gold" onclick="Dungeon.nextRoom()">⛏️ Press on — Depth ${this.run.depth+1} →</button>
       <button class="btn ghost" onclick="Dungeon.leave()">🚪 Climb out with ${u.gold} gold</button>
       <div style="height:20px"></div>`;
     Haptic.win();
+  },
+
+  /* What Scrying puts on the fork. Three states, and each says something
+     different: a reading you have paid for, an offer to pay for one, or — when
+     the skill is not carried or not yet known — nothing at all, because an
+     empty button advertising a skill you do not have is noise. */
+  foresightBlock(){
+    if(this.scried)
+      return `<div class="panel" style="border-color:#6a44b0">
+        <div class="row" style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:22px">🔭</span>
+          <div class="small" style="flex:1;line-height:1.5">${this.scried.line}</div>
+        </div></div>`;
+    const carried = Loadout.chosen().some(a=>a.id==='farsight');
+    if(!carried) return '';
+    const left = this.forkCharges('farsight');
+    if(left<1) return `<div class="center small" style="opacity:.6;margin:4px 0">
+        🔭 Farsight spent for this descent</div>`;
+    return `<button class="btn" style="border-color:#6a44b0"
+        onclick="Dungeon.scry()">🔭 Scry the passage below
+        <span style="font-size:12px;font-weight:700;color:var(--dim);margin-left:6px">${left} left</span>
+      </button>`;
   },
 
   // Bank the pot and return to the surface. `midFight` is true when the player
@@ -7314,6 +7482,7 @@ const Dungeon = {
     this.active=false;
     const u=this.run.unbanked;
     Game.s.gold += u.gold;
+    if(u.essence) Game.s.mats.essence += u.essence;
     const ups = Game.gainXp(u.xp);
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
@@ -7326,7 +7495,12 @@ const Dungeon = {
   },
 
   died(){
-    const foe=this.cur.spec.foe, lost=this.run.unbanked.gold, depth=this.run.depth;
+    /* Only a fight can end a run today, so `cur` is normally a monster room —
+       but a kind that can fail is exactly the sort of thing a later slice adds,
+       and reaching blindly for a foe that a chest or a seam does not have is
+       how that arrives as a crash instead of a missing sentence. */
+    const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm:'The dark'};
+    const lost=this.run.unbanked.gold, depth=this.run.depth;
     this.active=false;
     Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
     Game.s.maxHp=Game.maxHp();
@@ -7550,6 +7724,24 @@ const UI = {
         </div>
         <div style="font-size:20px;color:var(--dim)">${dOpen?'▶':'🔒'}</div>
       </div>`;
+    /* The Sanctum — the second setting, opened by the second realm's boss. Its
+       own node rather than a room inside the Deep, because a setting is a place
+       you decide to go to, and that decision is the thing the web is made of. */
+    const sOpen = Dungeon.sanctumOpen();
+    out+=`<div class="realmhdr"><span class="dot" style="background:#8ad4ff"></span>
+          <h2 style="color:#8ad4ff">The Sanctum</h2>${sOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">Six rooms of fields, flows and things that grow without bound.
+        It pays in <b>essence</b> rather than gold — and it is where Scrying is learned.</div>
+      <div class="node ${sOpen?'':'locked'}" onclick="Dungeon.descend('sanctum')">
+        <div class="ico" style="font-size:24px">🔮</div>
+        <div style="flex:1">
+          <div class="nm">Enter the Sanctum</div>
+          <div class="dt">${sOpen?'Six rooms · 🜄 essence every room · a fall loses it all'
+                                :'Clear the Matrix Marches to be admitted'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">${sOpen?'▶':'🔒'}</div>
+      </div>`;
+
     // The Arena sits past the campaign, opened by the last boss.
     const aOpen=Arena.unlocked(), best=g.arenaBest||0;
     out+=`<div class="realmhdr"><span class="dot" style="background:var(--gold)"></span>

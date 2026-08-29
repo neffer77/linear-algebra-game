@@ -223,6 +223,34 @@ module.exports = {
     t.ok('every room kind still builds with empty pockets', open.kindsBuild);
     t.ok('a chest with no picks is a dead end, never a dead run', open.chestWithoutPicks);
 
+    /* --- every room kind can reach the fork ---
+       The fork describes the room you just cleared, and it used to reach for a
+       foe that a chest or a seam does not have — so clearing a seam crashed it.
+       Found by S3, guarded here, because it is a fact about the room contract:
+       a kind added without a line in the fork is a crash, not a missing
+       sentence. */
+    const forks = await t.ev(() => {
+      const out = { crashed: [], lines: {}, kinds: Object.keys(RoomKinds).length };
+      Game.s.metRoom = { monster: 1, lock: 1, seam: 1 };
+      for (const kind of Object.keys(RoomKinds)) {
+        try {
+          Dungeon.descend('deep');
+          R.seed(7);
+          Dungeon.cur = { kind: RoomKinds[kind], spec: RoomKinds[kind].build(R, 3, SETTINGS.deep) };
+          R.unseed();
+          Dungeon.fork({ status: 'cleared', quality: 1, topics: [], yield: {},
+                         lock: { opened: true }, seam: { ore: 5, cut: 2, at: 2 } });
+          out.lines[kind] = document.getElementById('resultBody').innerText.split('\n')[2] || '';
+        } catch (e) { out.crashed.push(kind + ': ' + e.message); }
+      }
+      return out;
+    });
+    t.ok('every room kind can reach the fork without crashing it',
+      forks.crashed.length === 0, forks.crashed.join(' | '));
+    t.ok('and each gets its own sentence there',
+      new Set(Object.values(forks.lines)).size === forks.kinds,
+      JSON.stringify(forks.lines));
+
     // --- the chain survives the carry code ---
     const carried = await t.ev(() => {
       Game.s.mats = { ore: 37, essence: 21 };

@@ -161,7 +161,9 @@ async function runSuite(browser, suite) {
     await t.ready();
     await suite.run(t);
   } catch (e) {
-    crash = e.message;
+    // The stack, not just the message: a suite that throws is usually throwing
+    // in ITS own code rather than the game's, and the line number says which.
+    crash = (e.stack || e.message).split('\n').slice(0, 4).join('\n');
   }
   // An uncaught page exception fails the suite even if every claim passed.
   t.ok('the page raised no errors', errors.length === 0, errors.join(' | '));
