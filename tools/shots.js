@@ -58,6 +58,20 @@ const SCENES = [
                 const wrong = document.querySelector('#lockChoices .choice:not([data-correct="1"])');
                 if (wrong) wrong.click(); } },
 
+  { name: 'scry', note: 'the fork, with a reading paid for',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={}; set('Multivariable & Series',0.95);
+                Game.s.loadout=['farsight','ward','steady'];
+                Game.s.metRoom={monster:1,lock:1,seam:1};
+                Dungeon.descend('deep');
+                // A monster reading is the one worth showing: it is where the
+                // ability does arithmetic rather than just naming a room.
+                for(let i=0;i<60;i++){ Dungeon.run.seed=1000+i;
+                  if(Dungeon.peek(2).name==='monster') break; }
+                Dungeon.resolve({status:'cleared',quality:1,topics:[],yield:{gold:210,xp:60}});
+                Dungeon.scry(); } },
+
   { name: 'fork', note: 'press deeper, or climb out with the haul',
     go: () => { Game.s.metRoom = { monster: 1, lock: 1 };
                 Dungeon.descend('deep');
