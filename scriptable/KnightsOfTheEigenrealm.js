@@ -2431,7 +2431,23 @@ const Mastery = {
      mastery fall and surfaces the topic when it does. A solid, often-met topic
      barely moves — forty sightings puts its half-life out past a month; a
      shaky one seen once falls to nothing inside a week. */
-  strength(r){ return 2*Math.max(1, r.seen||0); },
+  strength(r){ return 2*Math.max(1, r.seen||0) * this.memory(); },
+
+  /* Loremaster stretches the forgetting curve for everything at once, which is
+     the only effect in the game that reaches back into this model rather than
+     out of it — and that makes it circular, because Loremaster's own strength
+     is read off faded mastery of its own strand. Left alone it would feed on
+     itself: remembering better raises the reach that decides how well you
+     remember. The guard breaks the loop by pricing Loremaster itself at the
+     plain rate, so what the skill is worth is judged on what you actually know
+     rather than on what the skill has already done for you. */
+  _plain:false,
+  memory(){
+    if(this._plain || typeof Passage==='undefined') return 1;
+    this._plain=true;
+    try { return Passage.memory(); } finally { this._plain=false; }
+  },
+
   retention(r){
     const d=this.daysSince(r);
     if(!isFinite(d)) return 0;
@@ -2807,11 +2823,15 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:3,
-  TAG:'KE3-',
+  VER:4,
+  TAG:'KE4-',
 
   topics(){ return Object.keys(TOPIC_LABEL); },
   items(){ return Object.keys(ITEMS); },
+  /* Settings, in the order fixed by SETTING_ORDER, for the per-setting depth
+     records. Same contract as ITEMS and the gear tables: written by position
+     with an explicit count, so the list is append-only. */
+  settings(){ return SETTING_ORDER; },
 
   /** A 16-bit fingerprint of the topic list. Verified collision-free at build
       time, so two different topic sets can never claim the same one. */
@@ -2971,6 +2991,13 @@ const Codec = {
     o.bits(RUNES.length, 8);
     for(const rn of RUNES) o.bits((g.runes && g.runes[rn.id]) ? 1 : 0, 1);
 
+    // v4: the deepest room banked from in each setting. Climbing reads it to
+    // decide where a descent starts, so it is progress a knight would be sorry
+    // to leave behind on the other device. Appended, like everything before it.
+    const ks=this.settings();
+    o.bits(ks.length, 8);
+    for(const sk of ks) o.varint(Math.max(0, Math.round((g.bests && g.bests[sk]) || 0)));
+
     const bytes=o.done();
     const s=this.sum(bytes);
     bytes.push((s>>8)&255, s&255);
@@ -3105,6 +3132,15 @@ const Codec = {
       g.mats.essence=b.varint();
       const nRu=b.bits(8);
       for(let i=0;i<nRu;i++){ const on=b.bits(1); if(on && RUNES[i]) g.runes[RUNES[i].id]=1; }
+    }
+
+    // v4 and later carry the depth records. A knight from an older code has
+    // walked nowhere as far as Climbing is concerned, which is the safe reading
+    // — it starts them at the surface rather than somewhere they cannot survive.
+    g.bests={};
+    if(ver>=4){
+      const nSet=b.bits(8), ks=this.settings();
+      for(let i=0;i<nSet;i++){ const d=b.varint(); if(ks[i] && d) g.bests[ks[i]]=d; }
     }
 
     return {ok:true, k, g, lostTopics};
@@ -3686,6 +3722,7 @@ const Game = {
       seenOpening:0,       // has the three-card opening been shown?
       metRoom:{},          // room kinds this knight has been introduced to
       loadout:['ward','sight','steady'],   // skill abilities carried into a fight
+      bests:{},                            // deepest room BANKED from, per setting (see Passage)
       mats:{ore:0, essence:0},             // what the Deep gives up; the Keep spends it
       runes:{},                            // permanent enchantments, id -> 1
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
@@ -5260,6 +5297,9 @@ const Battle = {
       this.skillLeft[a.id]=Loadout.charges(a)+Runes.spare();
     }
     this.wardUp=false; this.steadyUp=false; this.diceUp=false;
+    // Whatever walks with you is fresh at the start of every fight — it is a
+    // companion, not a consumable.
+    this.beastLeft=Passage.guard();
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
     this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
@@ -5353,6 +5393,20 @@ const Battle = {
     Anim.float(560, H-260, 'WARDED', '#8ad4ff');
     setTimeout(()=>this.renderPowers(), 60);
     return cut;
+  },
+
+  /* A blow the foe throws for missing an answer, run past everything that might
+     stop it. The beast goes first and a raised Ward second, so a knight
+     carrying both never spends the Ward on a blow the beast was going to eat —
+     which would be the worse of the two orders and the easy one to write. */
+  takeHit(raw){
+    if(this.beastLeft){
+      this.beastLeft--;
+      Anim.float(560, H-230, 'THE BEAST', '#c9b7ff');
+      setTimeout(()=>this.renderPowers(), 60);
+      return 0;
+    }
+    return this.spendWard(raw);
   },
 
   /* Spend one use of a skill ability. Charges are per fight and come from
@@ -5696,7 +5750,7 @@ const Battle = {
       this.diceUp=false;
       let dmg=0;
       for(let i=0;i<blows;i++)
-        dmg += this.spendWard(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
+        dmg += this.takeHit(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       this.settleMs = 820;
@@ -6141,6 +6195,89 @@ const SKILL_ABILITIES = [
    go(){ Battle.playCards(); }}
 ];
 
+/* ------------------------------- passage ---------------------------------- */
+/* The fourth channel, and the one that had nothing in it.
+ *
+ * Everything above is something you PRESS: three slots, charges, spent in a
+ * fight or at a fork and gone. Passage is the opposite shape. These are not
+ * carried and cannot be chosen, because they are not things you do — they are
+ * things that are true of you once you know the mathematics well enough, in
+ * every setting, on every descent, for good. That is the whole distinction the
+ * Skill Web draws, and it is why they live in their own table rather than as
+ * four more entries with \`charges: Infinity\`.
+ *
+ * Each has two tiers rather than four bands, because a permanent effect wants
+ * to be felt when it arrives rather than creeping in at a fifteenth of strength.
+ * Steady in the strand earns the first, solid the second.
+ */
+const PASSAGE_SKILLS = [
+  {id:'climbing', nm:'Climbing', ic:'🧗', skill:'Climbing', strand:'Multivariable & Series',
+   home:'the Summit', maths:'geodesics — the steepest way, and the shortest',
+   ds:'Begin a descent below the surface, on ground you have already proved.',
+   tiers:['Start at half the depth you have banked from', 'Start two short of your deepest']},
+
+  {id:'reckoning', nm:'Dead reckoning', ic:'🧭', skill:'Dead reckoning', strand:'Integrals',
+   home:'the Sea', maths:'integration — position is the sum of where you have been',
+   ds:'A fall no longer costs everything: you find your own way out with some of it.',
+   tiers:['Carry a quarter of the pot out of a fall', 'Carry half of it']},
+
+  {id:'taming', nm:'Beast taming', ic:'🐺', skill:'Beast taming', strand:'Eigen & Subspaces',
+   home:'the Wilds', maths:'credit assignment — which directions actually mattered',
+   ds:'Something walks with you, and takes the first blow of every fight.',
+   tiers:['The first blow of a fight lands on the beast', 'And it shrugs off the second too']},
+
+  {id:'loremaster', nm:'Loremaster', ic:'📖', skill:'Loremaster', strand:'Limits & Derivatives',
+   home:'the Library', maths:'long context — what survives as the interval grows',
+   ds:'What you have learned fades more slowly, everywhere, forever.',
+   tiers:['Everything you know fades half again as slowly', 'Twice as slowly']}
+];
+
+const Passage = {
+  byId(id){ return PASSAGE_SKILLS.find(a=>a.id===id) || null; },
+
+  /* 0, 1 or 2 — nothing, the first tier, or the second. Read straight off the
+     same faded reach every other skill uses, so a Passage skill you have let go
+     cold quietly stops being true of you. */
+  tier(a){
+    const m=Loadout.reach(a);
+    return m>=0.85 ? 2 : m>=0.6 ? 1 : 0;
+  },
+  has(id){ return this.tier(this.byId(id)) > 0; },
+
+  // How much of an unbanked pot survives a fall.
+  salvage(){ return [0, 0.25, 0.5][this.tier(this.byId('reckoning'))]; },
+  // How many opening blows the beast takes for you in a fight.
+  guard(){ return this.tier(this.byId('taming')); },
+  // What Loremaster multiplies the forgetting half-life by.
+  memory(){ return [1, 1.5, 2][this.tier(this.byId('loremaster'))]; },
+
+  /* Where Climbing puts you. \`best\` is the deepest room this knight has ever
+     banked from in this setting — proved ground, not merely visited, so the
+     route is one you have actually walked. Fixed-length settings are left
+     alone: starting a five-room Tavern on table three is not a shortcut, it is
+     a shorter night. */
+  startDepth(set){
+    if(!Game.s || !set || set.rooms) return 0;
+    const best=(Game.s.bests && Game.s.bests[set.key]) || 0;
+    const t=this.tier(this.byId('climbing'));
+    if(!t || best<2) return 0;
+    /* Both tiers land strictly short of the deepest room banked from — half of
+       it, or two above it — so the last stretch is always walked rather than
+       skipped. That is a property of the two formulas rather than something
+       clamped afterwards, and the suite sweeps it across every depth to keep it
+       one if either formula is ever changed. */
+    return Math.max(0, t===1 ? Math.floor(best/2) : best-2);
+  },
+
+  // The deepest room banked from, per setting. Written when a run banks.
+  recordBest(setKey, depth){
+    const g=Game.s; if(!g || !setKey) return;
+    g.bests = g.bests || {};
+    if((g.bests[setKey]||0) < depth){ g.bests[setKey]=depth; return true; }
+    return false;
+  }
+};
+
 /* Smithing, at the bench. Ore is spent here and nowhere else, which is what
    closes the loop: seams in the Deep give it up, and it comes back as the picks
    that open the Deep's chests. */
@@ -6238,6 +6375,10 @@ const Loadout = {
   // place once all three are full, so a player is never stuck having to unequip.
   toggle(id){
     const g=Game.s;
+    // Only a pressable ability can occupy a slot. Without this a Passage id —
+    // or any typo — would sit in the loadout doing nothing while evicting
+    // something that worked, since \`chosen()\` quietly filters it back out.
+    if(!this.byId(id)) return;
     g.loadout = Array.isArray(g.loadout) ? g.loadout : [];
     const i=g.loadout.indexOf(id);
     if(i>=0) g.loadout.splice(i,1);
@@ -6631,6 +6772,22 @@ const TAVERN_WAVES = {
   champReward:2,
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
+
+/* The order the codec writes per-setting depth records in. It is a list of its
+   own rather than Object.keys(SETTINGS) because the codec has to be readable
+   without the rest of the game around it — the verification harness loads it
+   alone — and because a saved code's layout must not be able to change when
+   somebody reorders a table for readability.
+
+   APPEND ONLY. A new setting goes on the end or every record after it lands on
+   the wrong setting. The playthrough suite asserts this list and SETTINGS name
+   exactly the same places, so the two cannot drift apart in silence. */
+const SETTING_ORDER = [
+  'deep',
+  'cellar',
+  'sanctum',
+  'tavern'
+];
 
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
    out, and whether it can kill you. The Deep runs forever on a seeded roll;
@@ -7594,13 +7751,19 @@ const Dungeon = {
     // the pot — so the Tavern is the one place you can walk out of poorer.
     const stake = this.buyIn(SETTINGS[key]);
     if(stake){ Game.s.gold -= stake; }
-    this.run = { setting:key, seed, depth:0, paid:stake, unbanked:{ gold:stake, xp:0 } };
+    // Climbing starts you on ground you have already banked from, so \`depth\`
+    // opens above zero and nextRoom steps into the first room past it.
+    const from = Passage.startDepth(SETTINGS[key]);
+    this.run = { setting:key, seed, depth:from, paid:stake, from,
+                 unbanked:{ gold:stake, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
     this.armForesight();
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = Game.s.maxHp;          // you enter whole; the Deep does not heal you
-    this.checkpoint(0);                // nothing cleared yet; a resume starts at room one
+    // Nothing cleared yet — except the ground Climbing skipped, which counts as
+    // done or a resume would walk the knight back to the surface.
+    this.checkpoint(from);
     this.nextRoom();
   },
 
@@ -7616,6 +7779,7 @@ const Dungeon = {
     Game.s.run = { seed:this.run.seed, done, setting:this.run.setting,
                    gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
                    paid:this.run.paid||0,       // what the door cost, for the net at the end
+                   from:this.run.from||0,       // where Climbing set you down
                    hp:Math.round(Game.s.hp) };
     Game.save();
   },
@@ -7630,7 +7794,7 @@ const Dungeon = {
     const r=this.pending();
     if(!r) return;
     this.run = { setting:r.setting||'deep', seed:r.seed, depth:r.done||0,
-                 paid:r.paid||0,
+                 paid:r.paid||0, from:r.from||0,
                  unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);
@@ -7721,6 +7885,7 @@ const Dungeon = {
     // that setting — a night at the tables is judged on the net, not the pot.
     const paid=this.run.paid||0;
     this.active=false;
+    Passage.recordBest(this.run.setting, depth);
     Game.s.gold += u.gold;
     if(u.essence) Game.s.mats.essence += u.essence;
     const ups=Game.gainXp(u.xp);
@@ -7832,6 +7997,10 @@ const Dungeon = {
     if(!this.active) return;
     this.active=false;
     const u=this.run.unbanked;
+    // Banking is what proves a depth — reaching it and dying there proves
+    // nothing, which is what keeps Climbing a record of achievement rather than
+    // a record of ambition. \`depth-1\` because the room you fled is not cleared.
+    Passage.recordBest(this.run.setting, Math.max(0, this.run.depth - (midFight?1:0)));
     Game.s.gold += u.gold;
     if(u.essence) Game.s.mats.essence += u.essence;
     const ups = Game.gainXp(u.xp);
@@ -7851,8 +8020,15 @@ const Dungeon = {
        and reaching blindly for a foe that a chest or a seam does not have is
        how that arrives as a crash instead of a missing sentence. */
     const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm:'The dark'};
-    const lost=this.run.unbanked.gold, depth=this.run.depth;
+    const pot=this.run.unbanked.gold, depth=this.run.depth;
+    /* Dead reckoning: a fall is no longer all or nothing. What is salvaged is
+       banked here rather than left in the run, because the run is about to stop
+       existing — and it is banked BEFORE the pot is reported lost, so the two
+       numbers on the screen always add up to what was being carried. */
+    const kept=Math.floor(pot * Passage.salvage());
+    const lost=pot-kept;
     this.active=false;
+    if(kept) Game.s.gold += kept;
     Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
@@ -7868,9 +8044,12 @@ const Dungeon = {
         <div style="font-size:16px;font-weight:800;line-height:1.9">
           <div>Depths cleared: <span style="color:var(--gold)">\${depth-1}</span></div>
           <div style="color:var(--red)">🎒 \${lost} unbanked gold lost to the dark</div>
+          \${kept?\`<div style="color:var(--green)">🧭 \${kept} carried out by dead reckoning</div>\`:''}
         </div>
         <hr>
-        <div class="sub">Bank your haul next time — nothing you carry survives a fall.</div>
+        <div class="sub">\${kept
+          ? 'You found your own way up in the dark. Most of a haul still dies with a run — bank it next time.'
+          : 'Bank your haul next time — nothing you carry survives a fall.'}</div>
       </div>
       <button class="btn gold" onclick="Dungeon.descend()">↻ Descend again</button>
       <button class="btn" onclick="UI.go('s-shop')">🏪 Spend what you banked</button>
@@ -8231,6 +8410,42 @@ const UI = {
       <div class="small" style="margin-top:8px;opacity:.75">
         weak · 0 &nbsp; shaky · 1 &nbsp; steady · 2 &nbsp; solid · 3
       </div>
+    </div>\` + this.passagePanel();
+  },
+
+  /* The other kind of skill. Nothing here is carried or pressed, so the panel
+     has no buttons — it is a statement of what is true of this knight now, and
+     the only thing that changes it is knowing the mathematics better. Both
+     tiers are shown whether or not they are earned, because the point of the
+     panel is to say what the next one is worth. */
+  passagePanel(){
+    const rows=PASSAGE_SKILLS.map(a=>{
+      const t=Passage.tier(a), reach=Loadout.reach(a);
+      const pct=Math.round(reach*100), col=Mastery.colour(reach);
+      const tier=(i)=>\`<div class="ds" style="margin-top:2px;
+          color:\${t>i?'var(--green)':'var(--dim)'};opacity:\${t>i?1:.65}">
+          \${t>i?'●':'○'} \${a.tiers[i]}</div>\`;
+      return \`<div class="item \${t?'equipped':''}">
+        <div class="ic" style="\${t?'':'opacity:.4'}">\${a.ic}</div>
+        <div style="flex:1">
+          <div class="nm">\${a.nm}
+            \${t? \`<span class="tag g">\${t===2?'mastered':'earned'}</span>\`
+               : '<span class="tag">not yet</span>'}</div>
+          <div class="ds">\${a.ds}</div>
+          \${tier(0)}\${tier(1)}
+          <div class="ds" style="margin-top:3px">
+            \${a.home} · \${a.maths} · draws on <b>\${a.strand}</b> ·
+            <span style="color:\${col}">\${Mastery.label(reach)} \${pct}%</span>
+          </div>
+        </div>
+      </div>\`;
+    }).join('');
+    return \`<div class="panel"><h2>🧭 What stays with you</h2>
+      <div class="sub">These are not carried and cannot be pressed. They are simply
+        true of you, in every setting, once you know the mathematics well enough —
+        and they stop being true if you let it go cold.
+        <b>steady</b> earns the first, <b>solid</b> the second.</div>
+      \${rows}
     </div>\`;
   },
   renderGear(){

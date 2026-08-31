@@ -775,14 +775,19 @@ let codeNotes = null;
       cut('const WEAPONS =', 'const B32 =') +
       arr('const TITLES = [') + ';' +
       arr('const BOUNTY_KINDS = [') + ';' +
+      // The codec writes a depth record per setting, and the ORDER of those is
+      // its own list precisely so that it can be lifted in here without the
+      // eight tables of foe curves that SETTINGS itself drags along.
+      arr('const SETTING_ORDER = [') + ';' +
       cut('const B32 =', 'const Profiles = {') +
       ';var Game={fresh:()=>({topicStats:{}})};' +
       'exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;' +
-      'exports.CRESTS=CRESTS;exports.CREST_COLS=CREST_COLS;exports.REALMS=REALMS;')(out);
+      'exports.CRESTS=CRESTS;exports.CREST_COLS=CREST_COLS;exports.REALMS=REALMS;' +
+      'exports.SETTING_ORDER=SETTING_ORDER;')(out);
   } catch (e) {
     return fail('codes', 'load', `could not load the codec: ${e.message}`);
   }
-  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS } = out;
+  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS, SETTING_ORDER } = out;
 
   /* 1. The topic list is what the mastery half of a code is indexed by, and a
         code carries a 16-bit fingerprint of it. Changing the list is allowed —
@@ -948,20 +953,42 @@ let codeNotes = null;
   REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => { maxG.cleared[ri + ':' + fi] = 1; }));
   for (const k of Object.keys(TOPIC_LABEL))
     maxG.topicStats[k] = { c: 0, w: HEAVY, m: 0.999, seen: HEAVY, last: 0, t: NOW - 900 * 864e5 };
+  /* Depth records, at a depth nobody will reach, for every setting the design
+     calls for rather than every setting built so far — eight, per the Skill
+     Web. Measuring the ceiling against what exists today would let the four
+     settings still to come arrive as a surprise. */
+  const PLANNED_SETTINGS = 8;
+  maxG.bests = {};
+  SETTING_ORDER.forEach(k => { maxG.bests[k] = 9999; });
+  const settingSlack = (PLANNED_SETTINGS - SETTING_ORDER.length) * 2;   // bytes, at 2 per varint
   const maxCode = Codec.encode({ nm: 'Maximilian the Unabbreviated', crest: CRESTS[0], col: CREST_COLS[0] }, maxG, NOW);
   const maxDec = Codec.decode(maxCode);
   if (!maxDec.ok) fail('codes', 'qr', `the heaviest realistic knight would not decode (${maxDec.why})`);
   else if (maxDec.g.lvl !== 99 || maxDec.g.gold !== 9999999)
     fail('codes', 'qr', 'the heaviest realistic knight did not survive its own round trip');
-  if (maxCode.length > 1024)
-    fail('codes', 'qr', `the heaviest realistic knight encodes to ${maxCode.length} characters, past the 1024 the ceiling above assumes`);
-  const maxQR = QR.matrix([{ mode: 'byte', data: Codec.utf8(URL_PREFIX) },
-                           { mode: 'alnum', text: maxCode }]);
+  /* What actually has to hold is that the code still fits a QR symbol loose
+     enough to scan. The old test asserted 1024 characters instead, which was a
+     stand-in for that and has now been overtaken: the heaviest knight passed it
+     while the symbol it produces is version 19 of a permitted 20, with room to
+     spare. So the character count is reported rather than asserted, and the
+     version is asserted twice — once as the format stands, and once with the
+     four settings still to be built already carrying depth records, so that
+     the cliff arrives here rather than in somebody's camera. */
+  const slackChars = Math.ceil(settingSlack * 8 / 5);      // base32: 5 bits a character
+  const symbol = text => QR.matrix([{ mode: 'byte', data: Codec.utf8(URL_PREFIX) },
+                                    { mode: 'alnum', text }]);
+  const maxQR = symbol(maxCode);
+  const grownQR = symbol(maxCode + 'A'.repeat(slackChars));
   if (!maxQR) fail('codes', 'qr', 'the heaviest realistic knight does not fit in any supported version');
   else if (maxQR.v > 20) fail('codes', 'qr', `the heaviest realistic knight needs version ${maxQR.v}, which is too dense to scan`);
+  if (!grownQR || grownQR.v > 20)
+    fail('codes', 'qr', `once the remaining ${PLANNED_SETTINGS - SETTING_ORDER.length} settings ` +
+      `carry a depth record the heaviest knight needs version ${grownQR ? grownQR.v : '>40'}, ` +
+      `which is too dense to scan — the format needs a field trimmed before then`);
 
   codeNotes = { topics: keys.length, sig: Codec.sig(), worst: big && big.size,
-                maxChars: maxCode.length, maxSize: maxQR && maxQR.size, maxQ: maxG.qCount };
+                maxChars: maxCode.length, maxSize: maxQR && maxQR.size, maxQ: maxG.qCount,
+                maxV: maxQR && maxQR.v, grownV: grownQR && grownQR.v };
 })();
 
 /* ----------------------------------------------------------------- report */
@@ -997,7 +1024,7 @@ if (figKeys.size) {
 if (codeNotes) {
   console.log(`  knight codes: topics       ${pad(codeNotes.topics, 10)}  (signature 0x${codeNotes.sig.toString(16)})`);
   console.log(`    QR symbols pinned                      (worst case ${codeNotes.worst}×${codeNotes.worst} modules)`);
-  console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → ${codeNotes.maxSize}×${codeNotes.maxSize} modules`);
+  console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → v${codeNotes.maxV} (${codeNotes.maxSize}×${codeNotes.maxSize}), v${codeNotes.grownV} at eight settings`);
 }
 console.log('─'.repeat(58));
 

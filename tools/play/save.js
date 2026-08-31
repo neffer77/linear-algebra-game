@@ -36,8 +36,8 @@ module.exports = {
     /* The format version. Bump it here ON PURPOSE when the save gains a field,
        and add a case below proving the previous version still reads — those
        two together are the whole backward-compatibility contract. */
-    t.eq('the codec is at version 3', codec.ver, 3);
-    t.eq('codes are tagged KE3-', codec.head, 'KE3-');
+    t.eq('the codec is at version 4', codec.ver, 4);
+    t.eq('codes are tagged KE4-', codec.head, 'KE4-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);
@@ -54,7 +54,8 @@ module.exports = {
     const v1 = await t.ev(code => {
       const d = Codec.decode(code);
       return { ok: d.ok, why: d.why, rev: d.ok ? d.g.rev : null, lvl: d.ok ? d.g.lvl : null,
-               mats: d.ok ? d.g.mats : null, runes: d.ok ? d.g.runes : null };
+               mats: d.ok ? d.g.mats : null, runes: d.ok ? d.g.runes : null,
+               bests: d.ok ? d.g.bests : null };
     }, V1);
     t.ok('a version 1 code still decodes — an old QR must not stop working', v1.ok, v1.why);
     t.eq('it reads as revision zero, from before the counter existed', v1.rev, 0);
@@ -66,6 +67,32 @@ module.exports = {
       v1.mats && v1.mats.ore === 0 && v1.mats.essence === 0, JSON.stringify(v1.mats));
     t.ok('and wearing no runes', v1.runes && Object.keys(v1.runes).length === 0,
       JSON.stringify(v1.runes));
+    t.ok('and having walked nowhere, as far as Climbing is concerned',
+      v1.bests && Object.keys(v1.bests).length === 0, JSON.stringify(v1.bests));
+
+    /* And the version immediately before this one, which is the case a format
+       bump is most likely to break: v3 wrote materials and runes and then
+       stopped, so a v4 decoder must know to stop reading there too rather than
+       running off the end of the buffer into the depth records. Minted from the
+       build that shipped v3, not written by hand. */
+    const V3 = 'KE3-ANICVDNUDUCUFOYLZMZQXEZLSAAHMRSJQEIPAAAAAAAAAAAAWCUAGAAAAABICAEAAABAIA'
+             + 'QAEABAAIACAAQAEABAA2AAAAAAAAAAAIYAAAAAAAAAAAAAASRKA5ABFTQ';
+    const v3 = await t.ev(code => {
+      const d = Codec.decode(code);
+      return { ok: d.ok, why: d.why, lvl: d.ok ? d.g.lvl : null, gold: d.ok ? d.g.gold : null,
+               ore: d.ok ? d.g.mats.ore : null, essence: d.ok ? d.g.mats.essence : null,
+               runes: d.ok ? Object.keys(d.g.runes) : null,
+               forged: d.ok ? !!d.g.owned.wD : null,
+               bests: d.ok ? d.g.bests : null };
+    }, V3);
+    t.ok('a version 3 code still decodes', v3.ok, v3.why);
+    t.ok('with the knight it was made from', v3.lvl === 7 && v3.gold === 2200,
+      JSON.stringify(v3));
+    t.ok('their materials intact', v3.ore === 37 && v3.essence === 21, JSON.stringify(v3));
+    t.ok('their runes and forged gear too',
+      v3.runes && v3.runes.length === 2 && v3.forged === true, JSON.stringify(v3.runes));
+    t.ok('and the field added after them reading as empty rather than as whatever came next',
+      v3.bests && Object.keys(v3.bests).length === 0, JSON.stringify(v3.bests));
 
     /* --- the referee: newest wins, per knight ---
        The vault mirrors localStorage wholesale, so a doctored backup is planted

@@ -144,6 +144,18 @@ const SCENES = [
                 set('Vectors',0.95); set('Limits & Derivatives',0.68); set('Applications',0.4);
                 UI.go('s-gear'); } },
 
+  { name: 'passage', note: 'what stays with you — earned, not carried',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={};
+                // One of each state, so the panel shows what it looks like to be
+                // part of the way there rather than all or nothing.
+                set('Integrals',0.95); set('Eigen & Subspaces',0.68);
+                set('Multivariable & Series',0.40);
+                Game.s.bests={deep:14};
+                UI.go('s-gear');
+                document.getElementById('gearList').scrollIntoView(false); } },
+
   { name: 'tome', note: 'the tale is re-readable here',
     go: () => { UI.go('s-tome'); } },
 
