@@ -107,6 +107,17 @@ const SCENES = [
                 R.seed(11); const spec = RoomKinds.seam.build(R, 6, SETTINGS.deep); R.unseed();
                 Seam.begin(spec, { depth: 6 }, () => {}); } },
 
+  { name: 'wager', note: 'the Tavern — price the riddle before you see it',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={}; set('Integrals',0.42);
+                Game.s.metRoom={monster:1,lock:1,seam:1,wager:1};
+                Game.s.gold=500;
+                // The interesting shot is the band where the small bet is worth
+                // taking and the big one is not, which is where the numbers on
+                // the buttons stop agreeing with each other.
+                Dungeon.descend('tavern'); } },
+
   { name: 'forge', note: 'the Keep spends what the Deep gave up',
     go: () => { Game.s.gold = 900; Game.s.mats = { ore: 26, essence: 9 };
                 Game.s.runes = { r_edge: 1 };

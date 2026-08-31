@@ -27,6 +27,7 @@ const SUITES = [
   require('./play/skills'),      // S1
   require('./play/chain'),       // S2
   require('./play/foresight'),   // S3
+  require('./play/tavern'),      // S4
   require('./play/cheat')        // T1
 ];
 

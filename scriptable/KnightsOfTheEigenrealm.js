@@ -5259,7 +5259,7 @@ const Battle = {
       if(a.where==='fork') continue;            // those are the run's, not the fight's
       this.skillLeft[a.id]=Loadout.charges(a)+Runes.spare();
     }
-    this.wardUp=false; this.steadyUp=false;
+    this.wardUp=false; this.steadyUp=false; this.diceUp=false;
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
     this.chargeMax=(f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0);
@@ -5378,9 +5378,30 @@ const Battle = {
   useInsight(){
     const g=Game.s; if(g.items.insight<1||this.answered) return;
     g.items.insight--;
-    const btns=[...document.querySelectorAll('#choices .choice')].filter(b=>b.dataset.correct!=='1' && !b.classList.contains('faded'));
-    R.shuffle(btns).slice(0,2).forEach(b=>b.classList.add('faded'));
+    R.shuffle(this.wrongStillUp()).slice(0,2).forEach(b=>b.classList.add('faded'));
     Sfx.coin(); Game.save(); this.renderPowers();
+  },
+
+  // Wrong answers still on offer — what Insight burns and what Cards turns over.
+  wrongStillUp(){
+    return [...document.querySelectorAll('#choices .choice')]
+      .filter(b=>b.dataset.correct!=='1' && !b.classList.contains('faded'));
+  },
+  cardsLeftToTurn(){ return this.wrongStillUp().length; },
+
+  /* Cards, and why it is not just a free Insight. Every generator that can
+     diagnose a wrong answer ships a \`why\` for it — those are the misreadings
+     the question is built to catch, and they are the ones a player is actually
+     about to pick. Cards turns those over first and falls back to the rest only
+     when it runs out, so what it removes is the confusion rather than two
+     answers drawn out of a hat. */
+  playCards(){
+    if(this.answered) return;
+    const up=this.wrongStillUp();
+    const traps=R.shuffle(up.filter(b=>b.dataset.trap==='1'));
+    const rest=R.shuffle(up.filter(b=>b.dataset.trap!=='1'));
+    traps.concat(rest).slice(0,2).forEach(b=>b.classList.add('faded'));
+    Anim.float(560, H-290, 'READ', '#8ad4ff');
   },
   useRage(){
     const g=Game.s; if(g.items.rage<1||this.rage) return;
@@ -5504,10 +5525,19 @@ const Battle = {
       const b=document.createElement('button');
       b.className='btn choice'; b.innerHTML=c;
       if(c===st.a) b.dataset.correct='1';
+      // A wrong answer the generator can diagnose is one the question was built
+      // to catch. Marked at render time, while the raw choice string is still
+      // in hand — the button's markup is not always the same text — so Cards
+      // can turn the traps over first.
+      else if(st.why && st.why[c]) b.dataset.trap='1';
       b.onclick=()=>this.answer(b,c);
       box.appendChild(b);
     });
     this.renderPerfect();
+    // The power bar is re-read here because more than one ability's readiness
+    // depends on the question now on screen — whether the Codex has a rule for
+    // it, and whether there are wrong answers left to turn over.
+    this.renderPowers();
   },
 
   // Motes carry raw distractors; shuffle them into four choices on the spot.
@@ -5627,10 +5657,14 @@ const Battle = {
       const w=this.wStats();
       const speed = this.speedMult(el);
       const crit = R.chance(w.crit + this.combo*0.02);
-      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1);
+      // A staked strike lands for triple, and the stake is spent either way.
+      const staked = this.diceUp; this.diceUp=false;
+      const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
+                  * (staked?3:1);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
+      if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
@@ -5654,8 +5688,15 @@ const Battle = {
         if(this.perfect) this.combo=0;             // a missed Perfect Strike costs the streak
         this.combo=0;
       }
-      let dmg=Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3);
-      dmg=this.spendWard(dmg);
+      // A lost stake is the second blow, not a bigger one: the Ward still has
+      // something to halve, and the arithmetic stays the arithmetic every other
+      // miss uses.
+      const blows = this.diceUp ? 2 : 1;
+      if(this.diceUp) Anim.float(560, H-290, 'STAKE LOST', '#ff6b6b', true);
+      this.diceUp=false;
+      let dmg=0;
+      for(let i=0;i<blows;i++)
+        dmg += this.spendWard(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       this.settleMs = 820;
@@ -6075,7 +6116,29 @@ const SKILL_ABILITIES = [
    where:'fork',
    ds:'At the fork, look one room down before you choose.',
    ready(){ return Dungeon.active && !Dungeon.scried; },
-   go(){ Dungeon.scry(); }}
+   go(){ Dungeon.scry(); }},
+
+  /* The Tavern's two, and the pair the game had been carrying unnamed since the
+     beginning: the Berserker Rune was always a bet, and the Sage's Insight was
+     always information. As items they were bought; as skills they are known,
+     which is the difference the whole loadout is built on.
+
+     Dice is the one with a downside, and it is the only ability in the game
+     that has one. That is deliberate: a bet you cannot lose teaches nothing
+     about expectation, and the Tavern is where expectation is learned. It still
+     obeys the rule every ability obeys — the fight is not one question shorter
+     for having pressed it. */
+  {id:'dice', nm:'Dice', ic:'🎲', skill:'Dice', strand:'Integrals',
+   ds:'Stake the next strike: triple damage if you are right, and the foe strikes twice if you are not.',
+   ready(){ return !Battle.diceUp && !Battle.answered; },
+   go(){ Battle.diceUp=true;
+         Anim.float(220, H-260, 'STAKED', '#ffd479', true);
+         UI.toast('🎲 The strike is staked.'); }},
+
+  {id:'cards', nm:'Cards', ic:'🃏', skill:'Cards', strand:'Matrices',
+   ds:'Turn two wrong answers face up — the two the question expects you to fall for.',
+   ready(){ return !Battle.answered && Battle.cardsLeftToTurn()>0; },
+   go(){ Battle.playCards(); }}
 ];
 
 /* Smithing, at the bench. Ore is spent here and nowhere else, which is what
@@ -6553,6 +6616,22 @@ const SANCTUM_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Tavern's rivals are people at a table, not things in a hole. They hit
+   softly and hold little health, because losing a hand here is meant to cost
+   you money rather than blood — the risk in this setting is on the felt. */
+const TAVERN_WAVES = {
+  // Four, not three: the Tavern's fights sit at tables two and four of five, so
+  // a champion every third would be a rule that never fires. The second rival
+  // of the night is the sharp one.
+  championEvery:4,
+  hp0:34,  hpPer:14, champHp:1.5,
+  atk0:7,  atkGrow:1.04, champAtk:1.2,
+  gold0:28, goldPer:11,
+  xp0:26,   xpPer:9,
+  champReward:2,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
    out, and whether it can kill you. The Deep runs forever on a seeded roll;
    the cellar is three rooms on a fixed plan with a chest in the middle, and it
@@ -6577,6 +6656,23 @@ const SETTINGS = {
     plan:['monster','seam','monster','lock','monster','monster'],
     strands:['Multivariable & Series','Eigen & Subspaces','Integrals'],
     essencePerRoom:1
+  },
+  /* The Tavern is the only place that cannot kill you and can still send you
+     home poorer. You buy in at the door with banked gold, every table plays
+     for the pot, and what you carry out is whatever is left of it — so the
+     press-on-or-leave fork stops being about survival and becomes the thing
+     it has always secretly been about, which is expectation.
+
+     It has no material, and that is not an oversight. Materials belong to the
+     Material channel — Delving and Smithing and the rest. What the Tavern
+     produces is Dice and Cards, which are Combat skills, so what it pays in
+     is gold at variance. */
+  tavern: {
+    key:'tavern', nm:'the Tavern', waves:TAVERN_WAVES,
+    canDie:false, rooms:5,
+    plan:['wager','monster','wager','monster','wager'],
+    strands:['Integrals','Applications','Matrices'],
+    buyIn:100
   }
 };
 
@@ -6808,6 +6904,22 @@ const RoomKinds = {
     },
     enter(spec, ctx, done){ Seam.begin(spec, ctx, done); },
   },
+
+  /* The Tavern's own room, and the only one in the game where the decision is
+     made before the question is seen. One riddle, three stakes, and the odds
+     written out — because the point is not the riddle, it is choosing which
+     bet is worth taking. */
+  wager: {
+    build(rng, depth, set){
+      const pool = WaveEngine.pool(Game.s.topicStats);
+      const prefer = settingTopics(set) ||
+                     (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null);
+      const key = Mastery.pick(pool, prefer, true);
+      const base = clamp(1 + Math.floor(depth/3), 1, 3);
+      return { kind:'wager', q:buildQuestion(key, Mastery.adjustDiff(key, base)), depth };
+    },
+    enter(spec, ctx, done){ Wager.begin(spec, ctx, done); },
+  },
 };
 
 /* -------------------------------- the seam -------------------------------- */
@@ -6944,6 +7056,188 @@ const Seam = {
     };
     if(outcome.seam && outcome.seam.ore>0){ Sfx.coin(); Haptic.win(); }
     else if(outcome.seam && outcome.seam.cut>0){ Sfx.bad(); Haptic.hurt(); }
+  }
+};
+
+/* ------------------------------- the wager -------------------------------- */
+/* Dice's UI half, and the Tavern's reason to exist.
+ *
+ * Every other room asks a question and then pays you. This one makes you price
+ * the question first: three stakes, each with its own payout, and the expected
+ * value of all three written on the buttons. The probability in that sum is not
+ * invented — it is the same faded mastery number the Ledger shows and the
+ * scheduler reads, so "how well do I know this" stops being a colour on a
+ * progress bar and becomes the thing that decides whether a bet is worth taking.
+ *
+ * The trade is deliberately not a trick question. A bigger stake buys a WORSE
+ * multiplier, so the break-even probability climbs as you push more across the
+ * felt: a third for the small bet, a half for the whole pot. Between those two
+ * numbers is a band where the small bet is worth taking and the big one is not,
+ * and finding that band is the entire lesson.
+ */
+const Wager = {
+  spec:null, ctx:null, done:null, resolved:false, staked:0, mult:1,
+
+  /* Stake tiers as a fraction of the pot, and what a win pays on top of the
+     stake. Break-even probability is 1/(1+mult), which is what makes the table
+     legible: 1/3, 5/12, 1/2. */
+  TIERS:[
+    {nm:'a quarter', frac:0.25, mult:2.0},
+    {nm:'half',      frac:0.5,  mult:1.4},
+    {nm:'the lot',   frac:1.0,  mult:1.0}
+  ],
+  stakeFor(pot, tier){ return Math.max(1, Math.round(pot * tier.frac)); },
+  /* What the house thinks your chances are: your own faded mastery — floored,
+     because a question is multiple choice and a knight who knows nothing at all
+     still guesses right one time in however many answers are on offer. Pricing
+     an unmet topic below that would be quoting odds the player can beat by
+     shutting their eyes, which is the one thing a game about expectation must
+     not do. Capped short of certainty for the same reason in reverse. */
+  odds(key, choices){
+    const guess = 1 / Math.max(2, choices || 4);
+    return clamp(Math.max(guess, Mastery.eff(key)), 0, 0.97);
+  },
+  ev(stake, mult, p){ return stake * (p*mult - (1-p)); },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done;
+    this.resolved=false; this.staked=0; this.mult=1;
+    UI.go('s-lock');                       // the same plain non-combat screen
+    this.table();
+  },
+
+  pot(){ return (this.ctx && this.ctx.run && this.ctx.run.unbanked.gold) || 0; },
+
+  table(){
+    const q=this.spec.q, p=this.odds(q.key, q.choices.length), pot=this.pot();
+    const pct=Math.round(p*100);
+    // Nothing on the table is worth pricing, so say so rather than offering
+    // three bets of a single coin. Walking away is still a room cleared.
+    const broke = pot < 4;
+    const bet=(t,i)=>{
+      const stake=this.stakeFor(pot,t), ev=this.ev(stake,t.mult,p);
+      const good=ev>0;
+      return \`<button class="btn \${good?'gold':''}" onclick="Wager.stake(\${i})">
+        🎲 Stake \${t.nm} — \${stake} gold
+        <span style="font-size:12px;font-weight:700;margin-left:6px;
+                     color:\${good?'rgba(40,26,4,.72)':'var(--dim)'}"
+        >wins \${Math.round(stake*t.mult)} · needs \${Math.round(100/(1+t.mult))}% ·
+         \${ev>=0?'+':'−'}\${Math.abs(Math.round(ev))} expected</span>
+      </button>\`;
+    };
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">🎲</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🎲 Table \${this.ctx.depth}</span>
+          <span class="pill">🎒 pot \${pot}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A hand of \${q.topic}</h2>
+        <div class="sub">The house prices you at <b>\${pct}%</b> on this — that is what your
+          Ledger says you know about \${q.topic} right now. Every stake below says what it
+          pays, what chance it needs to be worth taking, and what it is worth at your odds.</div>
+      </div>
+      \${broke ? \`<div class="panel center"><div class="sub">There is nothing left in the pot
+          to play with. The table lets you watch this one.</div></div>\`
+              : this.TIERS.map(bet).join('')}
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Wager.walkAway()">\${broke?'Sit out the hand':'Fold — keep the pot'}</span>
+      </div>
+      <div style="height:16px"></div>\`;
+  },
+
+  stake(i){
+    const t=this.TIERS[i]; if(!t) return;
+    this.staked=this.stakeFor(this.pot(), t); this.mult=t.mult;
+    this.ask();
+  },
+
+  ask(){
+    const q=this.spec.q;
+    document.getElementById('lockBody').innerHTML=\`
+      <div class="center crest">🎲</div>
+      <div class="panel">
+        <h2 style="font-size:17px">\${q.topic}
+          <span class="tag">\${this.staked} gold on it</span></h2>
+        <div class="sub">Right and the table pays \${Math.round(this.staked*this.mult)}.
+          Wrong and the stake is gone.</div>
+        <hr>
+        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        <div id="wagerFig"></div>
+        <div id="wagerChoices" style="margin-top:10px"></div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>\`;
+    Figure.render(q.fig, document.getElementById('wagerFig'));
+    const box=document.getElementById('wagerChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+  },
+
+  answer(btn, choice){
+    if(this.resolved) return;
+    const q=this.spec.q, ok=(choice===q.a);
+    document.querySelectorAll('#wagerChoices .choice').forEach(b=>{
+      b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);       // the table teaches either way
+    Game.save();
+
+    // The pot is the run's unbanked gold, so a win is a yield and a loss is a
+    // withdrawal the shell has to make. Yields only ever add, so the loss is
+    // applied here and reported as a negative for the fork to read.
+    const won=Math.round(this.staked*this.mult);
+    if(ok){
+      this.finish({ status:'cleared', quality:1, topics:[q.key], yield:{gold:won, xp:8},
+                    wager:{staked:this.staked, won, mult:this.mult} },
+        \`<div class="center crest">🎲✨</div>
+         <div class="panel center">
+           <h2 style="color:var(--green)">The table pays</h2>
+           <div class="sub">\${this.staked} staked at ×\${this.mult.toFixed(1)}.</div>
+           <hr>
+           <div style="font-weight:800;line-height:1.9" class="coin">🪙 +\${won} gold</div>
+           <div class="small" style="margin-top:6px">\${q.ex||''}</div>
+         </div>\`);
+      return;
+    }
+    this.ctx.run.unbanked.gold = Math.max(0, this.ctx.run.unbanked.gold - this.staked);
+    this.finish({ status:'cleared', quality:0, topics:[q.key], yield:{xp:8},
+                  wager:{staked:this.staked, won:-this.staked, mult:this.mult} },
+      \`<div class="center crest">🎲💢</div>
+       <div class="panel center">
+         <h2 style="color:var(--red)">The table takes it</h2>
+         <div class="sub">\${q.why[choice]||'that was not the hand'}</div>
+         <hr>
+         <div style="font-weight:800;line-height:1.9;color:var(--red)">🪙 −\${this.staked} gold</div>
+         <div class="small" style="margin-top:8px">The answer was <b>\${q.a}</b>. \${q.ex||''}</div>
+       </div>\`);
+  },
+
+  walkAway(){
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{},
+                  wager:{staked:0, won:0, mult:1} },
+      \`<div class="center crest">🎲</div>
+       <div class="panel center"><h2>You sit the hand out</h2>
+       <div class="sub">The pot is exactly where you left it.</div></div>\`);
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+\`<button class="btn gold" id="wagerGo" style="margin-top:12px">Onward →</button>\`;
+    document.getElementById('wagerGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    const w=outcome.wager;
+    if(w && w.won>0){ Sfx.coin(); Haptic.win(); }
+    else if(w && w.staked>0){ Sfx.bad(); Haptic.hurt(); }
   }
 };
 
@@ -7173,7 +7467,9 @@ const ROOM_INTRO = {
   seam: {ic:'⛰️', t:'An ore seam',
     b:'Say how deep you mean to cut before you start. Deeper pays far more, but every riddle must land — one miss and the seam collapses with nothing in your hands.'},
   lock: {ic:'🧰', t:'A locked chest',
-    b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'}
+    b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'},
+  wager: {ic:'🎲', t:'A table, and a bet',
+    b:'You price the riddle before you see it. Three stakes, each paying differently, and the table tells you what chance each one needs to be worth taking — measured against what your Ledger says you know. Win and the pot grows. Lose and the stake is gone.'}
 };
 const RoomIntro = {
   needed(kindName){
@@ -7216,6 +7512,10 @@ const Dungeon = {
   // The Sanctum opens one realm later than the Deep: it is a second place to
   // go, not a first, and it should arrive when a knight already has a habit.
   sanctumOpen(){ return !!(Game.s && REALMS[1] && Game.s.cleared['1:'+(REALMS[1].foes.length-1)]); },
+  // And the Tavern one later again. It is the first place that can send a
+  // knight home poorer than they arrived, which is not a thing to meet on the
+  // way to your first sword.
+  tavernOpen(){ return !!(Game.s && REALMS[2] && Game.s.cleared['2:'+(REALMS[2].foes.length-1)]); },
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
@@ -7267,6 +7567,8 @@ const Dungeon = {
               At your \${Math.round(hp)} health that is \${blows} blows before you fall — \${read}.\`;
     } else if(next.name==='lock'){
       line = \`A <b>locked chest</b>. No foe. You carry \${Game.s.items.pick} pick\${Game.s.items.pick===1?'':'s'}.\`;
+    } else if(next.name==='wager'){
+      line = \`A <b>table</b>. No foe — but the pot is what is at risk.\`;
     } else {
       line = \`An <b>ore seam</b>. No foe — only the ore is at risk.\`;
     }
@@ -7275,10 +7577,24 @@ const Dungeon = {
     this.fork(this.lastOutcome||{});          // redraw the fork, now with the reading
   },
 
+  /* What a setting costs to walk into. The Tavern is the only one that charges,
+     and it charges what you can pay rather than a fixed toll: arriving with
+     forty gold buys you a forty-gold pot, not a locked door. The Skill Web's
+     rule is multipliers, never gates, and a buy-in that turned a player away
+     would be the first gate in the game. */
+  buyIn(set){
+    if(!set.buyIn || !Game.s) return 0;
+    return Math.max(0, Math.min(set.buyIn, Math.floor(Game.s.gold)));
+  },
+
   descend(setting){
     const key = SETTINGS[setting] ? setting : 'deep';
     const seed = ((Date.now() ^ Math.floor(Math.random()*0xffffffff)) >>> 0) || 1;
-    this.run = { setting:key, seed, depth:0, unbanked:{ gold:0, xp:0 } };
+    // A buy-in moves gold out of the purse and onto the table, where it becomes
+    // the pot — so the Tavern is the one place you can walk out of poorer.
+    const stake = this.buyIn(SETTINGS[key]);
+    if(stake){ Game.s.gold -= stake; }
+    this.run = { setting:key, seed, depth:0, paid:stake, unbanked:{ gold:stake, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
     this.armForesight();
@@ -7299,6 +7615,7 @@ const Dungeon = {
   checkpoint(done){
     Game.s.run = { seed:this.run.seed, done, setting:this.run.setting,
                    gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
+                   paid:this.run.paid||0,       // what the door cost, for the net at the end
                    hp:Math.round(Game.s.hp) };
     Game.save();
   },
@@ -7313,6 +7630,7 @@ const Dungeon = {
     const r=this.pending();
     if(!r) return;
     this.run = { setting:r.setting||'deep', seed:r.seed, depth:r.done||0,
+                 paid:r.paid||0,
                  unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);
@@ -7398,6 +7716,10 @@ const Dungeon = {
     const u={gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
              essence:this.run.unbanked.essence||0};
     const set=this.set(), depth=this.run.depth;
+    // What the run was worth against what it cost to enter. Only a setting with
+    // a buy-in has a number here worth reading, and it is the whole point of
+    // that setting — a night at the tables is judged on the net, not the pot.
+    const paid=this.run.paid||0;
     this.active=false;
     Game.s.gold += u.gold;
     if(u.essence) Game.s.mats.essence += u.essence;
@@ -7411,17 +7733,20 @@ const Dungeon = {
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">🏰</div>
       <div class="panel center">
-        <h1 style="font-size:20px;color:var(--gold)">Back up the stairs</h1>
-        <div class="sub" style="margin-top:6px">\${depth} rooms of \${set.nm}, and you walked out of all of them.</div>
+        <h1 style="font-size:20px;color:var(--gold)">\${paid?'Out into the night':'Back up the stairs'}</h1>
+        <div class="sub" style="margin-top:6px">\${depth} \${paid?'tables':'rooms'} of \${set.nm}, and you walked out of all of them.</div>
         <hr>
         <div style="font-size:15px;font-weight:800;line-height:1.8">
           <div class="coin">🎒 \${u.gold} gold banked</div>
           <div style="color:var(--blue)">✦ \${u.xp} experience</div>
           \${u.essence?\`<div style="color:#b48bec">🜄 \${u.essence} essence</div>\`:''}
+          \${paid?\`<div style="color:\${u.gold>=paid?'var(--green)':'var(--red)'}">
+            \${u.gold>=paid?'▲':'▼'} \${u.gold>=paid?'+':'−'}\${Math.abs(u.gold-paid)} on the \${paid} you brought</div>\`:''}
         </div>
         <hr>
-        <div class="sub">That is the whole game: answer to strike, and choose when to walk out.
-          The realms above are open to you now — and the Deep, when you are ready, runs as far as you dare.</div>
+        <div class="sub">\${paid
+          ? 'A night at the tables is judged on the net, not the pot. The odds were on every button — what you did with them is the lesson.'
+          : 'That is the whole game: answer to strike, and choose when to walk out. The realms above are open to you now — and the Deep, when you are ready, runs as far as you dare.'}</div>
       </div>
       <button class="btn gold" onclick="UI.go('s-map')">🗺️ To the map →</button>
       <div style="height:20px"></div>\`;
@@ -7447,6 +7772,12 @@ const Dungeon = {
       const ore = (outcome.seam && outcome.seam.ore) || 0;
       icon = ore?'🪨':'⛰️';
       line = (ore ? \`The seam gives up \${ore} ore. \` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.kind==='wager'){
+      const w = outcome.wager || {staked:0, won:0};
+      icon = w.won>0 ? '🎲' : w.staked>0 ? '🃏' : '🎲';
+      line = (w.won>0 ? \`The table pays \${w.won}. \`
+             : w.staked>0 ? \`The table takes \${w.staked}. \`
+             : 'You sat the hand out. ') + 'Another table waits.';
     } else if(sp.foe){
       icon = sp.foe.boss?'👑':'⛏️';
       line = \`\${sp.foe.nm} falls. \${PASSAGE}\`;
@@ -7509,7 +7840,7 @@ const Dungeon = {
     this.clearRun();                   // banked and done; there is nothing to resume
     Game.save();
     UI.go('s-map');
-    UI.toast(\`🚪 \${midFight?'Fled':'Climbed out'} of the Deep at depth \${this.run.depth} with \${u.gold} gold.\`);
+    UI.toast(\`🚪 \${midFight?'Fled':'Climbed out'} of \${this.set().nm.replace(/^The /,'the ')} at depth \${this.run.depth} with \${u.gold} gold.\`);
     if(ups) Celebrate.banner('LEVEL '+Game.s.lvl, 'Maximum health now '+Game.s.maxHp, 'var(--gold)', ()=>Sfx.level());
     Titles.check();
   },
@@ -7763,6 +8094,22 @@ const UI = {
                                 :'Clear the Matrix Marches to be admitted'}</div>
         </div>
         <div style="font-size:20px;color:var(--dim)">\${sOpen?'▶':'🔒'}</div>
+      </div>\`;
+
+    const tOpen = Dungeon.tavernOpen(), buy = Dungeon.buyIn(SETTINGS.tavern);
+    out+=\`<div class="realmhdr"><span class="dot" style="background:#ffd479"></span>
+          <h2 style="color:#ffd479">The Tavern</h2>\${tOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">Five tables. Nothing here can kill you — but you
+        buy in at the door, and everything after that is played for the pot. The only place
+        you can walk out <b>poorer</b> than you walked in.</div>
+      <div class="node \${tOpen?'':'locked'}" onclick="Dungeon.descend('tavern')">
+        <div class="ico" style="font-size:24px">🎲</div>
+        <div style="flex:1">
+          <div class="nm">Take a seat</div>
+          <div class="dt">\${tOpen?\`Buy in for \${buy} gold · three stakes a hand · the odds are shown\`
+                                :'Clear the Cliffs of Change to be let in'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">\${tOpen?'▶':'🔒'}</div>
       </div>\`;
 
     // The Arena sits past the campaign, opened by the last boss.
