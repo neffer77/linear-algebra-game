@@ -26,7 +26,8 @@ const SUITES = [
   require('./play/adapt'),       // P6
   require('./play/skills'),      // S1
   require('./play/chain'),       // S2
-  require('./play/foresight')    // S3
+  require('./play/foresight'),   // S3
+  require('./play/cheat')        // T1
 ];
 
 function arg(flag) {

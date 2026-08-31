@@ -3663,6 +3663,7 @@ const Game = {
       titles:{},           // earned milestone ids
       run:null,            // mid-descent checkpoint, or null between runs (see Dungeon)
       firstRun:0,          // has this knight finished the cellar? gates the map
+      cheated:0,           // were the gates opened by the testing door? (see Cheats)
       seenOpening:0,       // has the three-card opening been shown?
       metRoom:{},          // room kinds this knight has been introduced to
       loadout:['ward','sight','steady'],   // skill abilities carried into a fight
@@ -7630,6 +7631,9 @@ const UI = {
           return `<span class="medal ${got?'got':''}">${got?t.ic:'🔒'} ${t.nm}
             <span class="small" style="font-weight:400">— ${t.ds}</span></span>`;}).join('')}
       </div>`;
+    // The stamp says which build this is, and whether the gates were opened
+    // rather than won — both things a bug report needs to carry.
+    paintBuild();
   },
   renderMap(){
     if(!Game.s) return;
@@ -8472,16 +8476,112 @@ const Knights = {
    build writes build-info.json next to index.html and stamps the worker with
    the same commit; the service worker's cache serves it offline, so the number
    shown always matches the build actually installed. file:// and Scriptable
-   have no such file, and read as a local build. */
+   have no such file, and read as a local build.
+
+   The stamp is also the way in to the testing cheat below, so it is painted
+   from a stored string rather than written once: the line has to be able to
+   change when a knight is unlocked, and Settings can be opened again later. */
+let BUILD_LINE='build local';
+function paintBuild(){
+  const el=document.getElementById('buildStamp');
+  if(!el) return;
+  el.textContent = BUILD_LINE + ' · save format v'+Codec.VER
+    + (Game.s && Game.s.cheated ? ' · unlocked for testing' : '');
+}
 function stampBuild(){
   const el=document.getElementById('buildStamp');
   if(!el) return;
-  const show=v=>{ el.textContent='build '+v+' · save format v'+Codec.VER; };
+  el.onclick=()=>Cheats.knock();
+  const show=v=>{ BUILD_LINE='build '+v; paintBuild(); };
   if(!/^https?:$/.test(location.protocol)){ show('local'); return; }
   fetch('build-info.json').then(r=>r.ok?r.json():null).then(j=>{
     show(j && j.version ? j.version+(j.builtAt?(' · '+j.builtAt.slice(0,10)):'') : 'unknown');
   }).catch(()=>show('unknown'));
 }
+
+/* ---------------------------- the testing door ----------------------------
+   Every gate in the game — the realms after the first, the Deep, the Sanctum,
+   the Arena — reads the same `cleared` map, so opening the whole game is one
+   assignment. What takes the care is making it hard to arrive at by accident
+   and impossible to be in without knowing: a player who stumbles into an open
+   Sanctum at level one would think the game broken, and a save that has been
+   opened this way must never be mistaken for a run someone actually made.
+
+   Hence the shape: seven deliberate taps on the build stamp to reveal the box,
+   a word to type into it, and a permanent mark on the knight afterwards. The
+   taps have to be quick, so an idle finger on the stamp never accumulates. */
+const Cheats = {
+  WORD:'open the gates',
+  TAPS:7,
+  GAP:1500,                              // ms between taps before the count resets
+  taps:0, at:0,
+
+  knock(){
+    const now=Date.now();
+    this.taps = (now - this.at < this.GAP) ? this.taps+1 : 1;
+    this.at = now;
+    if(this.taps >= this.TAPS){ this.taps=0; this.open(); return; }
+    // Silent until it is clearly deliberate, then it counts down out loud so
+    // that whoever meant to find it knows they are on the way.
+    if(this.taps >= 4) UI.toast((this.TAPS-this.taps)+' more');
+  },
+
+  open(){
+    const el=document.getElementById('codeBox');
+    el.innerHTML=`<div class="cxbox">
+      <div class="cxk">The testing door</div>
+      <div class="small">Say the words and every realm, the Deep, the Sanctum and the
+        Arena open at once — for trying things out, not for playing. This knight
+        will be marked as unlocked from here on.</div>
+      <textarea id="cheatIn" placeholder="Say the words" autocapitalize="off"
+                autocorrect="off" spellcheck="false"></textarea>
+      <button class="btn gold" id="cheatGo">Speak</button>
+      <button class="btn ghost" onclick="Cheats.close()">Cancel</button>
+    </div>`;
+    el.classList.add('on');
+    document.getElementById('cheatGo').onclick=()=>{
+      const said=document.getElementById('cheatIn').value;
+      const res=this.say(said);
+      if(!res.ok){ UI.toast(res.why); return; }
+      this.close();
+      UI.toast(res.note);
+      UI.renderMap(); paintBuild();
+    };
+  },
+  close(){ const el=document.getElementById('codeBox'); el.classList.remove('on'); el.innerHTML=''; },
+
+  /* Spelling is forgiven — case, spaces and punctuation all go — because the
+     word is a door rather than a puzzle, and a tester typing it on a phone
+     keyboard should not be fighting autocorrect for entry. */
+  tidy(s){ return String(s||'').toLowerCase().replace(/[^a-z]/g,''); },
+
+  say(said){
+    if(this.tidy(said) !== this.tidy(this.WORD))
+      return {ok:false, why:'Nothing answers.'};
+    if(!Game.s) return {ok:false, why:'No knight is playing.'};
+    const opened=this.openAll();
+    return {ok:true, note: opened
+      ? 'Every gate stands open.'
+      : 'They were already open.'};
+  },
+
+  /* Marks every foe in every realm cleared, which is what all four gates read,
+     and walks the knight past the cellar so the map is theirs. Returns whether
+     anything actually changed, so saying the words twice can say so. */
+  openAll(){
+    const g=Game.s;
+    if(!g) return false;
+    let changed=false;
+    REALMS.forEach((r,ri)=>r.foes.forEach((f,fi)=>{
+      const key=ri+':'+fi;
+      if(!g.cleared[key]){ g.cleared[key]=true; changed=true; }
+    }));
+    if(!g.firstRun){ g.firstRun=1; changed=true; }   // the cellar is behind them
+    if(!g.cheated){ g.cheated=1; changed=true; }
+    if(changed) Game.save();
+    return changed;
+  }
+};
 
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){

@@ -137,7 +137,10 @@ const SCENES = [
     go: () => { UI.go('s-tome'); } },
 
   { name: 'settings', note: 'build and save-format stamp at the foot',
-    go: () => { UI.go('s-prefs'); } }
+    go: () => { UI.go('s-prefs'); } },
+
+  { name: 'testing-door', note: 'seven taps on the build stamp find this',
+    go: () => { UI.go('s-prefs'); Cheats.open(); } }
 ];
 
 function arg(flag) { const i = process.argv.indexOf(flag); return i > 0 ? process.argv[i + 1] : null; }
