@@ -75,6 +75,106 @@ module.exports = {
     t.eq('and the cellar is behind them, so the map is theirs', after.firstRun, 1);
     t.eq('the knight is marked', after.cheated, 1);
 
+    // --- arming: the gates alone leave a level-one knight to die in the Sanctum ---
+    const armed = await t.ev(() => {
+      Game.s.cleared = {}; Game.s.cheated = 0;      // back to a sealed map
+      Game.s.lvl = 1; Game.s.gold = 0; Game.s.xp = 30;
+      Game.s.weapon = 'w0'; Game.s.armor = 'a0'; Game.s.owned = { w0: 1, a0: 1 };
+      Game.s.items = { potion: 0, insight: 0, rage: 0, feather: 0, pick: 0 };
+      Game.s.mats = { ore: 0, essence: 0 };
+      const wasHp = Game.maxHp();
+      const res = Cheats.say('arm the knight');
+      const buyable = t => t.filter(x => !x.forge);
+      return {
+        ok: res.ok, note: res.note,
+        lvl: Game.s.lvl, gold: Game.s.gold,
+        weapon: Game.s.weapon, armor: Game.s.armor,
+        bestWeapon: buyable(WEAPONS)[buyable(WEAPONS).length - 1].id,
+        bestArmor: buyable(ARMORS)[buyable(ARMORS).length - 1].id,
+        ownsAllBuyable: buyable(WEAPONS).concat(buyable(ARMORS)).every(x => Game.s.owned[x.id]),
+        ownsDeepsteel: !!(Game.s.owned.wD || Game.s.owned.aD),
+        picks: Game.s.items.pick,
+        ore: Game.s.mats.ore, essence: Game.s.mats.essence,
+        runes: Object.keys(Game.s.runes || {}).length,
+        wasHp, maxHp: Game.s.maxHp, hp: Game.s.hp,
+        // the gates are a different door, and arming must not open them
+        deep: Dungeon.unlocked(), cleared: Object.keys(Game.s.cleared).length
+      };
+    });
+    t.ok('the second word arms the knight', armed.ok, armed.note);
+    t.ok('at a level fit for the end of the game', armed.lvl >= 30, String(armed.lvl));
+    t.ok('with gold past the price of everything', armed.gold >= 99999, String(armed.gold));
+    t.eq('the best blade on the bench, drawn', armed.weapon, armed.bestWeapon);
+    t.eq('and the best plate, worn', armed.armor, armed.bestArmor);
+    t.ok('everything the Smithy sells is owned', armed.ownsAllBuyable);
+    t.ok('but not the deepsteel — that is the Forge\'s to make, and the point of testing it',
+      !armed.ownsDeepsteel);
+    t.eq('a full purse of lockpicks', armed.picks, 9);
+    t.ok('and ore and essence to feed the Forge', armed.ore >= 200 && armed.essence >= 100,
+      `${armed.ore} ore, ${armed.essence} essence`);
+    t.eq('runes are left to be forged, not given', armed.runes, 0);
+    t.ok('health follows the new plate rather than the old body',
+      armed.maxHp > armed.wasHp && armed.hp === armed.maxHp,
+      `${armed.wasHp} → ${armed.maxHp}, at ${armed.hp}`);
+    t.ok('and arming opens no gate — that is the other word',
+      !armed.deep && armed.cleared === 0);
+
+    // --- teaching: skill charges are cut from mastery, so an armed knight
+    //     with an empty head still carries an empty loadout ---
+    const taught = await t.ev(() => {
+      Game.s.cleared = {}; Game.s.cheated = 0; Game.s.gold = 0;
+      Game.s.topicStats = {};
+      Game.s.loadout = ['farsight', 'ward', 'steady'];
+      const before = Loadout.chosen().map(a => Loadout.charges(a));
+      const res = Cheats.say('teach me everything');
+      const topics = Object.keys(TOPIC_LABEL);
+      return {
+        ok: res.ok, note: res.note,
+        before,
+        after: Loadout.chosen().map(a => Loadout.charges(a)),
+        everyTopic: topics.every(k => Game.s.topicStats[k] && Game.s.topicStats[k].seen > 0),
+        solid: topics.every(k => Mastery.eff(k) >= 0.85),
+        count: Object.keys(Game.s.topicStats).length,
+        want: topics.length,
+        // again, its own door only
+        gold: Game.s.gold, deep: Dungeon.unlocked()
+      };
+    });
+    t.ok('the third word teaches every topic', taught.ok, taught.note);
+    t.eq('all of them, not a strand', taught.count, taught.want);
+    t.ok('every topic reads solid after the fade is applied', taught.solid);
+    t.ok('an untaught knight carries skills with no charges',
+      taught.before.every(c => c === 0), JSON.stringify(taught.before));
+    t.ok('and a taught one carries them full',
+      taught.after.every(c => c === 3), JSON.stringify(taught.after));
+    t.ok('teaching hands out no gold and opens no gate',
+      taught.gold === 0 && !taught.deep);
+
+    // --- and one word for all three, which is the usual thing to want ---
+    const everything = await t.ev(() => {
+      Game.s.cleared = {}; Game.s.cheated = 0; Game.s.topicStats = {};
+      Game.s.lvl = 1; Game.s.gold = 0; Game.s.weapon = 'w0'; Game.s.armor = 'a0';
+      Game.s.owned = { w0: 1, a0: 1 };
+      Game.s.loadout = ['farsight', 'ward', 'steady'];
+      const res = Cheats.say('show me everything');
+      const again = Cheats.say('show me everything');
+      return {
+        ok: res.ok, note: res.note, againNote: again.note,
+        sanctum: Dungeon.sanctumOpen(), arena: Arena.unlocked(),
+        lvl: Game.s.lvl, gold: Game.s.gold,
+        charges: Loadout.chosen().map(a => Loadout.charges(a)),
+        cheated: Game.s.cheated
+      };
+    });
+    t.ok('one word does all three', everything.ok, everything.note);
+    t.ok('the Sanctum and the Arena open', everything.sanctum && everything.arena);
+    t.ok('the knight is armed', everything.lvl >= 30 && everything.gold >= 99999);
+    t.ok('and carries full skills', everything.charges.every(c => c === 3),
+      JSON.stringify(everything.charges));
+    t.eq('and is marked', everything.cheated, 1);
+    t.ok('saying it twice says there is nothing left to give',
+      /nothing left/i.test(everything.againNote), everything.againNote);
+
     // --- it opens gates, and touches nothing else ---
     const untouched = await t.ev(() => {
       Game.s.gold = 137; Game.s.lvl = 2; Game.s.xp = 40;

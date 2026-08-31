@@ -8528,12 +8528,82 @@ function stampBuild(){
 
    Hence the shape: seven deliberate taps on the build stamp to reveal the box,
    a word to type into it, and a permanent mark on the knight afterwards. The
-   taps have to be quick, so an idle finger on the stamp never accumulates. */
+   taps have to be quick, so an idle finger on the stamp never accumulates.
+
+   There are three doors rather than one, because the three things that stand
+   between a tester and a screen are different things. Opening the gates alone
+   leaves a level-one knight in a practice blade, who reaches the Sanctum and
+   dies to the first foe in it; arming alone leaves them with nowhere to go;
+   and neither hands over the mastery that skill charges are cut from, so the
+   loadout stays empty however good the sword is. Each word does one of those,
+   and a fourth says all three at once. */
+const CHEAT_LEVEL = 30;                  // where a knight stands when the Arena opens
+const CHEAT_GOLD  = 99999;               // past the price of everything on the bench
+
 const Cheats = {
-  WORD:'open the gates',
   TAPS:7,
   GAP:1500,                              // ms between taps before the count resets
   taps:0, at:0,
+
+  /* Each door is one word and one effect, and each reports whether it actually
+     changed anything, so saying a word twice can say so rather than lying. */
+  DOORS:[
+    {word:'open the gates', ds:'every realm, the Deep, the Sanctum and the Arena',
+     note:'Every gate stands open.', already:'They were already open.',
+     apply(g){
+       let ch=false;
+       REALMS.forEach((r,ri)=>r.foes.forEach((f,fi)=>{
+         const key=ri+':'+fi;
+         if(!g.cleared[key]){ g.cleared[key]=true; ch=true; }
+       }));
+       if(!g.firstRun){ g.firstRun=1; ch=true; }      // the cellar is behind them
+       return ch;
+     }},
+
+    {word:'arm the knight', ds:'the level, the gold, the gear and the materials',
+     note:'Armed, and richer than sense allows.', already:'Already armed to the teeth.',
+     apply(g){
+       let ch=false;
+       const set=(k,v)=>{ if(g[k]!==v){ g[k]=v; ch=true; } };
+       set('lvl', Math.max(g.lvl, CHEAT_LEVEL));
+       set('gold', Math.max(g.gold, CHEAT_GOLD));
+       set('xp', 0);
+       // Everything the Smithy sells, owned and the best of it worn. Deepsteel
+       // is left alone deliberately: it is the Forge's own output, and a tester
+       // wanting to see the Forge should have the ore and make it.
+       const buyable=t=>t.filter(x=>!x.forge);
+       for(const x of buyable(WEAPONS).concat(buyable(ARMORS)))
+         if(!g.owned[x.id]){ g.owned[x.id]=1; ch=true; }
+       set('weapon', buyable(WEAPONS)[buyable(WEAPONS).length-1].id);
+       set('armor',  buyable(ARMORS)[buyable(ARMORS).length-1].id);
+       for(const k of Object.keys(ITEMS))
+         if((g.items[k]||0) < 9){ g.items[k]=9; ch=true; }
+       g.mats=g.mats||{ore:0,essence:0};
+       if(g.mats.ore < 200){ g.mats.ore=200; ch=true; }
+       if(g.mats.essence < 100){ g.mats.essence=100; ch=true; }
+       // Health has to follow the new plate, or the knight walks around on the
+       // hundred points a level-one body had.
+       g.maxHp=Game.maxHp(); g.hp=g.maxHp;
+       return ch;
+     }},
+
+    {word:'teach me everything', ds:'solid mastery of every topic, so skills have charges',
+     note:'Every topic sits solid.', already:'Every topic already sits solid.',
+     apply(g){
+       let ch=false;
+       const now=Date.now();
+       for(const k of Object.keys(TOPIC_LABEL)){
+         const r=g.topicStats[k];
+         if(r && r.m>=0.95 && r.seen>=20) continue;
+         g.topicStats[k]={c:40, w:2, m:0.95, seen:20, last:g.qCount, t:now};
+         ch=true;
+       }
+       return ch;
+     }}
+  ],
+
+  // Said on its own, this is all three doors at once — the usual thing to want.
+  ALL:'show me everything',
 
   knock(){
     const now=Date.now();
@@ -8549,9 +8619,12 @@ const Cheats = {
     const el=document.getElementById('codeBox');
     el.innerHTML=\`<div class="cxbox">
       <div class="cxk">The testing door</div>
-      <div class="small">Say the words and every realm, the Deep, the Sanctum and the
-        Arena open at once — for trying things out, not for playing. This knight
-        will be marked as unlocked from here on.</div>
+      <div class="small">For trying things out, not for playing. This knight will be
+        marked as unlocked from here on.</div>
+      <div class="small" style="text-align:left;margin-top:8px">
+        \${this.DOORS.map(d=>\`<div><b style="color:var(--gold)">\${d.word}</b> — \${d.ds}</div>\`).join('')}
+        <div style="margin-top:4px"><b style="color:var(--gold)">\${this.ALL}</b> — all three</div>
+      </div>
       <textarea id="cheatIn" placeholder="Say the words" autocapitalize="off"
                 autocorrect="off" spellcheck="false"></textarea>
       <button class="btn gold" id="cheatGo">Speak</button>
@@ -8575,30 +8648,26 @@ const Cheats = {
   tidy(s){ return String(s||'').toLowerCase().replace(/[^a-z]/g,''); },
 
   say(said){
-    if(this.tidy(said) !== this.tidy(this.WORD))
-      return {ok:false, why:'Nothing answers.'};
+    const w=this.tidy(said);
+    const all = w===this.tidy(this.ALL);
+    const doors = all ? this.DOORS : this.DOORS.filter(d=>this.tidy(d.word)===w);
+    if(!doors.length) return {ok:false, why:'Nothing answers.'};
     if(!Game.s) return {ok:false, why:'No knight is playing.'};
-    const opened=this.openAll();
-    return {ok:true, note: opened
-      ? 'Every gate stands open.'
-      : 'They were already open.'};
+    return {ok:true, note:this.walk(doors)};
   },
 
-  /* Marks every foe in every realm cleared, which is what all four gates read,
-     and walks the knight past the cellar so the map is theirs. Returns whether
-     anything actually changed, so saying the words twice can say so. */
-  openAll(){
+  /* Walks a knight through one or more doors, marks them, and saves once. The
+     mark goes on whichever door was used, so there is no way through here that
+     leaves a save looking like a run someone actually made. */
+  walk(doors){
     const g=Game.s;
-    if(!g) return false;
     let changed=false;
-    REALMS.forEach((r,ri)=>r.foes.forEach((f,fi)=>{
-      const key=ri+':'+fi;
-      if(!g.cleared[key]){ g.cleared[key]=true; changed=true; }
-    }));
-    if(!g.firstRun){ g.firstRun=1; changed=true; }   // the cellar is behind them
+    for(const d of doors) if(d.apply(g)) changed=true;
     if(!g.cheated){ g.cheated=1; changed=true; }
     if(changed) Game.save();
-    return changed;
+    if(doors.length>1) return changed ? 'The way is open, and you are ready for it.'
+                                      : 'Nothing left to give.';
+    return changed ? doors[0].note : doors[0].already;
   }
 };
 
