@@ -76,8 +76,41 @@ jobs:
           fi
           echo "Scriptable build matches index.html"
 
+      # The generators are checked against the maths they claim to teach, and
+      # the knight codec is checked for a round-trip fixpoint and backward
+      # compatibility — the guard that a save format change cannot silently
+      # corrupt a knight. No dependencies to install; verify.js is self-contained.
+      - name: Run the verification suite
+        run: npm test
+
+  # The verification suite above checks what can be checked without a browser.
+  # These drive the real index.html in Chromium, because the run loop, the save
+  # referee, the opening, and the scheduler only exist once the page is running.
+  # Split from validate so a browser problem is never mistaken for a game one.
+  playthrough:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Playwright
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+
+      - name: Play the game
+        run: npm run test:play
+
+      # The Deep's press-on-or-leave fork is only a decision if the depth worth
+      # banking at rises with how good the player is. This plays thousands of
+      # runs at five accuracy levels and fails if that spread flattens.
+      - name: Check the fork still rewards skill
+        run: npm run balance
+
   build:
-    needs: validate
+    needs: [validate, playthrough]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

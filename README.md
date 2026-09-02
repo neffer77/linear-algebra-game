@@ -361,7 +361,62 @@ The mathematics is verified rather than assumed, and the harness ships with the 
 ```bash
 npm test            # every check
 npm run test:quick  # fewer repetitions
+npm run test:play   # play the game in a browser
+npm run test:all    # both
 ```
+
+`npm test` covers what can be checked without a browser — the mathematics below, and
+the knight codec. `npm run test:play` covers what cannot: it drives the real
+`index.html` in Chromium, because there is no build step to import across and the run
+loop only exists once the page is running. Six suites, ~106 checks, about half a
+minute:
+
+| suite | what it holds to |
+| --- | --- |
+| `save` | a save bumps its revision; the backup is reconciled newest-first; a v1 code still reads |
+| `wave` | the arena's foe curve is byte-identical to a pinned snapshot |
+| `lock` | a chest opens or snaps a pick, never ends a run, and always moves mastery |
+| `run` | quit in room three, reload the page, resume the *same* room three |
+| `frontdoor` | a blank browser reaches a finished first run, at 320px, through buttons alone |
+| `adapt` | difficulty, topic choice and teaching all track effective mastery |
+
+It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
+with `npm run test:play -- --suite run`, or watch it with `PLAY_HEADED=1`.
+
+The `wave` suite pins a hash on purpose: any change to the escalation numbers or the
+RNG call order will fail it. That is a balance change, so update the pin *and* say so
+in the commit rather than treating it as noise.
+
+### The dials
+
+```bash
+npm run balance             # the sweep, and its acceptance properties
+npm run balance -- --sweep  # search the curve space for settings that hold
+```
+
+After every cleared room the Deep asks: press deeper, or climb out with what you
+carry? That is only a decision if the arithmetic can go either way — the player is
+weighing `E[next room's loot] > P(wipe) × what you'd lose`. The property that makes it
+an expression of *skill* is that the **break-even depth** — the deepest point still
+worth pressing to — must rise with accuracy. If a 40% player and a 95% player should
+both bank at depth four, the fork is a formality.
+
+`tools/balance.js` plays thousands of runs at five accuracy levels and reads that depth
+out of the results, driving `Combat` and `WaveEngine` from `index.html` so there is no
+second copy of the damage formula to drift. It currently reports:
+
+| accuracy | break-even | banked | always presses on, falls at |
+| --- | --- | --- | --- |
+| 40% | depth 3 | 140 | 4.1 |
+| 55% | depth 4 | 273 | 5.5 |
+| 70% | depth 5 | 409 | 7.2 |
+| 85% | depth 8 | 1011 | 10.8 |
+| 95% | depth 12 | 1940 | 14.8 |
+
+This is what caught the Deep shipping with the *Arena's* foe curve — 295 health and 30
+attack at depth one, against a knight who has just cleared one realm and swings for
+fourteen. `DEEP_WAVES` exists because of this harness, and CI runs it so a curve edit
+that flattens the spread fails the build.
 
 `tools/mathexpr.js` compiles the game's *display HTML* — nested fraction spans, `<sup>`
 powers, unicode superscripts, U+2212 minus — back into evaluable expressions, which is
