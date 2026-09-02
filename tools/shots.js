@@ -72,6 +72,28 @@ const SCENES = [
                 Dungeon.resolve({status:'cleared',quality:1,topics:[],yield:{gold:210,xp:60}});
                 Dungeon.scry(); } },
 
+  { name: 'rumour-table', note: 'the Tavern sells what the rest of the night asks',
+    go: () => { Game.s.metRoom={monster:1,lock:1,seam:1,wager:1,rumour:1};
+                Game.s.gold=500;
+                Dungeon.descend('tavern');
+                Dungeon.resolve({status:'cleared',quality:1,topics:[],yield:{gold:60,xp:10}});
+                Dungeon.nextRoom(); } },
+
+  { name: 'both-readings', note: 'a fork with foresight paid for twice',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={};
+                set('Multivariable & Series',0.95); set('Applications',0.95);
+                Game.s.loadout=['farsight','rumours','ward'];
+                Game.s.metRoom={monster:1,lock:1,seam:1};
+                Dungeon.descend('deep');
+                // A stretch with a fight in it is the one worth showing: that is
+                // where the two readings say genuinely different things.
+                for(let i=0;i<80;i++){ Dungeon.run.seed=2000+i;
+                  if(Dungeon.peek(2).name==='monster' && Dungeon.peek(3).name!=='monster') break; }
+                Dungeon.resolve({status:'cleared',quality:1,topics:[],yield:{gold:180,xp:40}});
+                Dungeon.scry(); Dungeon.hearRumours(); } },
+
   { name: 'fork', note: 'press deeper, or climb out with the haul',
     go: () => { Game.s.metRoom = { monster: 1, lock: 1 };
                 Dungeon.descend('deep');

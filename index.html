@@ -6163,6 +6163,19 @@ const SKILL_ABILITIES = [
      about expectation, and the Tavern is where expectation is learned. It still
      obeys the rule every ability obeys — the fight is not one question shorter
      for having pressed it. */
+  /* The second Foresight ability, and deliberately not a better Farsight.
+     Farsight is a point observation: one room, named exactly. Rumours is a
+     summary of a sample — three rooms at once, counted and totalled, with no
+     word about which is which. Knowing that the next stretch holds two fights
+     and a champion tells you whether to commit to it; it does not tell you what
+     is behind the next door. The two answer different questions, which is why
+     carrying both is worth a slot each. */
+  {id:'rumours', nm:'Rumours', ic:'🗣️', skill:'Rumours', strand:'Applications',
+   where:'fork',
+   ds:'At the fork, hear what the next three rooms hold — how many, and how bad, but not which.',
+   ready(){ return Dungeon.active && !Dungeon.heardHere(); },
+   go(){ Dungeon.hearRumours(); }},
+
   {id:'dice', nm:'Dice', ic:'🎲', skill:'Dice', strand:'Integrals',
    ds:'Stake the next strike: triple damage if you are right, and the foe strikes twice if you are not.',
    ready(){ return !Battle.diceUp && !Battle.answered; },
@@ -6808,7 +6821,7 @@ const SETTINGS = {
   tavern: {
     key:'tavern', nm:'the Tavern', waves:TAVERN_WAVES,
     canDie:false, rooms:5,
-    plan:['wager','monster','wager','monster','wager'],
+    plan:['wager','rumour','wager','monster','wager'],
     strands:['Integrals','Applications','Matrices'],
     buyIn:100
   }
@@ -7057,6 +7070,15 @@ const RoomKinds = {
       return { kind:'wager', q:buildQuestion(key, Mastery.adjustDiff(key, base)), depth };
     },
     enter(spec, ctx, done){ Wager.begin(spec, ctx, done); },
+  },
+
+  /* The Tavern's other table, and the only room in the game that sells nothing
+     but information. What it knows is what the remaining hands will ask about —
+     which is worth exactly as much as it changes what you would have staked,
+     and nothing at all if you were going to bet the same either way. */
+  rumour: {
+    build(rng, depth, set){ return { kind:'rumour', depth }; },
+    enter(spec, ctx, done){ Rumour.begin(spec, ctx, done); },
   },
 };
 
@@ -7379,6 +7401,115 @@ const Wager = {
   }
 };
 
+/* ------------------------------- the rumour ------------------------------- */
+/* Rumours' UI half, and the cheapest room in the game to describe: a stranger
+ * at a table who will tell you what the rest of the night asks about, for a cut
+ * of the pot.
+ *
+ * The price is a fraction rather than a number, which is the whole design. A
+ * knight sitting on four hundred pays four times what one sitting on a hundred
+ * pays, so information costs what it is worth to the person buying it — and
+ * folding is always free, because a room that can only be entered by spending
+ * is a gate, and this game does not have those.
+ */
+const Rumour = {
+  spec:null, ctx:null, done:null, resolved:false,
+  CUT: 0.15,                              // of the pot, rounded, minimum one coin
+
+  price(pot){ return pot<1 ? 0 : Math.max(1, Math.round(pot*this.CUT)); },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done; this.resolved=false;
+    UI.go('s-lock');
+    this.offer();
+  },
+
+  pot(){ return (this.ctx && this.ctx.run && this.ctx.run.unbanked.gold) || 0; },
+
+  /* What is left to hear: the hands after this room, in the order they come.
+     Asked of the same peek() the fork's foresight uses, so the two can never
+     disagree about what a room is going to be. */
+  ahead(){
+    const set=SETTINGS[this.ctx.setting] || Dungeon.set();
+    const out=[];
+    for(let d=this.ctx.depth+1; d<=(set.rooms||0); d++){
+      const r=Dungeon.peek(d);
+      if(r && r.name==='wager' && r.topic) out.push({depth:d, topic:r.topic});
+    }
+    return out;
+  },
+
+  offer(){
+    const pot=this.pot(), cost=this.price(pot), left=this.ahead();
+    const body = !left.length
+      ? `<div class="sub">…but there are no hands left tonight. Whatever they know,
+          it is no use to you now.</div>`
+      : `<div class="sub">There are <b>${left.length}</b> hand${left.length===1?'':'s'} still
+          to come. For a cut of the pot the stranger will tell you what each one asks about —
+          which is worth something only if it changes what you would have staked.</div>`;
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🗣️</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🗣️ Table ${this.ctx.depth}</span>
+          <span class="pill">🎒 pot ${pot}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A stranger with something to say</h2>
+        ${body}
+      </div>
+      ${left.length && cost ? `<button class="btn gold" onclick="Rumour.buy()">
+          🗣️ Hear it — ${cost} gold
+          <span style="font-size:12px;font-weight:700;margin-left:6px;color:rgba(40,26,4,.72)"
+          >a ${Math.round(this.CUT*100)}% cut of what you are carrying</span>
+        </button>` : ''}
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Rumour.walkAway()">${left.length && cost ? 'Buy nothing' : 'Move along'}</span>
+      </div>
+      <div style="height:16px"></div>`;
+  },
+
+  buy(){
+    const cost=this.price(this.pot());
+    if(cost<1 || cost>this.pot()) return;
+    this.ctx.run.unbanked.gold -= cost;
+    const left=this.ahead();
+    Sfx.coin(0); Haptic.tap();
+    this.finish({ status:'cleared', quality:1, topics:[], yield:{},
+                  rumour:{paid:cost, heard:left.length} },
+      `<div class="center crest">🗣️</div>
+       <div class="panel">
+         <h2 style="font-size:18px">“Since you are paying.”</h2>
+         <div class="sub">What the rest of the night will ask you about.</div>
+         <hr>
+         ${left.map(x=>`<div style="display:flex;justify-content:space-between;
+             font-size:14px;font-weight:700;line-height:2">
+             <span>Table ${x.depth}</span>
+             <span style="color:var(--gold)">${TOPIC_LABEL[x.topic]||x.topic}</span>
+           </div>`).join('')}
+         <hr>
+         <div class="small">Knowing the topic is not knowing the answer — but it is knowing
+           whether the big stake is the one to take.</div>
+       </div>`);
+  },
+
+  walkAway(){
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{},
+                  rumour:{paid:0, heard:0} },
+      `<div class="center crest">🗣️</div>
+       <div class="panel center"><h2>You let them talk to somebody else</h2>
+       <div class="sub">The pot is exactly where you left it.</div></div>`);
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+`<button class="btn gold" id="rumourGo" style="margin-top:12px">Onward →</button>`;
+    document.getElementById('rumourGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+  }
+};
+
 /* -------------------------------- the lock -------------------------------- */
 /* The lock room's UI half. It owns nothing about the run — it grades one riddle
    and hands the shell a single outcome. Mastery is written the instant the
@@ -7606,6 +7737,8 @@ const ROOM_INTRO = {
     b:'Say how deep you mean to cut before you start. Deeper pays far more, but every riddle must land — one miss and the seam collapses with nothing in your hands.'},
   lock: {ic:'🧰', t:'A locked chest',
     b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'},
+  rumour: {ic:'🗣️', t:'A stranger with something to say',
+    b:'This table sells information rather than a hand. For a cut of the pot you are carrying, you hear what the remaining hands will ask about — worth paying for only when it would change what you stake. Walking past costs nothing.'},
   wager: {ic:'🎲', t:'A table, and a bet',
     b:'You price the riddle before you see it. Three stakes, each paying differently, and the table tells you what chance each one needs to be worth taking — measured against what your Ledger says you know. Win and the pot grows. Lose and the stake is gone.'}
 };
@@ -7666,6 +7799,7 @@ const Dungeon = {
     for(const a of Loadout.chosen())
       if(a.where==='fork') this.forkLeft[a.id]=Loadout.charges(a)+Runes.spare();
     this.scried=null;
+    this.heard=null;
   },
   forkCharges(id){ return (this.forkLeft && this.forkLeft[id]) || 0; },
 
@@ -7673,17 +7807,32 @@ const Dungeon = {
      seed, the same roll — so what you are shown is what you will meet. It is
      rebuilt rather than remembered, which keeps foresight honest: there is no
      second copy of the layout that could disagree with the real one. */
+  /* What lies at a depth, worked out the way nextRoom works it out — the same
+     seed, the same roll — so what foresight shows is what you will meet. Only
+     the cheap half of the room is rebuilt: the kind, the foe a fight would
+     bring, and the topic a table would ask about. Building the whole room here
+     would draw questions nobody is going to answer, and would move the mastery
+     scheduler's no-repeat cursor while it did it. */
   peek(depth){
     const set=this.set();
+    if(depth<1 || (set.rooms && depth>set.rooms)) return null;
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
     const name = set.plan ? set.plan[depth-1]
                : (depth>=2 && R.chance(set.lockChance)) ? 'lock'
                : (depth>=2 && R.chance(set.seamChance||0)) ? 'seam' : 'monster';
-    const kind = RoomKinds[name] || RoomKinds.monster;
-    let foe=null;
+    let foe=null, topic=null;
     if(name==='monster') foe=WaveEngine.foe(depth, set.waves);
+    if(name==='wager'){
+      // The same draw RoomKinds.wager.build makes, and only the draw — `pure`
+      // keeps it out of the no-repeat cursor, so peeking cannot change what the
+      // room turns out to be.
+      const pool=WaveEngine.pool(Game.s.topicStats);
+      const prefer=settingTopics(set) ||
+                   (REALMS[Game.s.realm] ? REALMS[Game.s.realm].pool : null);
+      topic=Mastery.pick(pool, prefer, true);
+    }
     R.unseed();
-    return {name, foe};
+    return {name, foe, topic};
   },
 
   /* Spend a Farsight charge. The reading names the room and, for a fight, how
@@ -7707,12 +7856,68 @@ const Dungeon = {
       line = `A <b>locked chest</b>. No foe. You carry ${Game.s.items.pick} pick${Game.s.items.pick===1?'':'s'}.`;
     } else if(next.name==='wager'){
       line = `A <b>table</b>. No foe — but the pot is what is at risk.`;
+    } else if(next.name==='rumour'){
+      line = `A <b>stranger</b> selling what they know. No foe, and nothing at risk but a cut.`;
     } else {
       line = `An <b>ore seam</b>. No foe — only the ore is at risk.`;
     }
     this.scried={ name:next.name, line };
     Sfx.coin(0); Haptic.tap();
     this.fork(this.lastOutcome||{});          // redraw the fork, now with the reading
+  },
+
+  /* Rumours. Where Farsight spends itself on one room and is gone by the time
+     you stand in it, this buys a stretch — and so it has to last the stretch,
+     or it would be a worse Farsight sold at the same price. `heard.through` is
+     the last depth it covers, and the reading stays on the fork until that
+     depth is behind you. */
+  RUMOUR_SPAN: 3,
+  heardHere(){ return !!(this.heard && this.run && this.heard.through > this.run.depth); },
+
+  hearRumours(){
+    if(!this.active || this.heardHere()) return;
+    if(this.forkCharges('rumours')<1){ UI.toast('Nobody else is talking.'); return; }
+    this.forkLeft.rumours--;
+    const from=this.run.depth+1, rooms=[];
+    for(let d=from; d<from+this.RUMOUR_SPAN; d++){
+      const r=this.peek(d);
+      if(r) rooms.push(r);
+    }
+    this.heard={ through:from+rooms.length-1, from, line:this.rumourLine(rooms) };
+    Sfx.coin(0); Haptic.tap();
+    this.fork(this.lastOutcome||{});
+  },
+
+  /* The reading itself: counts, and the two numbers a decision actually turns
+     on — the total health standing between you and the far end, and the worst
+     single blow you would have to take on the way. Deliberately silent about
+     the order, because the order is what Farsight sells. */
+  rumourLine(rooms){
+    if(!rooms.length) return 'Nothing but the way out. This is the last of it.';
+    const fights=rooms.filter(r=>r.name==='monster');
+    const champ=fights.some(r=>r.foe && r.foe.boss);
+    const hp=fights.reduce((n,r)=>n+r.foe.hp, 0);
+    const worst=fights.reduce((n,r)=>Math.max(n, r.foe.atk), 0);
+    const others={};
+    for(const r of rooms) if(r.name!=='monster') others[r.name]=(others[r.name]||0)+1;
+    const NAME={lock:['a chest','chests'], seam:['a seam','seams'],
+                wager:['a table','tables'], rumour:['a rumour','rumours']};
+    const bits=[];
+    if(fights.length) bits.push(`<b>${fights.length}</b> fight${fights.length===1?'':'s'}`);
+    for(const k in others){
+      const n=others[k], nm=NAME[k]||[k,k];
+      bits.push(n===1 ? `<b>${nm[0]}</b>` : `<b>${n}</b> ${nm[1]}`);
+    }
+    const span = rooms.length===1 ? 'The next room holds'
+               : `The next <b>${rooms.length}</b> rooms hold`;
+    let line = `${span} ${bits.join(' and ')}.`;
+    if(fights.length){
+      const per=Math.max(1, worst - Game.armor().def);
+      line += ` <b>${hp}</b> health between you and the far end, and the hardest
+                hitter among them lands about <b>${per}</b> a blow.`;
+      if(champ) line += ' One of them is a <b>champion</b>.';
+    }
+    return line;
   },
 
   /* What a setting costs to walk into. The Tavern is the only one that charges,
@@ -7803,7 +8008,11 @@ const Dungeon = {
   // genuinely random, so you cannot memorise a fight, only its foe.
   nextRoom(){
     this.run.depth++;
-    this.scried=null;                 // a reading was about this room; it is now behind you
+    /* A Farsight reading was about this one room and is spent walking into it.
+       A rumour covers a stretch, so it is left alone until the stretch is
+       behind you — heardHere() is what decides that, and it reads the depth
+       rather than being cleared here. */
+    this.scried=null;
     const depth = this.run.depth;
     const set = this.set();
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
@@ -7918,6 +8127,11 @@ const Dungeon = {
       const ore = (outcome.seam && outcome.seam.ore) || 0;
       icon = ore?'🪨':'⛰️';
       line = (ore ? `The seam gives up ${ore} ore. ` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.kind==='rumour'){
+      const r = outcome.rumour || {paid:0, heard:0};
+      icon = r.paid?'🗣️':'🤫';
+      line = (r.paid ? `You paid ${r.paid} to hear what is coming. `
+                     : 'You let them talk to somebody else. ') + 'Another table waits.';
     } else if(sp.kind==='wager'){
       const w = outcome.wager || {staked:0, won:0};
       icon = w.won>0 ? '🎲' : w.staked>0 ? '🃏' : '🎲';
@@ -7954,22 +8168,43 @@ const Dungeon = {
      different: a reading you have paid for, an offer to pay for one, or — when
      the skill is not carried or not yet known — nothing at all, because an
      empty button advertising a skill you do not have is noise. */
+  /* What foresight puts on the fork. Two abilities now, each in one of three
+     states — a reading you have paid for, an offer to pay for one, or, when the
+     skill is not carried or not yet known, nothing at all, because an empty
+     button advertising a skill you do not have is noise.
+
+     Written as a table because there are two of them and there will be four:
+     the design places Tracking and Weather-reading here as well, and each is a
+     line in this list rather than another branch to keep in step. */
+  FORESIGHT:[
+    {id:'farsight', ic:'🔭', col:'#6a44b0',
+     offer:'Scry the passage below', spent:'Farsight spent for this descent',
+     call:'Dungeon.scry()',
+     reading(d){ return d.scried && d.scried.line; }},
+    {id:'rumours', ic:'🗣️', col:'#c98f2b',
+     offer:'Listen for rumours', spent:'Nothing more is being said down here',
+     call:'Dungeon.hearRumours()',
+     reading(d){ return d.heardHere() && d.heard.line; }}
+  ],
+
   foresightBlock(){
-    if(this.scried)
-      return `<div class="panel" style="border-color:#6a44b0">
+    const carried=new Set(Loadout.chosen().map(a=>a.id));
+    return this.FORESIGHT.map(f=>{
+      const said=f.reading(this);
+      if(said) return `<div class="panel" style="border-color:${f.col}">
         <div class="row" style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:22px">🔭</span>
-          <div class="small" style="flex:1;line-height:1.5">${this.scried.line}</div>
+          <span style="font-size:22px">${f.ic}</span>
+          <div class="small" style="flex:1;line-height:1.5">${said}</div>
         </div></div>`;
-    const carried = Loadout.chosen().some(a=>a.id==='farsight');
-    if(!carried) return '';
-    const left = this.forkCharges('farsight');
-    if(left<1) return `<div class="center small" style="opacity:.6;margin:4px 0">
-        🔭 Farsight spent for this descent</div>`;
-    return `<button class="btn" style="border-color:#6a44b0"
-        onclick="Dungeon.scry()">🔭 Scry the passage below
-        <span style="font-size:12px;font-weight:700;color:var(--dim);margin-left:6px">${left} left</span>
-      </button>`;
+      if(!carried.has(f.id)) return '';
+      const left=this.forkCharges(f.id);
+      if(left<1) return `<div class="center small" style="opacity:.6;margin:4px 0">
+          ${f.ic} ${f.spent}</div>`;
+      return `<button class="btn" style="border-color:${f.col}"
+          onclick="${f.call}">${f.ic} ${f.offer}
+          <span style="font-size:12px;font-weight:700;color:var(--dim);margin-left:6px">${left} left</span>
+        </button>`;
+    }).join('');
   },
 
   // Bank the pot and return to the surface. `midFight` is true when the player
