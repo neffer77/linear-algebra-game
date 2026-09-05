@@ -109,6 +109,13 @@ jobs:
       - name: Check the fork still rewards skill
         run: npm run balance
 
+      # And the same question asked of the Summit, whose pressure is thinning
+      # air rather than a steepening foe curve. A setting shipped unmeasured is
+      # exactly how the Deep once came to be unplayable, so every endless one
+      # gets swept — with the knight who would actually be standing there.
+      - name: Check the climb still has a top
+        run: npm run balance -- --setting summit --lvl 14 --weapon 4 --armor 4 --depth 40
+
   build:
     needs: [validate, playthrough]
     runs-on: ubuntu-latest

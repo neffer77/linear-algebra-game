@@ -94,6 +94,23 @@ const SCENES = [
                 Dungeon.resolve({status:'cleared',quality:1,topics:[],yield:{gold:180,xp:40}});
                 Dungeon.scry(); Dungeon.hearRumours(); } },
 
+  { name: 'summit', note: 'the climb — the air is what stops you',
+    go: () => { const set=(n,m)=>{const st=STRANDS.find(x=>x[0]===n);
+                  st[1].forEach(k=>Game.s.topicStats[k]={c:20,w:2,m,seen:12,last:0,t:Date.now()});};
+                Game.s.topicStats={}; set('Multivariable & Series',0.95);
+                Game.s.loadout=['sighting','farsight','ward'];
+                Game.s.metRoom={monster:1,lock:1,seam:1};
+                Game.s.lvl=14; Game.s.weapon='w4'; Game.s.armor='a4';
+                Game.s.owned.w4=1; Game.s.owned.a4=1; Game.s.bests={};
+                Dungeon.descend('summit');
+                // Part-way up, so the thinned air shows on the health line.
+                for(let i=0;i<7;i++){
+                  Dungeon.resolve({status:'cleared',quality:1,topics:[],
+                                   yield:{gold:70,xp:16}});
+                  if(i<6) Dungeon.nextRoom();
+                }
+                Dungeon.takeSighting(); } },
+
   { name: 'fork', note: 'press deeper, or climb out with the haul',
     go: () => { Game.s.metRoom = { monster: 1, lock: 1 };
                 Dungeon.descend('deep');
