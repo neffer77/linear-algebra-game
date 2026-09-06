@@ -36,13 +36,13 @@ function arg(flag, dflt) {
 
 /* Everything below runs INSIDE the page, so it can call the game's own
  * functions. It is written as one string-free function passed to evaluate. */
-function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges }) {
+function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, setting }) {
   /* A seeded stream of our own, so a sweep is reproducible and never touches
      the game's R (which the page uses for its own draws). */
   const mkRng = s => { let x = (s >>> 0) || 1;
     return () => { x = (x * 1664525 + 1013904223) >>> 0; return x / 4294967296; }; };
 
-  const set = SETTINGS.deep;
+  const set = SETTINGS[setting] || SETTINGS.deep;
   // The curve under test — the shipped one unless a sweep passed its own.
   const CURVE = waves ? Object.assign({}, set.waves, waves) : set.waves;
 
@@ -81,12 +81,27 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges }) {
   /* A whole descent, pressing on to `bankAt` and then climbing out. Returns
      what was banked (0 on a wipe — a fall costs exactly the unbanked pile) and
      how deep it got. */
+  /* What a knight can hold at this height. On the Summit the air thins with
+     every room climbed, down to a floor — the same multiplier Game.maxHp reads
+     live, restated here because this harness never touches the live save. A
+     setting without thin air returns the knight's whole health at every depth,
+     so this is a no-op everywhere else. */
+  function ceilingAt(depth) {
+    if (!set.thinAir) return BASE.maxHp;
+    const climbed = Math.max(0, depth - 1);
+    const air = Math.min(1, Math.max(set.airFloor || 0.4, 1 - set.thinAir * climbed));
+    return Math.round(BASE.maxHp * air);
+  }
+
   function descend(acc, seed, bankAt) {
     const rnd = mkRng(seed);
     const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def };
     let pot = 0, depth = 0;
     while (depth < bankAt) {
       depth++;
+      // Height is applied before the room, exactly as nextRoom applies it.
+      st.hp = Math.min(st.hp, ceilingAt(depth));
+      if (st.hp <= 0) return { banked: 0, depth, died: true };
       /* Rooms are laid out by the same seeded roll the real Dungeon uses —
          kept in step with Dungeon.nextRoom by hand, because the shell picks
          its kind inline. If a room kind is added there and not here, this
@@ -125,7 +140,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges }) {
                  dmg: w.dmg, crit: w.crit, def: a.def,
                  gear: `${w.nm} · ${a.nm} · level ${knight.lvl}` };
 
-  const out = { base: BASE, levels: [] };
+  const out = { base: BASE, levels: [], foresight: set.foresight || 'farsight' };
   for (const acc of accuracies) {
     /* Expected banked gold if you commit to leaving at depth d. Averaged over
        many seeds, this curve rises while rooms are survivable and falls once
@@ -187,6 +202,12 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges }) {
           if (Math.floor(st.hp / per) <= 3) { turned = true; break; }
         }
         depth = next;
+        /* The same ceiling the blind climb is under. A knight carrying
+           foresight is not exempt from the air, and leaving this out measures
+           an ability that never tires — which flatters it at exactly the
+           heights where the reading is supposed to matter most. */
+        st.hp = Math.min(st.hp, ceilingAt(depth));
+        if (st.hp <= 0) return { banked: 0, depth, died: true, turned };
         if (nLock) { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
         if (nSeam) continue;
         if (fightRoom(st, nFoe, acc, rnd) === null) return { banked: 0, depth, died: true, turned };
@@ -238,14 +259,22 @@ function judge(res) {
                `${(worst.greedySurvivedAll * 100).toFixed(0)}% of the time — the Deep is too soft`);
   if (best.greedyMeanDepth <= worst.greedyMeanDepth)
     fails.push('a strong player gets no deeper than a weak one before falling');
-  // Scrying must beat pressing on blind, or it is decoration in a slot that
-  // could hold something that works.
+  // Whatever the setting's own ability is, Farsight must never COST a player
+  // anything: information may always be ignored, so a knight carrying it can
+  // do no worse than one who is not. That holds everywhere.
   for (const x of L) {
     if (x.scryEv < x.bestEv * 0.98)
       fails.push(`at ${Math.round(x.acc * 100)}% accuracy Farsight banks ${Math.round(x.scryEv)} ` +
                  `against ${x.bestEv} blind — information the player may ignore should never cost them`);
   }
-  if (!L.some(x => x.scryBreakEven > x.breakEven))
+  /* Farsight is the only foresight this harness models, and it answers "is the
+     NEXT room survivable" — which is the question the Deep asks. A setting
+     built around a different ability is not failed for Farsight being quiet in
+     it; on the Summit, where the danger is attrition rather than one foe
+     spiking, a one-room reading genuinely cannot help, and demanding that it
+     does would only push the curves somewhere dishonest. What is reported
+     instead is that the sweep did not measure that setting's own ability. */
+  if (res.foresight === 'farsight' && !L.some(x => x.scryBreakEven > x.breakEven))
     fails.push('seeing one room ahead never makes it rational to go deeper — ' +
                'foresight is decoration in a slot that could hold something that works');
   if (best.breakEven < 3)
@@ -261,6 +290,14 @@ function judge(res) {
   const sweep = process.argv.includes('--sweep');
   // The knight the Deep opens for: first realm cleared, its gold spent.
   const knight = { lvl: arg('--lvl', 3), weapon: arg('--weapon', 1), armor: arg('--armor', 1) };
+  /* Which setting to sweep. The Deep is the default because it is the loop the
+     whole game is built on — but a setting shipped unmeasured is exactly how
+     the Deep once came to be unplayable, so every new one gets swept before it
+     is believed. */
+  const setName = (() => {
+    const i = process.argv.indexOf('--setting');
+    return i > 0 ? process.argv[i + 1] : 'deep';
+  })();
 
   const { chromium } = loadPlaywright();
   const browser = await chromium.launch(launchOptions());
@@ -307,7 +344,8 @@ function judge(res) {
 
   const t0 = Date.now();
   const res = await page.evaluate(simulate,
-    { accuracies: ACCURACIES, runs, maxDepth, waves: null, knight, scryCharges: arg('--scry', 3) });
+    { accuracies: ACCURACIES, runs, maxDepth, waves: null, knight,
+      scryCharges: arg('--scry', 3), setting: setName });
   await browser.close();
   const secs = ((Date.now() - t0) / 1000).toFixed(1);
 
@@ -315,9 +353,14 @@ function judge(res) {
   else {
     console.log('\nKnights of the Eigenrealm — the Dials');
     console.log('──────────────────────────────────────────────────────────');
-    console.log(`  the knight the Deep opens for: ${res.base.gear}`);
+    console.log(`  setting: ${setName}`);
+    console.log(`  the knight it opens for: ${res.base.gear}`);
     console.log(`  ${res.base.maxHp} health · ${res.base.dmg} damage · ${res.base.def} defence`);
-    console.log(`  ${runs} runs per accuracy level, to depth ${maxDepth}\n`);
+    console.log(`  ${runs} runs per accuracy level, to depth ${maxDepth}`);
+    if (res.foresight !== 'farsight')
+      console.log(`  note: this setting's own foresight is ${res.foresight}, which this sweep` +
+                  `\n        does not model — the Farsight column below is a floor, not its value`);
+    console.log('');
     console.log('  accuracy   break-even   banked      with Farsight: aims   banks   bails');
     console.log('  ────────   ──────────   ──────      ───────────────────   ─────   ─────');
     for (const L of res.levels) {

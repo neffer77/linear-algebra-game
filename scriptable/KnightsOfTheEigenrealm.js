@@ -3830,7 +3830,11 @@ const Game = {
   maxHp(){
     const base = 100 + (this.s.lvl-1)*18 + this.armor().hp;
     const mul = (typeof Arena!=='undefined' && Arena.active) ? Arena.mods.hpMul : 1;
-    return Math.round(base*mul);
+    // Height is the second setting-scoped multiplier on this number, and it
+    // works the same way the Arena's boons do: read here rather than written
+    // into the save, so climbing down puts it back on its own.
+    const air = (typeof Dungeon!=='undefined') ? Dungeon.thinAir() : 1;
+    return Math.round(base*mul*air);
   },
   xpNeeded(){ return 60 + (this.s.lvl-1)*45; },
   gainXp(n){
@@ -6195,6 +6199,19 @@ const SKILL_ABILITIES = [
    ready(){ return Dungeon.active && !Dungeon.heardHere(); },
    go(){ Dungeon.hearRumours(); }},
 
+  /* The third Foresight ability, and the long-range one. Farsight answers
+     "what is behind this door"; Rumours answers "is this stretch worth
+     committing to"; Sighting answers neither, and instead answers "how far to
+     the thing I am climbing towards" — the distance to the next champion, and
+     to the next room that pays. From a height you cannot make out detail, but
+     you can see how far away things are, which is the trade the three of them
+     divide between them. */
+  {id:'sighting', nm:'Sighting', ic:'🗻', skill:'Sighting', strand:'Multivariable & Series',
+   where:'fork',
+   ds:'From a height, see how far it is to the next champion and the next room that pays.',
+   ready(){ return Dungeon.active && !Dungeon.sighted; },
+   go(){ Dungeon.takeSighting(); }},
+
   {id:'dice', nm:'Dice', ic:'🎲', skill:'Dice', strand:'Integrals',
    ds:'Stake the next strike: triple damage if you are right, and the foe strikes twice if you are not.',
    ready(){ return !Battle.diceUp && !Battle.answered; },
@@ -6786,6 +6803,29 @@ const TAVERN_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Summit's foes are not the point, which is why this curve opens gentler
+   than the Deep's — less health to chew through, and a softer blow. What makes
+   a climb hard here is the air: every room above the first takes a slice off
+   the health you can carry, down to a floor, so the wall a knight meets is
+   their own shrinking capacity rather than a foe they cannot out-damage.
+
+   The two curves cross at about height eight, and they have to. Thin air alone
+   asymptotes: once it reaches its floor the pressure stops rising, and a
+   setting that stops getting harder is one you climb forever. So the foes keep
+   growing past the point where the air has stopped, and the two together give
+   the climb a top. tools/balance.js reads it out — break-even 11, 12, 14, 17,
+   22 as accuracy climbs — and these numbers came from that sweep rather than
+   from taste. */
+const SUMMIT_WAVES = {
+  championEvery:6,
+  hp0:34,  hpPer:15, champHp:1.6,
+  atk0:7,  atkGrow:1.08, champAtk:1.25,
+  gold0:44, goldPer:16,
+  xp0:34,   xpPer:12,
+  champReward:2,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* The order the codec writes per-setting depth records in. It is a list of its
    own rather than Object.keys(SETTINGS) because the codec has to be readable
    without the rest of the game around it — the verification harness loads it
@@ -6799,7 +6839,8 @@ const SETTING_ORDER = [
   'deep',
   'cellar',
   'sanctum',
-  'tavern'
+  'tavern',
+  'summit'
 ];
 
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
@@ -6843,6 +6884,25 @@ const SETTINGS = {
     plan:['wager','rumour','wager','monster','wager'],
     strands:['Integrals','Applications','Matrices'],
     buyIn:100
+  },
+  /* The Summit is climbed rather than descended, and it is the one place where
+     the record IS the reward: it runs until you turn back, and how high you got
+     is what Climbing reads next time. It has no material for the same reason
+     the Tavern has none — the skills learned here are Foresight and Passage,
+     not Material — so what it pays is gold, xp, and a number to beat. */
+  summit: {
+    key:'summit', nm:'the Summit', waves:SUMMIT_WAVES,
+    canDie:true, rooms:0, lockChance:.18, seamChance:.10,
+    strands:['Multivariable & Series','Limits & Derivatives','Applications'],
+    thinAir:0.06, airFloor:0.4,
+    up:true,                                 // climbed, not descended: changes the words
+    /* Which foresight this setting is built around. It is not decoration: the
+       Deep's danger is a single foe spiking, which is what Farsight reads, and
+       the Summit's is attrition across many rooms, which Farsight cannot see at
+       all. The balance harness reads this so it asserts the right ability of
+       the right place rather than failing a setting for not answering a
+       question nobody asked it. */
+    foresight:'sighting'
   }
 };
 
@@ -7806,9 +7866,29 @@ const Dungeon = {
   // knight home poorer than they arrived, which is not a thing to meet on the
   // way to your first sword.
   tavernOpen(){ return !!(Game.s && REALMS[2] && Game.s.cleared['2:'+(REALMS[2].foes.length-1)]); },
+  // And the Summit one later again — it is the only setting that takes health
+  // away rather than asking you to spend it, which is not a thing to meet early.
+  summitOpen(){ return !!(Game.s && REALMS[3] && Game.s.cleared['3:'+(REALMS[3].foes.length-1)]); },
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
+
+  /* The Summit's whole pressure, in one number. Every room above the first
+     takes a slice off the health a knight can hold, down to a floor — so what
+     stops a climb is not a foe that out-damages you but the fact that you are
+     carrying less and less to spend. It is a multiplier read live rather than a
+     value written into the save: walk back down and it is simply gone, which is
+     what keeps it from leaking into the rest of the game.
+
+     The floor matters. Without it a long enough climb reduces a knight to one
+     point of health and the setting stops being a decision. */
+  thinAir(){
+    if(!this.active || !this.run) return 1;
+    const set=this.set();
+    if(!set.thinAir) return 1;
+    const climbed=Math.max(0, this.run.depth-1);
+    return clamp(1 - set.thinAir*climbed, set.airFloor||0.4, 1);
+  },
 
   /* Foresight, and the reason it is rationed by the descent rather than by the
      room: what it buys is a DECISION, and a decision you can re-buy every time
@@ -7819,6 +7899,7 @@ const Dungeon = {
       if(a.where==='fork') this.forkLeft[a.id]=Loadout.charges(a)+Runes.spare();
     this.scried=null;
     this.heard=null;
+    this.sighted=null;
   },
   forkCharges(id){ return (this.forkLeft && this.forkLeft[id]) || 0; },
 
@@ -7883,6 +7964,36 @@ const Dungeon = {
     this.scried={ name:next.name, line };
     Sfx.coin(0); Haptic.tap();
     this.fork(this.lastOutcome||{});          // redraw the fork, now with the reading
+  },
+
+  /* Sighting. It reaches far and says little: two distances, and nothing at all
+     about what lies between them. Landmarks rather than a survey — which is
+     what makes it worth a slot beside the other two rather than instead of
+     them. Like Farsight it is spent on the next room, because a distance
+     measured from here is wrong the moment you move. */
+  SIGHT_RANGE: 10,
+  takeSighting(){
+    if(!this.active || this.sighted) return;
+    if(this.forkCharges('sighting')<1){ UI.toast('Nothing more to see from here.'); return; }
+    this.forkLeft.sighting--;
+    const from=this.run.depth+1;
+    let champ=0, pays=0, seen=0;
+    for(let d=from; d<from+this.SIGHT_RANGE; d++){
+      const r=this.peek(d);
+      if(!r) break;                          // a fixed-length setting simply ends
+      seen++;
+      const at=d-this.run.depth;
+      if(!champ && r.name==='monster' && r.foe && r.foe.boss) champ=at;
+      if(!pays && (r.name==='lock' || r.name==='seam')) pays=at;
+      if(champ && pays) break;
+    }
+    const far=(n,what)=> n
+      ? \`<b>\${n}</b> room\${n===1?'':'s'} to \${what}\`
+      : \`no \${what} within sight\`;
+    this.sighted={ line:\`\${far(champ,'the next champion')}, and \${far(pays,'the next room that pays')}.\` +
+      (seen<this.SIGHT_RANGE ? ' Past that the way simply ends.' : '') };
+    Sfx.coin(0); Haptic.tap();
+    this.fork(this.lastOutcome||{});
   },
 
   /* Rumours. Where Farsight spends itself on one room and is gone by the time
@@ -8030,10 +8141,20 @@ const Dungeon = {
     /* A Farsight reading was about this one room and is spent walking into it.
        A rumour covers a stretch, so it is left alone until the stretch is
        behind you — heardHere() is what decides that, and it reads the depth
-       rather than being cleared here. */
+       rather than being cleared here. A sighting is a set of distances measured
+       from where you stood, so it expires with the Farsight reading rather than
+       with the rumour. */
     this.scried=null;
+    this.sighted=null;
     const depth = this.run.depth;
     const set = this.set();
+    /* Height is read live off the depth, so the moment it changes the knight's
+       capacity changes with it — and a knight who has climbed past what they
+       can now hold is brought down to it rather than walking around above their
+       own maximum. Harmless everywhere else: thinAir() is 1 outside the Summit,
+       so this recomputes the number it already was. */
+    Game.s.maxHp = Game.maxHp();
+    Game.s.hp = Math.min(Game.s.hp, Game.s.maxHp);
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
     // A setting with a plan lays its rooms out by hand — the cellar puts a
     // chest in the middle so a first run is guaranteed to meet one. Otherwise
@@ -8132,12 +8253,14 @@ const Dungeon = {
   fork(outcome){
     this.lastOutcome=outcome;
     const sp=this.cur.spec, u=this.run.unbanked, g=Game.s;
+    const up=!!this.set().up;               // the Summit is climbed, not descended
     /* The fork reads the same whatever the room was, so it has to be able to
        describe every kind — and a kind added without a line here used to reach
        for a foe that a chest or a seam does not have. Written as a table so the
        next kind is an entry rather than another branch to forget. */
-    const PASSAGE = 'A passage drops away into the dark.';
-    let icon='⛏️', line=PASSAGE;
+    const PASSAGE = up ? 'The ridge goes on, and the air thins.'
+                       : 'A passage drops away into the dark.';
+    let icon=up?'🧗':'⛏️', line=PASSAGE;
     if(sp.kind==='lock'){
       const opened = outcome.lock && outcome.lock.opened;
       icon = opened?'🎁':'🧰';
@@ -8158,14 +8281,14 @@ const Dungeon = {
              : w.staked>0 ? \`The table takes \${w.staked}. \`
              : 'You sat the hand out. ') + 'Another table waits.';
     } else if(sp.foe){
-      icon = sp.foe.boss?'👑':'⛏️';
+      icon = sp.foe.boss?'👑':(up?'🧗':'⛏️');
       line = \`\${sp.foe.nm} falls. \${PASSAGE}\`;
     }
     UI.go('s-result');
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">\${icon}</div>
       <div class="panel center">
-        <h1 style="font-size:20px">Depth \${this.run.depth} cleared</h1>
+        <h1 style="font-size:20px">\${up?'Height':'Depth'} \${this.run.depth} cleared</h1>
         <div class="sub" style="margin-top:6px">\${line}</div>
         <hr>
         <div style="font-size:15px;font-weight:800;line-height:1.8">
@@ -8177,8 +8300,8 @@ const Dungeon = {
         <div class="small">❤️ \${Math.round(g.hp)}/\${g.maxHp} · this haul is <b>at risk</b> until you climb out</div>
       </div>
       \${this.foresightBlock()}
-      <button class="btn gold" onclick="Dungeon.nextRoom()">⛏️ Press on — Depth \${this.run.depth+1} →</button>
-      <button class="btn ghost" onclick="Dungeon.leave()">🚪 Climb out with \${u.gold} gold</button>
+      <button class="btn gold" onclick="Dungeon.nextRoom()">\${up?'🧗':'⛏️'} \${up?'Climb higher':'Press on'} — \${up?'Height':'Depth'} \${this.run.depth+1} →</button>
+      <button class="btn ghost" onclick="Dungeon.leave()">🚪 \${up?'Turn back':'Climb out'} with \${u.gold} gold</button>
       <div style="height:20px"></div>\`;
     Haptic.win();
   },
@@ -8203,7 +8326,11 @@ const Dungeon = {
     {id:'rumours', ic:'🗣️', col:'#c98f2b',
      offer:'Listen for rumours', spent:'Nothing more is being said down here',
      call:'Dungeon.hearRumours()',
-     reading(d){ return d.heardHere() && d.heard.line; }}
+     reading(d){ return d.heardHere() && d.heard.line; }},
+    {id:'sighting', ic:'🗻', col:'#5aa9e6',
+     offer:'Take a sighting', spent:'Nothing more to see from here',
+     call:'Dungeon.takeSighting()',
+     reading(d){ return d.sighted && d.sighted.line; }}
   ],
 
   foresightBlock(){
@@ -8254,7 +8381,8 @@ const Dungeon = {
        but a kind that can fail is exactly the sort of thing a later slice adds,
        and reaching blindly for a foe that a chest or a seam does not have is
        how that arrives as a crash instead of a missing sentence. */
-    const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm:'The dark'};
+    const up=!!this.set().up;
+    const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm: up?'The thin air':'The dark'};
     const pot=this.run.unbanked.gold, depth=this.run.depth;
     /* Dead reckoning: a fall is no longer all or nothing. What is salvaged is
        banked here rather than left in the run, because the run is about to stop
@@ -8273,11 +8401,11 @@ const Dungeon = {
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">💀</div>
       <div class="panel center">
-        <h1 style="font-size:20px;color:var(--red)">The Deep keeps you</h1>
-        <div class="sub" style="margin-top:6px">\${foe.nm} ends your descent at depth \${depth}.</div>
+        <h1 style="font-size:20px;color:var(--red)">\${up?'The mountain keeps you':'The Deep keeps you'}</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} ends your \${up?'climb at height':'descent at depth'} \${depth}.</div>
         <hr>
         <div style="font-size:16px;font-weight:800;line-height:1.9">
-          <div>Depths cleared: <span style="color:var(--gold)">\${depth-1}</span></div>
+          <div>\${up?'Height reached':'Depths cleared'}: <span style="color:var(--gold)">\${depth-1}</span></div>
           <div style="color:var(--red)">🎒 \${lost} unbanked gold lost to the dark</div>
           \${kept?\`<div style="color:var(--green)">🧭 \${kept} carried out by dead reckoning</div>\`:''}
         </div>
@@ -8286,7 +8414,7 @@ const Dungeon = {
           ? 'You found your own way up in the dark. Most of a haul still dies with a run — bank it next time.'
           : 'Bank your haul next time — nothing you carry survives a fall.'}</div>
       </div>
-      <button class="btn gold" onclick="Dungeon.descend()">↻ Descend again</button>
+      <button class="btn gold" onclick="Dungeon.descend('\${this.run?this.run.setting:'deep'}')">↻ \${up?'Climb again':'Descend again'}</button>
       <button class="btn" onclick="UI.go('s-shop')">🏪 Spend what you banked</button>
       <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
       <div style="height:20px"></div>\`;
@@ -8524,6 +8652,22 @@ const UI = {
                                 :'Clear the Cliffs of Change to be let in'}</div>
         </div>
         <div style="font-size:20px;color:var(--dim)">\${tOpen?'▶':'🔒'}</div>
+      </div>\`;
+
+    const uOpen = Dungeon.summitOpen(), highest = (g.bests && g.bests.summit) || 0;
+    out+=\`<div class="realmhdr"><span class="dot" style="background:#8fd0ff"></span>
+          <h2 style="color:#8fd0ff">The Summit</h2>\${uOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
+      <div class="small" style="margin:2px 0 4px">Climbed, not descended, and it runs until you turn
+        back. Nothing up here hits harder than the Deep — but every room takes a slice off the
+        health you can hold, so what stops you is the air. How high you got is the score.</div>
+      <div class="node \${uOpen?'':'locked'}" onclick="Dungeon.descend('summit')">
+        <div class="ico" style="font-size:24px">🗻</div>
+        <div style="flex:1">
+          <div class="nm">Start the climb \${highest?\`<span class="tag g">best: height \${highest}</span>\`:''}</div>
+          <div class="dt">\${uOpen?'Endless · thinning air · a fall loses the haul'
+                                :'Clear the Cliffs of Change and what lies past them'}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">\${uOpen?'▶':'🔒'}</div>
       </div>\`;
 
     // The Arena sits past the campaign, opened by the last boss.

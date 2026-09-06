@@ -30,6 +30,7 @@ const SUITES = [
   require('./play/tavern'),      // S4
   require('./play/passage'),     // S5
   require('./play/rumours'),     // S6
+  require('./play/summit'),      // S7
   require('./play/cheat')        // T1
 ];
 
