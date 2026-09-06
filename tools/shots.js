@@ -136,6 +136,12 @@ const SCENES = [
                 Dungeon.resolve({ status: 'cleared', quality: 1, topics: [], yield: { gold: 180, xp: 40 } });
                 UI.go('s-title'); UI.refreshTitle(); } },
 
+  { name: 'map-open', note: 'late game — every destination above the campaign',
+    go: () => { REALMS.forEach((r,ri)=>r.foes.forEach((f,i)=>Game.s.cleared[ri+':'+i]=1));
+                Game.s.firstRun=1; Game.s.gold=2400; Game.s.lvl=22;
+                Game.s.bests={summit:14, deep:11}; Game.s.arenaBest=9;
+                UI.go('s-map'); } },
+
   { name: 'map', note: 'the overworld, with a descent waiting',
     go: () => { REALMS[0].foes.forEach((f, i) => Game.s.cleared['0:' + i] = 1);
                 Game.s.firstRun = 1; Game.s.gold = 640; Game.s.lvl = 4;

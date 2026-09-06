@@ -6906,6 +6906,63 @@ const SETTINGS = {
   }
 };
 
+/* Where a knight can GO, in the order they open.
+ *
+ * These used to be five hand-written blocks appended to the bottom of the map,
+ * below eight campaign realms and thirty-two fights — which put the loop the
+ * design calls the core of the game about as far from the top of the page as it
+ * is possible to be, and got worse with every setting added. As a table they
+ * are ordered once, rendered once, and the three settings still to come are a
+ * line each rather than another forty lines of markup to keep in step.
+ *
+ * \`open\` is the gate, \`detail\` the line under the name, and \`sealed\` what to go
+ * and do about it. Everything else is livery.
+ */
+const DESTINATIONS = [
+  {id:'deep', nm:'The Deep', col:'#b48bec', ic:'\\u26cf\\ufe0f',
+   blurb:'A seeded descent. Every haul rides unbanked until you climb out — press deeper for more, but a fall loses it all.',
+   open:()=>Dungeon.unlocked(),
+   act:"Dungeon.descend()",
+   label:()=>Dungeon.pending()?'Start a new descent':'Descend the Deep',
+   detail:()=>Dungeon.pending() ? 'Abandons the descent you left behind'
+                                : 'Scaling rooms · press-on / leave · your haul is at risk',
+   sealed:'Clear the first realm to find the shaft'},
+
+  {id:'sanctum', nm:'The Sanctum', col:'#8ad4ff', ic:'\\ud83d\\udd2e',
+   blurb:'Six rooms of fields, flows and things that grow without bound. It pays in <b>essence</b> rather than gold — and it is where Scrying is learned.',
+   open:()=>Dungeon.sanctumOpen(),
+   act:"Dungeon.descend('sanctum')",
+   label:()=>'Enter the Sanctum',
+   detail:()=>'Six rooms · 🜄 essence every room · a fall loses it all',
+   sealed:'Clear the Matrix Marches to be admitted'},
+
+  {id:'tavern', nm:'The Tavern', col:'#ffd479', ic:'\\ud83c\\udfb2',
+   blurb:'Five tables. Nothing here can kill you — but you buy in at the door, and everything after that is played for the pot. The only place you can walk out <b>poorer</b> than you walked in.',
+   open:()=>Dungeon.tavernOpen(),
+   act:"Dungeon.descend('tavern')",
+   label:()=>'Take a seat',
+   detail:()=>\`Buy in for \${Dungeon.buyIn(SETTINGS.tavern)} gold · three stakes a hand · the odds are shown\`,
+   sealed:'Clear the Cliffs of Change to be let in'},
+
+  {id:'summit', nm:'The Summit', col:'#8fd0ff', ic:'\\ud83d\\uddfb',
+   blurb:'Climbed, not descended, and it runs until you turn back. Nothing up here hits harder than the Deep — but every room takes a slice off the health you can hold, so what stops you is the air. How high you got is the score.',
+   open:()=>Dungeon.summitOpen(),
+   act:"Dungeon.descend('summit')",
+   label:()=>{ const h=(Game.s.bests&&Game.s.bests.summit)||0;
+               return 'Start the climb'+(h?\` <span class="tag g">best: height \${h}</span>\`:''); },
+   detail:()=>'Endless · thinning air · a fall loses the haul',
+   sealed:'Clear the Cliffs of Change and what lies past them'},
+
+  {id:'arena', nm:'The Arena', col:'var(--gold)', ic:'\\ud83c\\udfdf\\ufe0f',
+   blurb:'Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.',
+   open:()=>Arena.unlocked(),
+   act:"Arena.start()",
+   label:()=>{ const b=(Game.s&&Game.s.arenaBest)||0;
+               return 'Endless Waves'+(b?\` <span class="tag g">best: wave \${b}</span>\`:''); },
+   detail:()=>'Scaling foes · boons every 3 waves · a breather every 5',
+   sealed:'Defeat the Eigen Dragon to open the gates'}
+];
+
 /* Run-scoped boons, drafted three at a time. They stack. */
 const BOONS = [
   {ic:'🩸', nm:'Vigour',     ds:'+25% maximum health, and heal that much now',
@@ -8559,17 +8616,21 @@ const UI = {
         <div class="track thin"><div class="fill" style="width:\${clamp(g.gold/nx.cost*100,0,100)}%;background:linear-gradient(90deg,#5aa9e6,#a06bd6)"></div></div>\`
         :'<hr><div class="small">Every weapon and every plate is yours.</div>'}
     </div>\`;
+    /* The campaign, built into its own string so it can be placed last. It used
+       to be appended straight onto \`out\`, which is what fixed it above the
+       settings and made the order impossible to change without moving it. */
+    let realms='';
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
-      out+=\`<div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
+      realms+=\`<div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
             <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}</div>
             <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div>\`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
         const open = unlocked && prevDone;
-        out+=\`<div class="node \${open?'':'locked'} \${done?'done':''}" onclick="Battle.begin(\${ri},\${fi})">
+        realms+=\`<div class="node \${open?'':'locked'} \${done?'done':''}" onclick="Battle.begin(\${ri},\${fi})">
           <div class="ico" style="font-size:24px">\${f.boss?'👑':'👾'}</div>
           <div style="flex:1">
             <div class="nm">\${f.nm} \${done?'<span class="tag g">cleared</span>':''}\${f.boss?'<span class="tag r">boss</span>':''}</div>
@@ -8579,11 +8640,11 @@ const UI = {
         </div>\`;
       });
     });
-    // The Deep — the core run loop, opened by the first realm's boss.
-    // A knight who never finished the cellar is offered it back, at the top,
-    // before anything else — but the map is not locked behind it. Someone who
-    // walked out early should be able to get on with the game.
-    if(!g.firstRun && !Dungeon.pending()) out=\`
+    /* A knight who never finished the cellar is offered it back before anything
+       else — but the map is not locked behind it. Someone who walked out early
+       should be able to get on with the game. */
+    let head='';
+    if(!g.firstRun && !Dungeon.pending()) head+=\`
       <div class="node" style="border-color:var(--gold-dk)" onclick="Quartermaster.open()">
         <div class="ico" style="font-size:24px">🗝️</div>
         <div style="flex:1">
@@ -8591,14 +8652,13 @@ const UI = {
           <div class="dt">Three rooms in the cellar — nothing down there can finish you</div>
         </div>
         <div style="font-size:20px;color:var(--dim)">▶</div>
-      </div>\` + out;
-    const dOpen=Dungeon.unlocked(), pend=Dungeon.pending();
-    out+=\`<div class="realmhdr"><span class="dot" style="background:#b48bec"></span>
-          <h2 style="color:#b48bec">The Deep</h2>\${dOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">A seeded descent. Every haul rides unbanked until you climb out — press deeper for more, but a fall loses it all.</div>\`;
-    // A descent left in progress is the first thing offered — the pot is still
-    // riding on it, and the room is rebuilt exactly as it was left.
-    if(dOpen && pend) out+=\`
+      </div>\`;
+
+    /* A descent left in progress goes above everything, including the daily —
+       there is a pot riding on it, and every other thing on this page will
+       still be here afterwards. */
+    const pend = Dungeon.pending();
+    if(pend) head+=\`
       <div class="node" onclick="Dungeon.resume()" style="border-color:#b48bec">
         <div class="ico" style="font-size:24px">🕯️</div>
         <div style="flex:1">
@@ -8610,80 +8670,40 @@ const UI = {
       <div class="center" style="margin:-2px 0 6px">
         <span class="kbd" onclick="event.stopPropagation();Dungeon.abandon()">✖ Abandon it (the haul is lost)</span>
       </div>\`;
-    out+=\`
-      <div class="node \${dOpen?'':'locked'}" onclick="Dungeon.descend()">
-        <div class="ico" style="font-size:24px">⛏️</div>
-        <div style="flex:1">
-          <div class="nm">\${pend?'Start a new descent':'Descend the Deep'}</div>
-          <div class="dt">\${!dOpen?'Clear the first realm to find the shaft'
-                            :pend?'Abandons the descent you left behind':'Scaling rooms · press-on / leave · your haul is at risk'}</div>
-        </div>
-        <div style="font-size:20px;color:var(--dim)">\${dOpen?'▶':'🔒'}</div>
-      </div>\`;
-    /* The Sanctum — the second setting, opened by the second realm's boss. Its
-       own node rather than a room inside the Deep, because a setting is a place
-       you decide to go to, and that decision is the thing the web is made of. */
-    const sOpen = Dungeon.sanctumOpen();
-    out+=\`<div class="realmhdr"><span class="dot" style="background:#8ad4ff"></span>
-          <h2 style="color:#8ad4ff">The Sanctum</h2>\${sOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">Six rooms of fields, flows and things that grow without bound.
-        It pays in <b>essence</b> rather than gold — and it is where Scrying is learned.</div>
-      <div class="node \${sOpen?'':'locked'}" onclick="Dungeon.descend('sanctum')">
-        <div class="ico" style="font-size:24px">🔮</div>
-        <div style="flex:1">
-          <div class="nm">Enter the Sanctum</div>
-          <div class="dt">\${sOpen?'Six rooms · 🜄 essence every room · a fall loses it all'
-                                :'Clear the Matrix Marches to be admitted'}</div>
-        </div>
-        <div style="font-size:20px;color:var(--dim)">\${sOpen?'▶':'🔒'}</div>
+
+    /* Then the places that are open, ABOVE the campaign rather than below it.
+       A new knight has none of these and sees the realms straight away, which
+       is right — there is nowhere else to go yet. The moment the Deep opens it
+       arrives at the top, where the thing you are actually doing belongs. */
+    const openDests = DESTINATIONS.filter(d=>d.open());
+    for(const d of openDests){
+      out += \`<div class="realmhdr"><span class="dot" style="background:\${d.col}"></span>
+            <h2 style="color:\${d.col}">\${d.nm}</h2></div>
+          <div class="small" style="margin:2px 0 4px">\${d.blurb}</div>
+          <div class="node" onclick="\${d.act}">
+            <div class="ico" style="font-size:24px">\${d.ic}</div>
+            <div style="flex:1">
+              <div class="nm">\${d.label()}</div>
+              <div class="dt">\${d.detail()}</div>
+            </div>
+            <div style="font-size:20px;color:var(--dim)">▶</div>
+          </div>\`;
+    }
+
+    /* And the ones still shut, as a single line rather than five dead nodes.
+       What a sealed place needs to say is what to go and do about it, and that
+       is one sentence — spending a screenful of locked buttons on it is how the
+       map got long in the first place. */
+    const shut = DESTINATIONS.filter(d=>!d.open());
+    if(shut.length) out += \`<div class="panel" style="padding:10px 12px">
+        <div class="small"><b>🔒 Still sealed:</b> \${shut.map(d=>d.nm).join(', ')}.</div>
+        <div class="small" style="margin-top:3px;opacity:.8">Next: \${shut[0].sealed}.</div>
       </div>\`;
 
-    const tOpen = Dungeon.tavernOpen(), buy = Dungeon.buyIn(SETTINGS.tavern);
-    out+=\`<div class="realmhdr"><span class="dot" style="background:#ffd479"></span>
-          <h2 style="color:#ffd479">The Tavern</h2>\${tOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">Five tables. Nothing here can kill you — but you
-        buy in at the door, and everything after that is played for the pot. The only place
-        you can walk out <b>poorer</b> than you walked in.</div>
-      <div class="node \${tOpen?'':'locked'}" onclick="Dungeon.descend('tavern')">
-        <div class="ico" style="font-size:24px">🎲</div>
-        <div style="flex:1">
-          <div class="nm">Take a seat</div>
-          <div class="dt">\${tOpen?\`Buy in for \${buy} gold · three stakes a hand · the odds are shown\`
-                                :'Clear the Cliffs of Change to be let in'}</div>
-        </div>
-        <div style="font-size:20px;color:var(--dim)">\${tOpen?'▶':'🔒'}</div>
-      </div>\`;
-
-    const uOpen = Dungeon.summitOpen(), highest = (g.bests && g.bests.summit) || 0;
-    out+=\`<div class="realmhdr"><span class="dot" style="background:#8fd0ff"></span>
-          <h2 style="color:#8fd0ff">The Summit</h2>\${uOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">Climbed, not descended, and it runs until you turn
-        back. Nothing up here hits harder than the Deep — but every room takes a slice off the
-        health you can hold, so what stops you is the air. How high you got is the score.</div>
-      <div class="node \${uOpen?'':'locked'}" onclick="Dungeon.descend('summit')">
-        <div class="ico" style="font-size:24px">🗻</div>
-        <div style="flex:1">
-          <div class="nm">Start the climb \${highest?\`<span class="tag g">best: height \${highest}</span>\`:''}</div>
-          <div class="dt">\${uOpen?'Endless · thinning air · a fall loses the haul'
-                                :'Clear the Cliffs of Change and what lies past them'}</div>
-        </div>
-        <div style="font-size:20px;color:var(--dim)">\${uOpen?'▶':'🔒'}</div>
-      </div>\`;
-
-    // The Arena sits past the campaign, opened by the last boss.
-    const aOpen=Arena.unlocked(), best=g.arenaBest||0;
-    out+=\`<div class="realmhdr"><span class="dot" style="background:var(--gold)"></span>
-          <h2 style="color:var(--gold)">The Arena</h2>\${aOpen?'':'<span class="tag">🔒 sealed</span>'}</div>
-      <div class="small" style="margin:2px 0 4px">Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.</div>
-      <div class="node \${aOpen?'':'locked'}" onclick="Arena.start()">
-        <div class="ico" style="font-size:24px">🏟️</div>
-        <div style="flex:1">
-          <div class="nm">Endless Waves \${best?\`<span class="tag g">best: wave \${best}</span>\`:''}</div>
-          <div class="dt">\${aOpen?'Scaling foes · boons every 3 waves · a breather every 5':'Defeat the Eigen Dragon to open the gates'}</div>
-        </div>
-        <div style="font-size:20px;color:var(--dim)">\${aOpen?'▶':'🔒'}</div>
-      </div>\`;
-    list.innerHTML=out;
+    // The campaign last: it is the long part, and by the time it is long the
+    // player has somewhere else to be.
+    out += realms;
+    list.innerHTML = head + out;
   },
   renderShop(){
     const g=Game.s, out=[];
