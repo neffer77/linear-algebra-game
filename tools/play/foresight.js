@@ -90,9 +90,15 @@ module.exports = {
         // build room three the way nextRoom would, and compare
         const set = SETTINGS.deep;
         R.seed(((Dungeon.run.seed ^ (3 * 2654435761)) >>> 0) || 1);
+        /* Deliberately a SECOND copy of the cascade rather than a call to
+           Dungeon.roomKindAt: the shell and foresight share that function, so
+           asking it what the room is would only prove it agrees with itself.
+           This has to be written out by hand, and kept in step by hand, or the
+           check stops being a check. */
         const real = set.plan ? set.plan[2]
                    : R.chance(set.lockChance) ? 'lock'
-                   : R.chance(set.seamChance || 0) ? 'seam' : 'monster';
+                   : R.chance(set.seamChance || 0) ? 'seam'
+                   : R.chance(set.sigilChance || 0) ? 'sigil' : 'monster';
         const realFoe = real === 'monster' ? WaveEngine.foe(3, set.waves) : null;
         R.unseed();
         out.checked++;

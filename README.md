@@ -368,7 +368,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Six suites, ~106 checks, about half a
+loop only exists once the page is running. Sixteen suites, 628 checks, about half a
 minute:
 
 | suite | what it holds to |
@@ -379,6 +379,16 @@ minute:
 | `run` | quit in room three, reload the page, resume the *same* room three |
 | `frontdoor` | a blank browser reaches a finished first run, at 320px, through buttons alone |
 | `adapt` | difficulty, topic choice and teaching all track effective mastery |
+| `skills` | charges come from mastery and nothing else; no ability makes a fight shorter |
+| `chain` | ore out of the Deep, runes back into it — the material loop closes |
+| `foresight` | a reading names the room you actually meet, every time |
+| `tavern` | the odds printed on a stake are the odds the stake pays at |
+| `passage` | permanent skills are true of you everywhere, and fade with the maths |
+| `rumours` | what a stranger sells is true of the rooms it describes |
+| `summit` | thin air gives the climb a top, and the top rises with skill |
+| `sigil` | a ward is cut out of the strand Ward is made of, and rides on the run |
+| `map` | the places you can go are above the campaign, not below thirty-two fights |
+| `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
 with `npm run test:play -- --suite run`, or watch it with `PLAY_HEADED=1`.
