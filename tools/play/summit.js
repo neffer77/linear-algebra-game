@@ -241,7 +241,9 @@ module.exports = {
           if (!r) break;
           const at = d - 2;
           if (!champ && r.name === 'monster' && r.foe && r.foe.boss) champ = at;
-          if (!pays && (r.name === 'lock' || r.name === 'seam')) pays = at;
+          // A room that gives you something and cannot kill you doing it: the
+          // ward-stone belongs here as much as the chest and the seam do.
+          if (!pays && (r.name === 'lock' || r.name === 'seam' || r.name === 'sigil')) pays = at;
         }
         const said = /<b>(\d+)<\/b> rooms? to the next champion/.exec(line);
         const saidPays = /<b>(\d+)<\/b> rooms? to the next room that pays/.exec(line);

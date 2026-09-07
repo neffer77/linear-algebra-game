@@ -50,6 +50,31 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
      knight fell. Mirrors Battle's turn structure exactly: a correct answer
      strikes, a wrong one is struck, and the foe's wind-up lands on its own
      clock whatever you answered. */
+  /* A blow, after the ward-stones have had their say. Mirrors Battle.takeHit
+     for the one thing this harness models — a banked ward halves a blow and is
+     spent. The beast and the pressed Ward are deliberately absent: both come
+     from skills, and a sweep that hands the model player every skill measures a
+     game only the best-equipped knight is playing. */
+  function takeHit(st, raw) {
+    if (!st.wards) return raw;
+    st.wards--;
+    return Math.max(1, Math.round(raw / 2));
+  }
+
+  /* A ward-stone, inscribed. Each clean answer cuts a layer and stakes it
+     against the next, so pressing on is worth it exactly when acc > 0.5 — the
+     bet is n for n+1 at p, worth n + 2p - 1, and n falls out of it. That is the
+     rule this player follows, and it is why the room is a teaching room. */
+  function inscribe(acc, rnd, cap) {
+    let layers = 0;
+    for (let i = 0; i < cap; i++) {
+      if (i > 0 && acc <= 0.5) break;              // seal rather than stake it
+      if (rnd() < acc) layers++;
+      else { layers = Math.max(0, layers - 1); break; }
+    }
+    return layers;
+  }
+
   function fightRoom(st, foe, acc, rnd) {
     let ehp = foe.hp, combo = 0, charge = 0, slamNext = false;
     const chargeMax = foe.boss ? 2 : 3;
@@ -67,11 +92,11 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         ehp -= Combat.strike(st.dmg, speed, combo, crit, false, 1, 0.9 + rnd() * 0.2);
       } else {
         combo = 0;
-        st.hp -= Combat.foeHit(foe.atk, st.def, 0.85 + rnd() * 0.3);
+        st.hp -= takeHit(st, Combat.foeHit(foe.atk, st.def, 0.85 + rnd() * 0.3));
       }
       if (slamNext) {
         slamNext = false;
-        st.hp -= Combat.slam(foe.atk, st.def, ok);
+        st.hp -= takeHit(st, Combat.slam(foe.atk, st.def, ok));
       } else if (++charge >= chargeMax) { charge = 0; slamNext = true; }
       if (st.hp <= 0) return null;
     }
@@ -95,29 +120,35 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
 
   function descend(acc, seed, bankAt) {
     const rnd = mkRng(seed);
-    const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def };
+    const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def, wards: 0 };
     let pot = 0, depth = 0;
     while (depth < bankAt) {
       depth++;
       // Height is applied before the room, exactly as nextRoom applies it.
       st.hp = Math.min(st.hp, ceilingAt(depth));
       if (st.hp <= 0) return { banked: 0, depth, died: true };
-      /* Rooms are laid out by the same seeded roll the real Dungeon uses —
-         kept in step with Dungeon.nextRoom by hand, because the shell picks
-         its kind inline. If a room kind is added there and not here, this
-         harness quietly starts measuring a game nobody is playing. */
+      /* The room's kind comes from the shell's own function rather than from a
+         copy of the cascade kept in step by hand. That copy used to live here,
+         and it was one room kind away from quietly measuring a game nobody was
+         playing. */
       R.seed(((seed ^ (depth * 2654435761)) >>> 0) || 1);
-      const isLock = depth >= 2 && R.chance(set.lockChance);
-      const isSeam = !isLock && depth >= 2 && R.chance(set.seamChance || 0);
+      const kind = Dungeon.roomKindAt(depth, set);
       const foe = WaveEngine.foe(depth, CURVE);
       R.unseed();
-      if (isLock) {
+      if (kind === 'sigil') {
+        // A ward-stone pays nothing into the pot. What it banks is damage that
+        // will not land later, which is the whole reason it is modelled here:
+        // it changes how deep it is rational to go without changing the yield.
+        st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
+        continue;
+      }
+      if (kind === 'lock') {
         // A chest is one riddle: no foe, so it cannot kill you. It pays the
         // lock room's yield when answered, and nothing when fumbled.
         if (rnd() < acc) pot += Math.round(60 + depth * 20);
         continue;
       }
-      if (isSeam) {
+      if (kind === 'seam') {
         // A seam yields ore, not gold, so it adds nothing to the pot at risk —
         // but it also cannot kill you, which is what makes it matter here: it
         // is a free room, and free rooms make pressing on cheaper.
@@ -178,7 +209,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
        how much deeper it becomes rational to go. */
     function scryRun(acc, seed, bankAt) {
       const rnd = mkRng(seed);
-      const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def };
+      const st = { hp: BASE.maxHp, dmg: BASE.dmg, crit: BASE.crit, def: BASE.def, wards: 0 };
       let pot = 0, depth = 0, turned = false;
       /* Charges are the whole balance of this ability. A knight solid in the
          Sanctum's mathematics carries three readings for an ENTIRE descent, not
@@ -190,13 +221,13 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
       while (depth < bankAt) {
         const next = depth + 1;
         R.seed(((seed ^ (next * 2654435761)) >>> 0) || 1);
-        const nLock = next >= 2 && R.chance(set.lockChance);
-        const nSeam = !nLock && next >= 2 && R.chance(set.seamChance || 0);
+        const nKind = Dungeon.roomKindAt(next, set);
         const nFoe = WaveEngine.foe(next, CURVE);
         R.unseed();
+        const fight = nKind === 'monster';
         // A player spends a reading when they feel the risk, not at random.
         const worried = st.hp < BASE.maxHp * 0.6;
-        if (!nLock && !nSeam && charges > 0 && worried) {
+        if (fight && charges > 0 && worried) {
           charges--;
           const per = Math.max(1, nFoe.atk - BASE.def);
           if (Math.floor(st.hp / per) <= 3) { turned = true; break; }
@@ -208,8 +239,12 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
            heights where the reading is supposed to matter most. */
         st.hp = Math.min(st.hp, ceilingAt(depth));
         if (st.hp <= 0) return { banked: 0, depth, died: true, turned };
-        if (nLock) { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
-        if (nSeam) continue;
+        if (nKind === 'lock') { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
+        if (nKind === 'seam') continue;
+        if (nKind === 'sigil') {
+          st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
+          continue;
+        }
         if (fightRoom(st, nFoe, acc, rnd) === null) return { banked: 0, depth, died: true, turned };
         pot += nFoe.gold;
       }

@@ -92,7 +92,12 @@ module.exports = {
       Dungeon.hearRumours();
       out.through = Dungeon.heard.through;
       out.from = Dungeon.heard.from;
-      out.bothShown = /Scry|blows|health/.test(document.getElementById('resultBody').innerText)
+      /* Both readings, each in its own panel. Matched on the two icons rather
+         than on words out of the readings themselves: what Farsight says
+         depends on which room it landed on, so a phrase-match here quietly
+         becomes a test of the seed rather than of the fork. */
+      const html = document.getElementById('resultBody').innerHTML;
+      out.bothShown = html.indexOf('🔭') >= 0 && html.indexOf('🗣️') >= 0
                    && /rooms hold|room holds/.test(document.getElementById('resultBody').innerText);
 
       // walk one room: the scried reading is gone, the rumour is not

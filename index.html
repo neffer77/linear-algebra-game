@@ -5351,6 +5351,7 @@ const Battle = {
     const add=(k,label,enabled,fn)=>{
       const d=document.createElement('div');
       d.className='pw'+(enabled?'':' off'); d.innerHTML=label;
+      d.dataset.pw=k;                          // what this is, for anyone reading the bar
       d.onclick=fn; bar.appendChild(d);
     };
     /* Skill abilities come first: they are what this knight KNOWS, and they
@@ -5367,6 +5368,12 @@ const Battle = {
     add('insight',`${ITEMS.insight.ic} Insight ×${it.insight}`, it.insight>0 && !this.answered, ()=>Battle.useInsight());
     add('rage',   `${ITEMS.rage.ic} Rune ×${it.rage}`, it.rage>0 && !this.rage, ()=>Battle.useRage());
     if(it.feather>0) add('feather', `${ITEMS.feather.ic} Feather ×${it.feather}`, false, ()=>{});
+    /* Carried wards are a readout rather than a button, the way the Feather
+       already is: they are not pressed, they spend themselves on the next blow
+       that lands. But they have to be visible, or the strongest thing a knight
+       can be carrying into a fight is a number nobody can see. */
+    const wards=Dungeon.wards();
+    if(wards>0) add('sigil', `🌀 Ward ×${wards}`, false, ()=>{});
   },
 
   /* A raised Ward halves the next blow that actually lands, whichever kind it
@@ -5381,9 +5388,12 @@ const Battle = {
   },
 
   /* A blow the foe throws for missing an answer, run past everything that might
-     stop it. The beast goes first and a raised Ward second, so a knight
-     carrying both never spends the Ward on a blow the beast was going to eat —
-     which would be the worse of the two orders and the easy one to write. */
+     stop it. Three things can, and the order they are tried in is the whole of
+     the design: the beast first, because it costs nothing and is simply true of
+     you; then a raised Ward, because the player pressed it for this blow; then a
+     banked ward-stone layer, because it will still be there for the next one.
+     Cheapest first, so nothing a knight chose is ever spent on a blow something
+     free was going to eat. */
   takeHit(raw){
     if(this.beastLeft){
       this.beastLeft--;
@@ -5391,7 +5401,8 @@ const Battle = {
       setTimeout(()=>this.renderPowers(), 60);
       return 0;
     }
-    return this.spendWard(raw);
+    if(this.wardUp) return this.spendWard(raw);
+    return Dungeon.spendSigil(raw);
   },
 
   /* Spend one use of a skill ability. Charges are per fight and come from
@@ -6342,6 +6353,15 @@ const Runes = {
    the Sanctum feel like the Sanctum: its rooms prefer fields, flows and series,
    without ever excluding the rest — the scheduler treats it as a nudge, which
    is exactly the "relevance" signal it already weighs. */
+/* One named strand, flattened the same way. `settingTopics` describes a PLACE —
+   several strands, the character of the setting. This describes a SKILL: the
+   single body of mathematics one skill is made of, for a room whose whole
+   purpose is to practise it. */
+function strandTopics(name){
+  const s=STRANDS.find(x=>x[0]===name);
+  return (s && s[1].length) ? s[1] : null;
+}
+
 function settingTopics(set){
   if(!set || !set.strands) return null;
   const out=[];
@@ -6831,7 +6851,7 @@ const SETTING_ORDER = [
 const SETTINGS = {
   deep: {
     key:'deep', nm:'The Deep', waves:DEEP_WAVES,
-    canDie:true, rooms:0, lockChance:.26, seamChance:.24
+    canDie:true, rooms:0, lockChance:.26, seamChance:.24, sigilChance:.16
   },
   cellar: {
     key:'cellar', nm:'the cellar', waves:CELLAR_WAVES,
@@ -6873,7 +6893,11 @@ const SETTINGS = {
      not Material — so what it pays is gold, xp, and a number to beat. */
   summit: {
     key:'summit', nm:'the Summit', waves:SUMMIT_WAVES,
-    canDie:true, rooms:0, lockChance:.18, seamChance:.10,
+    /* The stone is commoner here than anywhere. The Summit kills by attrition
+       rather than by any single foe, so a banked half-blow is worth more on the
+       ridge than a chest is — and thin air means the knight who needs it most
+       is the one who has climbed furthest to find it. */
+    canDie:true, rooms:0, lockChance:.18, seamChance:.10, sigilChance:.22,
     strands:['Multivariable & Series','Limits & Derivatives','Applications'],
     thinAir:0.06, airFloor:0.4,
     up:true,                                 // climbed, not descended: changes the words
@@ -7197,6 +7221,51 @@ const RoomKinds = {
     build(rng, depth, set){ return { kind:'rumour', depth }; },
     enter(spec, ctx, done){ Rumour.begin(spec, ctx, done); },
   },
+
+  /* A ward-stone — Spellcraft, and the room this skill has been owed since the
+     first slice. Every other skill is practised somewhere: Delving has the
+     seam, Scrying has the fork, Dice and Cards have the tables. Ward has only
+     ever been a button, drawing on a strand nothing in the game ever asked
+     about on purpose. This is that practice.
+
+     Its questions come from the SKILL's strand rather than the setting's, which
+     is what makes it practice rather than another room that happens to be here
+     — and it reads that strand off the ability table, so if Spellcraft is ever
+     re-pointed at its own topics the stone follows without being told.
+
+     The shape of the decision is its own, too. The seam is all-or-nothing,
+     declared before you start; the wager is a stake chosen before the riddle is
+     seen. Inscribing is neither: each clean answer cuts a layer, and pressing on
+     stakes the last layer you cut against one more. Even money at your own
+     accuracy — the plainest bet in the game, in the one room that pays in
+     survival rather than gold. */
+  sigil: {
+    build(rng, depth, set){
+      /* Every other room passes its topics as `prefer`, which the scheduler
+         treats as a NUDGE — it weights the draw and nothing more, so a Sanctum
+         room asking about matrices now and then is the system working. This
+         room filters instead, and that difference is the whole point of it: a
+         place that practises Spellcraft two riddles in three is not where
+         Spellcraft is practised. Inside the strand the scheduler still chooses
+         normally, so the stone asks about the vectors you are worst at.
+
+         The filter falls back to the open pool if it would empty it, so a
+         knight who has somehow met none of the strand still gets a room rather
+         than a crash. */
+      const open = WaveEngine.pool(Game.s.topicStats);
+      const strand = strandTopics(Sigil.strand()) || [];
+      const pool = open.filter(k => strand.indexOf(k)>=0);
+      const draw = pool.length ? pool : open;
+      const base = clamp(1 + Math.floor(depth/4), 1, 3);
+      const qs=[];
+      for(let i=0;i<Sigil.MAX;i++){
+        const key = Mastery.pick(draw, strand, true);
+        qs.push(buildQuestion(key, Mastery.adjustDiff(key, base)));
+      }
+      return { kind:'sigil', qs, depth };
+    },
+    enter(spec, ctx, done){ Sigil.begin(spec, ctx, done); },
+  },
 };
 
 /* -------------------------------- the seam -------------------------------- */
@@ -7333,6 +7402,201 @@ const Seam = {
     };
     if(outcome.seam && outcome.seam.ore>0){ Sfx.coin(); Haptic.win(); }
     else if(outcome.seam && outcome.seam.cut>0){ Sfx.bad(); Haptic.hurt(); }
+  }
+};
+
+/* ---------------------------- the ward-stone ------------------------------ */
+/* Spellcraft's UI half, and the first room in the game that pays in survival.
+ *
+ * A layer is a banked Ward: it halves one blow, it spends itself, and it lasts
+ * the descent rather than the fight. That last part is what makes it worth
+ * carrying past the room — and what puts it at risk, because a ward rides on
+ * the run exactly as unbanked gold does. Fall and it is gone with everything
+ * else, which is the Deep's whole bargain applied to something other than coin.
+ *
+ * It obeys the rule every skill obeys: pressing on adds a question, so no fight
+ * is ever one riddle shorter for having stood here.
+ */
+const Sigil = {
+  MAX:3,
+  spec:null, ctx:null, done:null, resolved:false, at:0, layers:0,
+
+  /* Which mathematics a ward is made of — read off the ability rather than
+     written down twice. Ward is the skill's only pressable, so its strand IS
+     Spellcraft's strand, and re-pointing one re-points the other. */
+  strand(){ const a=Loadout.byId('ward'); return (a && a.strand) || 'Vectors'; },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done;
+    this.resolved=false; this.at=0; this.layers=0;
+    UI.go('s-lock');                       // the same plain non-combat screen
+    this.open();
+  },
+
+  // How many wards are already riding on this descent, before this stone.
+  carried(){ return Dungeon.wards(); },
+
+  open(){
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🌀</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🪬 ${this.strand()}</span>
+          <span class="pill">🌀 wards ×${this.carried()}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A ward-stone</h2>
+        <div class="sub">Cut a ward into the stone and carry it down with you: each layer
+          halves one blow, whenever it lands, for the rest of the descent.<br><br>
+          Every riddle you answer cuts a layer. Press on for another and you stake the
+          last one you cut — miss, and it cracks along with the one you were reaching for.</div>
+      </div>
+      <button class="btn gold" onclick="Sigil.ask()">🌀 Begin the inscription</button>
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Sigil.walkAway()">Leave the stone unmarked</span>
+      </div>
+      <div style="height:16px"></div>`;
+  },
+
+  ask(){
+    const q=this.spec.qs[this.at];
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🌀</div>
+      <div class="panel">
+        <div class="row" style="justify-content:center;gap:6px;display:flex;margin-bottom:8px">
+          ${this.spec.qs.map((x,i)=>
+            `<span class="rp ${i<this.layers?'done':i===this.at?'now':''}"></span>`).join('')}
+        </div>
+        <h2 style="font-size:17px">${q.topic} <span class="tag">layer ${this.at+1}/${this.MAX}</span></h2>
+        <div class="sub">${this.layers
+          ? `<b>${this.layers}</b> layer${this.layers===1?'':'s'} cut. This one is staked against it.`
+          : 'Nothing cut yet. This one costs you nothing to try.'}</div>
+        <hr>
+        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        <div id="sigilFig"></div>
+        <div id="sigilChoices" style="margin-top:10px"></div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>`;
+    Figure.render(q.fig, document.getElementById('sigilFig'));
+    const box=document.getElementById('sigilChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+  },
+
+  answer(btn, choice){
+    if(this.resolved) return;
+    const q=this.spec.qs[this.at], ok=(choice===q.a);
+    document.querySelectorAll('#sigilChoices .choice').forEach(b=>{
+      b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);       // the stone teaches either way
+    Game.save();
+
+    if(!ok){
+      /* The stake, paid. One layer cracks — never below nothing, so the first
+         riddle is genuinely free and a player meeting the room for the first
+         time cannot be punished for trying it. */
+      const lost=this.layers>0 ? 1 : 0;
+      this.layers-=lost;
+      this.seal(
+        `<div class="center crest">🌀💢</div>
+         <div class="panel center">
+           <h2 style="color:var(--red)">The line breaks</h2>
+           <div class="sub">${q.why[choice]||'that was not the shape of the field'}</div>
+           <hr>
+           <div class="small">The answer was <b>${q.a}</b>. ${q.ex||''}</div>
+           <div class="small" style="margin-top:8px">${lost
+             ? 'A cut layer cracks with it.' : 'Nothing was cut yet, so nothing is lost.'}</div>
+         </div>`);
+      return;
+    }
+
+    this.layers++; this.at++;
+    if(this.at >= this.MAX){
+      this.seal(
+        `<div class="center crest">🌀✨</div>
+         <div class="panel center">
+           <h2 style="color:var(--green)">The stone is full</h2>
+           <div class="sub">Three layers, and no room on it for a fourth.</div>
+         </div>`);
+      return;
+    }
+    setTimeout(()=>this.offer(), 650);
+  },
+
+  /* The fork in miniature, and the reason this room exists: at every step the
+     player is choosing between a ward they hold and a ward they might hold, at
+     odds they set themselves by knowing the mathematics. Both numbers are on
+     the buttons, because a decision you cannot price is not one. */
+  offer(){
+    if(this.resolved) return;
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🌀</div>
+      <div class="panel center">
+        <div class="row" style="justify-content:center;gap:6px;display:flex;margin-bottom:8px">
+          ${this.spec.qs.map((x,i)=>
+            `<span class="rp ${i<this.layers?'done':''}"></span>`).join('')}
+        </div>
+        <h2 style="font-size:18px;color:var(--green)">The line holds</h2>
+        <div class="sub"><b>${this.layers}</b> layer${this.layers===1?'':'s'} cut.
+          One more riddle would make it <b>${this.layers+1}</b> — or crack it back to
+          <b>${this.layers-1}</b>.</div>
+      </div>
+      <button class="btn gold" onclick="Sigil.ask()">🌀 Cut deeper — stake ${this.layers} for ${this.layers+1}</button>
+      <button class="btn ghost" onclick="Sigil.sealNow()">🪬 Seal it at ${this.layers}</button>
+      <div style="height:16px"></div>`;
+  },
+
+  sealNow(){
+    this.seal(
+      `<div class="center crest">🪬</div>
+       <div class="panel center">
+         <h2 style="color:var(--green)">The ward is sealed</h2>
+         <div class="sub">${this.layers} layer${this.layers===1?'':'s'}, and the stone goes quiet.</div>
+       </div>`);
+  },
+
+  /* Only ever offered before the first riddle — once a layer is cut, the way
+     out is `sealNow`, which keeps it. So there is nothing to zero here: a
+     `this.layers=0` on this line would look like the careful thing to write and
+     would in fact be unreachable, which is worse than not writing it. */
+  walkAway(){
+    this.seal(
+      `<div class="center crest">🌀</div>
+       <div class="panel center"><h2>You leave the stone unmarked</h2>
+       <div class="sub">It keeps whatever it was going to give.</div></div>`);
+  },
+
+  /* The room's one report. `ward` is what the SHELL adds to the run — the room
+     never touches the run itself, which is the whole of the Room Contract. */
+  seal(html){
+    const n=this.layers;
+    const topics=this.spec.qs.slice(0, this.at).map(x=>x.key);
+    this.finish({ status:'cleared', quality:n?1:0, topics, yield:{},
+                  ward:n, sigil:{layers:n, asked:this.at} },
+      html + (n ? `<div class="panel center" style="margin-top:10px">
+           <div style="font-weight:800;line-height:1.9;color:#8ad4ff">🌀 +${n} ward${n===1?'':'s'} carried</div>
+           <div class="small" style="margin-top:6px">Each halves one blow, whenever it lands.
+             They ride with the haul — a fall loses them too.</div>
+         </div>` : ''));
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+`<button class="btn gold" id="sigilGo" style="margin-top:12px">Onward →</button>`;
+    document.getElementById('sigilGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    if(outcome.ward>0){ Sfx.coin(); Haptic.win(); }
+    else { Sfx.bad ? Sfx.bad() : 0; Haptic.hurt(); }
   }
 };
 
@@ -7856,6 +8120,8 @@ const ROOM_INTRO = {
     b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'},
   rumour: {ic:'🗣️', t:'A stranger with something to say',
     b:'This table sells information rather than a hand. For a cut of the pot you are carrying, you hear what the remaining hands will ask about — worth paying for only when it would change what you stake. Walking past costs nothing.'},
+  sigil: {ic:'🌀', t:'A ward-stone',
+    b:'No foe, and nothing here pays in gold. Every riddle you answer cuts a layer into the stone, and every layer halves one blow for the rest of the descent. Press on for another and you stake the last one you cut — miss, and it cracks with it. The first is free.'},
   wager: {ic:'🎲', t:'A table, and a bet',
     b:'You price the riddle before you see it. Three stakes, each paying differently, and the table tells you what chance each one needs to be worth taking — measured against what your Ledger says you know. Win and the pot grows. Lose and the stake is gone.'}
 };
@@ -7951,13 +8217,28 @@ const Dungeon = {
      bring, and the topic a table would ask about. Building the whole room here
      would draw questions nobody is going to answer, and would move the mastery
      scheduler's no-repeat cursor while it did it. */
+  /* Which kind of room stands at a depth. One function, called by the shell
+     when it builds a room and by foresight when it reads one, because there is
+     no worse bug in this game than a reading that disagrees with the room — and
+     two hand-kept copies of a cascade is precisely how that happens. Must be
+     called with the room seed live: the rolls are part of the seeded stream.
+
+     A setting with a plan lays its rooms out by hand. Otherwise depth one is
+     always a fight, and past that each kind gets a roll in turn. */
+  roomKindAt(depth, set){
+    if(set.plan) return set.plan[depth-1];
+    if(depth<2) return 'monster';
+    if(R.chance(set.lockChance)) return 'lock';
+    if(R.chance(set.seamChance||0)) return 'seam';
+    if(R.chance(set.sigilChance||0)) return 'sigil';
+    return 'monster';
+  },
+
   peek(depth){
     const set=this.set();
     if(depth<1 || (set.rooms && depth>set.rooms)) return null;
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
-    const name = set.plan ? set.plan[depth-1]
-               : (depth>=2 && R.chance(set.lockChance)) ? 'lock'
-               : (depth>=2 && R.chance(set.seamChance||0)) ? 'seam' : 'monster';
+    const name = this.roomKindAt(depth, set);
     let foe=null, topic=null;
     if(name==='monster') foe=WaveEngine.foe(depth, set.waves);
     if(name==='wager'){
@@ -7996,6 +8277,8 @@ const Dungeon = {
       line = `A <b>table</b>. No foe — but the pot is what is at risk.`;
     } else if(next.name==='rumour'){
       line = `A <b>stranger</b> selling what they know. No foe, and nothing at risk but a cut.`;
+    } else if(next.name==='sigil'){
+      line = `A <b>ward-stone</b>. No foe — you carry ${this.wards()} ward${this.wards()===1?'':'s'} already.`;
     } else {
       line = `An <b>ore seam</b>. No foe — only the ore is at risk.`;
     }
@@ -8022,7 +8305,12 @@ const Dungeon = {
       seen++;
       const at=d-this.run.depth;
       if(!champ && r.name==='monster' && r.foe && r.foe.boss) champ=at;
-      if(!pays && (r.name==='lock' || r.name==='seam')) pays=at;
+      /* "Pays" means a room that gives you something and cannot kill you doing
+         it. A ward-stone counts: on a climb, where the thing that kills you is
+         the accumulated blows rather than any one foe, a stone is worth more
+         than a chest — so leaving it out would have Sighting quietly walk a
+         climber past the best room on the ridge. */
+      if(!pays && (r.name==='lock' || r.name==='seam' || r.name==='sigil')) pays=at;
       if(champ && pays) break;
     }
     const far=(n,what)=> n
@@ -8069,7 +8357,8 @@ const Dungeon = {
     const others={};
     for(const r of rooms) if(r.name!=='monster') others[r.name]=(others[r.name]||0)+1;
     const NAME={lock:['a chest','chests'], seam:['a seam','seams'],
-                wager:['a table','tables'], rumour:['a rumour','rumours']};
+                wager:['a table','tables'], rumour:['a rumour','rumours'],
+                sigil:['a ward-stone','ward-stones']};
     const bits=[];
     if(fights.length) bits.push(`<b>${fights.length}</b> fight${fights.length===1?'':'s'}`);
     for(const k in others){
@@ -8086,6 +8375,23 @@ const Dungeon = {
       if(champ) line += ' One of them is a <b>champion</b>.';
     }
     return line;
+  },
+
+  /* Wards cut at the ward-stones and not yet spent. Six is two full stones —
+     enough that a good run feels armoured, short of the point where blows stop
+     landing at all. Foresight is rationed per descent for the same reason. */
+  WARD_CAP:6,
+  wards(){ return (this.active && this.run && this.run.wards) || 0; },
+
+  /* Spend one on a blow. Called from Battle, after the beast and after a raised
+     Ward, so the two things a player chose to have are always used before the
+     thing that was banked for them. */
+  spendSigil(dmg){
+    if(this.wards()<1) return dmg;
+    this.run.wards--;
+    Anim.float(560, H-260, 'THE WARD', '#b48bec');
+    setTimeout(()=>Battle.renderPowers(), 60);
+    return Math.max(1, Math.round(dmg/2));
   },
 
   /* What a setting costs to walk into. The Tavern is the only one that charges,
@@ -8108,7 +8414,7 @@ const Dungeon = {
     // Climbing starts you on ground you have already banked from, so `depth`
     // opens above zero and nextRoom steps into the first room past it.
     const from = Passage.startDepth(SETTINGS[key]);
-    this.run = { setting:key, seed, depth:from, paid:stake, from,
+    this.run = { setting:key, seed, depth:from, paid:stake, from, wards:0,
                  unbanked:{ gold:stake, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
@@ -8134,6 +8440,7 @@ const Dungeon = {
                    gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
                    paid:this.run.paid||0,       // what the door cost, for the net at the end
                    from:this.run.from||0,       // where Climbing set you down
+                   wards:this.run.wards||0,     // ward-stone layers still uncracked
                    hp:Math.round(Game.s.hp) };
     Game.save();
   },
@@ -8147,8 +8454,14 @@ const Dungeon = {
   resume(){
     const r=this.pending();
     if(!r) return;
+    /* Wards ARE carried across a reload, where a spent foresight charge is not.
+       The difference is what each one is: a charge is a decision you get to
+       make again, and re-arming it costs the player nothing they earned. A ward
+       was cut out of three riddles answered correctly, so dropping it on a
+       reload would take back work — and keeping it is the same rule the
+       unbanked pot already follows. */
     this.run = { setting:r.setting||'deep', seed:r.seed, depth:r.done||0,
-                 paid:r.paid||0, from:r.from||0,
+                 paid:r.paid||0, from:r.from||0, wards:r.wards||0,
                  unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);
@@ -8194,13 +8507,10 @@ const Dungeon = {
     Game.s.maxHp = Game.maxHp();
     Game.s.hp = Math.min(Game.s.hp, Game.s.maxHp);
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
-    // A setting with a plan lays its rooms out by hand — the cellar puts a
-    // chest in the middle so a first run is guaranteed to meet one. Otherwise
-    // depth one opens on a fight and a locked chest surfaces now and then, on a
-    // roll that is part of the seeded build, so a run replays identically.
-    const name = set.plan ? set.plan[depth-1]
-               : (depth>=2 && R.chance(set.lockChance)) ? 'lock'
-               : (depth>=2 && R.chance(set.seamChance||0)) ? 'seam' : 'monster';
+    // The cellar puts a chest in the middle so a first run is guaranteed to
+    // meet one; elsewhere the kind is a seeded roll, so a run replays
+    // identically — and foresight reads it through the same function.
+    const name = this.roomKindAt(depth, set);
     const kind = RoomKinds[name] || RoomKinds.monster;
     const spec = kind.build(R, depth, set);
     R.unseed();
@@ -8228,6 +8538,11 @@ const Dungeon = {
       const y=outcome.yield||{};
       this.run.unbanked.gold += y.gold||0;
       this.run.unbanked.xp   += y.xp||0;
+      // A ward-stone pays in protection rather than coin, and the shell applies
+      // it for the same reason it applies the gold: the room reports, the run
+      // records. Capped so a lucky stretch of stones cannot make a knight
+      // effectively unhittable for the rest of a descent.
+      if(outcome.ward) this.run.wards = Math.min(this.WARD_CAP, (this.run.wards||0) + outcome.ward);
       // The Sanctum pays in essence for every room you get through, banked with
       // the rest — so a fall there costs the essence too.
       if(set.essencePerRoom)
@@ -8307,6 +8622,10 @@ const Dungeon = {
       const ore = (outcome.seam && outcome.seam.ore) || 0;
       icon = ore?'🪨':'⛰️';
       line = (ore ? `The seam gives up ${ore} ore. ` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.kind==='sigil'){
+      const n = (outcome.sigil && outcome.sigil.layers) || 0;
+      icon = n?'🪬':'🌀';
+      line = (n ? `The ward holds at ${n} layer${n===1?'':'s'}. ` : 'The stone stays blank. ') + PASSAGE;
     } else if(sp.kind==='rumour'){
       const r = outcome.rumour || {paid:0, heard:0};
       icon = r.paid?'🗣️':'🤫';
@@ -8333,6 +8652,7 @@ const Dungeon = {
           <div class="coin">🎒 ${u.gold} gold carried</div>
           <div style="color:var(--blue)">✦ ${u.xp} experience carried</div>
           ${u.essence?`<div style="color:#b48bec">🜄 ${u.essence} essence carried</div>`:''}
+          ${this.wards()?`<div style="color:#8ad4ff">🌀 ${this.wards()} ward${this.wards()===1?'':'s'} carried</div>`:''}
         </div>
         <hr>
         <div class="small">❤️ ${Math.round(g.hp)}/${g.maxHp} · this haul is <b>at risk</b> until you climb out</div>
