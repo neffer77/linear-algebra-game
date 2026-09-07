@@ -116,6 +116,12 @@ jobs:
       - name: Check the climb still has a top
         run: npm run balance -- --setting summit --lvl 14 --weapon 4 --armor 4 --depth 40
 
+      # And of the Wilds, whose danger rises and falls on a period rather than
+      # climbing. A swell is easy to tune into a place that is either never
+      # dangerous or never safe, and neither is a decision.
+      - name: Check the swell still rewards skill
+        run: npm run balance -- --setting wilds --lvl 12 --weapon 3 --armor 3 --depth 40
+
   build:
     needs: [validate, playthrough]
     runs-on: ubuntu-latest

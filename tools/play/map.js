@@ -174,6 +174,8 @@ module.exports = {
           typeof d.detail === 'function' && typeof d.act === 'string'),
         // every label and detail renders without throwing, with real state behind it
         labels: DESTINATIONS.map(d => d.label()),
+        byId: Object.fromEntries(DESTINATIONS.map(d =>
+          [d.id, { label: d.label(), detail: d.detail() }])),
         details: DESTINATIONS.map(d => d.detail()),
         // and every setting a knight can descend into has a node
         settingsCovered: Object.keys(SETTINGS)
@@ -181,18 +183,22 @@ module.exports = {
           .every(k => DESTINATIONS.some(d => d.id === k))
       };
     });
-    t.eq('five destinations', table.count, 5);
-    t.eq('in the order they open', table.ids, ['deep', 'sanctum', 'tavern', 'summit', 'arena']);
+    t.eq('six destinations', table.count, 6);
+    t.eq('in the order they open', table.ids,
+      ['deep', 'sanctum', 'tavern', 'summit', 'wilds', 'arena']);
     t.ok('each is fully described by the table', table.everyOneComplete);
     t.ok('every label renders', table.labels.every(l => typeof l === 'string' && l.length),
       JSON.stringify(table.labels));
+    /* Looked up by id rather than by position: the table grows with every
+       setting, and an index here would quietly start reading the wrong row the
+       next time one is appended. */
     t.ok('and shows the record where there is one',
-      /height 9/.test(table.labels[3]) && /wave 17/.test(table.labels[4]),
+      /height 9/.test(table.byId.summit.label) && /wave 17/.test(table.byId.arena.label),
       JSON.stringify(table.labels));
     t.ok('every detail renders', table.details.every(d => typeof d === 'string' && d.length),
       JSON.stringify(table.details));
     t.ok('and the Tavern quotes the buy-in it will actually charge',
-      /100 gold/.test(table.details[2]), table.details[2]);
+      /100 gold/.test(table.byId.tavern.detail), table.byId.tavern.detail);
     t.ok('every setting you can descend into has a way in from the map',
       table.settingsCovered);
   }

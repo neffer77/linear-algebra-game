@@ -6204,6 +6204,22 @@ const SKILL_ABILITIES = [
    ready(){ return Dungeon.active && !Dungeon.sighted; },
    go(){ Dungeon.takeSighting(); }},
 
+  /* The fourth Foresight ability, and the only one that reads a SHAPE rather
+     than a place. Farsight names one room; Rumours totals three; Sighting gives
+     two distances. Tracking gives none of those — it says how the danger out
+     here is moving: what its period is, where in that period you are standing,
+     and therefore whether the next stretch worsens or eases.
+
+     That is worthless in a setting that only climbs, and it is the whole of the
+     Wilds, where the herd circles. Four abilities, four different questions,
+     and the reason each is worth a slot beside the others rather than instead
+     of them. */
+  {id:'tracking', nm:'Tracking', ic:'🐾', skill:'Tracking', strand:'Eigen & Subspaces',
+   where:'fork',
+   ds:'Read the swell: how long its turn is, where in it you stand, and whether what is ahead worsens or eases.',
+   ready(){ return Dungeon.active && !Dungeon.tracked; },
+   go(){ Dungeon.takeTracking(); }},
+
   {id:'dice', nm:'Dice', ic:'🎲', skill:'Dice', strand:'Integrals',
    ds:'Stake the next strike: triple damage if you are right, and the foe strikes twice if you are not.',
    ready(){ return !Battle.diceUp && !Battle.answered; },
@@ -6709,11 +6725,24 @@ const WaveEngine = {
     return met.length>=12 ? met : all;
   },
 
+  /* Where in a curve's swell step `n` falls, as a multiplier. A curve without
+     one returns 1 at every step, so this is a no-op everywhere but the Wilds.
+
+     The swell is the Wilds' whole character: the herd circles, so danger rises
+     and falls on a period instead of climbing forever. It multiplies health and
+     reach and deliberately NOT reward — a trough that paid less would just be a
+     slower stretch, where what it actually is is a safer one. */
+  swell(n, c){
+    if(!c.swell) return 1;
+    return 1 + c.swell*Math.sin(2*Math.PI*(n-1)/c.swellEvery);
+  },
+
   /* The foe for step `n` (1-based), shaped by escalation curve `c`. */
   foe(n, c){
     const champion = n % c.championEvery === 0;
-    const hp  = Math.round((c.hp0  + n*c.hpPer)  * (champion?c.champHp:1));
-    const atk = Math.round(c.atk0 * Math.pow(c.atkGrow, n-1) * (champion?c.champAtk:1));
+    const sw = this.swell(n, c);
+    const hp  = Math.round((c.hp0  + n*c.hpPer)  * sw * (champion?c.champHp:1));
+    const atk = Math.round(c.atk0 * Math.pow(c.atkGrow, n-1) * sw * (champion?c.champAtk:1));
     return {
       nm:(champion?'':R.pick(c.adj)+' ')+R.pick(c.noun),
       art:R.pick(c.art), col:R.pick(c.col),
@@ -6827,6 +6856,38 @@ const SUMMIT_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Wilds' curve, and the first that does not simply climb.
+ *
+ * Every other setting gets harder monotonically: the Deep and the Summit ramp,
+ * the Summit additionally takes health away. The Wilds circles. A herd moves
+ * through it on a period, so the ramp underneath is gentle and what sits on top
+ * of it is a swell — nine rooms from crest to crest, a third again as dangerous
+ * at the peak as at the trough.
+ *
+ * That is a different fork question, and it is the only reason this setting
+ * exists. In the Deep you ask "can I take the next room". Here the next room is
+ * not the point: what decides a run is whether the stretch AHEAD is rising or
+ * easing, and one room's reading cannot tell you that. Which is what Tracking
+ * is for — the ability whose whole job is to find a period and say where in it
+ * you stand.
+ *
+ * It is a LONG place on purpose. tools/balance.js reads break-even out at
+ * 9/11/13/19/26 as accuracy climbs — a wider spread than anywhere else, and a
+ * walk of about three turns of the herd at the top end. That length is the
+ * point rather than a side effect: a period nobody goes round twice is not a
+ * period, and Tracking would have nothing to be right about in a setting you
+ * leave before the ground has finished turning once. */
+const WILDS_WAVES = {
+  championEvery:7,
+  hp0:38,  hpPer:17, champHp:1.6,
+  atk0:8,  atkGrow:1.07, champAtk:1.25,
+  gold0:52, goldPer:19,
+  xp0:30,   xpPer:11,
+  champReward:2,
+  swell:0.34, swellEvery:9,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* The order the codec writes per-setting depth records in. It is a list of its
    own rather than Object.keys(SETTINGS) because the codec has to be readable
    without the rest of the game around it — the verification harness loads it
@@ -6841,7 +6902,8 @@ const SETTING_ORDER = [
   'cellar',
   'sanctum',
   'tavern',
-  'summit'
+  'summit',
+  'wilds'
 ];
 
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
@@ -6908,6 +6970,23 @@ const SETTINGS = {
        the right place rather than failing a setting for not answering a
        question nobody asked it. */
     foresight:'sighting'
+  },
+  /* The Wilds: open country, walked rather than descended, and the first place
+     whose danger does not only grow. A herd circles it on a period, so the
+     ground ahead is sometimes rising and sometimes easing — and the fork stops
+     being "can I take the next room" and becomes "is this stretch getting worse
+     or better", which is a question no one-room reading can answer.
+
+     Like the Tavern and the Summit it pays no material, for the same stated
+     reason: what is learned out here is Tracking and Beast taming — Foresight
+     and Passage. Herbalism is the Wilds' Material skill and is not built; it
+     wants a gathering room and a use for what it gathers, which is its own
+     slice rather than something bolted onto this one. */
+  wilds: {
+    key:'wilds', nm:'the Wilds', waves:WILDS_WAVES,
+    canDie:true, rooms:0, lockChance:.20, seamChance:.16, sigilChance:.14,
+    strands:['Eigen & Subspaces','Matrices','Multivariable & Series'],
+    foresight:'tracking'
   }
 };
 
@@ -6957,6 +7036,15 @@ const DESTINATIONS = [
                return 'Start the climb'+(h?` <span class="tag g">best: height ${h}</span>`:''); },
    detail:()=>'Endless · thinning air · a fall loses the haul',
    sealed:'Clear the Cliffs of Change and what lies past them'},
+
+  {id:'wilds', nm:'The Wilds', col:'#7fc98a', ic:'🌿',
+   blurb:'Open country, and a herd that circles it. The danger out here rises and falls on a period rather than climbing — so what decides a walk is not the next room but whether the stretch ahead is worsening or easing.',
+   open:()=>Dungeon.wildsOpen(),
+   act:"Dungeon.descend('wilds')",
+   label:()=>{ const f=(Game.s.bests&&Game.s.bests.wilds)||0;
+               return 'Walk out into the Wilds'+(f?` <span class="tag g">best: ${f} rooms</span>`:''); },
+   detail:()=>'Endless · danger comes in a swell · a fall loses the haul',
+   sealed:'Clear the Eigen Citadel to find the way out'},
 
   {id:'arena', nm:'The Arena', col:'var(--gold)', ic:'\ud83c\udfdf\ufe0f',
    blurb:'Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.',
@@ -8173,6 +8261,10 @@ const Dungeon = {
   // And the Summit one later again — it is the only setting that takes health
   // away rather than asking you to spend it, which is not a thing to meet early.
   summitOpen(){ return !!(Game.s && REALMS[3] && Game.s.cleared['3:'+(REALMS[3].foes.length-1)]); },
+  /* And the Wilds one later again. Its fork asks about a stretch rather than a
+     room, which is only a question worth asking of a knight who has already
+     learned to ask the simpler one. */
+  wildsOpen(){ return !!(Game.s && REALMS[4] && Game.s.cleared['4:'+(REALMS[4].foes.length-1)]); },
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
@@ -8204,6 +8296,7 @@ const Dungeon = {
     this.scried=null;
     this.heard=null;
     this.sighted=null;
+    this.tracked=null;
   },
   forkCharges(id){ return (this.forkLeft && this.forkLeft[id]) || 0; },
 
@@ -8320,6 +8413,66 @@ const Dungeon = {
       (seen<this.SIGHT_RANGE ? ' Past that the way simply ends.' : '') };
     Sfx.coin(0); Haptic.tap();
     this.fork(this.lastOutcome||{});
+  },
+
+  /* Tracking. It reads a SHAPE rather than a place, which changes how long it
+     lasts: a period does not expire, and neither does the fact that you have
+     learned to read this ground. What does change is where in the turn you are
+     standing, so the reading is recomputed at every fork rather than stored —
+     and it runs out after one full turn of the swell, by which time a knight
+     who was going to use it has used it.
+
+     Like Rumours it covers a stretch rather than a room, because the question
+     it answers is about a stretch. Unlike Rumours it is silent about what is in
+     that stretch: it names the rhythm, and nothing at all about the contents. */
+  trackedHere(){ return !!(this.tracked && this.run && this.tracked.through > this.run.depth); },
+
+  takeTracking(){
+    if(!this.active || this.trackedHere()) return;
+    const set=this.set();
+    if(!set.waves.swell){ UI.toast('Nothing here circles.'); return; }
+    if(this.forkCharges('tracking')<1){ UI.toast('The trail tells you nothing more.'); return; }
+    this.forkLeft.tracking--;
+    const p=set.waves.swellEvery;
+    this.tracked={ from:this.run.depth, through:this.run.depth+p };
+    Sfx.coin(0); Haptic.tap();
+    this.fork(this.lastOutcome||{});
+  },
+
+  /* Where the swell stands at the room you are about to walk into, said in the
+     two numbers a decision turns on: how far to the next easing, and how far to
+     the next crest. The strength ratio is quoted too, because "a swell" means
+     nothing without knowing whether it is worth waiting out.
+
+     Everything here is derived from the curve rather than remembered, so a
+     reading can never disagree with the foes it describes — the same rule the
+     rest of foresight is built on. */
+  trackingLine(){
+    const set=this.set(), c=set.waves, p=c.swellEvery;
+    const next=this.run.depth+1;
+    // Where the crest and the trough of the turn containing `next` sit, in room
+    // numbers: the swell is 1 + A·sin(2π(n−1)/P), so it peaks a quarter of a
+    // turn in and bottoms three quarters in.
+    const ahead=(mark)=>{
+      const d=Math.round(mark*p - (next-1));
+      return ((d % p) + p) % p;                     // rooms from `next` to that mark
+    };
+    const toCrest=ahead(0.25), toTrough=ahead(0.75);
+    const at=WaveEngine.swell(next, c);
+    const span=(n)=>`<b>${n}</b> room${n===1?'':'s'} on`;
+    const ratio=Math.round(((1+c.swell)/(1-c.swell) - 1)*100);
+    /* Four states, not two. Standing ON the crest is not "walking into it" —
+       the worst room is the one under your feet and everything after it is
+       easier, which is the opposite advice. The turn's two ends each get their
+       own sentence for that reason. */
+    let where;
+    if(toCrest===0)       where='The very next room is the crest of it — from there the ground eases.';
+    else if(toTrough===0) where='The very next room is the low of the turn — after it the ground builds again.';
+    else if(toCrest<toTrough) where=`You are walking into it: it worsens to a crest ${span(toCrest)}, then eases.`;
+    else                  where=`You are past the crest: it eases to the low ${span(toTrough)}, then builds again.`;
+    return `The ground turns on a <b>${p}</b>-room round. ${where}` +
+      ` Right now they are running <b>${Math.round((at-1)*100)}%</b> off the middle, and a crest is
+        about <b>${ratio}%</b> harder than a low.`;
   },
 
   /* Rumours. Where Farsight spends itself on one room and is gone by the time
@@ -8688,7 +8841,16 @@ const Dungeon = {
     {id:'sighting', ic:'🗻', col:'#5aa9e6',
      offer:'Take a sighting', spent:'Nothing more to see from here',
      call:'Dungeon.takeSighting()',
-     reading(d){ return d.sighted && d.sighted.line; }}
+     reading(d){ return d.sighted && d.sighted.line; }},
+    {id:'tracking', ic:'🐾', col:'#7fc98a',
+     offer:'Read the ground', spent:'The trail tells you nothing more',
+     call:'Dungeon.takeTracking()',
+     reading(d){ return d.trackedHere() ? d.trackingLine() : null; },
+     /* The one ability with a place where it has nothing to say. Reading the
+        ground for a period only means something where there IS one; in the Deep
+        or on the Summit the danger only climbs. Rather than sell a charge for
+        that sentence, the fork says so and keeps the charge. */
+     mute(d){ return d.set().waves.swell ? null : 'Nothing here circles — the ground only climbs'; }}
   ],
 
   foresightBlock(){
@@ -8701,6 +8863,9 @@ const Dungeon = {
           <div class="small" style="flex:1;line-height:1.5">${said}</div>
         </div></div>`;
       if(!carried.has(f.id)) return '';
+      const mute=f.mute && f.mute(this);
+      if(mute) return `<div class="center small" style="opacity:.6;margin:4px 0">
+          ${f.ic} ${mute}</div>`;
       const left=this.forkCharges(f.id);
       if(left<1) return `<div class="center small" style="opacity:.6;margin:4px 0">
           ${f.ic} ${f.spent}</div>`;
