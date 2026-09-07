@@ -209,7 +209,7 @@ module.exports = {
     t.eq('drawn from the mathematics of gradients', sight.strand, 'Multivariable & Series');
     t.ok('it is in the fork\'s foresight table', sight.inTable);
     t.ok('every entry in which is a real ability', sight.everyForesightIsReal);
-    t.eq('foresight now has three of its five', sight.foresightCount, 3);
+    t.eq('foresight now has four of its five', sight.foresightCount, 4);
     t.eq('it looks ten rooms up', sight.range, 10);
     t.eq('a solid knight carries three', sight.armed, 3);
     t.eq('taking one spends a charge', sight.afterOne, 2);
@@ -332,7 +332,7 @@ module.exports = {
     const codec = await t.ev(() => {
       const out = {};
       out.ordersMatch = JSON.stringify(SETTING_ORDER) === JSON.stringify(Object.keys(SETTINGS));
-      out.summitLast = SETTING_ORDER[SETTING_ORDER.length - 1] === 'summit';
+      out.summitPlaced = SETTING_ORDER.indexOf('summit') === 4;
       out.ver = Codec.VER;
       Game.s.bests = { deep: 9, summit: 21 };
       const code = Codec.encode(Profiles.active(), Game.s, Date.now());
@@ -342,7 +342,11 @@ module.exports = {
       return out;
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
-    t.ok('with the new setting appended rather than inserted', codec.summitLast);
+    /* The Summit was appended at position five and must stay there: the codec
+       writes a knight's per-setting records by position, so a setting moved in
+       this list lands every record after it on the wrong place. Later settings
+       go on the end; this one does not move. */
+    t.eq('with the Summit still fifth, where it was appended', codec.summitPlaced, true);
     t.eq('and no format bump was needed — the count is written down', codec.ver, 4);
     t.ok('a knight code carries the climb', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21 });
@@ -355,11 +359,19 @@ module.exports = {
       summit: SETTINGS.summit.foresight,
       deep: SETTINGS.deep.foresight || 'farsight',
       sanctum: SETTINGS.sanctum.foresight || 'farsight',
-      declared: Object.keys(SETTINGS).filter(k => SETTINGS[k].foresight)
+      declared: Object.keys(SETTINGS).filter(k => SETTINGS[k].foresight),
+      declaredAreReal: Object.keys(SETTINGS).filter(k => SETTINGS[k].foresight)
+        .every(k => Dungeon.FORESIGHT.some(f => f.id === SETTINGS[k].foresight))
     }));
     t.eq('the Summit is built around Sighting', owns.summit, 'sighting');
     t.eq('the Deep is still built around Farsight, and still asserts it', owns.deep, 'farsight');
     t.eq('as is the Sanctum', owns.sanctum, 'farsight');
-    t.eq('and only the Summit opts out', owns.declared, ['summit']);
+    /* Two settings opt out now, and both have to earn it: the escape hatch is
+       for a place whose danger genuinely is not one foe spiking, and it must
+       name an ability that exists rather than a word. */
+    t.eq('the Summit and the Wilds opt out, and nothing else does',
+      owns.declared, ['summit', 'wilds']);
+    t.ok('and each names a foresight that is really in the game',
+      owns.declaredAreReal, JSON.stringify(owns.declared));
   }
 };
