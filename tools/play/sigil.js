@@ -141,7 +141,8 @@ module.exports = {
           R.seed(((Dungeon.run.seed ^ (d * 2654435761)) >>> 0) || 1);
           const real = R.chance(set.lockChance) ? 'lock'
                      : R.chance(set.seamChance || 0) ? 'seam'
-                     : R.chance(set.sigilChance || 0) ? 'sigil' : 'monster';
+                     : R.chance(set.sigilChance || 0) ? 'sigil'
+                     : R.chance(set.forageChance || 0) ? 'forage' : 'monster';
           R.unseed();
           out.checked++;
           if (said !== real) out.wrong.push(`d${d} seed${seed}: ${said} vs ${real}`);

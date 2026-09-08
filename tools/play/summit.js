@@ -347,7 +347,11 @@ module.exports = {
        this list lands every record after it on the wrong place. Later settings
        go on the end; this one does not move. */
     t.eq('with the Summit still fifth, where it was appended', codec.summitPlaced, true);
-    t.eq('and no format bump was needed — the count is written down', codec.ver, 4);
+    /* The count of settings is written into the code, so appending one has
+       never needed a version bump. The number below moves when something
+       ELSE is appended — herbs did that — and it staying pinned is what
+       makes a bump a deliberate act rather than a side effect. */
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
     t.ok('a knight code carries the climb', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21 });
     /* The Summit declares its own foresight, which tells the balance harness

@@ -98,7 +98,8 @@ module.exports = {
         const real = set.plan ? set.plan[2]
                    : R.chance(set.lockChance) ? 'lock'
                    : R.chance(set.seamChance || 0) ? 'seam'
-                   : R.chance(set.sigilChance || 0) ? 'sigil' : 'monster';
+                   : R.chance(set.sigilChance || 0) ? 'sigil'
+                   : R.chance(set.forageChance || 0) ? 'forage' : 'monster';
         const realFoe = real === 'monster' ? WaveEngine.foe(3, set.waves) : null;
         R.unseed();
         out.checked++;

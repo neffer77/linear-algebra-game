@@ -2611,6 +2611,35 @@ const ITEMS = {
   pick:{nm:'Iron Lockpick',    ic:'🔧', cost:30,  ds:'Cracks a locked chest in the Deep. Snaps on a wrong answer.'}
 };
 
+/* The Apothecary's bench. Herbs are gathered in the Wilds and spent only here,
+   which is what closes the second material loop: the Deep gives up ore and
+   essence, the Wilds gives up herbs, and the Keep turns all three into things
+   you take back out with you.
+
+   It differs from the other two benches in shape as well as in currency. The
+   Forge makes one-offs and the Rune Bench sells permanents; this one mostly
+   sells REPEATABLE bundles, because what the Wilds actually costs a knight is
+   consumables — you walk a long way out there and everything you drink on the
+   way is gone. The one permanent on the list is the reason to keep gathering
+   after the bundles stop being interesting.
+
+   `each` is what one purchase hands over; `keep` marks the permanent. */
+const APOTHECARY = [
+  {id:'a_draught', nm:'A course of draughts', ic:'🧪', herb:14,
+   ds:'Three Healing Draughts, steeped from what you gathered.',
+   each(g){ g.items.potion += 3; }},
+  {id:'a_insight', nm:'Clarity of sight',   ic:'🔮', herb:12,
+   ds:"Two Sage's Insights. Gold buys these too — herbs buy them while you are still out.",
+   each(g){ g.items.insight += 2; }},
+  {id:'a_feather', nm:'A phoenix feather',  ic:'🪶', herb:46,
+   ds:'One Feather. Dear, and the only thing here that decides whether a walk ends.',
+   each(g){ g.items.feather += 1; }},
+  {id:'a_satchel', nm:"The herbalist's satchel", ic:'🎒', herb:60, keep:true,
+   ds:'Every draught you drink from now on restores half again as much. Gold cannot buy this.',
+   each(g){ g.brewed.satchel = 1; },
+   owned(g){ return !!(g.brewed && g.brewed.satchel); }}
+];
+
 /* Smithing's bench. Ore buys the one consumable the chain needs — lockpicks —
    and two pieces of gear that are simply not for sale: gold cannot reach them
    at any price, which is what makes a seam worth cutting. */
@@ -2804,8 +2833,8 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:4,
-  TAG:'KE4-',
+  VER:5,
+  TAG:'KE5-',
 
   topics(){ return Object.keys(TOPIC_LABEL); },
   items(){ return Object.keys(ITEMS); },
@@ -2979,6 +3008,13 @@ const Codec = {
     o.bits(ks.length, 8);
     for(const sk of ks) o.varint(Math.max(0, Math.round((g.bests && g.bests[sk]) || 0)));
 
+    // v5: what the Wilds gave up, and the one thing the Apothecary makes that
+    // is kept rather than drunk. Appended after the settings block for the same
+    // reason everything else was appended: a v4 code simply ends above here and
+    // still reads in full.
+    o.varint(Math.max(0, Math.round(mt.herb||0)));
+    o.bits((g.brewed && g.brewed.satchel) ? 1 : 0, 1);
+
     const bytes=o.done();
     const s=this.sum(bytes);
     bytes.push((s>>8)&255, s&255);
@@ -3106,7 +3142,7 @@ const Codec = {
 
     // v3 and later carry materials and runes; older codes predate both, and a
     // knight arriving from one simply starts the chain with empty pockets.
-    g.mats={ore:0, essence:0};
+    g.mats={ore:0, essence:0, herb:0};
     g.runes={};
     if(ver>=3){
       g.mats.ore=b.varint();
@@ -3122,6 +3158,14 @@ const Codec = {
     if(ver>=4){
       const nSet=b.bits(8), ks=this.settings();
       for(let i=0;i<nSet;i++){ const d=b.varint(); if(ks[i] && d) g.bests[ks[i]]=d; }
+    }
+
+    // v5 and later carry the herb pouch and the satchel. A knight from an older
+    // code has simply never been out to the Wilds.
+    g.brewed={};
+    if(ver>=5){
+      g.mats.herb=b.varint();
+      if(b.bits(1)) g.brewed.satchel=1;
     }
 
     return {ok:true, k, g, lostTopics};
@@ -3704,7 +3748,8 @@ const Game = {
       metRoom:{},          // room kinds this knight has been introduced to
       loadout:['ward','sight','steady'],   // skill abilities carried into a fight
       bests:{},                            // deepest room BANKED from, per setting (see Passage)
-      mats:{ore:0, essence:0},             // what the Deep gives up; the Keep spends it
+      mats:{ore:0, essence:0, herb:0},     // what the Deep and the Wilds give up; the Keep spends it
+      brewed:{},                           // what the Apothecary made and cannot be unmade
       runes:{},                            // permanent enchantments, id -> 1
       topicStats:{}        // topic -> {c, w, m, seen, last}  (see Mastery)
     };
@@ -3738,9 +3783,11 @@ const Game = {
     if(typeof this.s.seenOpening!=='number') this.s.seenOpening=0;
     // Saves from before skills existed get the starting three.
     if(!Array.isArray(this.s.loadout)) this.s.loadout=['ward','sight','steady'];
-    if(!this.s.mats) this.s.mats={ore:0, essence:0};
+    if(!this.s.mats) this.s.mats={ore:0, essence:0, herb:0};
     if(typeof this.s.mats.ore!=='number') this.s.mats.ore=0;
     if(typeof this.s.mats.essence!=='number') this.s.mats.essence=0;
+    if(typeof this.s.mats.herb!=='number') this.s.mats.herb=0;
+    if(!this.s.brewed) this.s.brewed={};
     if(!this.s.runes) this.s.runes={};
     const t=this.s.topicStats||(this.s.topicStats={});
     let total=0;
@@ -5420,7 +5467,9 @@ const Battle = {
 
   usePotion(){
     const g=Game.s; if(g.items.potion<1) return;
-    g.items.potion--; const heal=Math.round(g.maxHp*.45);
+    // The satchel is the one thing herbs buy that gold cannot, and this is the
+    // whole of it: a draught goes half again as far, everywhere, for good.
+    g.items.potion--; const heal=Math.round(g.maxHp*.45*Apothecary.draughtMul());
     g.hp=Math.min(g.maxHp,g.hp+heal);
     Anim.float(220,H-240,'+'+heal,'#7bffa8'); Sfx.good();
     Game.save(); this.updateBars();
@@ -6340,6 +6389,30 @@ const Forge = {
   }
 };
 
+/* Herbalism, at the bench. The mirror of the Forge: same shape, different
+   currency, and one entry that is kept rather than spent. */
+const Apothecary = {
+  // What a draught is worth, as a multiplier. 1 until the satchel is brewed.
+  draughtMul(){ return (Game.s && Game.s.brewed && Game.s.brewed.satchel) ? 1.5 : 1; },
+  has(id){ const e=APOTHECARY.find(x=>x.id===id); return !!(e && e.owned && e.owned(Game.s)); },
+
+  brew(id){
+    const e=APOTHECARY.find(x=>x.id===id), g=Game.s;
+    if(!e) return;
+    if(e.owned && e.owned(g)) return;
+    if((g.mats.herb||0) < e.herb){
+      UI.toast(`That needs ${e.herb} herbs — gather a thicket out in the Wilds.`);
+      return;
+    }
+    g.mats.herb -= e.herb;
+    g.brewed = g.brewed || {};
+    e.each(g);
+    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    if(e.keep) Celebrate.banner(e.nm.toUpperCase(), e.ds, '#7fc98a', ()=>{});
+    else UI.toast(`${e.ic} ${e.nm} — made up and packed.`);
+  }
+};
+
 /* Enchanting, read from the other side: what the runes you wear are worth.
    Every rune is a flat, always-on number, so the answer is a sum and there is
    no order to get wrong. */
@@ -6872,11 +6945,17 @@ const SUMMIT_WAVES = {
  * you stand.
  *
  * It is a LONG place on purpose. tools/balance.js reads break-even out at
- * 9/11/13/19/26 as accuracy climbs — a wider spread than anywhere else, and a
+ * 10/12/18/20/27 as accuracy climbs — a wider spread than anywhere else, and a
  * walk of about three turns of the herd at the top end. That length is the
  * point rather than a side effect: a period nobody goes round twice is not a
  * period, and Tracking would have nothing to be right about in a setting you
- * leave before the ground has finished turning once. */
+ * leave before the ground has finished turning once.
+ *
+ * (Those numbers moved when the thickets landed. The Wilds shipped without
+ * them, so a third of its rooms were fights that are now gathering — the
+ * harness was measuring a harder place than the one being played, which is
+ * exactly the drift the room cascade was made one function to prevent. The
+ * figures above are the ones with thickets in.) */
 const WILDS_WAVES = {
   championEvery:7,
   hp0:38,  hpPer:17, champHp:1.6,
@@ -6985,6 +7064,10 @@ const SETTINGS = {
   wilds: {
     key:'wilds', nm:'the Wilds', waves:WILDS_WAVES,
     canDie:true, rooms:0, lockChance:.20, seamChance:.16, sigilChance:.14,
+    /* Thickets grow here and nowhere else, which is what makes herbs the
+       Wilds' own material rather than a third currency scattered everywhere.
+       Rolled last, so it takes from what would otherwise have been a fight. */
+    forageChance:.30,
     strands:['Eigen & Subspaces','Matrices','Multivariable & Series'],
     foresight:'tracking'
   }
@@ -7327,6 +7410,47 @@ const RoomKinds = {
      stakes the last layer you cut against one more. Even money at your own
      accuracy — the plainest bet in the game, in the one room that pays in
      survival rather than gold. */
+  /* A thicket — Herbalism, and the Wilds' half of the material chain.
+   *
+   * Every other room asks you to earn something and then hands it over. This
+   * one splits those into two decisions, because that is what its mathematics
+   * is about: you cannot carry everything, so what matters is which of the
+   * things in front of you are worth the room they take.
+   *
+   * First you earn BASKET SPACE, one square per clean answer, up to three, and
+   * a miss ends the gathering rather than losing what you already earned — the
+   * seam's bargain would be wrong here, since the room's decision is the second
+   * half and a collapse would delete it. Then you spend that space: five plants
+   * with different worths and different bulk, and a basket that will not hold
+   * them all. The best haul is rarely the most valuable plant.
+   */
+  forage: {
+    build(rng, depth, set){
+      const strand = strandTopics(Forage.strand()) || [];
+      const open = WaveEngine.pool(Game.s.topicStats);
+      const pool = open.filter(k => strand.indexOf(k)>=0);
+      const draw = pool.length ? pool : open;
+      const base = clamp(1 + Math.floor(depth/4), 1, 3);
+      const qs=[];
+      for(let i=0;i<Forage.MAX_SPACE;i++){
+        const key = Mastery.pick(draw, strand, true);
+        qs.push(buildQuestion(key, Mastery.adjustDiff(key, base)));
+      }
+      /* The plants, drawn under the room seed so a resumed walk finds the same
+         thicket. Bulk and worth are rolled independently on purpose: if the
+         dearest plant were always the bulkiest there would be one right answer
+         at every basket size and nothing to weigh. */
+      const plants=[];
+      for(let i=0;i<Forage.PLANTS;i++){
+        const bulk = rng.i(1, Forage.MAX_SPACE);
+        const worth = Math.round(rng.i(2, 8) * (1 + depth*0.22));
+        plants.push({ nm:rng.pick(Forage.NAMES), ic:rng.pick(Forage.ICONS), bulk, worth });
+      }
+      return { kind:'forage', qs, plants, depth };
+    },
+    enter(spec, ctx, done){ Forage.begin(spec, ctx, done); },
+  },
+
   sigil: {
     build(rng, depth, set){
       /* Every other room passes its topics as `prefer`, which the scheduler
@@ -7490,6 +7614,209 @@ const Seam = {
     };
     if(outcome.seam && outcome.seam.ore>0){ Sfx.coin(); Haptic.win(); }
     else if(outcome.seam && outcome.seam.cut>0){ Sfx.bad(); Haptic.hurt(); }
+  }
+};
+
+/* ------------------------------ the thicket ------------------------------- */
+/* Herbalism's UI half, and the only room in the game with two decisions in it.
+ *
+ * The riddles buy CAPACITY rather than loot, and the loot is then chosen. That
+ * split is the point: knowing the mathematics gets you a bigger basket, and
+ * what you do with the basket is a separate question the mathematics does not
+ * answer for you. A knight who answers everything correctly and then fills the
+ * basket badly walks out with less than one who answered less and chose well.
+ */
+const Forage = {
+  MAX_SPACE:3, PLANTS:5,
+  NAMES:['eigenroot','vetch','kernel-moss','spectral fern','null-nettle',
+         'basis-thistle','trace-lichen','orthogonal ivy'],
+  ICONS:['🌿','🍃','🌱','☘️','🍀'],
+
+  spec:null, ctx:null, done:null, resolved:false, at:0, space:0, taken:null,
+
+  /* The strand this room drills, read off the skill it belongs to rather than
+     written down twice — the same rule the ward-stone follows. Herbalism has no
+     pressable ability to hang it on, so the setting's own first strand is the
+     honest source: the Wilds is where Herbalism is practised. */
+  strand(){ return (SETTINGS.wilds.strands && SETTINGS.wilds.strands[0]) || 'Eigen & Subspaces'; },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done;
+    this.resolved=false; this.at=0; this.space=0; this.taken=[];
+    UI.go('s-lock');
+    this.open();
+  },
+
+  open(){
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🌿</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🌿 herbs ×${Game.s.mats.herb}</span>
+          <span class="pill">🧺 basket 0/${this.MAX_SPACE}</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A thicket</h2>
+        <div class="sub">More grows here than you can carry. Each riddle you answer clears
+          another square of basket — a wrong one ends the gathering, but you keep the room
+          you have already made.<br><br>
+          Then you choose. Every plant takes its own space, and the dearest is not always
+          worth the room it wants.</div>
+      </div>
+      <button class="btn gold" onclick="Forage.ask()">🌿 Start gathering</button>
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Forage.walkAway()">Walk past the thicket</span>
+      </div>
+      <div style="height:16px"></div>`;
+  },
+
+  ask(){
+    const q=this.spec.qs[this.at];
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🌿</div>
+      <div class="panel">
+        <div class="row" style="justify-content:center;gap:6px;display:flex;margin-bottom:8px">
+          ${this.spec.qs.map((x,i)=>
+            `<span class="rp ${i<this.space?'done':i===this.at?'now':''}"></span>`).join('')}
+        </div>
+        <h2 style="font-size:17px">${q.topic} <span class="tag">basket ${this.space}/${this.MAX_SPACE}</span></h2>
+        <div class="sub">Answer this and the basket takes one more.</div>
+        <hr>
+        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        <div id="forageFig"></div>
+        <div id="forageChoices" style="margin-top:10px"></div>
+      </div>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>`;
+    Figure.render(q.fig, document.getElementById('forageFig'));
+    const box=document.getElementById('forageChoices');
+    q.choices.forEach(c=>{
+      const b=document.createElement('button');
+      b.className='btn choice'; b.innerHTML=c;
+      if(c===q.a) b.dataset.correct='1';
+      b.onclick=()=>this.answer(b,c);
+      box.appendChild(b);
+    });
+  },
+
+  answer(btn, choice){
+    if(this.resolved) return;
+    const q=this.spec.qs[this.at], ok=(choice===q.a);
+    document.querySelectorAll('#forageChoices .choice').forEach(b=>{
+      b.classList.add('faded');
+      if(b.dataset.correct==='1') b.classList.add('right');
+    });
+    if(!ok){ btn.classList.remove('faded'); btn.classList.add('wrong'); }
+    Game.recordAnswer(q.key, ok, 1);
+    Game.save();
+
+    if(!ok){
+      /* A miss ends the gathering and takes nothing back. The seam's all-or-
+         nothing would be wrong here: the room's real decision is the choosing,
+         and a collapse would delete it rather than sharpen it. */
+      // Same defensive shape finish() uses: the explanation goes under the
+      // question when there is a slot for it, and into the body when there is
+      // not, rather than throwing on a null.
+      const slot=document.getElementById('lockOut') || document.getElementById('lockBody');
+      slot.innerHTML=
+        `<div class="panel center">
+           <div class="sub">${q.why[choice]||'that is not what grows here'}</div>
+           <div class="small" style="margin-top:6px">The answer was <b>${q.a}</b>. ${q.ex||''}</div>
+         </div>`;
+      setTimeout(()=>this.choose(), 1400);
+      return;
+    }
+    this.space++; this.at++;
+    if(this.at >= this.MAX_SPACE){ setTimeout(()=>this.choose(), 700); return; }
+    setTimeout(()=>this.ask(), 700);
+  },
+
+  // What is in the basket, and what is left of it.
+  held(){ return this.taken.reduce((n,i)=>n + this.spec.plants[i].bulk, 0); },
+  worth(){ return this.taken.reduce((n,i)=>n + this.spec.plants[i].worth, 0); },
+  room(){ return this.space - this.held(); },
+
+  toggle(i){
+    if(this.resolved) return;
+    const at=this.taken.indexOf(i);
+    if(at>=0) this.taken.splice(at,1);
+    else {
+      if(this.spec.plants[i].bulk > this.room()) return;   // it will not fit
+      this.taken.push(i);
+    }
+    this.choose();
+  },
+
+  choose(){
+    if(this.resolved) return;
+    if(this.space<1){
+      this.finish({ status:'cleared', quality:0, topics:[], yield:{},
+                    forage:{herbs:0, space:0, took:0} },
+        `<div class="center crest">🌿</div>
+         <div class="panel center"><h2>Nothing to carry it in</h2>
+         <div class="sub">The basket never opened. The thicket keeps what it has.</div></div>`);
+      return;
+    }
+    const rows=this.spec.plants.map((pl,i)=>{
+      const on=this.taken.indexOf(i)>=0;
+      const fits = on || pl.bulk <= this.room();
+      return `<div class="item ${on?'equipped':''}" style="${fits?'':'opacity:.45'}"
+                   onclick="Forage.toggle(${i})">
+        <div class="ic">${pl.ic}</div>
+        <div style="flex:1"><div class="nm">${pl.nm}</div>
+          <div class="ds">🌿 ${pl.worth} herbs · takes ${pl.bulk} square${pl.bulk===1?'':'s'}</div></div>
+        ${on?'<span class="pill">packed</span>':fits?'':'<span class="pill">no room</span>'}
+      </div>`;
+    }).join('');
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">🧺</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🧺 ${this.held()}/${this.space} full</span>
+          <span class="pill">🌿 ${this.worth()} herbs packed</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">What will you carry?</h2>
+        <div class="sub">${this.space} square${this.space===1?'':'s'} of basket, and more here
+          than fits in it. Tap to pack and unpack.</div>
+      </div>
+      ${rows}
+      <button class="btn gold" onclick="Forage.leave()">🧺 Carry it out — ${this.worth()} herbs</button>
+      <div id="lockOut"></div>
+      <div style="height:16px"></div>`;
+  },
+
+  leave(){
+    const herbs=this.worth(), took=this.taken.length;
+    Game.s.mats.herb += herbs;
+    Game.save();
+    this.finish({ status:'cleared', quality:herbs?1:0,
+                  topics:this.spec.qs.slice(0, this.at).map(x=>x.key), yield:{},
+                  forage:{herbs, space:this.space, took} },
+      `<div class="center crest">🌿✨</div>
+       <div class="panel center">
+         <h2 style="color:var(--green)">${took?'You pack up and move on':'You leave it standing'}</h2>
+         <div class="sub">${took} plant${took===1?'':'s'} in ${this.held()} of ${this.space} squares.</div>
+         ${herbs?`<hr><div style="font-weight:800;line-height:1.9">🌿 +${herbs} herbs</div>
+           <div class="small" style="margin-top:6px">Herbs are made up at the Keep — into
+             draughts, and into one thing gold cannot buy.</div>`:''}
+       </div>`);
+  },
+
+  walkAway(){
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{},
+                  forage:{herbs:0, space:0, took:0} },
+      `<div class="center crest">🌿</div>
+       <div class="panel center"><h2>You walk past the thicket</h2>
+       <div class="sub">It will still be growing when somebody else comes by.</div></div>`);
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+`<button class="btn gold" id="forageGo" style="margin-top:12px">Onward →</button>`;
+    document.getElementById('forageGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    if(outcome.forage && outcome.forage.herbs>0){ Sfx.coin(); Haptic.win(); }
   }
 };
 
@@ -8208,6 +8535,8 @@ const ROOM_INTRO = {
     b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'},
   rumour: {ic:'🗣️', t:'A stranger with something to say',
     b:'This table sells information rather than a hand. For a cut of the pot you are carrying, you hear what the remaining hands will ask about — worth paying for only when it would change what you stake. Walking past costs nothing.'},
+  forage: {ic:'🌿', t:'A thicket',
+    b:'Two decisions, not one. Every riddle you answer clears another square of basket — a wrong one ends the gathering, but you keep the room you have already made. Then you choose what to carry: each plant takes its own space, and the dearest is not always worth the room it wants.'},
   sigil: {ic:'🌀', t:'A ward-stone',
     b:'No foe, and nothing here pays in gold. Every riddle you answer cuts a layer into the stone, and every layer halves one blow for the rest of the descent. Press on for another and you stake the last one you cut — miss, and it cracks with it. The first is free.'},
   wager: {ic:'🎲', t:'A table, and a bet',
@@ -8324,6 +8653,7 @@ const Dungeon = {
     if(R.chance(set.lockChance)) return 'lock';
     if(R.chance(set.seamChance||0)) return 'seam';
     if(R.chance(set.sigilChance||0)) return 'sigil';
+    if(R.chance(set.forageChance||0)) return 'forage';
     return 'monster';
   },
 
@@ -8372,6 +8702,8 @@ const Dungeon = {
       line = `A <b>stranger</b> selling what they know. No foe, and nothing at risk but a cut.`;
     } else if(next.name==='sigil'){
       line = `A <b>ward-stone</b>. No foe — you carry ${this.wards()} ward${this.wards()===1?'':'s'} already.`;
+    } else if(next.name==='forage'){
+      line = `A <b>thicket</b>. No foe — only what you can carry out of it is at stake.`;
     } else {
       line = `An <b>ore seam</b>. No foe — only the ore is at risk.`;
     }
@@ -8403,7 +8735,7 @@ const Dungeon = {
          the accumulated blows rather than any one foe, a stone is worth more
          than a chest — so leaving it out would have Sighting quietly walk a
          climber past the best room on the ridge. */
-      if(!pays && (r.name==='lock' || r.name==='seam' || r.name==='sigil')) pays=at;
+      if(!pays && (r.name==='lock' || r.name==='seam' || r.name==='sigil' || r.name==='forage')) pays=at;
       if(champ && pays) break;
     }
     const far=(n,what)=> n
@@ -8511,7 +8843,8 @@ const Dungeon = {
     for(const r of rooms) if(r.name!=='monster') others[r.name]=(others[r.name]||0)+1;
     const NAME={lock:['a chest','chests'], seam:['a seam','seams'],
                 wager:['a table','tables'], rumour:['a rumour','rumours'],
-                sigil:['a ward-stone','ward-stones']};
+                sigil:['a ward-stone','ward-stones'],
+                forage:['a thicket','thickets']};
     const bits=[];
     if(fights.length) bits.push(`<b>${fights.length}</b> fight${fights.length===1?'':'s'}`);
     for(const k in others){
@@ -8775,6 +9108,10 @@ const Dungeon = {
       const ore = (outcome.seam && outcome.seam.ore) || 0;
       icon = ore?'🪨':'⛰️';
       line = (ore ? `The seam gives up ${ore} ore. ` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.kind==='forage'){
+      const f = outcome.forage || {herbs:0};
+      icon = f.herbs?'🧺':'🌿';
+      line = (f.herbs ? `You carry ${f.herbs} herbs out of the thicket. ` : 'The thicket keeps what it has. ') + PASSAGE;
     } else if(sp.kind==='sigil'){
       const n = (outcome.sigil && outcome.sigil.layers) || 0;
       icon = n?'🪬':'🌀';
@@ -9228,6 +9565,21 @@ const UI = {
         ${worn ? '<span class="pill">worn</span>'
                : `<button class="btn sm ${can?'gold':''}" style="width:auto"
                     onclick="Runes.buy('${r.id}')">🜄 ${r.cost}</button>`}
+      </div>`);
+    });
+    out.push(`</div><div class="panel"><h2>🌿 The Apothecary</h2>
+      <div class="sub">Herbalism makes up <b>herbs</b>, gathered from thickets out in the
+        Wilds and spent nowhere else. You hold <b>🌿 ${g.mats.herb}</b>. Most of this bench
+        can be bought again; the satchel is made once.</div>`);
+    APOTHECARY.forEach(e=>{
+      const done = e.owned && e.owned(g);
+      const can = !done && g.mats.herb >= e.herb;
+      out.push(`<div class="item ${done?'equipped':''}">
+        <div class="ic">${e.ic}</div>
+        <div style="flex:1"><div class="nm">${e.nm}</div><div class="ds">${e.ds}</div></div>
+        ${done ? '<span class="pill">made</span>'
+               : `<button class="btn sm ${can?'gold':''}" style="width:auto"
+                    onclick="Apothecary.brew('${e.id}')">🌿 ${e.herb}</button>`}
       </div>`);
     });
     out.push('</div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>');
@@ -10005,9 +10357,10 @@ const Cheats = {
        set('armor',  buyable(ARMORS)[buyable(ARMORS).length-1].id);
        for(const k of Object.keys(ITEMS))
          if((g.items[k]||0) < 9){ g.items[k]=9; ch=true; }
-       g.mats=g.mats||{ore:0,essence:0};
+       g.mats=g.mats||{ore:0,essence:0,herb:0};
        if(g.mats.ore < 200){ g.mats.ore=200; ch=true; }
        if(g.mats.essence < 100){ g.mats.essence=100; ch=true; }
+       if((g.mats.herb||0) < 150){ g.mats.herb=150; ch=true; }
        // Health has to follow the new plate, or the knight walks around on the
        // hundred points a level-one body had.
        g.maxHp=Game.maxHp(); g.hp=g.maxHp;
