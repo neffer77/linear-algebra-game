@@ -152,7 +152,7 @@ module.exports = {
     t.eq('drawn from the mathematics of what actually varies', abil.strand, 'Eigen & Subspaces');
     t.eq('and it is its own skill', abil.skill, 'Tracking');
     t.ok('it is in the fork\'s foresight table', abil.inTable);
-    t.eq('which now holds four of the five', abil.foresightCount, 4);
+    t.eq('which is now the whole five', abil.foresightCount, 5);
     t.ok('every entry in which is a real ability', abil.everyForesightIsReal);
     t.ok('and every fork ability is in it — none is left with nowhere to be pressed',
       abil.everyForkAbilityIsListed);
@@ -336,7 +336,7 @@ module.exports = {
     const codec = await t.ev(() => {
       const out = {};
       out.ordersMatch = JSON.stringify(SETTING_ORDER) === JSON.stringify(Object.keys(SETTINGS));
-      out.wildsLast = SETTING_ORDER[SETTING_ORDER.length - 1] === 'wilds';
+      out.wildsPlaced = SETTING_ORDER.indexOf('wilds') === 5;
       out.ver = Codec.VER;
       Game.s.bests = { deep: 9, summit: 21, wilds: 17 };
       const code = Codec.encode(Profiles.active(), Game.s, Date.now());
@@ -346,7 +346,10 @@ module.exports = {
       return out;
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
-    t.ok('with the Wilds appended rather than inserted', codec.wildsLast);
+    /* Appended at position six and it stays there — the codec writes these
+       records by position, so a setting that moves lands every record after
+       it on the wrong place. Later settings go on the end. */
+    t.ok('with the Wilds still sixth, where it was appended', codec.wildsPlaced);
     t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
     t.ok('a knight code carries the walk', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21, wilds: 17 });
@@ -399,7 +402,7 @@ module.exports = {
                         && /drops away into the dark/.test(deep);
       return out;
     });
-    t.eq('there are three voices', words.voices.length, 3);
+    t.eq('there are four voices', words.voices.length, 4);
     t.ok('each fully written out', words.everyVoiceComplete);
     t.ok('and each says something different', words.threeDistinct);
     t.ok('every setting that names a voice names one that exists',

@@ -133,7 +133,10 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
          playing. */
       R.seed(((seed ^ (depth * 2654435761)) >>> 0) || 1);
       const kind = Dungeon.roomKindAt(depth, set);
-      const foe = WaveEngine.foe(depth, CURVE);
+      /* The Sea's weather rides on a stream of its own, so it is asked for
+         separately — and asked for at all, because a sweep that sailed a
+         permanently calm sea would be measuring the wrong ocean. */
+      const foe = WaveEngine.foe(depth, CURVE, Dungeon.rough(depth, set, seed));
       R.unseed();
       if (kind === 'sigil') {
         // A ward-stone pays nothing into the pot. What it banks is damage that
@@ -146,6 +149,16 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         // A chest is one riddle: no foe, so it cannot kill you. It pays the
         // lock room's yield when answered, and nothing when fumbled.
         if (rnd() < acc) pot += Math.round(60 + depth * 20);
+        continue;
+      }
+      if (kind === 'hold') {
+        /* A cargo hold. The model player does the thing the room is asking
+           them to price: stow when the compounding beats the salvage they are
+           giving up. This harness models no Passage skills, so salvage is zero
+           and stowing is free money — which would make the Sea look richer than
+           it is. So the pot is left alone and the room counted as free, the
+           same way a seam is. The hold's own arithmetic is checked in its
+           suite, where it can be checked exactly rather than sampled. */
         continue;
       }
       if (kind === 'forage') {
@@ -229,7 +242,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         const next = depth + 1;
         R.seed(((seed ^ (next * 2654435761)) >>> 0) || 1);
         const nKind = Dungeon.roomKindAt(next, set);
-        const nFoe = WaveEngine.foe(next, CURVE);
+        const nFoe = WaveEngine.foe(next, CURVE, Dungeon.rough(next, set, seed));
         R.unseed();
         const fight = nKind === 'monster';
         // A player spends a reading when they feel the risk, not at random.
@@ -247,7 +260,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         st.hp = Math.min(st.hp, ceilingAt(depth));
         if (st.hp <= 0) return { banked: 0, depth, died: true, turned };
         if (nKind === 'lock') { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
-        if (nKind === 'seam' || nKind === 'forage') continue;
+        if (nKind === 'seam' || nKind === 'forage' || nKind === 'hold') continue;
         if (nKind === 'sigil') {
           st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
           continue;

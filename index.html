@@ -6269,6 +6269,23 @@ const SKILL_ABILITIES = [
    ready(){ return Dungeon.active && !Dungeon.tracked; },
    go(){ Dungeon.takeTracking(); }},
 
+  /* The fifth and last Foresight ability, and the only one that reads
+     something the player could not in principle have worked out. Farsight
+     names a room already fixed by the seed; Rumours totals it; Sighting
+     measures it; Tracking finds the period it repeats on. All four describe
+     something derivable. The weather is DRAWN — a third of the Sea's leagues
+     run rough on a roll — so a forecast is the one reading that sells
+     information rather than arithmetic.
+
+     It names which of the leagues ahead are rough, in order, because on the
+     water the useful question is not how bad it gets but WHEN: sail the calm
+     stretch and make shore before the blow. */
+  {id:'weather', nm:'Weather-reading', ic:'🌦️', skill:'Weather-reading', strand:'Applications',
+   where:'fork',
+   ds:'Read the sky: which of the leagues ahead are running rough, and which are calm.',
+   ready(){ return Dungeon.active && !Dungeon.forecastHere(); },
+   go(){ Dungeon.readWeather(); }},
+
   {id:'dice', nm:'Dice', ic:'🎲', skill:'Dice', strand:'Integrals',
    ds:'Stake the next strike: triple damage if you are right, and the foe strikes twice if you are not.',
    ready(){ return !Battle.diceUp && !Battle.answered; },
@@ -6810,10 +6827,15 @@ const WaveEngine = {
     return 1 + c.swell*Math.sin(2*Math.PI*(n-1)/c.swellEvery);
   },
 
-  /* The foe for step `n` (1-based), shaped by escalation curve `c`. */
-  foe(n, c){
+  /* The foe for step `n` (1-based), shaped by escalation curve `c`.
+
+     `mul` is an extra multiplier the CALLER knows about and the curve does
+     not — the Sea's weather, which is rolled on a stream of its own rather
+     than derived from n. It defaults to 1, so every other place is unaffected
+     and the call sites that do not care need not pass it. */
+  foe(n, c, mul){
     const champion = n % c.championEvery === 0;
-    const sw = this.swell(n, c);
+    const sw = this.swell(n, c) * (mul || 1);
     const hp  = Math.round((c.hp0  + n*c.hpPer)  * sw * (champion?c.champHp:1));
     const atk = Math.round(c.atk0 * Math.pow(c.atkGrow, n-1) * sw * (champion?c.champAtk:1));
     return {
@@ -6967,6 +6989,33 @@ const WILDS_WAVES = {
   adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
 };
 
+/* The Sea's curve, and the third kind of pressure.
+ *
+ * The Deep ramps. The Summit ramps and takes health away. The Wilds circles on
+ * a period you can work out. The Sea does none of those: its foes are ordinary
+ * and its danger is the WEATHER, which is a roll rather than a formula. Some
+ * leagues run rough and hit half again as hard, and there is no arithmetic that
+ * tells you which — only a forecast, which is what Weather-reading sells.
+ *
+ * That is deliberately the one place in the game where foresight is about
+ * something the player could not in principle work out for themselves. Farsight
+ * reads a room that is already fixed; Tracking reads a period that repeats. A
+ * squall is drawn, and knowing which way it fell is worth paying for.
+ *
+ * The base curve is gentle for the same reason the Wilds' is: the weather is
+ * already supplying the danger, and stacking two sources would leave no calm
+ * stretch worth sailing into. tools/balance.js reads out the usual property. */
+const SEA_WAVES = {
+  championEvery:6,
+  hp0:42,  hpPer:16, champHp:1.6,
+  atk0:9,  atkGrow:1.062, champAtk:1.25,
+  gold0:56, goldPer:20,
+  xp0:32,   xpPer:12,
+  champReward:2,
+  squallChance:0.32, squallMul:1.5,
+  adj:ARENA_ADJ, noun:ARENA_NOUN, art:ARENA_ART, col:ARENA_COL
+};
+
 /* The order the codec writes per-setting depth records in. It is a list of its
    own rather than Object.keys(SETTINGS) because the codec has to be readable
    without the rest of the game around it — the verification harness loads it
@@ -6982,7 +7031,8 @@ const SETTING_ORDER = [
   'sanctum',
   'tavern',
   'summit',
-  'wilds'
+  'wilds',
+  'sea'
 ];
 
 /* How a place is SPOKEN about. The Deep is descended, the Summit is climbed,
@@ -7006,7 +7056,11 @@ const VOICES = {
   out:  { unit:'Room',   ic:'🥾', passage:'The country opens out ahead.',
           on:'Walk on', out:'Head back', left:'Walked back', killer:'The herd',
           keeps:'The Wilds keep you', ends:'walk at room',
-          reached:'Rooms walked', again:'Walk out again', risk:'until you head back' }
+          reached:'Rooms walked', again:'Walk out again', risk:'until you head back' },
+  sea:  { unit:'League', ic:'⛵', passage:'Open water, and no bottom under you.',
+          on:'Sail on', out:'Make for shore', left:'Made shore', killer:'The sea',
+          keeps:'The sea keeps you', ends:'voyage at league',
+          reached:'Leagues sailed', again:'Set out again', risk:'until you make shore' }
 };
 
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
@@ -7095,6 +7149,25 @@ const SETTINGS = {
     voice:'out',                             // walked across, not down or up
     strands:['Eigen & Subspaces','Matrices','Multivariable & Series'],
     foresight:'tracking'
+  },
+  /* The Sea: sailed rather than descended, and the only place whose danger is
+     drawn rather than derived. Roughly a third of its leagues run rough and hit
+     half again as hard, on a roll nobody can work out from the shape of the
+     curve — which is what makes a forecast worth buying, and what makes this
+     the natural home for Weather-reading.
+
+     Its material is Cargo, and it does have one: the hold, where unbanked gold
+     is converted into freight that compounds every league and is lost whole in
+     a wreck. That is the Sea's own arithmetic — insurance against interest —
+     and it is why Dead reckoning, which salvages gold and never salvages
+     cargo, belongs out here too. */
+  sea: {
+    key:'sea', nm:'the Sea', waves:SEA_WAVES,
+    canDie:true, rooms:0, lockChance:.18, seamChance:.10, sigilChance:.12,
+    holdChance:.26,
+    voice:'sea',
+    strands:['Integrals','Multivariable & Series','Applications'],
+    foresight:'weather'
   }
 };
 
@@ -7153,6 +7226,15 @@ const DESTINATIONS = [
                return 'Walk out into the Wilds'+(f?` <span class="tag g">best: ${f} rooms</span>`:''); },
    detail:()=>'Endless · danger comes in a swell · a fall loses the haul',
    sealed:'Clear the Eigen Citadel to find the way out'},
+
+  {id:'sea', nm:'The Sea', col:'#5aa9e6', ic:'⛵',
+   blurb:'Sailed, not descended, and the only place whose danger is <b>drawn</b> rather than derived. A third of its leagues run rough on a roll nobody can work out — which is what makes a forecast worth buying. Its hold turns gold into freight that compounds, and goes down whole in a wreck.',
+   open:()=>Dungeon.seaOpen(),
+   act:"Dungeon.descend('sea')",
+   label:()=>{ const f=(Game.s.bests&&Game.s.bests.sea)||0;
+               return 'Put out to sea'+(f?` <span class="tag g">best: ${f} leagues</span>`:''); },
+   detail:()=>'Endless · squalls on a roll · 📦 freight compounds, and is not insured',
+   sealed:'Clear the Spectral Reach to reach the coast'},
 
   {id:'arena', nm:'The Arena', col:'var(--gold)', ic:'\ud83c\udfdf\ufe0f',
    blurb:'Endless waves drawing on every topic in the game. No free healing. You keep the gold either way.',
@@ -7333,7 +7415,11 @@ const RoomKinds = {
   monster: {
     // Pure. Given the seeded stream and how deep we are, describe the room.
     build(rng, depth, set){
-      return { kind:'monster', foe: WaveEngine.foe(depth, (set||SETTINGS.deep).waves) };
+      const s = set || SETTINGS.deep;
+      // The Sea's weather is the caller's business, not the curve's — see
+      // Dungeon.rough. Everywhere else this multiplier is 1.
+      return { kind:'monster', foe: WaveEngine.foe(depth, s.waves, Dungeon.rough(depth, s)),
+               rough: Dungeon.isRough(depth, s) };
     },
     // Take the screen, play the fight out, then report an outcome exactly once.
     // The room decides nothing about the save or the map — it hands the shell
@@ -7479,6 +7565,24 @@ const RoomKinds = {
       return { kind:'forage', qs, plants, depth };
     },
     enter(spec, ctx, done){ Forage.begin(spec, ctx, done); },
+  },
+
+  /* A cargo hold — Cargo, and the Sea's own arithmetic.
+   *
+   * Every other material in the game is a thing you gather. This one is a thing
+   * you CONVERT: unbanked gold, turned into freight that compounds every league
+   * you go on sailing. The catch is what a wreck does. Gold in the pot is partly
+   * salvaged by Dead reckoning; cargo is never salvaged, and goes down whole.
+   *
+   * So the room is one number against another — interest against insurance —
+   * and both are shown, because a decision you cannot price is not one. It is
+   * the only room whose worth depends on how much further you mean to sail,
+   * which is why it belongs in an endless setting rather than a fixed one. */
+  hold: {
+    build(rng, depth, set){
+      return { kind:'hold', depth };
+    },
+    enter(spec, ctx, done){ Hold.begin(spec, ctx, done); },
   },
 
   sigil: {
@@ -7644,6 +7748,115 @@ const Seam = {
     };
     if(outcome.seam && outcome.seam.ore>0){ Sfx.coin(); Haptic.win(); }
     else if(outcome.seam && outcome.seam.cut>0){ Sfx.bad(); Haptic.hurt(); }
+  }
+};
+
+/* ------------------------------- the hold --------------------------------- */
+/* Cargo's UI half. Owns nothing about the run: it reports how much gold became
+   freight, and the shell moves it. */
+const Hold = {
+  // What a league of sailing adds to freight already stowed.
+  GROWTH: 0.12,
+  // The shares of the pot on offer. A third, a half, all of it.
+  SHARES: [
+    {nm:'a third', frac:1/3},
+    {nm:'half',    frac:0.5},
+    {nm:'the lot', frac:1}
+  ],
+
+  spec:null, ctx:null, done:null, resolved:false,
+
+  /* What a stowed coin is worth after `n` more leagues, and what the same coin
+     is worth left in the pot — which is not its face value, because a wreck
+     takes all of it but what Dead reckoning saves. Both numbers are quoted at
+     the same n, so the comparison on the buttons is a fair one. */
+  grown(gold, n){ return Math.round(gold * Math.pow(1+this.GROWTH, Math.max(0, n))); },
+  breakEven(){
+    /* Freight beats gold when compounding outruns the salvage you give up.
+       Cargo is lost whole; gold keeps `salvage` of itself through a wreck. So
+       stowing wins after n leagues when (1+g)^n > 1 ... and the honest number to
+       show is how many leagues of sailing it takes for the growth to cover what
+       salvage would have returned on a wreck. */
+    const save = Passage.salvage();
+    if(save<=0) return 0;                       // nothing to give up: stow at once
+    return Math.ceil(Math.log(1/(1-save)) / Math.log(1+this.GROWTH));
+  },
+
+  begin(spec, ctx, done){
+    this.spec=spec; this.ctx=ctx; this.done=done;
+    this.resolved=false;
+    UI.go('s-lock');
+    this.offer();
+  },
+
+  offer(){
+    const pot=Math.floor(Dungeon.run.unbanked.gold);
+    const stowed=Math.floor(Dungeon.run.cargo||0);
+    const save=Math.round(Passage.salvage()*100);
+    const be=this.breakEven();
+    const opt=(sh)=>{
+      const take=Math.floor(pot*sh.frac);
+      if(take<1) return '';
+      return `<button class="btn ${sh.frac===1?'gold':''}" onclick="Hold.stow(${sh.frac})">
+        ⚓ Stow ${sh.nm} — ${take} gold
+        <span style="font-size:12px;font-weight:700;margin-left:6px;
+                     color:${sh.frac===1?'rgba(40,26,4,.72)':'var(--dim)'}"
+        >worth ${this.grown(take,5)} in five leagues</span>
+      </button>`;
+    };
+    document.getElementById('lockBody').innerHTML=`
+      <div class="center crest">⚓</div>
+      <div class="panel">
+        <div class="row" style="justify-content:space-between;display:flex">
+          <span class="pill">🎒 ${pot} gold in the pot</span>
+          <span class="pill">📦 ${stowed} stowed</span>
+        </div>
+        <h2 style="font-size:18px;margin-top:8px">A cargo hold</h2>
+        <div class="sub">Gold turned into freight grows <b>${Math.round(this.GROWTH*100)}%</b>
+          a league, every league you keep sailing.<br><br>
+          It is not insured. A wreck takes cargo whole, where
+          ${save ? `Dead reckoning would carry <b>${save}%</b> of the pot out with you`
+                 : 'the pot is lost either way — you have no Dead reckoning to lose'}.
+          ${be ? `On those terms the freight is ahead after about <b>${be}</b> more league${be===1?'':'s'}.`
+               : 'With nothing to salvage, there is nothing to weigh: stow it.'}</div>
+      </div>
+      ${this.SHARES.map(sh=>opt(sh)).join('')}
+      <div class="center" style="margin-top:6px">
+        <span class="kbd" onclick="Hold.walkAway()">Keep it all in the pot</span>
+      </div>
+      <div style="height:16px"></div>`;
+  },
+
+  stow(frac){
+    if(this.resolved) return;
+    const take=Math.floor(Math.floor(Dungeon.run.unbanked.gold)*frac);
+    if(take<1){ this.walkAway(); return; }
+    this.finish({ status:'cleared', quality:1, topics:[], yield:{},
+                  hold:{stowed:take} },
+      `<div class="center crest">📦</div>
+       <div class="panel center">
+         <h2 style="color:var(--green)">Stowed and lashed down</h2>
+         <div class="sub">${take} gold is freight now. It grows
+           ${Math.round(this.GROWTH*100)}% a league — and goes down with the ship.</div>
+       </div>`);
+  },
+
+  walkAway(){
+    this.finish({ status:'cleared', quality:0, topics:[], yield:{}, hold:{stowed:0} },
+      `<div class="center crest">⚓</div>
+       <div class="panel center"><h2>The hold stays empty</h2>
+       <div class="sub">Every coin stays in the pot, where a wreck can only take
+         what Dead reckoning cannot hold onto.</div></div>`);
+  },
+
+  finish(outcome, html){
+    this.resolved=true;
+    const out=document.getElementById('lockOut') || document.getElementById('lockBody');
+    out.innerHTML=html+`<button class="btn gold" id="holdGo" style="margin-top:12px">Onward →</button>`;
+    document.getElementById('holdGo').onclick=()=>{
+      const d=this.done; this.done=null; if(d) d(outcome);
+    };
+    if(outcome.hold && outcome.hold.stowed>0){ Sfx.coin(); Haptic.win(); }
   }
 };
 
@@ -8565,6 +8778,8 @@ const ROOM_INTRO = {
     b:'No foe here — just one riddle and a lockpick. Get it right and the chest opens. Get it wrong and the pick snaps, so a chest can cost you rather than pay you.'},
   rumour: {ic:'🗣️', t:'A stranger with something to say',
     b:'This table sells information rather than a hand. For a cut of the pot you are carrying, you hear what the remaining hands will ask about — worth paying for only when it would change what you stake. Walking past costs nothing.'},
+  hold: {ic:'⚓', t:'A cargo hold',
+    b:'Gold turned into freight grows every league you keep sailing — but it is not insured. A wreck takes cargo whole, where Dead reckoning would have carried part of the pot ashore with you. Interest against insurance, and both numbers are on the buttons.'},
   forage: {ic:'🌿', t:'A thicket',
     b:'Two decisions, not one. Every riddle you answer clears another square of basket — a wrong one ends the gathering, but you keep the room you have already made. Then you choose what to carry: each plant takes its own space, and the dearest is not always worth the room it wants.'},
   sigil: {ic:'🌀', t:'A ward-stone',
@@ -8624,6 +8839,9 @@ const Dungeon = {
      room, which is only a question worth asking of a knight who has already
      learned to ask the simpler one. */
   wildsOpen(){ return !!(Game.s && REALMS[4] && Game.s.cleared['4:'+(REALMS[4].foes.length-1)]); },
+  /* And the Sea one later again. It is the only place that asks a knight to
+     price interest against insurance, which wants a purse worth insuring. */
+  seaOpen(){ return !!(Game.s && REALMS[5] && Game.s.cleared['5:'+(REALMS[5].foes.length-1)]); },
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
@@ -8658,6 +8876,7 @@ const Dungeon = {
     this.heard=null;
     this.sighted=null;
     this.tracked=null;
+    this.forecast=null;
   },
   forkCharges(id){ return (this.forkLeft && this.forkLeft[id]) || 0; },
 
@@ -8686,8 +8905,34 @@ const Dungeon = {
     if(R.chance(set.seamChance||0)) return 'seam';
     if(R.chance(set.sigilChance||0)) return 'sigil';
     if(R.chance(set.forageChance||0)) return 'forage';
+    if(R.chance(set.holdChance||0)) return 'hold';
     return 'monster';
   },
+
+  /* Whether the league at `depth` is running rough, as a multiplier on the foe
+     that stands in it. 1 everywhere but the Sea.
+
+     It is drawn from a stream of ITS OWN — mixed from the run seed with a
+     different constant than the room cascade uses — for two reasons. The
+     weather has to be readable from anywhere without disturbing what kind of
+     room is there, and it has to read the same way twice however it is reached,
+     because a forecast that disagreed with the weather would be no forecast.
+
+     The save/restore around the seed matters: this is called from inside
+     `monster.build`, which the shell has already seeded, and a bare R.unseed()
+     there would drop the room's own stream on the floor mid-build. */
+  WEATHER_MIX: 2246822519,
+  rough(depth, set, seed){
+    const c=(set || this.set()).waves;
+    if(!c.squallChance) return 1;
+    const s = (seed===undefined ? (this.run && this.run.seed) : seed) || 1;
+    const prev = R._r;
+    R.seed(((s ^ (depth * this.WEATHER_MIX)) >>> 0) || 1);
+    const rough = R.chance(c.squallChance);
+    R._r = prev;
+    return rough ? c.squallMul : 1;
+  },
+  isRough(depth, set, seed){ return this.rough(depth, set, seed) !== 1; },
 
   peek(depth){
     const set=this.set();
@@ -8695,7 +8940,7 @@ const Dungeon = {
     R.seed(((this.run.seed ^ (depth * 2654435761)) >>> 0) || 1);
     const name = this.roomKindAt(depth, set);
     let foe=null, topic=null;
-    if(name==='monster') foe=WaveEngine.foe(depth, set.waves);
+    if(name==='monster') foe=WaveEngine.foe(depth, set.waves, this.rough(depth, set));
     if(name==='wager'){
       // The same draw RoomKinds.wager.build makes, and only the draw — `pure`
       // keeps it out of the no-repeat cursor, so peeking cannot change what the
@@ -8706,7 +8951,9 @@ const Dungeon = {
       topic=Mastery.pick(pool, prefer, true);
     }
     R.unseed();
-    return {name, foe, topic};
+    // The weather rides alongside the kind, because it is true of a league
+    // whatever is standing in it.
+    return {name, foe, topic, rough:this.isRough(depth, set)};
   },
 
   /* Spend a Farsight charge. The reading names the room and, for a fight, how
@@ -8736,6 +8983,8 @@ const Dungeon = {
       line = `A <b>ward-stone</b>. No foe — you carry ${this.wards()} ward${this.wards()===1?'':'s'} already.`;
     } else if(next.name==='forage'){
       line = `A <b>thicket</b>. No foe — only what you can carry out of it is at stake.`;
+    } else if(next.name==='hold'){
+      line = `A <b>cargo hold</b>. No foe — a chance to turn the pot into freight.`;
     } else {
       line = `An <b>ore seam</b>. No foe — only the ore is at risk.`;
     }
@@ -8767,7 +9016,8 @@ const Dungeon = {
          the accumulated blows rather than any one foe, a stone is worth more
          than a chest — so leaving it out would have Sighting quietly walk a
          climber past the best room on the ridge. */
-      if(!pays && (r.name==='lock' || r.name==='seam' || r.name==='sigil' || r.name==='forage')) pays=at;
+      if(!pays && (r.name==='lock' || r.name==='seam' || r.name==='sigil'
+                || r.name==='forage' || r.name==='hold')) pays=at;
       if(champ && pays) break;
     }
     const far=(n,what)=> n
@@ -8839,6 +9089,54 @@ const Dungeon = {
         about <b>${ratio}%</b> harder than a low.`;
   },
 
+  /* Weather-reading. It covers a stretch, like Rumours and Tracking, and for
+     the same reason: what it is about is a run of leagues rather than a room.
+     The span is fixed rather than tied to a period, because the weather has no
+     period — that is the whole difference between this place and the Wilds.
+
+     Like Tracking, the reading is recomputed at every fork rather than stored,
+     so what it says can never drift out of step with the water it describes. */
+  FORECAST_SPAN: 5,
+  forecastHere(){ return !!(this.forecast && this.run && this.forecast.through > this.run.depth); },
+
+  readWeather(){
+    if(!this.active || this.forecastHere()) return;
+    const set=this.set();
+    if(!set.waves.squallChance){ UI.toast('Nothing is drawn here.'); return; }
+    if(this.forkCharges('weather')<1){ UI.toast('The sky tells you nothing more.'); return; }
+    this.forkLeft.weather--;
+    this.forecast={ from:this.run.depth, through:this.run.depth+this.FORECAST_SPAN };
+    Sfx.coin(0); Haptic.tap();
+    this.fork(this.lastOutcome||{});
+  },
+
+  /* The forecast itself: the leagues ahead, in order, marked calm or rough, and
+     the two numbers a decision turns on — how far to the first blow, and how
+     much of the stretch is weather. Everything is read off the same function
+     the shell builds rooms with, so a forecast cannot disagree with the sea. */
+  forecastLine(){
+    const set=this.set(), from=this.run.depth+1;
+    const marks=[]; let firstRough=0, rough=0;
+    for(let i=0;i<this.FORECAST_SPAN;i++){
+      const d=from+i;
+      if(set.rooms && d>set.rooms) break;
+      const bad=this.isRough(d, set);
+      if(bad){ rough++; if(!firstRough) firstRough=i+1; }
+      marks.push(bad ? '<b style="color:var(--red)">rough</b>' : 'calm');
+    }
+    if(!marks.length) return 'Nothing but the harbour ahead.';
+    const mul=Math.round((set.waves.squallMul-1)*100);
+    let line=`The next <b>${marks.length}</b> leagues: ${marks.join(' · ')}.`;
+    if(!rough) line += ' Clear water the whole way.';
+    else {
+      line += ` <b>${rough}</b> of them are weather, and a rough league hits about
+                <b>${mul}%</b> harder.`;
+      line += firstRough===1 ? ' It starts with the very next one.'
+                             : ` The first is <b>${firstRough}</b> leagues on.`;
+    }
+    return line;
+  },
+
   /* Rumours. Where Farsight spends itself on one room and is gone by the time
      you stand in it, this buys a stretch — and so it has to last the stretch,
      or it would be a worse Farsight sold at the same price. `heard.through` is
@@ -8876,7 +9174,8 @@ const Dungeon = {
     const NAME={lock:['a chest','chests'], seam:['a seam','seams'],
                 wager:['a table','tables'], rumour:['a rumour','rumours'],
                 sigil:['a ward-stone','ward-stones'],
-                forage:['a thicket','thickets']};
+                forage:['a thicket','thickets'],
+                hold:['a hold','holds']};
     const bits=[];
     if(fights.length) bits.push(`<b>${fights.length}</b> fight${fights.length===1?'':'s'}`);
     for(const k in others){
@@ -8932,7 +9231,7 @@ const Dungeon = {
     // Climbing starts you on ground you have already banked from, so `depth`
     // opens above zero and nextRoom steps into the first room past it.
     const from = Passage.startDepth(SETTINGS[key]);
-    this.run = { setting:key, seed, depth:from, paid:stake, from, wards:0,
+    this.run = { setting:key, seed, depth:from, paid:stake, from, wards:0, cargo:0,
                  unbanked:{ gold:stake, xp:0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);   // what the descent's riddles draw on
@@ -8959,6 +9258,8 @@ const Dungeon = {
                    paid:this.run.paid||0,       // what the door cost, for the net at the end
                    from:this.run.from||0,       // where Climbing set you down
                    wards:this.run.wards||0,     // ward-stone layers still uncracked
+                   cargo:Math.round(this.run.cargo||0),   // freight in the hold
+
                    hp:Math.round(Game.s.hp) };
     Game.save();
   },
@@ -8979,7 +9280,7 @@ const Dungeon = {
        reload would take back work — and keeping it is the same rule the
        unbanked pot already follows. */
     this.run = { setting:r.setting||'deep', seed:r.seed, depth:r.done||0,
-                 paid:r.paid||0, from:r.from||0, wards:r.wards||0,
+                 paid:r.paid||0, from:r.from||0, wards:r.wards||0, cargo:r.cargo||0,
                  unbanked:{ gold:r.gold||0, xp:r.xp||0 } };
     this.active = true;
     this.realm.pool = WaveEngine.pool(Game.s.topicStats);
@@ -9061,6 +9362,25 @@ const Dungeon = {
       // records. Capped so a lucky stretch of stones cannot make a knight
       // effectively unhittable for the rest of a descent.
       if(outcome.ward) this.run.wards = Math.min(this.WARD_CAP, (this.run.wards||0) + outcome.ward);
+      /* Freight compounds for every league CLEARED, not every league entered.
+         That distinction is the whole of it: `resume` re-enters the room you
+         left, so growing on entry would let a knight quit and come back to
+         compound the hold for nothing, over and over. A cleared league is
+         banked in the checkpoint and cannot be re-cleared, so it can only be
+         counted once. Applied before the stow below, so freight put aboard this
+         league starts growing next league rather than the moment it lands. */
+      if(this.run.cargo>0) this.run.cargo *= (1 + Hold.GROWTH);
+      /* Cargo is a CONVERSION rather than a yield: it comes out of the pot
+         rather than out of the room, so the shell moves it across instead of
+         adding it. Clamped to what is actually in the pot, because the room
+         quotes a share of a number that nothing else may have changed since. */
+      if(outcome.hold && outcome.hold.stowed){
+        const take=Math.min(Math.floor(outcome.hold.stowed), Math.floor(this.run.unbanked.gold));
+        if(take>0){
+          this.run.unbanked.gold -= take;
+          this.run.cargo = (this.run.cargo||0) + take;
+        }
+      }
       // The Sanctum pays in essence for every room you get through, banked with
       // the rest — so a fall there costs the essence too.
       if(set.essencePerRoom)
@@ -9078,7 +9398,8 @@ const Dungeon = {
   /* The end of a fixed-length run. Everything carried is banked — you walked
      out of the last room, which is the same thing as climbing the stairs. */
   finishRun(outcome){
-    const u={gold:this.run.unbanked.gold, xp:this.run.unbanked.xp,
+    const u={gold:this.run.unbanked.gold + Math.floor(this.run.cargo||0),
+             xp:this.run.unbanked.xp,
              essence:this.run.unbanked.essence||0};
     const set=this.set(), depth=this.run.depth;
     // What the run was worth against what it cost to enter. Only a setting with
@@ -9139,6 +9460,10 @@ const Dungeon = {
       const ore = (outcome.seam && outcome.seam.ore) || 0;
       icon = ore?'🪨':'⛰️';
       line = (ore ? `The seam gives up ${ore} ore. ` : 'The seam keeps what it has. ') + PASSAGE;
+    } else if(sp.kind==='hold'){
+      const h = outcome.hold || {stowed:0};
+      icon = h.stowed?'📦':'⚓';
+      line = (h.stowed ? `${h.stowed} gold goes into the hold. ` : 'The hold stays empty. ') + PASSAGE;
     } else if(sp.kind==='forage'){
       const f = outcome.forage || {herbs:0};
       icon = f.herbs?'🧺':'🌿';
@@ -9174,6 +9499,7 @@ const Dungeon = {
           <div style="color:var(--blue)">✦ ${u.xp} experience carried</div>
           ${u.essence?`<div style="color:#b48bec">🜄 ${u.essence} essence carried</div>`:''}
           ${this.wards()?`<div style="color:#8ad4ff">🌀 ${this.wards()} ward${this.wards()===1?'':'s'} carried</div>`:''}
+          ${this.run.cargo>=1?`<div style="color:#7fc98a">📦 ${Math.floor(this.run.cargo)} in freight — uninsured</div>`:''}
         </div>
         <hr>
         <div class="small">❤️ ${Math.round(g.hp)}/${g.maxHp} · this haul is <b>at risk</b> ${w.risk}</div>
@@ -9210,6 +9536,15 @@ const Dungeon = {
      offer:'Take a sighting', spent:'Nothing more to see from here',
      call:'Dungeon.takeSighting()',
      reading(d){ return d.sighted && d.sighted.line; }},
+    {id:'weather', ic:'🌦️', col:'#8ad4ff',
+     offer:'Read the sky', spent:'The sky tells you nothing more',
+     call:'Dungeon.readWeather()',
+     reading(d){ return d.forecastHere() ? d.forecastLine() : null; },
+     /* Same escape hatch Tracking has, for the same reason: in a place with no
+        weather there is nothing to forecast, and selling a charge for that
+        sentence would be a trap. */
+     mute(d){ return d.set().waves.squallChance ? null
+                : 'The sky here has nothing to say — nothing is drawn'; }},
     {id:'tracking', ic:'🐾', col:'#7fc98a',
      offer:'Read the ground', spent:'The trail tells you nothing more',
      call:'Dungeon.takeTracking()',
@@ -9254,7 +9589,9 @@ const Dungeon = {
     // nothing, which is what keeps Climbing a record of achievement rather than
     // a record of ambition. `depth-1` because the room you fled is not cleared.
     Passage.recordBest(this.run.setting, Math.max(0, this.run.depth - (midFight?1:0)));
-    Game.s.gold += u.gold;
+    // Freight is sold the moment it reaches shore, at whatever it has grown to.
+    const freight=Math.floor(this.run.cargo||0);
+    Game.s.gold += u.gold + freight;
     if(u.essence) Game.s.mats.essence += u.essence;
     const ups = Game.gainXp(u.xp);
     Game.s.maxHp=Game.maxHp();
@@ -9280,8 +9617,12 @@ const Dungeon = {
        banked here rather than left in the run, because the run is about to stop
        existing — and it is banked BEFORE the pot is reported lost, so the two
        numbers on the screen always add up to what was being carried. */
+    /* Cargo goes down with the ship, whole. Dead reckoning is a knight finding
+       their own way out with what they can carry; nobody swims a hold ashore,
+       and that asymmetry is the entire decision the hold room asks. */
+    const freight=Math.floor(this.run.cargo||0);
     const kept=Math.floor(pot * Passage.salvage());
-    const lost=pot-kept;
+    const lost=pot-kept+freight;
     this.active=false;
     if(kept) Game.s.gold += kept;
     Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));

@@ -34,6 +34,7 @@ const SUITES = [
   require('./play/sigil'),       // S8
   require('./play/wilds'),       // S9
   require('./play/thicket'),     // S10
+  require('./play/sea'),         // S11a
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

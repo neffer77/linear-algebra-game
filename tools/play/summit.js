@@ -209,7 +209,7 @@ module.exports = {
     t.eq('drawn from the mathematics of gradients', sight.strand, 'Multivariable & Series');
     t.ok('it is in the fork\'s foresight table', sight.inTable);
     t.ok('every entry in which is a real ability', sight.everyForesightIsReal);
-    t.eq('foresight now has four of its five', sight.foresightCount, 4);
+    t.eq('foresight is complete: five of five', sight.foresightCount, 5);
     t.eq('it looks ten rooms up', sight.range, 10);
     t.eq('a solid knight carries three', sight.armed, 3);
     t.eq('taking one spends a charge', sight.afterOne, 2);
@@ -373,8 +373,8 @@ module.exports = {
     /* Two settings opt out now, and both have to earn it: the escape hatch is
        for a place whose danger genuinely is not one foe spiking, and it must
        name an ability that exists rather than a word. */
-    t.eq('the Summit and the Wilds opt out, and nothing else does',
-      owns.declared, ['summit', 'wilds']);
+    t.eq('three settings opt out now, and nothing else does',
+      owns.declared, ['summit', 'wilds', 'sea']);
     t.ok('and each names a foresight that is really in the game',
       owns.declaredAreReal, JSON.stringify(owns.declared));
   }
