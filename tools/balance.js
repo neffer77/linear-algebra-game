@@ -148,6 +148,13 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         if (rnd() < acc) pot += Math.round(60 + depth * 20);
         continue;
       }
+      if (kind === 'forage') {
+        /* A thicket, like a seam: no foe, so it cannot kill you, and what it
+           pays is herbs rather than gold so it adds nothing to the pot at risk.
+           What it changes is the same thing a seam changes — it is a free room,
+           and free rooms make pressing on cheaper. */
+        continue;
+      }
       if (kind === 'seam') {
         // A seam yields ore, not gold, so it adds nothing to the pot at risk —
         // but it also cannot kill you, which is what makes it matter here: it
@@ -240,7 +247,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         st.hp = Math.min(st.hp, ceilingAt(depth));
         if (st.hp <= 0) return { banked: 0, depth, died: true, turned };
         if (nKind === 'lock') { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
-        if (nKind === 'seam') continue;
+        if (nKind === 'seam' || nKind === 'forage') continue;
         if (nKind === 'sigil') {
           st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
           continue;

@@ -33,6 +33,7 @@ const SUITES = [
   require('./play/summit'),      // S7
   require('./play/sigil'),       // S8
   require('./play/wilds'),       // S9
+  require('./play/thicket'),     // S10
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

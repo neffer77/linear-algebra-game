@@ -347,7 +347,7 @@ module.exports = {
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
     t.ok('with the Wilds appended rather than inserted', codec.wildsLast);
-    t.eq('and still no format bump — the count is written down', codec.ver, 4);
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
     t.ok('a knight code carries the walk', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21, wilds: 17 });
 

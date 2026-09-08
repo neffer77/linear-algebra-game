@@ -36,8 +36,8 @@ module.exports = {
     /* The format version. Bump it here ON PURPOSE when the save gains a field,
        and add a case below proving the previous version still reads — those
        two together are the whole backward-compatibility contract. */
-    t.eq('the codec is at version 4', codec.ver, 4);
-    t.eq('codes are tagged KE4-', codec.head, 'KE4-');
+    t.eq('the codec is at version 5', codec.ver, 5);
+    t.eq('codes are tagged KE5-', codec.head, 'KE5-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);
@@ -93,6 +93,30 @@ module.exports = {
       v3.runes && v3.runes.length === 2 && v3.forged === true, JSON.stringify(v3.runes));
     t.ok('and the field added after them reading as empty rather than as whatever came next',
       v3.bests && Object.keys(v3.bests).length === 0, JSON.stringify(v3.bests));
+
+    /* And the version immediately before THIS one, for the same reason. v4
+       ended after the per-setting depth records, so a v5 decoder must stop
+       reading there rather than running off the end into the herb pouch and
+       finding whatever the zero-padding gives it. Minted from the build that
+       shipped v4, not written by hand. */
+    const V4 = 'KE4-ARICVAFKDYASEMZLSNYABNSGJSA2FAAAAAAAAAAAACYKQAYAAAAAFAQAQAAADBACAAQAEA'
+             + 'BAAIACAAQAEADIAAAAAAAAAABDAAAAAAAAAAAAAADIEQDQDAYAAAAAJQ4AMWZQ';
+    const v4 = await t.ev(code => {
+      const d = Codec.decode(code);
+      return { ok: d.ok, why: d.why, lvl: d.ok ? d.g.lvl : null, gold: d.ok ? d.g.gold : null,
+               ore: d.ok ? d.g.mats.ore : null, essence: d.ok ? d.g.mats.essence : null,
+               herb: d.ok ? d.g.mats.herb : null,
+               brewed: d.ok ? d.g.brewed : null,
+               bests: d.ok ? d.g.bests : null };
+    }, V4);
+    t.ok('a version 4 code still decodes', v4.ok, v4.why);
+    t.ok('with the knight it was made from', v4.lvl === 11 && v4.gold === 3400,
+      JSON.stringify(v4));
+    t.ok('their materials intact', v4.ore === 52 && v4.essence === 18, JSON.stringify(v4));
+    t.eq('and everywhere they had walked', v4.bests, { deep: 12, summit: 19, wilds: 14 });
+    t.eq('the herb pouch reads as empty rather than as whatever came next', v4.herb, 0);
+    t.ok('and nothing is brewed', v4.brewed && Object.keys(v4.brewed).length === 0,
+      JSON.stringify(v4.brewed));
 
     /* --- the referee: newest wins, per knight ---
        The vault mirrors localStorage wholesale, so a doctored backup is planted
