@@ -32,7 +32,7 @@ module.exports = {
       out.topics = settingTopics(S);
       out.topicsResolve = Array.isArray(out.topics) && out.topics.length > 10;
       out.foresight = S.foresight;
-      out.notClimbed = !S.up && !S.thinAir;
+      out.notClimbed = S.voice !== 'up' && !S.thinAir;
 
       // opens one realm later than the Summit
       Game.s.cleared = {};
@@ -350,6 +350,70 @@ module.exports = {
     t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
     t.ok('a knight code carries the walk', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21, wilds: 17 });
+
+    /* --- and it is SPOKEN of as open country ---
+       This is the gap the slice shipped with: the Wilds walked and talked like
+       the Deep, offering to "climb out" of a passage that "drops away into the
+       dark". The Summit had its own words from the first day and nothing was
+       looking at the Wilds', which is exactly how a place ends up describing
+       somewhere else. */
+    const words = await t.ev(() => {
+      const out = {};
+      Game.s.metRoom = { monster: 1, lock: 1, seam: 1, wager: 1, rumour: 1, sigil: 1, forage: 1 };
+      Game.s.loadout = [];
+
+      out.voices = Object.keys(VOICES);
+      out.everyVoiceComplete = Object.values(VOICES).every(v =>
+        v.unit && v.ic && v.passage && v.on && v.out && v.left && v.killer &&
+        v.keeps && v.ends && v.reached && v.again && v.risk);
+      out.everySettingsVoiceReal = Object.keys(SETTINGS)
+        .every(k => !SETTINGS[k].voice || !!VOICES[SETTINGS[k].voice]);
+      out.threeDistinct = new Set(Object.values(VOICES).map(v => v.passage)).size ===
+                          Object.keys(VOICES).length;
+
+      /* Climbing can set a knight down above the first room, so the number in
+         the heading is not fixed — what is being checked is the WORD. */
+      Dungeon.descend('wilds');
+      Dungeon.resolve({ status: 'cleared', quality: 1, topics: [], yield: { gold: 40, xp: 8 } });
+      const fork = document.getElementById('resultBody').innerText;
+      out.saysRoom = new RegExp('Room ' + Dungeon.run.depth + ' cleared').test(fork);
+      out.notDepth = !/Depth/.test(fork);
+      out.opensOut = /country opens out/.test(fork);
+      out.noDarkPassage = !/drops away into the dark/.test(fork);
+      out.walksOn = /Walk on/.test(fork);
+      out.headsBack = /Head back/.test(fork);
+      out.notClimbOut = !/Climb out/.test(fork);
+      out.riskUntilYouHeadBack = /at risk until you head back/.test(fork);
+
+      // and a fall out here is the herd, not the dark and not the air
+      Dungeon.died({ status: 'failed', quality: 0, topics: [], yield: {} });
+      const dead = document.getElementById('resultBody').innerText;
+      out.wildsKeep = /Wilds keep you/.test(dead);
+      out.notTheDeep = !/Deep keeps you/.test(dead) && !/mountain keeps you/.test(dead);
+
+      // the Deep is untouched by any of it
+      Dungeon.descend('deep');
+      Dungeon.resolve({ status: 'cleared', quality: 1, topics: [], yield: { gold: 10, xp: 2 } });
+      const deep = document.getElementById('resultBody').innerText;
+      out.deepStillDepth = new RegExp('Depth ' + Dungeon.run.depth + ' cleared').test(deep)
+                        && /drops away into the dark/.test(deep);
+      return out;
+    });
+    t.eq('there are three voices', words.voices.length, 3);
+    t.ok('each fully written out', words.everyVoiceComplete);
+    t.ok('and each says something different', words.threeDistinct);
+    t.ok('every setting that names a voice names one that exists',
+      words.everySettingsVoiceReal);
+    t.ok('the Wilds counts rooms rather than depths',
+      words.saysRoom && words.notDepth);
+    t.ok('the country opens out ahead rather than dropping into the dark',
+      words.opensOut && words.noDarkPassage);
+    t.ok('you walk on rather than pressing deeper', words.walksOn);
+    t.ok('and head back rather than climbing out', words.headsBack && words.notClimbOut);
+    t.ok('right down to what the haul is at risk until', words.riskUntilYouHeadBack);
+    t.ok('a fall out here is the herd, not the dark and not the air',
+      words.wildsKeep && words.notTheDeep);
+    t.ok('and the Deep still speaks the way it always did', words.deepStillDepth);
 
     // --- a walk, actually walked ---
     const walk = await t.ev(() => {

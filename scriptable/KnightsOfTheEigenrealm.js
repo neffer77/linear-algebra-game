@@ -7004,6 +7004,30 @@ const SETTING_ORDER = [
   'wilds'
 ];
 
+/* How a place is SPOKEN about. The Deep is descended, the Summit is climbed,
+   the Wilds is walked across — and a fork that tells a knight in open country
+   that "a passage drops away into the dark" and offers to "climb out" is
+   describing somewhere else.
+ 
+   This started as one boolean on the Summit, which was fine for two voices and
+   wrong the moment there were three: the Wilds shipped a slice ago speaking the
+   Deep's words throughout, and nothing noticed because nothing was looking.
+   A table, so the next place is an entry rather than another ternary. */
+const VOICES = {
+  down: { unit:'Depth',  ic:'⛏️', passage:'A passage drops away into the dark.',
+          on:'Press on', out:'Climb out', left:'Climbed out', killer:'The dark',
+          keeps:'The Deep keeps you', ends:'descent at depth',
+          reached:'Depths cleared', again:'Descend again', risk:'until you climb out' },
+  up:   { unit:'Height', ic:'🧗', passage:'The ridge goes on, and the air thins.',
+          on:'Climb higher', out:'Turn back', left:'Turned back', killer:'The thin air',
+          keeps:'The mountain keeps you', ends:'climb at height',
+          reached:'Height reached', again:'Climb again', risk:'until you turn back' },
+  out:  { unit:'Room',   ic:'🥾', passage:'The country opens out ahead.',
+          on:'Walk on', out:'Head back', left:'Walked back', killer:'The herd',
+          keeps:'The Wilds keep you', ends:'walk at room',
+          reached:'Rooms walked', again:'Walk out again', risk:'until you head back' }
+};
+
 /* A descent's setting: the curve it draws foes from, how its rooms are laid
    out, and whether it can kill you. The Deep runs forever on a seeded roll;
    the cellar is three rooms on a fixed plan with a chest in the middle, and it
@@ -7060,7 +7084,7 @@ const SETTINGS = {
     canDie:true, rooms:0, lockChance:.18, seamChance:.10, sigilChance:.22,
     strands:['Multivariable & Series','Limits & Derivatives','Applications'],
     thinAir:0.06, airFloor:0.4,
-    up:true,                                 // climbed, not descended: changes the words
+    voice:'up',                              // climbed, not descended: changes the words
     /* Which foresight this setting is built around. It is not decoration: the
        Deep's danger is a single foe spiking, which is what Farsight reads, and
        the Summit's is attrition across many rooms, which Farsight cannot see at
@@ -7087,6 +7111,7 @@ const SETTINGS = {
        Wilds' own material rather than a third currency scattered everywhere.
        Rolled last, so it takes from what would otherwise have been a fight. */
     forageChance:.30,
+    voice:'out',                             // walked across, not down or up
     strands:['Eigen & Subspaces','Matrices','Multivariable & Series'],
     foresight:'tracking'
   }
@@ -7459,11 +7484,16 @@ const RoomKinds = {
          thicket. Bulk and worth are rolled independently on purpose: if the
          dearest plant were always the bulkiest there would be one right answer
          at every basket size and nothing to weigh. */
+      /* Names are dealt without replacement. Two rows reading "vetch · 13
+         herbs · 1 square" and "vetch · 8 herbs · 3 squares" is not a bug in the
+         arithmetic, but it is a bug in the screen: the player is being asked to
+         compare five things and two of them look like the same thing. */
+      const names=rng.shuffle(Forage.NAMES);
       const plants=[];
       for(let i=0;i<Forage.PLANTS;i++){
         const bulk = rng.i(1, Forage.MAX_SPACE);
         const worth = Math.round(rng.i(2, 8) * (1 + depth*0.22));
-        plants.push({ nm:rng.pick(Forage.NAMES), ic:rng.pick(Forage.ICONS), bulk, worth });
+        plants.push({ nm:names[i], ic:rng.pick(Forage.ICONS), bulk, worth });
       }
       return { kind:'forage', qs, plants, depth };
     },
@@ -8616,6 +8646,8 @@ const Dungeon = {
 
   // Which setting this descent is in — the Deep unless the cellar says otherwise.
   set(){ return SETTINGS[(this.run && this.run.setting) || 'deep'] || SETTINGS.deep; },
+  // And how to talk about it. Every place has a voice; most of them are the Deep's.
+  words(){ return VOICES[this.set().voice || 'down'] || VOICES.down; },
 
   /* The Summit's whole pressure, in one number. Every room above the first
      takes a slice off the health a knight can hold, down to a floor — so what
@@ -9111,14 +9143,13 @@ const Dungeon = {
   fork(outcome){
     this.lastOutcome=outcome;
     const sp=this.cur.spec, u=this.run.unbanked, g=Game.s;
-    const up=!!this.set().up;               // the Summit is climbed, not descended
+    const w=this.words();
     /* The fork reads the same whatever the room was, so it has to be able to
        describe every kind — and a kind added without a line here used to reach
        for a foe that a chest or a seam does not have. Written as a table so the
        next kind is an entry rather than another branch to forget. */
-    const PASSAGE = up ? 'The ridge goes on, and the air thins.'
-                       : 'A passage drops away into the dark.';
-    let icon=up?'🧗':'⛏️', line=PASSAGE;
+    const PASSAGE = w.passage;
+    let icon=w.ic, line=PASSAGE;
     if(sp.kind==='lock'){
       const opened = outcome.lock && outcome.lock.opened;
       icon = opened?'🎁':'🧰';
@@ -9147,14 +9178,14 @@ const Dungeon = {
              : w.staked>0 ? \`The table takes \${w.staked}. \`
              : 'You sat the hand out. ') + 'Another table waits.';
     } else if(sp.foe){
-      icon = sp.foe.boss?'👑':(up?'🧗':'⛏️');
+      icon = sp.foe.boss?'👑':w.ic;
       line = \`\${sp.foe.nm} falls. \${PASSAGE}\`;
     }
     UI.go('s-result');
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">\${icon}</div>
       <div class="panel center">
-        <h1 style="font-size:20px">\${up?'Height':'Depth'} \${this.run.depth} cleared</h1>
+        <h1 style="font-size:20px">\${w.unit} \${this.run.depth} cleared</h1>
         <div class="sub" style="margin-top:6px">\${line}</div>
         <hr>
         <div style="font-size:15px;font-weight:800;line-height:1.8">
@@ -9164,11 +9195,11 @@ const Dungeon = {
           \${this.wards()?\`<div style="color:#8ad4ff">🌀 \${this.wards()} ward\${this.wards()===1?'':'s'} carried</div>\`:''}
         </div>
         <hr>
-        <div class="small">❤️ \${Math.round(g.hp)}/\${g.maxHp} · this haul is <b>at risk</b> until you climb out</div>
+        <div class="small">❤️ \${Math.round(g.hp)}/\${g.maxHp} · this haul is <b>at risk</b> \${w.risk}</div>
       </div>
       \${this.foresightBlock()}
-      <button class="btn gold" onclick="Dungeon.nextRoom()">\${up?'🧗':'⛏️'} \${up?'Climb higher':'Press on'} — \${up?'Height':'Depth'} \${this.run.depth+1} →</button>
-      <button class="btn ghost" onclick="Dungeon.leave()">🚪 \${up?'Turn back':'Climb out'} with \${u.gold} gold</button>
+      <button class="btn gold" onclick="Dungeon.nextRoom()">\${w.ic} \${w.on} — \${w.unit} \${this.run.depth+1} →</button>
+      <button class="btn ghost" onclick="Dungeon.leave()">🚪 \${w.out} with \${u.gold} gold</button>
       <div style="height:20px"></div>\`;
     Haptic.win();
   },
@@ -9250,7 +9281,8 @@ const Dungeon = {
     this.clearRun();                   // banked and done; there is nothing to resume
     Game.save();
     UI.go('s-map');
-    UI.toast(\`🚪 \${midFight?'Fled':'Climbed out'} of \${this.set().nm.replace(/^The /,'the ')} at depth \${this.run.depth} with \${u.gold} gold.\`);
+    const w=this.words();
+    UI.toast(\`🚪 \${midFight?'Fled':w.left} of \${this.set().nm.replace(/^The /,'the ')} at \${w.unit.toLowerCase()} \${this.run.depth} with \${u.gold} gold.\`);
     if(ups) Celebrate.banner('LEVEL '+Game.s.lvl, 'Maximum health now '+Game.s.maxHp, 'var(--gold)', ()=>Sfx.level());
     Titles.check();
   },
@@ -9260,8 +9292,8 @@ const Dungeon = {
        but a kind that can fail is exactly the sort of thing a later slice adds,
        and reaching blindly for a foe that a chest or a seam does not have is
        how that arrives as a crash instead of a missing sentence. */
-    const up=!!this.set().up;
-    const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm: up?'The thin air':'The dark'};
+    const w=this.words();
+    const foe=(this.cur && this.cur.spec && this.cur.spec.foe) || {nm: w.killer};
     const pot=this.run.unbanked.gold, depth=this.run.depth;
     /* Dead reckoning: a fall is no longer all or nothing. What is salvaged is
        banked here rather than left in the run, because the run is about to stop
@@ -9280,11 +9312,11 @@ const Dungeon = {
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">💀</div>
       <div class="panel center">
-        <h1 style="font-size:20px;color:var(--red)">\${up?'The mountain keeps you':'The Deep keeps you'}</h1>
-        <div class="sub" style="margin-top:6px">\${foe.nm} ends your \${up?'climb at height':'descent at depth'} \${depth}.</div>
+        <h1 style="font-size:20px;color:var(--red)">\${w.keeps}</h1>
+        <div class="sub" style="margin-top:6px">\${foe.nm} ends your \${w.ends} \${depth}.</div>
         <hr>
         <div style="font-size:16px;font-weight:800;line-height:1.9">
-          <div>\${up?'Height reached':'Depths cleared'}: <span style="color:var(--gold)">\${depth-1}</span></div>
+          <div>\${w.reached}: <span style="color:var(--gold)">\${depth-1}</span></div>
           <div style="color:var(--red)">🎒 \${lost} unbanked gold lost to the dark</div>
           \${kept?\`<div style="color:var(--green)">🧭 \${kept} carried out by dead reckoning</div>\`:''}
         </div>
@@ -9293,7 +9325,7 @@ const Dungeon = {
           ? 'You found your own way up in the dark. Most of a haul still dies with a run — bank it next time.'
           : 'Bank your haul next time — nothing you carry survives a fall.'}</div>
       </div>
-      <button class="btn gold" onclick="Dungeon.descend('\${this.run?this.run.setting:'deep'}')">↻ \${up?'Climb again':'Descend again'}</button>
+      <button class="btn gold" onclick="Dungeon.descend('\${this.run?this.run.setting:'deep'}')">↻ \${w.again}</button>
       <button class="btn" onclick="UI.go('s-shop')">🏪 Spend what you banked</button>
       <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
       <div style="height:20px"></div>\`;
