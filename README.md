@@ -368,7 +368,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Eighteen suites, 781 checks, about three
+loop only exists once the page is running. Eighteen suites, 793 checks, about three
 quarters of a minute:
 
 | suite | what it holds to |

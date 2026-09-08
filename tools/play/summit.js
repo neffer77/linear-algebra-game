@@ -29,7 +29,7 @@ module.exports = {
       out.exists = !!S;
       out.endless = S.rooms;
       out.canDie = S.canDie;
-      out.climbed = !!S.up;
+      out.climbed = S.voice === 'up';
       out.thinAir = S.thinAir;
       out.floor = S.airFloor;
       out.hasNoMaterial = !S.essencePerRoom && !S.orePerRoom && !S.buyIn;

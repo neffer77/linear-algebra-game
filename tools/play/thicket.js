@@ -108,6 +108,20 @@ module.exports = {
       R.seed(99); RoomKinds.forage.build(R, 4, SETTINGS.wilds); R.unseed();
       out.cursorHeld = Mastery._last === 'sentinel';
 
+      // names are dealt without replacement, over many thickets
+      out.namesDistinct = true;
+      for (let s2 = 0; s2 < 40; s2++) {
+        R.seed(6100 + s2 * 271);
+        const p2 = RoomKinds.forage.build(R, 5, SETTINGS.wilds).plants;
+        R.unseed();
+        if (new Set(p2.map(x => x.nm)).size !== p2.length) {
+          out.namesDistinct = false;
+          out.someNames = p2.map(x => x.nm);
+          break;
+        }
+      }
+      out.someNames = out.someNames || a.plants.map(x => x.nm);
+
       /* Bulk and worth have to vary independently, or there is one right answer
          at every basket size and the second decision is not a decision. Read
          over many thickets rather than one. */
@@ -135,6 +149,8 @@ module.exports = {
     t.eq('five plants in it', pure.plantCount, 5);
     t.eq('and one riddle per square of basket', pure.qCount, 3);
     t.ok('every plant is fully described', pure.everyPlantWhole);
+    t.ok('and no two in a thicket share a name — five things to compare, five names',
+      pure.namesDistinct, JSON.stringify(pure.someNames));
     t.ok('building it does not disturb what the next fight will ask', pure.cursorHeld);
     t.ok('plants differ in bulk', pure.bulkVaries);
     t.ok('and two of the same bulk are not worth the same', pure.worthVariesWithinBulk);
