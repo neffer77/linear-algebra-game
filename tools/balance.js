@@ -111,7 +111,30 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
      live, restated here because this harness never touches the live save. A
      setting without thin air returns the knight's whole health at every depth,
      so this is a no-op everywhere else. */
+  /* What a knight actually hits at this depth. Everywhere but the Library this
+     is the accuracy they walked in with — the sweep's whole method is to hold
+     skill fixed and vary the place.
+
+     The Library is the exception because its pressure IS the question: every
+     few shelves the material is asked a tier harder, and a harder tier is
+     answered less often by the same person. Leaving that out measured a setting
+     with the gentlest foe curve in the game and no other pressure at all, which
+     is why the first sweep of it had no top — 85% and 95% both ran off the end.
+
+     TIER_COST is the one number in this harness that is an assumption rather
+     than a reading: nothing in the game states what a difficulty tier costs a
+     given player, so it is set at seven points of accuracy a tier and floored.
+     The property it exists to protect is not the exact depth but that the
+     shelves have an end, and that a knight who reads better gets further along
+     them. Both hold across a wide range of it. */
+  const TIER_COST = 0.07;
+  function accAt(acc, depth) {
+    if (!set.stackEvery) return acc;
+    return Math.max(0.15, acc - TIER_COST * Dungeon.stacks(depth, set));
+  }
+
   function ceilingAt(depth) {
+
     if (!set.thinAir) return BASE.maxHp;
     const climbed = Math.max(0, depth - 1);
     const air = Math.min(1, Math.max(set.airFloor || 0.4, 1 - set.thinAir * climbed));
@@ -138,17 +161,20 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
          permanently calm sea would be measuring the wrong ocean. */
       const foe = WaveEngine.foe(depth, CURVE, Dungeon.rough(depth, set, seed));
       R.unseed();
+      // In the Library the shelves get older; everywhere else this is `acc`.
+      const hit = accAt(acc, depth);
+
       if (kind === 'sigil') {
         // A ward-stone pays nothing into the pot. What it banks is damage that
         // will not land later, which is the whole reason it is modelled here:
         // it changes how deep it is rational to go without changing the yield.
-        st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
+        st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(hit, rnd, Sigil.MAX));
         continue;
       }
       if (kind === 'lock') {
         // A chest is one riddle: no foe, so it cannot kill you. It pays the
         // lock room's yield when answered, and nothing when fumbled.
-        if (rnd() < acc) pot += Math.round(60 + depth * 20);
+        if (rnd() < hit) pot += Math.round(60 + depth * 20);
         continue;
       }
       if (kind === 'hold') {
@@ -174,7 +200,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         // is a free room, and free rooms make pressing on cheaper.
         continue;
       }
-      const left = fightRoom(st, foe, acc, rnd);
+      const left = fightRoom(st, foe, hit, rnd);
       if (left === null) return { banked: 0, depth, died: true };
       pot += foe.gold;
     }
@@ -191,7 +217,9 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
                  dmg: w.dmg, crit: w.crit, def: a.def,
                  gear: `${w.nm} · ${a.nm} · level ${knight.lvl}` };
 
-  const out = { base: BASE, levels: [], foresight: set.foresight || 'farsight' };
+  const out = { base: BASE, levels: [], foresight: set.foresight || 'farsight',
+                counter: set.counter || null };
+
   for (const acc of accuracies) {
     /* Expected banked gold if you commit to leaving at depth d. Averaged over
        many seeds, this curve rises while rooms are survivable and falls once
@@ -259,13 +287,17 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
            heights where the reading is supposed to matter most. */
         st.hp = Math.min(st.hp, ceilingAt(depth));
         if (st.hp <= 0) return { banked: 0, depth, died: true, turned };
-        if (nKind === 'lock') { if (rnd() < acc) pot += Math.round(60 + next * 20); continue; }
+        /* The stacks are felt by a knight carrying foresight too. Leaving this
+           out compared a scrying reader who never tires against a blind one
+           who does, which flatters the ability with somebody else's advantage. */
+        const hit = accAt(acc, depth);
+        if (nKind === 'lock') { if (rnd() < hit) pot += Math.round(60 + next * 20); continue; }
         if (nKind === 'seam' || nKind === 'forage' || nKind === 'hold') continue;
         if (nKind === 'sigil') {
-          st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(acc, rnd, Sigil.MAX));
+          st.wards = Math.min(Dungeon.WARD_CAP, st.wards + inscribe(hit, rnd, Sigil.MAX));
           continue;
         }
-        if (fightRoom(st, nFoe, acc, rnd) === null) return { banked: 0, depth, died: true, turned };
+        if (fightRoom(st, nFoe, hit, rnd) === null) return { banked: 0, depth, died: true, turned };
         pot += nFoe.gold;
       }
       return { banked: pot, depth, died: false, turned };
@@ -329,7 +361,13 @@ function judge(res) {
      spiking, a one-room reading genuinely cannot help, and demanding that it
      does would only push the curves somewhere dishonest. What is reported
      instead is that the sweep did not measure that setting's own ability. */
-  if (res.foresight === 'farsight' && !L.some(x => x.scryBreakEven > x.breakEven))
+  /* A setting may also declare that its answer is not a foresight at all — the
+     Library is survived by Loremaster, a Passage skill, because what it does to
+     you is take away what you knew rather than put something in your way. Then
+     the Farsight property is not merely unmeasured but genuinely not the
+     question, and the sweep says so rather than failing it. */
+  if (!res.counter && res.foresight === 'farsight' && !L.some(x => x.scryBreakEven > x.breakEven))
+
     fails.push('seeing one room ahead never makes it rational to go deeper — ' +
                'foresight is decoration in a slot that could hold something that works');
   if (best.breakEven < 3)
@@ -412,7 +450,12 @@ function judge(res) {
     console.log(`  the knight it opens for: ${res.base.gear}`);
     console.log(`  ${res.base.maxHp} health · ${res.base.dmg} damage · ${res.base.def} defence`);
     console.log(`  ${runs} runs per accuracy level, to depth ${maxDepth}`);
-    if (res.foresight !== 'farsight')
+    if (res.counter)
+      console.log(`  note: this setting is answered by ${res.counter}, which is a Passage\n` +
+                  `        skill rather than a foresight — the Farsight column below is\n` +
+                  `        a floor, and the property it usually asserts does not apply`);
+    else if (res.foresight !== 'farsight')
+
       console.log(`  note: this setting's own foresight is ${res.foresight}, which this sweep` +
                   `\n        does not model — the Farsight column below is a floor, not its value`);
     console.log('');

@@ -351,7 +351,7 @@ module.exports = {
        never needed a version bump. The number below moves when something
        ELSE is appended — herbs did that — and it staying pinned is what
        makes a bump a deliberate act rather than a side effect. */
-    t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 6);
     t.ok('a knight code carries the climb', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21 });
     /* The Summit declares its own foresight, which tells the balance harness
@@ -364,6 +364,19 @@ module.exports = {
       deep: SETTINGS.deep.foresight || 'farsight',
       sanctum: SETTINGS.sanctum.foresight || 'farsight',
       declared: Object.keys(SETTINGS).filter(k => SETTINGS[k].foresight),
+      library: SETTINGS.library.foresight,
+      // Computed in the PAGE, not on the Node side — SETTINGS lives in the
+      // browser, and reaching for it out here is a ReferenceError waiting for
+      // the next setting to be added.
+      optOut: Object.keys(SETTINGS)
+        .filter(k => SETTINGS[k].foresight && SETTINGS[k].foresight !== 'farsight'),
+      counters: Object.keys(SETTINGS).filter(k => SETTINGS[k].counter),
+      // no setting may both name a foresight and claim something else answers it
+      allAccountedFor: Object.keys(SETTINGS)
+        .every(k => !(SETTINGS[k].foresight && SETTINGS[k].counter)),
+
+
+
       declaredAreReal: Object.keys(SETTINGS).filter(k => SETTINGS[k].foresight)
         .every(k => Dungeon.FORESIGHT.some(f => f.id === SETTINGS[k].foresight))
     }));
@@ -373,8 +386,19 @@ module.exports = {
     /* Two settings opt out now, and both have to earn it: the escape hatch is
        for a place whose danger genuinely is not one foe spiking, and it must
        name an ability that exists rather than a word. */
-    t.eq('three settings opt out now, and nothing else does',
-      owns.declared, ['summit', 'wilds', 'sea']);
+    /* The Library declares Farsight — it does not opt out. Its danger is one
+       shelf at a time getting harder, which is exactly what a one-room
+       reading is for, so it must keep asserting the property. */
+    /* Three settings answer the Farsight property with a different foresight,
+       and exactly one answers it with something that is not a foresight at all.
+       Both are escape hatches from a real property, so both are pinned: a
+       setting may not simply go quiet. */
+    t.eq('three settings are built around a different foresight',
+      owns.optOut, ['summit', 'wilds', 'sea']);
+    t.eq('and one is answered by a Passage skill instead', owns.counters, ['library']);
+    t.ok('but never both at once — a setting may not go quiet twice over',
+      owns.allAccountedFor, JSON.stringify(owns.declared));
+
     t.ok('and each names a foresight that is really in the game',
       owns.declaredAreReal, JSON.stringify(owns.declared));
   }

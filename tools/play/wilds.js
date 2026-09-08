@@ -350,7 +350,7 @@ module.exports = {
        records by position, so a setting that moves lands every record after
        it on the wrong place. Later settings go on the end. */
     t.ok('with the Wilds still sixth, where it was appended', codec.wildsPlaced);
-    t.eq('and the format is where the last deliberate bump left it', codec.ver, 5);
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 6);
     t.ok('a knight code carries the walk', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21, wilds: 17 });
 
@@ -402,7 +402,7 @@ module.exports = {
                         && /drops away into the dark/.test(deep);
       return out;
     });
-    t.eq('there are four voices', words.voices.length, 4);
+    t.eq('there are five voices', words.voices.length, 5);
     t.ok('each fully written out', words.everyVoiceComplete);
     t.ok('and each says something different', words.threeDistinct);
     t.ok('every setting that names a voice names one that exists',

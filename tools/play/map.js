@@ -183,9 +183,10 @@ module.exports = {
           .every(k => DESTINATIONS.some(d => d.id === k))
       };
     });
-    t.eq('seven destinations', table.count, 7);
+    t.eq('eight destinations', table.count, 8);
     t.eq('in the order they open', table.ids,
-      ['deep', 'sanctum', 'tavern', 'summit', 'wilds', 'sea', 'arena']);
+      ['deep', 'sanctum', 'tavern', 'summit', 'wilds', 'sea', 'library', 'arena']);
+
     t.ok('each is fully described by the table', table.everyOneComplete);
     t.ok('every label renders', table.labels.every(l => typeof l === 'string' && l.length),
       JSON.stringify(table.labels));

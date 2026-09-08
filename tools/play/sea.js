@@ -577,7 +577,7 @@ module.exports = {
       out.seaKeeps = /The sea keeps you/.test(document.getElementById('resultBody').innerText);
       return out;
     });
-    t.eq('there are four voices now', words.voices.length, 4);
+    t.eq('there are five voices now', words.voices.length, 5);
     t.ok('each fully written out', words.everyVoiceComplete);
     t.ok('and each says something different', words.distinct);
     t.ok('every setting that names a voice names a real one', words.everySettingsVoiceReal);
@@ -591,7 +591,8 @@ module.exports = {
     const codec = await t.ev(() => {
       const out = {};
       out.ordersMatch = JSON.stringify(SETTING_ORDER) === JSON.stringify(Object.keys(SETTINGS));
-      out.seaLast = SETTING_ORDER[SETTING_ORDER.length - 1] === 'sea';
+      out.seaPlaced = SETTING_ORDER.indexOf('sea') === 6;
+
       out.ver = Codec.VER;
       Game.s.bests = { deep: 9, wilds: 21, sea: 17 };
       const back = Codec.decode(Codec.encode(Profiles.active(), Game.s, Date.now()));
@@ -600,8 +601,12 @@ module.exports = {
       return out;
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
-    t.ok('with the Sea appended rather than inserted', codec.seaLast);
-    t.eq('and no format bump — the count is written down', codec.ver, 5);
+    /* Appended at position seven and it stays there: the codec writes these
+       records by position, so a setting that moves lands every record after it
+       on the wrong place. Later settings go on the end. */
+    t.ok('with the Sea still seventh, where it was appended', codec.seaPlaced);
+
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 6);
     t.ok('a knight code carries the voyage', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, wilds: 21, sea: 17 });
 

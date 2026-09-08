@@ -368,8 +368,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Nineteen suites, 899 checks, about three
-quarters of a minute:
+loop only exists once the page is running. Twenty suites, 997 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -390,6 +389,7 @@ quarters of a minute:
 | `wilds` | the ground turns on a period, and what Tracking says about it is true |
 | `thicket` | riddles buy basket, the basket is spent, and it cannot be overfilled |
 | `sea` | the forecast is true of water that is drawn rather than derived |
+| `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `map` | the places you can go are above the campaign, not below thirty-two fights |
 | `cheat` | the testing door opens for nobody who has not typed it |
 

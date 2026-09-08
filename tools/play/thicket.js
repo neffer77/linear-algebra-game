@@ -415,8 +415,8 @@ module.exports = {
       out.bareSatchel = bare.ok ? !!bare.g.brewed.satchel : null;
       return out;
     });
-    t.eq('the format moved to five for this', codec.ver, 5);
-    t.eq('and the tag with it', codec.tag, 'KE5-');
+    t.eq('the format has moved on since', codec.ver, 6);
+    t.eq('and the tag with it', codec.tag, 'KE6-');
     t.ok('a knight code carries the pouch', codec.ok);
     t.eq('exactly', codec.herb, 137);
     t.ok('and the satchel with it', codec.satchel);

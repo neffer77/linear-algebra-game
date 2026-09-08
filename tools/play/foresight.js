@@ -100,7 +100,8 @@ module.exports = {
                    : R.chance(set.seamChance || 0) ? 'seam'
                    : R.chance(set.sigilChance || 0) ? 'sigil'
                    : R.chance(set.forageChance || 0) ? 'forage'
-                   : R.chance(set.holdChance || 0) ? 'hold' : 'monster';
+                   : R.chance(set.holdChance || 0) ? 'hold'
+                   : R.chance(set.copyChance || 0) ? 'copy' : 'monster';
         const realFoe = real === 'monster' ? WaveEngine.foe(3, set.waves) : null;
         R.unseed();
         out.checked++;
