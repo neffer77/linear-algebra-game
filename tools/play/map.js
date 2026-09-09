@@ -44,7 +44,7 @@ module.exports = {
     t.ok('the Deep is within a couple of taps of the top, not thirty',
       reach.deep !== null && reach.deep <= 2, `${reach.deep} nodes in front of it`);
     t.ok('and with every place open, even the last of them is above the campaign',
-      reach.arena !== null && reach.arena <= 6,
+      reach.arena !== null && reach.arena <= 8,
       `${reach.arena} in front of the Arena, of ${reach.allOpenTotal} nodes`);
     t.ok('the campaign is still all there', reach.allOpenTotal > 30,
       String(reach.allOpenTotal));
@@ -183,9 +183,10 @@ module.exports = {
           .every(k => DESTINATIONS.some(d => d.id === k))
       };
     });
-    t.eq('six destinations', table.count, 6);
+    t.eq('eight destinations', table.count, 8);
     t.eq('in the order they open', table.ids,
-      ['deep', 'sanctum', 'tavern', 'summit', 'wilds', 'arena']);
+      ['deep', 'sanctum', 'tavern', 'summit', 'wilds', 'sea', 'library', 'arena']);
+
     t.ok('each is fully described by the table', table.everyOneComplete);
     t.ok('every label renders', table.labels.every(l => typeof l === 'string' && l.length),
       JSON.stringify(table.labels));

@@ -142,7 +142,9 @@ module.exports = {
           const real = R.chance(set.lockChance) ? 'lock'
                      : R.chance(set.seamChance || 0) ? 'seam'
                      : R.chance(set.sigilChance || 0) ? 'sigil'
-                     : R.chance(set.forageChance || 0) ? 'forage' : 'monster';
+                     : R.chance(set.forageChance || 0) ? 'forage'
+                     : R.chance(set.holdChance || 0) ? 'hold'
+                     : R.chance(set.copyChance || 0) ? 'copy' : 'monster';
           R.unseed();
           out.checked++;
           if (said !== real) out.wrong.push(`d${d} seed${seed}: ${said} vs ${real}`);

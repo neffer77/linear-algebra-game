@@ -122,6 +122,19 @@ jobs:
       - name: Check the swell still rewards skill
         run: npm run balance -- --setting wilds --lvl 12 --weapon 3 --armor 3 --depth 40
 
+      # And of the Sea, whose danger is drawn rather than derived. A squall rate
+      # is the easiest of the three pressures to set somewhere that either never
+      # bites or always does.
+      - name: Check the crossing still rewards skill
+        run: npm run balance -- --setting sea --lvl 15 --weapon 4 --armor 4 --depth 40
+
+      # And of the Library, whose pressure is the questions rather than the
+      # foes. The sweep models the stacks as accuracy lost per tier, because
+      # without that it measured the gentlest foe curve in the game and no other
+      # pressure at all — and duly reported a setting with no top.
+      - name: Check the stacks still have an end
+        run: npm run balance -- --setting library --lvl 17 --weapon 5 --armor 5 --depth 40
+
   build:
     needs: [validate, playthrough]
     runs-on: ubuntu-latest
