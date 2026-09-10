@@ -95,10 +95,55 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      # Which browser build is wanted is decided by the version npm actually
+      # resolved, not by the range in package.json. There is no lockfile here,
+      # so ^1.49.0 floats - key the cache on what landed rather than on what
+      # was asked for, or a Playwright release quietly serves a stale browser.
+      - name: Read the resolved Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      # The browser is ~150MB and byte-identical for a given version, so there
+      # is no reason to fetch it on every run. A partial or corrupt restore is
+      # safe: the install below verifies what is there and re-fetches anything
+      # missing.
+      - name: Cache the Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+
+      # `--with-deps` runs apt-get update before installing anything, and that
+      # update reads every repository configured on the runner image - Google's
+      # Chrome repo among them, which has nothing to do with this project. When
+      # that mirror serves a bad index the deploy goes red with nothing wrong in
+      # the build. That is exactly how S11 failed: `Hash Sum mismatch`, after
+      # every check that ran had passed, and a merged slice sat undeployed for a
+      # day. A stale cached index is what causes it, so clear the lists and try
+      # again rather than losing a deploy to someone else's mirror.
+      #
+      # Note the cache above does NOT cover this: it skips the browser download,
+      # not the apt update. The retry is what makes the step survive.
       - name: Install Playwright
         run: |
-          npm install --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          for attempt in 1 2 3; do
+            if npx playwright install --with-deps chromium; then
+              exit 0
+            fi
+            if [ "${attempt}" -lt 3 ]; then
+              echo "::warning::playwright install failed (attempt ${attempt}); clearing apt lists and retrying"
+              # Expanded as root inside sh, not by this shell - and partial/ is
+              # put back, because apt needs it to exist and will not always
+              # recreate it itself.
+              sudo sh -c 'rm -rf /var/lib/apt/lists/* && mkdir -p /var/lib/apt/lists/partial'
+              sleep $(( attempt * 10 ))
+            fi
+          done
+          echo "::error::playwright install failed three times"
+          exit 1
 
       - name: Play the game
         run: npm run test:play
