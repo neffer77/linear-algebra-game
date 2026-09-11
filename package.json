@@ -10,7 +10,9 @@
     "test:all": "npm test && npm run test:play",
     "build": "node build-scriptable.js",
     "balance": "node tools/balance.js",
-    "shots": "node tools/shots.js"
+    "shots": "node tools/shots.js",
+    "audit:shots": "node tools/shots.js --out tools/audit/shots && node tools/audit/build-shots.js",
+    "audit": "node tools/audit/assemble.js && node tools/audit/check.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0"

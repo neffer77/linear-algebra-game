@@ -1,0 +1,7 @@
+# Generated. build-shots.js makes these; assemble.js makes the last one.
+shots/
+panel-*.png
+view-*.png
+render-*.png
+shots-inline.js
+muster-built.html

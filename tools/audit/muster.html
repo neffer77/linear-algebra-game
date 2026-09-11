@@ -1,0 +1,820 @@
+<title>The Skill Muster</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Light palette on bare :root — the complete set, so the un-stamped
+     (system-default) document always resolves. */
+  :root{
+    --ground:#f4f2f7; --surface:#ffffff; --sunk:#eceaf2;
+    --edge:#ddd8e8; --edge-soft:#e9e5f0;
+    --text:#221d30; --dim:#6b647f; --faint:#9a93ab;
+    --built:#9a6f10; --partial:#a35f22; --absent:#a9a2ba;
+    --built-bg:#f7edd4; --partial-bg:#f8e6d6; --absent-bg:#eeecf3;
+    --rule:#ddd8e8; --quote:#8a7fa8;
+    --shadow:0 1px 2px rgba(34,29,48,.06), 0 8px 24px rgba(34,29,48,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#14121c; --surface:#1d1a29; --sunk:#191624;
+      --edge:#2e2a40; --edge-soft:#262236;
+      --text:#e8e4f0; --dim:#9a93b0; --faint:#6d6684;
+      --built:#e0b552; --partial:#d08a4a; --absent:#4a4560;
+      --built-bg:#2a2318; --partial-bg:#281e16; --absent-bg:#201d2c;
+      --rule:#2e2a40; --quote:#8d84a8;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#14121c; --surface:#1d1a29; --sunk:#191624;
+    --edge:#2e2a40; --edge-soft:#262236;
+    --text:#e8e4f0; --dim:#9a93b0; --faint:#6d6684;
+    --built:#e0b552; --partial:#d08a4a; --absent:#4a4560;
+    --built-bg:#2a2318; --partial-bg:#281e16; --absent-bg:#201d2c;
+    --rule:#2e2a40; --quote:#8d84a8;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--ground); color:var(--text);
+    font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    font-size:16px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:56px 24px 96px}
+  @media (max-width:640px){ .wrap{padding:36px 18px 72px} }
+
+  h1,h2,h3{font-family:"IBM Plex Serif",Georgia,serif; text-wrap:balance; margin:0}
+  h1{font-size:clamp(30px,5.4vw,42px); font-weight:600; line-height:1.14; letter-spacing:-.01em}
+  h2{font-size:clamp(21px,3.4vw,26px); font-weight:600; line-height:1.24}
+  h3{font-size:17px; font-weight:600}
+  p{margin:0}
+  a{color:var(--text)}
+
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11.5px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--faint); margin:0 0 14px;
+  }
+  .lede{font-size:18px; color:var(--dim); max-width:64ch}
+  section{display:flex; flex-direction:column; gap:18px; margin-top:60px}
+  section > p, section > .lede{max-width:66ch}
+  hr{border:0; border-top:1px solid var(--rule); margin:0}
+
+  /* --- the count, stated once and plainly --- */
+  .tally{
+    display:flex; flex-wrap:wrap; gap:1px; margin-top:34px;
+    background:var(--edge); border:1px solid var(--edge); border-radius:10px; overflow:hidden;
+  }
+  .tally div{
+    flex:1 1 130px; background:var(--surface); padding:16px 18px;
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .tally b{
+    font-family:"IBM Plex Mono",monospace; font-size:26px; font-weight:500;
+    font-variant-numeric:tabular-nums; letter-spacing:-.02em; line-height:1;
+  }
+  .tally span{font-size:12.5px; color:var(--dim)}
+  .tally .none b{color:var(--absent)}
+  .tally .some b{color:var(--built)}
+  /* A count that is finished should not look like a count that is partway. */
+  .tally .lit{background:var(--built-bg)}
+  .tally .lit b{color:var(--built)}
+  .tally .lit span{color:var(--text); opacity:.75}
+
+  /* --- the muster roll --- */
+  .channel{margin-top:30px}
+  .channel-head{
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+    padding-bottom:9px; border-bottom:1px solid var(--rule); margin-bottom:2px;
+  }
+  .channel-head h3{font-family:"IBM Plex Sans",sans-serif; font-size:14px; letter-spacing:.02em}
+  .channel-head .why{font-size:13px; color:var(--dim); flex:1; min-width:200px}
+  .channel-head .score{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--faint);
+    font-variant-numeric:tabular-nums;
+  }
+
+  .row{
+    display:grid; grid-template-columns:1fr auto; gap:6px 14px;
+    align-items:baseline; padding:11px 12px; border-radius:7px;
+    border-bottom:1px solid var(--edge-soft);
+  }
+  .row:last-child{border-bottom:0}
+  .row .nm{font-weight:500; font-size:15px}
+  .row .meta{
+    grid-column:1; font-family:"IBM Plex Mono",monospace;
+    font-size:12px; color:var(--faint);
+  }
+  .row .note{grid-column:1; font-size:13.5px; color:var(--dim); max-width:52ch}
+  .row.absent{opacity:.5}
+  .row.absent .nm{font-weight:400}
+  .row.lit{background:var(--built-bg); opacity:1}
+  .row.half{background:var(--partial-bg); opacity:1}
+
+  .chip{
+    grid-row:1; grid-column:2; justify-self:end; white-space:nowrap;
+    font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.05em;
+    text-transform:uppercase; padding:3px 9px; border-radius:999px;
+    border:1px solid currentColor;
+  }
+  .chip.b{color:var(--built)}
+  .chip.p{color:var(--partial)}
+  .chip.a{color:var(--absent); border-color:var(--edge)}
+
+  /* --- screenshots --- */
+  figure{margin:0; display:flex; flex-direction:column; gap:11px}
+  .shot{
+    background:var(--sunk); border:1px solid var(--edge); border-radius:12px;
+    padding:12px; display:flex; justify-content:center; box-shadow:var(--shadow);
+  }
+  .shot img{display:block; max-width:100%; height:auto; border-radius:5px}
+  .shot.tall img{max-height:560px; width:auto}
+  figcaption{font-size:14px; color:var(--dim); max-width:62ch}
+  figcaption b{color:var(--text); font-weight:600}
+  .pair{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:26px}
+
+  /* --- the plan --- */
+  .step{
+    display:flex; flex-direction:column; gap:9px;
+    background:var(--surface); border:1px solid var(--edge);
+    border-radius:11px; padding:20px 22px;
+  }
+  .step .top{display:flex; align-items:baseline; gap:11px; flex-wrap:wrap}
+  .step .n{
+    font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--built);
+    border:1px solid var(--built); border-radius:5px; padding:1px 7px;
+  }
+  .step h3{flex:1; min-width:180px}
+  .step .size{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--faint)}
+  .step p{font-size:14.5px; color:var(--dim); max-width:60ch}
+  .step .gate{
+    font-size:13.5px; color:var(--text); border-left:2px solid var(--built);
+    padding-left:12px; margin-top:2px;
+  }
+  .step .gate span{
+    font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--faint); display:block; margin-bottom:3px;
+  }
+
+  .aside{
+    border-left:2px solid var(--rule); padding:2px 0 2px 18px;
+    color:var(--quote); font-family:"IBM Plex Serif",Georgia,serif;
+    font-style:italic; font-size:16.5px; max-width:58ch;
+  }
+  .foot{
+    margin-top:72px; padding-top:20px; border-top:1px solid var(--rule);
+    font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--faint);
+    display:flex; flex-wrap:wrap; gap:6px 20px;
+  }
+  code{font-family:"IBM Plex Mono",monospace; font-size:.9em; color:var(--dim)}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Knights of the Eigenrealm · build audit</p>
+  <h1>Twenty skills were designed.<br>All twenty are in the game.</h1>
+
+  <p class="lede" style="margin-top:16px">
+    The Skill Web placed all twenty and gave each a setting, a branch of mathematics, and a
+    way of paying the player back. This is what actually shipped, measured against the code
+    rather than against memory — and after twelve slices and a reordering, the answer is all
+    of it. The roster went from one to twenty, all four ways a skill can pay are filled, every
+    setting the design named is built, and nothing on the roll is half. This page has spent
+    five revisions as a list of what was missing. There is nothing left on it, so what it is
+    for now is the record of how that happened, including the parts that went wrong.
+  </p>
+
+
+
+  <div class="tally">
+    <div class="lit"><b>20 / 20</b><span>skills, and none of them half</span></div>
+    <div class="lit"><b>8 / 8</b><span>settings — every place the design named</span></div>
+    <div class="lit"><b>5 / 5</b><span>foresight abilities</span></div>
+    <div class="lit"><b>4 / 4</b><span>payoff channels reached</span></div>
+
+  </div>
+
+  <section>
+    <h2>The muster, by how a skill pays you back</h2>
+    <p>
+      The Skill Web's central idea is that a skill pays through one of four channels — and a
+      skill missing from the economy simply pays through a different one. Grouping the roll
+      that way shows the shape of the gap rather than just its size.
+    </p>
+
+    <div class="channel" id="roll"></div>
+
+    <p class="aside">
+      Foresight is complete, and the five are deliberately different questions rather than one
+      answer at five strengths. <b>Farsight</b> reads the next room exactly. <b>Rumours</b>
+      totals the next three and says nothing about their order. <b>Sighting</b> gives two
+      distances and no detail at all — how far to the next champion, how far to the next room
+      that pays. <b>Tracking</b> answers none of those and instead reads a <em>shape</em>: the
+      period the danger moves on, where in that turn you are standing, and therefore whether
+      the stretch ahead worsens or eases. And <b>Weather-reading</b> is the only one that reads
+      something <em>drawn</em> rather than derived — the swell has a period a clever player
+      could work out unaided, but which leagues run rough is a coin the sea has already
+      flipped, so a forecast is the only way anyone can know it.
+    </p>
+
+  </section>
+
+  <section>
+    <h2>Where the skills were meant to live</h2>
+    <p>
+      Each skill is learned in a setting, and the settings are what create the pull to leave a
+      place you like. All eight now exist: the Deep you descend, the Keep where ore, essence,
+      herbs and pages are spent, the Sanctum, which pays essence rather than gold, the Tavern,
+      which pays gold at variance and is the only place that can send you home poorer than you
+      arrived, the Summit, which is climbed and whose danger is not its foes but the air, the
+      Wilds, which is walked across and whose danger circles rather than climbs, the Sea, whose
+      danger is <em>drawn</em> — each league is a coin the weather has already flipped — and the
+      Library, which is the only place where the pressure is the questions themselves: every few
+      shelves the riddles get harder, and no amount of health saves you from that.
+    </p>
+
+    <div id="settings" class="tally" style="margin-top:8px"></div>
+    <p class="aside" style="margin-top:14px">
+      Every skill on the roll now has the place it names. Four of them were homeless three
+      slices ago and shipped anyway, which was deliberate rather than a shortcut: charges and
+      tiers are cut from the mathematics a skill draws on, never from admission, and the
+      Sanctum's own suite asserted that for Scrying before any of them shipped. It is worth
+      saying what that bought — because the skills went first, the Summit, the Wilds, the Sea
+      and the Library each arrived with the ability that answers it already written and already
+      tested, and closing a setting cost a room rather than a system.
+    </p>
+
+  </section>
+
+  <section>
+    <h2>What it looks like now</h2>
+    <p>
+      Screenshots at phone size, most of them straight out of <code>npm run shots</code>, which
+      renders twenty-eight named scenes. Ten of these eleven screens did not exist when this
+      page was first written, and the eleventh has been rearranged. One of them earned its place
+      twice over: the Wilds shot was taken for this page and showed the setting speaking the
+      Deep's words, which is how that bug was found — a picture caught what twenty suites did
+      not.
+    </p>
+
+
+
+    <figure>
+      <div class="shot"><img id="s-map" alt="The top of the map: the daily, then the Deep, the Sanctum and the Tavern, above the campaign realms."></div>
+      <figcaption>
+        <b>The first screenful, at last.</b> Every setting used to be appended below eight
+        campaign realms and thirty-two fights — thirty-three nodes in front of the Deep, which
+        the test for the fix measures exactly. It was never a decision, only the order things
+        were written in, and it got one setting worse each slice. Places you can go now come
+        first; places still sealed are one line saying what to go and do about it.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-summit" alt="A Summit fork at height seven, showing 249 health of a whole 389, and a Sighting reading two distances."></div>
+      <figcaption>
+        <b>Not every place kills you the same way.</b> The Summit is climbed rather than
+        descended, and its danger is not its foes: every room above the first takes a slice off
+        the health you can hold. At height seven this knight carries 249 of a whole 389, and
+        what ends the climb is that number rather than anything they meet. Sighting, beside it,
+        gives distances and no detail — the only foresight that helps when the thing killing you
+        is attrition.
+      </figcaption>
+    </figure>
+
+    <div class="pair" style="margin-top:8px">
+      <figure>
+        <div class="shot"><img id="s-skills" alt="The Gear screen's skills panel, seven abilities each showing its uses, the strand it draws on, and how well that strand is known."></div>
+        <figcaption>
+          <b>Knowing the maths is the power.</b> Uses are not bought. Each row says how many you
+          carry and why — the branch of mathematics behind it, and how well you know that branch
+          right now. Seven abilities to choose three from, where there was one.
+        </figcaption>
+      </figure>
+      <figure>
+        <div class="shot"><img id="s-passage" alt="The Passage panel, four skills showing two tiers each, marked earned, mastered or not yet."></div>
+        <figcaption>
+          <b>And some of it is not a button at all.</b> Passage skills are never carried and
+          cannot be pressed. They are true of you in every setting once the mathematics is
+          there — and stop being true if you let it go cold, which is why both tiers are shown
+          whether or not you have them.
+        </figcaption>
+      </figure>
+    </div>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-wager" alt="A Tavern table pricing three stakes, each showing what it pays, the chance it needs, and its expected value."></div>
+      <figcaption>
+        <b>A bet is a decision with a number on it.</b> The Tavern is the only room where you
+        price the riddle <em>before</em> you see it. A bigger stake buys a worse multiplier, so
+        the chance each needs climbs from a third to a half — and the probability in that sum is
+        the knight's own faded mastery, the same number the Ledger shows. At 42% the quarter
+        stake is worth taking, the whole pot is not, and the buttons say so.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-sigil" alt="A ward-stone at the second of three layers: one pip filled, a vector question, and a line saying one layer is cut and this riddle is staked against it."></div>
+      <figcaption>
+        <b>And the plainest bet in the game.</b> A ward-stone cuts one layer per clean answer,
+        and each layer halves one blow for the rest of the descent — the only room that pays in
+        survival rather than coin. Press on and you stake the layer you hold against one more:
+        <em>n</em> to win <em>n</em>+1 at your own accuracy, worth <em>n</em> + 2<em>p</em> − 1,
+        so the <em>n</em> cancels and the whole question is whether you are better than a coin.
+        The riddles are filtered to the strand Ward is made of rather than merely weighted
+        towards it, which is what makes standing here practice rather than scenery.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-tracking" alt="A Wilds fork reading Room 6 cleared, with a Tracking panel naming a nine-room round and saying the ground eases one room on."></div>
+      <figcaption>
+        <b>The only reading that is about a shape.</b> Out in the Wilds the danger does not
+        climb, it circles — so the useful question is not what is behind the next door but
+        whether the stretch ahead is worsening or easing, and no one-room reading can answer it.
+        Tracking names the period, says where in the turn you are standing, and quotes how far
+        off the middle the foes are running right now. Note the words as well as the panel: this
+        place counts <em>rooms</em>, the country opens out ahead, and you walk on rather than
+        pressing deeper.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-thicket" alt="A thicket with two squares of basket, one plant packed, and three others marked no room."></div>
+      <figcaption>
+        <b>The half the mathematics does not answer.</b> A thicket has two decisions in it.
+        Riddles buy basket space — that part rewards knowing the material. What to put in the
+        basket does not: five plants, different worths, different bulk, and it will not all fit.
+        Here two squares are open, one is spent on the plant worth thirteen, and the nettle
+        worth twenty will not go in at any price. A knight who answers everything and packs
+        badly walks out with less than one who answered less and chose well.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-weather" alt="A Sea fork after League 5, showing 318 gold and 260 in uninsured freight, and a forecast marking the next five leagues calm, rough, calm, rough, calm."></div>
+      <figcaption>
+        <b>Cargo you cannot bank, and weather nobody could deduce.</b> The Sea is the only place
+        that lets you carry something that grows — freight compounds 12% a league — and the only
+        one where what you carry is uninsured: make shore and it is yours, go down and it is all
+        of it gone. That makes the two Sea skills answer each other: freight beats gold once
+        growth outruns the salvage a wreck would have returned, which is three leagues at Dead
+        reckoning's first tier and seven at its second — so getting better at surviving a fall
+        makes stowing cargo a <em>worse</em> bet, and the hold quotes the number rather than
+        leaving it to be discovered. Weather-reading is the one foresight about something
+
+        <em>drawn</em> rather than derived: the Wilds' swell has a period a sharp player works
+        out unaided, but which league runs rough is a coin already flipped, and this is the only
+        way to see it. Two of the next five are weather, they hit 50% harder, and the first is
+        two leagues on — enough to know whether this haul makes shore.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-scribe" alt="A scriptorium copying Logarithmic Differentiation, line three of four, two lines clean and one slipped, at 70% precision."></div>
+      <figcaption>
+        <b>The room where a mistake is not over when it is over.</b> Everywhere else a wrong
+        answer costs you that answer. Copying a page, a slip cuts precision — and every line
+        <em>after</em> it is worth less for the rest of the page. Two lines clean, one slipped,
+        precision down to 70%, and the line being written now is worth two pages where it would
+        have been worth three. That is the shape of the Library as a whole: its pressure is not
+        health, it is the questions. Every few shelves they get harder, and nothing you carry
+        answers that — which is why the place is countered by Loremaster, a Passage skill, rather
+        than by any foresight. It is the one setting on the roll that names a counter instead.
+      </figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-crucible" alt="The Crucible: four material chips to pour from and four to pour into, and three quotes — a third of 120 pages returning 26 ore, half returning 36, the lot returning 54."></div>
+      <figcaption>
+        <b>And the last one, which teaches without a word.</b> Alchemy is the only skill that
+        converts rather than gathers or spends, and the rate is a <em>diffusion</em>: flux runs
+        down a gradient, and the flow flattens the gradient that drives it. Nothing on this
+        screen explains that. The three buttons simply quote what each share would come back as,
+        and 40 pages → 26 while 120 → 54 says the whole thing: the second half of the pile is
+        worth half what the first half was. No ceiling reaches 1, so a round trip strictly
+        loses — 100 pages poured out and back comes home as 22, then 4, then nothing — which is
+        what keeps this a priced refusal to travel rather than an escape from the map.
+      </figcaption>
+    </figure>
+
+  </section>
+
+
+
+
+  <section>
+    <h2>How the gap got smaller</h2>
+    <p>
+      The roadmap first built here — P0 through P6 — was scoped as a <em>vertical slice</em>, and
+      says so in its own text. It bought depth and deliberately deferred breadth, which is why
+      the first version of this page counted one skill. The mismatch between “finish the build
+      order” and “get the twenty skills” should have been named at the start rather than found
+      by playing the result.
+    </p>
+    <p>
+      Twelve slices and a reordering closed it, in the order that made each one cheapest:
+    </p>
+
+
+    <div class="step">
+      <div class="top"><span class="n">S1</span><h3>The loadout frame</h3><span class="size">shipped</span></div>
+      <p>
+        Three slots, charges read off mastery in Dial Three's bands — weak none, shaky one,
+        steady two, solid three — filling the power bar that already existed. No ability may
+        reduce the number of questions in a fight, and the suite fires each one mid-fight and
+        asserts the foe's health does not move, so a future ability that breaks the rule fails
+        the build rather than shipping.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S2</span><h3>The Deep–Keep chain</h3><span class="size">shipped</span></div>
+      <p>
+        Delving cuts ore from seams; Smithing spends it on picks and on gear no coin buys;
+        Lockpicking opens chests for essence; Enchanting spends essence on permanent runes. A
+        closed loop inside two settings, with the Skill Web's own warning asserted rather than
+        assumed: multipliers, never gates. A knight with nothing can still descend, and a chest
+        met without a pick is a dead end rather than a dead run.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S3</span><h3>Scrying, and the Sanctum</h3><span class="size">shipped</span></div>
+      <p>
+        The first ability spent outside a fight, on the decision itself, with charges that last a
+        descent rather than a room. The harness showed why that scarcity is the whole balance:
+        simulated with unlimited scrying, a good player bails out of 97% of runs and the fork
+        becomes an algorithm. The Sanctum is the second real setting and the pattern the
+        remaining five will follow — its own curve, room plan, mathematics and material.
+      </p>
+    </div>
+
+    <p class="aside" style="margin-top:6px">
+      Two bugs of the same shape turned up on the way, and both were shipped before they were
+      found: the fork and the death screen each described the room you had just left by reaching
+      for its foe, so clearing a seam crashed them. The room contract now walks every kind
+      through the fork in its own suite.
+    </p>
+
+    <div class="step">
+      <div class="top"><span class="n">S4</span><h3>The Tavern, Dice and Cards</h3><span class="size">shipped</span></div>
+      <p>
+        The two skills the game had been carrying unnamed since the beginning — the Berserker
+        Rune was always a bet, the Sage's Insight was always information — became skills, so the
+        uses come off mastery instead of a shop. Their setting is the first that cannot kill you
+        and can still send you home poorer: you buy in at the door and every table plays for the
+        pot. Three of its five rooms are hands, and a hand is the only room where the decision
+        comes before the question.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S5</span><h3>Passage — the empty channel, filled</h3><span class="size">shipped</span></div>
+      <p>
+        Four skills of a shape nothing else in the game has. They are not carried, have no
+        charges, and cannot be pressed: two tiers each, earned at steady and solid, true
+        everywhere until the strand goes cold. Climbing opens a route onto ground you have
+        banked from; Dead reckoning makes a fall cost less than everything; the beast takes the
+        opening blows; Loremaster slows the forgetting curve for every topic at once.
+      </p>
+    </div>
+
+    <p class="aside" style="margin-top:6px">
+      Loremaster is the only effect that reaches back <em>into</em> the mastery model rather
+      than reading out of it, which makes it circular — it is priced off faded mastery of its
+      own strand and is the thing deciding how fast that fades. Left alone it does not merely
+      inflate: it recurses until the stack goes. A guard prices it plainly, so the skill is
+      judged on what you actually know rather than on what it has already done for you.
+    </p>
+
+    <div class="step">
+      <div class="top"><span class="n">S6</span><h3>Rumours, and a table that sells them</h3><span class="size">shipped</span></div>
+      <p>
+        The second foresight, built to answer a question the first does not: three rooms counted
+        and totalled, silent about their order, and lasting the stretch it describes rather than
+        being spent on the next room. The Tavern gained a table that sells you what the
+        remaining hands will ask about, for a cut of the pot rather than a fixed price — so
+        information costs what it is worth to the person buying it, and folding is free.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S7</span><h3>The Summit, and Sighting</h3><span class="size">shipped</span></div>
+      <p>
+        The fifth setting, climbed rather than descended, and the first whose danger is not its
+        foes. Every room above the first takes a slice off the health a knight can hold, so what
+        ends a climb is your own shrinking capacity. How high you got is what Climbing reads
+        next time, which gave that skill the home it had been naming since it shipped without
+        one. Sighting is the third foresight: two distances, no detail.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">M1</span><h3>The map, reordered</h3><span class="size">shipped</span></div>
+      <p>
+        The open question below, answered. Places you can go now sit above the campaign rather
+        than below it, sealed ones collapse to a single line, and the five hand-written node
+        blocks became a table — so the three settings still to come are a line each. Nothing
+        tested the order before, which is precisely why it could drift that far without anything
+        going red.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S8</span><h3>The ward-stone</h3><span class="size">shipped</span></div>
+      <p>
+        The last half-built skill, finished — and not by a setting, which is what made it the
+        awkward one. Spellcraft got a room instead: a stone you cut a ward into, one layer per
+        clean answer, each layer halving one blow for the rest of the descent. Two things make
+        it practice rather than another room. Its riddles are <em>filtered</em> to the skill's
+        own strand rather than merely preferred, because a place that teaches Spellcraft two
+        riddles in three is not where Spellcraft is practised — and it reads that strand off the
+        ability table, so re-pointing Ward re-points the stone. What a layer is worth is fixed
+        by where it sits in the cascade: the beast first because it is free, then a raised Ward
+        because the player pressed it for this blow, then a banked layer because it will still
+        be there for the next one.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S9</span><h3>The Wilds, and Tracking</h3><span class="size">shipped</span></div>
+      <p>
+        The sixth setting, and the first whose danger does not only grow. A herd circles it, so
+        the curve carries a <em>swell</em> — nine rooms crest to crest, about a third either
+        side of the middle. It is the only place where a room deeper in can be softer than the
+        one behind it, and that changes what the fork asks: not "can I take the next room",
+        which Farsight already answers, but "is the stretch ahead worsening or easing", which no
+        one-room reading can. Hence Tracking, the fourth foresight and the first that reads a
+        shape rather than a place. It lasts a whole turn of the swell, is recomputed at every
+        fork rather than stored, and has a place where it has nothing to say — in a setting that
+        only climbs there is no period to read, so the fork says so and keeps the charge.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S10</span><h3>Herbalism, and a third currency</h3><span class="size">shipped</span></div>
+      <p>
+        The Wilds shipped without a material and said so in its own table; this closed it. The
+        thicket is the first room in the game with <em>two</em> decisions in it: riddles buy
+        basket space, and the space is then spent on five plants that differ in worth and in
+        bulk. Knowing the mathematics gets you a bigger basket and tells you nothing about how
+        to fill it, so a knight who answers everything and packs badly walks out with less than
+        one who answered less and chose well. The Apothecary at the Keep spends what it gathers,
+        including one permanent — a satchel that makes every draught go half again as far — that
+        gold cannot buy at any price.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S11a</span><h3>The Sea, and a hold that compounds</h3><span class="size">shipped</span></div>
+      <p>
+        The seventh setting, and the third kind of pressure: the Deep steepens, the Wilds
+        circles, and the Sea <em>draws</em>. A league is rough or calm on its own coin, and a
+        rough one hits half again as hard. That is the only pressure in the game a player cannot
+        deduce from the outside, which is what Weather-reading is for — and it is why the squall
+        had to be drawn on its own stream rather than off the room's, or reading the sky would
+        have quietly changed the sea it was reading. Cargo is the setting's material and the
+        one thing in the game you can carry that grows: it compounds 12% a league and goes down
+        with the ship, so it is priced against exactly what Dead reckoning would have saved. The
+        first version compounded in the room rather than on the league cleared, which made
+        stepping out and back in free money; growth now happens once, on leagues actually behind
+        you.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S11b</span><h3>The Library, and the last kind of danger</h3><span class="size">shipped</span></div>
+      <p>
+        The eighth and final setting, whose pressure is not health at all: every few shelves the
+        questions themselves get harder, and nothing a knight carries answers that. It is
+        therefore the one setting that names a <em>counter</em> rather than a foresight —
+        Loremaster, a Passage skill, buys shelves between steps rather than sight — and the roll
+        now asserts that a setting takes one or the other and never both. Its room is the
+        scriptorium, where a slip does not merely cost you a line: precision falls, and every
+        line after it is worth less for the rest of the page. Pages buy recency and never
+        mastery, which is asserted field by field, because a bench that could sell you knowing
+        the mathematics would undo the thing the whole game is built on.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">S12</span><h3>Alchemy, and a choice that had to be found twice</h3><span class="size">shipped</span></div>
+      <p>
+        The last entry, and the only skill that <em>converts</em> — the third verb the Material
+        channel names and the one nothing in the game did. It has no gathering room, for the
+        same reason Smithing and Enchanting have none: there is nothing to go and cut. What it
+        needed was a bench and a rate, and the rate is a diffusion rather than a price list.
+        Flux runs down a gradient, the flow flattens the gradient, and no ceiling reaches 1 — so
+        a round trip strictly loses and the bench prices the pull between settings instead of
+        deleting it.
+      </p>
+      <p>
+        It shipped that way, and then someone asked what the <em>choice</em> at the bench
+        actually was. Measured rather than defended, the answer was: thinner than it should be.
+        The dominant play was always to pour the least that clears the line you want and come
+        back for the rest, and splitting cost nothing — 80 poured at once and two lots of 40
+        come to the same number, because the integration carries its own state. The amount was
+        never a commitment. One pour per descent made it one: over-pour and the material is
+        gone for this trip, under-pour and the thing you wanted is still out of reach when you
+        get back. That is the shape of the seam's depth, the thicket's basket and the hold's
+        share, and it was missing here.
+      </p>
+      <p class="gate"><span>what that cost</span>
+        A second commit, a codec bump to v7 for one bit of charge, and seven suites that had
+        deliberately pinned the old format version so a bump would make someone go and look.
+        They did. Cheaper than shipping a bench whose only decision was arithmetic.
+      </p>
+    </div>
+
+    <p class="aside" style="margin-top:6px">
+      Three findings from the balance harness are worth keeping. The Summit as first written had
+      no top: thin air asymptotes, so once it reached its floor a strong player climbed forever,
+      and the foe curve had to keep growing past that point to give the climb a summit. And
+      Farsight is worth almost nothing up there — correctly, because it reads one foe and the
+      Summit kills by attrition. Settings now declare which foresight they are built around, and
+      the harness asserts that property only where it applies. The third is that the harness
+      held its own copy of the room layout, with a comment warning that a room kind added to the
+      game and not to it would leave the sweep measuring a game nobody was playing — a third
+      copy of a cascade that already existed twice. It is one function now, called by the shell
+      when it builds a room and by foresight when it reads one. Ward-stones, added to it, move
+      the Summit's break-even from 11/12/14/17/22 to 11/12/16/19/23: deeper, still bounded,
+      still rising with skill.
+    </p>
+    <p class="aside" style="margin-top:6px">
+      And then it happened anyway, one slice later, which is the more useful half of the story.
+      The Wilds shipped and was swept; thickets landed in the next slice and the sweep came back
+      <em>byte-identical</em>, although a third of the setting's rooms had stopped being fights.
+      The harness reads the shared cascade now but still needed a branch for the new kind, and
+      had none — so it had quietly gone on measuring a place nobody was playing. The Wilds'
+      break-even is 10/12/18/20/27; the 9/11/13/19/26 published here a slice ago was wrong.
+      A single source of truth for the LAYOUT does not give you one for what each room COSTS.
+    </p>
+    <p class="aside" style="margin-top:6px">
+      The Library made the same point a third way, and the loudest. Its first sweep came back
+      with <em>no top</em>: at 85% and 95% the break-even ran clean off depth forty, which is the
+      signature of a setting with no pressure in it. The harness was measuring the gentlest foe
+      curve in the game and nothing else, because the thing that actually ends a run in the
+      stacks is the questions getting harder, and a sweep that models a knight's accuracy as a
+      constant cannot see that. It now spends accuracy per tier — the one number on this page
+      that is an assumption rather than a reading, and labelled as such in the harness. With it,
+      the stacks have an end: <b>13 / 16 / 21 / 24 / 27</b>. The Sea reads
+      <b>10 / 14 / 17 / 22 / 28</b>, and the two settings sit at opposite ends of what a
+      one-room reading is worth: on the Sea a strong knight with Farsight bails out of half the
+      runs they would otherwise have sailed, because the next league is a coin and seeing it
+      flip is the whole game — in the Library the same knight bails out of none of them, because
+      the thing killing them is four shelves away and no reading of the next room can see it.
+
+    </p>
+  </section>
+
+
+
+  <section>
+    <h2>The roll is closed</h2>
+    <p>
+      There is nothing left to list. Every skill the Skill Web named exists, every setting is
+      built, all four payoff channels are full, and no entry is half. The gate this page set for
+      the last slice held: nothing added since has become a way to <em>buy</em> mastery. Pages
+      buy recency and the Crucible buys conversion, and both are asserted field by field against
+      the mastery model rather than trusted.
+    </p>
+
+    <div class="step">
+      <div class="top"><span class="n">—</span><h3>The one that was not a place</h3><span class="size">done</span></div>
+      <p>
+        This slot held <b>Spellcraft</b> through four revisions of this page: the one entry on
+        the roll that a new setting would not fix, and the one most likely to stay half forever
+        unless it was named as work. It was named, and the ward-stone closed it — which is the
+        argument for keeping a list like this one honest rather than tidy. Nothing is left in
+        this column.
+      </p>
+    </div>
+
+
+    <p style="margin-top:6px">
+      The open question this page carried from its first version — whether the map should be
+      reordered — is <b>closed</b>, and the last two settings proved it was worth doing: the Sea
+      and the Library each landed as one line in a table, in the right place, with nothing to
+      rearrange. Before that reorder they would have been appended below eight campaign realms
+      and thirty-two fights, thirty-three nodes in front of the Deep.
+    </p>
+    <p style="margin-top:6px">
+      Everything above is live. All of it is on <code>main</code> and deployed, and the full
+      suite runs in CI on every merge — including five balance sweeps, one for each setting that
+      never ends, because a place shipped unmeasured is exactly how the Deep once came to be
+      unplayable. S11 took two attempts to get there, for a reason worth noting: the first run
+      died before it reached the deploy, not on the game but on an apt mirror handing the runner
+      a bad package hash while it installed a browser. Every check that ran, passed — the ones
+      that mattered never got to run at all. That step is now cached and retried, and the retry
+      clears the stale package index that causes the fault rather than simply hoping twice. It
+      did not need to fire for this slice, which went green first time — but the caching is not
+      what would have saved S11, and it is worth being exact about that: a cache hit skips the
+      browser download, not the package-index update that actually broke.
+    </p>
+
+
+
+  </section>
+
+  <div class="foot">
+    <span>measured against bfa759f</span>
+    <span>merged and deployed</span>
+    <span>1,071 checks · 21 suites</span>
+
+
+
+
+  </div>
+</div>
+
+<script>
+const SKILLS = [
+  ['Material','Things you carry out','What a skill produces, spends or converts. The pull to leave one setting to gather what another needs.',[
+    ['Lockpicking','Deep · descent','lit','Built','Chests open or snap a pick, and a clean open gives up essence — the far end of the chain.'],
+    ['Delving','Deep · graphs','lit','Built','Seams. You say how deep to cut before you start; one miss collapses it for nothing.'],
+    ['Smithing','Keep · allocation','lit','Built','The Forge turns ore into picks and into Deepsteel no coin buys. Also grants Steady Hand.'],
+    ['Enchanting','Keep · transforms','lit','Built','The Rune Bench turns essence into three permanent runes.'],
+    ['Scrying','Sanctum · power laws','lit','Built','Foresight-primary — see the pick below. Also its own setting.'],
+    ['Herbalism','thickets · which directions matter','lit','Built','Riddles buy basket space; the space is then spent. Five plants, different worths, different bulk, and it will not all fit.'],
+
+    ['Cargo','Sea · optimal transport','lit','Built','The only thing you can carry that grows — 12% a league, uninsured, and priced against exactly what Dead reckoning would have saved.'],
+    ['Scribing','Library · finite precision','lit','Built','A slip does not just cost the line: precision falls, and every line after it is worth less. Pages buy recency, never mastery.'],
+
+    ['Alchemy','Sanctum · diffusion','lit','Built','The only skill that CONVERTS. The rate is a diffusion: pouring a deep pile into an empty one pays, and the pouring flattens the slope that was paying you.']
+  ]],
+  ['Combat','Things you press in a fight','A loadout ability or passive. The same fight made more survivable and more interesting — never shorter.',[
+    ['Spellcraft','ward-stones · vector fields','lit','Built','Ward halves the next blow. The ward-stone banks more of them, out of riddles filtered to the strand Ward is made of.'],
+
+    ['Dice','Tavern · expectation','lit','Built','Stake the next strike: triple if it lands, struck twice if it does not. The only ability in the game with a downside.'],
+    ['Cards','Tavern · information theory','lit','Built','Turns over the two wrong answers the generator can diagnose — the confusions the question was built to catch.']
+  ]],
+  ['Foresight','Things you know before you go','Reveals what is ahead, turning the press-on-or-leave fork from a gamble into a decision. The design’s strongest reward.',[
+    ['Scrying · Farsight','Sanctum · power laws','lit','Built','At the fork, one room down: the foe, its reach, and how many blows that is against your health.'],
+    ['Tracking','Wilds · periodicity','lit','Built','The only reading about a SHAPE: how long the turn is, where in it you stand, and whether the stretch ahead worsens or eases.'],
+
+    ['Rumours','Tavern · statistics','lit','Built','The next three rooms counted and totalled — and silent about the order, which is what Farsight sells.'],
+    ['Weather-reading','Sea · PDEs','lit','Built','The only reading of something DRAWN rather than derived: which leagues ahead run rough, in order, and how far to the first blow.'],
+
+    ['Sighting','Summit · gradients','lit','Built','Two distances and no detail: from a height you see how far, not what.']
+  ]],
+  ['Passage','Ways through, and things that stay','Opens routes on the map, or grants permanent growth that travels everywhere. Was the empty channel three revisions of this page ago; is full now.',[
+    ['Dead reckoning','Sea · integration','lit','Built','A fall stops being all or nothing: a quarter of the pot comes out with you, then half.'],
+    ['Climbing','Summit · geodesics','lit','Built','Opens a route — a descent starts on ground you have already banked from, never past it.'],
+    ['Beast taming','Wilds · credit assignment','lit','Built','Something walks with you and takes the opening blows. It goes before the Ward, so neither is wasted.'],
+    ['Loremaster','Library · long context','lit','Built','Everything you know fades more slowly. The only effect that reaches back into the mastery model.']
+  ]]
+];
+
+const CH = { half:'p', lit:'b', absent:'a' };
+document.getElementById('roll').innerHTML = SKILLS.map(([name, tag, why, rows]) => {
+  const live = rows.filter(r => r[2] !== 'absent').length;
+  return `<div class="channel">
+    <div class="channel-head">
+      <h3>${name}</h3>
+      <span class="why">${why}</span>
+      <span class="score">${live} / ${rows.length}</span>
+    </div>
+    ${rows.map(([nm, meta, state, chip, note]) => `
+      <div class="row ${state}">
+        <span class="nm">${nm}</span>
+        <span class="chip ${CH[state]}">${chip}</span>
+        <span class="meta">${meta}</span>
+        ${note ? `<span class="note">${note}</span>` : ''}
+      </div>`).join('')}
+  </div>`;
+}).join('');
+
+const SETTINGS = [
+  ['The Deep','built','seeded descent'], ['The Keep','built','forge and rune bench'],
+  ['The Sanctum','built','six rooms, pays essence'], ['The Tavern','built','five tables, played for the pot'],
+  ['The Summit','built','climbed; the air thins'],
+  ['The Wilds','built','walked; the danger circles'],
+  ['The Sea','built','sailed; the weather is drawn'],
+  ['The Library','built','the questions are the danger']
+];
+
+document.getElementById('settings').innerHTML = SETTINGS.map(([nm, st, note]) =>
+  `<div class="${st === 'built' ? 'some' : 'none'}" style="flex-basis:150px">
+     <b style="font-size:15px;font-family:'IBM Plex Sans',sans-serif;${st === 'no' ? 'color:var(--absent)' : ''}">${nm}</b>
+     <span>${note || 'not built'}</span>
+   </div>`).join('');
+</script>
+<script>const SHOTS = {/*…*/};
+</script>
+<script>
+/* Every figure on the page, by id. Kept in step with the figures above — and
+   loudly, not quietly: an id here with no figure, or a figure with no entry
+   here, should be a visible error rather than a blank rectangle. */
+for (const id of ['map', 'summit', 'skills', 'passage', 'wager', 'sigil',
+                  'tracking', 'thicket', 'weather', 'scribe', 'crucible']) {
+  const el
+ = document.getElementById('s-' + id);
+  if (!el) throw new Error('no figure for ' + id);
+  if (!SHOTS[id]) throw new Error('no image for ' + id);
+  el.src = SHOTS[id];
+}
+
+</script>
+
+</body></html>
