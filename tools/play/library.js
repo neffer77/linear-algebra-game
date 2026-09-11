@@ -561,8 +561,8 @@ module.exports = {
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
     t.ok('with the Library appended rather than inserted', codec.libraryLast);
-    t.eq('the format moved to six for the pages', codec.ver, 6);
-    t.eq('and the tag with it', codec.tag, 'KE6-');
+    t.eq('the format moved to seven for the crucible', codec.ver, 7);
+    t.eq('and the tag with it', codec.tag, 'KE7-');
     t.ok('a knight code carries the pages', codec.ok);
     t.eq('exactly', codec.page, 231);
     t.eq('without disturbing what was already in there', codec.herb, 12);

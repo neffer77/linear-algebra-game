@@ -36,8 +36,8 @@ module.exports = {
     /* The format version. Bump it here ON PURPOSE when the save gains a field,
        and add a case below proving the previous version still reads — those
        two together are the whole backward-compatibility contract. */
-    t.eq('the codec is at version 6', codec.ver, 6);
-    t.eq('codes are tagged KE6-', codec.head, 'KE6-');
+    t.eq('the codec is at version 7', codec.ver, 7);
+    t.eq('codes are tagged KE7-', codec.head, 'KE7-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);
@@ -117,6 +117,32 @@ module.exports = {
     t.eq('the herb pouch reads as empty rather than as whatever came next', v4.herb, 0);
     t.ok('and nothing is brewed', v4.brewed && Object.keys(v4.brewed).length === 0,
       JSON.stringify(v4.brewed));
+
+    /* And the version immediately before THIS one. v6 ended after the page
+       count, so a v7 decoder must stop there rather than reading the crucible's
+       charge bit off the zero-padding — which would be harmless today, because
+       0 means READY, but is exactly the assumption that stops being safe the
+       first time an appended field has no safe zero. Minted from the build that
+       shipped v6, not written by hand. */
+    const V6 = 'KE6-AZICVVFKDYATUO33MMR3WS3QAEOWAPLAH3YZ4BCNECYAAAAAAAAABMFIAEAAAAACQEAIAAA'
+             + 'BQQBAAIACAAQAEABAAIACABUAAAAAAAAAAARQAAAAAAAAAAAAAA3CMBQCALAAAAADQJBQECDH'
+             + 'UDNFU';
+    const v6 = await t.ev(code => {
+      const d = Codec.decode(code);
+      return { ok: d.ok, why: d.why, lvl: d.ok ? d.g.lvl : null, gold: d.ok ? d.g.gold : null,
+               mats: d.ok ? d.g.mats : null, alch: d.ok ? d.g.alch : null,
+               satchel: d.ok ? !!(d.g.brewed && d.g.brewed.satchel) : null,
+               bests: d.ok ? d.g.bests : null };
+    }, V6);
+    t.ok('a version 6 code still decodes', v6.ok, v6.why);
+    t.ok('with the knight it was made from', v6.lvl === 17 && v6.gold === 3311,
+      JSON.stringify(v6));
+    t.eq('all four materials intact', v6.mats,
+      { ore: 27, essence: 19, herb: 33, page: 61 });
+    t.ok('the satchel still brewed', v6.satchel === true);
+    t.eq('everywhere they had been', v6.bests,
+      { deep: 11, summit: 14, wilds: 9, sea: 12, library: 8 });
+    t.eq('and the crucible reads as lit, which is the generous default', v6.alch, 0);
 
     /* --- the referee: newest wins, per knight ---
        The vault mirrors localStorage wholesale, so a doctored backup is planted
