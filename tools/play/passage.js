@@ -443,14 +443,14 @@ module.exports = {
       const back = Codec.decode(code);
       out.ok = back.ok;
       out.bests = back.ok ? back.g.bests : null;
-      out.tagIsV4 = /^KE6-/.test(code);
+      out.tagIsCurrent = /^KE7-/.test(code);
       return out;
     });
-    t.eq('the format is at version six', codec.ver, 6);
+    t.eq('the format is at version seven', codec.ver, 7);
     t.ok('and SETTING_ORDER has not drifted from SETTINGS',
       codec.orderMatchesSettings, JSON.stringify(codec.orderCoversSettings));
     t.ok('a knight code carries the depth records', codec.ok);
     t.eq('exactly', codec.bests, { deep: 17, tavern: 4 });
-    t.ok('under a version-six tag', codec.tagIsV4);
+    t.ok('under the current family tag', codec.tagIsCurrent);
   }
 };

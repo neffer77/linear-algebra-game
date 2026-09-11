@@ -606,7 +606,7 @@ module.exports = {
        on the wrong place. Later settings go on the end. */
     t.ok('with the Sea still seventh, where it was appended', codec.seaPlaced);
 
-    t.eq('and the format is where the last deliberate bump left it', codec.ver, 6);
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 7);
     t.ok('a knight code carries the voyage', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, wilds: 21, sea: 17 });
 

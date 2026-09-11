@@ -2888,8 +2888,8 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:6,
-  TAG:'KE6-',
+  VER:7,
+  TAG:'KE7-',
 
 
   topics(){ return Object.keys(TOPIC_LABEL); },
@@ -3075,6 +3075,13 @@ const Codec = {
     // everything is appended: a v5 code ends above here and still reads whole.
     o.varint(Math.max(0, Math.round(mt.page||0)));
 
+    // v7: whether the crucible has been worked since the last descent. One bit,
+    // and it has to travel: a charge that reset itself every time the page was
+    // reloaded would not be a limit at all. Note the sense — 0 is READY, so a
+    // knight arriving from an older code finds the bench lit rather than spent,
+    // which is the generous reading and the right one.
+    o.bits(g.alch ? 1 : 0, 1);
+
 
     const bytes=o.done();
     const s=this.sum(bytes);
@@ -3233,6 +3240,11 @@ const Codec = {
     // v6 and later carry the page count. A knight from an older code has never
     // been into the stacks.
     if(ver>=6) g.mats.page=b.varint();
+
+    // v7 and later carry the crucible's charge. Older codes read as 0 — ready —
+    // which is what the bit reader returns past the end of a body anyway, so
+    // this gate is belt and braces rather than the thing holding it up.
+    g.alch = (ver>=7 && b.bits(1)) ? 1 : 0;
 
 
     return {ok:true, k, g, lostTopics};
@@ -3816,6 +3828,7 @@ const Game = {
       loadout:['ward','sight','steady'],   // skill abilities carried into a fight
       bests:{},                            // deepest room BANKED from, per setting (see Passage)
       mats:{ore:0, essence:0, herb:0, page:0},  // what the places give up; the Keep spends it
+      alch:0,                                   // the crucible's charge: 0 ready, 1 worked
 
       brewed:{},                           // what the Apothecary made and cannot be unmade
       runes:{},                            // permanent enchantments, id -> 1
@@ -3856,6 +3869,7 @@ const Game = {
     if(typeof this.s.mats.essence!=='number') this.s.mats.essence=0;
     if(typeof this.s.mats.herb!=='number') this.s.mats.herb=0;
     if(typeof this.s.mats.page!=='number') this.s.mats.page=0;
+    if(this.s.alch!==1) this.s.alch=0;      // anything but 'worked' means ready
 
     if(!this.s.brewed) this.s.brewed={};
     if(!this.s.runes) this.s.runes={};
@@ -6598,6 +6612,31 @@ const Crucible = {
   mat(id){ return MATERIALS.find(m=>m.id===id) || null; },
   held(id){ return (Game.s && Game.s.mats && Game.s.mats[id]) || 0; },
 
+  /* The gate, and the reason the three shares are a decision rather than a
+     rounding exercise.
+   *
+   * Without it the bench is only a tax: the rate punishes over-pouring, so the
+   * dominant play is always "pour the least that clears the line you want, and
+   * come back later for more". That is computable rather than interesting, and
+   * splitting a pour costs nothing — 80 at once and 2×40 come to the same
+   * number, because the integration carries its own state.
+   *
+   * One pour per descent turns the amount into a commitment made BEFORE you
+   * know what you will need, which is the same shape as every other good
+   * decision in this game: the seam's depth, the thicket's basket, the hold's
+   * share. Over-pour and you have wasted material; under-pour and the thing you
+   * wanted is still out of reach when you get back.
+   *
+   * It re-lights on a descent that actually went somewhere — one room cleared,
+   * not one button pressed. Descending and turning straight round at the door
+   * is free, so without that floor the gate would be two clicks wide. */
+  ready(){ return !(Game.s && Game.s.alch); },
+  spend(){ if(Game.s) Game.s.alch = 1; },
+  relight(depth){
+    if(Game.s && depth >= 1 && Game.s.alch){ Game.s.alch = 0; return true; }
+    return false;
+  },
+
   /* Faded mastery of the strand, averaged over its topics — the same reading
      every other skill is priced off, so letting it cool takes the rate back. */
   reach(){
@@ -6640,11 +6679,13 @@ const Crucible = {
   pour(fromId, toId, n){
     const g=Game.s, a=this.mat(fromId), b=this.mat(toId);
     if(!g || !a || !b || fromId===toId) return;
+    if(!this.ready()){ UI.toast('The crucible is cold. Go and descend — it lights again after a room.'); return; }
     const q=this.quote(fromId, toId, n);
     if(q.spend <= 0){ UI.toast(\`No \${a.nm} to pour — that comes from \${a.from}.\`); return; }
     if(q.get <= 0){ UI.toast('The gradient is too flat — that would come back as nothing.'); return; }
     g.mats[fromId] -= q.spend;
     g.mats[toId]   += q.get;
+    this.spend();
     Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
     UI.toast(\`\${a.ic}→\${b.ic} \${q.spend} \${a.nm} down to \${q.get} \${b.nm}.\`);
   },
@@ -10143,6 +10184,10 @@ const Dungeon = {
     const ups = Game.gainXp(u.xp);
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    // A descent that got at least one room re-lights the crucible. Measured off
+    // the same depth that proves ground for Climbing, so turning round in the
+    // doorway re-lights nothing.
+    Crucible.relight(Math.max(0, this.run.depth - (midFight?1:0)));
     this.clearRun();                   // banked and done; there is nothing to resume
     Game.save();
     UI.go('s-map');
@@ -10175,6 +10220,10 @@ const Dungeon = {
     Game.s.hp=Math.max(1, Math.round(Game.s.maxHp*.4));
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp, Game.s.maxHp);
+    // Dying still counts as having gone. The crucible is a limit on how often
+    // you may convert, not a prize for surviving — and a knight who just lost a
+    // pot is the last one who should also find the bench shut.
+    Crucible.relight(depth);
     this.clearRun();                   // the run is over; the checkpoint dies with it
     Game.save();
     UI.go('s-result');
@@ -10540,7 +10589,9 @@ const UI = {
           <b>gradient</b>: pouring a deep pile into an empty one pays well, pouring between
           two level piles barely pays at all, and every unit you pour flattens the slope that
           was paying you. Your grasp of \${Crucible.STRAND} is <b>\${band}</b>, which is what
-          sets the rate.</div>
+          sets the rate. \${Crucible.ready()
+            ? 'The crucible is <b>lit</b>, and it will take <b>one pour</b> — so how much you pour is the decision, and you make it before you know what you will need.'
+            : 'The crucible is <b>cold</b>. It lights again when you have been down and cleared a room.'}</div>
         <div class="ds" style="margin-bottom:4px">Pour from</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
           \${MATERIALS.map(m=>chip('from',m)).join('')}</div>
@@ -10553,7 +10604,7 @@ const UI = {
         Crucible.SHARES.forEach(sh=>{
           const n=Math.max(1, Math.floor(src*sh.frac));
           const q=Crucible.quote(from, to, n);
-          const can=q.get>0;
+          const can=q.get>0 && Crucible.ready();
           out.push(\`<div class="item">
             <div class="ic">\${a.ic}</div>
             <div style="flex:1"><div class="nm">\${sh.nm} — \${q.spend} \${a.nm}</div>

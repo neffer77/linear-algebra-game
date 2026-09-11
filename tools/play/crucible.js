@@ -178,10 +178,14 @@ module.exports = {
         { c: 30, w: 1, m: 0.99, seen: 20, last: Game.s.qCount || 0, t: Date.now() });
       out.tier = Crucible.tier();                       // the most generous case
       Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 100 };
+      // The bench allows one pour per descent. This section is about the RATE,
+      // so it re-lights between pours rather than walking a knight up and down
+      // the Deep sixteen times; the gate itself is checked further down.
+      const pour = (a, b, n) => { Game.s.alch = 0; Crucible.pour(a, b, n); };
       const seq = [];
       for (let i = 0; i < 8; i++) {
-        Crucible.pour('page', 'ore', Game.s.mats.page);
-        Crucible.pour('ore', 'page', Game.s.mats.ore);
+        pour('page', 'ore', Game.s.mats.page);
+        pour('ore', 'page', Game.s.mats.ore);
         seq.push(Game.s.mats.page);
       }
       out.seq = seq;
@@ -191,9 +195,9 @@ module.exports = {
       out.ended = seq[seq.length - 1];
       // A three-cornered cycle is no better than a two-cornered one.
       Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 100 };
-      Crucible.pour('page', 'ore', 100);
-      Crucible.pour('ore', 'herb', Game.s.mats.ore);
-      Crucible.pour('herb', 'page', Game.s.mats.herb);
+      pour('page', 'ore', 100);
+      pour('ore', 'herb', Game.s.mats.ore);
+      pour('herb', 'page', Game.s.mats.herb);
       out.threeCorner = Game.s.mats.page;
       return out;
     });
@@ -252,6 +256,7 @@ module.exports = {
       Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 200 };
       const before = JSON.parse(JSON.stringify(Game.s.topicStats));
       const qBefore = Game.s.qCount;
+      Game.s.alch = 0;
       Crucible.pour('page', 'ore', 200);
       const after = Game.s.topicStats;
       const moved = [];
@@ -275,6 +280,7 @@ module.exports = {
       const out = {};
       Game.s.mats = { ore: 3, essence: 11, herb: 7, page: 90 };
       const q = Crucible.quote('page', 'ore', 45);
+      Game.s.alch = 0;
       Crucible.pour('page', 'ore', 45);
       out.spent = 90 - Game.s.mats.page;
       out.gained = Game.s.mats.ore - 3;
@@ -286,22 +292,26 @@ module.exports = {
       // You cannot spend what you do not have.
       Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 5 };
       out.clamped = Crucible.quote('page', 'ore', 9999).spend;
+      Game.s.alch = 0;
       Crucible.pour('page', 'ore', 9999);
       out.notNegative = Game.s.mats.page >= 0;
 
       // An empty pile is a refusal, not a crash.
       Game.s.mats = { ore: 4, essence: 0, herb: 0, page: 0 };
+      Game.s.alch = 0;
       Crucible.pour('page', 'ore', 10);
       out.emptyNoop = Game.s.mats.ore === 4 && Game.s.mats.page === 0;
 
       // A pile cannot pour into itself.
       Game.s.mats = { ore: 20, essence: 0, herb: 0, page: 0 };
+      Game.s.alch = 0;
       Crucible.pour('ore', 'ore', 20);
       out.selfNoop = Game.s.mats.ore === 20;
 
       // A quote that would come back as nothing is refused rather than taken.
       Game.s.mats = { ore: 500, essence: 0, herb: 0, page: 1 };
       const dud = Crucible.quote('page', 'ore', 1);
+      Game.s.alch = 0;
       Crucible.pour('page', 'ore', 1);
       out.dudGet = dud.get;
       out.dudRefused = Game.s.mats.page === 1;
@@ -319,6 +329,71 @@ module.exports = {
     t.ok('a pile cannot pour into itself', books.selfNoop);
     t.eq('a pour worth nothing is quoted as nothing', books.dudGet, 0);
     t.ok('and is refused rather than swallowing the material', books.dudRefused);
+
+    // --- one pour per descent, which is what makes the amount a decision ---
+    const gate = await t.ev(() => {
+      const out = {};
+      Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 120 };
+      Game.s.alch = 0;
+      out.startsLit = Crucible.ready();
+      Crucible.pour('page', 'ore', 40);
+      out.firstTook = Game.s.mats.ore > 0;
+      out.coldAfter = !Crucible.ready();
+
+      // A second pour in the same visit does nothing at all.
+      const oreAfterFirst = Game.s.mats.ore, pagesAfterFirst = Game.s.mats.page;
+      Crucible.pour('page', 'ore', 40);
+      out.secondBlocked = Game.s.mats.ore === oreAfterFirst &&
+                          Game.s.mats.page === pagesAfterFirst;
+
+      // Turning round in the doorway re-lights nothing.
+      out.doorwayNoop = Crucible.relight(0) === false && !Crucible.ready();
+      // One room cleared does.
+      out.roomRelights = Crucible.relight(1) === true && Crucible.ready();
+
+      // It survives a reload, or the limit would be one page-refresh wide.
+      Crucible.pour('page', 'ore', 20);
+      const k = Profiles.active();
+      const code = Codec.encode({ nm: k.nm, crest: k.crest, col: k.col }, Game.s, Date.now());
+      const back = Codec.decode(code);
+      out.spentTravels = back.ok && back.g.alch === 1;
+      Game.s.alch = 0;
+      const lit = Codec.decode(
+        Codec.encode({ nm: k.nm, crest: k.crest, col: k.col }, Game.s, Date.now()));
+      out.litTravels = lit.ok && lit.g.alch === 0;
+      return out;
+    });
+    t.ok('a knight arrives with the crucible lit', gate.startsLit);
+    t.ok('the first pour is taken', gate.firstTook);
+    t.ok('and leaves it cold', gate.coldAfter);
+    t.ok('a second pour in the same visit does nothing', gate.secondBlocked);
+    t.ok('turning round in the doorway re-lights nothing', gate.doorwayNoop);
+    t.ok('one room cleared re-lights it', gate.roomRelights);
+    t.ok('a cold crucible stays cold through a save', gate.spentTravels);
+    t.ok('and a lit one stays lit', gate.litTravels);
+
+    // --- and a descent is what re-lights it, at either ending ---
+    const endings = await t.ev(() => {
+      const out = {};
+      Game.s.cleared = {};
+      REALMS.forEach((r, ri) => r.foes.forEach((f, i) => Game.s.cleared[ri + ':' + i] = 1));
+      // Banking out of a descent that got somewhere.
+      Dungeon.descend('deep');
+      Dungeon.run.depth = 4;
+      Game.s.alch = 1;
+      Dungeon.leave(false);
+      out.bankingRelights = Game.s.alch === 0;
+      // Dying counts too — the bench is a limit, not a prize for surviving.
+      Dungeon.descend('deep');
+      Dungeon.run.depth = 3;
+      Game.s.alch = 1;
+      Dungeon.died();
+      out.dyingRelights = Game.s.alch === 0;
+      return out;
+    });
+    t.ok('banking out of a descent re-lights the crucible', endings.bankingRelights);
+    t.ok('and so does dying — it is a limit, not a prize for surviving',
+      endings.dyingRelights);
 
     // --- the bench points somewhere, and that is not part of the knight ---
     const bench = await t.ev(() => {
@@ -352,6 +427,6 @@ module.exports = {
     t.ok('the four piles still survive a save', bench.matsSurvive);
     t.ok('and where the bench happens to be pointed is not saved with them',
       bench.noBenchField);
-    t.eq('this slice appends no field, so the codec is unmoved', bench.tag, 'KE6-');
+    t.eq('the codec moved to KE7- for the charge bit', bench.tag, 'KE7-');
   }
 };

@@ -351,7 +351,7 @@ module.exports = {
        never needed a version bump. The number below moves when something
        ELSE is appended — herbs did that — and it staying pinned is what
        makes a bump a deliberate act rather than a side effect. */
-    t.eq('and the format is where the last deliberate bump left it', codec.ver, 6);
+    t.eq('and the format is where the last deliberate bump left it', codec.ver, 7);
     t.ok('a knight code carries the climb', codec.ok);
     t.eq('exactly', codec.bests, { deep: 9, summit: 21 });
     /* The Summit declares its own foresight, which tells the balance harness
