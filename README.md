@@ -225,6 +225,111 @@ simulated rather than guessed: see *Correctness* below.
 
 ---
 
+## The eight settings
+
+The campaign above is one half of the game. The other is the **descent loop**, and it is
+where the twenty skills live.
+
+A descent is a run of rooms with a fork after each one: **press on, or bank what you are
+carrying and leave.** Gold, experience and materials ride unbanked until you walk out, and
+in the places that can kill you a fall costs most of it. That fork is the whole game —
+everything a skill does is either information to decide it with, or something that changes
+what the next room costs.
+
+| Setting | Shape | What makes it different |
+|---|---|---|
+| ⛏️ **The Deep** | endless, descended | The baseline: the foe curve simply climbs. Seams give ore, chests give essence |
+| 🕯️ **The cellar** | 3 rooms, cannot kill you | The first run. It has to finish, or it has taught nothing |
+| 🔮 **The Sanctum** | 6 rooms, fixed | Pays **essence** per room rather than gold — where Scrying is practised |
+| 🍺 **The Tavern** | 5 rooms, cannot kill you | You buy in at the door and every table plays for the pot. The only place that can send you home poorer |
+| 🧗 **The Summit** | endless, climbed | Its danger is not its foes. Every room above the first takes a slice off the health you can hold |
+| 🥾 **The Wilds** | endless, walked | A herd circles it, so danger rises and falls on a period of nine rooms rather than climbing |
+| ⛵ **The Sea** | endless, sailed | A third of leagues run rough on a roll and hit half again as hard — the one pressure you cannot deduce |
+| 📚 **The Library** | endless, read | The pressure is the *questions*: every three shelves the material is asked a tier older |
+
+Each place keeps its own words — the Deep is descended and counts *depth*, the Wilds is
+walked and counts *rooms*, the Sea is sailed and counts *leagues* — so a fork never offers
+to "climb out" of open country.
+
+**Five kinds of pressure, not one curve at five speeds.** The Deep ramps. The Summit ramps
+*and* shrinks you. The Wilds circles. The Sea draws. The Library ages the questions and
+ignores your health entirely. Each is swept by the balance harness, which plays thousands
+of runs at five accuracy levels and fails the build if the depth worth banking at stops
+rising with skill:
+
+| Setting | Break-even depth at 40 / 55 / 70 / 85 / 95% accuracy |
+|---|---|
+| The Deep | 3 · 4 · 7 · 9 · 13 |
+| The Summit | 11 · 12 · 16 · 19 · 23 |
+| The Wilds | 10 · 12 · 18 · 20 · 27 |
+| The Sea | 10 · 14 · 17 · 22 · 28 |
+| The Library | 13 · 16 · 21 · 24 · 27 |
+
+Nine kinds of room can appear: a **fight**, a **chest** to pick, a **seam** to cut, a
+**ward-stone** to inscribe, a **thicket** to gather, a **scriptorium** to copy, a **hold**
+to stow cargo in, and the Tavern's **wagers** and **rumours**. Which kinds a setting grows
+is part of what the setting *is*.
+
+---
+
+## The twenty skills
+
+A skill is a body of mathematics, not a purchase. **Charges come from mastery and nothing
+else** — know the strand a skill draws on and you carry more uses of it; let that strand go
+cold and you carry fewer. Nothing in the game sells them.
+
+They pay through one of four channels:
+
+| Channel | What it gives | Skills |
+|---|---|---|
+| **Material** | something you carry out, spend, or convert | Lockpicking, Delving, Smithing, Enchanting, Scrying, Herbalism, Cargo, Scribing, Alchemy |
+| **Combat** | something you press in a fight | Spellcraft, Dice, Cards |
+| **Foresight** | something you know before you go | Farsight, Rumours, Sighting, Tracking, Weather-reading |
+| **Passage** | a route, or permanent growth that travels | Climbing, Dead reckoning, Beast taming, Loremaster |
+
+Ten are loadout abilities — you carry three at a time. Four are **Passage** skills, which
+are never carried and cannot be pressed: they are simply true of you everywhere once the
+mathematics is there, and stop being true if you let it go cold.
+
+The five foresights are deliberately different *questions* rather than one answer at five
+strengths. **Farsight** reads the next room exactly. **Rumours** totals the next three and
+says nothing about their order. **Sighting** gives two distances and no detail.
+**Tracking** reads a shape — the period the danger moves on and where in it you stand.
+**Weather-reading** is the only one that reads something *drawn* rather than derived.
+
+One rule holds all of them: **no ability may reduce the number of questions in a fight.**
+They make the same practice more survivable or more informed, never shorter — and the
+suite fires each one mid-fight and asserts the foe's health does not move.
+
+---
+
+## Materials and the benches
+
+Four materials, each given up by a different place and spent at the Keep:
+
+| Material | Comes from | Spent at |
+|---|---|---|
+| 🪨 ore | seams in the Deep | **the Forge** — lockpicks, and Deepsteel gear no coin buys |
+| 🜄 essence | chests, and the Sanctum | **the Rune Bench** — three permanent runes |
+| 🌿 herbs | thickets in the Wilds | **the Apothecary** — draughts, and a satchel gold cannot buy |
+| 📄 pages | passages in the Library | **the Scriptorium** — binds a topic's *recency*, never its mastery |
+
+That last line is a rule rather than a detail: **a currency may buy convenience and may
+never buy mastery.** A bench that could sell you knowing the mathematics would make every
+other room optional, so both benches that come near it are checked field by field.
+
+The fifth bench is **the Crucible**, where Alchemy converts one material into another. Its
+rate is a diffusion — flux runs down a gradient, and the flow flattens the gradient that
+drives it — so pouring a deep pile into an empty one pays well, pouring between two level
+piles barely pays, and every unit poured makes the next worth less. No rate ever reaches
+1:1, so a round trip strictly loses and there is no cycle to farm. It takes **one pour per
+descent**, which is what makes *how much* a commitment rather than arithmetic.
+
+Materials never gate anything. A knight with nothing can still descend, and a chest met
+without a pick is a dead end rather than a dead run.
+
+---
+
 ## The teaching parts
 
 The game is built so that losing teaches you as much as winning.
@@ -301,6 +406,17 @@ Inside `index.html` the code is organised as:
 | `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
 | `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
+| `SETTINGS`, `VOICES`, `SETTING_ORDER` | the eight settings as plain data: curve, room plan, strands, material, and the words each place is spoken about in |
+| `Dungeon` | the descent shell: the fork, the checkpoint, resuming, and every foresight reading |
+| `RoomKinds` | the room contract — nine kinds, each a pure seeded `build` and an `enter` that reports an outcome the shell applies |
+| `Sigil`, `Forage`, `Scribe`, `Hold`, `Seam`, `Wager` | the rooms themselves: ward-stone, thicket, scriptorium, cargo hold, seam, table |
+| `SKILL_ABILITIES`, `Loadout` | the ten carried abilities, and the mastery bands their charges are read from |
+| `PASSAGE_SKILLS`, `Passage` | the four skills that are never carried: salvage, guard, memory, and where a climb starts you |
+| `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
+| `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
+| `WaveEngine` | one foe curve for every setting — ramp, swell, thin air and champions in one place |
+| `Codec` | the knight code: a binary save encoder, base32 and checksummed, small enough for a QR |
+| `DESTINATIONS` | what the map offers and in what order, as a table rather than hand-written blocks |
 | `Profiles`, `Knights` | one save slot per player on a shared browser, plus the code that carries a knight to another device |
 | `Vault` | the second copy of every save, in IndexedDB, and the recovery that puts it back |
 | `Keep` | service-worker registration, the update prompt, and the install nudge |
@@ -368,7 +484,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty suites, 997 checks, about a minute:
+loop only exists once the page is running. Twenty-one suites, 1,071 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -390,6 +506,7 @@ loop only exists once the page is running. Twenty suites, 997 checks, about a mi
 | `thicket` | riddles buy basket, the basket is spent, and it cannot be overfilled |
 | `sea` | the forecast is true of water that is drawn rather than derived |
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
+| `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `map` | the places you can go are above the campaign, not below thirty-two fights |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
