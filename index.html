@@ -6257,8 +6257,12 @@ const Rite = {
    Each ability draws on a STRAND rather than a single topic: a skill is a body
    of mathematics, not one question type. The strands here are the closest the
    present curriculum comes to each skill's real branch — Spellcraft is vector
-   fields, Scrying is power laws, Smithing is allocation — and they will be
-   re-pointed at the skill's own topics when its setting is built. */
+   fields, Scrying is power laws, Smithing is allocation. This once said they
+   would be re-pointed "when its setting is built"; every setting is built now,
+   and re-pointing them was not the right call after all. A strand is what a
+   skill is MADE of, and narrowing it to the topics of one place would tie an
+   ability to a setting rather than to a body of mathematics — which is exactly
+   what the ward-stone does deliberately, and only for the room. */
 const SKILL_ABILITIES = [
   {id:'ward', nm:'Ward', ic:'🌀', skill:'Spellcraft', strand:'Vectors',
    ds:'Halves the next blow that lands on you.',
@@ -7487,8 +7491,10 @@ const SETTINGS = {
  * below eight campaign realms and thirty-two fights — which put the loop the
  * design calls the core of the game about as far from the top of the page as it
  * is possible to be, and got worse with every setting added. As a table they
- * are ordered once, rendered once, and the three settings still to come are a
- * line each rather than another forty lines of markup to keep in step.
+ * are ordered once, rendered once, and a new setting is a line rather than
+ * another forty lines of markup to keep in step. That paid off exactly as
+ * hoped: the last three settings each landed as one line, in the right place,
+ * with nothing to rearrange.
  *
  * `open` is the gate, `detail` the line under the name, and `sealed` what to go
  * and do about it. Everything else is livery.
