@@ -336,6 +336,15 @@ The game is built so that losing teaches you as much as winning.
 
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
+- **🔎 Show me the working.** Every question carries a way out for a player who is
+  genuinely stuck: ask, and the problem is worked in front of you in numbered steps,
+  ending on the answer. Twelve topics are worked from a hand-written ladder — pick *u*,
+  differentiate it, rewrite, integrate — and the rest from the explanation of that exact
+  instance. It exists because every other teaching in the game arrives *after* you commit,
+  which means the only route to it is a guess, and a lucky guess banks mastery nobody has.
+  What it costs is the strike: no damage dealt, the streak breaks, the foe takes its turn,
+  and **the topic records nothing at all** — not a right answer, not a wrong one, and not a
+  fresh timestamp either. Being shown is not knowing, so the question comes back.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
 - **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
@@ -413,6 +422,7 @@ Inside `index.html` the code is organised as:
 | `SKILL_ABILITIES`, `Loadout` | the ten carried abilities, and the mastery bands their charges are read from |
 | `PASSAGE_SKILLS`, `Passage` | the four skills that are never carried: salvage, guard, memory, and where a climb starts you |
 | `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
+| `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
 | `WaveEngine` | one foe curve for every setting — ramp, swell, thin air and champions in one place |
 | `Codec` | the knight code: a binary save encoder, base32 and checksummed, small enough for a QR |
@@ -484,7 +494,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-one suites, 1,071 checks, about a minute:
+loop only exists once the page is running. Twenty-two suites, 1,113 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -507,6 +517,7 @@ loop only exists once the page is running. Twenty-one suites, 1,071 checks, abou
 | `sea` | the forecast is true of water that is drawn rather than derived |
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
+| `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `map` | the places you can go are above the campaign, not below thirty-two fights |
 | `cheat` | the testing door opens for nobody who has not typed it |
 

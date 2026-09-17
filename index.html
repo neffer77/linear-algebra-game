@@ -365,6 +365,23 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 #qhead{display:flex; align-items:center; justify-content:center; gap:2px; margin-bottom:2px;}
 
 /* ---- perfect strike ---- */
+/* ---- being shown the working ---- */
+#showwork{margin-top:8px;}
+#showwork .wbtn{display:block; width:100%; padding:10px; border-radius:12px; cursor:pointer;
+  text-align:center; font-size:13.5px; color:var(--dim);
+  border:1px dashed var(--line); background:transparent;}
+#showwork .wbtn:active{background:rgba(255,255,255,.04);}
+.wkbox{margin-top:4px;}
+.wkrule{border-left:2px solid var(--gold); padding:4px 0 4px 10px; margin-bottom:10px;
+  font-size:13.5px; color:var(--dim);}
+.wksteps{margin:0 0 4px; padding-left:22px;}
+.wksteps li{margin-bottom:9px; line-height:1.55;}
+.wksteps li::marker{color:var(--gold); font-weight:600;}
+.wkask{color:var(--dim); font-size:13px;}
+.wkgot{color:var(--ink); font-weight:600;}
+.wkwhy{font-size:14px;}
+.wkans{margin-top:10px; padding-top:8px; border-top:1px solid var(--line);}
+.wkans b{color:var(--gold);}
 #pstrike{margin-top:8px;}
 #pstrike .pbtn{display:block; width:100%; padding:11px; border-radius:12px; cursor:pointer;
   border:1px dashed var(--gold); background:rgba(242,193,78,.08); color:var(--gold);
@@ -558,6 +575,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="qfig"></div>
       <div id="choices"></div>
       <div id="pstrike" style="display:none"></div>
+      <div id="showwork" style="display:none"></div>
     </div>
 
     <div class="panel" id="explain" style="display:none"></div>
@@ -3810,6 +3828,7 @@ const Game = {
       bests:{},                            // deepest room BANKED from, per setting (see Passage)
       mats:{ore:0, essence:0, herb:0, page:0},  // what the places give up; the Keep spends it
       alch:0,                                   // the crucible's charge: 0 ready, 1 worked
+      shown:0,                                  // times the working was asked for, never mastery
 
       brewed:{},                           // what the Apothecary made and cannot be unmade
       runes:{},                            // permanent enchantments, id -> 1
@@ -3851,6 +3870,7 @@ const Game = {
     if(typeof this.s.mats.herb!=='number') this.s.mats.herb=0;
     if(typeof this.s.mats.page!=='number') this.s.mats.page=0;
     if(this.s.alch!==1) this.s.alch=0;      // anything but 'worked' means ready
+    if(typeof this.s.shown!=='number') this.s.shown=0;
 
     if(!this.s.brewed) this.s.brewed={};
     if(!this.s.runes) this.s.runes={};
@@ -5577,6 +5597,7 @@ const Battle = {
   nextQuestion(){
     if(this.over) return;
     this.answered=false;
+    this.shownWork=false;
     const ex=document.getElementById('explain');
     ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
     let key, diff;
@@ -5702,6 +5723,7 @@ const Battle = {
       box.appendChild(b);
     });
     this.renderPerfect();
+    this.renderWork();
     // The power bar is re-read here because more than one ability's readiness
     // depends on the question now on screen — whether the Codex has a rule for
     // it, and whether there are wrong answers left to turn over.
@@ -5733,6 +5755,31 @@ const Battle = {
     p.style.display='';
     p.innerHTML=`<div class="pbtn" id="pgo">⚔ Perfect Strike — build it yourself, ×3 damage</div>`;
     document.getElementById('pgo').onclick=()=>this.openPad();
+  },
+  /* The door out, offered on every question the game can work — which is all of
+     them. Deliberately quiet: a dashed outline rather than a gold button,
+     because it is the choice that costs you the turn and should not read as the
+     obvious one. */
+  SHOWN: Object.freeze({shown:true}),   // an object, so it can never === an answer
+  renderWork(){
+    const w=document.getElementById('showwork');
+    const st=this.step();
+    if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
+    w.style.display='';
+    w.innerHTML=`<div class="wbtn" id="wgo">🔎 Show me the working — costs you the strike</div>`;
+    document.getElementById('wgo').onclick=()=>this.showWork();
+  },
+  /* Routed through answer() with a sentinel rather than resolving the turn
+     itself. The sentinel can never equal the answer, so the turn lands exactly
+     as a miss does — streak broken, foe's turn, wind-up still winding — and
+     every piece of that arithmetic stays in one place. What `shownWork`
+     changes is only the two things that must differ: the mastery model is not
+     told, and the panel shows the derivation instead of the verdict. */
+  showWork(){
+    if(this.answered) return;
+    this.shownWork=true;
+    Game.s.shown=(Game.s.shown||0)+1;
+    this.answer(null, this.SHOWN);
   },
   openPad(){
     this.padVal='';
@@ -5774,11 +5821,15 @@ const Battle = {
       else b.classList.add('faded');
     });
     document.getElementById('pstrike').style.display='none';
+    document.getElementById('showwork').style.display='none';
 
     // A ladder step is one small piece of a topic, so it moves mastery by a
     // fraction; the parent problem still counts in full.
     const weight = this.rite ? 1/Math.max(2,this.rite.motes.length) : 1;
-    this.lastMastery = Game.recordAnswer(this.cur.key, ok, weight);
+    /* Being shown the working tells the mastery model nothing at all — not a
+       wrong answer, not a question answered, and not a fresh timestamp. See the
+       Working module: recency is what pages buy, and this must not be a bench. */
+    this.lastMastery = this.shownWork ? null : Game.recordAnswer(this.cur.key, ok, weight);
 
     // --- a step of a Rite: teach, chip in a little damage, move on ---
     if(this.rite){
@@ -5923,6 +5974,29 @@ const Battle = {
     const why = inRite ? (st._why||{}) : this.cur.why;
     const miss = !ok && why[picked];
     const e=document.getElementById('explain');
+
+    /* Shown rather than answered: the derivation replaces the verdict. No
+       "the answer was", because nothing was guessed — and no rule restated
+       above it, because the working carries the rule itself. */
+    if(this.shownWork){
+      const w=Working.forStep(st);
+      e.style.display='block';
+      e.innerHTML =
+        `<div class="head" style="color:var(--dim)">🔎 Worked through for you.</div>`+
+        Working.render(w)+
+        `<div class="miss" style="margin-top:10px">No strike, and the streak is broken.
+           Nothing was recorded against ${TOPIC_LABEL[this.cur.key]||this.cur.topic} —
+           being shown is not knowing, so the question will come back.</div>`+
+        (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage.</div>`:'')+
+        `<div id="afig"></div>`+
+        `<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>`;
+      Figure.render(w.fig, document.getElementById('afig'));
+      const wb=document.getElementById('contBtn');
+      wb.onclick=()=>{ wb.onclick=null; wb.disabled=true; this.afterTurn(); };
+      this.revealScroll(e);
+      return;
+    }
+
     const head = inRite
       ? (ok ? '✔️ Step taken.' : '✕ Not that step.')
       : (ok ? '⚔️ A clean strike!' : '🩸 The blow lands on you.');
@@ -5989,6 +6063,7 @@ const Battle = {
       r.i++;
       if(r.i < r.motes.length){
         this.answered=false;
+        this.shownWork=false;                    // each rung is asked afresh
         const ex=document.getElementById('explain'); ex.style.display='none'; ex.innerHTML='';
         this.qStart=performance.now();
         this.renderStep();
@@ -6000,6 +6075,11 @@ const Battle = {
       this.finisher = 1 + 1.6*(clean/total);
       this.rite=null;
       this.answered=false;                       // answer() guards on this
+      /* And the flag with it. A rung shown earlier must not follow the ladder
+         out: the assembled solution is a real answer and has to reach the
+         mastery model, or a single peek partway up would silently cost the
+         player credit for the whole topic. */
+      this.shownWork=false;
       this.qStart=performance.now()-999999;      // the finisher is not a speed test
       this.answer(null, this.cur.a);             // the assembled solution strikes
       return;
@@ -6211,6 +6291,100 @@ const Codex = {
       if(onClose) onClose(free);
     };
     Sfx.coin(0);
+  }
+};
+
+/* Being shown the working.
+ *
+ * Every other teaching in the game arrives AFTER you commit: answer, then read
+ * why. That is the right order for practice and the wrong order for a player
+ * who is genuinely stuck, because the only way to reach the explanation is to
+ * guess — and a lucky guess banks mastery you do not have.
+ *
+ * So this is the honest door out: ask to be shown, and the problem is worked
+ * in front of you, in steps, ending on the answer. What it costs is the strike.
+ * You deal no damage, the streak breaks, the foe takes its turn, and — the part
+ * that matters — the topic records NOTHING. Not a correct answer, not a wrong
+ * one, and not a fresh timestamp either. Being shown is not knowing, and the
+ * mastery model must never hear about it.
+ *
+ * That last point is load-bearing rather than fussy. Recency is what the
+ * Scriptorium sells for pages; a button that quietly reset a topic's clock
+ * would be a free bench, and would undercut the one currency the game is most
+ * careful about.
+ *
+ * Where the steps come from, in order of preference:
+ *
+ *   1. A mote ladder. Twelve topics are already written as a chain of small
+ *      questions — pick u, differentiate it, rewrite, integrate — and that IS
+ *      the working, authored by hand rather than inferred.
+ *   2. The explanation. Every generator writes `ex` as the arithmetic of THIS
+ *      instance rather than a restated rule, and they are written sequentially:
+ *      the rule, then the numbers, then what it means. Split on sentences, that
+ *      is a genuine derivation, and all seventy split into two to five parts.
+ *
+ * The codex rule rides on top as a heading where the topic has one, because a
+ * derivation is easier to follow when you have been told what you are doing. */
+const Working = {
+  /* Sentence boundaries, without breaking on the decimals, vectors and
+     bracketed fragments the explanations are full of. A step has to begin with
+     something that can start a sentence. */
+  sentences(text){
+    return String(text||'')
+      .split(/(?<=[.!?])\s+(?=[A-Z0-9(⟨∫√Σ−-])/)
+      .map(s=>s.trim())
+      .filter(Boolean);
+  },
+
+  /* The working for one question, as data. `steps` is what gets numbered on
+     screen; `answer` is always the last word, whatever the source. */
+  // One test, asked once. Deciding this twice let the label say "ladder" while
+  // the steps came from prose — which a mutation found and a reader would not.
+  hasLadder(st){ return !!(st && Array.isArray(st.motes) && st.motes.length); },
+
+  forStep(st){
+    if(!st) return null;
+    const steps=[];
+    const fromLadder = this.hasLadder(st);
+
+    if(fromLadder){
+      // A ladder: each rung is a question with its own answer and reason.
+      for(const m of st.motes){
+        steps.push({ ask: String(m.q||'').replace(/<[^>]+>/g,' ').trim(),
+                     got: m.a, why: m.ex || '' });
+      }
+    } else {
+      for(const s of this.sentences(st.ex)) steps.push({ why:s });
+    }
+
+    if(!steps.length && st.ex) steps.push({ why:String(st.ex) });
+
+    return {
+      topic: st.topic || '',
+      rule: (st.codex && st.codex.rule) || '',
+      steps,
+      answer: st.a,
+      fig: st.figAnswer || null,
+      // A ladder is authored; sentences are inferred. Worth saying which.
+      source: fromLadder ? 'ladder' : 'explanation'
+    };
+  },
+
+  // Every question can be worked. If this ever returns false the button must
+  // not be offered, and the suite checks it never does across all seventy.
+  has(st){ const w=this.forStep(st); return !!(w && w.steps.length && w.answer!=null); },
+
+  render(w){
+    if(!w) return '';
+    return `<div class="wkbox">
+      ${w.rule?`<div class="wkrule"><b>The rule</b><br>${w.rule}</div>`:''}
+      <ol class="wksteps">
+        ${w.steps.map(s=>`<li>${s.ask?`<span class="wkask">${s.ask}</span><br>`:''}
+          ${s.got?`<span class="wkgot">${s.got}</span>${s.why?'<br>':''}`:''}
+          ${s.why?`<span class="wkwhy">${s.why}</span>`:''}</li>`).join('')}
+      </ol>
+      <div class="wkans">The answer is <b>${w.answer}</b>.</div>
+    </div>`;
   }
 };
 
