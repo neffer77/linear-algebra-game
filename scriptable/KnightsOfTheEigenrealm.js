@@ -5785,7 +5785,7 @@ const Battle = {
     const st=this.step();
     if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
     w.style.display='';
-    w.innerHTML=\`<div class="wbtn" id="wgo">🔎 Show me the working — costs you the strike</div>\`;
+    w.innerHTML=\`<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>\`;
     document.getElementById('wgo').onclick=()=>this.showWork();
   },
   /* Routed through answer() with a sentinel rather than resolving the turn
@@ -5917,6 +5917,27 @@ const Battle = {
       Bounty.bump('topic',1,this.cur.key);
       Bounty.bump('streak',this.combo);
       if(crit) Bounty.bump('crit',1);
+    } else if(this.shownWork){
+      /* Being shown is not a miss, so the foe's ordinary blow does not land.
+         What it costs is the strike and the streak: no damage dealt, nothing
+         learned, and the question still standing between you and the foe.
+       *
+       * The stake goes with it — you did not strike, so there was nothing for
+       * a staked strike to ride on — but it is spent rather than refunded.
+       * Steady Hand is deliberately NOT consumed: it holds a streak through a
+       * wrong answer, and this was not one. It will still be there for the miss
+       * it was meant for.
+       *
+       * The wind-up is untouched below. That slam fires on the foe's own clock
+       * regardless of what the player does, and exempting it here would make
+       * this a way to stand safely through a wind-up rather than a way to
+       * learn. Unbraced, because bracing is what a correct answer buys. */
+      if(this.perfect) this.combo=0;
+      this.combo=0;
+      if(this.diceUp) Anim.float(560, H-290, 'STAKE LOST', '#ff6b6b', true);
+      this.diceUp=false;
+      this.settleMs = 620;
+      this.missed++;                 // no longer flawless, because it was not
     } else {
       // Steady Hand spends itself here, holding the streak through one miss.
       if(this.steadyUp){
@@ -6003,9 +6024,10 @@ const Battle = {
       e.innerHTML =
         \`<div class="head" style="color:var(--dim)">🔎 Worked through for you.</div>\`+
         Working.render(w)+
-        \`<div class="miss" style="margin-top:10px">No strike, and the streak is broken.
-           Nothing was recorded against \${TOPIC_LABEL[this.cur.key]||this.cur.topic} —
-           being shown is not knowing, so the question will come back.</div>\`+
+        \`<div class="miss" style="margin-top:10px">No strike, and the streak is broken —
+           but no blow either. Nothing was recorded against
+           \${TOPIC_LABEL[this.cur.key]||this.cur.topic}: being shown is not knowing, so the
+           question will come back.</div>\`+
         (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage.</div>\`:'')+
         \`<div id="afig"></div>\`+
         \`<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>\`;
