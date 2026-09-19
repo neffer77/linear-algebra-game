@@ -115,6 +115,7 @@ module.exports = {
       REALMS.forEach((r, ri) => r.foes.forEach((f, i) => Game.s.cleared[ri + ':' + i] = 1));
       Battle.begin(0, 0);
       await new Promise(r => setTimeout(r, 250));
+      Battle.slamNext = false;        // the wind-up is its own thing; see below
       // Give the topic a real history, so "unchanged" is a meaningful claim
       // rather than a comparison of two empty objects.
       const key = Battle.cur.key;
@@ -131,7 +132,7 @@ module.exports = {
         if (before[f] !== after[f]) out.moved.push(f);
       }
       out.foeUnhurt = Battle.ehp === ehp;
-      out.tookDamage = Game.s.hp < hp;
+      out.tookNoDamage = Game.s.hp === hp;
       out.comboBroken = Battle.combo === 0;
       out.qCountSame = Game.s.qCount === qc;
       out.correctSame = Game.s.stats.correct === correct;
@@ -144,7 +145,8 @@ module.exports = {
     t.eq('being shown moves no field of the topic — including recency',
       price.moved, []);
     t.ok('the foe takes no damage: it cannot shorten a fight', price.foeUnhurt);
-    t.ok('the turn passes, so the foe gets its blow in', price.tookDamage);
+    t.ok('and the knight takes none either — it costs the strike, not blood',
+      price.tookNoDamage);
     t.ok('the streak breaks', price.comboBroken);
     t.ok('it does not count as a question answered', price.qCountSame);
     t.ok('nor as a right answer', price.correctSame);
@@ -234,11 +236,56 @@ module.exports = {
       return out;
     });
     t.ok('the working is offered while the question is open', button.offered);
-    t.ok('and the button says what it costs', /costs you the strike/i.test(button.wording),
+    t.ok('and the button says what it costs, and what it does not',
+      /costs the strike/i.test(button.wording) && /not blood/i.test(button.wording),
       button.wording);
     t.ok('once answered it is gone', button.goneAfterAnswer);
     t.ok('and stays gone even if the fight redraws its controls',
       button.goneOnRedraw);
+
+    /* What the gentler price does and does not touch. Showing costs the strike
+       and the streak; it is not a wrong answer, so the things that exist to
+       soften a wrong answer are left alone, and the things that ride on a
+       strike are not. */
+    const spares = await t.ev(async () => {
+      const out = {};
+      Battle.begin(0, 0);
+      await new Promise(r => setTimeout(r, 250));
+      Battle.slamNext = false;
+
+      // Steady Hand holds a streak through a MISS. Being shown is not one, so
+      // it must still be in hand afterwards for the miss it was meant for.
+      Battle.steadyUp = true;
+      Battle.diceUp = true;                 // a stake rode on a strike that never came
+      const hp = Game.s.hp;
+      const missed0 = Battle.missed;
+      Battle.showWork();
+      await new Promise(r => setTimeout(r, 250));
+      out.notFlawless = Battle.missed === missed0 + 1;
+      out.steadyKept = Battle.steadyUp === true;
+      out.stakeSpent = Battle.diceUp === false;
+      out.unhurt = Game.s.hp === hp;
+
+      // The wind-up is the foe's own clock and fires whatever the player does.
+      // Standing here must not be a way to wait one out.
+      Battle.begin(0, 0);
+      await new Promise(r => setTimeout(r, 250));
+      Battle.slamNext = true;
+      const hp2 = Game.s.hp;
+      Battle.showWork();
+      await new Promise(r => setTimeout(r, 1400));
+      out.slamLanded = Game.s.hp < hp2;
+      return out;
+    });
+    t.ok('a fight with a working shown in it is no longer flawless',
+      spares.notFlawless);
+    t.ok('Steady Hand is not spent — being shown is not the miss it guards against',
+      spares.steadyKept);
+    t.ok('but a stake is spent: there was no strike for it to ride on',
+      spares.stakeSpent);
+    t.ok('and with no wind-up due, nothing touches the knight at all', spares.unhurt);
+    t.ok('a wind-up still lands — this is not a way to wait one out',
+      spares.slamLanded);
 
     /* Three checks that exist because a mutation walked past the first draft of
        this suite. Each names a guard that was real but unasserted. */
@@ -250,19 +297,19 @@ module.exports = {
       Battle.begin(0, 0);
       await new Promise(r => setTimeout(r, 250));
       Game.s.shown = 0;
-      const hp = Game.s.hp;
+      const combo0 = (Battle.combo = 5);
       Battle.showWork();
       await new Promise(r => setTimeout(r, 150));
-      const afterOne = Game.s.hp;
+      Battle.combo = combo0;                 // if a second press lands, it breaks this again
       Battle.showWork();
       Battle.showWork();
       await new Promise(r => setTimeout(r, 200));
       out.countedOnce = Game.s.shown === 1;
-      out.hurtOnce = Game.s.hp === afterOne && afterOne < hp;
+      out.onlyOnce = Battle.combo === combo0;
       return out;
     });
     t.ok('pressing it again does nothing — one working, one turn', twice.countedOnce);
-    t.ok('and one blow, not three', twice.hurtOnce);
+    t.ok('and the turn is not resolved a second time', twice.onlyOnce);
 
     // The sentinel stands in for "no answer given". If it were ever a value a
     // generator could produce, being shown would read as a correct strike.

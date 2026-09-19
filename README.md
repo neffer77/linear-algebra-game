@@ -342,9 +342,12 @@ The game is built so that losing teaches you as much as winning.
   differentiate it, rewrite, integrate — and the rest from the explanation of that exact
   instance. It exists because every other teaching in the game arrives *after* you commit,
   which means the only route to it is a guess, and a lucky guess banks mastery nobody has.
-  What it costs is the strike: no damage dealt, the streak breaks, the foe takes its turn,
-  and **the topic records nothing at all** — not a right answer, not a wrong one, and not a
-  fresh timestamp either. Being shown is not knowing, so the question comes back.
+  What it costs is the strike, not blood: you deal no damage and the streak breaks, but the
+  foe's ordinary blow does not land — being shown is not a wrong answer, so it is not
+  punished like one. Its wind-up still fires, because that runs on the foe's own clock
+  whatever you do. And **the topic records nothing at all** — not a right answer, not a
+  wrong one, and not a fresh timestamp either. Being shown is not knowing, so the question
+  comes back.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
 - **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
@@ -494,7 +497,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-two suites, 1,113 checks, about a minute:
+loop only exists once the page is running. Twenty-two suites, 1,118 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
