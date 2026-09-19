@@ -143,6 +143,29 @@ const VIEWPORTS = [
       Scribe.ask();` }
 ];
 
+/* One element, by selector, after a setup that puts it on screen. The panels
+   above are found by the heading they carry inside a scrolling list; this is
+   for the ones that are not in a list at all — the explanation panel, which is
+   a sibling of the question rather than a child of anything. */
+const ELEMENTS = [
+  /* The working, shown. Posed on u-substitution because that is one of the
+     twelve topics with a hand-authored ladder, so the picture shows the good
+     case: four rungs, each with what was asked, what came out, and why. */
+  { key: 'working', sel: '#explain', height: 900, setup: `${strand}
+      REALMS.forEach((r,ri)=>r.foes.forEach((f,i)=>Game.s.cleared[ri+':'+i]=1));
+      Game.s.lvl=14;
+      Battle.begin(3,1);` ,
+    then: `
+      R.seed(20260916);
+      Battle.cur = buildQuestion('uSub', 2);
+      R.unseed();
+      Battle.rite=null; Battle.answered=false; Battle.shownWork=false;
+      Battle.slamNext=false;
+      Battle.renderStep();
+      Battle.combo=4;
+      Battle.showWork();` }
+];
+
 /* Whole screens, straight from tools/shots.js output — resolved by NAME, not
    by the NN- prefix. That prefix is the scene's position in the list, so it
    shifts every time a scene is added, and a hard-coded number quietly picks up
@@ -203,6 +226,21 @@ const FILES = [
     await ctx.close();
     FILES.push({ key: v.key, file: `view-${v.key}.png` });
     console.log('viewport', v.key);
+  }
+
+  for (const e of ELEMENTS) {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: e.height }, deviceScaleFactor: 2 });
+    const page = await ctx.newPage();
+    await boot(page);
+    await page.evaluate(e.setup);
+    await sleep(500);
+    if (e.then) { await page.evaluate(e.then); await sleep(600); }
+    const el = await page.$(e.sel);
+    if (!el) throw new Error('no element matched ' + e.key + ' (' + e.sel + ')');
+    await el.screenshot({ path: path.join(OUT, `el-${e.key}.png`) });
+    await ctx.close();
+    FILES.push({ key: e.key, file: `el-${e.key}.png` });
+    console.log('element ', e.key);
   }
 
   const ctx = await browser.newContext();

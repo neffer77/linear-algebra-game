@@ -2,6 +2,7 @@
 shots/
 panel-*.png
 view-*.png
+el-*.png
 render-*.png
 shots-inline.js
 muster-built.html

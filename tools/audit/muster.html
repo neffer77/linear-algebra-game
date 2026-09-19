@@ -179,9 +179,11 @@
     way of paying the player back. This is what actually shipped, measured against the code
     rather than against memory — and after twelve slices and a reordering, the answer is all
     of it. The roster went from one to twenty, all four ways a skill can pay are filled, every
-    setting the design named is built, and nothing on the roll is half. This page has spent
-    five revisions as a list of what was missing. There is nothing left on it, so what it is
-    for now is the record of how that happened, including the parts that went wrong.
+    setting the design named is built, and nothing on the roll is half. This page spent five
+    revisions as a list of what was missing; there is nothing left on it. What it is for now
+    is the record of how that happened, including the parts that went wrong — and of what
+    came after, because closing the roll turned out to mean the design had no gaps rather
+    than that the game was finished.
   </p>
 
 
@@ -250,8 +252,8 @@
     <h2>What it looks like now</h2>
     <p>
       Screenshots at phone size, most of them straight out of <code>npm run shots</code>, which
-      renders twenty-eight named scenes. Ten of these eleven screens did not exist when this
-      page was first written, and the eleventh has been rearranged. One of them earned its place
+      renders twenty-eight named scenes. Eleven of these twelve screens did not exist when
+      this page was first written, and the twelfth has been rearranged. One of them earned its place
       twice over: the Wilds shot was taken for this page and showed the setting speaking the
       Deep's words, which is how that bug was found — a picture caught what twenty suites did
       not.
@@ -398,6 +400,23 @@
       </figcaption>
     </figure>
 
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-working" alt="A worked solution for u-substitution: the rule, then four numbered steps each showing what was asked, what came out and why, then the answer and a note that nothing was recorded."></div>
+      <figcaption>
+        <b>And the one that arrived after the roll was closed.</b> Every other teaching in
+        this game comes <em>after</em> you commit — answer, then read why — which is right for
+        practice and wrong for a player who is simply stuck, because the only route to the
+        explanation was a guess, and a lucky guess banks mastery nobody has. Now the problem
+        can be worked in front of you instead. Twelve topics were already written as a chain
+        of small questions, so for those the working is <em>authored</em> rather than
+        inferred: pick <em>u</em>, differentiate it, rewrite, integrate. The rest are split
+        out of the explanation, which was always the arithmetic of that exact instance rather
+        than a rule restated. What it costs is the strike and the streak — and the topic
+        records nothing at all, not even a fresh timestamp, because recency is what the
+        Scriptorium sells and this is not a bench.
+      </figcaption>
+    </figure>
+
   </section>
 
 
@@ -413,7 +432,9 @@
       by playing the result.
     </p>
     <p>
-      Twelve slices and a reordering closed it, in the order that made each one cheapest:
+      Twelve slices and a reordering closed it, in the order that made each one cheapest —
+      and a thirteenth arrived afterwards, which is the more interesting fact and is dealt
+      with at the end:
     </p>
 
 
@@ -671,13 +692,62 @@
 
 
   <section>
+    <h2>And then a thirteenth</h2>
+    <p>
+      The roll being closed meant the design had no gaps left, not that the game was
+      finished. The next thing asked for was not on any list, and could not have been: it is
+      not a skill at all.
+    </p>
+
+    <div class="step">
+      <div class="top"><span class="n">S13</span><h3>Being shown the working</h3><span class="size">shipped</span></div>
+      <p>
+        Every teaching in this game arrived <em>after</em> you committed — answer, then read
+        why. That is the right order for practice and the wrong order for someone who is
+        simply stuck, because the only route to the explanation was to guess, and a lucky
+        guess banks mastery nobody has. So the problem can now be worked in front of you
+        instead, in numbered steps, ending on the answer.
+      </p>
+      <p>
+        Almost none of it had to be written. Twelve topics were already authored as a chain
+        of small questions, and that chain <em>is</em> the working; the other fifty-eight
+        carry an explanation that was always the arithmetic of that exact instance, written
+        sequentially — the rule, then the numbers, then what it means. Measured before
+        relying on it rather than after: all seventy split into two to five genuine steps,
+        none into a single blob.
+      </p>
+      <p class="gate"><span>the price, twice</span>
+        It shipped costing exactly what a wrong answer costs, including the foe's blow — which
+        made it strictly worse than guessing, since a guess at least lands one time in four.
+        The rational move for a stuck player was still to guess, which is the thing it was
+        built to replace. It now costs the strike and the streak and no blood. The wind-up
+        still lands, because that fires on the foe's clock whatever you do; Steady Hand is
+        not spent, because it guards a miss and this is not one.
+      </p>
+    </div>
+
+    <p class="aside" style="margin-top:6px">
+      Two bugs, both found by writing the checks rather than by reading the code. The flag
+      marking a turn as shown leaked across the rungs of a ladder and then followed the
+      ladder <em>out</em>, so one peek partway up a four-rung derivation made the assembled
+      solution record nothing — silently costing a player credit for the whole topic. And the
+      module decided "is this a ladder?" in two places, so its own label could say
+      <em>authored</em> while the steps came from prose. Neither was visible on screen.
+      Eleven mutations for the feature and six more for the reprice; three survived a first
+      pass and every one of them named a weak CHECK rather than a weak guard.
+    </p>
+
     <h2>The roll is closed</h2>
     <p>
       There is nothing left to list. Every skill the Skill Web named exists, every setting is
-      built, all four payoff channels are full, and no entry is half. The gate this page set for
-      the last slice held: nothing added since has become a way to <em>buy</em> mastery. Pages
-      buy recency and the Crucible buys conversion, and both are asserted field by field against
-      the mastery model rather than trusted.
+      built, all four payoff channels are full, and no entry is half.
+    </p>
+    <p>
+      The gate this page set for the last slice has held through two slices since:
+      <b>nothing added has become a way to buy mastery.</b> Pages buy recency; the Crucible
+      buys conversion; being shown the working buys neither, and is the sharpest test of the
+      rule so far, because it hands over the answer itself. All three are asserted field by
+      field against the mastery model rather than trusted to behave.
     </p>
 
     <div class="step">
@@ -718,9 +788,9 @@
   </section>
 
   <div class="foot">
-    <span>measured against bfa759f</span>
+    <span>measured against f9258a8</span>
     <span>merged and deployed</span>
-    <span>1,071 checks · 21 suites</span>
+    <span>1,118 checks · 22 suites</span>
 
 
 
@@ -807,7 +877,7 @@ document.getElementById('settings').innerHTML = SETTINGS.map(([nm, st, note]) =>
    loudly, not quietly: an id here with no figure, or a figure with no entry
    here, should be a visible error rather than a blank rectangle. */
 for (const id of ['map', 'summit', 'skills', 'passage', 'wager', 'sigil',
-                  'tracking', 'thicket', 'weather', 'scribe', 'crucible']) {
+                  'tracking', 'thicket', 'weather', 'scribe', 'crucible', 'working']) {
   const el
  = document.getElementById('s-' + id);
   if (!el) throw new Error('no figure for ' + id);
