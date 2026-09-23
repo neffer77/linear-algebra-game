@@ -21,6 +21,14 @@ To play from your phone's browser over your network:
 npx http-server . -p 8080     # then visit http://<your-ip>:8080
 ```
 
+### On iPhone, as an app
+
+Add it to your Home Screen from Safari (Share → **Add to Home Screen**) and it runs full
+screen and offline. Or, with a Mac, build the native app in [`ios/`](ios/README.md) straight
+onto your phone with a free Apple ID. That version adds real haptics, which Safari on iPhone
+cannot do, and keeps its saves as app data. Step-by-step instructions are in
+[ios/README.md](ios/README.md).
+
 ### On iOS (Scriptable)
 
 1. Install [Scriptable](https://apps.apple.com/app/scriptable/id1405459188) from the App Store.
@@ -406,6 +414,7 @@ manifest.webmanifest, sw.js            make it installable and playable offline
 icons/                                 generated; run tools/make-icons.js
 build-scriptable.js                    packages index.html into the iOS script
 scriptable/KnightsOfTheEigenrealm.js   generated; paste into Scriptable
+ios/                                   the native iPhone app — open Eigenrealm.xcodeproj
 ```
 
 Inside `index.html` the code is organised as:
@@ -497,7 +506,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-two suites, 1,118 checks, about a minute:
+loop only exists once the page is running. Twenty-three suites, 1,137 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -521,6 +530,7 @@ loop only exists once the page is running. Twenty-two suites, 1,118 checks, abou
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
+| `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `map` | the places you can go are above the campaign, not below thirty-two fights |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
