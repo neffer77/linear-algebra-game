@@ -1,0 +1,7 @@
+# Xcode's per-user state and build output. Signing a build with your own Apple
+# ID also writes DEVELOPMENT_TEAM into project.pbxproj; that one is tracked, so
+# leave it uncommitted rather than ignoring the whole project file.
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
