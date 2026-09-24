@@ -1,0 +1,290 @@
+name: Build the iOS app
+
+# The Xcode project in ios/ is written on machines without Xcode, so this is
+# the first place it is ever compiled. It does more than compile: it launches
+# the app in the iOS Simulator with EIGENREALM_PROBE=1, and the app reports on
+# itself over stderr — that the game loaded over the custom URL scheme, that
+# localStorage and IndexedDB work there and PERSIST across a relaunch, that
+# the haptics and clipboard bridge reaches Swift, and that confirm() and
+# prompt() are wired to native dialogs. Every one of those is something that
+# could fail silently on a real phone.
+#
+# It also builds the app for a real iPhone as an unsigned .ipa, and on main
+# publishes it to the ios-app release for SideStore to install and re-sign.
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - 'index.html'
+      - 'icons/**'
+      - 'manifest.webmanifest'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'index.html'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  simulator:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    env:
+      BUNDLE_ID: io.github.neffer77.eigenrealm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+
+      - name: Pick an iPhone simulator
+        run: |
+          UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          for runtime in sorted(devices, reverse=True):
+              if "iOS" not in runtime:
+                  continue
+              for d in devices[runtime]:
+                  if d.get("isAvailable") and d["name"].startswith("iPhone"):
+                      print(d["udid"]); raise SystemExit
+          raise SystemExit("no available iPhone simulator")
+          ')
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl list devices | grep "$UDID"
+
+      # Unsigned: the simulator does not need a signature, and signing needs an
+      # Apple ID that CI does not have. On a phone, Xcode signs with yours.
+      - name: Build
+        run: |
+          if ! xcodebuild -project ios/Eigenrealm.xcodeproj -scheme Eigenrealm \
+                 -destination "id=$UDID" -configuration Debug \
+                 -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; then
+            grep -E "error:" build.log | sort -u | head -40
+            tail -60 build.log
+            exit 1
+          fi
+          echo "--- warnings from this project's own files:"
+          grep -E "ios/.*warning:" build.log | sort -u || echo "none"
+          # A WKWebView delegate method whose signature is slightly off is not
+          # an error: Swift just never calls it. That is how a dialog handler
+          # would vanish and leave the game unable to name a knight — so a
+          # near-miss fails the build here instead of silently on a phone.
+          if grep -q "nearly matches" build.log; then
+            grep "nearly matches" build.log
+            echo "::error::a delegate method nearly matches its requirement and will never be called"
+            exit 1
+          fi
+
+      - name: The bundle carries the game from this commit
+        run: |
+          APP=build/Build/Products/Debug-iphonesimulator/Eigenrealm.app
+          echo "APP=$APP" >> "$GITHUB_ENV"
+          cmp index.html "$APP/web/index.html"
+          test -f "$APP/Bridge.js"
+          test -f "$APP/Assets.car"
+          plist() { plutil -extract "$1" raw -o - "$APP/Info.plist"; }
+          test "$(plist CFBundleIdentifier)" = "$BUNDLE_ID"
+          test "$(plist CFBundleDisplayName)" = "Eigenrealm"
+          test "$(plist UILaunchScreen.UIColorName)" = "LaunchBackground"
+          test "$(plist CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName)" = "AppIcon"
+          echo "index.html, Bridge.js, icon, launch colour and identity all present"
+
+      - name: Launch it, and let it report on itself
+        run: |
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" "$APP"
+
+          launch() {
+            rm -f "$1"
+            SIMCTL_CHILD_EIGENREALM_PROBE=1 xcrun simctl launch --terminate-running-process \
+              --stderr="$PWD/$1" "$UDID" "$BUNDLE_ID"
+            for i in $(seq 1 90); do
+              grep -q "EIGENREALM-NATIVE" "$1" 2>/dev/null && return 0
+              sleep 1
+            done
+            echo "::error::no report from the app after 90s"; cat "$1" || true; return 1
+          }
+
+          launch first.log
+          xcrun simctl io "$UDID" screenshot first-launch.png
+          xcrun simctl terminate "$UDID" "$BUNDLE_ID" || true
+          sleep 2
+          launch second.log
+
+          python3 - <<'PY'
+          import json, re, sys
+          def report(path):
+              text = open(path, errors="replace").read()
+              failed = re.search(r"EIGENREALM-PROBE-FAILED (.*)", text)
+              if failed:
+                  sys.exit(f"{path}: the probe script threw: {failed.group(1)}")
+              page = json.loads(re.search(r"EIGENREALM-PROBE (\{.*\})", text).group(1))
+              native = json.loads(re.search(r"EIGENREALM-NATIVE (\{.*\})", text).group(1))
+              return page, native
+
+          first, native = report("first.log")
+          second, _ = report("second.log")
+          print("first launch: ", json.dumps(first))
+          print("native side:  ", json.dumps(native))
+          print("second launch:", json.dumps(second))
+
+          checks = [
+              ("the game loaded", first["game"] == "object" and first["battle"] == "object"),
+              ("including show-the-working", first["working"] == "object"),
+              ("over the app's own scheme", first["protocol"] == "eigenrealm:"),
+              ("the game knows it is installed", first["standalone"]),
+              ("navigator.vibrate is bridged", first["vibrate"]),
+              ("navigator.clipboard is bridged", first["clipboard"]),
+              ("localStorage works on the custom scheme", first["localStorage"]),
+              ("IndexedDB works on the custom scheme", first["indexedDB"]),
+              ("confirm() reaches a native dialog", first["confirm"]),
+              ("prompt() reaches a native dialog and returns its text", first["prompt"]),
+              ("a haptic from the page arrived in Swift", native["haptics"] >= 1),
+              ("the clipboard write arrived in Swift and on the pasteboard", native["copied"]),
+              ("a fresh install starts with nothing saved", first["persisted"] is False),
+              ("and what it saved is still there after a relaunch", second["persisted"] is True),
+          ]
+          bad = [name for name, ok in checks if not ok]
+          for name, ok in checks:
+              print(("  ok   " if ok else "  FAIL ") + name)
+          if bad:
+              sys.exit(f"{len(bad)} of {len(checks)} checks failed")
+          print(f"all {len(checks)} checks passed")
+          PY
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator
+          path: |
+            build.log
+            first.log
+            second.log
+            first-launch.png
+          if-no-files-found: ignore
+
+  # The same app built for a real iPhone and packed as an .ipa, for SideStore.
+  # It is unsigned on purpose: SideStore signs it on the phone with your own
+  # Apple ID, and re-signs it every week without a Mac. Built on every run so a
+  # branch proves the .ipa before it reaches main; only main publishes it.
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      BUNDLE_ID: io.github.neffer77.eigenrealm
+      # The build number only ever goes up, so each .ipa installs over the last
+      # as a newer version, and the version shows which run made it.
+      VERSION: 1.0.${{ github.run_number }}
+      BUILD: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build for iPhone, unsigned
+        run: |
+          if ! xcodebuild -project ios/Eigenrealm.xcodeproj -scheme Eigenrealm \
+                 -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+                 -derivedDataPath build \
+                 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+                 MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+                 build > build.log 2>&1; then
+            grep -E "error:" build.log | sort -u | head -40
+            tail -60 build.log
+            exit 1
+          fi
+
+      # An .ipa is only a zip with the app inside a folder named Payload.
+      - name: Pack the .ipa
+        run: |
+          rm -rf pack && mkdir -p pack/Payload
+          cp -R build/Build/Products/Release-iphoneos/Eigenrealm.app pack/Payload/
+          (cd pack && zip -qry ../Eigenrealm.ipa Payload)
+          ls -l Eigenrealm.ipa
+
+      # Checked from the .ipa itself, not the build folder: this is the file a
+      # phone will get.
+      - name: The .ipa holds a device build of the game from this commit
+        run: |
+          rm -rf check && mkdir check && unzip -q Eigenrealm.ipa -d check
+          APP=check/Payload/Eigenrealm.app
+          cmp index.html "$APP/web/index.html"
+          test -f "$APP/Bridge.js"
+          test -f "$APP/Assets.car"
+          test -x "$APP/Eigenrealm"
+          plist() { plutil -extract "$1" raw -o - "$APP/Info.plist"; }
+          test "$(plist CFBundleIdentifier)" = "$BUNDLE_ID"
+          test "$(plist CFBundleShortVersionString)" = "$VERSION"
+          test "$(plist CFBundleVersion)" = "$BUILD"
+          test "$(plist DTPlatformName)" = "iphoneos"
+          test "$(plist MinimumOSVersion)" = "16.0"
+          ARCHS=$(lipo -archs "$APP/Eigenrealm")
+          echo "architectures: $ARCHS"
+          [[ " $ARCHS " == *" arm64 "* ]]
+          echo "Eigenrealm $VERSION ($BUILD) for iPhone, $(du -h Eigenrealm.ipa | cut -f1)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eigenrealm-ipa
+          path: Eigenrealm.ipa
+          if-no-files-found: error
+
+  # One release, always at the same address, always holding the newest .ipa:
+  # https://github.com/<repo>/releases/download/ios-app/Eigenrealm.ipa
+  # Only from main, and only once the simulator run has passed too.
+  publish:
+    needs: [simulator, ipa]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ios-app
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Eigenrealm-ipa
+
+      - name: Publish
+        run: |
+          NOTES="The iPhone app, built from ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}).
+
+          Install it with SideStore: download Eigenrealm.ipa on your iPhone, then in SideStore go to My Apps, tap +, and choose it. The full guide is ios/README.md."
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # Point the tag at this commit, then swap the file in place.
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$TAG" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release upload "$TAG" Eigenrealm.ipa --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" Eigenrealm.ipa --target "$GITHUB_SHA" \
+              --title "Eigenrealm for iPhone" --notes "$NOTES" --latest
+          fi
+
+      - name: The published file is the one just built
+        run: |
+          URL="https://github.com/$GH_REPO/releases/download/$TAG/Eigenrealm.ipa"
+          for i in 1 2 3 4 5 6; do
+            if curl -fsSL -o published.ipa "$URL" && cmp -s published.ipa Eigenrealm.ipa; then
+              echo "$URL serves this run's .ipa"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$URL does not serve this run's .ipa"; exit 1

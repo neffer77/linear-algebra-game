@@ -2,8 +2,10 @@
 /*
  * Draws the app icons, rather than storing them.
  *
- *   node tools/make-icons.js
+ *   node tools/make-icons.js         every icon
+ *   node tools/make-icons.js ios     only the iOS app's
  *   -> icons/icon-192.png, icon-512.png, icon-180.png, icon-maskable-512.png
+ *   -> ios/Eigenrealm/Assets.xcassets/AppIcon.appiconset/icon-1024.png
  *
  * Every other pixel in this project is drawn procedurally at runtime; the app
  * icon is the one image a browser insists on having as a file. So it is drawn
@@ -15,19 +17,27 @@
  */
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
 
 const OUT = path.join(__dirname, '..', 'icons');
+const IOS = path.join(__dirname, '..', 'ios', 'Eigenrealm', 'Assets.xcassets', 'AppIcon.appiconset');
 const SIZES = [
   { file: 'icon-192.png', size: 192, pad: 0.06 },
   { file: 'icon-512.png', size: 512, pad: 0.06 },
   { file: 'icon-180.png', size: 180, pad: 0.06 },   // apple-touch-icon
   // Maskable icons are cropped to a circle by some launchers, so the crest
   // has to sit inside the middle 80% and the background must reach the edge.
-  { file: 'icon-maskable-512.png', size: 512, pad: 0.20 }
+  { file: 'icon-maskable-512.png', size: 512, pad: 0.20 },
+  // The iOS app. iOS rounds the corners itself, so the art is a full-bleed
+  // square — which the backdrop already is — with the crest given more room
+  // than a browser icon, since the mask eats further into the edges. And no
+  // alpha channel: an app icon must be opaque, and a canvas only ever exports
+  // RGBA, so this one is written as RGB by hand below.
+  { file: 'icon-1024.png', size: 1024, pad: 0.12, dir: IOS, opaque: true, tag: 'ios' }
 ];
 
 /** Drawn in the page, so this is browser canvas code. */
-const DRAW = ({ size, pad }) => {
+const DRAW = ({ size, pad, raw }) => {
   const c = document.createElement('canvas');
   c.width = c.height = size;
   const g = c.getContext('2d');
@@ -99,7 +109,59 @@ const DRAW = ({ size, pad }) => {
   }
   g.putImageData(img, 0, 0);
 
+  // The pixels themselves, for an icon that has to be written without alpha.
+  if (raw) {
+    let bin = '';
+    for (let i = 0; i < d.length; i += 0x8000) {
+      bin += String.fromCharCode.apply(null, d.subarray(i, i + 0x8000));
+    }
+    return btoa(bin);
+  }
   return c.toDataURL('image/png');
+};
+
+/* A PNG with no alpha channel: colour type 2, eight bits a channel. Written by
+   hand because the only other way to strip alpha is a dependency this project
+   does not otherwise need. CRC-32 by table, so it runs on any Node. */
+const CRC = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+const crc32 = (buf) => {
+  let c = 0xFFFFFFFF;
+  for (const b of buf) c = CRC[(c ^ b) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+};
+const chunk = (type, data) => {
+  const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
+  const body = Buffer.concat([Buffer.from(type, 'ascii'), data]);
+  const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([len, body, crc]);
+};
+const rgbPng = (rgba, size) => {
+  const stride = size * 3 + 1;
+  const rows = Buffer.alloc(stride * size);
+  for (let y = 0; y < size; y++) {
+    rows[y * stride] = 0;                             // filter: none
+    for (let x = 0; x < size; x++) {
+      const s = (y * size + x) * 4, o = y * stride + 1 + x * 3;
+      rows[o] = rgba[s]; rows[o + 1] = rgba[s + 1]; rows[o + 2] = rgba[s + 2];
+    }
+  }
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8; ihdr[9] = 2;                          // 8-bit, truecolour, no alpha
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', zlib.deflateSync(rows, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0))
+  ]);
 };
 
 (async () => {
@@ -112,12 +174,21 @@ const DRAW = ({ size, pad }) => {
   const page = await browser.newPage();
   await page.setContent('<!doctype html><meta charset="utf-8"><body></body>');
 
-  fs.mkdirSync(OUT, { recursive: true });
-  for (const { file, size, pad } of SIZES) {
-    const url = await page.evaluate(DRAW, { size, pad });
-    const png = Buffer.from(url.split(',')[1], 'base64');
-    fs.writeFileSync(path.join(OUT, file), png);
-    console.log(`${file.padEnd(24)} ${size}×${size}  ${(png.length / 1024).toFixed(1)} KB`);
+  const only = process.argv[2];
+  for (const { file, size, pad, dir, opaque, tag } of SIZES) {
+    if (only && tag !== only) continue;
+    const into = dir || OUT;
+    fs.mkdirSync(into, { recursive: true });
+    let png;
+    if (opaque) {
+      const rgba = Buffer.from(await page.evaluate(DRAW, { size, pad, raw: true }), 'base64');
+      png = rgbPng(rgba, size);
+    } else {
+      const url = await page.evaluate(DRAW, { size, pad });
+      png = Buffer.from(url.split(',')[1], 'base64');
+    }
+    fs.writeFileSync(path.join(into, file), png);
+    console.log(`${file.padEnd(24)} ${size}×${size}  ${(png.length / 1024).toFixed(1)} KB${opaque ? '  (RGB, no alpha)' : ''}`);
   }
   await browser.close();
 })();
