@@ -24,10 +24,12 @@ npx http-server . -p 8080     # then visit http://<your-ip>:8080
 ### On iPhone, as an app
 
 Add it to your Home Screen from Safari (Share → **Add to Home Screen**) and it runs full
-screen and offline. Or, with a Mac, build the native app in [`ios/`](ios/README.md) straight
-onto your phone with a free Apple ID. That version adds real haptics, which Safari on iPhone
-cannot do, and keeps its saves as app data. Step-by-step instructions are in
-[ios/README.md](ios/README.md).
+screen and offline. Or install the native app with a free Apple ID. That version adds real
+haptics, which Safari on iPhone cannot do, and keeps its saves as app data. CI builds it as
+an [`.ipa`](https://github.com/neffer77/linear-algebra-game/releases/download/ios-app/Eigenrealm.ipa)
+on every change, for [SideStore](https://sidestore.io) to install and renew weekly on the
+phone itself. You can also build it from [`ios/`](ios/README.md) with Xcode. Step-by-step
+instructions for both are in [ios/README.md](ios/README.md).
 
 ### On iOS (Scriptable)
 

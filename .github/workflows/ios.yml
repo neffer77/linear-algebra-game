@@ -8,6 +8,9 @@ name: Build the iOS app
 # the haptics and clipboard bridge reaches Swift, and that confirm() and
 # prompt() are wired to native dialogs. Every one of those is something that
 # could fail silently on a real phone.
+#
+# It also builds the app for a real iPhone as an unsigned .ipa, and on main
+# publishes it to the ios-app release for SideStore to install and re-sign.
 
 on:
   push:
@@ -177,3 +180,111 @@ jobs:
             second.log
             first-launch.png
           if-no-files-found: ignore
+
+  # The same app built for a real iPhone and packed as an .ipa, for SideStore.
+  # It is unsigned on purpose: SideStore signs it on the phone with your own
+  # Apple ID, and re-signs it every week without a Mac. Built on every run so a
+  # branch proves the .ipa before it reaches main; only main publishes it.
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      BUNDLE_ID: io.github.neffer77.eigenrealm
+      # The build number only ever goes up, so each .ipa installs over the last
+      # as a newer version, and the version shows which run made it.
+      VERSION: 1.0.${{ github.run_number }}
+      BUILD: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build for iPhone, unsigned
+        run: |
+          if ! xcodebuild -project ios/Eigenrealm.xcodeproj -scheme Eigenrealm \
+                 -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+                 -derivedDataPath build \
+                 CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+                 MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" \
+                 build > build.log 2>&1; then
+            grep -E "error:" build.log | sort -u | head -40
+            tail -60 build.log
+            exit 1
+          fi
+
+      # An .ipa is only a zip with the app inside a folder named Payload.
+      - name: Pack the .ipa
+        run: |
+          rm -rf pack && mkdir -p pack/Payload
+          cp -R build/Build/Products/Release-iphoneos/Eigenrealm.app pack/Payload/
+          (cd pack && zip -qry ../Eigenrealm.ipa Payload)
+          ls -l Eigenrealm.ipa
+
+      # Checked from the .ipa itself, not the build folder: this is the file a
+      # phone will get.
+      - name: The .ipa holds a device build of the game from this commit
+        run: |
+          rm -rf check && mkdir check && unzip -q Eigenrealm.ipa -d check
+          APP=check/Payload/Eigenrealm.app
+          cmp index.html "$APP/web/index.html"
+          test -f "$APP/Bridge.js"
+          test -f "$APP/Assets.car"
+          test -x "$APP/Eigenrealm"
+          plist() { plutil -extract "$1" raw -o - "$APP/Info.plist"; }
+          test "$(plist CFBundleIdentifier)" = "$BUNDLE_ID"
+          test "$(plist CFBundleShortVersionString)" = "$VERSION"
+          test "$(plist CFBundleVersion)" = "$BUILD"
+          test "$(plist DTPlatformName)" = "iphoneos"
+          test "$(plist MinimumOSVersion)" = "16.0"
+          ARCHS=$(lipo -archs "$APP/Eigenrealm")
+          echo "architectures: $ARCHS"
+          [[ " $ARCHS " == *" arm64 "* ]]
+          echo "Eigenrealm $VERSION ($BUILD) for iPhone, $(du -h Eigenrealm.ipa | cut -f1)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Eigenrealm-ipa
+          path: Eigenrealm.ipa
+          if-no-files-found: error
+
+  # One release, always at the same address, always holding the newest .ipa:
+  # https://github.com/<repo>/releases/download/ios-app/Eigenrealm.ipa
+  # Only from main, and only once the simulator run has passed too.
+  publish:
+    needs: [simulator, ipa]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ios-app
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: Eigenrealm-ipa
+
+      - name: Publish
+        run: |
+          NOTES="The iPhone app, built from ${GITHUB_SHA::7} (run ${GITHUB_RUN_NUMBER}).
+
+          Install it with SideStore: download Eigenrealm.ipa on your iPhone, then in SideStore go to My Apps, tap +, and choose it. The full guide is ios/README.md."
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            # Point the tag at this commit, then swap the file in place.
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$TAG" -f sha="$GITHUB_SHA" -F force=true > /dev/null
+            gh release upload "$TAG" Eigenrealm.ipa --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" Eigenrealm.ipa --target "$GITHUB_SHA" \
+              --title "Eigenrealm for iPhone" --notes "$NOTES" --latest
+          fi
+
+      - name: The published file is the one just built
+        run: |
+          URL="https://github.com/$GH_REPO/releases/download/$TAG/Eigenrealm.ipa"
+          for i in 1 2 3 4 5 6; do
+            if curl -fsSL -o published.ipa "$URL" && cmp -s published.ipa Eigenrealm.ipa; then
+              echo "$URL serves this run's .ipa"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$URL does not serve this run's .ipa"; exit 1
