@@ -139,7 +139,11 @@ module.exports = {
       UI.go('s-shop');
       const shop = document.getElementById('shopList').innerText;
       out.shopHidesForged = !/Deepsteel Edge[\s\S]{0,40}🪙/.test(shop);
-      out.shopShowsForgeBench = /The Forge/.test(shop) && /Rune Bench/.test(shop);
+      // The benches are rooms of the Keep now; the Smithy points the way.
+      UI.go('s-keep');
+      const keep = document.getElementById('keepBody').innerText;
+      out.shopShowsForgeBench = /The Forge/.test(keep) && /Rune Bench/.test(keep)
+        && /Keep's workrooms/.test(shop);
       return out;
     });
     t.ok('the forge refuses without ore', forge.refusedWithoutOre);
@@ -149,7 +153,7 @@ module.exports = {
       JSON.stringify(forge));
     t.ok('that gear beats what a new delver could afford', forge.bladeDmg >= 30, String(forge.bladeDmg));
     t.ok('and is not for sale at any price', forge.notInShop && forge.shopHidesForged);
-    t.ok('the Smithy shows both benches', forge.shopShowsForgeBench);
+    t.ok('the Keep has both benches, and the Smithy points to it', forge.shopShowsForgeBench);
 
     // --- Enchanting: essence becomes something permanent ---
     const rune = await t.ev(() => {

@@ -459,6 +459,38 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .btile:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
 .bpad{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px;}
 .bpad .btile{min-width:0; padding:0;}
+/* ---- the Keep and its rooms ---- */
+.matrow{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+.mat{display:flex; flex-direction:column; align-items:center; padding:6px 2px; border-radius:10px;
+  background:#171129; border:1px solid var(--edge); font-size:11px; color:var(--dim);}
+.mat b{font-size:17px; color:var(--ink);}
+.door.lit{box-shadow:0 0 0 1px rgba(87,204,122,.45), 0 0 16px rgba(87,204,122,.16);}
+.roomhead{position:relative; margin:0 0 8px; border-radius:14px; overflow:hidden; border:1px solid var(--edge);}
+.roomart{display:block; width:100%; height:auto;}
+.roomname{position:absolute; left:10px; top:8px; padding:3px 10px; border-radius:999px;
+  background:rgba(12,8,22,.78); font-family:var(--serif); font-weight:800; font-size:15px;}
+/* ---- brewing ---- */
+.brewT{margin:10px 0 6px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
+  background:rgba(242,193,78,.07); text-align:center;}
+.brewT .bk,.brewT .bn{display:block; font-size:11px; color:var(--dim);}
+.brewT .bk{font-family:var(--serif); letter-spacing:.14em; text-transform:uppercase; color:var(--gold);}
+.brewT .bv{display:block; font-size:24px; font-weight:800; margin:2px 0;}
+.brewH .bvec{font-weight:800; color:var(--gold); margin-left:4px; white-space:nowrap;}
+.bstep{width:44px; height:44px; flex:none; border-radius:11px; border:1px solid var(--edge);
+  background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink); font-size:22px; font-weight:900;
+  box-shadow:0 3px 0 #150e28; cursor:pointer;}
+.bstep:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+.bstep[disabled]{opacity:.35; pointer-events:none;}
+.bparts{min-width:26px; text-align:center; font-size:20px; font-weight:900;}
+.brewSum{margin:10px 0 8px; text-align:center; font-size:15px; line-height:1.6; overflow-wrap:anywhere;}
+.brewSum b{color:var(--gold);}
+.brewM{display:flex; gap:6px; margin-bottom:8px;}
+.bm{flex:1; display:flex; flex-direction:column; align-items:center; padding:7px 4px; border-radius:10px;
+  border:1px solid var(--edge); background:#171129; font-size:12px; color:var(--dim);}
+.bm b{font-size:17px; color:var(--ink);}
+.bm i{font-style:normal; font-weight:800;}
+.bm.ok{border-color:#3f6a46; background:#1d3a28;} .bm.ok i{color:#9ee8b3;}
+.bm.under i{color:var(--gold);} .bm.over{border-color:#6a3c41;} .bm.over i{color:#ffb3b6;}
 /* Numbers kept from the scratch pad. They stay beside the question until the
    next one, which is the whole point: a sum worked out once should not have to
    be held in your head while you work out the next. */
@@ -605,14 +637,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div id="hud" class="hud"></div>
     <div class="panel" style="padding:10px">
       <div class="row">
+        <button class="btn sm" onclick="UI.go('s-keep')" id="btnKeep">🏰 Keep</button>
         <button class="btn sm" onclick="UI.go('s-shop')">🏪 Smithy</button>
         <button class="btn sm" onclick="UI.go('s-gear')">🎒 Gear</button>
-        <button class="btn sm" onclick="UI.go('s-tome')">📖 Tome</button>
       </div>
       <div class="row">
+        <button class="btn sm ghost" onclick="UI.go('s-tome')">📖 Tome</button>
         <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
-        <button class="btn sm ghost" onclick="Game.rest()">🔥 Camp &amp; Rest</button>
-        <button class="btn sm ghost" onclick="UI.go('s-prefs')">⚙️ Settings</button>
+        <button class="btn sm ghost" onclick="Game.rest()">🔥 Rest</button>
+        <button class="btn sm ghost" onclick="UI.go('s-prefs')" aria-label="Settings" style="flex:0 0 46px">⚙️</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -684,6 +717,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div class="panel"><h2>🏪 The Smithy</h2><div class="sub">Spend gold won in battle. Equip from Gear.</div></div>
     <div id="shopList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ THE KEEP ============ -->
+  <div class="screen" id="s-keep">
+    <div id="keepBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ A ROOM OF THE KEEP ============ -->
+  <div class="screen" id="s-room">
+    <div id="roomBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-keep')">← Back to the Keep</button>
     <div style="height:20px"></div>
   </div>
 
@@ -7163,7 +7210,7 @@ const Forge = {
       g.maxHp=Game.maxHp(); g.hp=Math.min(g.maxHp, g.hp+120);
       UI.toast('🛡️ Deepsteel Plate — forged and worn.');
     }
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
   }
 };
 
@@ -7208,7 +7255,7 @@ const Scriptorium = {
       r.last = g.qCount || 0;
       r.t = now;
     }
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     UI.toast(\`📄 \${keys.length} topic\${keys.length===1?'':'s'} bound — as fresh as the day you learned them.\`);
   }
 };
@@ -7232,7 +7279,7 @@ const Apothecary = {
     g.mats.herb -= e.herb;
     g.brewed = g.brewed || {};
     e.each(g);
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     if(e.keep) Celebrate.banner(e.nm.toUpperCase(), e.ds, '#7fc98a', ()=>{});
     else UI.toast(\`\${e.ic} \${e.nm} — made up and packed.\`);
   }
@@ -7359,7 +7406,7 @@ const Crucible = {
     g.mats[fromId] -= q.spend;
     g.mats[toId]   += q.get;
     this.spend();
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     UI.toast(\`\${a.ic}→\${b.ic} \${q.spend} \${a.nm} down to \${q.get} \${b.nm}.\`);
   },
 
@@ -7374,7 +7421,7 @@ const Crucible = {
       if(id === this.from) return;
       this.to = id;
     }
-    UI.renderShop();
+    Rooms.refresh();
   }
 };
 
@@ -7398,7 +7445,7 @@ const Runes = {
     g.mats.essence -= r.cost;
     g.runes[id]=1;
     Sfx.mastered ? Sfx.mastered() : Sfx.win();
-    Haptic.win(); Game.save(); UI.renderShop();
+    Haptic.win(); Game.save(); Rooms.refresh();
     Celebrate.banner(r.nm.toUpperCase(), r.ds, 'var(--gold)', ()=>{});
   }
 };
@@ -10939,6 +10986,8 @@ const UI = {
     if(id!=='s-battle') Anim.stop();
     if(id==='s-map') this.renderMap();
     if(id==='s-shop') this.renderShop();
+    if(id==='s-keep') Rooms.renderKeep();
+    if(id==='s-room') Rooms.render();
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
@@ -11182,118 +11231,16 @@ const UI = {
           \`<button class="btn sm gold" style="width:auto" \${buy('a',a.id,a.cost)}>🪙 \${a.cost}</button>\`}
       </div>\`);
     });
-    /* Smithing and Enchanting: the Keep's half of the chain. Neither takes
-       gold — they take what the Deep gave up, which is the point. A player who
-       never descends can still buy everything above; a player who does gets
-       things gold cannot reach. */
-    out.push(\`</div><div class="panel"><h2>🔨 The Forge</h2>
-      <div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
-        <b>🪨 \${g.mats.ore}</b>.</div>\`);
-    FORGE.forEach(f=>{
-      const done = f.owned && f.owned(g);
-      const can = !done && g.mats.ore >= f.ore;
-      out.push(\`<div class="item \${done?'equipped':''}">
-        <div class="ic">\${f.ic}</div>
-        <div style="flex:1"><div class="nm">\${f.nm}</div><div class="ds">\${f.ds}</div></div>
-        \${done ? '<span class="pill">forged</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Forge.make('\${f.id}')">🪨 \${f.ore}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>🜄 The Rune Bench</h2>
-      <div class="sub">Enchanting spends <b>essence</b>, which comes only from chests
-        opened cleanly. You hold <b>🜄 \${g.mats.essence}</b>. A rune is bought once and
-        kept for good.</div>\`);
-    RUNES.forEach(r=>{
-      const worn=Runes.worn(r.id), can=!worn && g.mats.essence>=r.cost;
-      out.push(\`<div class="item \${worn?'equipped':''}">
-        <div class="ic">\${r.ic}</div>
-        <div style="flex:1"><div class="nm">\${r.nm}</div><div class="ds">\${r.ds}</div></div>
-        \${worn ? '<span class="pill">worn</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Runes.buy('\${r.id}')">🜄 \${r.cost}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>🌿 The Apothecary</h2>
-      <div class="sub">Herbalism makes up <b>herbs</b>, gathered from thickets out in the
-        Wilds and spent nowhere else. You hold <b>🌿 \${g.mats.herb}</b>. Most of this bench
-        can be bought again; the satchel is made once.</div>\`);
-    APOTHECARY.forEach(e=>{
-      const done = e.owned && e.owned(g);
-      const can = !done && g.mats.herb >= e.herb;
-      out.push(\`<div class="item \${done?'equipped':''}">
-        <div class="ic">\${e.ic}</div>
-        <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
-        \${done ? '<span class="pill">made</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Apothecary.brew('\${e.id}')">🌿 \${e.herb}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>📄 The Scriptorium</h2>
-      <div class="sub">Scribing spends <b>pages</b>, copied in the Library and spent nowhere
-        else. You hold <b>📄 \${g.mats.page}</b>. Binding sets a topic's clock back — it buys
-        <b>recency</b>, never mastery. \${(() => {
-          const cold = Scriptorium.coldest(12).length;
-          return cold ? \`<b>\${cold}</b> topic\${cold===1?' has':'s have'} faded enough to be worth binding.\`
-                      : 'Nothing has faded enough to be worth binding yet.';
-        })()}</div>\`);
-    SCRIPTORIUM.forEach(e=>{
-      const can = g.mats.page >= e.page && Scriptorium.coldest(1).length > 0;
-      out.push(\`<div class="item">
-        <div class="ic">\${e.ic}</div>
-        <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
-        <button class="btn sm \${can?'gold':''}" style="width:auto"
-          onclick="Scriptorium.bind('\${e.id}')">📄 \${e.page}</button>
-      </div>\`);
-    });
-    /* Alchemy's bench. The three buttons are the teaching: they quote what each
-       share would actually come back as, so a player sees the second half of a
-       pile yield about half what the first half did without being told why. */
-    {
-      const from=Crucible.from, to=Crucible.to;
-      const a=Crucible.mat(from), b=Crucible.mat(to);
-      const src=Crucible.held(from);
-      const band=['weak','steady','solid'][Crucible.tier()];
-      const chip=(which,m)=>{
-        const on = (which==='from' ? from : to) === m.id;
-        const dead = which==='to' && m.id===from;
-        return \`<button class="btn sm \${on?'gold':''}" style="width:auto;opacity:\${dead?0.35:1}"
-                  \${dead?'disabled':''} onclick="Crucible.point('\${which}','\${m.id}')"
-                  >\${m.ic} \${m.nm} ×\${Crucible.held(m.id)}</button>\`;
-      };
-      out.push(\`</div><div class="panel"><h2>⚗️ The Crucible</h2>
-        <div class="sub">Alchemy turns one material into another. Nothing is gathered here —
-          what it sells is <b>conversion</b>, and it is never free. The rate follows the
-          <b>gradient</b>: pouring a deep pile into an empty one pays well, pouring between
-          two level piles barely pays at all, and every unit you pour flattens the slope that
-          was paying you. Your grasp of \${Crucible.STRAND} is <b>\${band}</b>, which is what
-          sets the rate. \${Crucible.ready()
-            ? 'The crucible is <b>lit</b>, and it will take <b>one pour</b> — so how much you pour is the decision, and you make it before you know what you will need.'
-            : 'The crucible is <b>cold</b>. It lights again when you have been down and cleared a room.'}</div>
-        <div class="ds" style="margin-bottom:4px">Pour from</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-          \${MATERIALS.map(m=>chip('from',m)).join('')}</div>
-        <div class="ds" style="margin-bottom:4px">into</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-          \${MATERIALS.map(m=>chip('to',m)).join('')}</div>\`);
-      if(src <= 0){
-        out.push(\`<div class="ds">You hold no \${a.nm}. That comes from \${a.from}.</div>\`);
-      } else {
-        Crucible.SHARES.forEach(sh=>{
-          const n=Math.max(1, Math.floor(src*sh.frac));
-          const q=Crucible.quote(from, to, n);
-          const can=q.get>0 && Crucible.ready();
-          out.push(\`<div class="item">
-            <div class="ic">\${a.ic}</div>
-            <div style="flex:1"><div class="nm">\${sh.nm} — \${q.spend} \${a.nm}</div>
-              <div class="ds">comes back as <b>\${q.get}</b> \${b.nm}.</div></div>
-            <button class="btn sm \${can?'gold':''}" style="width:auto" \${can?'':'disabled'}
-              onclick="Crucible.pour('\${from}','\${to}',\${q.spend})">\${b.ic} \${q.get}</button>
-          </div>\`);
-        });
-      }
-    }
-    out.push('</div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>');
+    /* The benches that spend what the realms give up — ore, essence, herbs,
+       pages — are rooms of the Keep now, not the bottom of this list. What is
+       left here is what gold buys, and a door to the rest. */
+    out.push(\`</div><div class="node" id="shopToKeep" onclick="UI.go('s-keep')">
+        <div class="ico" style="font-size:24px">🏰</div>
+        <div style="flex:1"><div class="nm">The Keep's workrooms</div>
+          <div class="dt">Forge · Rune Bench · Apothecary · Scriptorium · Crucible — they take ore,
+            essence, herbs and pages, not gold</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>\`);
 
     Object.entries(ITEMS).forEach(([k,it])=>{
       out.push(\`<div class="item">
@@ -11493,6 +11440,496 @@ const Shop = {
 };
 
 /* ------------------------------- training --------------------------------- */
+/* ------------------------------ the Keep's rooms -------------------------- */
+/* Five benches used to be five panels at the bottom of the Smithy's list, under
+   the weapons and the armour, where a knight carrying forty herbs had to scroll
+   past everything gold buys to find the one place herbs are spent. They are
+   rooms now: the Keep is a hub that says, on each door, what can be done behind
+   it with what you are carrying — and each room is its own screen, with the
+   bench in it and nothing else.
+
+   Nothing about what a bench SELLS has moved. The modules that own the
+   arithmetic — Forge, Runes, Apothecary, Scriptorium, Crucible — are untouched
+   apart from which screen they redraw; this is where their lists are drawn. */
+const ROOMS = [
+  {id:'forge',    nm:'The Forge',       ic:'🔨', col:'#ff9a5c', ds:'Smithing · spends ore'},
+  {id:'runes',    nm:'The Rune Bench',  ic:'🜄', col:'#7cc8ff', ds:'Enchanting · spends essence'},
+  {id:'apoth',    nm:'The Apothecary',  ic:'🌿', col:'#7fc98a', ds:'Herbalism · spends herbs'},
+  {id:'script',   nm:'The Scriptorium', ic:'📄', col:'#e9d49a', ds:'Scribing · spends pages'},
+  {id:'crucible', nm:'The Crucible',    ic:'⚗️', col:'#b48bec', ds:'Alchemy · turns one material into another'}
+];
+
+const Rooms = {
+  cur:'forge',
+  byId(id){ return ROOMS.find(r=>r.id===id) || null; },
+
+  /* What a door says. One line, and it is the reason the hub exists: either
+     what you can do in there right now, or how far you are from the next thing
+     worth coming back for. \`go\` marks a room with something to do in it. */
+  status(id){
+    const g=Game.s, m=g.mats;
+    const next=(list, held, cost, unit)=>{
+      // \`list\` is what is still worth making; the cheapest of it is the goal.
+      if(!list.length) return null;
+      const can=list.filter(x=>held>=cost(x)).length;
+      if(can) return {go:true, n:can};
+      const goal=list.slice().sort((a,b)=>cost(a)-cost(b))[0];
+      return {go:false, txt:\`\${cost(goal)-held} more \${unit} for \${goal.nm}\`};
+    };
+    if(id==='forge'){
+      const s=next(FORGE.filter(f=>!(f.owned && f.owned(g))), m.ore||0, f=>f.ore, 'ore');
+      return s.go ? {go:true, txt:\`\${s.n} can be forged\`} : s;
+    }
+    if(id==='runes'){
+      const s=next(RUNES.filter(r=>!Runes.worn(r.id)), m.essence||0, r=>r.cost, 'essence');
+      if(!s) return {go:false, txt:'Every rune is worn'};
+      return s.go ? {go:true, txt:\`\${s.n} can be carved\`} : s;
+    }
+    if(id==='apoth'){
+      const s=next(APOTHECARY.filter(e=>!(e.owned && e.owned(g))), m.herb||0, e=>e.herb, 'herbs');
+      return s.go ? {go:true, txt:\`\${s.n} can be brewed\`} : s;
+    }
+    if(id==='script'){
+      const cold=Scriptorium.coldest(12).length;
+      if(!cold) return {go:false, txt:'Nothing has gone cold'};
+      const leaf=SCRIPTORIUM[0].page;
+      return (m.page||0)>=leaf
+        ? {go:true, txt:\`\${cold} topic\${cold===1?' has':'s have'} gone cold\`}
+        : {go:false, txt:\`\${cold} gone cold · \${leaf-(m.page||0)} more pages to bind one\`};
+    }
+    if(id==='crucible'){
+      return Crucible.ready() ? {go:true, txt:'Lit — it will take one pour'}
+                              : {go:false, txt:'Cold — clear a room to relight it'};
+    }
+    return {go:false, txt:''};
+  },
+
+  mats(){
+    const g=Game.s;
+    return \`<div class="matrow">\${MATERIALS.map(m=>
+      \`<span class="mat" data-mat="\${m.id}"><b>\${g.mats[m.id]||0}</b>\${m.ic} \${m.nm}</span>\`).join('')}</div>\`;
+  },
+
+  renderKeep(){
+    if(!Game.s) return;
+    const doors=ROOMS.map(r=>{
+      const s=this.status(r.id);
+      return \`<div class="node door\${s.go?' lit':''}" data-room="\${r.id}" style="border-left-color:\${r.col}"
+                   onclick="Rooms.open('\${r.id}')">
+        <div class="ico" style="font-size:24px">\${r.ic}</div>
+        <div style="flex:1">
+          <div class="nm" style="color:\${r.col}">\${r.nm}</div>
+          <div class="dt">\${r.ds}</div>
+          <div class="dt dstat" style="color:\${s.go?'var(--green)':'var(--dim)'}">\${s.go?'● ':''}\${s.txt}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+    }).join('');
+    document.getElementById('keepBody').innerHTML=\`
+      <div id="hudK" class="hud">\${UI.hud()}</div>
+      <div class="panel"><h2>🏰 The Keep</h2>
+        <div class="sub">Gather out in the realms; make things here. Every room spends its own
+          material, and each door says what you can do behind it with what you are carrying.</div>
+        \${this.mats()}
+      </div>
+      \${doors}
+      <div class="node" onclick="UI.go('s-shop')">
+        <div class="ico" style="font-size:24px">🏪</div>
+        <div style="flex:1"><div class="nm">The Smithy</div>
+          <div class="dt">Blades, plate and draughts · spends gold</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+  },
+
+  open(id){
+    if(!this.byId(id)) return;
+    this.cur=id;
+    Brew.s=null;                       // a mix left on the bench is not kept
+    UI.go('s-room');
+  },
+  render(){
+    if(!Game.s) return;
+    const r=this.byId(this.cur) || ROOMS[0];
+    document.getElementById('roomBody').innerHTML =
+      \`<div class="roomhead" data-room="\${r.id}">\${this.art(r.id)}
+         <div class="roomname" style="color:\${r.col}">\${r.ic} \${r.nm}</div></div>\` +
+      this.bench[r.id].call(this, Game.s);
+  },
+  /* Whatever a bench just changed, redraw the screen that is showing it. The
+     benches call this instead of repainting the Smithy, which is where they
+     used to live. */
+  refresh(){
+    const on=document.querySelector('.screen.on');
+    if(!on) return;
+    if(on.id==='s-room') this.render();
+    else if(on.id==='s-keep') this.renderKeep();
+    else if(on.id==='s-shop') UI.renderShop();
+  },
+
+  /* ---- the rooms, drawn ---- */
+  /* One small scene a room, and each shows one true thing about the knight
+     standing in it: the Deepsteel on the rack is dark until it is forged, a
+     rune's place on the table is lit once it is worn, the cauldron is the
+     colour of what is being mixed, and the crucible's two vessels stand as full
+     as the piles they are poured between. */
+  art(id){
+    const g=Game.s;
+    const frame=(bg, inner, label)=>\`<svg class="roomart" viewBox="0 0 360 150" role="img" aria-label="\${label}"
+        preserveAspectRatio="xMidYMid slice"><rect width="360" height="150" fill="\${bg}"/>\${inner}</svg>\`;
+    const courses=(c)=>\`<path d="M0 30h360M0 60h360M0 90h360" stroke="\${c}" stroke-width="2"/>\`;
+    if(id==='forge'){
+      const edge=g.owned.wD ? '#c9c3dc' : '#3a2a26', plate=g.owned.aD ? '#c9c3dc' : '#3a2a26';
+      return frame('#2e1810', courses('#1f0f0a')+\`
+        <rect y="122" width="360" height="28" fill="#1c100b"/>
+        <path d="M22 122V70a34 34 0 0 1 68 0v52z" fill="#241410" stroke="#4d2e22" stroke-width="5"/>
+        <ellipse cx="56" cy="118" rx="26" ry="22" fill="#e2572b"/><ellipse cx="56" cy="120" rx="16" ry="13" fill="#ffb347"/>
+        <ellipse cx="56" cy="122" rx="8" ry="6" fill="#fff1b8"/>
+        <ellipse cx="80" cy="128" rx="90" ry="20" fill="#ff8c3c" opacity=".16"/>
+        <path d="M132 86h96c0 9-12 14-26 15l5 21h-54l5-21c-14-1-26-6-26-15z" fill="#4a4a58" stroke="#6e6e80" stroke-width="2"/>
+        <rect x="156" y="78" width="50" height="8" rx="3" fill="#ffb347"/>
+        <rect x="262" y="34" width="80" height="88" rx="6" fill="#241410" stroke="#4d2e22" stroke-width="4"/>
+        <path d="M280 44l4 8v52h-8V52z" fill="\${edge}"/><path d="M272 104h16M280 104v12" stroke="#8a6a3a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M300 52h32l-3 40-13 8-13-8z" fill="\${plate}"/>\`, 'The forge: a hearth, an anvil, and a rack for what has been made');
+    }
+    if(id==='runes'){
+      const slot=(x,y,rid)=>{
+        const on=Runes.worn(rid);
+        return \`<circle cx="\${x}" cy="\${y}" r="15" fill="\${on?'#2c6a9c':'#142a45'}" stroke="\${on?'#cdeaff':'#2f4d70'}" stroke-width="3"/>
+          \${on?\`<circle cx="\${x}" cy="\${y}" r="22" fill="#7cc8ff" opacity=".22"/>\`:''}\`;
+      };
+      return frame('#0f1d33', courses('#0a1424')+\`
+        <ellipse cx="180" cy="88" rx="150" ry="58" fill="#1d3a5c" opacity=".55"/>
+        <ellipse cx="180" cy="84" rx="112" ry="52" fill="#1a3352" stroke="#3a5a7e" stroke-width="5"/>
+        <ellipse cx="180" cy="84" rx="86" ry="38" fill="none" stroke="#7cc8ff" stroke-width="2" stroke-dasharray="4 8" opacity=".7"/>
+        <path d="M180 50l56 56H124z" fill="none" stroke="#7cc8ff" stroke-width="1.5" opacity=".4"/>
+        \${slot(180,50,'r_edge')}\${slot(124,106,'r_hide')}\${slot(236,106,'r_depth')}\`,
+        'The rune bench: a carved table with a place for each rune');
+    }
+    if(id==='apoth'){
+      const brew = Brew.s ? Brew.colour() : '#57cc7a';
+      const herb=(x,c)=>\`<path d="M\${x} 0v16" stroke="#8a6a3a" stroke-width="2"/>
+        <path d="M\${x} 16c-7 5-9 17-5 30M\${x} 16c7 5 9 17 5 30M\${x} 16v34" stroke="\${c}" stroke-width="3" fill="none" stroke-linecap="round"/>\`;
+      return frame('#1c2f21', courses('#14231a')+\`
+        <rect y="122" width="360" height="28" fill="#33281c"/>
+        \${herb(120,'#6fbf7f')}\${herb(180,'#b9a05a')}\${herb(240,'#8fcf9a')}
+        <rect x="18" y="56" width="16" height="26" rx="5" fill="#e05a6a"/><rect x="40" y="62" width="14" height="20" rx="6" fill="#7cc8ff"/>
+        <rect x="60" y="52" width="18" height="30" rx="4" fill="#57cc7a"/><rect x="12" y="82" width="74" height="7" rx="3" fill="#6b4f30"/>
+        <rect x="24" y="96" width="20" height="22" rx="8" fill="#ffb347"/><rect x="52" y="92" width="14" height="26" rx="5" fill="#b48bec"/>
+        <path d="M282 122V66a30 30 0 0 1 60 0v56z" fill="#16233a" stroke="#3b5141" stroke-width="5"/>
+        <circle cx="322" cy="62" r="7" fill="#ffe6ae"/>
+        <ellipse cx="180" cy="140" rx="46" ry="6" fill="#ff8a5c" opacity=".35"/>
+        <path d="M134 82h92c0 34-18 56-46 56s-46-22-46-56z" fill="#2b2b36" stroke="#55556a" stroke-width="3"/>
+        <ellipse cx="180" cy="82" rx="46" ry="10" fill="\${brew}" stroke="#55556a" stroke-width="3"/>
+        <ellipse cx="168" cy="80" rx="12" ry="3" fill="#fff" opacity=".35"/>
+        \${Brew.s && Brew.ready() ? \`<circle cx="164" cy="60" r="6" fill="none" stroke="\${brew}" stroke-width="2"/>
+          <circle cx="190" cy="48" r="8" fill="none" stroke="\${brew}" stroke-width="2"/><circle cx="204" cy="66" r="4" fill="none" stroke="\${brew}" stroke-width="2"/>\` : ''}\`,
+        'The apothecary: hanging herbs, shelves of bottles, and a cauldron over a fire');
+    }
+    if(id==='script'){
+      const book=(x,h,c)=>\`<rect x="\${x}" y="\${52-h}" width="11" height="\${h}" fill="\${c}"/>\`;
+      const cold=Scriptorium.coldest(12).length;
+      return frame('#33260f', \`
+        \${[[16,34,'#7a2f3f'],[30,40,'#2f5a7a'],[44,30,'#5a6b2f'],[58,38,'#8a6a3a'],[72,32,'#4a3f72'],[86,40,'#7a2f3f'],[100,36,'#2f7a5a'],
+           [240,38,'#8a6a3a'],[254,30,'#2f5a7a'],[268,40,'#5a2f6b'],[282,34,'#7a5a2f'],[296,28,'#2f7a5a'],[310,38,'#7a2f3f'],[324,32,'#4a3f72']]
+          .map(b=>book(b[0],b[1],b[2])).join('')}
+        <rect y="52" width="360" height="7" fill="#5a4024"/>
+        <rect y="112" width="360" height="38" fill="#5d4020"/><path d="M0 112h360" stroke="#8a6438" stroke-width="3"/>
+        <path d="M112 104q34-16 68-4q34-12 68 4v26q-34-14-68-2q-34-12-68 2z" fill="#efe4c4" stroke="#b9a678" stroke-width="2"/>
+        <path d="M180 100v28M126 108h40M126 115h34M194 108h40M194 115h32" stroke="#9a8758" stroke-width="2" stroke-linecap="round"/>
+        <path d="M232 104l34-56" stroke="#e8e0d0" stroke-width="3" stroke-linecap="round"/>
+        <path d="M266 48c-9 4-17 15-22 28 7-3 17-13 22-28z" fill="#f6efe0"/>
+        <rect x="70" y="84" width="10" height="34" rx="2" fill="#efe6c9"/>
+        \${cold ? \`<path d="M75 84c-4-5-3-10 0-14 3 4 4 9 0 14z" fill="#ffb347"/><circle cx="75" cy="78" r="20" fill="#ffb347" opacity=".2"/>\` : ''}\`,
+        'The scriptorium: shelves, an open book, a quill, and a candle that burns while something has gone cold');
+    }
+    // the crucible: the two piles it is pointed between, drawn as full as they are
+    const a=Crucible.mat(Crucible.from), b=Crucible.mat(Crucible.to);
+    const COL={ore:'#d8c7b0', essence:'#7cc8ff', herb:'#57cc7a', page:'#e9d49a'};
+    const lit=Crucible.ready();
+    const vessel=(x, m)=>{
+      const h=Math.round(clamp(Crucible.held(m.id)/60,0,1)*74);
+      return \`<rect x="\${x+2}" y="\${116-h}" width="56" height="\${h}" fill="\${COL[m.id]}" opacity=".85"/>
+        <path d="M\${x} 38v70a10 10 0 0 0 10 10h40a10 10 0 0 0 10-10V38" fill="none" stroke="#8a76a0" stroke-width="4"/>\`;
+    };
+    return frame('#2a1634', courses('#1c0e24')+\`
+      <rect y="122" width="360" height="28" fill="#22122b"/>
+      \${vessel(40,a)}\${vessel(260,b)}
+      <path d="M100 52c30 0 44 14 56 34" fill="none" stroke="\${COL[a.id]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="\${lit?'6 8':'1 14'}"/>
+      <path d="M204 86c12-20 26-34 56-34" fill="none" stroke="\${COL[b.id]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="\${lit?'6 8':'1 14'}"/>
+      <path d="M144 84h72l-7 42a10 10 0 0 1-10 8h-38a10 10 0 0 1-10-8z" fill="#3d2a4c" stroke="#b48bec" stroke-width="3"/>
+      <ellipse cx="180" cy="84" rx="36" ry="7" fill="\${lit?'#ff8ad8':'#4a3a58'}"/>\`,
+      'The crucible, between the pile being poured and the pile being filled');
+  },
+
+  /* ---- the benches ---- */
+  /* The lists that were the Smithy's lower half, one to a room and otherwise
+     as they were: same entries, same prices, same buttons calling the same
+     modules. */
+  bench:{
+    forge(g){
+      return \`<div class="panel"><div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
+          <b>🪨 \${g.mats.ore}</b>.</div>\` +
+        FORGE.map(f=>{
+          const done = f.owned && f.owned(g);
+          const can = !done && g.mats.ore >= f.ore;
+          return \`<div class="item \${done?'equipped':''}">
+            <div class="ic">\${f.ic}</div>
+            <div style="flex:1"><div class="nm">\${f.nm}</div><div class="ds">\${f.ds}</div></div>
+            \${done ? '<span class="pill">forged</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                        onclick="Forge.make('\${f.id}')">🪨 \${f.ore}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    runes(g){
+      return \`<div class="panel"><div class="sub">Enchanting spends <b>essence</b>, which comes only from chests
+          opened cleanly. You hold <b>🜄 \${g.mats.essence}</b>. A rune is bought once and
+          kept for good.</div>\` +
+        RUNES.map(r=>{
+          const worn=Runes.worn(r.id), can=!worn && g.mats.essence>=r.cost;
+          return \`<div class="item \${worn?'equipped':''}">
+            <div class="ic">\${r.ic}</div>
+            <div style="flex:1"><div class="nm">\${r.nm}</div><div class="ds">\${r.ds}</div></div>
+            \${worn ? '<span class="pill">worn</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                        onclick="Runes.buy('\${r.id}')">🜄 \${r.cost}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    apoth(g){
+      if(Brew.s) return Brew.html();
+      return \`<div class="panel"><div class="sub">Herbalism makes up <b>herbs</b>, gathered from thickets out in the
+          Wilds and spent nowhere else. You hold <b>🌿 \${g.mats.herb}</b>. Most of this bench
+          can be made again; the satchel is made once. Nothing here is handed over: choose a
+          recipe, then <b>mix it</b> — find the parts of each herb that add up to what it calls for.</div>\` +
+        APOTHECARY.map(e=>{
+          const done = e.owned && e.owned(g);
+          const can = !done && g.mats.herb >= e.herb;
+          return \`<div class="item \${done?'equipped':''}">
+            <div class="ic">\${e.ic}</div>
+            <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
+            \${done ? '<span class="pill">made</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto" data-brew="\${e.id}"
+                        onclick="Brew.open('\${e.id}')">🌿 \${e.herb}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    script(g){
+      const cold = Scriptorium.coldest(12).length;
+      return \`<div class="panel"><div class="sub">Scribing spends <b>pages</b>, copied in the Library and spent nowhere
+          else. You hold <b>📄 \${g.mats.page}</b>. Binding sets a topic's clock back — it buys
+          <b>recency</b>, never mastery. \${cold
+            ? \`<b>\${cold}</b> topic\${cold===1?' has':'s have'} faded enough to be worth binding.\`
+            : 'Nothing has faded enough to be worth binding yet.'}</div>\` +
+        SCRIPTORIUM.map(e=>{
+          const can = g.mats.page >= e.page && Scriptorium.coldest(1).length > 0;
+          return \`<div class="item">
+            <div class="ic">\${e.ic}</div>
+            <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
+            <button class="btn sm \${can?'gold':''}" style="width:auto"
+              onclick="Scriptorium.bind('\${e.id}')">📄 \${e.page}</button>
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    /* Alchemy's bench. The three buttons are the teaching: they quote what each
+       share would actually come back as, so a player sees the second half of a
+       pile yield about half what the first half did without being told why. */
+    crucible(g){
+      const from=Crucible.from, to=Crucible.to;
+      const a=Crucible.mat(from), b=Crucible.mat(to);
+      const src=Crucible.held(from);
+      const band=['weak','steady','solid'][Crucible.tier()];
+      const chip=(which,m)=>{
+        const on = (which==='from' ? from : to) === m.id;
+        const dead = which==='to' && m.id===from;
+        return \`<button class="btn sm \${on?'gold':''}" style="width:auto;opacity:\${dead?0.35:1}"
+                  \${dead?'disabled':''} onclick="Crucible.point('\${which}','\${m.id}')"
+                  >\${m.ic} \${m.nm} ×\${Crucible.held(m.id)}</button>\`;
+      };
+      let out=\`<div class="panel">
+        <div class="sub">Alchemy turns one material into another. Nothing is gathered here —
+          what it sells is <b>conversion</b>, and it is never free. The rate follows the
+          <b>gradient</b>: pouring a deep pile into an empty one pays well, pouring between
+          two level piles barely pays at all, and every unit you pour flattens the slope that
+          was paying you. Your grasp of \${Crucible.STRAND} is <b>\${band}</b>, which is what
+          sets the rate. \${Crucible.ready()
+            ? 'The crucible is <b>lit</b>, and it will take <b>one pour</b> — so how much you pour is the decision, and you make it before you know what you will need.'
+            : 'The crucible is <b>cold</b>. It lights again when you have been down and cleared a room.'}</div>
+        <div class="ds" style="margin-bottom:4px">Pour from</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          \${MATERIALS.map(m=>chip('from',m)).join('')}</div>
+        <div class="ds" style="margin-bottom:4px">into</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          \${MATERIALS.map(m=>chip('to',m)).join('')}</div>\`;
+      if(src <= 0){
+        out+=\`<div class="ds">You hold no \${a.nm}. That comes from \${a.from}.</div>\`;
+      } else {
+        Crucible.SHARES.forEach(sh=>{
+          const n=Math.max(1, Math.floor(src*sh.frac));
+          const q=Crucible.quote(from, to, n);
+          const can=q.get>0 && Crucible.ready();
+          out+=\`<div class="item">
+            <div class="ic">\${a.ic}</div>
+            <div style="flex:1"><div class="nm">\${sh.nm} — \${q.spend} \${a.nm}</div>
+              <div class="ds">comes back as <b>\${q.get}</b> \${b.nm}.</div></div>
+            <button class="btn sm \${can?'gold':''}" style="width:auto" \${can?'':'disabled'}
+              onclick="Crucible.pour('\${from}','\${to}',\${q.spend})">\${b.ic} \${q.get}</button>
+          </div>\`;
+        });
+      }
+      return out+'</div>';
+    }
+  }
+};
+
+/* -------------------------------- brewing --------------------------------- */
+/* What the Apothecary asks for before it hands anything over.
+ *
+ * Every other bench is a price list: hold enough, press the button. This one
+ * was too, and it was the odd one out for it — a potion is a MIXTURE, so many
+ * parts of this and so many of that, and "so many parts of each, added up" is
+ * a linear combination, the third topic the game teaches. The bench had the
+ * mathematics sitting in its own fiction and was not using it.
+ *
+ * So a recipe now calls for a strength — ⟨7, 11⟩, warmth and calm — and the
+ * herbs on the bench each carry their own. The knight sets how many parts of
+ * each go in, and the cauldron takes it when the parts add up to exactly what
+ * was called for.
+ *
+ * Three things it is careful about.
+ *
+ *   It is solved by looking, not by remembering. The running total is on
+ *   screen the whole time, component by component, with how far over or under
+ *   each one is. Nothing has to be held in the head; that is the point of it.
+ *
+ *   It can always be done. The target is BUILT from a hidden choice of parts,
+ *   every herb used at least once, so there is an answer inside the steppers'
+ *   reach — and because the herbs are linearly independent, exactly one.
+ *
+ *   It tells the mastery model nothing. A puzzle with a live total can be
+ *   solved by nudging steppers until the lights go green, so it is practice and
+ *   not evidence — and a bench that moved a topic's mastery would be herbs
+ *   buying what no currency in this game is allowed to buy. It costs what the
+ *   recipe always cost, gives what it always gave, and touches no record. */
+const Brew = {
+  s:null,
+  CAP:6,                                   // parts of any one herb the bench will take
+  HERBS:[['🌿','Sage'],['🍂','Bitterroot'],['🌼','Sunpetal'],['🍄','Mosscap'],['🌾','Reedgrass'],['🫐','Nightberry']],
+  NOTES:['warmth','calm','spark'],
+  /* How hard a recipe is to mix, in step with what it is worth: two herbs and
+     small parts for a draught, three herbs in three strengths for the things
+     that are dear. \`neg\` lets a herb take a strength away as well as add it. */
+  TIER:{
+    a_draught:{dim:2, max:3, neg:false, col:'#e05a6a'},
+    a_insight:{dim:2, max:4, neg:true,  col:'#7cc8ff'},
+    a_feather:{dim:3, max:3, neg:false, col:'#ffb347'},
+    a_satchel:{dim:3, max:4, neg:true,  col:'#57cc7a'}
+  },
+  tier(id){ return this.TIER[id] || this.TIER.a_draught; },
+  colour(){ return this.s ? this.tier(this.s.id).col : '#57cc7a'; },
+
+  det(m){
+    return m.length===2 ? m[0][0]*m[1][1] - m[0][1]*m[1][0]
+      : m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+      - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+      + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  },
+  /* One mix. Herbs are drawn until they are independent — a zero determinant
+     would mean one herb is made of the others, and then either the recipe has
+     many answers or none worth finding. */
+  make(id){
+    const t=this.tier(id), n=t.dim;
+    const fallback = n===2 ? [[2,1],[1,3]] : [[2,1,0],[0,2,1],[1,0,2]];
+    let vs=null;
+    for(let guard=0; guard<200 && !vs; guard++){
+      const c=Array.from({length:n}, ()=>Array.from({length:n}, ()=>R.i(t.neg?-1:0, 4)));
+      // independent, and no herb that only ever takes away
+      if(this.det(c)!==0 && !c.some(v=>v.every(x=>x<=0))) vs=c;
+    }
+    if(!vs) vs=fallback;
+    const parts=vs.map(()=>R.i(1, t.max));
+    const names=R.shuffle(this.HERBS).slice(0, n);
+    return {
+      id, dim:n, taps:0,
+      herbs:vs.map((v,i)=>({ic:names[i][0], nm:names[i][1], v, n:0})),
+      target:Array.from({length:n}, (_,k)=>vs.reduce((a,v,i)=>a+parts[i]*v[k], 0))
+    };
+  },
+
+  open(id){
+    const e=APOTHECARY.find(x=>x.id===id), g=Game.s;
+    if(!e || !g) return;
+    if(e.owned && e.owned(g)) return;
+    if((g.mats.herb||0) < e.herb){
+      UI.toast(\`That needs \${e.herb} herbs — gather a thicket out in the Wilds.\`);
+      return;
+    }
+    this.s=this.make(id);
+    Rooms.refresh();
+  },
+  step(i, d){
+    const s=this.s; if(!s || !s.herbs[i]) return;
+    const was=s.herbs[i].n;
+    s.herbs[i].n=clamp(was+d, 0, this.CAP);
+    if(s.herbs[i].n!==was){ s.taps++; Haptic.tap(); }
+    Rooms.refresh();
+  },
+  mix(){
+    const s=this.s;
+    return s.target.map((_,k)=>s.herbs.reduce((a,h)=>a+h.n*h.v[k], 0));
+  },
+  ready(){
+    if(!this.s) return false;
+    const m=this.mix();
+    return m.every((x,k)=>x===this.s.target[k]);
+  },
+  cancel(){ this.s=null; Rooms.refresh(); },
+  /* The mix is right: hand over to the bench, which spends the herbs and makes
+     the thing exactly as it always did. */
+  commit(){
+    if(!this.s || !this.ready()) return;
+    const id=this.s.id;
+    this.s=null;
+    Apothecary.brew(id);
+  },
+
+  html(){
+    const s=this.s, e=APOTHECARY.find(x=>x.id===s.id), mix=this.mix(), ok=this.ready();
+    const note=k=>this.NOTES[k];
+    const used=s.herbs.filter(h=>h.n>0);
+    const sum = used.length
+      ? used.map(h=>\`\${h.n}·\${vecR(h.v)}\`).join(' + ') + \` = <b>\${vecR(mix)}</b>\`
+      : 'Nothing in the cauldron yet.';
+    return \`<div class="panel" id="brewPanel">
+      <h2 style="font-size:17px">\${e.ic} Mixing: \${e.nm}</h2>
+      <div class="sub">Each part of a herb adds that herb's strengths once. Set the parts so the
+        mix adds up to <b>exactly</b> what the recipe calls for — so many parts of each, added up.</div>
+      <div class="brewT"><span class="bk">The recipe calls for</span>
+        <span class="bv" id="brewTarget">\${vecR(s.target)}</span>
+        <span class="bn">\${s.target.map((_,k)=>note(k)).join(' · ')}</span></div>
+      \${s.herbs.map((h,i)=>\`<div class="item brewH">
+        <div class="ic">\${h.ic}</div>
+        <div style="flex:1"><div class="nm">\${h.nm} <span class="bvec">\${vecR(h.v)}</span></div>
+          <div class="ds">\${h.v.map((x,k)=>\`\${note(k)} \${neg(x)}\`).join(' · ')} a part</div></div>
+        <button type="button" class="bstep" data-herb="\${i}" data-d="-1" aria-label="One part less \${h.nm}"
+          onclick="Brew.step(\${i},-1)" \${h.n<=0?'disabled':''}>−</button>
+        <span class="bparts" data-parts="\${i}">\${h.n}</span>
+        <button type="button" class="bstep" data-herb="\${i}" data-d="1" aria-label="One part more \${h.nm}"
+          onclick="Brew.step(\${i},1)" \${h.n>=this.CAP?'disabled':''}>+</button>
+      </div>\`).join('')}
+      <div class="brewSum" id="brewSum">\${sum}</div>
+      <div class="brewM">\${s.target.map((want,k)=>{
+        const d=mix[k]-want;
+        return \`<div class="bm \${d===0?'ok':d<0?'under':'over'}" data-note="\${k}">
+          <span>\${note(k)}</span><b>\${neg(mix[k])} / \${neg(want)}</b>
+          <i>\${d===0?'✓ exact':d<0?\`\${-d} short\`:\`\${d} over\`}</i></div>\`;
+      }).join('')}</div>
+      <button class="btn \${ok?'gold':''}" id="brewGo" \${ok?'':'disabled'} onclick="Brew.commit()">🌿 Brew it — \${e.herb} herbs</button>
+      <button class="btn ghost" id="brewBack" onclick="Brew.cancel()">← Not now (nothing is spent)</button>
+    </div>\`;
+  }
+};
+
 const Train = {
   pool:[], title:'', c:0, w:0, cur:null, lesson:null,
   renderPick(){
