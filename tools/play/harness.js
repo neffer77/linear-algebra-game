@@ -126,8 +126,27 @@ class Play {
       if (await this.screen() !== 's-battle') return true;
       const clicked = await this.ev(() => {
         const b = document.querySelector('#choices .choice[data-correct="1"]');
-        if (!b) return false;
-        b.click(); return true;
+        if (b) { b.click(); return true; }
+        /* No answers on offer means the answer is being built: a keypad for a
+           whole number, slots and tiles for a vector or a matrix. Built the way
+           a player builds it — through the buttons — from the answer the game
+           is holding. */
+        const st = Battle.step && Battle.step();
+        if (!st || Battle.answered) return false;
+        const pad = k => document.querySelector(`#pad button[data-k="${k}"]`);
+        if (pad('ok')) {
+          const a = String(st.a);
+          for (const ch of a.replace('−', '')) pad(ch).click();
+          if (a.startsWith('−')) pad('−').click();
+          pad('ok').click(); return true;
+        }
+        const go = document.querySelector('#pstrike #bgo');
+        if (!go) return false;
+        (String(st.a).match(/−?\d+/g) || []).forEach((n, i) => {
+          document.querySelector(`#pstrike .bslot[data-i="${i}"]`).click();
+          document.querySelector(`#pstrike .btile[data-v="${n}"]`).click();
+        });
+        document.querySelector('#pstrike #bgo').click(); return true;
       });
       if (!clicked) { await sleep(250); continue; }
       await sleep(1400);                       // the strike animation must settle

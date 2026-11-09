@@ -416,6 +416,58 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
   border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
 .cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
+/* ---- lessons: the ladder a topic is taught up ---- */
+.lsn{display:inline-flex; align-items:center; gap:5px; padding:1px 8px; border-radius:999px;
+  background:#1f3350; border:1px solid #3d6a9c; color:#bfe0ff; font-size:10px; font-weight:800;
+  letter-spacing:.06em; margin-left:6px; white-space:nowrap; font-family:var(--serif);}
+.lsn i{display:inline-block; width:6px; height:6px; border-radius:50%; background:#3d6a9c;}
+.lsn i.on{background:#bfe0ff;}
+#lcard:empty,#tCard:empty{display:none}
+.lcard{background:rgba(90,169,230,.09); border:1px solid rgba(90,169,230,.42); border-radius:12px;
+  padding:10px 12px; margin:8px 0 10px; font-size:14.5px; line-height:1.55; text-align:left;}
+.lcard .lk{font-family:var(--serif); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:#9fd0ff; font-weight:800; margin-bottom:4px;}
+.lcard .lrule{font-weight:700;}
+.lcard .leg{margin-top:6px; padding:6px 9px; border-radius:8px; background:rgba(0,0,0,.22);
+  font-size:14px; overflow-x:auto;}
+.lcard details{margin-top:6px;}
+.lcard summary{cursor:pointer; color:#9fd0ff; font-size:13px; min-height:32px; display:flex; align-items:center;}
+.lcard .lq{font-weight:800; text-align:center; margin:6px 0;}
+.lcard .lnow{margin-top:8px; font-size:12px; color:var(--dim);}
+.claim{margin-top:10px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
+  background:rgba(242,193,78,.07); font-size:17px;}
+.claim span{display:block; font-family:var(--serif); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--gold); margin-bottom:3px;}
+/* Building an answer out of its pieces. The slots sit inside the answer's own
+   shape — brackets, commas and all — so what is being assembled looks like the
+   thing it will be, and each number has somewhere to live the moment it is
+   worked out instead of having to be carried. */
+.bld{margin-top:6px; text-align:center;}
+.bld .bhint{font-size:12px; color:var(--dim); margin-bottom:8px;}
+.bld .bans{font-size:22px; font-weight:800; line-height:2.2;}
+.bslot{display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:40px;
+  padding:0 6px; margin:2px 1px; border-radius:9px; border:2px dashed var(--edge); background:#140f24;
+  color:var(--ink); font:inherit; font-size:19px; font-weight:800; cursor:pointer; vertical-align:middle;}
+.bslot.now{border-color:var(--gold); border-style:solid; box-shadow:0 0 8px rgba(242,193,78,.5);}
+.bslot.full{border-style:solid; border-color:#6a5aa0;}
+.bslot.good{border-color:var(--green); background:#1d3a28;}
+.bslot.bad{border-color:var(--red); background:#3a1d22;}
+.btiles{display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin-top:10px;}
+.btile{min-width:46px; min-height:46px; padding:0 10px; border-radius:11px; border:1px solid var(--edge);
+  background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink); font-size:18px; font-weight:900;
+  box-shadow:0 3px 0 #150e28; cursor:pointer;}
+.btile:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+.bpad{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px;}
+.bpad .btile{min-width:0; padding:0;}
+/* Numbers kept from the scratch pad. They stay beside the question until the
+   next one, which is the whole point: a sum worked out once should not have to
+   be held in your head while you work out the next. */
+.slate{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin:6px 0 2px;}
+.slate:empty{display:none}
+.slate .sk{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); font-family:var(--serif);}
+.slate button{min-height:34px; padding:0 10px; border-radius:9px; border:1px solid var(--gold-dk);
+  background:#2b2247; color:var(--gold); font-weight:800; font-size:15px; cursor:pointer;}
+.slate button.sx{border-color:var(--edge); color:var(--dim); font-size:12px; font-weight:700;}
 /* Collapsible strand. At seventy topics the flat list was a wall of buttons;
    these headers keep every screen to one thumb-reach, and opening one closes
    the rest so the list never grows underneath your thumb. */
@@ -444,9 +496,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink);
   box-shadow:0 3px 0 #150e28; cursor:pointer}
 #calcKeys button:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28}
-#calcKeys button.eq{grid-column:span 3; background:linear-gradient(180deg,var(--gold),var(--gold2));
+#calcKeys button.eq{grid-column:span 2; background:linear-gradient(180deg,var(--gold),var(--gold2));
   color:#241a05}
 #calcKeys button.clr{color:#ff9b9e}
+#calcKeys button.keep{font-size:14px; color:var(--gold)}
 
 /* One bar, two jobs: "a new version is ready" and "install me so your saves
    survive". Both are interruptions, so both sit out of the way at the bottom
@@ -590,8 +643,10 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="riteBar" style="display:none"></div>
       <div id="riteTrail" style="display:none"></div>
       <div id="qhead"><div id="qtopic"></div></div>
+      <div id="lcard"></div>
       <div id="qbox"></div>
       <div id="qfig"></div>
+      <div class="slate"></div>
       <div id="choices"></div>
       <div id="pstrike" style="display:none"></div>
       <div id="showwork" style="display:none"></div>
@@ -664,7 +719,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div id="trainRun" style="display:none">
       <div class="panel">
         <div id="tTopic" class="small center"></div>
+        <div id="tCard"></div>
         <div id="tQ" style="font-size:19px;font-weight:800;text-align:center;padding:8px 2px 10px;line-height:1.5"></div>
+        <div class="slate"></div>
         <div id="tChoices"></div>
       </div>
       <div class="panel" id="tExplain" style="display:none;border-left:4px solid var(--gold);font-size:15px;line-height:1.6"></div>
@@ -2333,6 +2390,90 @@ taylor(d){
 }
 };
 
+/* A rule for every topic.
+ *
+ * Thirty-seven generators carry their own \`codex\` card, written beside the
+ * question it explains. The rest were the simpler topics, and went without on
+ * the theory that they needed no introduction — which is true of somebody who
+ * already knows them and false of everybody else. A topic with no rule cannot
+ * be introduced before it is asked, and the first sight of "tr" or "det" or
+ * "×" was a question about a word nobody had defined.
+ *
+ * So these are the missing cards, and buildQuestion falls back to them. Each is
+ * what a first meeting needs: the rule in one sentence, and one small instance
+ * of it with the arithmetic showing. Checked against the generators they
+ * describe — \`ln(kx)\` really does differentiate to 1/x, the scalar projection
+ * really is over ‖v‖ and not ‖v‖² — and held to the same 200 characters the
+ * authored ones are. */
+const RULES = {
+  vecAdd:   {rule:'Add matching components: first with first, second with second. Nothing else mixes.',
+             eg:'⟨1, 2⟩ + ⟨3, 4⟩ = ⟨1+3, 2+4⟩ = ⟨4, 6⟩'},
+  vecScale: {rule:'A number in front of a vector multiplies every component of it.',
+             eg:'3 · ⟨2, −1⟩ = ⟨3·2, 3·(−1)⟩ = ⟨6, −3⟩'},
+  vecCombo: {rule:'Scale each vector by its own number first, then add the results component by component.',
+             eg:'2⟨1, 0⟩ + 3⟨0, 1⟩ = ⟨2, 0⟩ + ⟨0, 3⟩ = ⟨2, 3⟩'},
+  dot:      {rule:'Multiply matching components, then add the products. The answer is one number, not a vector.',
+             eg:'⟨1, 2⟩ · ⟨3, 4⟩ = 1·3 + 2·4 = 11'},
+  mag:      {rule:'The length of a vector: square each component, add the squares, take the square root. It is Pythagoras.',
+             eg:'‖⟨3, 4⟩‖ = √(9 + 16) = √25 = 5'},
+  orth:     {rule:'Two vectors are perpendicular exactly when their dot product is zero.',
+             eg:'⟨1, 2⟩ · ⟨2, −1⟩ = 2 − 2 = 0, so they are perpendicular'},
+  matVec:   {rule:'Dot each row of the matrix with the vector. Each row gives one entry of the answer.',
+             eg:\`\${mat([[1,2],[3,4]])}\${vec([1,1])} : top = 1·1 + 2·1 = 3, bottom = 3·1 + 4·1 = 7\`},
+  det2:     {rule:'For a 2×2 matrix, det = ad − bc: multiply down the main diagonal, then subtract the product of the other diagonal.',
+             eg:\`det \${mat([[1,2],[3,4]])} = 1·4 − 2·3 = −2\`},
+  transpose:{rule:'Flip the matrix across its main diagonal, so rows become columns. The diagonal stays put; the other two entries swap.',
+             eg:\`\${mat([[1,2],[3,4]])}<sup>T</sup> = \${mat([[1,3],[2,4]])}\`},
+  trace:    {rule:'The trace (tr) is the sum of the main diagonal — top-left to bottom-right. Nothing off the diagonal counts.',
+             eg:\`tr \${mat([[1,2],[3,4]])} = 1 + 4 = 5\`},
+  solve2:   {rule:'Make one unknown cancel: add or subtract the equations (scaling one if needed), solve for what is left, then substitute back.',
+             eg:'x + y = 5 and x − y = 1: adding gives 2x = 6, so x = 3 and y = 2'},
+  det3:     {rule:'Expand along the top row: each entry times the 2×2 determinant left when its row and column are struck out, with signs + − +.',
+             eg:'det = a(ei − fh) − b(di − fg) + c(dh − eg)'},
+  cross:    {rule:'u × v = ⟨u₂v₃ − u₃v₂, u₃v₁ − u₁v₃, u₁v₂ − u₂v₁⟩. The result is a vector perpendicular to both.',
+             eg:'⟨1, 0, 0⟩ × ⟨0, 1, 0⟩ = ⟨0, 0, 1⟩'},
+  rank:     {rule:'Two columns are linearly independent unless one is a multiple of the other. For a 2×2 matrix that is exactly when the determinant is not zero.',
+             eg:\`\${mat([[1,2],[2,4]])} has det 1·4 − 2·2 = 0: the second column is twice the first, so they are dependent\`},
+  proj:     {rule:'The scalar projection of u onto v is (u · v) / ‖v‖ — how much of u points along v.',
+             eg:'u = ⟨3, 4⟩, v = ⟨1, 0⟩: (3·1 + 4·0) / 1 = 3'},
+  limPoly:  {rule:'A polynomial has no jumps or holes, so its limit at a point is simply its value there: substitute.',
+             eg:'lim x→2 of (x² + 1) = 2² + 1 = 5'},
+  limRational:{rule:'If substituting gives 0/0, a common factor is hiding. Factor the top, cancel it, then substitute.',
+             eg:'(x² − 4)/(x − 2) = (x − 2)(x + 2)/(x − 2) = x + 2, which → 4 as x → 2'},
+  limInf:   {rule:'At infinity only the highest powers matter. Higher power underneath: the limit is 0. Equal powers: the ratio of their coefficients.',
+             eg:'(2x + 3)/(4x² + 2) → 0, and (6x² + x)/(2x² − 5) → 6/2 = 3'},
+  powerRule:{rule:'d/dx of xⁿ is n·xⁿ⁻¹: bring the power down in front, then lower the power by one. A constant on its own disappears.',
+             eg:'d/dx (3x² − 5x + 8) = 6x − 5'},
+  evalDeriv:{rule:'Differentiate first, then put the point into the derivative — not into the original function.',
+             eg:'f(x) = x², so f′(x) = 2x and f′(3) = 6'},
+  trigDeriv:{rule:'d/dx sin(kx) = k·cos(kx), and d/dx cos(kx) = −k·sin(kx). The k inside comes out in front; cos picks up a minus sign.',
+             eg:'d/dx sin(3x) = 3cos(3x)'},
+  expLog:   {rule:'d/dx of e^(kx) is k·e^(kx): it stays itself, times the k. d/dx of ln(kx) is 1/x, whatever k is.',
+             eg:'d/dx e^(2x) = 2e^(2x), and d/dx ln(5x) = 1/x'},
+  quotient: {rule:'(f/g)′ = (f′g − fg′) / g². Top′ times bottom, minus top times bottom′, all over the bottom squared.',
+             eg:'d/dx of x/(x + 2) = (1·(x + 2) − x·1)/(x + 2)² = 2/(x + 2)²'},
+  tangent:  {rule:'The slope of the tangent line at x = a is the derivative there, f′(a). Differentiate, then substitute a.',
+             eg:'f(x) = x² at x = 3: f′(x) = 2x, so the slope is 6'},
+  indefPower:{rule:'∫ xⁿ dx = xⁿ⁺¹/(n + 1) + C: raise the power by one, divide by the new power, and add C.',
+             eg:'∫ 15x⁴ dx = 15·x⁵/5 + C = 3x⁵ + C'},
+  intTrig:  {rule:'∫ cos(kx) dx = (1/k)·sin(kx) + C, and ∫ sin(kx) dx = −(1/k)·cos(kx) + C. Divide by the k inside.',
+             eg:'∫ cos(2x) dx = ½ sin(2x) + C'},
+  intExp:   {rule:'∫ e^(kx) dx = (1/k)·e^(kx) + C. Integrating divides by the k inside, where differentiating multiplied by it.',
+             eg:'∫ e^(3x) dx = ⅓ e^(3x) + C'},
+  area:     {rule:'The area under a curve from a to b is the definite integral: find the antiderivative F, then take F(b) − F(a).',
+             eg:'under y = x² from 0 to 3: x³/3 gives 27/3 − 0 = 9'},
+  secondDeriv:{rule:'The second derivative is the derivative of the derivative: apply the power rule, then apply it again to what you got.',
+             eg:'f = x³: f′ = 3x², then f″ = 6x'},
+  critical: {rule:'Critical points are where f′(x) = 0. If f′ is already factored, set each bracket to zero in turn.',
+             eg:'f′(x) = 3(x − 1)(x + 2) is zero at x = 1 and x = −2'},
+  matPow:   {rule:'A² means A times A — a matrix product, rows dotted with columns. It is not each entry squared.',
+             eg:\`\${mat([[1,1],[0,1]])}² = \${mat([[1,2],[0,1]])}, not \${mat([[1,1],[0,1]])}\`},
+  nullSpace:{rule:'The null space is every vector v with Av = 0. Test a candidate by multiplying: every row dotted with v must give 0.',
+             eg:\`\${mat([[1,1],[2,2]])} sends ⟨1, −1⟩ to ⟨1 − 1, 2 − 2⟩ = ⟨0, 0⟩\`},
+  colSpace: {rule:'The dimension of the column space is the number of independent columns — the rank. Columns that are multiples of each other count once.',
+             eg:\`\${mat([[1,2],[2,4]])}: the second column is twice the first, so the dimension is 1\`}
+};
+
 /* ------------------------------ topic metadata --------------------------- */
 const TOPIC_LABEL = {
   vecAdd:'Vector Addition', vecScale:'Scalar Multiplication', vecCombo:'Linear Combinations',
@@ -3996,7 +4137,7 @@ const Game = {
 /* ------------------------------ preferences ------------------------------ */
 const PREF_KEY='eigenrealm.prefs';
 const Prefs = {
-  d:{sound:true, motion:true, haptics:true, calc:true},
+  d:{sound:true, motion:true, haptics:true, calc:true, lessons:true},
   load(){
     let stored=null;
     try{ stored=localStorage.getItem(PREF_KEY); if(stored) Object.assign(this.d, JSON.parse(stored)); }catch(e){}
@@ -5026,7 +5167,7 @@ function buildQuestion(key, diff){
     // Optional, and consumed by later work: how hard the topic is to hold in
     // one piece, the ladder it breaks into, its one-card summary, a figure
     // spec, and how the answer may be constructed rather than chosen.
-    complexity:p.complexity, motes:p.motes, codex:p.codex,
+    complexity:p.complexity, motes:p.motes, codex:p.codex || RULES[key],
     fig:p.fig, figAnswer:p.figAnswer, input:p.input
   };
 }
@@ -5516,7 +5657,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
-    add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered, ()=>Battle.useInsight());
+    add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
     add('rage',   \`\${ITEMS.rage.ic} Rune ×\${it.rage}\`, it.rage>0 && !this.rage, ()=>Battle.useRage());
     if(it.feather>0) add('feather', \`\${ITEMS.feather.ic} Feather ×\${it.feather}\`, false, ()=>{});
     /* Carried wards are a readout rather than a button, the way the Feather
@@ -5580,11 +5721,18 @@ const Battle = {
   },
   useInsight(){
     const g=Game.s; if(g.items.insight<1||this.answered) return;
+    // Nothing to burn on a true-or-false or a build: spending one there would
+    // either answer the question outright or do nothing at all.
+    if(!this.insightUseful()) return;
     g.items.insight--;
     R.shuffle(this.wrongStillUp()).slice(0,2).forEach(b=>b.classList.add('faded'));
     Sfx.coin(); Game.save(); this.renderPowers();
   },
 
+  /* Insight burns two wrong answers, so it needs two to burn — and a first
+     meeting offers exactly two, which would leave the answer standing alone. An
+     item spent to be told the answer to an easy question is an item wasted. */
+  insightUseful(){ return this.cardsLeftToTurn()>1 && !this.lessonIs('meet'); },
   // Wrong answers still on offer — what Insight burns and what Cards turns over.
   wrongStillUp(){
     return [...document.querySelectorAll('#choices .choice')]
@@ -5644,7 +5792,7 @@ const Battle = {
                  // The Library's stacks reach into fights too — it would be a
                  // strange shelf where only the chests got older.
                  + (this.mode==='dungeon' ? Dungeon.stacks() : 0);
-      diff = Mastery.adjustDiff(key, base);
+      diff = Lesson.diff(key, Mastery.adjustDiff(key, base));
 
     }
     this.curDiff = diff;
@@ -5657,6 +5805,12 @@ const Battle = {
       this.rite = {motes:this.cur.motes, i:0, clean:0, trail:[], parent:this.cur};
     }
     this.unassisted = !this.rite && this.cur.complexity===3 && Rite.graduated(key);
+    /* The form this question takes. The daily is the same twelve problems for
+       everyone, so it is never re-shaped by what one knight happens to know. */
+    this.lesson = this.mode==='daily' ? null
+      : Lesson.plan(this.cur, !!this.rite,
+          'Now you — an easy one first. Nothing strikes you for getting a first meeting wrong.');
+    Calc.clearKept();                 // last question's sums are not this one's
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
@@ -5691,8 +5845,17 @@ const Battle = {
   // What the player is actually being asked right now: a ladder step, or the
   // whole problem once the scaffolding has faded.
   step(){
-    return this.rite ? this.rite.motes[this.rite.i] : this.cur;
+    if(this.rite) return this.rite.motes[this.rite.i];
+    return (this.lesson && this.lesson.step) || this.cur;
   },
+  /* What "show me the working" works. A lesson step is the same problem asked
+     in an easier form — a claim to judge, or three answers instead of four —
+     so the working shown is the problem's own, not the form's. */
+  workStep(){
+    const st=this.step();
+    return (st && st.lesson) ? this.cur : st;
+  },
+  lessonIs(f){ return !!(this.lesson && this.lesson.format===f); },
 
   renderStep(){
     const st=this.step();
@@ -5709,6 +5872,7 @@ const Battle = {
     } else { rb.style.display='none'; tr.style.display='none'; }
 
     document.getElementById('qtopic').innerHTML = this.cur.topic +
+      Lesson.chip(this.lesson) +
       (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
       (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
 
@@ -5723,6 +5887,10 @@ const Battle = {
       head.appendChild(chip);
     }
 
+    // The card belongs to the first sight of the topic: a ladder shows it over
+    // its first rung only, not over every step.
+    document.getElementById('lcard').innerHTML =
+      (this.lesson && this.lesson.card && !(this.rite && this.rite.i>0)) ? this.lesson.card : '';
     document.getElementById('qbox').innerHTML = st.q;
     // A question figure must never reveal the answer; the payoff picture is
     // held back for the explanation.
@@ -5766,12 +5934,18 @@ const Battle = {
   // honest boundary of what a keypad can express.
   canPerfect(){
     const st=this.step();
-    return this.mode!=='daily' && !this.answered && /^−?\\d+$/.test(String(st.a));
+    if(this.mode==='daily' || this.answered) return false;
+    // The two lowest rungs are about meeting the idea, not about producing it.
+    if(this.lessonIs('meet') || this.lessonIs('tf')) return false;
+    if(st===this.cur && !Lesson.buildable(this.cur)) return false;
+    return !!Lesson.shape(st.a);
   },
   renderPerfect(){
     const p=document.getElementById('pstrike');
     if(!this.canPerfect()){ p.style.display='none'; p.innerHTML=''; return; }
     p.style.display='';
+    // On the build rung there is nothing to choose from: the pad is the question.
+    if(this.lessonIs('build') && !this.rite){ this.openPad(); return; }
     p.innerHTML=\`<div class="pbtn" id="pgo">⚔ Perfect Strike — build it yourself, ×3 damage</div>\`;
     document.getElementById('pgo').onclick=()=>this.openPad();
   },
@@ -5782,7 +5956,7 @@ const Battle = {
   SHOWN: Object.freeze({shown:true}),   // an object, so it can never === an answer
   renderWork(){
     const w=document.getElementById('showwork');
-    const st=this.step();
+    const st=this.workStep();
     if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
     w.style.display='';
     w.innerHTML=\`<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>\`;
@@ -5801,9 +5975,18 @@ const Battle = {
     this.answer(null, this.SHOWN);
   },
   openPad(){
-    this.padVal='';
+    const st=this.step();
     document.getElementById('choices').innerHTML='';
     const p=document.getElementById('pstrike');
+    /* A vector or a matrix is built from tiles, slot by slot. A whole number
+       keeps the keypad it always had. */
+    if(Lesson.shape(st.a)!=='int'){
+      Lesson.build(p, st.a, st===this.cur ? this.cur.choices : buildMote(st),
+        val=>{ this.perfect=true; this.answer(null, val); });
+      this.renderPowers();
+      return;
+    }
+    this.padVal='';
     p.innerHTML=\`<div id="pad">
       <div id="padVal">—</div>
       \${[1,2,3,4,5,6,7,8,9].map(n=>\`<button data-k="\${n}">\${n}</button>\`).join('')}
@@ -5844,7 +6027,8 @@ const Battle = {
 
     // A ladder step is one small piece of a topic, so it moves mastery by a
     // fraction; the parent problem still counts in full.
-    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length) : 1;
+    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length)
+                 : Lesson.weight(this.lesson && this.lesson.format);
     /* Being shown the working tells the mastery model nothing at all — not a
        wrong answer, not a question answered, and not a fresh timestamp. See the
        Working module: recency is what pages buy, and this must not be a bench. */
@@ -5938,6 +6122,23 @@ const Battle = {
       this.diceUp=false;
       this.settleMs = 620;
       this.missed++;                 // no longer flawless, because it was not
+    } else if(this.lessonIs('meet')){
+      /* A first meeting is taught, not tested, so a wrong answer here is not
+         answered with a blow. It is still a wrong answer: the streak goes, the
+         stake goes with it, the mastery model hears about it, and no damage was
+         dealt — so there is nothing to be gained by missing on purpose, only
+         nothing to be afraid of. Steady Hand is kept for a miss that costs
+         something, exactly as it is when the working is shown.
+       *
+       * The wind-up below is untouched, for the reason it is everywhere else:
+       * it is the foe's own clock, not a reply to this answer. */
+      this.combo=0;
+      if(this.diceUp) Anim.float(560, H-290, 'STAKE LOST', '#ff6b6b', true);
+      this.diceUp=false;
+      Anim.float(560, H-250, 'NOT YET', '#9fd0ff');
+      this.settleMs = 620;
+      Sfx.bad();
+      this.missed++;
     } else {
       // Steady Hand spends itself here, holding the streak through one miss.
       if(this.steadyUp){
@@ -5995,7 +6196,7 @@ const Battle = {
 
     Game.save();
     setTimeout(()=>this.updateBars(),420);
-    this.showExplain(ok, choice);
+    this.showExplain(ok, choice, st);
   },
 
   // Streak milestones: escalating callouts so a hot run feels like one.
@@ -6010,8 +6211,9 @@ const Battle = {
 
   showExplain(ok, picked, st){
     st = st || this.cur;
-    const inRite = st !== this.cur;
-    const why = inRite ? (st._why||{}) : this.cur.why;
+    const inRite = !!this.rite && st !== this.cur;
+    const why = st !== this.cur ? (st._why||{}) : this.cur.why;
+    const met = !inRite && this.lessonIs('meet');
     const miss = !ok && why[picked];
     const e=document.getElementById('explain');
 
@@ -6019,7 +6221,7 @@ const Battle = {
        "the answer was", because nothing was guessed — and no rule restated
        above it, because the working carries the rule itself. */
     if(this.shownWork){
-      const w=Working.forStep(st);
+      const w=Working.forStep(st.lesson ? this.cur : st);
       e.style.display='block';
       e.innerHTML =
         \`<div class="head" style="color:var(--dim)">🔎 Worked through for you.</div>\`+
@@ -6040,14 +6242,16 @@ const Battle = {
 
     const head = inRite
       ? (ok ? '✔️ Step taken.' : '✕ Not that step.')
-      : (ok ? '⚔️ A clean strike!' : '🩸 The blow lands on you.');
+      : (ok ? '⚔️ A clean strike!'
+            : met ? '📖 Not yet — and no blow lands on a first meeting.'
+                  : '🩸 The blow lands on you.');
     // A wrong answer is exactly when the rule is worth restating.
     const rule = (!ok && this.cur.codex)
       ? \`<div class="cxinline"><b>The rule</b><br>\${this.cur.codex.rule}</div>\` : '';
     e.style.display='block';
     e.innerHTML =
       \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${head}</div>\`+
-      (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
+      ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${st.ex}</div>\`+ rule +
@@ -6426,6 +6630,275 @@ const Working = {
       </ol>
       <div class="wkans">The answer is <b>\${w.answer}</b>.</div>
     </div>\`;
+  }
+};
+
+/* -------------------------------- lessons --------------------------------- */
+/* How a topic is asked, as distinct from which topic and how hard.
+ *
+ * Until this existed every question arrived in the same form: four answers,
+ * pick one. That is the right form for something you know and the wrong one for
+ * something you have never met, and the game had no way to tell the difference
+ * — the first sight of a determinant was a determinant to compute, with the
+ * foe's blow waiting on the answer. Recognising, judging, choosing and
+ * producing are four different things to ask of a learner, in that order of
+ * difficulty, and a topic should be walked up them rather than dropped at the
+ * top.
+ *
+ *     meet     the rule, one small instance of it, then an easy question
+ *              with three answers. Nothing strikes you for getting it wrong.
+ *     tf       a claimed answer, and you say whether it is right. Checking
+ *              somebody else's working is easier than doing your own.
+ *     choose   the question as it always was: four answers, one of them right.
+ *     build    no answers offered. You assemble it, a number at a time, and it
+ *              strikes as a Perfect Strike does.
+ *     free     past the ladder. Choose, or build for the triple — your call.
+ *
+ * WHERE A TOPIC STANDS IS NOT STORED. It is read off effective mastery, the
+ * same faded number that already decides how hard the question is and whether
+ * the rule is free to look at. That is deliberate, and it is most of the
+ * design: the fade is what answers "have I forgotten this", so a topic left
+ * alone for a month walks itself back down the ladder and is re-introduced
+ * without anybody keeping a second schedule. It also means nothing is added to
+ * a save or a knight code, and a knight who existed before this did is placed
+ * on every topic the moment the page loads — by what they actually know.
+ *
+ * The lower rungs count for less in the mastery model, for the reason a mote
+ * does: saying "true" to a claim is weaker evidence than producing the answer,
+ * and four easy wins must not persuade the scheduler you own the topic. The
+ * weights are chosen so that a clean run climbs exactly one rung an answer —
+ * meet → tf → choose → build — and so that none of those landings sits on a
+ * band's edge, where a rounding error would decide the format. */
+const Lesson = {
+  MEET:0.15, TF:0.35, CHOOSE:0.60, BUILD:0.75,
+  ORDER:['meet','tf','choose','build'],
+  WEIGHT:{meet:0.6, tf:0.6},
+  LABEL:{meet:'first meeting', tf:'true or false', choose:'choose', build:'build it'},
+  ICON:{meet:'📖', tf:'⚖️', choose:'🎯', build:'🧩'},
+  TRUE:'✔ True', FALSE:'✘ False',
+
+  /* Answers that have more than one right form. "Which vector is an
+     eigenvector" is answered by any multiple of the one on offer, so it can be
+     chosen but not built: a keypad would mark ⟨2, −6⟩ wrong beside ⟨−1, 3⟩. */
+  NO_BUILD:{eigenvec:1, nullSpace:1},
+
+  on(){ return Prefs.d.lessons!==false; },
+
+  stage(key){
+    if(!this.on() || !Game.s) return 'free';
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return 'meet';
+    const e=Mastery.eff(key);
+    return e<this.MEET ? 'meet' : e<this.TF ? 'tf' : e<this.CHOOSE ? 'choose'
+         : e<this.BUILD ? 'build' : 'free';
+  },
+  weight(format){ return this.WEIGHT[format] || 1; },
+  // The two lowest rungs are about the idea, so the numbers stay small.
+  diff(key, d){ const s=this.stage(key); return (s==='meet' || s==='tf') ? 1 : d; },
+
+  /* What an answer is made of, if it is made of numbers in a fixed shape. This
+     is the honest boundary of what can be assembled from tiles: a whole number,
+     a row vector, a matrix. A polynomial or a fraction has structure a row of
+     slots cannot express, and is chosen instead. */
+  shape(a){
+    a=String(a);
+    if(/^−?\\d+$/.test(a)) return 'int';
+    if(/^⟨−?\\d+(, −?\\d+)+⟩$/.test(a)) return 'vec';
+    if(/^<span class="mtx">(<span class="col">(<span>−?\\d+<\\/span>)+<\\/span>)+<\\/span>$/.test(a)) return 'mtx';
+    return null;
+  },
+  buildable(q){ return !!(q && this.shape(q.a) && !this.NO_BUILD[q.key]); },
+
+  /* The plan for one question: the rung the knight is on, the form the question
+     will actually take, the step to ask in place of the question itself (when
+     the form changes what is asked), and the card to show above it.
+
+     \`inRite\` is a complex topic arriving as its ladder of motes. The ladder is
+     already a walk-through, so it keeps its own form; what it gains is the card
+     on a first meeting, which it never had. */
+  plan(q, inRite, note){
+    const stage=this.stage(q.key);
+    const p={stage, format:stage, step:null, card:''};
+    if(stage==='meet') p.card=this.card(q, note);
+    if(inRite){ p.format='rite'; return p; }
+    if(stage==='meet') p.step=this.meetStep(q);
+    else if(stage==='tf') p.step=this.tfStep(q);
+    else if(stage==='free' || (stage==='build' && !this.buildable(q))) p.format='choose';
+    return p;
+  },
+
+  /* The first meeting's question: the real one, with one wrong answer taken
+     away. Three is enough to have to think and few enough to be kind. */
+  meetStep(q){
+    const wrong=R.shuffle(q.choices.filter(c=>c!==q.a)).slice(0,2);
+    return { lesson:'meet', topic:q.topic, q:q.q, a:q.a, ex:q.ex,
+             why:q.why, _why:q.why, fig:q.fig, figAnswer:q.figAnswer,
+             _choices:R.shuffle([q.a].concat(wrong)) };
+  },
+
+  /* A claim to judge. Half the time it is the answer. The other half it is one
+     of the wrong answers the generator can diagnose, where it has any — those
+     are the misreadings the question was built to catch, so a false claim is
+     never arbitrary: it is the mistake a learner is about to make, shown to
+     them as somebody else's. The reason it is wrong is read out either way. */
+  tfStep(q){
+    const wrong=q.choices.filter(c=>c!==q.a);
+    const traps=wrong.filter(c=>q.why && q.why[c]);
+    const truth=R.chance(.5);
+    const claim=truth ? q.a : R.pick(traps.length ? traps : wrong);
+    const verdict = truth
+      ? \`The claim was <b style="color:var(--green)">true</b>.\`
+      : \`The claim was <b style="color:var(--red)">false</b> — the answer is
+           <b style="color:var(--gold)">\${q.a}</b>.\` +
+        (q.why && q.why[claim] ? \` What was claimed: \${q.why[claim]}.\` : '');
+    return { lesson:'tf', topic:q.topic, claim, truth, quiet:true,
+             q:\`\${q.q}<div class="claim"><span>The claim</span>\${claim}</div>\`,
+             a: truth ? this.TRUE : this.FALSE,
+             ex:\`<div style="margin-bottom:6px">\${verdict}</div>\${q.ex}\`,
+             why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,
+             _choices:[this.TRUE, this.FALSE] };
+  },
+
+  /* The card a first meeting opens with: the rule, one small instance of it,
+     and — folded away, because it is long — a whole problem worked through.
+     It stays on screen above the question, which is the point of putting it
+     there instead of in a dialog: the example is still in view while you copy
+     its method, so the method does not have to be memorised to be used once. */
+  card(q, note){
+    const r=Game.s && Game.s.topicStats[q.key];
+    const again=!!(r && r.seen);
+    const c=q.codex || {};
+    const s=buildQuestion(q.key, 1), w=Working.forStep(s);
+    const worked = (w && w.steps.length)
+      ? \`<details><summary>▸ Watch one worked through</summary>
+           <div class="lq">\${s.q}</div>\${Working.render(Object.assign({}, w, {rule:''}))}</details>\` : '';
+    return \`<div class="lcard">
+      <div class="lk">📖 \${again?'Back to the rule':'New to you'} · \${TOPIC_LABEL[q.key]||q.topic}</div>
+      <div class="lrule">\${c.rule||''}</div>
+      \${c.eg?\`<div class="leg">\${c.eg}</div>\`:''}
+      \${worked}
+      <div class="lnow">\${note||'Now you — an easy one first.'}</div>
+    </div>\`;
+  },
+
+  // The tag beside the topic's name: which rung, and how far up the ladder.
+  chip(p){
+    if(!p || p.stage==='free') return '';
+    if(p.format==='rite' && p.stage!=='meet') return '';
+    const f = p.format==='rite' ? 'meet' : p.format;
+    const at=this.ORDER.indexOf(p.stage);
+    return \`<span class="lsn" data-stage="\${p.stage}" data-format="\${p.format}">\${this.ICON[f]} \${this.LABEL[f]}
+      \${this.ORDER.map((_,i)=>\`<i\${i<=at?' class="on"':''}></i>\`).join('')}</span>\`;
+  },
+
+  /* ---- building an answer ---- */
+  /* An answer split into its numbers and what lies between them. Joining the
+     gaps back up around whatever the player put in the slots gives a string in
+     exactly the answer's own format — so a built answer is graded by the same
+     \`===\` a chosen one is, and a built WRONG answer that happens to be one of
+     the question's diagnosed mistakes is explained as that mistake. */
+  pieces(a){
+    a=String(a);
+    return { nums:a.match(/−?\\d+/g)||[], gaps:a.split(/−?\\d+/) };
+  },
+  join(gaps, vals){
+    let s=gaps[0];
+    for(let i=0;i<vals.length;i++) s+=vals[i]+gaps[i+1];
+    return s;
+  },
+  /* The tiles on offer: every number in the answer, every number in the wrong
+     answers, and near misses to make up at least six. Sorted, not shuffled — a
+     number bank in order is quicker to read and gives nothing away. */
+  bank(nums, choices){
+    const val=s=>Number(String(s).replace('−','-'));
+    const set=new Set(nums);
+    for(const c of (choices||[])) for(const n of (String(c).match(/−?\\d+/g)||[])) set.add(n);
+    const base=nums.map(val);
+    let guard=0;
+    while(set.size<6 && guard++<80) set.add(neg(R.pick(base)+R.nz(-3,3)));
+    let all=[...set];
+    if(all.length>10){
+      const keep=new Set(nums);
+      all=[...keep].concat(R.shuffle(all.filter(x=>!keep.has(x))).slice(0, 10-keep.size));
+    }
+    return all.sort((x,y)=>val(x)-val(y));
+  },
+
+  /* Draw the build into \`el\`; \`done(answer)\` is called once, with the assembled
+     string, when the player commits. One build at a time — there is only ever
+     one question on screen. */
+  build(el, a, choices, done, label){
+    const shape=this.shape(a);
+    if(!shape) return false;
+    const {nums, gaps}=this.pieces(a);
+    const order=nums.map((_,i)=>i);
+    if(shape==='mtx'){
+      // mat() writes column by column; people read row by row.
+      const cols=(String(a).match(/class="col"/g)||[]).length, rows=nums.length/cols;
+      order.sort((x,y)=>(x%rows - y%rows) || (x-y));
+    }
+    this._b={ el, shape, nums, gaps, order, done, label,
+              vals:nums.map(()=>null), at:order[0],
+              bank: shape==='int' ? null : this.bank(nums, choices) };
+    this.paintBuild();
+    return true;
+  },
+  filled(v){ return v!=null && v!=='' && v!=='−'; },
+  paintBuild(){
+    const b=this._b; if(!b) return;
+    const slot=i=>{
+      const v=b.vals[i], has=v!=null && v!=='';
+      return \`<button type="button" class="bslot\${b.at===i?' now':''}\${has?' full':''}" data-i="\${i}">\${has?v:'&nbsp;'}</button>\`;
+    };
+    let ans=b.gaps[0];
+    b.nums.forEach((_,i)=>{ ans+=slot(i)+b.gaps[i+1]; });
+    const ready=b.vals.every(v=>this.filled(v));
+    const keys = b.shape==='int'
+      ? \`<div class="bpad">\${['1','2','3','4','5','6','7','8','9','0','±','⌫'].map(k=>
+          \`<button type="button" class="btile" data-k="\${k}">\${k}</button>\`).join('')}</div>\`
+      : \`<div class="btiles">\${b.bank.map(v=>
+          \`<button type="button" class="btile" data-v="\${v}">\${v}</button>\`).join('')}</div>\`;
+    b.el.innerHTML=\`<div class="bld">
+        <div class="bhint">\${b.shape==='int' ? 'Type the answer.'
+          : 'Tap a number to drop it into the lit slot. Tap a slot to change it.'}</div>
+        <div class="bans">\${ans}</div>
+        \${keys}
+        <button type="button" class="btn gold" id="bgo" style="margin-top:12px" \${ready?'':'disabled'}>\${b.label||'⚔ Strike'}</button>
+      </div>\`;
+    b.el.querySelectorAll('.bslot').forEach(x=>{
+      x.onclick=()=>{ b.at=+x.dataset.i; this.paintBuild(); };
+    });
+    b.el.querySelectorAll('.btile').forEach(x=>{
+      x.onclick=()=>this.tapBuild(x.dataset.v, x.dataset.k);
+    });
+    b.el.querySelector('#bgo').onclick=()=>this.commitBuild();
+  },
+  tapBuild(v, k){
+    const b=this._b; if(!b) return;
+    if(b.shape==='int'){
+      let cur=b.vals[0]||'';
+      if(k==='⌫') cur=cur.slice(0,-1);
+      else if(k==='±') cur = cur.startsWith('−') ? cur.slice(1) : '−'+cur;
+      else if(cur.replace('−','').length<7) cur+=k;
+      b.vals[0]=cur;
+    } else {
+      b.vals[b.at]=v;
+      // On to the next empty slot in reading order, so a clean build is one
+      // tap a number and nothing else.
+      const next=b.order.find(i=>b.vals[i]==null);
+      if(next!==undefined) b.at=next;
+    }
+    Haptic.tap();
+    this.paintBuild();
+  },
+  commitBuild(){
+    const b=this._b;
+    if(!b || !b.vals.every(v=>this.filled(v))) return;
+    this._b=null;
+    // "007" is seven. Typed numbers are normalised to how the game writes them.
+    const vals = b.shape==='int'
+      ? [neg(Number(String(b.vals[0]).replace('−','-')))] : b.vals;
+    b.done(this.join(b.gaps, vals));
   }
 };
 
@@ -9315,7 +9788,9 @@ const Lock = {
     const firstContact = !(r && r.seen>0);
     // First sight of a topic is taught before it is tested — you never snap a
     // pick on something the game never showed you.
-    if(firstContact && spec.q.codex) this.study(); else this.tumblers();
+    // — unless there is no pick to snap. Every topic has a rule now, and a
+    // knight with empty pockets is not about to be tested on anything.
+    if(firstContact && spec.q.codex && (Game.s.items.pick||0)>0) this.study(); else this.tumblers();
   },
 
   study(){
@@ -10547,6 +11022,7 @@ const UI = {
         \${row('motion','✨','Full motion','Screen shake, hit-stop, particles and slow-motion')}
         \${row('haptics','📳','Haptics','Vibration on hits, where the device supports it')}
         \${row('calc','🧮','Scratch pad','A calculator during fights, for the arithmetic the question is not about')}
+        \${row('lessons','📖','Step-by-step lessons','New and faded topics are taught first: the rule, a true-or-false, then choosing, then building the answer')}
       </div>
       <div class="panel"><h2>🏅 Titles</h2>
         <div class="sub" style="margin-bottom:6px">\${Titles.count()} of \${TITLES.length} earned.</div>
@@ -11018,7 +11494,7 @@ const Shop = {
 
 /* ------------------------------- training --------------------------------- */
 const Train = {
-  pool:[], title:'', c:0, w:0, cur:null,
+  pool:[], title:'', c:0, w:0, cur:null, lesson:null,
   renderPick(){
     document.getElementById('trainRun').style.display='none';
     document.getElementById('trainPick').style.display='';
@@ -11075,41 +11551,67 @@ const Train = {
     document.getElementById('trainRun').style.display='';
     this.next();
   },
+  // The step on screen: a lesson may ask the question in an easier form.
+  step(){ return (this.lesson && this.lesson.step) || this.cur; },
   next(){
     document.getElementById('tExplain').style.display='none';
     const key = this.pool.length>1 ? Mastery.pick(this.pool) : this.pool[0];
-    const diff = Game.s ? Mastery.adjustDiff(key, 2) : R.i(1,3);
+    const diff = Game.s ? Lesson.diff(key, Mastery.adjustDiff(key, 2)) : R.i(1,3);
     this.cur=buildQuestion(key, diff);
+    /* The yard teaches the way a fight does — the same ladder, read off the
+       same mastery — so drilling a topic here walks it up the same rungs, and
+       nothing learned in one place is asked as if it were new in the other. */
+    this.lesson = Game.s ? Lesson.plan(this.cur, false) : null;
+    Calc.clearKept();
+    const st=this.step();
     document.getElementById('tTopic').innerHTML =
       (this.pool.length>1 ? this.title+' — ' : '') + this.cur.topic +
+      Lesson.chip(this.lesson) +
       (Game.s&&Mastery.isReview(key) ? ' <span class="rev">⟳ review</span>' : '');
-    document.getElementById('tQ').innerHTML=this.cur.q;
+    document.getElementById('tCard').innerHTML = (this.lesson && this.lesson.card) || '';
+    document.getElementById('tQ').innerHTML=st.q;
     const box=document.getElementById('tChoices'); box.innerHTML='';
-    this.cur.choices.forEach(c=>{
-      const b=document.createElement('button');
-      b.className='btn choice'; b.innerHTML=c;
-      if(c===this.cur.a) b.dataset.correct='1';
-      b.onclick=()=>this.answer(b,c);
-      box.appendChild(b);
-    });
+    if(this.lesson && this.lesson.format==='build'){
+      Lesson.build(box, st.a, this.cur.choices, val=>this.answer(null, val), 'Check ▶');
+    } else {
+      (st._choices || this.cur.choices).forEach(c=>{
+        const b=document.createElement('button');
+        b.className='btn choice'; b.innerHTML=c;
+        if(c===st.a) b.dataset.correct='1';
+        b.onclick=()=>this.answer(b,c);
+        box.appendChild(b);
+      });
+    }
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
   answer(btn,choice){
-    const ok=choice===this.cur.a;
-    document.querySelectorAll('#tChoices .choice').forEach(b=>{
-      b.onclick=null;
-      if(b.dataset.correct==='1') b.classList.add('right');
-      else if(b===btn) b.classList.add('wrong'); else b.classList.add('faded');
-    });
+    const st=this.step();
+    const ok=choice===st.a;
+    const box=document.getElementById('tChoices');
+    if(btn){
+      box.querySelectorAll('.choice').forEach(b=>{
+        b.onclick=null;
+        if(b.dataset.correct==='1') b.classList.add('right');
+        else if(b===btn) b.classList.add('wrong'); else b.classList.add('faded');
+      });
+    } else {
+      // A built answer: the tiles go, and what was assembled stays to be read.
+      box.innerHTML=\`<div class="btn choice \${ok?'right':'wrong'}" style="cursor:default">\${choice}</div>\`;
+    }
     if(ok){ this.c++; Sfx.good(); } else { this.w++; Sfx.bad(); }
-    if(Game.s){ Game.recordAnswer(this.cur.key, ok); Game.save(); }
+    if(Game.s){
+      Game.recordAnswer(this.cur.key, ok, Lesson.weight(this.lesson && this.lesson.format));
+      Game.save();
+    }
     const e=document.getElementById('tExplain');
-    const miss = !ok && this.cur.why[choice];
+    const why = st!==this.cur ? (st._why||{}) : this.cur.why;
+    const miss = !ok && why[choice];
     e.style.display='block';
     e.innerHTML=\`<div style="font-weight:900;color:\${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
-        \${ok?'Correct.':'Not quite — the answer was <span style="color:var(--gold)">'+this.cur.a+'</span>.'}</div>
+        \${ok?'Correct.': st.quiet ? 'Not quite.'
+            : 'Not quite — the answer was <span style="color:var(--gold)">'+st.a+'</span>.'}</div>
       \${miss?\`<div class="miss">You chose <b>\${choice}</b>: \${miss}.</div>\`:''}
-      <div>\${this.cur.ex}</div>
+      <div>\${st.ex}</div>
       <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>\`;
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
@@ -11126,6 +11628,47 @@ const Train = {
    own keypad can produce, and anything it cannot parse simply shows no result. */
 const Calc = {
   ex:'', shown:false,
+
+  /* Kept numbers. The pad works one sum at a time, and most questions here are
+     two or three sums and then a comparison — a determinant is two products and
+     a difference, a matrix product is four dot products. Without somewhere to
+     put the first result, it has to be held in your head while you work the
+     second, and that is not the mathematics being tested. Keep pins what the
+     pad is showing beside the question, where it stays until the next one. */
+  kept:[], KEEP_MAX:6,
+  keep(){
+    const v=this.evaluate(this.ex);
+    if(v===null) return false;
+    const t=this.fmt(v);
+    if(this.kept[this.kept.length-1]===t) return false;      // already pinned
+    this.kept.push(t);
+    if(this.kept.length>this.KEEP_MAX) this.kept.shift();
+    this.ex='';                                              // ready for the next sum
+    this.paintKept();
+    return true;
+  },
+  clearKept(){ if(this.kept.length){ this.kept=[]; } this.paintKept(); },
+  // A kept number goes back into the sum being typed — it was kept to be used.
+  useKept(i){
+    const t=this.kept[i]; if(t===undefined) return;
+    if(!this.shown) this.open();
+    const lead=/[0-9.)²]$/.test(this.ex) ? '+' : '';
+    this.ex += lead + (t.startsWith('−') ? '('+t+')' : t);
+    this.render();
+  },
+  paintKept(){
+    const html = this.kept.length
+      ? \`<span class="sk">kept</span>\` +
+        this.kept.map((t,i)=>\`<button type="button" data-kept="\${i}">\${t}</button>\`).join('') +
+        \`<button type="button" class="sx" data-kept="x">clear</button>\`
+      : '';
+    document.querySelectorAll('.slate').forEach(el=>{
+      el.innerHTML=html;
+      el.querySelectorAll('button').forEach(b=>{
+        b.onclick=()=>{ if(b.dataset.kept==='x') this.clearKept(); else this.useKept(+b.dataset.kept); };
+      });
+    });
+  },
 
   tokens(s){
     const t=[]; let i=0;
@@ -11201,7 +11744,7 @@ const Calc = {
         ['4','4'],['5','5'],['6','6'],['×','×'],
         ['1','1'],['2','2'],['3','3'],['−','−'],
         ['C','C'],['0','0'],['.','.'],['+','+'],
-        ['⌫','⌫'],['=','=']],
+        ['⌫','⌫'],['📌 Keep','K'],['=','=']],
 
   /** Shown only where a scratch sum is plausibly wanted. */
   relevant(){
@@ -11224,11 +11767,13 @@ const Calc = {
       <div id="calcEx">&nbsp;</div>
       <div id="calcRes">&nbsp;</div>
       <div id="calcKeys">\${this.KEYS.map(([label,k])=>
-        \`<button data-k="\${k}"\${k==='='?' class="eq"':''}\${k==='C'?' class="clr"':''}>\${label}</button>\`).join('')}</div>
+        \`<button data-k="\${k}"\${k==='='?' class="eq"':''}\${k==='C'?' class="clr"':''}\${k==='K'?' class="keep"':''}>\${label}</button>\`).join('')}</div>
+      <div class="slate"></div>
     </div>\`;
     el.classList.add('on');
     document.getElementById('calcX').onclick=()=>this.close();
     el.querySelectorAll('#calcKeys button').forEach(b=>{ b.onclick=()=>this.key(b.dataset.k); });
+    this.paintKept();
     this.render();
   },
   close(){
@@ -11239,6 +11784,7 @@ const Calc = {
 
   key(k){
     if(k==='C') this.ex='';
+    else if(k==='K'){ this.keep(); Haptic.tap(); this.render(); return; }
     else if(k==='⌫') this.ex=this.ex.slice(0,-1);
     else if(k==='='){
       const v=this.evaluate(this.ex);
