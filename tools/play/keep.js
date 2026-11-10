@@ -127,8 +127,33 @@ module.exports = {
 
       // a bench redraws the room it is in
       Rooms.open('forge');
-      document.querySelector('#roomBody button[onclick*="f_picks"]').click();
-      out.forged = { ore: Game.s.mats.ore, shown: /You hold\s+🪨\s*5/.test(document.getElementById('roomBody').innerText) };
+      const picks0 = Game.s.items.pick;
+      document.querySelector('#roomBody [data-forge="f_picks"]').click();
+      out.anvil = { work: !!document.getElementById('forgeWork'), ore: Game.s.mats.ore,
+        listGone: !document.querySelector('#roomBody [data-forge]') };
+      document.getElementById('forgeStrike').click();
+      document.getElementById('forgeStrike').click();
+      out.twoStrikes = { ore: Game.s.mats.ore, picks: Game.s.items.pick - picks0,
+        pips: document.querySelectorAll('#roomBody .anvilpips i.on').length,
+        label: document.getElementById('forgeStrike').innerText };
+      // put down before the last blow: nothing spent, nothing made
+      document.getElementById('forgeDown').click();
+      out.putDown = { ore: Game.s.mats.ore, picks: Game.s.items.pick - picks0, work: !!Forge.work,
+        listBack: !!document.querySelector('#roomBody [data-forge="f_picks"]') };
+      // and the whole of it
+      document.querySelector('#roomBody [data-forge="f_picks"]').click();
+      for (let i = 0; i < 3; i++) document.getElementById('forgeStrike').click();
+      out.forged = { ore: Game.s.mats.ore, picks: Game.s.items.pick - picks0, work: !!Forge.work,
+        shown: /You hold\s+🪨\s*5/.test(document.getElementById('roomBody').innerText) };
+      // too little ore: the anvil is not even set
+      Game.s.mats.ore = 3;
+      Rooms.open('forge'); document.querySelector('#roomBody [data-forge="f_picks"]').click();
+      out.noOre = !!Forge.work;
+      // a blade left half beaten is not waiting when you come back
+      Game.s.mats.ore = 9; Forge.start('f_picks'); Forge.strike();
+      UI.go('s-keep'); Rooms.open('forge');
+      out.leftHalf = { work: !!Forge.work, ore: Game.s.mats.ore };
+      Game.s.mats.ore = 5;
       Rooms.open('runes');
       document.querySelector('#roomBody button[onclick*="r_edge"]').click();
       out.carved = { worn: !!Game.s.runes.r_edge, pill: /worn/.test(document.getElementById('roomBody').innerText),
@@ -150,10 +175,114 @@ module.exports = {
     t.ok('nothing the rooms sell is left in the Smithy', rooms.shopClean);
     t.ok('which still sells everything gold buys', rooms.shopSellsGold);
     t.eq('and points to the Keep for the rest', rooms.shopLeadsToKeep, 's-keep');
-    t.ok('forging in the room spends the ore and redraws the room', rooms.forged.ore === 5 && rooms.forged.shown, JSON.stringify(rooms.forged));
+    t.ok('choosing a thing to forge sets it on the anvil, and spends nothing yet',
+      rooms.anvil.work && rooms.anvil.listGone && rooms.anvil.ore === 9, JSON.stringify(rooms.anvil));
+    t.ok('two strikes are two strikes: still nothing spent, nothing made',
+      rooms.twoStrikes.ore === 9 && rooms.twoStrikes.picks === 0 && rooms.twoStrikes.pips === 2
+      && /last strike/i.test(rooms.twoStrikes.label), JSON.stringify(rooms.twoStrikes));
+    t.ok('putting the work down costs nothing',
+      rooms.putDown.ore === 9 && rooms.putDown.picks === 0 && !rooms.putDown.work && rooms.putDown.listBack);
+    t.ok('the third strike makes it: ore spent once, three picks, and the room redrawn',
+      rooms.forged.ore === 5 && rooms.forged.picks === 3 && !rooms.forged.work && rooms.forged.shown, JSON.stringify(rooms.forged));
+    t.ok('without the ore the anvil is never set', !rooms.noOre);
+    t.ok('and work left half done is not kept', !rooms.leftHalf.work && rooms.leftHalf.ore === 9);
     t.ok('carving a rune lights its place on the table', rooms.carved.worn && rooms.carved.pill && rooms.carved.slotLit);
     t.ok('the crucible repoints in place', rooms.pointed.from === 'herb' && rooms.pointed.shown, JSON.stringify(rooms.pointed));
     t.eq('the way out of a room is back to the Keep', rooms.back, 's-keep');
+
+    // ------------------------------------------------------------------
+    // The quarters: the one room that sells nothing.
+    // ------------------------------------------------------------------
+    const home = await t.ev(() => {
+      const out = {};
+      const k = Profiles.active();
+      const snap = () => JSON.stringify([Game.s.gold, Game.s.mats, Game.s.topicStats, Game.s.stats]);
+      Game.s.cleared = {}; Game.s.bests = {};
+      UI.go('s-keep');
+      out.door = /0 of 8 trophies/.test(document.getElementById('doorQuarters').innerText);
+      document.getElementById('doorQuarters').click();
+      out.screen = document.querySelector('.screen.on').id;
+      const art = () => document.querySelector('#quartersBody svg.roomart');
+      out.none = { trophies: art().querySelectorAll('[data-trophy]').length, next: (art().querySelector('[data-next]') || { dataset: {} }).dataset.next,
+        text: document.getElementById('qTrophies').innerText };
+
+      // two champions down
+      REALMS[0].foes.forEach((f, i) => Game.s.cleared['0:' + i] = 1);
+      REALMS[1].foes.forEach((f, i) => Game.s.cleared['1:' + i] = 1);
+      Quarters.render();
+      out.two = { trophies: art().querySelectorAll('[data-trophy]').length, next: art().querySelector('[data-next]').dataset.next,
+        text: document.getElementById('qTrophies').innerText,
+        names: [REALMS[0], REALMS[1]].map(r => r.foes[r.foes.length - 1].nm), nextName: REALMS[2].foes[REALMS[2].foes.length - 1].nm };
+      // a realm half cleared is not a trophy
+      Game.s.cleared['2:0'] = 1; Quarters.render();
+      out.halfRealm = art().querySelectorAll('[data-trophy]').length;
+
+      // colours and crest: through the buttons
+      const before = snap();
+      document.querySelector('#qCols .sw[data-col="#57cc7a"]').click();
+      document.querySelector('#qCrests .cr[data-crest="🐺"]').click();
+      out.look = { col: Profiles.active().col, crest: Profiles.active().crest,
+        banner: art().innerHTML.includes('#57cc7a') && art().querySelector('[data-crest]').textContent === '🐺',
+        pressed: document.querySelector('#qCols .sw.on').dataset.col,
+        stored: JSON.parse(localStorage.getItem(ROSTER_KEY)).knights.find(x => x.id === k.id).col,
+        free: snap() === before };
+      // only what a knight code can carry
+      Quarters.set('col', '#123456'); Quarters.set('crest', '🦄');
+      out.onlyListed = Profiles.active().col === '#57cc7a' && Profiles.active().crest === '🐺';
+      // and it does carry them
+      const res = Codec.decode(Profiles.export(k.id));
+      out.travels = res.ok && res.k.col === '#57cc7a' && res.k.crest === '🐺';
+
+      // worn into the fight
+      Battle.begin(0, 0);
+      out.worn = { plume: Battle.plumeCol, cape: Battle.capeCol, capeDarker: Battle.capeCol !== Battle.plumeCol };
+      Battle.flee();
+
+      // rooms are opened by where you have been
+      Quarters.open();
+      const row = id => document.querySelector(`#qRooms [data-style="${id}"]`);
+      out.rooms = { studyOpen: !!row('study').querySelector('button'), lodgeShut: !row('lodge').querySelector('button') && /🔒/.test(row('lodge').innerText),
+        eyrieShut: !row('eyrie').querySelector('button') };
+      Quarters.set('room', 'lodge');
+      out.lockedRefused = Profiles.active().room !== 'lodge';
+      row('study').querySelector('button').click();
+      out.movedIn = { room: Profiles.active().room, wall: art().innerHTML.includes('#14233d'), pill: /home/.test(row('study').innerText) };
+      Game.s.bests = { wilds: 3, summit: 9 }; Quarters.render();
+      out.afterWilds = { lodge: !!row('lodge').querySelector('button'), eyrie: !!row('eyrie').querySelector('button') };
+      Game.s.bests.summit = 10; Quarters.render();
+      out.afterSummit = !!row('eyrie').querySelector('button');
+      // a room you no longer qualify for falls back to stone, rather than breaking
+      Profiles.active().room = 'eyrie'; Game.s.bests = {}; Quarters.render();
+      out.fallback = Quarters.style(Profiles.active(), Game.s).id;
+      Profiles.active().room = 'keep';
+      out.nothingBought = snap() === before;
+      document.querySelector('#s-quarters > button.ghost').click();
+      out.back = document.querySelector('.screen.on').id;
+      return out;
+    });
+    t.ok('the Keep has a door to the knight\'s own quarters', home.door && home.screen === 's-quarters');
+    t.ok('an empty shelf marks the place for the first champion', home.none.trophies === 0 && home.none.next === '0');
+    t.ok('each champion put down leaves a trophy, named',
+      home.two.trophies === 2 && home.two.names.every(n => home.two.text.includes(n)), home.two.text.slice(0, 120));
+    t.ok('and the empty place moves on to the next', home.two.next === '2' && home.two.text.includes(home.two.nextName));
+    t.eq('a realm half cleared is not a trophy', home.halfRealm, 2);
+    t.ok('colour and crest change at a tap, and the room shows them',
+      home.look.col === '#57cc7a' && home.look.crest === '🐺' && home.look.banner && home.look.pressed === '#57cc7a', JSON.stringify(home.look));
+    t.eq('they are kept on the roster', home.look.stored, '#57cc7a');
+    t.ok('they cost nothing', home.look.free);
+    t.ok('only a colour or crest a knight code can carry is accepted', home.onlyListed);
+    t.ok('and the code does carry them', home.travels);
+    t.ok('the knight wears the colour into the fight: plume as chosen, cape a shade darker',
+      home.worn.plume === '#57cc7a' && home.worn.capeDarker && /^#[0-9a-f]{6}$/.test(home.worn.cape), JSON.stringify(home.worn));
+    t.ok('a room is opened by somewhere the knight has been',
+      home.rooms.studyOpen && home.rooms.lodgeShut && home.rooms.eyrieShut, JSON.stringify(home.rooms));
+    t.ok('a locked room cannot be moved into', home.lockedRefused);
+    t.ok('an open one can, and the walls change', home.movedIn.room === 'study' && home.movedIn.wall && home.movedIn.pill, JSON.stringify(home.movedIn));
+    t.ok('the Wilds open the lodge; nine up the Summit does not open the eyrie', home.afterWilds.lodge && !home.afterWilds.eyrie);
+    t.ok('ten does', home.afterSummit);
+    t.eq('a room no longer earned falls back to the stone keep', home.fallback, 'keep');
+    t.ok('nothing in the quarters touched gold, materials or mastery', home.nothingBought);
+    t.eq('the way out is back to the Keep', home.back, 's-keep');
 
     // ------------------------------------------------------------------
     // Mixing: always possible, in exactly one way.

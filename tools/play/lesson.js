@@ -507,6 +507,74 @@ module.exports = {
     t.ok('and a minus sign alone is not an answer', yard.loneMinusShut);
 
     // ------------------------------------------------------------------
+    // The rooms of a descent keep their own form, and gain the rule.
+    // ------------------------------------------------------------------
+    const sideRooms = await t.ev(() => {
+      const out = { seen: {}, known: {} };
+      Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 0 };
+      const cardIn = id => !!document.getElementById(id).closest('.panel').querySelector('.lcard');
+      // never met: the rule is above the question, and the four answers are still there
+      Game.s.topicStats = {};
+      R.seed(11); const spec = RoomKinds.seam.build(R, 6, SETTINGS.deep); R.unseed();
+      Seam.begin(spec, { depth: 6 }, () => {}); Seam.cut(1);
+      out.seen.seam = { card: cardIn('seamChoices'), choices: document.querySelectorAll('#seamChoices .choice').length };
+      // the same seam, once its topic is known: no card
+      Game.s.topicStats[spec.qs[0].key] = { c: 5, w: 0, m: 0.9, seen: 5, last: 0, t: Date.now() };
+      Seam.begin(spec, { depth: 6 }, () => {}); Seam.cut(1);
+      out.known.seam = cardIn('seamChoices');
+      // the card for a room draws nothing from the dice
+      Game.s.topicStats = {};
+      const q = buildQuestion('det2', 1);
+      const realR = R._r; let drew = 0; R._r = () => { drew++; return realR(); };
+      const html = Lesson.roomCard(q);
+      R._r = realR;
+      out.plain = { drew, hasRule: html.includes(q.codex.rule), noWorked: !/Watch one worked/.test(html) };
+      // the fight's own card may: it rolls a worked example
+      R._r = () => { drew++; return realR(); }; drew = 0;
+      const full = Lesson.card(q);
+      R._r = realR;
+      out.full = { drew, worked: /Watch one worked/.test(full) };
+      Game.s.topicStats.det2 = { c: 5, w: 0, m: 0.9, seen: 5, last: 0, t: Date.now() };
+      out.noneWhenKnown = Lesson.roomCard(q);
+      UI.go('s-title');
+      return out;
+    });
+    t.ok('a seam on a topic never met shows the rule above the question',
+      sideRooms.seen.seam.card === true && sideRooms.seen.seam.choices === 4, JSON.stringify(sideRooms.seen));
+    t.eq('and does not once the topic is known', sideRooms.known.seam, false);
+    t.ok('a room\'s card carries the rule and no worked example', sideRooms.plain.hasRule && sideRooms.plain.noWorked);
+    t.eq('so it draws nothing from the dice a seeded room is rebuilt from', sideRooms.plain.drew, 0);
+    t.ok('where a fight\'s card rolls one', sideRooms.full.worked && sideRooms.full.drew > 0);
+    t.eq('no card at all for a topic past its first meeting', sideRooms.noneWhenKnown, '');
+
+    // ------------------------------------------------------------------
+    // The end of a fight says what it taught.
+    // ------------------------------------------------------------------
+    const taught = await t.ev(() => {
+      const out = {};
+      __L.begin();
+      __L.ask('vecAdd', undefined); __L.answer(true); __L.next();
+      __L.ask('det2', 0.7); __L.answer(false); __L.next();
+      __L.ask('dot', 0.5);
+      document.getElementById('wgo').click(); __L.next();      // shown: records nothing
+      out.learned = JSON.parse(JSON.stringify(Battle.learned));
+      const host = document.createElement('div'); host.innerHTML = Battle.learnedHtml();
+      out.rows = [...host.querySelectorAll('[data-learned]')].map(r => r.dataset.learned);
+      out.text = host.innerText || host.textContent;
+      // a new fight starts with nothing learned
+      Battle.begin(0, 0);
+      out.fresh = { n: Object.keys(Battle.learned).length, html: Battle.learnedHtml() };
+      Battle.flee();
+      return out;
+    });
+    t.ok('a topic that rose is listed with where it started and where it stands',
+      taught.rows.includes('vecAdd') && /0% → 30%/.test(taught.text), taught.text.slice(0, 160));
+    t.ok('one that fell is listed too', taught.rows.includes('det2') && taught.learned.det2.to < taught.learned.det2.from);
+    t.ok('one that was only shown is not: nothing moved', !taught.rows.includes('dot') && !taught.learned.dot);
+    t.ok('rises come before falls', taught.rows.indexOf('vecAdd') < taught.rows.indexOf('det2'));
+    t.ok('and a new fight begins with nothing to report', taught.fresh.n === 0 && taught.fresh.html === '');
+
+    // ------------------------------------------------------------------
     // Kept numbers: the pad holds a sum so the knight does not have to.
     // ------------------------------------------------------------------
     const kept = await t.ev(() => {

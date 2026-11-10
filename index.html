@@ -450,6 +450,16 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .roomart{display:block; width:100%; height:auto;}
 .roomname{position:absolute; left:10px; top:8px; padding:3px 10px; border-radius:999px;
   background:rgba(12,8,22,.78); font-family:var(--serif); font-weight:800; font-size:15px;}
+.anvilpips{display:flex; justify-content:center; gap:10px; margin:12px 0 4px;}
+.anvilpips i{width:16px; height:16px; border-radius:50%; background:#2e1a12; border:2px solid #6b3e2c;}
+.anvilpips i.on{background:#ffd479; border-color:#ffd479; box-shadow:0 0 10px #ffb347;}
+.swrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+.sw{width:44px; height:44px; border-radius:50%; border:2px solid rgba(255,255,255,.18); cursor:pointer; padding:0;}
+.sw.on{border:3px solid var(--ink); box-shadow:0 0 0 3px rgba(243,236,216,.25);}
+.cr{width:46px; height:46px; border-radius:11px; border:2px solid var(--edge); background:#1d1633;
+  font-size:22px; cursor:pointer; padding:0;}
+.cr.on{border-color:var(--gold); background:#2c2249;}
+.chipsw{display:block; width:30px; height:26px; border-radius:6px; box-sizing:border-box;}
 /* ---- brewing ---- */
 .brewT{margin:10px 0 6px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
   background:rgba(242,193,78,.07); text-align:center;}
@@ -711,6 +721,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ A ROOM OF THE KEEP ============ -->
   <div class="screen" id="s-room">
     <div id="roomBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-keep')">← Back to the Keep</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ THE KNIGHT'S QUARTERS ============ -->
+  <div class="screen" id="s-quarters">
+    <div id="quartersBody"></div>
     <button class="btn ghost" onclick="UI.go('s-keep')">← Back to the Keep</button>
     <div style="height:20px"></div>
   </div>
@@ -4381,7 +4398,9 @@ function drawKnight(x,y,s,lunge,hurt,dead){
 
   const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
   const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
-  const cape = '#7a2f8f';
+  // The colour chosen in the quarters, worn where it shows: cape, tabard, plume.
+  const cape = Battle.capeCol || '#7a2f8f';
+  const plume = Battle.plumeCol || '#e5484d';
 
   // cape
   cx.save();
@@ -4416,7 +4435,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
   cx.quadraticCurveTo(10,-130,-2,-122);
-  setFill('#e5484d'); cx.fill();
+  setFill(plume); cx.fill();
 
   // shield (left arm)
   cx.save(); cx.translate(-38,-58); cx.rotate(-0.15);
@@ -5594,6 +5613,10 @@ const Battle = {
   },
   _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
+    const me=Profiles.active();
+    this.capeCol  = me ? shadeCol(col_(me), -70) : null;
+    this.plumeCol = me ? col_(me) : null;
+    this.learned={};                 // what moved in the mastery model, this fight
     // Skill abilities recharge every fight — they are what you know, not what
     // you own, so they cannot be hoarded or run out for good.
     this.skillLeft={};
@@ -6061,6 +6084,10 @@ const Battle = {
        wrong answer, not a question answered, and not a fresh timestamp. See the
        Working module: recency is what pages buy, and this must not be a bench. */
     this.lastMastery = this.shownWork ? null : Game.recordAnswer(this.cur.key, ok, weight);
+    if(this.lastMastery && this.learned){
+      const key=this.cur.key, e=this.learned[key] || (this.learned[key]={from:this.lastMastery.was});
+      e.to=Game.s.topicStats[key].m;
+    }
 
     // --- a step of a Rite: teach, chip in a little damage, move on ---
     if(this.rite){
@@ -6378,6 +6405,24 @@ const Battle = {
     this.nextQuestion();
   },
 
+  /* What the fight taught, for the panel that ends it. Gold and experience say
+     what was won; this says what changed in what the knight knows, which is the
+     only thing the game is actually for. Topics that fell are listed too — a
+     fight that showed up a weakness has told you something worth having. */
+  learnedHtml(){
+    const rows=Object.keys(this.learned||{}).map(k=>({k, d:this.learned[k]}))
+      .filter(x=>Math.round(x.d.to*100)!==Math.round(x.d.from*100))
+      .sort((a,b)=>(b.d.to-b.d.from)-(a.d.to-a.d.from)).slice(0,5);
+    if(!rows.length) return '';
+    return `<hr><div id="learned"><div class="small" style="margin-bottom:4px;font-weight:800;color:var(--gold)">What this fight taught</div>
+      ${rows.map(({k,d})=>{
+        const up=d.to>d.from, st=Lesson.stage(k);
+        return `<div class="small" data-learned="${k}" style="display:flex;justify-content:space-between;gap:8px;line-height:1.9">
+          <span>${TOPIC_LABEL[k]||k}${st!=='free'?` <span class="lsn">${Lesson.ICON[st]} ${Lesson.LABEL[st]} next</span>`:''}</span>
+          <b style="color:${up?'var(--green)':'var(--red)'};white-space:nowrap">${Math.round(d.from*100)}% → ${Math.round(d.to*100)}%</b></div>`;
+      }).join('')}</div>`;
+  },
+
   win(){
     if(this.over) return;
     this.tension(1);
@@ -6422,6 +6467,7 @@ const Battle = {
           </div>
           <hr>
           <div class="small">Longest streak this battle: ${g.stats.best}</div>
+          ${this.learnedHtml()}
         </div>
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(${this.ri},${this.fi})">↻ Fight again</button>
@@ -6458,6 +6504,7 @@ const Battle = {
           <hr>
           <div style="font-weight:800">−${lost} gold lost in the retreat</div>
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+          ${this.learnedHtml()}
         </div>
         <button class="btn gold" onclick="Battle.begin(${this.ri},${this.fi})">⚔️ Try again</button>
         <button class="btn" onclick="UI.go('s-tome')">📖 Study the Tome</button>
@@ -6792,11 +6839,13 @@ const Lesson = {
      It stays on screen above the question, which is the point of putting it
      there instead of in a dialog: the example is still in view while you copy
      its method, so the method does not have to be memorised to be used once. */
-  card(q, note){
+  card(q, note, plain){
     const r=Game.s && Game.s.topicStats[q.key];
     const again=!!(r && r.seen);
     const c=q.codex || {};
-    const s=buildQuestion(q.key, 1), w=Working.forStep(s);
+    // `plain` leaves the worked problem out, and with it the only draw on the
+    // dice this makes — see roomCard.
+    const s=plain ? null : buildQuestion(q.key, 1), w=s && Working.forStep(s);
     const worked = (w && w.steps.length)
       ? `<details><summary>▸ Watch one worked through</summary>
            <div class="lq">${s.q}</div>${Working.render(Object.assign({}, w, {rule:''}))}</details>` : '';
@@ -6807,6 +6856,21 @@ const Lesson = {
       ${worked}
       <div class="lnow">${note||'Now you — an easy one first.'}</div>
     </div>`;
+  },
+
+  /* The card, for the rooms of a descent. A seam, a thicket, a ward-stone and a
+     table each ask in their own way and stake their own thing on the answer, so
+     they keep their four answers — but none of them should be the first place a
+     topic is ever seen with nothing said about it. Where the knight is at the
+     first rung, the rule goes above the question.
+
+     It draws nothing from the dice. A room is rebuilt from its seed when a run
+     is resumed, and a card that rolled a fresh worked example on the way would
+     be one more thing that could differ between the room you left and the room
+     you came back to. */
+  roomCard(q){
+    if(!q || this.stage(q.key)!=='meet') return '';
+    return this.card(q, 'This room asks it the plain way — read the rule first.', true);
   },
 
   // The tag beside the topic's name: which rung, and how far up the ladder.
@@ -7175,6 +7239,31 @@ const Passage = {
    closes the loop: seams in the Deep give it up, and it comes back as the picks
    that open the Deep's chests. */
 const Forge = {
+  /* Three strikes at the anvil before a thing is made. It changes nothing about
+     what the Forge sells or what it costs — the ore is spent on the last blow,
+     by make(), exactly as it always was — but a blade that appears when a
+     button is pressed is a receipt, and one that is beaten out is a blade.
+     Putting the work down before the last strike costs nothing. */
+  STRIKES:3, work:null,
+  start(id){
+    const f=FORGE.find(x=>x.id===id), g=Game.s;
+    if(!f || !g) return;
+    if(f.owned && f.owned(g)) return;
+    if((g.mats.ore||0) < f.ore){
+      UI.toast(`That needs ${f.ore} ore — cut a seam in the Deep.`);
+      return;
+    }
+    this.work={id, n:0};
+    Rooms.refresh();
+  },
+  strike(){
+    const w=this.work; if(!w) return;
+    w.n++;
+    Sfx.coin(w.n); Haptic.tap();
+    if(w.n>=this.STRIKES){ this.work=null; this.make(w.id); return; }
+    Rooms.refresh();
+  },
+  down(){ this.work=null; Rooms.refresh(); },
   make(id){
     const f=FORGE.find(x=>x.id===id), g=Game.s;
     if(!f) return;
@@ -8751,7 +8840,7 @@ const Seam = {
         <h2 style="font-size:17px">${q.topic} <span class="tag">${this.at+1}/${this.want}</span></h2>
         <div class="sub">${this.yieldFor(this.want,this.ctx.depth)} ore rides on cutting all ${this.want} clean.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        ${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
         <div id="seamFig"></div>
         <div id="seamChoices" style="margin-top:10px"></div>
       </div>
@@ -8915,7 +9004,7 @@ const Scribe = {
           <b>${Math.round(this.precision*100)}%</b> precision — this line is worth
           <b>${Math.floor(this.PER_STEP*this.precision)}</b>.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        ${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
         <div id="scribeFig"></div>
         <div id="scribeChoices" style="margin-top:10px"></div>
       </div>
@@ -9177,7 +9266,7 @@ const Forage = {
         <h2 style="font-size:17px">${q.topic} <span class="tag">basket ${this.space}/${this.MAX_SPACE}</span></h2>
         <div class="sub">Answer this and the basket takes one more.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        ${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
         <div id="forageFig"></div>
         <div id="forageChoices" style="margin-top:10px"></div>
       </div>
@@ -9382,7 +9471,7 @@ const Sigil = {
           ? `<b>${this.layers}</b> layer${this.layers===1?'':'s'} cut. This one is staked against it.`
           : 'Nothing cut yet. This one costs you nothing to try.'}</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        ${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
         <div id="sigilFig"></div>
         <div id="sigilChoices" style="margin-top:10px"></div>
       </div>
@@ -9614,7 +9703,7 @@ const Wager = {
         <div class="sub">Right and the table pays ${Math.round(this.staked*this.mult)}.
           Wrong and the stake is gone.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
+        ${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">${q.q}</div>
         <div id="wagerFig"></div>
         <div id="wagerChoices" style="margin-top:10px"></div>
       </div>
@@ -10969,6 +11058,7 @@ const UI = {
     if(id==='s-shop') this.renderShop();
     if(id==='s-keep') Rooms.renderKeep();
     if(id==='s-room') Rooms.render();
+    if(id==='s-quarters') Quarters.render();
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
@@ -11514,6 +11604,13 @@ const Rooms = {
         ${this.mats()}
       </div>
       ${doors}
+      <div class="node" id="doorQuarters" onclick="Quarters.open()" style="border-left-color:${col_(Profiles.active())}">
+        <div class="ico" style="font-size:24px">${(Profiles.active()||{}).crest||'🛡️'}</div>
+        <div style="flex:1"><div class="nm">Your quarters</div>
+          <div class="dt">Trophies, colours and crest · nothing here is bought</div>
+          <div class="dt">${Quarters.trophies(Game.s).filter(t=>t.won).length} of ${REALMS.length} trophies on the shelf</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>
       <div class="node" onclick="UI.go('s-shop')">
         <div class="ico" style="font-size:24px">🏪</div>
         <div style="flex:1"><div class="nm">The Smithy</div>
@@ -11526,6 +11623,7 @@ const Rooms = {
     if(!this.byId(id)) return;
     this.cur=id;
     Brew.s=null;                       // a mix left on the bench is not kept
+    Forge.work=null;                   // nor a blade left half beaten
     UI.go('s-room');
   },
   render(){
@@ -11567,7 +11665,8 @@ const Rooms = {
         <ellipse cx="56" cy="122" rx="8" ry="6" fill="#fff1b8"/>
         <ellipse cx="80" cy="128" rx="90" ry="20" fill="#ff8c3c" opacity=".16"/>
         <path d="M132 86h96c0 9-12 14-26 15l5 21h-54l5-21c-14-1-26-6-26-15z" fill="#4a4a58" stroke="#6e6e80" stroke-width="2"/>
-        <rect x="156" y="78" width="50" height="8" rx="3" fill="#ffb347"/>
+        <rect x="156" y="78" width="50" height="8" rx="3" fill="${['#7a7a88','#e2572b','#ff9a3c','#ffd479'][Forge.work?Math.min(3,Forge.work.n+1):0]}"/>
+        ${Forge.work && Forge.work.n>0 ? `<path d="M180 76l-26-30M180 76l-10-40M180 76l14-38M180 76l32-26" stroke="#ffd479" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 8"/>` : ''}
         <rect x="262" y="34" width="80" height="88" rx="6" fill="#241410" stroke="#4d2e22" stroke-width="4"/>
         <path d="M280 44l4 8v52h-8V52z" fill="${edge}"/><path d="M272 104h16M280 104v12" stroke="#8a6a3a" stroke-width="4" stroke-linecap="round"/>
         <path d="M300 52h32l-3 40-13 8-13-8z" fill="${plate}"/>`, 'The forge: a hearth, an anvil, and a rack for what has been made');
@@ -11648,6 +11747,18 @@ const Rooms = {
      modules. */
   bench:{
     forge(g){
+      if(Forge.work){
+        const f=FORGE.find(x=>x.id===Forge.work.id), n=Forge.work.n, left=Forge.STRIKES-n;
+        return `<div class="panel" id="forgeWork">
+          <h2 style="font-size:17px">${f.ic} On the anvil: ${f.nm}</h2>
+          <div class="sub">${f.ds}</div>
+          <div class="anvilpips" aria-label="${n} of ${Forge.STRIKES} strikes">${
+            Array.from({length:Forge.STRIKES}, (_,i)=>`<i${i<n?' class="on"':''}></i>`).join('')}</div>
+          <button class="btn gold" id="forgeStrike" onclick="Forge.strike()">🔨 ${
+            n===0 ? `Strike the anvil — ${f.ore} ore` : left===1 ? 'The last strike!' : 'Strike again'}</button>
+          <button class="btn ghost" id="forgeDown" onclick="Forge.down()">← Put it down (nothing is spent)</button>
+        </div>`;
+      }
       return `<div class="panel"><div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
           <b>🪨 ${g.mats.ore}</b>.</div>` +
         FORGE.map(f=>{
@@ -11658,7 +11769,7 @@ const Rooms = {
             <div style="flex:1"><div class="nm">${f.nm}</div><div class="ds">${f.ds}</div></div>
             ${done ? '<span class="pill">forged</span>'
                    : `<button class="btn sm ${can?'gold':''}" style="width:auto"
-                        onclick="Forge.make('${f.id}')">🪨 ${f.ore}</button>`}
+                        data-forge="${f.id}" onclick="Forge.start('${f.id}')">🪨 ${f.ore}</button>`}
           </div>`;
         }).join('') + '</div>';
     },
@@ -11910,6 +12021,181 @@ const Brew = {
     </div>`;
   }
 };
+
+/* ------------------------------ the quarters ------------------------------ */
+/* The one room in the Keep that sells nothing.
+ *
+ * Every other door is a bench. This is where the knight lives, and what is in
+ * it is a record rather than a shop: the banner is their crest in their colour,
+ * the figure by the window wears what they wear into a fight, and the shelf
+ * holds one trophy for every realm whose champion they have put down — with an
+ * empty place, marked, for the next.
+ *
+ * Nothing here is bought. Colours and crest are free to change, because they
+ * always were a choice made at the gate and never an achievement. The rooms
+ * themselves are the other kind of thing: each is opened by somewhere the
+ * knight has actually been, and the door says where. That keeps to the rule the
+ * benches keep — what shows you have learned something cannot be had for coin.
+ *
+ * And nothing here is new to a save. The crest and colour were already on the
+ * roster and already travel in a knight code; the trophies are read off the
+ * map nodes that were always recorded; the chosen room is one word on the
+ * roster, which is this device's own and is simply the stone keep again on
+ * another. */
+const ROOM_STYLES = [
+  {id:'keep',  nm:'Stone keep',   wall:'#2a2142', line:'#1c1530', floor:'#3d2b22', rug:.55,
+   open:()=>true, how:''},
+  {id:'study', nm:'Arcane study', wall:'#14233d', line:'#0d1830', floor:'#2a2040', rug:.5,
+   open:g=>!!g.cleared['1:'+(REALMS[1].foes.length-1)],
+   how:()=>`Put down ${REALMS[1].foes[REALMS[1].foes.length-1].nm}`},
+  {id:'lodge', nm:'Forest lodge', wall:'#1d3324', line:'#14231a', floor:'#3b2a1a', rug:.5,
+   open:g=>((g.bests && g.bests.wilds)||0) >= 1,
+   how:()=>'Walk out into the Wilds and come back with something'},
+  {id:'eyrie', nm:'Summit eyrie', wall:'#22364d', line:'#172536', floor:'#3a3f4d', rug:.45,
+   open:g=>((g.bests && g.bests.summit)||0) >= 10,
+   how:()=>'Bank a climb from height 10 on the Summit'}
+];
+
+const Quarters = {
+  style(k, g){
+    const s=ROOM_STYLES.find(x=>x.id===(k && k.room));
+    return (s && s.open(g)) ? s : ROOM_STYLES[0];
+  },
+  // One trophy a realm, in the order the realms are met.
+  trophies(g){
+    return REALMS.map((r,ri)=>{
+      const boss=r.foes[r.foes.length-1];
+      return {realm:r.nm, col:r.col, boss:boss.nm, won:!!g.cleared[ri+':'+(r.foes.length-1)]};
+    });
+  },
+
+  open(){ UI.go('s-quarters'); },
+
+  /* The knight, standing. The same figure the battle draws, in the same
+     colours it will be drawn in there — which is the point of showing it. */
+  figure(col){
+    const cape=shadeCol(col, -70);
+    return `<g transform="translate(180 176)">
+      <ellipse cx="0" cy="4" rx="34" ry="6" fill="#000" opacity=".35"/>
+      <path d="M-6 -72Q-44 -30 -30 10Q-10 4 6 -70z" fill="${cape}"/>
+      <rect x="-20" y="-30" width="15" height="34" rx="5" fill="#8b97a8"/><rect x="5" y="-30" width="15" height="34" rx="5" fill="#8b97a8"/>
+      <rect x="-23" y="-2" width="20" height="9" rx="4" fill="#4a4038"/><rect x="3" y="-2" width="20" height="9" rx="4" fill="#4a4038"/>
+      <rect x="-24" y="-78" width="48" height="52" rx="10" fill="#c9d3e0"/>
+      <rect x="-9" y="-78" width="18" height="50" fill="${cape}"/>
+      <path d="M0 -66l6 10-6 10-6-10z" fill="#f2c14e"/>
+      <circle cx="-26" cy="-72" r="12" fill="#8b97a8"/><circle cx="26" cy="-72" r="12" fill="#8b97a8"/>
+      <circle cx="-26" cy="-72" r="7" fill="#c9d3e0"/><circle cx="26" cy="-72" r="7" fill="#c9d3e0"/>
+      <rect x="-19" y="-118" width="38" height="40" rx="13" fill="#c9d3e0"/>
+      <rect x="-14" y="-106" width="28" height="8" fill="#1a1622"/>
+      <rect x="-12" y="-104" width="9" height="4" fill="#5ad1ff"/><rect x="3" y="-104" width="9" height="4" fill="#5ad1ff"/>
+      <path d="M0 -120Q16 -136 4 -146Q10 -130 -2 -122z" fill="${col}"/>
+      <path d="M-52 -78h28v28q-14 16-28 0z" fill="${col}" stroke="#f2c14e" stroke-width="3"/>
+      <rect x="32" y="-64" width="9" height="20" fill="#6b5a3e"/><rect x="23" y="-68" width="28" height="7" fill="#f2c14e"/>
+      <path d="M30 -68h12l-2 -54-4 -10-4 10z" fill="#dfe8f5"/>
+    </g>`;
+  },
+
+  art(k, g){
+    const st=this.style(k, g), tr=this.trophies(g);
+    const next=tr.findIndex(t=>!t.won);
+    const shelf=tr.map((t,i)=>{
+      const x=250+(i%4)*26, y=i<4 ? 74 : 116;
+      if(t.won) return `<g data-trophy="${i}"><path d="M${x-7} ${y-16}h14v7a7 7 0 0 1-14 0z" fill="${t.col}"/>
+        <rect x="${x-2}" y="${y-4}" width="4" height="4" fill="${t.col}"/><rect x="${x-6}" y="${y}" width="12" height="3" rx="1" fill="#8a6a3a"/></g>`;
+      if(i===next) return `<g data-next="${i}"><rect x="${x-8}" y="${y-17}" width="16" height="20" rx="4" fill="none"
+        stroke="#8d80b3" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="${x}" y="${y-2}" text-anchor="middle" font-size="12" font-weight="700" fill="#b4a8d4">?</text></g>`;
+      return '';
+    }).join('');
+    return `<svg class="roomart" viewBox="0 0 360 200" role="img" preserveAspectRatio="xMidYMid slice"
+        aria-label="Your quarters: your banner, your trophies, and the knight in your colours">
+      <rect width="360" height="200" fill="${st.wall}"/>
+      <path d="M0 36h360M0 72h360M0 108h360" stroke="${st.line}" stroke-width="2"/>
+      <rect y="150" width="360" height="50" fill="${st.floor}"/><path d="M0 150h360" stroke="#000" stroke-opacity=".3" stroke-width="3"/>
+      <ellipse cx="180" cy="182" rx="92" ry="13" fill="${col_(k)}" opacity="${st.rug}"/>
+      <path d="M22 150V86a26 26 0 0 1 52 0v64z" fill="#0f1a33" stroke="#4a3f62" stroke-width="5"/>
+      <circle cx="58" cy="84" r="7" fill="#ffe6ae"/><path d="M48 60v90M22 110h52" stroke="#4a3f62" stroke-width="3"/>
+      <rect x="100" y="38" width="48" height="6" rx="3" fill="#8a6a3a"/>
+      <path d="M104 44h40v64l-20-13-20 13z" fill="${col_(k)}"/>
+      <text x="124" y="80" text-anchor="middle" font-size="22" data-crest="1">${k.crest}</text>
+      <rect x="236" y="78" width="110" height="6" rx="2" fill="#6b4f30"/><rect x="236" y="120" width="110" height="6" rx="2" fill="#6b4f30"/>
+      ${shelf}
+      ${this.figure(col_(k))}
+    </svg>`;
+  },
+
+  render(){
+    const k=Profiles.active(), g=Game.s;
+    if(!k || !g) return;
+    const tr=this.trophies(g), won=tr.filter(t=>t.won), next=tr.find(t=>!t.won);
+    const st=this.style(k, g);
+    const w=Game.weapon(), a=Game.armor();
+    const runes=RUNES.filter(r=>Runes.worn(r.id));
+    const solid=Object.keys(g.topicStats).filter(key=>Mastery.eff(key)>=0.85).length;
+    document.getElementById('quartersBody').innerHTML=`
+      <div class="roomhead">${this.art(k, g)}
+        <div class="roomname" style="color:${k.col}">${k.crest} ${Knights.esc(k.nm)}'s quarters</div></div>
+      <div class="panel">
+        <div class="sub">Level <b>${g.lvl}</b> · <b>${Titles.count()}</b> title${Titles.count()===1?'':'s'} ·
+          <b>${solid}</b> topic${solid===1?'':'s'} solid right now.
+          <span class="kbd" style="margin-left:6px" onclick="Knights.rename('${k.id}');Quarters.render()">✏️ Rename</span></div>
+        <div class="item equipped"><div class="ic">${w.ic}</div>
+          <div style="flex:1"><div class="nm">${w.nm}</div><div class="ds">⚔️ ${w.dmg} damage · ${Math.round(w.crit*100)}% crit</div></div></div>
+        <div class="item equipped"><div class="ic">${a.ic}</div>
+          <div style="flex:1"><div class="nm">${a.nm}</div><div class="ds">🛡️ ${a.def} defence · ❤️ +${a.hp} health</div></div></div>
+        ${runes.length?`<div class="small" style="margin-top:6px">Runes worn: ${runes.map(r=>r.ic+' '+r.nm).join(' · ')}</div>`:''}
+      </div>
+      <div class="panel" id="qTrophies"><h2>🏆 The shelf</h2>
+        <div class="sub"><b>${won.length}</b> of ${tr.length} champions put down. Each leaves a trophy;
+          ${next ? `the empty place is for <b>${next.boss}</b>, in ${next.realm}.` : 'the shelf is full.'}</div>
+        ${won.map(t=>`<div class="item"><div class="ic" style="color:${t.col}">🏆</div>
+          <div style="flex:1"><div class="nm">${t.boss}</div><div class="ds" style="color:${t.col}">${t.realm}</div></div></div>`).join('')}
+      </div>
+      <div class="panel" id="qLook"><h2>🎨 Colours and crest</h2>
+        <div class="sub">Yours to change whenever you like. They are worn into every fight, and they travel
+          with the knight to another device.</div>
+        <div class="swrow" id="qCols">${CREST_COLS.map(c=>
+          `<button type="button" class="sw${c===k.col?' on':''}" style="background:${c}" data-col="${c}"
+             aria-label="Colour ${c}" aria-pressed="${c===k.col}" onclick="Quarters.set('col','${c}')"></button>`).join('')}</div>
+        <div class="swrow" id="qCrests">${CRESTS.map(c=>
+          `<button type="button" class="cr${c===k.crest?' on':''}" data-crest="${c}"
+             aria-pressed="${c===k.crest}" onclick="Quarters.set('crest','${c}')">${c}</button>`).join('')}</div>
+      </div>
+      <div class="panel" id="qRooms"><h2>🏠 The room</h2>
+        <div class="sub">Not bought. Each is opened by somewhere you have been.</div>
+        ${ROOM_STYLES.map(s=>{
+          const open=s.open(g), on=st.id===s.id;
+          return `<div class="item ${on?'equipped':''}" data-style="${s.id}" style="${open?'':'opacity:.6'}">
+            <div class="ic"><span class="chipsw" style="background:${s.wall};border-bottom:7px solid ${s.floor}"></span></div>
+            <div style="flex:1"><div class="nm">${s.nm}</div>
+              <div class="ds">${open ? (on?'Where you live now.':'Open to you.') : '🔒 '+s.how()}</div></div>
+            ${on ? '<span class="pill">home</span>'
+                 : open ? `<button class="btn sm" style="width:auto" onclick="Quarters.set('room','${s.id}')">Move in</button>` : ''}
+          </div>`;
+        }).join('')}
+      </div>`;
+  },
+
+  /* Only ever one of the values on offer: a crest and a colour are written into
+     a knight code as an index, so anything else would not survive the journey. */
+  set(what, v){
+    const k=Profiles.active(), g=Game.s;
+    if(!k || !g) return;
+    if(what==='col'   && CREST_COLS.indexOf(v)>=0) k.col=v;
+    else if(what==='crest' && CRESTS.indexOf(v)>=0) k.crest=v;
+    else if(what==='room'){
+      const s=ROOM_STYLES.find(x=>x.id===v);
+      if(!s || !s.open(g)) return;
+      k.room=v;
+    } else return;
+    Profiles.save();
+    Haptic.tap();
+    this.render();
+    UI.refreshTitle();
+  }
+};
+// The active knight's colour, or the first on the list if it is somehow not one.
+function col_(k){ return (k && CREST_COLS.indexOf(k.col)>=0) ? k.col : CREST_COLS[0]; }
 
 const Train = {
   pool:[], title:'', c:0, w:0, cur:null, lesson:null,

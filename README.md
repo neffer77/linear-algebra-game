@@ -342,6 +342,18 @@ piles barely pays, and every unit poured makes the next worth less. No rate ever
 1:1, so a round trip strictly loses and there is no cycle to farm. It takes **one pour per
 descent**, which is what makes *how much* a commitment rather than arithmetic.
 
+**The Forge is struck, not pressed.** Choosing something to forge sets it on the anvil;
+three strikes make it, and the ore is spent on the last one. Putting the work down before
+then costs nothing.
+
+**Your quarters** are the one room that sells nothing. The banner is the knight's crest in
+their colour, the figure wears what they wear into a fight, and the shelf holds one trophy
+for every realm whose champion has been put down, with the next place marked. Colours and
+crest are free to change, are worn in battle (plume as chosen, cape a shade darker), and
+travel in a knight code as they always did. The room itself has four styles, and none is
+bought: each is opened by somewhere the knight has been — a champion beaten, a walk in the
+Wilds, a climb banked from height ten.
+
 **The Apothecary asks for a mix before it makes anything.** A potion is so many parts of
 each herb, added up — a linear combination — so a recipe calls for a strength such as
 ⟨10, 14⟩, each herb on the bench carries its own, and the cauldron takes the mix when the
@@ -384,8 +396,15 @@ The game is built so that losing teaches you as much as winning.
   run climbs exactly one rung an answer. A first meeting that goes wrong draws no blood,
   but it is still a wrong answer in every other respect, so there is nothing to gain by
   missing on purpose. The Training Grounds use the same ladder. The Daily Skirmish does
-  not: it is the same twelve problems for everyone. Dungeon side-rooms (locks, seams,
-  thickets and the rest) still ask in the old four-answer form.
+  not: it is the same twelve problems for everyone. The rooms of a descent — seams,
+  thickets, ward-stones, tables, the scriptorium — keep their four answers, because each
+  stakes its own thing on the answer, but a topic at its first meeting now arrives there
+  with the rule above the question. That card draws nothing from the dice, so a room
+  rebuilt from its seed on resuming a run is the room that was left.
+- **The end of a fight says what it taught.** Under the gold and the experience, the
+  victory and defeat panels list each topic whose mastery moved — *Dot Product 0% → 30%* —
+  with the rung it will be asked on next. Falls are listed as well as rises; being shown
+  the working moves nothing and so lists nothing.
 - **Every topic has a rule card.** Thirty-seven were written beside their generators; the
   other thirty-three — the simpler topics, which went without on the theory that they
   needed no introduction — fall back to `RULES`.
@@ -487,6 +506,7 @@ Inside `index.html` the code is organised as:
 | `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
 | `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
+| `ROOM_STYLES`, `Quarters` | the knight's own room: trophies read off cleared champions, colours and crest on the roster, and room styles opened by play |
 | `Brew` | the Apothecary's mix: draws independent herbs, builds a target from hidden parts, and hands a right mix to the bench |
 | `RULES`, `Lesson` | a rule card for every topic, and the ladder a topic is asked up — rung read off faded mastery, the true-or-false and three-answer steps, and the tile-and-slot build |
 | `WaveEngine` | one foe curve for every setting — ramp, swell, thin air and champions in one place |
@@ -566,7 +586,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-five suites, 1,279 checks, about a minute:
+loop only exists once the page is running. Twenty-five suites, 1,314 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -590,8 +610,8 @@ loop only exists once the page is running. Twenty-five suites, 1,279 checks, abo
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
-| `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, and a first meeting draws no blood |
-| `keep` | every craft has a room that says what can be done in it, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
+| `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
+| `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `map` | the places you can go are above the campaign, not below thirty-two fights |
 | `cheat` | the testing door opens for nobody who has not typed it |
