@@ -9938,7 +9938,7 @@ const Lock = {
       <div class="center crest">🔒</div>
       <div class="panel center">
         <h2>A locked chest, and no picks</h2>
-        <div class="sub">This one guards <b>\${q.topic}</b>. Smith or buy lockpicks at the Smithy and the Deep's chests open to you.</div>
+        <div class="sub">This one guards <b>\${q.topic}</b>. Forge lockpicks at the Keep, or buy them at the Smithy, and the Deep's chests open to you.</div>
       </div>
       <div id="lockOut"></div>
       <div style="height:16px"></div>\`;
