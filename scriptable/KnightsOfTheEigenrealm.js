@@ -416,6 +416,114 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .cxinline{background:rgba(242,193,78,.1); border:1px solid rgba(242,193,78,.34);
   border-radius:9px; padding:8px 10px; margin:8px 0; font-size:14px; line-height:1.55;}
 .cxinline b{color:var(--gold); font-size:11px; letter-spacing:.14em; text-transform:uppercase;}
+/* ---- lessons: the ladder a topic is taught up ---- */
+.lsn{display:inline-flex; align-items:center; gap:5px; padding:1px 8px; border-radius:999px;
+  background:#1f3350; border:1px solid #3d6a9c; color:#bfe0ff; font-size:10px; font-weight:800;
+  letter-spacing:.06em; margin-left:6px; white-space:nowrap; font-family:var(--serif);}
+.lsn i{display:inline-block; width:6px; height:6px; border-radius:50%; background:#3d6a9c;}
+.lsn i.on{background:#bfe0ff;}
+#lcard:empty,#tCard:empty{display:none}
+.lcard{background:rgba(90,169,230,.09); border:1px solid rgba(90,169,230,.42); border-radius:12px;
+  padding:10px 12px; margin:8px 0 10px; font-size:14.5px; line-height:1.55; text-align:left;}
+.lcard .lk{font-family:var(--serif); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:#9fd0ff; font-weight:800; margin-bottom:4px;}
+.lcard .lrule{font-weight:700;}
+.lcard .leg{margin-top:6px; padding:6px 9px; border-radius:8px; background:rgba(0,0,0,.22);
+  font-size:14px; overflow-x:auto;}
+.lcard details{margin-top:6px;}
+.lcard summary{cursor:pointer; color:#9fd0ff; font-size:13px; min-height:32px; display:flex; align-items:center;}
+.lcard .lq{font-weight:800; text-align:center; margin:6px 0;}
+.lcard .lnow{margin-top:8px; font-size:12px; color:var(--dim);}
+.claim{margin-top:10px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
+  background:rgba(242,193,78,.07); font-size:17px;}
+.claim span{display:block; font-family:var(--serif); font-size:10px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--gold); margin-bottom:3px;}
+/* Building an answer out of its pieces. The slots sit inside the answer's own
+   shape — brackets, commas and all — so what is being assembled looks like the
+   thing it will be, and each number has somewhere to live the moment it is
+   worked out instead of having to be carried. */
+.bld{margin-top:6px; text-align:center;}
+.bld .bhint{font-size:12px; color:var(--dim); margin-bottom:8px;}
+.bld .bans{font-size:22px; font-weight:800; line-height:2.2;}
+.bslot{display:inline-flex; align-items:center; justify-content:center; min-width:44px; min-height:40px;
+  padding:0 6px; margin:2px 1px; border-radius:9px; border:2px dashed var(--edge); background:#140f24;
+  color:var(--ink); font:inherit; font-size:19px; font-weight:800; cursor:pointer; vertical-align:middle;}
+.bslot.now{border-color:var(--gold); border-style:solid; box-shadow:0 0 8px rgba(242,193,78,.5);}
+.bslot.full{border-style:solid; border-color:#6a5aa0;}
+.bslot.good{border-color:var(--green); background:#1d3a28;}
+.bslot.bad{border-color:var(--red); background:#3a1d22;}
+.btiles{display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin-top:10px;}
+.btile{min-width:46px; min-height:46px; padding:0 10px; border-radius:11px; border:1px solid var(--edge);
+  background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink); font-size:18px; font-weight:900;
+  box-shadow:0 3px 0 #150e28; cursor:pointer;}
+.btile:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+.bpad{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px;}
+.bpad .btile{min-width:0; padding:0;}
+/* ---- what next, at the top of the map ---- */
+#heroCard{border-color:rgba(242,193,78,.4); padding-bottom:12px;}
+#heroCard .hk{font-family:var(--serif); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold);}
+#heroCard .hn{font-family:var(--serif); font-size:23px; font-weight:800; line-height:1.15; margin-top:2px;}
+#heroCard .hd{font-size:13px; color:var(--dim); margin-top:5px;}
+#heroCard .hd b{color:var(--ink);}
+.hpips{display:flex; gap:5px; margin-top:8px;}
+.hpips i{flex:1; height:8px; border-radius:4px; background:#171129; border:1px solid var(--edge);}
+.hpips i.now{border-color:var(--gold); box-shadow:0 0 6px rgba(242,193,78,.6);}
+.hpips i.boss{flex:1.4;}
+.hchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
+.hchip{display:inline-flex; align-items:center; min-height:36px; padding:0 11px; border-radius:999px;
+  border:1px solid var(--edge); background:#1d1633; color:var(--ink); font:inherit; font-size:12.5px; font-weight:700;}
+button.hchip{cursor:pointer; border-color:var(--gold-dk);}
+/* ---- the Keep and its rooms ---- */
+.matrow{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
+.mat{display:flex; flex-direction:column; align-items:center; padding:6px 2px; border-radius:10px;
+  background:#171129; border:1px solid var(--edge); font-size:11px; color:var(--dim);}
+.mat b{font-size:17px; color:var(--ink);}
+.door.lit{box-shadow:0 0 0 1px rgba(87,204,122,.45), 0 0 16px rgba(87,204,122,.16);}
+.roomhead{position:relative; margin:0 0 8px; border-radius:14px; overflow:hidden; border:1px solid var(--edge);}
+.roomart{display:block; width:100%; height:auto;}
+.roomname{position:absolute; left:10px; top:8px; padding:3px 10px; border-radius:999px;
+  background:rgba(12,8,22,.78); font-family:var(--serif); font-weight:800; font-size:15px;}
+.anvilpips{display:flex; justify-content:center; gap:10px; margin:12px 0 4px;}
+.anvilpips i{width:16px; height:16px; border-radius:50%; background:#2e1a12; border:2px solid #6b3e2c;}
+.anvilpips i.on{background:#ffd479; border-color:#ffd479; box-shadow:0 0 10px #ffb347;}
+.swrow{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;}
+.sw{width:44px; height:44px; border-radius:50%; border:2px solid rgba(255,255,255,.18); cursor:pointer; padding:0;}
+.sw.on{border:3px solid var(--ink); box-shadow:0 0 0 3px rgba(243,236,216,.25);}
+.cr{width:46px; height:46px; border-radius:11px; border:2px solid var(--edge); background:#1d1633;
+  font-size:22px; cursor:pointer; padding:0;}
+.cr.on{border-color:var(--gold); background:#2c2249;}
+.chipsw{display:block; width:30px; height:26px; border-radius:6px; box-sizing:border-box;}
+/* ---- brewing ---- */
+.brewT{margin:10px 0 6px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
+  background:rgba(242,193,78,.07); text-align:center;}
+.brewT .bk,.brewT .bn{display:block; font-size:11px; color:var(--dim);}
+.brewT .bk{font-family:var(--serif); letter-spacing:.14em; text-transform:uppercase; color:var(--gold);}
+.brewT .bv{display:block; font-size:24px; font-weight:800; margin:2px 0;}
+.brewH .bvec{font-weight:800; color:var(--gold); margin-left:4px; white-space:nowrap;}
+.bstep{width:44px; height:44px; flex:none; border-radius:11px; border:1px solid var(--edge);
+  background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink); font-size:22px; font-weight:900;
+  box-shadow:0 3px 0 #150e28; cursor:pointer;}
+.bstep:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
+.bstep[disabled]{opacity:.35; pointer-events:none;}
+.bparts{min-width:26px; text-align:center; font-size:20px; font-weight:900;}
+.brewSum{margin:10px 0 8px; text-align:center; font-size:15px; line-height:1.6; overflow-wrap:anywhere;}
+.brewSum b{color:var(--gold);}
+.brewM{display:flex; gap:6px; margin-bottom:8px;}
+.bm{flex:1; display:flex; flex-direction:column; align-items:center; padding:7px 4px; border-radius:10px;
+  border:1px solid var(--edge); background:#171129; font-size:12px; color:var(--dim);}
+.bm b{font-size:17px; color:var(--ink);}
+.bm i{font-style:normal; font-weight:800;}
+.bm.ok{border-color:#3f6a46; background:#1d3a28;} .bm.ok i{color:#9ee8b3;}
+.bm.under i{color:var(--gold);} .bm.over{border-color:#6a3c41;} .bm.over i{color:#ffb3b6;}
+/* Numbers kept from the scratch pad. They stay beside the question until the
+   next one, which is the whole point: a sum worked out once should not have to
+   be held in your head while you work out the next. */
+.slate{display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px; margin:6px 0 2px;}
+.slate:empty{display:none}
+.slate .sk{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); font-family:var(--serif);}
+.slate button{min-height:34px; padding:0 10px; border-radius:9px; border:1px solid var(--gold-dk);
+  background:#2b2247; color:var(--gold); font-weight:800; font-size:15px; cursor:pointer;}
+.slate button.sx{border-color:var(--edge); color:var(--dim); font-size:12px; font-weight:700;}
 /* Collapsible strand. At seventy topics the flat list was a wall of buttons;
    these headers keep every screen to one thumb-reach, and opening one closes
    the rest so the list never grows underneath your thumb. */
@@ -444,9 +552,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   border:1px solid var(--edge); background:linear-gradient(180deg,#3d3160,#281f45); color:var(--ink);
   box-shadow:0 3px 0 #150e28; cursor:pointer}
 #calcKeys button:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28}
-#calcKeys button.eq{grid-column:span 3; background:linear-gradient(180deg,var(--gold),var(--gold2));
+#calcKeys button.eq{grid-column:span 2; background:linear-gradient(180deg,var(--gold),var(--gold2));
   color:#241a05}
 #calcKeys button.clr{color:#ff9b9e}
+#calcKeys button.keep{font-size:14px; color:var(--gold)}
 
 /* One bar, two jobs: "a new version is ready" and "install me so your saves
    survive". Both are interruptions, so both sit out of the way at the bottom
@@ -550,16 +659,18 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ MAP ============ -->
   <div class="screen" id="s-map">
     <div id="hud" class="hud"></div>
+    <div id="mapHero"></div>
     <div class="panel" style="padding:10px">
       <div class="row">
+        <button class="btn sm" onclick="UI.go('s-keep')" id="btnKeep">🏰 Keep</button>
         <button class="btn sm" onclick="UI.go('s-shop')">🏪 Smithy</button>
         <button class="btn sm" onclick="UI.go('s-gear')">🎒 Gear</button>
-        <button class="btn sm" onclick="UI.go('s-tome')">📖 Tome</button>
       </div>
       <div class="row">
-        <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
-        <button class="btn sm ghost" onclick="Game.rest()">🔥 Camp &amp; Rest</button>
-        <button class="btn sm ghost" onclick="UI.go('s-prefs')">⚙️ Settings</button>
+        <button class="btn sm ghost" onclick="UI.go('s-tome')">📖 Tome</button>
+        <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Train</button>
+        <button class="btn sm ghost" onclick="Game.rest()">🔥 Rest</button>
+        <button class="btn sm ghost" onclick="UI.go('s-prefs')" aria-label="Settings" style="flex:0 0 46px">⚙️</button>
       </div>
     </div>
     <div id="mapList"></div>
@@ -590,8 +701,10 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="riteBar" style="display:none"></div>
       <div id="riteTrail" style="display:none"></div>
       <div id="qhead"><div id="qtopic"></div></div>
+      <div id="lcard"></div>
       <div id="qbox"></div>
       <div id="qfig"></div>
+      <div class="slate"></div>
       <div id="choices"></div>
       <div id="pstrike" style="display:none"></div>
       <div id="showwork" style="display:none"></div>
@@ -632,6 +745,27 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ THE KEEP ============ -->
+  <div class="screen" id="s-keep">
+    <div id="keepBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ A ROOM OF THE KEEP ============ -->
+  <div class="screen" id="s-room">
+    <div id="roomBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-keep')">← Back to the Keep</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ THE KNIGHT'S QUARTERS ============ -->
+  <div class="screen" id="s-quarters">
+    <div id="quartersBody"></div>
+    <button class="btn ghost" onclick="UI.go('s-keep')">← Back to the Keep</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ GEAR ============ -->
   <div class="screen" id="s-gear">
     <div id="hud3" class="hud"></div>
@@ -664,7 +798,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div id="trainRun" style="display:none">
       <div class="panel">
         <div id="tTopic" class="small center"></div>
+        <div id="tCard"></div>
         <div id="tQ" style="font-size:19px;font-weight:800;text-align:center;padding:8px 2px 10px;line-height:1.5"></div>
+        <div class="slate"></div>
         <div id="tChoices"></div>
       </div>
       <div class="panel" id="tExplain" style="display:none;border-left:4px solid var(--gold);font-size:15px;line-height:1.6"></div>
@@ -2333,6 +2469,90 @@ taylor(d){
 }
 };
 
+/* A rule for every topic.
+ *
+ * Thirty-seven generators carry their own \`codex\` card, written beside the
+ * question it explains. The rest were the simpler topics, and went without on
+ * the theory that they needed no introduction — which is true of somebody who
+ * already knows them and false of everybody else. A topic with no rule cannot
+ * be introduced before it is asked, and the first sight of "tr" or "det" or
+ * "×" was a question about a word nobody had defined.
+ *
+ * So these are the missing cards, and buildQuestion falls back to them. Each is
+ * what a first meeting needs: the rule in one sentence, and one small instance
+ * of it with the arithmetic showing. Checked against the generators they
+ * describe — \`ln(kx)\` really does differentiate to 1/x, the scalar projection
+ * really is over ‖v‖ and not ‖v‖² — and held to the same 200 characters the
+ * authored ones are. */
+const RULES = {
+  vecAdd:   {rule:'Add matching components: first with first, second with second. Nothing else mixes.',
+             eg:'⟨1, 2⟩ + ⟨3, 4⟩ = ⟨1+3, 2+4⟩ = ⟨4, 6⟩'},
+  vecScale: {rule:'A number in front of a vector multiplies every component of it.',
+             eg:'3 · ⟨2, −1⟩ = ⟨3·2, 3·(−1)⟩ = ⟨6, −3⟩'},
+  vecCombo: {rule:'Scale each vector by its own number first, then add the results component by component.',
+             eg:'2⟨1, 0⟩ + 3⟨0, 1⟩ = ⟨2, 0⟩ + ⟨0, 3⟩ = ⟨2, 3⟩'},
+  dot:      {rule:'Multiply matching components, then add the products. The answer is one number, not a vector.',
+             eg:'⟨1, 2⟩ · ⟨3, 4⟩ = 1·3 + 2·4 = 11'},
+  mag:      {rule:'The length of a vector: square each component, add the squares, take the square root. It is Pythagoras.',
+             eg:'‖⟨3, 4⟩‖ = √(9 + 16) = √25 = 5'},
+  orth:     {rule:'Two vectors are perpendicular exactly when their dot product is zero.',
+             eg:'⟨1, 2⟩ · ⟨2, −1⟩ = 2 − 2 = 0, so they are perpendicular'},
+  matVec:   {rule:'Dot each row of the matrix with the vector. Each row gives one entry of the answer.',
+             eg:\`\${mat([[1,2],[3,4]])}\${vec([1,1])} : top = 1·1 + 2·1 = 3, bottom = 3·1 + 4·1 = 7\`},
+  det2:     {rule:'For a 2×2 matrix, det = ad − bc: multiply down the main diagonal, then subtract the product of the other diagonal.',
+             eg:\`det \${mat([[1,2],[3,4]])} = 1·4 − 2·3 = −2\`},
+  transpose:{rule:'Flip the matrix across its main diagonal, so rows become columns. The diagonal stays put; the other two entries swap.',
+             eg:\`\${mat([[1,2],[3,4]])}<sup>T</sup> = \${mat([[1,3],[2,4]])}\`},
+  trace:    {rule:'The trace (tr) is the sum of the main diagonal — top-left to bottom-right. Nothing off the diagonal counts.',
+             eg:\`tr \${mat([[1,2],[3,4]])} = 1 + 4 = 5\`},
+  solve2:   {rule:'Make one unknown cancel: add or subtract the equations (scaling one if needed), solve for what is left, then substitute back.',
+             eg:'x + y = 5 and x − y = 1: adding gives 2x = 6, so x = 3 and y = 2'},
+  det3:     {rule:'Expand along the top row: each entry times the 2×2 determinant left when its row and column are struck out, with signs + − +.',
+             eg:'det = a(ei − fh) − b(di − fg) + c(dh − eg)'},
+  cross:    {rule:'u × v = ⟨u₂v₃ − u₃v₂, u₃v₁ − u₁v₃, u₁v₂ − u₂v₁⟩. The result is a vector perpendicular to both.',
+             eg:'⟨1, 0, 0⟩ × ⟨0, 1, 0⟩ = ⟨0, 0, 1⟩'},
+  rank:     {rule:'Two columns are linearly independent unless one is a multiple of the other. For a 2×2 matrix that is exactly when the determinant is not zero.',
+             eg:\`\${mat([[1,2],[2,4]])} has det 1·4 − 2·2 = 0: the second column is twice the first, so they are dependent\`},
+  proj:     {rule:'The scalar projection of u onto v is (u · v) / ‖v‖ — how much of u points along v.',
+             eg:'u = ⟨3, 4⟩, v = ⟨1, 0⟩: (3·1 + 4·0) / 1 = 3'},
+  limPoly:  {rule:'A polynomial has no jumps or holes, so its limit at a point is simply its value there: substitute.',
+             eg:'lim x→2 of (x² + 1) = 2² + 1 = 5'},
+  limRational:{rule:'If substituting gives 0/0, a common factor is hiding. Factor the top, cancel it, then substitute.',
+             eg:'(x² − 4)/(x − 2) = (x − 2)(x + 2)/(x − 2) = x + 2, which → 4 as x → 2'},
+  limInf:   {rule:'At infinity only the highest powers matter. Higher power underneath: the limit is 0. Equal powers: the ratio of their coefficients.',
+             eg:'(2x + 3)/(4x² + 2) → 0, and (6x² + x)/(2x² − 5) → 6/2 = 3'},
+  powerRule:{rule:'d/dx of xⁿ is n·xⁿ⁻¹: bring the power down in front, then lower the power by one. A constant on its own disappears.',
+             eg:'d/dx (3x² − 5x + 8) = 6x − 5'},
+  evalDeriv:{rule:'Differentiate first, then put the point into the derivative — not into the original function.',
+             eg:'f(x) = x², so f′(x) = 2x and f′(3) = 6'},
+  trigDeriv:{rule:'d/dx sin(kx) = k·cos(kx), and d/dx cos(kx) = −k·sin(kx). The k inside comes out in front; cos picks up a minus sign.',
+             eg:'d/dx sin(3x) = 3cos(3x)'},
+  expLog:   {rule:'d/dx of e^(kx) is k·e^(kx): it stays itself, times the k. d/dx of ln(kx) is 1/x, whatever k is.',
+             eg:'d/dx e^(2x) = 2e^(2x), and d/dx ln(5x) = 1/x'},
+  quotient: {rule:'(f/g)′ = (f′g − fg′) / g². Top′ times bottom, minus top times bottom′, all over the bottom squared.',
+             eg:'d/dx of x/(x + 2) = (1·(x + 2) − x·1)/(x + 2)² = 2/(x + 2)²'},
+  tangent:  {rule:'The slope of the tangent line at x = a is the derivative there, f′(a). Differentiate, then substitute a.',
+             eg:'f(x) = x² at x = 3: f′(x) = 2x, so the slope is 6'},
+  indefPower:{rule:'∫ xⁿ dx = xⁿ⁺¹/(n + 1) + C: raise the power by one, divide by the new power, and add C.',
+             eg:'∫ 15x⁴ dx = 15·x⁵/5 + C = 3x⁵ + C'},
+  intTrig:  {rule:'∫ cos(kx) dx = (1/k)·sin(kx) + C, and ∫ sin(kx) dx = −(1/k)·cos(kx) + C. Divide by the k inside.',
+             eg:'∫ cos(2x) dx = ½ sin(2x) + C'},
+  intExp:   {rule:'∫ e^(kx) dx = (1/k)·e^(kx) + C. Integrating divides by the k inside, where differentiating multiplied by it.',
+             eg:'∫ e^(3x) dx = ⅓ e^(3x) + C'},
+  area:     {rule:'The area under a curve from a to b is the definite integral: find the antiderivative F, then take F(b) − F(a).',
+             eg:'under y = x² from 0 to 3: x³/3 gives 27/3 − 0 = 9'},
+  secondDeriv:{rule:'The second derivative is the derivative of the derivative: apply the power rule, then apply it again to what you got.',
+             eg:'f = x³: f′ = 3x², then f″ = 6x'},
+  critical: {rule:'Critical points are where f′(x) = 0. If f′ is already factored, set each bracket to zero in turn.',
+             eg:'f′(x) = 3(x − 1)(x + 2) is zero at x = 1 and x = −2'},
+  matPow:   {rule:'A² means A times A — a matrix product, rows dotted with columns. It is not each entry squared.',
+             eg:\`\${mat([[1,1],[0,1]])}² = \${mat([[1,2],[0,1]])}, not \${mat([[1,1],[0,1]])}\`},
+  nullSpace:{rule:'The null space is every vector v with Av = 0. Test a candidate by multiplying: every row dotted with v must give 0.',
+             eg:\`\${mat([[1,1],[2,2]])} sends ⟨1, −1⟩ to ⟨1 − 1, 2 − 2⟩ = ⟨0, 0⟩\`},
+  colSpace: {rule:'The dimension of the column space is the number of independent columns — the rank. Columns that are multiples of each other count once.',
+             eg:\`\${mat([[1,2],[2,4]])}: the second column is twice the first, so the dimension is 1\`}
+};
+
 /* ------------------------------ topic metadata --------------------------- */
 const TOPIC_LABEL = {
   vecAdd:'Vector Addition', vecScale:'Scalar Multiplication', vecCombo:'Linear Combinations',
@@ -3996,7 +4216,7 @@ const Game = {
 /* ------------------------------ preferences ------------------------------ */
 const PREF_KEY='eigenrealm.prefs';
 const Prefs = {
-  d:{sound:true, motion:true, haptics:true, calc:true},
+  d:{sound:true, motion:true, haptics:true, calc:true, lessons:true},
   load(){
     let stored=null;
     try{ stored=localStorage.getItem(PREF_KEY); if(stored) Object.assign(this.d, JSON.parse(stored)); }catch(e){}
@@ -4212,7 +4432,9 @@ function drawKnight(x,y,s,lunge,hurt,dead){
 
   const skin = hurt>0 ? '#ff8b8b' : '#c9d3e0';
   const dark = hurt>0 ? '#c05c5c' : '#8b97a8';
-  const cape = '#7a2f8f';
+  // The colour chosen in the quarters, worn where it shows: cape, tabard, plume.
+  const cape = Battle.capeCol || '#7a2f8f';
+  const plume = Battle.plumeCol || '#e5484d';
 
   // cape
   cx.save();
@@ -4247,7 +4469,7 @@ function drawKnight(x,y,s,lunge,hurt,dead){
   cx.beginPath(); cx.moveTo(0,-120);
   cx.quadraticCurveTo(16+Math.sin(Anim.t*4)*4,-136,4,-146);
   cx.quadraticCurveTo(10,-130,-2,-122);
-  setFill('#e5484d'); cx.fill();
+  setFill(plume); cx.fill();
 
   // shield (left arm)
   cx.save(); cx.translate(-38,-58); cx.rotate(-0.15);
@@ -5026,7 +5248,7 @@ function buildQuestion(key, diff){
     // Optional, and consumed by later work: how hard the topic is to hold in
     // one piece, the ladder it breaks into, its one-card summary, a figure
     // spec, and how the answer may be constructed rather than chosen.
-    complexity:p.complexity, motes:p.motes, codex:p.codex,
+    complexity:p.complexity, motes:p.motes, codex:p.codex || RULES[key],
     fig:p.fig, figAnswer:p.figAnswer, input:p.input
   };
 }
@@ -5425,6 +5647,10 @@ const Battle = {
   },
   _start(f){
     this.foe=f; this.emax=f.hp; this.ehp=f.hp;
+    const me=Profiles.active();
+    this.capeCol  = me ? shadeCol(col_(me), -70) : null;
+    this.plumeCol = me ? col_(me) : null;
+    this.learned={};                 // what moved in the mastery model, this fight
     // Skill abilities recharge every fight — they are what you know, not what
     // you own, so they cannot be hoarded or run out for good.
     this.skillLeft={};
@@ -5516,7 +5742,7 @@ const Battle = {
           left>0 && a.ready(), ()=>Battle.useSkill(a.id));
     }
     add('potion', \`\${ITEMS.potion.ic} Draught ×\${it.potion}\`, it.potion>0 && Game.s.hp<Game.s.maxHp, ()=>Battle.usePotion());
-    add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered, ()=>Battle.useInsight());
+    add('insight',\`\${ITEMS.insight.ic} Insight ×\${it.insight}\`, it.insight>0 && !this.answered && this.insightUseful(), ()=>Battle.useInsight());
     add('rage',   \`\${ITEMS.rage.ic} Rune ×\${it.rage}\`, it.rage>0 && !this.rage, ()=>Battle.useRage());
     if(it.feather>0) add('feather', \`\${ITEMS.feather.ic} Feather ×\${it.feather}\`, false, ()=>{});
     /* Carried wards are a readout rather than a button, the way the Feather
@@ -5580,11 +5806,18 @@ const Battle = {
   },
   useInsight(){
     const g=Game.s; if(g.items.insight<1||this.answered) return;
+    // Nothing to burn on a true-or-false or a build: spending one there would
+    // either answer the question outright or do nothing at all.
+    if(!this.insightUseful()) return;
     g.items.insight--;
     R.shuffle(this.wrongStillUp()).slice(0,2).forEach(b=>b.classList.add('faded'));
     Sfx.coin(); Game.save(); this.renderPowers();
   },
 
+  /* Insight burns two wrong answers, so it needs two to burn — and a first
+     meeting offers exactly two, which would leave the answer standing alone. An
+     item spent to be told the answer to an easy question is an item wasted. */
+  insightUseful(){ return this.cardsLeftToTurn()>1 && !this.lessonIs('meet'); },
   // Wrong answers still on offer — what Insight burns and what Cards turns over.
   wrongStillUp(){
     return [...document.querySelectorAll('#choices .choice')]
@@ -5644,7 +5877,7 @@ const Battle = {
                  // The Library's stacks reach into fights too — it would be a
                  // strange shelf where only the chests got older.
                  + (this.mode==='dungeon' ? Dungeon.stacks() : 0);
-      diff = Mastery.adjustDiff(key, base);
+      diff = Lesson.diff(key, Mastery.adjustDiff(key, base));
 
     }
     this.curDiff = diff;
@@ -5657,6 +5890,12 @@ const Battle = {
       this.rite = {motes:this.cur.motes, i:0, clean:0, trail:[], parent:this.cur};
     }
     this.unassisted = !this.rite && this.cur.complexity===3 && Rite.graduated(key);
+    /* The form this question takes. The daily is the same twelve problems for
+       everyone, so it is never re-shaped by what one knight happens to know. */
+    this.lesson = this.mode==='daily' ? null
+      : Lesson.plan(this.cur, !!this.rite,
+          'Now you — an easy one first. Nothing strikes you for getting a first meeting wrong.');
+    Calc.clearKept();                 // last question's sums are not this one's
     const tg=document.getElementById('telegraph');
     if(this.slamNext){
       tg.style.display='block';
@@ -5691,8 +5930,17 @@ const Battle = {
   // What the player is actually being asked right now: a ladder step, or the
   // whole problem once the scaffolding has faded.
   step(){
-    return this.rite ? this.rite.motes[this.rite.i] : this.cur;
+    if(this.rite) return this.rite.motes[this.rite.i];
+    return (this.lesson && this.lesson.step) || this.cur;
   },
+  /* What "show me the working" works. A lesson step is the same problem asked
+     in an easier form — a claim to judge, or three answers instead of four —
+     so the working shown is the problem's own, not the form's. */
+  workStep(){
+    const st=this.step();
+    return (st && st.lesson) ? this.cur : st;
+  },
+  lessonIs(f){ return !!(this.lesson && this.lesson.format===f); },
 
   renderStep(){
     const st=this.step();
@@ -5709,6 +5957,7 @@ const Battle = {
     } else { rb.style.display='none'; tr.style.display='none'; }
 
     document.getElementById('qtopic').innerHTML = this.cur.topic +
+      Lesson.chip(this.lesson) +
       (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
       (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
 
@@ -5723,6 +5972,10 @@ const Battle = {
       head.appendChild(chip);
     }
 
+    // The card belongs to the first sight of the topic: a ladder shows it over
+    // its first rung only, not over every step.
+    document.getElementById('lcard').innerHTML =
+      (this.lesson && this.lesson.card && !(this.rite && this.rite.i>0)) ? this.lesson.card : '';
     document.getElementById('qbox').innerHTML = st.q;
     // A question figure must never reveal the answer; the payoff picture is
     // held back for the explanation.
@@ -5766,12 +6019,18 @@ const Battle = {
   // honest boundary of what a keypad can express.
   canPerfect(){
     const st=this.step();
-    return this.mode!=='daily' && !this.answered && /^−?\\d+$/.test(String(st.a));
+    if(this.mode==='daily' || this.answered) return false;
+    // The two lowest rungs are about meeting the idea, not about producing it.
+    if(this.lessonIs('meet') || this.lessonIs('tf')) return false;
+    if(st===this.cur && !Lesson.buildable(this.cur)) return false;
+    return !!Lesson.shape(st.a);
   },
   renderPerfect(){
     const p=document.getElementById('pstrike');
     if(!this.canPerfect()){ p.style.display='none'; p.innerHTML=''; return; }
     p.style.display='';
+    // On the build rung there is nothing to choose from: the pad is the question.
+    if(this.lessonIs('build') && !this.rite){ this.openPad(); return; }
     p.innerHTML=\`<div class="pbtn" id="pgo">⚔ Perfect Strike — build it yourself, ×3 damage</div>\`;
     document.getElementById('pgo').onclick=()=>this.openPad();
   },
@@ -5782,7 +6041,7 @@ const Battle = {
   SHOWN: Object.freeze({shown:true}),   // an object, so it can never === an answer
   renderWork(){
     const w=document.getElementById('showwork');
-    const st=this.step();
+    const st=this.workStep();
     if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
     w.style.display='';
     w.innerHTML=\`<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>\`;
@@ -5801,9 +6060,18 @@ const Battle = {
     this.answer(null, this.SHOWN);
   },
   openPad(){
-    this.padVal='';
+    const st=this.step();
     document.getElementById('choices').innerHTML='';
     const p=document.getElementById('pstrike');
+    /* A vector or a matrix is built from tiles, slot by slot. A whole number
+       keeps the keypad it always had. */
+    if(Lesson.shape(st.a)!=='int'){
+      Lesson.build(p, st.a, st===this.cur ? this.cur.choices : buildMote(st),
+        val=>{ this.perfect=true; this.answer(null, val); });
+      this.renderPowers();
+      return;
+    }
+    this.padVal='';
     p.innerHTML=\`<div id="pad">
       <div id="padVal">—</div>
       \${[1,2,3,4,5,6,7,8,9].map(n=>\`<button data-k="\${n}">\${n}</button>\`).join('')}
@@ -5844,11 +6112,16 @@ const Battle = {
 
     // A ladder step is one small piece of a topic, so it moves mastery by a
     // fraction; the parent problem still counts in full.
-    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length) : 1;
+    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length)
+                 : Lesson.weight(this.lesson && this.lesson.format);
     /* Being shown the working tells the mastery model nothing at all — not a
        wrong answer, not a question answered, and not a fresh timestamp. See the
        Working module: recency is what pages buy, and this must not be a bench. */
     this.lastMastery = this.shownWork ? null : Game.recordAnswer(this.cur.key, ok, weight);
+    if(this.lastMastery && this.learned){
+      const key=this.cur.key, e=this.learned[key] || (this.learned[key]={from:this.lastMastery.was});
+      e.to=Game.s.topicStats[key].m;
+    }
 
     // --- a step of a Rite: teach, chip in a little damage, move on ---
     if(this.rite){
@@ -5938,6 +6211,23 @@ const Battle = {
       this.diceUp=false;
       this.settleMs = 620;
       this.missed++;                 // no longer flawless, because it was not
+    } else if(this.lessonIs('meet')){
+      /* A first meeting is taught, not tested, so a wrong answer here is not
+         answered with a blow. It is still a wrong answer: the streak goes, the
+         stake goes with it, the mastery model hears about it, and no damage was
+         dealt — so there is nothing to be gained by missing on purpose, only
+         nothing to be afraid of. Steady Hand is kept for a miss that costs
+         something, exactly as it is when the working is shown.
+       *
+       * The wind-up below is untouched, for the reason it is everywhere else:
+       * it is the foe's own clock, not a reply to this answer. */
+      this.combo=0;
+      if(this.diceUp) Anim.float(560, H-290, 'STAKE LOST', '#ff6b6b', true);
+      this.diceUp=false;
+      Anim.float(560, H-250, 'NOT YET', '#9fd0ff');
+      this.settleMs = 620;
+      Sfx.bad();
+      this.missed++;
     } else {
       // Steady Hand spends itself here, holding the streak through one miss.
       if(this.steadyUp){
@@ -5995,7 +6285,7 @@ const Battle = {
 
     Game.save();
     setTimeout(()=>this.updateBars(),420);
-    this.showExplain(ok, choice);
+    this.showExplain(ok, choice, st);
   },
 
   // Streak milestones: escalating callouts so a hot run feels like one.
@@ -6010,8 +6300,9 @@ const Battle = {
 
   showExplain(ok, picked, st){
     st = st || this.cur;
-    const inRite = st !== this.cur;
-    const why = inRite ? (st._why||{}) : this.cur.why;
+    const inRite = !!this.rite && st !== this.cur;
+    const why = st !== this.cur ? (st._why||{}) : this.cur.why;
+    const met = !inRite && this.lessonIs('meet');
     const miss = !ok && why[picked];
     const e=document.getElementById('explain');
 
@@ -6019,7 +6310,7 @@ const Battle = {
        "the answer was", because nothing was guessed — and no rule restated
        above it, because the working carries the rule itself. */
     if(this.shownWork){
-      const w=Working.forStep(st);
+      const w=Working.forStep(st.lesson ? this.cur : st);
       e.style.display='block';
       e.innerHTML =
         \`<div class="head" style="color:var(--dim)">🔎 Worked through for you.</div>\`+
@@ -6040,14 +6331,16 @@ const Battle = {
 
     const head = inRite
       ? (ok ? '✔️ Step taken.' : '✕ Not that step.')
-      : (ok ? '⚔️ A clean strike!' : '🩸 The blow lands on you.');
+      : (ok ? '⚔️ A clean strike!'
+            : met ? '📖 Not yet — and no blow lands on a first meeting.'
+                  : '🩸 The blow lands on you.');
     // A wrong answer is exactly when the rule is worth restating.
     const rule = (!ok && this.cur.codex)
       ? \`<div class="cxinline"><b>The rule</b><br>\${this.cur.codex.rule}</div>\` : '';
     e.style.display='block';
     e.innerHTML =
       \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${head}</div>\`+
-      (ok?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
+      ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${st.ex}</div>\`+ rule +
@@ -6146,6 +6439,24 @@ const Battle = {
     this.nextQuestion();
   },
 
+  /* What the fight taught, for the panel that ends it. Gold and experience say
+     what was won; this says what changed in what the knight knows, which is the
+     only thing the game is actually for. Topics that fell are listed too — a
+     fight that showed up a weakness has told you something worth having. */
+  learnedHtml(){
+    const rows=Object.keys(this.learned||{}).map(k=>({k, d:this.learned[k]}))
+      .filter(x=>Math.round(x.d.to*100)!==Math.round(x.d.from*100))
+      .sort((a,b)=>(b.d.to-b.d.from)-(a.d.to-a.d.from)).slice(0,5);
+    if(!rows.length) return '';
+    return \`<hr><div id="learned"><div class="small" style="margin-bottom:4px;font-weight:800;color:var(--gold)">What this fight taught</div>
+      \${rows.map(({k,d})=>{
+        const up=d.to>d.from, st=Lesson.stage(k);
+        return \`<div class="small" data-learned="\${k}" style="display:flex;justify-content:space-between;gap:8px;line-height:1.9">
+          <span>\${TOPIC_LABEL[k]||k}\${st!=='free'?\` <span class="lsn">\${Lesson.ICON[st]} \${Lesson.LABEL[st]} next</span>\`:''}</span>
+          <b style="color:\${up?'var(--green)':'var(--red)'};white-space:nowrap">\${Math.round(d.from*100)}% → \${Math.round(d.to*100)}%</b></div>\`;
+      }).join('')}</div>\`;
+  },
+
   win(){
     if(this.over) return;
     this.tension(1);
@@ -6190,6 +6501,7 @@ const Battle = {
           </div>
           <hr>
           <div class="small">Longest streak this battle: \${g.stats.best}</div>
+          \${this.learnedHtml()}
         </div>
         <button class="btn gold" onclick="UI.go('s-map')">🗺️ Onward</button>
         <button class="btn" onclick="Battle.begin(\${this.ri},\${this.fi})">↻ Fight again</button>
@@ -6226,6 +6538,7 @@ const Battle = {
           <hr>
           <div style="font-weight:800">−\${lost} gold lost in the retreat</div>
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+          \${this.learnedHtml()}
         </div>
         <button class="btn gold" onclick="Battle.begin(\${this.ri},\${this.fi})">⚔️ Try again</button>
         <button class="btn" onclick="UI.go('s-tome')">📖 Study the Tome</button>
@@ -6426,6 +6739,292 @@ const Working = {
       </ol>
       <div class="wkans">The answer is <b>\${w.answer}</b>.</div>
     </div>\`;
+  }
+};
+
+/* -------------------------------- lessons --------------------------------- */
+/* How a topic is asked, as distinct from which topic and how hard.
+ *
+ * Until this existed every question arrived in the same form: four answers,
+ * pick one. That is the right form for something you know and the wrong one for
+ * something you have never met, and the game had no way to tell the difference
+ * — the first sight of a determinant was a determinant to compute, with the
+ * foe's blow waiting on the answer. Recognising, judging, choosing and
+ * producing are four different things to ask of a learner, in that order of
+ * difficulty, and a topic should be walked up them rather than dropped at the
+ * top.
+ *
+ *     meet     the rule, one small instance of it, then an easy question
+ *              with three answers. Nothing strikes you for getting it wrong.
+ *     tf       a claimed answer, and you say whether it is right. Checking
+ *              somebody else's working is easier than doing your own.
+ *     choose   the question as it always was: four answers, one of them right.
+ *     build    no answers offered. You assemble it, a number at a time, and it
+ *              strikes as a Perfect Strike does.
+ *     free     past the ladder. Choose, or build for the triple — your call.
+ *
+ * WHERE A TOPIC STANDS IS NOT STORED. It is read off effective mastery, the
+ * same faded number that already decides how hard the question is and whether
+ * the rule is free to look at. That is deliberate, and it is most of the
+ * design: the fade is what answers "have I forgotten this", so a topic left
+ * alone for a month walks itself back down the ladder and is re-introduced
+ * without anybody keeping a second schedule. It also means nothing is added to
+ * a save or a knight code, and a knight who existed before this did is placed
+ * on every topic the moment the page loads — by what they actually know.
+ *
+ * The lower rungs count for less in the mastery model, for the reason a mote
+ * does: saying "true" to a claim is weaker evidence than producing the answer,
+ * and four easy wins must not persuade the scheduler you own the topic. The
+ * weights are chosen so that a clean run climbs exactly one rung an answer —
+ * meet → tf → choose → build — and so that none of those landings sits on a
+ * band's edge, where a rounding error would decide the format. */
+const Lesson = {
+  MEET:0.15, TF:0.35, CHOOSE:0.60, BUILD:0.75,
+  ORDER:['meet','tf','choose','build'],
+  WEIGHT:{meet:0.6, tf:0.6},
+  LABEL:{meet:'first meeting', tf:'true or false', choose:'choose', build:'build it'},
+  ICON:{meet:'📖', tf:'⚖️', choose:'🎯', build:'🧩'},
+  TRUE:'✔ True', FALSE:'✘ False',
+
+  /* Answers that have more than one right form. "Which vector is an
+     eigenvector" is answered by any multiple of the one on offer, so it can be
+     chosen but not built: a keypad would mark ⟨2, −6⟩ wrong beside ⟨−1, 3⟩. */
+  NO_BUILD:{eigenvec:1, nullSpace:1},
+
+  on(){ return Prefs.d.lessons!==false; },
+
+  stage(key){
+    if(!this.on() || !Game.s) return 'free';
+    const r=Game.s.topicStats[key];
+    if(!r || !r.seen) return 'meet';
+    const e=Mastery.eff(key);
+    return e<this.MEET ? 'meet' : e<this.TF ? 'tf' : e<this.CHOOSE ? 'choose'
+         : e<this.BUILD ? 'build' : 'free';
+  },
+  weight(format){ return this.WEIGHT[format] || 1; },
+  // The two lowest rungs are about the idea, so the numbers stay small.
+  diff(key, d){ const s=this.stage(key); return (s==='meet' || s==='tf') ? 1 : d; },
+
+  /* What an answer is made of, if it is made of numbers in a fixed shape. This
+     is the honest boundary of what can be assembled from tiles: a whole number,
+     a row vector, a matrix. A polynomial or a fraction has structure a row of
+     slots cannot express, and is chosen instead. */
+  shape(a){
+    a=String(a);
+    if(/^−?\\d+$/.test(a)) return 'int';
+    if(/^⟨−?\\d+(, −?\\d+)+⟩$/.test(a)) return 'vec';
+    if(/^<span class="mtx">(<span class="col">(<span>−?\\d+<\\/span>)+<\\/span>)+<\\/span>$/.test(a)) return 'mtx';
+    return null;
+  },
+  buildable(q){ return !!(q && this.shape(q.a) && !this.NO_BUILD[q.key]); },
+
+  /* The plan for one question: the rung the knight is on, the form the question
+     will actually take, the step to ask in place of the question itself (when
+     the form changes what is asked), and the card to show above it.
+
+     \`inRite\` is a complex topic arriving as its ladder of motes. The ladder is
+     already a walk-through, so it keeps its own form; what it gains is the card
+     on a first meeting, which it never had. */
+  plan(q, inRite, note){
+    const stage=this.stage(q.key);
+    const p={stage, format:stage, step:null, card:''};
+    if(stage==='meet') p.card=this.card(q, note);
+    if(inRite){ p.format='rite'; return p; }
+    if(stage==='meet') p.step=this.meetStep(q);
+    else if(stage==='tf') p.step=this.tfStep(q);
+    else if(stage==='free' || (stage==='build' && !this.buildable(q))) p.format='choose';
+    return p;
+  },
+
+  /* The first meeting's question: the real one, with one wrong answer taken
+     away. Three is enough to have to think and few enough to be kind. */
+  meetStep(q){
+    const wrong=R.shuffle(q.choices.filter(c=>c!==q.a)).slice(0,2);
+    return { lesson:'meet', topic:q.topic, q:q.q, a:q.a, ex:q.ex,
+             why:q.why, _why:q.why, fig:q.fig, figAnswer:q.figAnswer,
+             _choices:R.shuffle([q.a].concat(wrong)) };
+  },
+
+  /* A claim to judge. Half the time it is the answer. The other half it is one
+     of the wrong answers the generator can diagnose, where it has any — those
+     are the misreadings the question was built to catch, so a false claim is
+     never arbitrary: it is the mistake a learner is about to make, shown to
+     them as somebody else's. The reason it is wrong is read out either way. */
+  tfStep(q){
+    const wrong=q.choices.filter(c=>c!==q.a);
+    const traps=wrong.filter(c=>q.why && q.why[c]);
+    const truth=R.chance(.5);
+    const claim=truth ? q.a : R.pick(traps.length ? traps : wrong);
+    const verdict = truth
+      ? \`The claim was <b style="color:var(--green)">true</b>.\`
+      : \`The claim was <b style="color:var(--red)">false</b> — the answer is
+           <b style="color:var(--gold)">\${q.a}</b>.\` +
+        (q.why && q.why[claim] ? \` What was claimed: \${q.why[claim]}.\` : '');
+    return { lesson:'tf', topic:q.topic, claim, truth, quiet:true,
+             q:\`\${q.q}<div class="claim"><span>The claim</span>\${claim}</div>\`,
+             a: truth ? this.TRUE : this.FALSE,
+             ex:\`<div style="margin-bottom:6px">\${verdict}</div>\${q.ex}\`,
+             why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,
+             _choices:[this.TRUE, this.FALSE] };
+  },
+
+  /* The card a first meeting opens with: the rule, one small instance of it,
+     and — folded away, because it is long — a whole problem worked through.
+     It stays on screen above the question, which is the point of putting it
+     there instead of in a dialog: the example is still in view while you copy
+     its method, so the method does not have to be memorised to be used once. */
+  card(q, note, plain){
+    const r=Game.s && Game.s.topicStats[q.key];
+    const again=!!(r && r.seen);
+    const c=q.codex || {};
+    // \`plain\` leaves the worked problem out, and with it the only draw on the
+    // dice this makes — see roomCard.
+    const s=plain ? null : buildQuestion(q.key, 1), w=s && Working.forStep(s);
+    const worked = (w && w.steps.length)
+      ? \`<details><summary>▸ Watch one worked through</summary>
+           <div class="lq">\${s.q}</div>\${Working.render(Object.assign({}, w, {rule:''}))}</details>\` : '';
+    return \`<div class="lcard">
+      <div class="lk">📖 \${again?'Back to the rule':'New to you'} · \${TOPIC_LABEL[q.key]||q.topic}</div>
+      <div class="lrule">\${c.rule||''}</div>
+      \${c.eg?\`<div class="leg">\${c.eg}</div>\`:''}
+      \${worked}
+      <div class="lnow">\${note||'Now you — an easy one first.'}</div>
+    </div>\`;
+  },
+
+  /* The card, for the rooms of a descent. A seam, a thicket, a ward-stone and a
+     table each ask in their own way and stake their own thing on the answer, so
+     they keep their four answers — but none of them should be the first place a
+     topic is ever seen with nothing said about it. Where the knight is at the
+     first rung, the rule goes above the question.
+
+     It draws nothing from the dice. A room is rebuilt from its seed when a run
+     is resumed, and a card that rolled a fresh worked example on the way would
+     be one more thing that could differ between the room you left and the room
+     you came back to. */
+  roomCard(q){
+    if(!q || this.stage(q.key)!=='meet') return '';
+    return this.card(q, 'This room asks it the plain way — read the rule first.', true);
+  },
+
+  // The tag beside the topic's name: which rung, and how far up the ladder.
+  chip(p){
+    if(!p || p.stage==='free') return '';
+    if(p.format==='rite' && p.stage!=='meet') return '';
+    const f = p.format==='rite' ? 'meet' : p.format;
+    const at=this.ORDER.indexOf(p.stage);
+    return \`<span class="lsn" data-stage="\${p.stage}" data-format="\${p.format}">\${this.ICON[f]} \${this.LABEL[f]}
+      \${this.ORDER.map((_,i)=>\`<i\${i<=at?' class="on"':''}></i>\`).join('')}</span>\`;
+  },
+
+  /* ---- building an answer ---- */
+  /* An answer split into its numbers and what lies between them. Joining the
+     gaps back up around whatever the player put in the slots gives a string in
+     exactly the answer's own format — so a built answer is graded by the same
+     \`===\` a chosen one is, and a built WRONG answer that happens to be one of
+     the question's diagnosed mistakes is explained as that mistake. */
+  pieces(a){
+    a=String(a);
+    return { nums:a.match(/−?\\d+/g)||[], gaps:a.split(/−?\\d+/) };
+  },
+  join(gaps, vals){
+    let s=gaps[0];
+    for(let i=0;i<vals.length;i++) s+=vals[i]+gaps[i+1];
+    return s;
+  },
+  /* The tiles on offer: every number in the answer, every number in the wrong
+     answers, and near misses to make up at least six. Sorted, not shuffled — a
+     number bank in order is quicker to read and gives nothing away. */
+  bank(nums, choices){
+    const val=s=>Number(String(s).replace('−','-'));
+    const set=new Set(nums);
+    for(const c of (choices||[])) for(const n of (String(c).match(/−?\\d+/g)||[])) set.add(n);
+    const base=nums.map(val);
+    let guard=0;
+    while(set.size<6 && guard++<80) set.add(neg(R.pick(base)+R.nz(-3,3)));
+    let all=[...set];
+    if(all.length>10){
+      const keep=new Set(nums);
+      all=[...keep].concat(R.shuffle(all.filter(x=>!keep.has(x))).slice(0, 10-keep.size));
+    }
+    return all.sort((x,y)=>val(x)-val(y));
+  },
+
+  /* Draw the build into \`el\`; \`done(answer)\` is called once, with the assembled
+     string, when the player commits. One build at a time — there is only ever
+     one question on screen. */
+  build(el, a, choices, done, label){
+    const shape=this.shape(a);
+    if(!shape) return false;
+    const {nums, gaps}=this.pieces(a);
+    const order=nums.map((_,i)=>i);
+    if(shape==='mtx'){
+      // mat() writes column by column; people read row by row.
+      const cols=(String(a).match(/class="col"/g)||[]).length, rows=nums.length/cols;
+      order.sort((x,y)=>(x%rows - y%rows) || (x-y));
+    }
+    this._b={ el, shape, nums, gaps, order, done, label,
+              vals:nums.map(()=>null), at:order[0],
+              bank: shape==='int' ? null : this.bank(nums, choices) };
+    this.paintBuild();
+    return true;
+  },
+  filled(v){ return v!=null && v!=='' && v!=='−'; },
+  paintBuild(){
+    const b=this._b; if(!b) return;
+    const slot=i=>{
+      const v=b.vals[i], has=v!=null && v!=='';
+      return \`<button type="button" class="bslot\${b.at===i?' now':''}\${has?' full':''}" data-i="\${i}">\${has?v:'&nbsp;'}</button>\`;
+    };
+    let ans=b.gaps[0];
+    b.nums.forEach((_,i)=>{ ans+=slot(i)+b.gaps[i+1]; });
+    const ready=b.vals.every(v=>this.filled(v));
+    const keys = b.shape==='int'
+      ? \`<div class="bpad">\${['1','2','3','4','5','6','7','8','9','0','±','⌫'].map(k=>
+          \`<button type="button" class="btile" data-k="\${k}">\${k}</button>\`).join('')}</div>\`
+      : \`<div class="btiles">\${b.bank.map(v=>
+          \`<button type="button" class="btile" data-v="\${v}">\${v}</button>\`).join('')}</div>\`;
+    b.el.innerHTML=\`<div class="bld">
+        <div class="bhint">\${b.shape==='int' ? 'Type the answer.'
+          : 'Tap a number to drop it into the lit slot. Tap a slot to change it.'}</div>
+        <div class="bans">\${ans}</div>
+        \${keys}
+        <button type="button" class="btn gold" id="bgo" style="margin-top:12px" \${ready?'':'disabled'}>\${b.label||'⚔ Strike'}</button>
+      </div>\`;
+    b.el.querySelectorAll('.bslot').forEach(x=>{
+      x.onclick=()=>{ b.at=+x.dataset.i; this.paintBuild(); };
+    });
+    b.el.querySelectorAll('.btile').forEach(x=>{
+      x.onclick=()=>this.tapBuild(x.dataset.v, x.dataset.k);
+    });
+    b.el.querySelector('#bgo').onclick=()=>this.commitBuild();
+  },
+  tapBuild(v, k){
+    const b=this._b; if(!b) return;
+    if(b.shape==='int'){
+      let cur=b.vals[0]||'';
+      if(k==='⌫') cur=cur.slice(0,-1);
+      else if(k==='±') cur = cur.startsWith('−') ? cur.slice(1) : '−'+cur;
+      else if(cur.replace('−','').length<7) cur+=k;
+      b.vals[0]=cur;
+    } else {
+      b.vals[b.at]=v;
+      // On to the next empty slot in reading order, so a clean build is one
+      // tap a number and nothing else.
+      const next=b.order.find(i=>b.vals[i]==null);
+      if(next!==undefined) b.at=next;
+    }
+    Haptic.tap();
+    this.paintBuild();
+  },
+  commitBuild(){
+    const b=this._b;
+    if(!b || !b.vals.every(v=>this.filled(v))) return;
+    this._b=null;
+    // "007" is seven. Typed numbers are normalised to how the game writes them.
+    const vals = b.shape==='int'
+      ? [neg(Number(String(b.vals[0]).replace('−','-')))] : b.vals;
+    b.done(this.join(b.gaps, vals));
   }
 };
 
@@ -6674,6 +7273,31 @@ const Passage = {
    closes the loop: seams in the Deep give it up, and it comes back as the picks
    that open the Deep's chests. */
 const Forge = {
+  /* Three strikes at the anvil before a thing is made. It changes nothing about
+     what the Forge sells or what it costs — the ore is spent on the last blow,
+     by make(), exactly as it always was — but a blade that appears when a
+     button is pressed is a receipt, and one that is beaten out is a blade.
+     Putting the work down before the last strike costs nothing. */
+  STRIKES:3, work:null,
+  start(id){
+    const f=FORGE.find(x=>x.id===id), g=Game.s;
+    if(!f || !g) return;
+    if(f.owned && f.owned(g)) return;
+    if((g.mats.ore||0) < f.ore){
+      UI.toast(\`That needs \${f.ore} ore — cut a seam in the Deep.\`);
+      return;
+    }
+    this.work={id, n:0};
+    Rooms.refresh();
+  },
+  strike(){
+    const w=this.work; if(!w) return;
+    w.n++;
+    Sfx.coin(w.n); Haptic.tap();
+    if(w.n>=this.STRIKES){ this.work=null; this.make(w.id); return; }
+    Rooms.refresh();
+  },
+  down(){ this.work=null; Rooms.refresh(); },
   make(id){
     const f=FORGE.find(x=>x.id===id), g=Game.s;
     if(!f) return;
@@ -6690,7 +7314,7 @@ const Forge = {
       g.maxHp=Game.maxHp(); g.hp=Math.min(g.maxHp, g.hp+120);
       UI.toast('🛡️ Deepsteel Plate — forged and worn.');
     }
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
   }
 };
 
@@ -6735,7 +7359,7 @@ const Scriptorium = {
       r.last = g.qCount || 0;
       r.t = now;
     }
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     UI.toast(\`📄 \${keys.length} topic\${keys.length===1?'':'s'} bound — as fresh as the day you learned them.\`);
   }
 };
@@ -6759,7 +7383,7 @@ const Apothecary = {
     g.mats.herb -= e.herb;
     g.brewed = g.brewed || {};
     e.each(g);
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     if(e.keep) Celebrate.banner(e.nm.toUpperCase(), e.ds, '#7fc98a', ()=>{});
     else UI.toast(\`\${e.ic} \${e.nm} — made up and packed.\`);
   }
@@ -6886,7 +7510,7 @@ const Crucible = {
     g.mats[fromId] -= q.spend;
     g.mats[toId]   += q.get;
     this.spend();
-    Sfx.coin(); Haptic.win(); Game.save(); UI.renderShop();
+    Sfx.coin(); Haptic.win(); Game.save(); Rooms.refresh();
     UI.toast(\`\${a.ic}→\${b.ic} \${q.spend} \${a.nm} down to \${q.get} \${b.nm}.\`);
   },
 
@@ -6901,7 +7525,7 @@ const Crucible = {
       if(id === this.from) return;
       this.to = id;
     }
-    UI.renderShop();
+    Rooms.refresh();
   }
 };
 
@@ -6925,7 +7549,7 @@ const Runes = {
     g.mats.essence -= r.cost;
     g.runes[id]=1;
     Sfx.mastered ? Sfx.mastered() : Sfx.win();
-    Haptic.win(); Game.save(); UI.renderShop();
+    Haptic.win(); Game.save(); Rooms.refresh();
     Celebrate.banner(r.nm.toUpperCase(), r.ds, 'var(--gold)', ()=>{});
   }
 };
@@ -8250,7 +8874,7 @@ const Seam = {
         <h2 style="font-size:17px">\${q.topic} <span class="tag">\${this.at+1}/\${this.want}</span></h2>
         <div class="sub">\${this.yieldFor(this.want,this.ctx.depth)} ore rides on cutting all \${this.want} clean.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        \${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
         <div id="seamFig"></div>
         <div id="seamChoices" style="margin-top:10px"></div>
       </div>
@@ -8414,7 +9038,7 @@ const Scribe = {
           <b>\${Math.round(this.precision*100)}%</b> precision — this line is worth
           <b>\${Math.floor(this.PER_STEP*this.precision)}</b>.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        \${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
         <div id="scribeFig"></div>
         <div id="scribeChoices" style="margin-top:10px"></div>
       </div>
@@ -8676,7 +9300,7 @@ const Forage = {
         <h2 style="font-size:17px">\${q.topic} <span class="tag">basket \${this.space}/\${this.MAX_SPACE}</span></h2>
         <div class="sub">Answer this and the basket takes one more.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        \${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
         <div id="forageFig"></div>
         <div id="forageChoices" style="margin-top:10px"></div>
       </div>
@@ -8881,7 +9505,7 @@ const Sigil = {
           ? \`<b>\${this.layers}</b> layer\${this.layers===1?'':'s'} cut. This one is staked against it.\`
           : 'Nothing cut yet. This one costs you nothing to try.'}</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        \${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
         <div id="sigilFig"></div>
         <div id="sigilChoices" style="margin-top:10px"></div>
       </div>
@@ -9113,7 +9737,7 @@ const Wager = {
         <div class="sub">Right and the table pays \${Math.round(this.staked*this.mult)}.
           Wrong and the stake is gone.</div>
         <hr>
-        <div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
+        \${Lesson.roomCard(q)}<div style="font-size:17px;text-align:center;line-height:1.5">\${q.q}</div>
         <div id="wagerFig"></div>
         <div id="wagerChoices" style="margin-top:10px"></div>
       </div>
@@ -9315,7 +9939,9 @@ const Lock = {
     const firstContact = !(r && r.seen>0);
     // First sight of a topic is taught before it is tested — you never snap a
     // pick on something the game never showed you.
-    if(firstContact && spec.q.codex) this.study(); else this.tumblers();
+    // — unless there is no pick to snap. Every topic has a rule now, and a
+    // knight with empty pockets is not about to be tested on anything.
+    if(firstContact && spec.q.codex && (Game.s.items.pick||0)>0) this.study(); else this.tumblers();
   },
 
   study(){
@@ -9416,7 +10042,7 @@ const Lock = {
       <div class="center crest">🔒</div>
       <div class="panel center">
         <h2>A locked chest, and no picks</h2>
-        <div class="sub">This one guards <b>\${q.topic}</b>. Smith or buy lockpicks at the Smithy and the Deep's chests open to you.</div>
+        <div class="sub">This one guards <b>\${q.topic}</b>. Forge lockpicks at the Keep, or buy them at the Smithy, and the Deep's chests open to you.</div>
       </div>
       <div id="lockOut"></div>
       <div style="height:16px"></div>\`;
@@ -10464,6 +11090,9 @@ const UI = {
     if(id!=='s-battle') Anim.stop();
     if(id==='s-map') this.renderMap();
     if(id==='s-shop') this.renderShop();
+    if(id==='s-keep') Rooms.renderKeep();
+    if(id==='s-room') Rooms.render();
+    if(id==='s-quarters') Quarters.render();
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
     if(id==='s-train') Train.renderPick();
@@ -10547,6 +11176,7 @@ const UI = {
         \${row('motion','✨','Full motion','Screen shake, hit-stop, particles and slow-motion')}
         \${row('haptics','📳','Haptics','Vibration on hits, where the device supports it')}
         \${row('calc','🧮','Scratch pad','A calculator during fights, for the arithmetic the question is not about')}
+        \${row('lessons','📖','Step-by-step lessons','New and faded topics are taught first: the rule, a true-or-false, then choosing, then building the answer')}
       </div>
       <div class="panel"><h2>🏅 Titles</h2>
         <div class="sub" style="margin-bottom:6px">\${Titles.count()} of \${TITLES.length} earned.</div>
@@ -10558,10 +11188,82 @@ const UI = {
     // rather than won — both things a bug report needs to carry.
     paintBuild();
   },
+  /* The first uncleared fight of the campaign, in the order it is met. Realms
+     open on the champion before them and foes on the foe before them, so the
+     first one not yet beaten is always one that can be walked into. */
+  nextFoe(){
+    const g=Game.s;
+    for(let ri=0; ri<REALMS.length; ri++){
+      const r=REALMS[ri];
+      for(let fi=0; fi<r.foes.length; fi++)
+        if(!g.cleared[ri+':'+fi]) return {ri, fi, r, f:r.foes[fi]};
+    }
+    return null;
+  },
+  /* What to do next, as one card at the top of the map.
+   *
+   * The map is a long page and every part of it is a fair thing to do, which is
+   * exactly why a knight opening it had to read it to find out where they were.
+   * This answers that before anything else is read: the one thing the campaign
+   * is waiting on, with a single button — and beneath it, at most three smaller
+   * things the game happens to know are worth a visit right now. Each of those
+   * is read off state that already exists; none of them is a new thing to track.
+   *
+   * It is deliberately NOT one of the map's nodes. The order of those is a
+   * promise the map suite holds the page to — a descent in progress first, the
+   * open places above the campaign — and a card that joined the list would
+   * renumber all of it. */
+  hero(){
+    const g=Game.s;
+    const pend=Dungeon.pending(), nx=this.nextFoe();
+    let main;
+    if(pend){
+      const set=SETTINGS[pend.setting||'deep']||SETTINGS.deep;
+      main=\`<div class="hk">Unfinished</div>
+        <div class="hn">Back to \${set.nm}</div>
+        <div class="hd">Room \${(pend.done||0)+1} · 🎒 \${pend.gold||0} gold still at risk · ❤️ \${pend.hp}</div>
+        <button class="btn gold" id="heroGo" data-hero="resume" onclick="Dungeon.resume()">🕯️ Return to the descent</button>\`;
+    } else if(!g.firstRun){
+      main=\`<div class="hk">Start here</div>
+        <div class="hn">The quartermaster is waiting</div>
+        <div class="hd">Three rooms in the cellar — nothing down there can finish you.</div>
+        <button class="btn gold" id="heroGo" data-hero="cellar" onclick="Quartermaster.open()">🗝️ Go down to the cellar</button>\`;
+    } else if(nx){
+      const done=nx.r.foes.filter((f,i)=>g.cleared[nx.ri+':'+i]).length;
+      main=\`<div class="hk">Continue · realm \${nx.ri+1} of \${REALMS.length}</div>
+        <div class="hn" style="color:\${nx.r.col}">\${nx.r.nm}</div>
+        <div class="hpips" aria-label="\${done} of \${nx.r.foes.length} beaten">\${nx.r.foes.map((f,i)=>
+          \`<i class="\${i<done?'on':i===done?'now':''}\${f.boss?' boss':''}" style="\${i<done?\`background:\${nx.r.col};border-color:\${nx.r.col}\`:''}"></i>\`).join('')}</div>
+        <div class="hd">Next: <b>\${nx.f.boss?'👑 ':''}\${nx.f.nm}</b> · ❤️ \${nx.f.hp} · ⚔️ \${nx.f.atk}</div>
+        <button class="btn gold" id="heroGo" data-hero="fight" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight</button>\`;
+    } else {
+      main=\`<div class="hk">The campaign is won</div>
+        <div class="hn">Every champion is down</div>
+        <div class="hd">What is left goes further than any realm did.</div>
+        <button class="btn gold" id="heroGo" data-hero="deep" onclick="Dungeon.descend()">⛏️ Descend the Deep</button>\`;
+    }
+    // The smaller things. Each is shown only when it is true, so an empty row
+    // means there is genuinely nothing else pressing.
+    const chips=[];
+    const days=(g.streak&&g.streak.days)||0;
+    if(days>1) chips.push(\`<span class="hchip" data-chip="streak">🔥 \${days} days running</span>\`);
+    const weak=Mastery.weakest(1)[0];
+    if(weak && Mastery.eff(weak)<0.6){
+      const st=Lesson.stage(weak);
+      chips.push(\`<button type="button" class="hchip" data-chip="weak" data-key="\${weak}"
+        onclick="UI.go('s-train');Train.startPool('\${weak}')">\${st!=='free'?Lesson.ICON[st]:'🎯'} Practise \${TOPIC_LABEL[weak]}</button>\`);
+    }
+    const lit=ROOMS.filter(r=>r.id!=='crucible').map(r=>({r, s:Rooms.status(r.id)})).find(x=>x.s.go);
+    if(lit) chips.push(\`<button type="button" class="hchip" data-chip="keep" data-room="\${lit.r.id}"
+        onclick="Rooms.open('\${lit.r.id}')">\${lit.r.ic} \${lit.r.nm.replace(/^The /,'')}: \${lit.s.txt}</button>\`);
+    return \`<div class="panel" id="heroCard">\${main}\${chips.length?\`<div class="hchips">\${chips.join('')}</div>\`:''}</div>\`;
+  },
   renderMap(){
     if(!Game.s) return;
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp,Game.s.maxHp);
+    const hero=document.getElementById('mapHero');
+    if(hero) hero.innerHTML=this.hero();
     ['hud','hud2','hud3'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=this.hud();});
     const g=Game.s, list=document.getElementById('mapList');
     Bounty.ensure();
@@ -10706,118 +11408,16 @@ const UI = {
           \`<button class="btn sm gold" style="width:auto" \${buy('a',a.id,a.cost)}>🪙 \${a.cost}</button>\`}
       </div>\`);
     });
-    /* Smithing and Enchanting: the Keep's half of the chain. Neither takes
-       gold — they take what the Deep gave up, which is the point. A player who
-       never descends can still buy everything above; a player who does gets
-       things gold cannot reach. */
-    out.push(\`</div><div class="panel"><h2>🔨 The Forge</h2>
-      <div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
-        <b>🪨 \${g.mats.ore}</b>.</div>\`);
-    FORGE.forEach(f=>{
-      const done = f.owned && f.owned(g);
-      const can = !done && g.mats.ore >= f.ore;
-      out.push(\`<div class="item \${done?'equipped':''}">
-        <div class="ic">\${f.ic}</div>
-        <div style="flex:1"><div class="nm">\${f.nm}</div><div class="ds">\${f.ds}</div></div>
-        \${done ? '<span class="pill">forged</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Forge.make('\${f.id}')">🪨 \${f.ore}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>🜄 The Rune Bench</h2>
-      <div class="sub">Enchanting spends <b>essence</b>, which comes only from chests
-        opened cleanly. You hold <b>🜄 \${g.mats.essence}</b>. A rune is bought once and
-        kept for good.</div>\`);
-    RUNES.forEach(r=>{
-      const worn=Runes.worn(r.id), can=!worn && g.mats.essence>=r.cost;
-      out.push(\`<div class="item \${worn?'equipped':''}">
-        <div class="ic">\${r.ic}</div>
-        <div style="flex:1"><div class="nm">\${r.nm}</div><div class="ds">\${r.ds}</div></div>
-        \${worn ? '<span class="pill">worn</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Runes.buy('\${r.id}')">🜄 \${r.cost}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>🌿 The Apothecary</h2>
-      <div class="sub">Herbalism makes up <b>herbs</b>, gathered from thickets out in the
-        Wilds and spent nowhere else. You hold <b>🌿 \${g.mats.herb}</b>. Most of this bench
-        can be bought again; the satchel is made once.</div>\`);
-    APOTHECARY.forEach(e=>{
-      const done = e.owned && e.owned(g);
-      const can = !done && g.mats.herb >= e.herb;
-      out.push(\`<div class="item \${done?'equipped':''}">
-        <div class="ic">\${e.ic}</div>
-        <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
-        \${done ? '<span class="pill">made</span>'
-               : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
-                    onclick="Apothecary.brew('\${e.id}')">🌿 \${e.herb}</button>\`}
-      </div>\`);
-    });
-    out.push(\`</div><div class="panel"><h2>📄 The Scriptorium</h2>
-      <div class="sub">Scribing spends <b>pages</b>, copied in the Library and spent nowhere
-        else. You hold <b>📄 \${g.mats.page}</b>. Binding sets a topic's clock back — it buys
-        <b>recency</b>, never mastery. \${(() => {
-          const cold = Scriptorium.coldest(12).length;
-          return cold ? \`<b>\${cold}</b> topic\${cold===1?' has':'s have'} faded enough to be worth binding.\`
-                      : 'Nothing has faded enough to be worth binding yet.';
-        })()}</div>\`);
-    SCRIPTORIUM.forEach(e=>{
-      const can = g.mats.page >= e.page && Scriptorium.coldest(1).length > 0;
-      out.push(\`<div class="item">
-        <div class="ic">\${e.ic}</div>
-        <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
-        <button class="btn sm \${can?'gold':''}" style="width:auto"
-          onclick="Scriptorium.bind('\${e.id}')">📄 \${e.page}</button>
-      </div>\`);
-    });
-    /* Alchemy's bench. The three buttons are the teaching: they quote what each
-       share would actually come back as, so a player sees the second half of a
-       pile yield about half what the first half did without being told why. */
-    {
-      const from=Crucible.from, to=Crucible.to;
-      const a=Crucible.mat(from), b=Crucible.mat(to);
-      const src=Crucible.held(from);
-      const band=['weak','steady','solid'][Crucible.tier()];
-      const chip=(which,m)=>{
-        const on = (which==='from' ? from : to) === m.id;
-        const dead = which==='to' && m.id===from;
-        return \`<button class="btn sm \${on?'gold':''}" style="width:auto;opacity:\${dead?0.35:1}"
-                  \${dead?'disabled':''} onclick="Crucible.point('\${which}','\${m.id}')"
-                  >\${m.ic} \${m.nm} ×\${Crucible.held(m.id)}</button>\`;
-      };
-      out.push(\`</div><div class="panel"><h2>⚗️ The Crucible</h2>
-        <div class="sub">Alchemy turns one material into another. Nothing is gathered here —
-          what it sells is <b>conversion</b>, and it is never free. The rate follows the
-          <b>gradient</b>: pouring a deep pile into an empty one pays well, pouring between
-          two level piles barely pays at all, and every unit you pour flattens the slope that
-          was paying you. Your grasp of \${Crucible.STRAND} is <b>\${band}</b>, which is what
-          sets the rate. \${Crucible.ready()
-            ? 'The crucible is <b>lit</b>, and it will take <b>one pour</b> — so how much you pour is the decision, and you make it before you know what you will need.'
-            : 'The crucible is <b>cold</b>. It lights again when you have been down and cleared a room.'}</div>
-        <div class="ds" style="margin-bottom:4px">Pour from</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-          \${MATERIALS.map(m=>chip('from',m)).join('')}</div>
-        <div class="ds" style="margin-bottom:4px">into</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
-          \${MATERIALS.map(m=>chip('to',m)).join('')}</div>\`);
-      if(src <= 0){
-        out.push(\`<div class="ds">You hold no \${a.nm}. That comes from \${a.from}.</div>\`);
-      } else {
-        Crucible.SHARES.forEach(sh=>{
-          const n=Math.max(1, Math.floor(src*sh.frac));
-          const q=Crucible.quote(from, to, n);
-          const can=q.get>0 && Crucible.ready();
-          out.push(\`<div class="item">
-            <div class="ic">\${a.ic}</div>
-            <div style="flex:1"><div class="nm">\${sh.nm} — \${q.spend} \${a.nm}</div>
-              <div class="ds">comes back as <b>\${q.get}</b> \${b.nm}.</div></div>
-            <button class="btn sm \${can?'gold':''}" style="width:auto" \${can?'':'disabled'}
-              onclick="Crucible.pour('\${from}','\${to}',\${q.spend})">\${b.ic} \${q.get}</button>
-          </div>\`);
-        });
-      }
-    }
-    out.push('</div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>');
+    /* The benches that spend what the realms give up — ore, essence, herbs,
+       pages — are rooms of the Keep now, not the bottom of this list. What is
+       left here is what gold buys, and a door to the rest. */
+    out.push(\`</div><div class="node" id="shopToKeep" onclick="UI.go('s-keep')">
+        <div class="ico" style="font-size:24px">🏰</div>
+        <div style="flex:1"><div class="nm">The Keep's workrooms</div>
+          <div class="dt">Forge · Rune Bench · Apothecary · Scriptorium · Crucible — they take ore,
+            essence, herbs and pages, not gold</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div><div class="panel"><h2>🧪 Relics &amp; Draughts</h2>\`);
 
     Object.entries(ITEMS).forEach(([k,it])=>{
       out.push(\`<div class="item">
@@ -11017,8 +11617,694 @@ const Shop = {
 };
 
 /* ------------------------------- training --------------------------------- */
+/* ------------------------------ the Keep's rooms -------------------------- */
+/* Five benches used to be five panels at the bottom of the Smithy's list, under
+   the weapons and the armour, where a knight carrying forty herbs had to scroll
+   past everything gold buys to find the one place herbs are spent. They are
+   rooms now: the Keep is a hub that says, on each door, what can be done behind
+   it with what you are carrying — and each room is its own screen, with the
+   bench in it and nothing else.
+
+   Nothing about what a bench SELLS has moved. The modules that own the
+   arithmetic — Forge, Runes, Apothecary, Scriptorium, Crucible — are untouched
+   apart from which screen they redraw; this is where their lists are drawn. */
+const ROOMS = [
+  {id:'forge',    nm:'The Forge',       ic:'🔨', col:'#ff9a5c', ds:'Smithing · spends ore'},
+  {id:'runes',    nm:'The Rune Bench',  ic:'🜄', col:'#7cc8ff', ds:'Enchanting · spends essence'},
+  {id:'apoth',    nm:'The Apothecary',  ic:'🌿', col:'#7fc98a', ds:'Herbalism · spends herbs'},
+  {id:'script',   nm:'The Scriptorium', ic:'📄', col:'#e9d49a', ds:'Scribing · spends pages'},
+  {id:'crucible', nm:'The Crucible',    ic:'⚗️', col:'#b48bec', ds:'Alchemy · turns one material into another'}
+];
+
+const Rooms = {
+  cur:'forge',
+  byId(id){ return ROOMS.find(r=>r.id===id) || null; },
+
+  /* What a door says. One line, and it is the reason the hub exists: either
+     what you can do in there right now, or how far you are from the next thing
+     worth coming back for. \`go\` marks a room with something to do in it. */
+  status(id){
+    const g=Game.s, m=g.mats;
+    const next=(list, held, cost, unit)=>{
+      // \`list\` is what is still worth making; the cheapest of it is the goal.
+      if(!list.length) return null;
+      const can=list.filter(x=>held>=cost(x)).length;
+      if(can) return {go:true, n:can};
+      const goal=list.slice().sort((a,b)=>cost(a)-cost(b))[0];
+      return {go:false, txt:\`\${cost(goal)-held} more \${unit} for \${goal.nm}\`};
+    };
+    if(id==='forge'){
+      const s=next(FORGE.filter(f=>!(f.owned && f.owned(g))), m.ore||0, f=>f.ore, 'ore');
+      return s.go ? {go:true, txt:\`\${s.n} can be forged\`} : s;
+    }
+    if(id==='runes'){
+      const s=next(RUNES.filter(r=>!Runes.worn(r.id)), m.essence||0, r=>r.cost, 'essence');
+      if(!s) return {go:false, txt:'Every rune is worn'};
+      return s.go ? {go:true, txt:\`\${s.n} can be carved\`} : s;
+    }
+    if(id==='apoth'){
+      const s=next(APOTHECARY.filter(e=>!(e.owned && e.owned(g))), m.herb||0, e=>e.herb, 'herbs');
+      return s.go ? {go:true, txt:\`\${s.n} can be brewed\`} : s;
+    }
+    if(id==='script'){
+      const cold=Scriptorium.coldest(12).length;
+      if(!cold) return {go:false, txt:'Nothing has gone cold'};
+      const leaf=SCRIPTORIUM[0].page;
+      return (m.page||0)>=leaf
+        ? {go:true, txt:\`\${cold} topic\${cold===1?' has':'s have'} gone cold\`}
+        : {go:false, txt:\`\${cold} gone cold · \${leaf-(m.page||0)} more pages to bind one\`};
+    }
+    if(id==='crucible'){
+      return Crucible.ready() ? {go:true, txt:'Lit — it will take one pour'}
+                              : {go:false, txt:'Cold — clear a room to relight it'};
+    }
+    return {go:false, txt:''};
+  },
+
+  mats(){
+    const g=Game.s;
+    return \`<div class="matrow">\${MATERIALS.map(m=>
+      \`<span class="mat" data-mat="\${m.id}"><b>\${g.mats[m.id]||0}</b>\${m.ic} \${m.nm}</span>\`).join('')}</div>\`;
+  },
+
+  renderKeep(){
+    if(!Game.s) return;
+    const doors=ROOMS.map(r=>{
+      const s=this.status(r.id);
+      return \`<div class="node door\${s.go?' lit':''}" data-room="\${r.id}" style="border-left-color:\${r.col}"
+                   onclick="Rooms.open('\${r.id}')">
+        <div class="ico" style="font-size:24px">\${r.ic}</div>
+        <div style="flex:1">
+          <div class="nm" style="color:\${r.col}">\${r.nm}</div>
+          <div class="dt">\${r.ds}</div>
+          <div class="dt dstat" style="color:\${s.go?'var(--green)':'var(--dim)'}">\${s.go?'● ':''}\${s.txt}</div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+    }).join('');
+    document.getElementById('keepBody').innerHTML=\`
+      <div id="hudK" class="hud">\${UI.hud()}</div>
+      <div class="panel"><h2>🏰 The Keep</h2>
+        <div class="sub">Gather out in the realms; make things here. Every room spends its own
+          material, and each door says what you can do behind it with what you are carrying.</div>
+        \${this.mats()}
+      </div>
+      \${doors}
+      <div class="node" id="doorQuarters" onclick="Quarters.open()" style="border-left-color:\${col_(Profiles.active())}">
+        <div class="ico" style="font-size:24px">\${(Profiles.active()||{}).crest||'🛡️'}</div>
+        <div style="flex:1"><div class="nm">Your quarters</div>
+          <div class="dt">Trophies, colours and crest · nothing here is bought</div>
+          <div class="dt">\${Quarters.trophies(Game.s).filter(t=>t.won).length} of \${REALMS.length} trophies on the shelf</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>
+      <div class="node" onclick="UI.go('s-shop')">
+        <div class="ico" style="font-size:24px">🏪</div>
+        <div style="flex:1"><div class="nm">The Smithy</div>
+          <div class="dt">Blades, plate and draughts · spends gold</div></div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+  },
+
+  open(id){
+    if(!this.byId(id)) return;
+    this.cur=id;
+    Brew.s=null;                       // a mix left on the bench is not kept
+    Forge.work=null;                   // nor a blade left half beaten
+    UI.go('s-room');
+  },
+  render(){
+    if(!Game.s) return;
+    const r=this.byId(this.cur) || ROOMS[0];
+    document.getElementById('roomBody').innerHTML =
+      \`<div class="roomhead" data-room="\${r.id}">\${this.art(r.id)}
+         <div class="roomname" style="color:\${r.col}">\${r.ic} \${r.nm}</div></div>\` +
+      this.bench[r.id].call(this, Game.s);
+  },
+  /* Whatever a bench just changed, redraw the screen that is showing it. The
+     benches call this instead of repainting the Smithy, which is where they
+     used to live. */
+  refresh(){
+    const on=document.querySelector('.screen.on');
+    if(!on) return;
+    if(on.id==='s-room') this.render();
+    else if(on.id==='s-keep') this.renderKeep();
+    else if(on.id==='s-shop') UI.renderShop();
+  },
+
+  /* ---- the rooms, drawn ---- */
+  /* One small scene a room, and each shows one true thing about the knight
+     standing in it: the Deepsteel on the rack is dark until it is forged, a
+     rune's place on the table is lit once it is worn, the cauldron is the
+     colour of what is being mixed, and the crucible's two vessels stand as full
+     as the piles they are poured between. */
+  art(id){
+    const g=Game.s;
+    const frame=(bg, inner, label)=>\`<svg class="roomart" viewBox="0 0 360 150" role="img" aria-label="\${label}"
+        preserveAspectRatio="xMidYMid slice"><rect width="360" height="150" fill="\${bg}"/>\${inner}</svg>\`;
+    const courses=(c)=>\`<path d="M0 30h360M0 60h360M0 90h360" stroke="\${c}" stroke-width="2"/>\`;
+    if(id==='forge'){
+      const edge=g.owned.wD ? '#c9c3dc' : '#3a2a26', plate=g.owned.aD ? '#c9c3dc' : '#3a2a26';
+      return frame('#2e1810', courses('#1f0f0a')+\`
+        <rect y="122" width="360" height="28" fill="#1c100b"/>
+        <path d="M22 122V70a34 34 0 0 1 68 0v52z" fill="#241410" stroke="#4d2e22" stroke-width="5"/>
+        <ellipse cx="56" cy="118" rx="26" ry="22" fill="#e2572b"/><ellipse cx="56" cy="120" rx="16" ry="13" fill="#ffb347"/>
+        <ellipse cx="56" cy="122" rx="8" ry="6" fill="#fff1b8"/>
+        <ellipse cx="80" cy="128" rx="90" ry="20" fill="#ff8c3c" opacity=".16"/>
+        <path d="M132 86h96c0 9-12 14-26 15l5 21h-54l5-21c-14-1-26-6-26-15z" fill="#4a4a58" stroke="#6e6e80" stroke-width="2"/>
+        <rect x="156" y="78" width="50" height="8" rx="3" fill="\${['#7a7a88','#e2572b','#ff9a3c','#ffd479'][Forge.work?Math.min(3,Forge.work.n+1):0]}"/>
+        \${Forge.work && Forge.work.n>0 ? \`<path d="M180 76l-26-30M180 76l-10-40M180 76l14-38M180 76l32-26" stroke="#ffd479" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="3 8"/>\` : ''}
+        <rect x="262" y="34" width="80" height="88" rx="6" fill="#241410" stroke="#4d2e22" stroke-width="4"/>
+        <path d="M280 44l4 8v52h-8V52z" fill="\${edge}"/><path d="M272 104h16M280 104v12" stroke="#8a6a3a" stroke-width="4" stroke-linecap="round"/>
+        <path d="M300 52h32l-3 40-13 8-13-8z" fill="\${plate}"/>\`, 'The forge: a hearth, an anvil, and a rack for what has been made');
+    }
+    if(id==='runes'){
+      const slot=(x,y,rid)=>{
+        const on=Runes.worn(rid);
+        return \`<circle cx="\${x}" cy="\${y}" r="15" fill="\${on?'#2c6a9c':'#142a45'}" stroke="\${on?'#cdeaff':'#2f4d70'}" stroke-width="3"/>
+          \${on?\`<circle cx="\${x}" cy="\${y}" r="22" fill="#7cc8ff" opacity=".22"/>\`:''}\`;
+      };
+      return frame('#0f1d33', courses('#0a1424')+\`
+        <ellipse cx="180" cy="88" rx="150" ry="58" fill="#1d3a5c" opacity=".55"/>
+        <ellipse cx="180" cy="84" rx="112" ry="52" fill="#1a3352" stroke="#3a5a7e" stroke-width="5"/>
+        <ellipse cx="180" cy="84" rx="86" ry="38" fill="none" stroke="#7cc8ff" stroke-width="2" stroke-dasharray="4 8" opacity=".7"/>
+        <path d="M180 50l56 56H124z" fill="none" stroke="#7cc8ff" stroke-width="1.5" opacity=".4"/>
+        \${slot(180,50,'r_edge')}\${slot(124,106,'r_hide')}\${slot(236,106,'r_depth')}\`,
+        'The rune bench: a carved table with a place for each rune');
+    }
+    if(id==='apoth'){
+      const brew = Brew.s ? Brew.colour() : '#57cc7a';
+      const herb=(x,c)=>\`<path d="M\${x} 0v16" stroke="#8a6a3a" stroke-width="2"/>
+        <path d="M\${x} 16c-7 5-9 17-5 30M\${x} 16c7 5 9 17 5 30M\${x} 16v34" stroke="\${c}" stroke-width="3" fill="none" stroke-linecap="round"/>\`;
+      return frame('#1c2f21', courses('#14231a')+\`
+        <rect y="122" width="360" height="28" fill="#33281c"/>
+        \${herb(120,'#6fbf7f')}\${herb(180,'#b9a05a')}\${herb(240,'#8fcf9a')}
+        <rect x="18" y="56" width="16" height="26" rx="5" fill="#e05a6a"/><rect x="40" y="62" width="14" height="20" rx="6" fill="#7cc8ff"/>
+        <rect x="60" y="52" width="18" height="30" rx="4" fill="#57cc7a"/><rect x="12" y="82" width="74" height="7" rx="3" fill="#6b4f30"/>
+        <rect x="24" y="96" width="20" height="22" rx="8" fill="#ffb347"/><rect x="52" y="92" width="14" height="26" rx="5" fill="#b48bec"/>
+        <path d="M282 122V66a30 30 0 0 1 60 0v56z" fill="#16233a" stroke="#3b5141" stroke-width="5"/>
+        <circle cx="322" cy="62" r="7" fill="#ffe6ae"/>
+        <ellipse cx="180" cy="140" rx="46" ry="6" fill="#ff8a5c" opacity=".35"/>
+        <path d="M134 82h92c0 34-18 56-46 56s-46-22-46-56z" fill="#2b2b36" stroke="#55556a" stroke-width="3"/>
+        <ellipse cx="180" cy="82" rx="46" ry="10" fill="\${brew}" stroke="#55556a" stroke-width="3"/>
+        <ellipse cx="168" cy="80" rx="12" ry="3" fill="#fff" opacity=".35"/>
+        \${Brew.s && Brew.ready() ? \`<circle cx="164" cy="60" r="6" fill="none" stroke="\${brew}" stroke-width="2"/>
+          <circle cx="190" cy="48" r="8" fill="none" stroke="\${brew}" stroke-width="2"/><circle cx="204" cy="66" r="4" fill="none" stroke="\${brew}" stroke-width="2"/>\` : ''}\`,
+        'The apothecary: hanging herbs, shelves of bottles, and a cauldron over a fire');
+    }
+    if(id==='script'){
+      const book=(x,h,c)=>\`<rect x="\${x}" y="\${52-h}" width="11" height="\${h}" fill="\${c}"/>\`;
+      const cold=Scriptorium.coldest(12).length;
+      return frame('#33260f', \`
+        \${[[16,34,'#7a2f3f'],[30,40,'#2f5a7a'],[44,30,'#5a6b2f'],[58,38,'#8a6a3a'],[72,32,'#4a3f72'],[86,40,'#7a2f3f'],[100,36,'#2f7a5a'],
+           [240,38,'#8a6a3a'],[254,30,'#2f5a7a'],[268,40,'#5a2f6b'],[282,34,'#7a5a2f'],[296,28,'#2f7a5a'],[310,38,'#7a2f3f'],[324,32,'#4a3f72']]
+          .map(b=>book(b[0],b[1],b[2])).join('')}
+        <rect y="52" width="360" height="7" fill="#5a4024"/>
+        <rect y="112" width="360" height="38" fill="#5d4020"/><path d="M0 112h360" stroke="#8a6438" stroke-width="3"/>
+        <path d="M112 104q34-16 68-4q34-12 68 4v26q-34-14-68-2q-34-12-68 2z" fill="#efe4c4" stroke="#b9a678" stroke-width="2"/>
+        <path d="M180 100v28M126 108h40M126 115h34M194 108h40M194 115h32" stroke="#9a8758" stroke-width="2" stroke-linecap="round"/>
+        <path d="M232 104l34-56" stroke="#e8e0d0" stroke-width="3" stroke-linecap="round"/>
+        <path d="M266 48c-9 4-17 15-22 28 7-3 17-13 22-28z" fill="#f6efe0"/>
+        <rect x="70" y="84" width="10" height="34" rx="2" fill="#efe6c9"/>
+        \${cold ? \`<path d="M75 84c-4-5-3-10 0-14 3 4 4 9 0 14z" fill="#ffb347"/><circle cx="75" cy="78" r="20" fill="#ffb347" opacity=".2"/>\` : ''}\`,
+        'The scriptorium: shelves, an open book, a quill, and a candle that burns while something has gone cold');
+    }
+    // the crucible: the two piles it is pointed between, drawn as full as they are
+    const a=Crucible.mat(Crucible.from), b=Crucible.mat(Crucible.to);
+    const COL={ore:'#d8c7b0', essence:'#7cc8ff', herb:'#57cc7a', page:'#e9d49a'};
+    const lit=Crucible.ready();
+    const vessel=(x, m)=>{
+      const h=Math.round(clamp(Crucible.held(m.id)/60,0,1)*74);
+      return \`<rect x="\${x+2}" y="\${116-h}" width="56" height="\${h}" fill="\${COL[m.id]}" opacity=".85"/>
+        <path d="M\${x} 38v70a10 10 0 0 0 10 10h40a10 10 0 0 0 10-10V38" fill="none" stroke="#8a76a0" stroke-width="4"/>\`;
+    };
+    return frame('#2a1634', courses('#1c0e24')+\`
+      <rect y="122" width="360" height="28" fill="#22122b"/>
+      \${vessel(40,a)}\${vessel(260,b)}
+      <path d="M100 52c30 0 44 14 56 34" fill="none" stroke="\${COL[a.id]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="\${lit?'6 8':'1 14'}"/>
+      <path d="M204 86c12-20 26-34 56-34" fill="none" stroke="\${COL[b.id]}" stroke-width="5" stroke-linecap="round" stroke-dasharray="\${lit?'6 8':'1 14'}"/>
+      <path d="M144 84h72l-7 42a10 10 0 0 1-10 8h-38a10 10 0 0 1-10-8z" fill="#3d2a4c" stroke="#b48bec" stroke-width="3"/>
+      <ellipse cx="180" cy="84" rx="36" ry="7" fill="\${lit?'#ff8ad8':'#4a3a58'}"/>\`,
+      'The crucible, between the pile being poured and the pile being filled');
+  },
+
+  /* ---- the benches ---- */
+  /* The lists that were the Smithy's lower half, one to a room and otherwise
+     as they were: same entries, same prices, same buttons calling the same
+     modules. */
+  bench:{
+    forge(g){
+      if(Forge.work){
+        const f=FORGE.find(x=>x.id===Forge.work.id), n=Forge.work.n, left=Forge.STRIKES-n;
+        return \`<div class="panel" id="forgeWork">
+          <h2 style="font-size:17px">\${f.ic} On the anvil: \${f.nm}</h2>
+          <div class="sub">\${f.ds}</div>
+          <div class="anvilpips" aria-label="\${n} of \${Forge.STRIKES} strikes">\${
+            Array.from({length:Forge.STRIKES}, (_,i)=>\`<i\${i<n?' class="on"':''}></i>\`).join('')}</div>
+          <button class="btn gold" id="forgeStrike" onclick="Forge.strike()">🔨 \${
+            n===0 ? \`Strike the anvil — \${f.ore} ore\` : left===1 ? 'The last strike!' : 'Strike again'}</button>
+          <button class="btn ghost" id="forgeDown" onclick="Forge.down()">← Put it down (nothing is spent)</button>
+        </div>\`;
+      }
+      return \`<div class="panel"><div class="sub">Smithing spends <b>ore</b> cut from seams in the Deep. You hold
+          <b>🪨 \${g.mats.ore}</b>.</div>\` +
+        FORGE.map(f=>{
+          const done = f.owned && f.owned(g);
+          const can = !done && g.mats.ore >= f.ore;
+          return \`<div class="item \${done?'equipped':''}">
+            <div class="ic">\${f.ic}</div>
+            <div style="flex:1"><div class="nm">\${f.nm}</div><div class="ds">\${f.ds}</div></div>
+            \${done ? '<span class="pill">forged</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                        data-forge="\${f.id}" onclick="Forge.start('\${f.id}')">🪨 \${f.ore}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    runes(g){
+      return \`<div class="panel"><div class="sub">Enchanting spends <b>essence</b>, which comes only from chests
+          opened cleanly. You hold <b>🜄 \${g.mats.essence}</b>. A rune is bought once and
+          kept for good.</div>\` +
+        RUNES.map(r=>{
+          const worn=Runes.worn(r.id), can=!worn && g.mats.essence>=r.cost;
+          return \`<div class="item \${worn?'equipped':''}">
+            <div class="ic">\${r.ic}</div>
+            <div style="flex:1"><div class="nm">\${r.nm}</div><div class="ds">\${r.ds}</div></div>
+            \${worn ? '<span class="pill">worn</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto"
+                        onclick="Runes.buy('\${r.id}')">🜄 \${r.cost}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    apoth(g){
+      if(Brew.s) return Brew.html();
+      return \`<div class="panel"><div class="sub">Herbalism makes up <b>herbs</b>, gathered from thickets out in the
+          Wilds and spent nowhere else. You hold <b>🌿 \${g.mats.herb}</b>. Most of this bench
+          can be made again; the satchel is made once. Nothing here is handed over: choose a
+          recipe, then <b>mix it</b> — find the parts of each herb that add up to what it calls for.</div>\` +
+        APOTHECARY.map(e=>{
+          const done = e.owned && e.owned(g);
+          const can = !done && g.mats.herb >= e.herb;
+          return \`<div class="item \${done?'equipped':''}">
+            <div class="ic">\${e.ic}</div>
+            <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
+            \${done ? '<span class="pill">made</span>'
+                   : \`<button class="btn sm \${can?'gold':''}" style="width:auto" data-brew="\${e.id}"
+                        onclick="Brew.open('\${e.id}')">🌿 \${e.herb}</button>\`}
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    script(g){
+      const cold = Scriptorium.coldest(12).length;
+      return \`<div class="panel"><div class="sub">Scribing spends <b>pages</b>, copied in the Library and spent nowhere
+          else. You hold <b>📄 \${g.mats.page}</b>. Binding sets a topic's clock back — it buys
+          <b>recency</b>, never mastery. \${cold
+            ? \`<b>\${cold}</b> topic\${cold===1?' has':'s have'} faded enough to be worth binding.\`
+            : 'Nothing has faded enough to be worth binding yet.'}</div>\` +
+        SCRIPTORIUM.map(e=>{
+          const can = g.mats.page >= e.page && Scriptorium.coldest(1).length > 0;
+          return \`<div class="item">
+            <div class="ic">\${e.ic}</div>
+            <div style="flex:1"><div class="nm">\${e.nm}</div><div class="ds">\${e.ds}</div></div>
+            <button class="btn sm \${can?'gold':''}" style="width:auto"
+              onclick="Scriptorium.bind('\${e.id}')">📄 \${e.page}</button>
+          </div>\`;
+        }).join('') + '</div>';
+    },
+    /* Alchemy's bench. The three buttons are the teaching: they quote what each
+       share would actually come back as, so a player sees the second half of a
+       pile yield about half what the first half did without being told why. */
+    crucible(g){
+      const from=Crucible.from, to=Crucible.to;
+      const a=Crucible.mat(from), b=Crucible.mat(to);
+      const src=Crucible.held(from);
+      const band=['weak','steady','solid'][Crucible.tier()];
+      const chip=(which,m)=>{
+        const on = (which==='from' ? from : to) === m.id;
+        const dead = which==='to' && m.id===from;
+        return \`<button class="btn sm \${on?'gold':''}" style="width:auto;opacity:\${dead?0.35:1}"
+                  \${dead?'disabled':''} onclick="Crucible.point('\${which}','\${m.id}')"
+                  >\${m.ic} \${m.nm} ×\${Crucible.held(m.id)}</button>\`;
+      };
+      let out=\`<div class="panel">
+        <div class="sub">Alchemy turns one material into another. Nothing is gathered here —
+          what it sells is <b>conversion</b>, and it is never free. The rate follows the
+          <b>gradient</b>: pouring a deep pile into an empty one pays well, pouring between
+          two level piles barely pays at all, and every unit you pour flattens the slope that
+          was paying you. Your grasp of \${Crucible.STRAND} is <b>\${band}</b>, which is what
+          sets the rate. \${Crucible.ready()
+            ? 'The crucible is <b>lit</b>, and it will take <b>one pour</b> — so how much you pour is the decision, and you make it before you know what you will need.'
+            : 'The crucible is <b>cold</b>. It lights again when you have been down and cleared a room.'}</div>
+        <div class="ds" style="margin-bottom:4px">Pour from</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+          \${MATERIALS.map(m=>chip('from',m)).join('')}</div>
+        <div class="ds" style="margin-bottom:4px">into</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          \${MATERIALS.map(m=>chip('to',m)).join('')}</div>\`;
+      if(src <= 0){
+        out+=\`<div class="ds">You hold no \${a.nm}. That comes from \${a.from}.</div>\`;
+      } else {
+        Crucible.SHARES.forEach(sh=>{
+          const n=Math.max(1, Math.floor(src*sh.frac));
+          const q=Crucible.quote(from, to, n);
+          const can=q.get>0 && Crucible.ready();
+          out+=\`<div class="item">
+            <div class="ic">\${a.ic}</div>
+            <div style="flex:1"><div class="nm">\${sh.nm} — \${q.spend} \${a.nm}</div>
+              <div class="ds">comes back as <b>\${q.get}</b> \${b.nm}.</div></div>
+            <button class="btn sm \${can?'gold':''}" style="width:auto" \${can?'':'disabled'}
+              onclick="Crucible.pour('\${from}','\${to}',\${q.spend})">\${b.ic} \${q.get}</button>
+          </div>\`;
+        });
+      }
+      return out+'</div>';
+    }
+  }
+};
+
+/* -------------------------------- brewing --------------------------------- */
+/* What the Apothecary asks for before it hands anything over.
+ *
+ * Every other bench is a price list: hold enough, press the button. This one
+ * was too, and it was the odd one out for it — a potion is a MIXTURE, so many
+ * parts of this and so many of that, and "so many parts of each, added up" is
+ * a linear combination, the third topic the game teaches. The bench had the
+ * mathematics sitting in its own fiction and was not using it.
+ *
+ * So a recipe now calls for a strength — ⟨7, 11⟩, warmth and calm — and the
+ * herbs on the bench each carry their own. The knight sets how many parts of
+ * each go in, and the cauldron takes it when the parts add up to exactly what
+ * was called for.
+ *
+ * Three things it is careful about.
+ *
+ *   It is solved by looking, not by remembering. The running total is on
+ *   screen the whole time, component by component, with how far over or under
+ *   each one is. Nothing has to be held in the head; that is the point of it.
+ *
+ *   It can always be done. The target is BUILT from a hidden choice of parts,
+ *   every herb used at least once, so there is an answer inside the steppers'
+ *   reach — and because the herbs are linearly independent, exactly one.
+ *
+ *   It tells the mastery model nothing. A puzzle with a live total can be
+ *   solved by nudging steppers until the lights go green, so it is practice and
+ *   not evidence — and a bench that moved a topic's mastery would be herbs
+ *   buying what no currency in this game is allowed to buy. It costs what the
+ *   recipe always cost, gives what it always gave, and touches no record. */
+const Brew = {
+  s:null,
+  CAP:6,                                   // parts of any one herb the bench will take
+  HERBS:[['🌿','Sage'],['🍂','Bitterroot'],['🌼','Sunpetal'],['🍄','Mosscap'],['🌾','Reedgrass'],['🫐','Nightberry']],
+  NOTES:['warmth','calm','spark'],
+  /* How hard a recipe is to mix, in step with what it is worth: two herbs and
+     small parts for a draught, three herbs in three strengths for the things
+     that are dear. \`neg\` lets a herb take a strength away as well as add it. */
+  TIER:{
+    a_draught:{dim:2, max:3, neg:false, col:'#e05a6a'},
+    a_insight:{dim:2, max:4, neg:true,  col:'#7cc8ff'},
+    a_feather:{dim:3, max:3, neg:false, col:'#ffb347'},
+    a_satchel:{dim:3, max:4, neg:true,  col:'#57cc7a'}
+  },
+  tier(id){ return this.TIER[id] || this.TIER.a_draught; },
+  colour(){ return this.s ? this.tier(this.s.id).col : '#57cc7a'; },
+
+  det(m){
+    return m.length===2 ? m[0][0]*m[1][1] - m[0][1]*m[1][0]
+      : m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])
+      - m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])
+      + m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+  },
+  /* One mix. Herbs are drawn until they are independent — a zero determinant
+     would mean one herb is made of the others, and then either the recipe has
+     many answers or none worth finding. */
+  make(id){
+    const t=this.tier(id), n=t.dim;
+    const fallback = n===2 ? [[2,1],[1,3]] : [[2,1,0],[0,2,1],[1,0,2]];
+    let vs=null;
+    for(let guard=0; guard<200 && !vs; guard++){
+      const c=Array.from({length:n}, ()=>Array.from({length:n}, ()=>R.i(t.neg?-1:0, 4)));
+      // independent, and no herb that only ever takes away
+      if(this.det(c)!==0 && !c.some(v=>v.every(x=>x<=0))) vs=c;
+    }
+    if(!vs) vs=fallback;
+    const parts=vs.map(()=>R.i(1, t.max));
+    const names=R.shuffle(this.HERBS).slice(0, n);
+    return {
+      id, dim:n, taps:0,
+      herbs:vs.map((v,i)=>({ic:names[i][0], nm:names[i][1], v, n:0})),
+      target:Array.from({length:n}, (_,k)=>vs.reduce((a,v,i)=>a+parts[i]*v[k], 0))
+    };
+  },
+
+  open(id){
+    const e=APOTHECARY.find(x=>x.id===id), g=Game.s;
+    if(!e || !g) return;
+    if(e.owned && e.owned(g)) return;
+    if((g.mats.herb||0) < e.herb){
+      UI.toast(\`That needs \${e.herb} herbs — gather a thicket out in the Wilds.\`);
+      return;
+    }
+    this.s=this.make(id);
+    Rooms.refresh();
+  },
+  step(i, d){
+    const s=this.s; if(!s || !s.herbs[i]) return;
+    const was=s.herbs[i].n;
+    s.herbs[i].n=clamp(was+d, 0, this.CAP);
+    if(s.herbs[i].n!==was){ s.taps++; Haptic.tap(); }
+    Rooms.refresh();
+  },
+  mix(){
+    const s=this.s;
+    return s.target.map((_,k)=>s.herbs.reduce((a,h)=>a+h.n*h.v[k], 0));
+  },
+  ready(){
+    if(!this.s) return false;
+    const m=this.mix();
+    return m.every((x,k)=>x===this.s.target[k]);
+  },
+  cancel(){ this.s=null; Rooms.refresh(); },
+  /* The mix is right: hand over to the bench, which spends the herbs and makes
+     the thing exactly as it always did. */
+  commit(){
+    if(!this.s || !this.ready()) return;
+    const id=this.s.id;
+    this.s=null;
+    Apothecary.brew(id);
+  },
+
+  html(){
+    const s=this.s, e=APOTHECARY.find(x=>x.id===s.id), mix=this.mix(), ok=this.ready();
+    const note=k=>this.NOTES[k];
+    const used=s.herbs.filter(h=>h.n>0);
+    const sum = used.length
+      ? used.map(h=>\`\${h.n}·\${vecR(h.v)}\`).join(' + ') + \` = <b>\${vecR(mix)}</b>\`
+      : 'Nothing in the cauldron yet.';
+    return \`<div class="panel" id="brewPanel">
+      <h2 style="font-size:17px">\${e.ic} Mixing: \${e.nm}</h2>
+      <div class="sub">Each part of a herb adds that herb's strengths once. Set the parts so the
+        mix adds up to <b>exactly</b> what the recipe calls for — so many parts of each, added up.</div>
+      <div class="brewT"><span class="bk">The recipe calls for</span>
+        <span class="bv" id="brewTarget">\${vecR(s.target)}</span>
+        <span class="bn">\${s.target.map((_,k)=>note(k)).join(' · ')}</span></div>
+      \${s.herbs.map((h,i)=>\`<div class="item brewH">
+        <div class="ic">\${h.ic}</div>
+        <div style="flex:1"><div class="nm">\${h.nm} <span class="bvec">\${vecR(h.v)}</span></div>
+          <div class="ds">\${h.v.map((x,k)=>\`\${note(k)} \${neg(x)}\`).join(' · ')} a part</div></div>
+        <button type="button" class="bstep" data-herb="\${i}" data-d="-1" aria-label="One part less \${h.nm}"
+          onclick="Brew.step(\${i},-1)" \${h.n<=0?'disabled':''}>−</button>
+        <span class="bparts" data-parts="\${i}">\${h.n}</span>
+        <button type="button" class="bstep" data-herb="\${i}" data-d="1" aria-label="One part more \${h.nm}"
+          onclick="Brew.step(\${i},1)" \${h.n>=this.CAP?'disabled':''}>+</button>
+      </div>\`).join('')}
+      <div class="brewSum" id="brewSum">\${sum}</div>
+      <div class="brewM">\${s.target.map((want,k)=>{
+        const d=mix[k]-want;
+        return \`<div class="bm \${d===0?'ok':d<0?'under':'over'}" data-note="\${k}">
+          <span>\${note(k)}</span><b>\${neg(mix[k])} / \${neg(want)}</b>
+          <i>\${d===0?'✓ exact':d<0?\`\${-d} short\`:\`\${d} over\`}</i></div>\`;
+      }).join('')}</div>
+      <button class="btn \${ok?'gold':''}" id="brewGo" \${ok?'':'disabled'} onclick="Brew.commit()">🌿 Brew it — \${e.herb} herbs</button>
+      <button class="btn ghost" id="brewBack" onclick="Brew.cancel()">← Not now (nothing is spent)</button>
+    </div>\`;
+  }
+};
+
+/* ------------------------------ the quarters ------------------------------ */
+/* The one room in the Keep that sells nothing.
+ *
+ * Every other door is a bench. This is where the knight lives, and what is in
+ * it is a record rather than a shop: the banner is their crest in their colour,
+ * the figure by the window wears what they wear into a fight, and the shelf
+ * holds one trophy for every realm whose champion they have put down — with an
+ * empty place, marked, for the next.
+ *
+ * Nothing here is bought. Colours and crest are free to change, because they
+ * always were a choice made at the gate and never an achievement. The rooms
+ * themselves are the other kind of thing: each is opened by somewhere the
+ * knight has actually been, and the door says where. That keeps to the rule the
+ * benches keep — what shows you have learned something cannot be had for coin.
+ *
+ * And nothing here is new to a save. The crest and colour were already on the
+ * roster and already travel in a knight code; the trophies are read off the
+ * map nodes that were always recorded; the chosen room is one word on the
+ * roster, which is this device's own and is simply the stone keep again on
+ * another. */
+const ROOM_STYLES = [
+  {id:'keep',  nm:'Stone keep',   wall:'#2a2142', line:'#1c1530', floor:'#3d2b22', rug:.55,
+   open:()=>true, how:''},
+  {id:'study', nm:'Arcane study', wall:'#14233d', line:'#0d1830', floor:'#2a2040', rug:.5,
+   open:g=>!!g.cleared['1:'+(REALMS[1].foes.length-1)],
+   how:()=>\`Put down \${REALMS[1].foes[REALMS[1].foes.length-1].nm}\`},
+  {id:'lodge', nm:'Forest lodge', wall:'#1d3324', line:'#14231a', floor:'#3b2a1a', rug:.5,
+   open:g=>((g.bests && g.bests.wilds)||0) >= 1,
+   how:()=>'Walk out into the Wilds and come back with something'},
+  {id:'eyrie', nm:'Summit eyrie', wall:'#22364d', line:'#172536', floor:'#3a3f4d', rug:.45,
+   open:g=>((g.bests && g.bests.summit)||0) >= 10,
+   how:()=>'Bank a climb from height 10 on the Summit'}
+];
+
+const Quarters = {
+  style(k, g){
+    const s=ROOM_STYLES.find(x=>x.id===(k && k.room));
+    return (s && s.open(g)) ? s : ROOM_STYLES[0];
+  },
+  // One trophy a realm, in the order the realms are met.
+  trophies(g){
+    return REALMS.map((r,ri)=>{
+      const boss=r.foes[r.foes.length-1];
+      return {realm:r.nm, col:r.col, boss:boss.nm, won:!!g.cleared[ri+':'+(r.foes.length-1)]};
+    });
+  },
+
+  open(){ UI.go('s-quarters'); },
+
+  /* The knight, standing. The same figure the battle draws, in the same
+     colours it will be drawn in there — which is the point of showing it. */
+  figure(col){
+    const cape=shadeCol(col, -70);
+    return \`<g transform="translate(180 176)">
+      <ellipse cx="0" cy="4" rx="34" ry="6" fill="#000" opacity=".35"/>
+      <path d="M-6 -72Q-44 -30 -30 10Q-10 4 6 -70z" fill="\${cape}"/>
+      <rect x="-20" y="-30" width="15" height="34" rx="5" fill="#8b97a8"/><rect x="5" y="-30" width="15" height="34" rx="5" fill="#8b97a8"/>
+      <rect x="-23" y="-2" width="20" height="9" rx="4" fill="#4a4038"/><rect x="3" y="-2" width="20" height="9" rx="4" fill="#4a4038"/>
+      <rect x="-24" y="-78" width="48" height="52" rx="10" fill="#c9d3e0"/>
+      <rect x="-9" y="-78" width="18" height="50" fill="\${cape}"/>
+      <path d="M0 -66l6 10-6 10-6-10z" fill="#f2c14e"/>
+      <circle cx="-26" cy="-72" r="12" fill="#8b97a8"/><circle cx="26" cy="-72" r="12" fill="#8b97a8"/>
+      <circle cx="-26" cy="-72" r="7" fill="#c9d3e0"/><circle cx="26" cy="-72" r="7" fill="#c9d3e0"/>
+      <rect x="-19" y="-118" width="38" height="40" rx="13" fill="#c9d3e0"/>
+      <rect x="-14" y="-106" width="28" height="8" fill="#1a1622"/>
+      <rect x="-12" y="-104" width="9" height="4" fill="#5ad1ff"/><rect x="3" y="-104" width="9" height="4" fill="#5ad1ff"/>
+      <path d="M0 -120Q16 -136 4 -146Q10 -130 -2 -122z" fill="\${col}"/>
+      <path d="M-52 -78h28v28q-14 16-28 0z" fill="\${col}" stroke="#f2c14e" stroke-width="3"/>
+      <rect x="32" y="-64" width="9" height="20" fill="#6b5a3e"/><rect x="23" y="-68" width="28" height="7" fill="#f2c14e"/>
+      <path d="M30 -68h12l-2 -54-4 -10-4 10z" fill="#dfe8f5"/>
+    </g>\`;
+  },
+
+  art(k, g){
+    const st=this.style(k, g), tr=this.trophies(g);
+    const next=tr.findIndex(t=>!t.won);
+    const shelf=tr.map((t,i)=>{
+      const x=250+(i%4)*26, y=i<4 ? 74 : 116;
+      if(t.won) return \`<g data-trophy="\${i}"><path d="M\${x-7} \${y-16}h14v7a7 7 0 0 1-14 0z" fill="\${t.col}"/>
+        <rect x="\${x-2}" y="\${y-4}" width="4" height="4" fill="\${t.col}"/><rect x="\${x-6}" y="\${y}" width="12" height="3" rx="1" fill="#8a6a3a"/></g>\`;
+      if(i===next) return \`<g data-next="\${i}"><rect x="\${x-8}" y="\${y-17}" width="16" height="20" rx="4" fill="none"
+        stroke="#8d80b3" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <text x="\${x}" y="\${y-2}" text-anchor="middle" font-size="12" font-weight="700" fill="#b4a8d4">?</text></g>\`;
+      return '';
+    }).join('');
+    return \`<svg class="roomart" viewBox="0 0 360 200" role="img" preserveAspectRatio="xMidYMid slice"
+        aria-label="Your quarters: your banner, your trophies, and the knight in your colours">
+      <rect width="360" height="200" fill="\${st.wall}"/>
+      <path d="M0 36h360M0 72h360M0 108h360" stroke="\${st.line}" stroke-width="2"/>
+      <rect y="150" width="360" height="50" fill="\${st.floor}"/><path d="M0 150h360" stroke="#000" stroke-opacity=".3" stroke-width="3"/>
+      <ellipse cx="180" cy="182" rx="92" ry="13" fill="\${col_(k)}" opacity="\${st.rug}"/>
+      <path d="M22 150V86a26 26 0 0 1 52 0v64z" fill="#0f1a33" stroke="#4a3f62" stroke-width="5"/>
+      <circle cx="58" cy="84" r="7" fill="#ffe6ae"/><path d="M48 60v90M22 110h52" stroke="#4a3f62" stroke-width="3"/>
+      <rect x="100" y="38" width="48" height="6" rx="3" fill="#8a6a3a"/>
+      <path d="M104 44h40v64l-20-13-20 13z" fill="\${col_(k)}"/>
+      <text x="124" y="80" text-anchor="middle" font-size="22" data-crest="1">\${k.crest}</text>
+      <rect x="236" y="78" width="110" height="6" rx="2" fill="#6b4f30"/><rect x="236" y="120" width="110" height="6" rx="2" fill="#6b4f30"/>
+      \${shelf}
+      \${this.figure(col_(k))}
+    </svg>\`;
+  },
+
+  render(){
+    const k=Profiles.active(), g=Game.s;
+    if(!k || !g) return;
+    const tr=this.trophies(g), won=tr.filter(t=>t.won), next=tr.find(t=>!t.won);
+    const st=this.style(k, g);
+    const w=Game.weapon(), a=Game.armor();
+    const runes=RUNES.filter(r=>Runes.worn(r.id));
+    const solid=Object.keys(g.topicStats).filter(key=>Mastery.eff(key)>=0.85).length;
+    document.getElementById('quartersBody').innerHTML=\`
+      <div class="roomhead">\${this.art(k, g)}
+        <div class="roomname" style="color:\${k.col}">\${k.crest} \${Knights.esc(k.nm)}'s quarters</div></div>
+      <div class="panel">
+        <div class="sub">Level <b>\${g.lvl}</b> · <b>\${Titles.count()}</b> title\${Titles.count()===1?'':'s'} ·
+          <b>\${solid}</b> topic\${solid===1?'':'s'} solid right now.
+          <span class="kbd" style="margin-left:6px" onclick="Knights.rename('\${k.id}');Quarters.render()">✏️ Rename</span></div>
+        <div class="item equipped"><div class="ic">\${w.ic}</div>
+          <div style="flex:1"><div class="nm">\${w.nm}</div><div class="ds">⚔️ \${w.dmg} damage · \${Math.round(w.crit*100)}% crit</div></div></div>
+        <div class="item equipped"><div class="ic">\${a.ic}</div>
+          <div style="flex:1"><div class="nm">\${a.nm}</div><div class="ds">🛡️ \${a.def} defence · ❤️ +\${a.hp} health</div></div></div>
+        \${runes.length?\`<div class="small" style="margin-top:6px">Runes worn: \${runes.map(r=>r.ic+' '+r.nm).join(' · ')}</div>\`:''}
+      </div>
+      <div class="panel" id="qTrophies"><h2>🏆 The shelf</h2>
+        <div class="sub"><b>\${won.length}</b> of \${tr.length} champions put down. Each leaves a trophy;
+          \${next ? \`the empty place is for <b>\${next.boss}</b>, in \${next.realm}.\` : 'the shelf is full.'}</div>
+        \${won.map(t=>\`<div class="item"><div class="ic" style="color:\${t.col}">🏆</div>
+          <div style="flex:1"><div class="nm">\${t.boss}</div><div class="ds" style="color:\${t.col}">\${t.realm}</div></div></div>\`).join('')}
+      </div>
+      <div class="panel" id="qLook"><h2>🎨 Colours and crest</h2>
+        <div class="sub">Yours to change whenever you like. They are worn into every fight, and they travel
+          with the knight to another device.</div>
+        <div class="swrow" id="qCols">\${CREST_COLS.map(c=>
+          \`<button type="button" class="sw\${c===k.col?' on':''}" style="background:\${c}" data-col="\${c}"
+             aria-label="Colour \${c}" aria-pressed="\${c===k.col}" onclick="Quarters.set('col','\${c}')"></button>\`).join('')}</div>
+        <div class="swrow" id="qCrests">\${CRESTS.map(c=>
+          \`<button type="button" class="cr\${c===k.crest?' on':''}" data-crest="\${c}"
+             aria-pressed="\${c===k.crest}" onclick="Quarters.set('crest','\${c}')">\${c}</button>\`).join('')}</div>
+      </div>
+      <div class="panel" id="qRooms"><h2>🏠 The room</h2>
+        <div class="sub">Not bought. Each is opened by somewhere you have been.</div>
+        \${ROOM_STYLES.map(s=>{
+          const open=s.open(g), on=st.id===s.id;
+          return \`<div class="item \${on?'equipped':''}" data-style="\${s.id}" style="\${open?'':'opacity:.6'}">
+            <div class="ic"><span class="chipsw" style="background:\${s.wall};border-bottom:7px solid \${s.floor}"></span></div>
+            <div style="flex:1"><div class="nm">\${s.nm}</div>
+              <div class="ds">\${open ? (on?'Where you live now.':'Open to you.') : '🔒 '+s.how()}</div></div>
+            \${on ? '<span class="pill">home</span>'
+                 : open ? \`<button class="btn sm" style="width:auto" onclick="Quarters.set('room','\${s.id}')">Move in</button>\` : ''}
+          </div>\`;
+        }).join('')}
+      </div>\`;
+  },
+
+  /* Only ever one of the values on offer: a crest and a colour are written into
+     a knight code as an index, so anything else would not survive the journey. */
+  set(what, v){
+    const k=Profiles.active(), g=Game.s;
+    if(!k || !g) return;
+    if(what==='col'   && CREST_COLS.indexOf(v)>=0) k.col=v;
+    else if(what==='crest' && CRESTS.indexOf(v)>=0) k.crest=v;
+    else if(what==='room'){
+      const s=ROOM_STYLES.find(x=>x.id===v);
+      if(!s || !s.open(g)) return;
+      k.room=v;
+    } else return;
+    Profiles.save();
+    Haptic.tap();
+    this.render();
+    UI.refreshTitle();
+  }
+};
+// The active knight's colour, or the first on the list if it is somehow not one.
+function col_(k){ return (k && CREST_COLS.indexOf(k.col)>=0) ? k.col : CREST_COLS[0]; }
+
 const Train = {
-  pool:[], title:'', c:0, w:0, cur:null,
+  pool:[], title:'', c:0, w:0, cur:null, lesson:null,
   renderPick(){
     document.getElementById('trainRun').style.display='none';
     document.getElementById('trainPick').style.display='';
@@ -11075,41 +12361,67 @@ const Train = {
     document.getElementById('trainRun').style.display='';
     this.next();
   },
+  // The step on screen: a lesson may ask the question in an easier form.
+  step(){ return (this.lesson && this.lesson.step) || this.cur; },
   next(){
     document.getElementById('tExplain').style.display='none';
     const key = this.pool.length>1 ? Mastery.pick(this.pool) : this.pool[0];
-    const diff = Game.s ? Mastery.adjustDiff(key, 2) : R.i(1,3);
+    const diff = Game.s ? Lesson.diff(key, Mastery.adjustDiff(key, 2)) : R.i(1,3);
     this.cur=buildQuestion(key, diff);
+    /* The yard teaches the way a fight does — the same ladder, read off the
+       same mastery — so drilling a topic here walks it up the same rungs, and
+       nothing learned in one place is asked as if it were new in the other. */
+    this.lesson = Game.s ? Lesson.plan(this.cur, false) : null;
+    Calc.clearKept();
+    const st=this.step();
     document.getElementById('tTopic').innerHTML =
       (this.pool.length>1 ? this.title+' — ' : '') + this.cur.topic +
+      Lesson.chip(this.lesson) +
       (Game.s&&Mastery.isReview(key) ? ' <span class="rev">⟳ review</span>' : '');
-    document.getElementById('tQ').innerHTML=this.cur.q;
+    document.getElementById('tCard').innerHTML = (this.lesson && this.lesson.card) || '';
+    document.getElementById('tQ').innerHTML=st.q;
     const box=document.getElementById('tChoices'); box.innerHTML='';
-    this.cur.choices.forEach(c=>{
-      const b=document.createElement('button');
-      b.className='btn choice'; b.innerHTML=c;
-      if(c===this.cur.a) b.dataset.correct='1';
-      b.onclick=()=>this.answer(b,c);
-      box.appendChild(b);
-    });
+    if(this.lesson && this.lesson.format==='build'){
+      Lesson.build(box, st.a, this.cur.choices, val=>this.answer(null, val), 'Check ▶');
+    } else {
+      (st._choices || this.cur.choices).forEach(c=>{
+        const b=document.createElement('button');
+        b.className='btn choice'; b.innerHTML=c;
+        if(c===st.a) b.dataset.correct='1';
+        b.onclick=()=>this.answer(b,c);
+        box.appendChild(b);
+      });
+    }
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
   answer(btn,choice){
-    const ok=choice===this.cur.a;
-    document.querySelectorAll('#tChoices .choice').forEach(b=>{
-      b.onclick=null;
-      if(b.dataset.correct==='1') b.classList.add('right');
-      else if(b===btn) b.classList.add('wrong'); else b.classList.add('faded');
-    });
+    const st=this.step();
+    const ok=choice===st.a;
+    const box=document.getElementById('tChoices');
+    if(btn){
+      box.querySelectorAll('.choice').forEach(b=>{
+        b.onclick=null;
+        if(b.dataset.correct==='1') b.classList.add('right');
+        else if(b===btn) b.classList.add('wrong'); else b.classList.add('faded');
+      });
+    } else {
+      // A built answer: the tiles go, and what was assembled stays to be read.
+      box.innerHTML=\`<div class="btn choice \${ok?'right':'wrong'}" style="cursor:default">\${choice}</div>\`;
+    }
     if(ok){ this.c++; Sfx.good(); } else { this.w++; Sfx.bad(); }
-    if(Game.s){ Game.recordAnswer(this.cur.key, ok); Game.save(); }
+    if(Game.s){
+      Game.recordAnswer(this.cur.key, ok, Lesson.weight(this.lesson && this.lesson.format));
+      Game.save();
+    }
     const e=document.getElementById('tExplain');
-    const miss = !ok && this.cur.why[choice];
+    const why = st!==this.cur ? (st._why||{}) : this.cur.why;
+    const miss = !ok && why[choice];
     e.style.display='block';
     e.innerHTML=\`<div style="font-weight:900;color:\${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
-        \${ok?'Correct.':'Not quite — the answer was <span style="color:var(--gold)">'+this.cur.a+'</span>.'}</div>
+        \${ok?'Correct.': st.quiet ? 'Not quite.'
+            : 'Not quite — the answer was <span style="color:var(--gold)">'+st.a+'</span>.'}</div>
       \${miss?\`<div class="miss">You chose <b>\${choice}</b>: \${miss}.</div>\`:''}
-      <div>\${this.cur.ex}</div>
+      <div>\${st.ex}</div>
       <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>\`;
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
@@ -11126,6 +12438,47 @@ const Train = {
    own keypad can produce, and anything it cannot parse simply shows no result. */
 const Calc = {
   ex:'', shown:false,
+
+  /* Kept numbers. The pad works one sum at a time, and most questions here are
+     two or three sums and then a comparison — a determinant is two products and
+     a difference, a matrix product is four dot products. Without somewhere to
+     put the first result, it has to be held in your head while you work the
+     second, and that is not the mathematics being tested. Keep pins what the
+     pad is showing beside the question, where it stays until the next one. */
+  kept:[], KEEP_MAX:6,
+  keep(){
+    const v=this.evaluate(this.ex);
+    if(v===null) return false;
+    const t=this.fmt(v);
+    if(this.kept[this.kept.length-1]===t) return false;      // already pinned
+    this.kept.push(t);
+    if(this.kept.length>this.KEEP_MAX) this.kept.shift();
+    this.ex='';                                              // ready for the next sum
+    this.paintKept();
+    return true;
+  },
+  clearKept(){ if(this.kept.length){ this.kept=[]; } this.paintKept(); },
+  // A kept number goes back into the sum being typed — it was kept to be used.
+  useKept(i){
+    const t=this.kept[i]; if(t===undefined) return;
+    if(!this.shown) this.open();
+    const lead=/[0-9.)²]$/.test(this.ex) ? '+' : '';
+    this.ex += lead + (t.startsWith('−') ? '('+t+')' : t);
+    this.render();
+  },
+  paintKept(){
+    const html = this.kept.length
+      ? \`<span class="sk">kept</span>\` +
+        this.kept.map((t,i)=>\`<button type="button" data-kept="\${i}">\${t}</button>\`).join('') +
+        \`<button type="button" class="sx" data-kept="x">clear</button>\`
+      : '';
+    document.querySelectorAll('.slate').forEach(el=>{
+      el.innerHTML=html;
+      el.querySelectorAll('button').forEach(b=>{
+        b.onclick=()=>{ if(b.dataset.kept==='x') this.clearKept(); else this.useKept(+b.dataset.kept); };
+      });
+    });
+  },
 
   tokens(s){
     const t=[]; let i=0;
@@ -11201,7 +12554,7 @@ const Calc = {
         ['4','4'],['5','5'],['6','6'],['×','×'],
         ['1','1'],['2','2'],['3','3'],['−','−'],
         ['C','C'],['0','0'],['.','.'],['+','+'],
-        ['⌫','⌫'],['=','=']],
+        ['⌫','⌫'],['📌 Keep','K'],['=','=']],
 
   /** Shown only where a scratch sum is plausibly wanted. */
   relevant(){
@@ -11224,11 +12577,13 @@ const Calc = {
       <div id="calcEx">&nbsp;</div>
       <div id="calcRes">&nbsp;</div>
       <div id="calcKeys">\${this.KEYS.map(([label,k])=>
-        \`<button data-k="\${k}"\${k==='='?' class="eq"':''}\${k==='C'?' class="clr"':''}>\${label}</button>\`).join('')}</div>
+        \`<button data-k="\${k}"\${k==='='?' class="eq"':''}\${k==='C'?' class="clr"':''}\${k==='K'?' class="keep"':''}>\${label}</button>\`).join('')}</div>
+      <div class="slate"></div>
     </div>\`;
     el.classList.add('on');
     document.getElementById('calcX').onclick=()=>this.close();
     el.querySelectorAll('#calcKeys button').forEach(b=>{ b.onclick=()=>this.key(b.dataset.k); });
+    this.paintKept();
     this.render();
   },
   close(){
@@ -11239,6 +12594,7 @@ const Calc = {
 
   key(k){
     if(k==='C') this.ex='';
+    else if(k==='K'){ this.keep(); Haptic.tap(); this.render(); return; }
     else if(k==='⌫') this.ex=this.ex.slice(0,-1);
     else if(k==='='){
       const v=this.evaluate(this.ex);

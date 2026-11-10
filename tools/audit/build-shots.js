@@ -42,7 +42,7 @@ const PANELS = [
      Posed at exactly that gradient because the three quotes are the only
      teaching the room does: 40 pages come back as 26 and 120 as 54, so the
      second half of the pile is visibly worth half the first. */
-  { key: 'crucible', heading: /The Crucible/, list: 'shopList',
+  { key: 'crucible', heading: /Alchemy turns one material/, list: 'roomBody',
     setup: `${strand}
       REALMS.forEach((r,ri)=>r.foes.forEach((f,i)=>Game.s.cleared[ri+':'+i]=1));
       Game.s.lvl=18; Game.s.gold=1500;
@@ -50,7 +50,7 @@ const PANELS = [
       Game.s.alch=0;
       strandTopics(Crucible.STRAND).forEach(k=>Game.s.topicStats[k]=
         {c:30,w:2,m:0.9,seen:20,last:Game.s.qCount||0,t:Date.now()});
-      UI.go('s-shop');` }
+      Rooms.open('crucible');` }
 ];
 
 /* What the player sees without scrolling. */

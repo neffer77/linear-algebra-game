@@ -202,5 +202,97 @@ module.exports = {
       /100 gold/.test(table.byId.tavern.detail), table.byId.tavern.detail);
     t.ok('every setting you can descend into has a way in from the map',
       table.settingsCovered);
+
+    // ------------------------------------------------------------------
+    // One card at the top says what to do next.
+    // ------------------------------------------------------------------
+    const hero = await t.ev(() => {
+      const out = {};
+      const card = () => { UI.go('s-map'); const c = document.getElementById('heroCard');
+        return { text: c.innerText, go: c.querySelector('#heroGo').dataset.hero,
+          chips: [...c.querySelectorAll('[data-chip]')].map(x => x.dataset.chip),
+          pips: [...c.querySelectorAll('.hpips i')].map(i => i.className.trim()) }; };
+      Game.s.cleared = {}; Game.s.topicStats = {}; Game.s.streak = { days: 0, last: null };
+      Game.s.mats = { ore: 0, essence: 0, herb: 0, page: 0 }; Game.s.runes = {};
+      delete Game.s.dungeon;
+
+      // a knight who has not been down to the cellar is sent there
+      Game.s.firstRun = 0;
+      out.cellar = card();
+      Game.s.firstRun = 1;
+
+      // a new campaign: the first foe of the first realm
+      out.start = card();
+      out.startNames = { realm: REALMS[0].nm, foe: REALMS[0].foes[0].nm };
+      out.notANode = !document.querySelector('#mapList #heroCard') && !document.getElementById('heroCard').classList.contains('node');
+      out.quiet = out.start.chips;
+      document.getElementById('heroGo').click();
+      out.fights = { screen: document.querySelector('.screen.on').id, foe: Battle.foe.nm, ri: Battle.ri, fi: Battle.fi };
+      Battle.flee();
+
+      // two down in the first realm: the third is next, and the pips say so
+      Game.s.cleared['0:0'] = 1; Game.s.cleared['0:1'] = 1;
+      out.third = card(); out.thirdFoe = REALMS[0].foes[2].nm;
+      document.getElementById('heroGo').click();
+      out.thirdFights = { ri: Battle.ri, fi: Battle.fi, foe: Battle.foe.nm };
+      Battle.flee();
+      // a realm finished: on to the next one
+      REALMS[0].foes.forEach((f, i) => Game.s.cleared['0:' + i] = 1);
+      out.nextRealm = card(); out.nextRealmName = REALMS[1].nm;
+      const boss = REALMS[1].foes.length - 1;
+      REALMS[1].foes.forEach((f, i) => { if (i < boss) Game.s.cleared['1:' + i] = 1; });
+      out.boss = card(); out.bossName = REALMS[1].foes[boss].nm;
+
+      // the smaller things, each only when it is true
+      Game.s.streak = { days: 5, last: null };
+      Game.s.topicStats.matVec = { c: 1, w: 3, m: 0.22, seen: 4, last: 0, t: Date.now() };
+      Game.s.mats.herb = 38;
+      out.busy = card();
+      document.querySelector('#heroCard [data-chip="weak"]').click();
+      out.weakGoes = { screen: document.querySelector('.screen.on').id, topic: Train.cur && Train.cur.key };
+      UI.go('s-map');
+      document.querySelector('#heroCard [data-chip="keep"]').click();
+      out.keepGoes = { screen: document.querySelector('.screen.on').id, room: Rooms.cur };
+      // a solid knight with empty pockets is not nagged
+      Game.s.topicStats.matVec.m = 0.95; Game.s.mats.herb = 0; Game.s.streak.days = 1;
+      out.calm = card().chips;
+
+      // a descent in flight outranks the campaign
+      Dungeon.descend('deep');
+      Dungeon.run.gold = 77; Dungeon.checkpoint && Dungeon.checkpoint();
+      UI.go('s-title');
+      out.pending = !!Dungeon.pending();
+      out.resume = card();
+      Dungeon.abandon ? (window.confirm = () => true, Dungeon.abandon()) : 0;
+
+      // the whole campaign won
+      REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => Game.s.cleared[ri + ':' + fi] = 1));
+      out.won = card();
+      return out;
+    });
+    t.eq('a knight who has not seen the cellar is sent there first', hero.cellar.go, 'cellar');
+    t.ok('a new campaign is pointed at its first foe',
+      hero.start.go === 'fight' && hero.start.text.includes(hero.startNames.realm) && hero.start.text.includes(hero.startNames.foe),
+      hero.start.text.slice(0, 100));
+    t.ok('the card is not one of the map\'s nodes, so their order is untouched', hero.notANode);
+    t.eq('with nothing else pressing, it says nothing else', hero.quiet, []);
+    t.ok('its button starts that fight',
+      hero.fights.screen === 's-battle' && hero.fights.foe === hero.startNames.foe && hero.fights.ri === 0 && hero.fights.fi === 0,
+      JSON.stringify(hero.fights));
+    t.ok('two foes down, it names the third',
+      hero.third.text.includes(hero.thirdFoe) && hero.third.pips.filter(c => c.includes('on')).length === 2
+      && hero.third.pips[2].includes('now'), JSON.stringify(hero.third.pips));
+    t.ok('and its button fights the third, not the first',
+      hero.thirdFights.fi === 2 && hero.thirdFights.foe === hero.thirdFoe, JSON.stringify(hero.thirdFights));
+    t.ok('a realm finished, it moves to the next', hero.nextRealm.text.includes(hero.nextRealmName) && /realm 2 of/i.test(hero.nextRealm.text));
+    t.ok('and it says when the next foe is the champion', hero.boss.text.includes('👑') && hero.boss.text.includes(hero.bossName));
+    t.eq('a streak, a weak topic and a lit bench each get a line', hero.busy.chips, ['streak', 'weak', 'keep']);
+    t.ok('the weak topic\'s line starts a drill on that topic',
+      hero.weakGoes.screen === 's-train' && hero.weakGoes.topic === 'matVec', JSON.stringify(hero.weakGoes));
+    t.ok('the bench\'s line opens that room', hero.keepGoes.screen === 's-room' && hero.keepGoes.room === 'apoth', JSON.stringify(hero.keepGoes));
+    t.eq('a knight with nothing pressing is not nagged', hero.calm, []);
+    t.ok('a descent in flight outranks the campaign', hero.pending && hero.resume.go === 'resume' && /at risk/.test(hero.resume.text),
+      hero.resume.text.slice(0, 100));
+    t.ok('and when every champion is down it points at what is left', hero.won.go === 'deep' && /Every champion is down/.test(hero.won.text));
   }
 };

@@ -376,8 +376,12 @@ module.exports = {
         Battle.emax = Battle.ehp = 1e6; Battle.over = null;
         Battle.nextQuestion();
         if (Battle.rite) { Battle.rite = null; Battle.renderStep(); }
-        const q = Battle.cur, why = q.why || {};
-        const wantTraps = q.choices.filter(c => c !== q.a && why[c]).length;
+        /* Read off the step on screen, not the question behind it: a lesson
+           may be asking the same problem with three answers, or as a claim to
+           judge, and the marking has to agree with what is actually offered. */
+        const q = Battle.cur, st = Battle.step();
+        const offered = st._choices || q.choices, why = st.why || {};
+        const wantTraps = offered.filter(c => c !== st.a && why[c]).length;
         const marked = [...document.querySelectorAll('#choices .choice')]
           .filter(b => b.dataset.trap === '1').length;
         out.drawn++;

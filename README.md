@@ -313,9 +313,16 @@ suite fires each one mid-fight and asserts the foe's health does not move.
 
 ---
 
-## Materials and the benches
+## Materials and the Keep's rooms
 
-Four materials, each given up by a different place and spent at the Keep:
+Four materials, each given up by a different place and spent at the Keep. The Keep is a
+hub off the map (🏰): one door a craft, and each door says what can be done behind it with
+what you are carrying — *2 can be brewed*, *13 more ore for Deepsteel Edge*, *Cold — clear
+a room to relight it*. Every room is its own screen, with the bench in it and a small drawn
+scene that shows one true thing about the knight standing there: the Deepsteel on the
+Forge's rack is dark until it is forged, a rune's place on the table is lit once it is
+worn, and the Crucible's two vessels stand as full as the piles it is pointed between. The
+Smithy keeps what gold buys.
 
 | Material | Comes from | Spent at |
 |---|---|---|
@@ -335,6 +342,29 @@ piles barely pays, and every unit poured makes the next worth less. No rate ever
 1:1, so a round trip strictly loses and there is no cycle to farm. It takes **one pour per
 descent**, which is what makes *how much* a commitment rather than arithmetic.
 
+**The Forge is struck, not pressed.** Choosing something to forge sets it on the anvil;
+three strikes make it, and the ore is spent on the last one. Putting the work down before
+then costs nothing.
+
+**Your quarters** are the one room that sells nothing. The banner is the knight's crest in
+their colour, the figure wears what they wear into a fight, and the shelf holds one trophy
+for every realm whose champion has been put down, with the next place marked. Colours and
+crest are free to change, are worn in battle (plume as chosen, cape a shade darker), and
+travel in a knight code as they always did. The room itself has four styles, and none is
+bought: each is opened by somewhere the knight has been — a champion beaten, a walk in the
+Wilds, a climb banked from height ten.
+
+**The Apothecary asks for a mix before it makes anything.** A potion is so many parts of
+each herb, added up — a linear combination — so a recipe calls for a strength such as
+⟨10, 14⟩, each herb on the bench carries its own, and the cauldron takes the mix when the
+parts add up to exactly what was called for. The running total stays on screen, strength
+by strength, with how far short or over each one is: it is solved by looking, not by
+remembering. Every recipe can be mixed, in exactly one way, using every herb, because the
+target is built from a hidden choice of parts and the herbs are always linearly
+independent. It costs and gives precisely what brewing always did, walking away spends
+nothing, and it tells the mastery model **nothing** — a puzzle with a live total can be
+solved by nudging, so it is practice and not evidence.
+
 Materials never gate anything. A knight with nothing can still descend, and a chest met
 without a pick is a dead end rather than a dead run.
 
@@ -346,6 +376,48 @@ The game is built so that losing teaches you as much as winning.
 
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
+- **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
+  producing are four different things to ask of a learner, so a topic is walked up four
+  rungs rather than dropped at the top:
+
+  | Rung | What you are asked |
+  |---|---|
+  | 📖 first meeting | The rule, one small instance of it, a whole problem worked through (folded away), then an easy question with **three** answers and small numbers. Nothing strikes you for getting it wrong. |
+  | ⚖️ true or false | A claimed answer, and you say whether it is right. A false claim is always one of the mistakes the question can diagnose, and the reason is read out either way. |
+  | 🎯 choose | The question as it always was: four answers. |
+  | 🧩 build it | No answers offered. A vector or matrix is assembled from number tiles, slot by slot; a whole number is typed. It strikes as a Perfect Strike does, ×3. |
+
+  **Where a topic stands is not stored anywhere.** It is read off *effective* mastery —
+  the faded number that already sets difficulty — so a topic left alone for a month walks
+  itself back down the ladder and is re-introduced, nothing is added to a save or a knight
+  code, and a knight who existed before the ladder did is placed by what they know. The
+  two easy rungs count for six-tenths of an answer in the mastery model, because saying
+  "true" is weaker evidence than producing the answer; the weights are chosen so a clean
+  run climbs exactly one rung an answer. A first meeting that goes wrong draws no blood,
+  but it is still a wrong answer in every other respect, so there is nothing to gain by
+  missing on purpose. The Training Grounds use the same ladder. The Daily Skirmish does
+  not: it is the same twelve problems for everyone. The rooms of a descent — seams,
+  thickets, ward-stones, tables, the scriptorium — keep their four answers, because each
+  stakes its own thing on the answer, but a topic at its first meeting now arrives there
+  with the rule above the question. That card draws nothing from the dice, so a room
+  rebuilt from its seed on resuming a run is the room that was left.
+- **The map opens on what to do next.** One card above everything else names the single
+  thing the campaign is waiting on — the next foe, with the realm's progress as pips — and
+  has one button for it. A descent left in flight outranks it; a knight who has not seen
+  the cellar is sent there. Beneath, at most three smaller lines appear only when true: a
+  streak, the weakest topic (one tap drills it), and a bench with something to make. A
+  knight with nothing pressing sees none of them.
+- **The end of a fight says what it taught.** Under the gold and the experience, the
+  victory and defeat panels list each topic whose mastery moved — *Dot Product 0% → 30%* —
+  with the rung it will be asked on next. Falls are listed as well as rises; being shown
+  the working moves nothing and so lists nothing.
+- **Every topic has a rule card.** Thirty-seven were written beside their generators; the
+  other thirty-three — the simpler topics, which went without on the theory that they
+  needed no introduction — fall back to `RULES`.
+- **📌 Kept numbers.** The scratch pad works one sum at a time and most questions are two
+  or three sums and a comparison. **Keep** pins a result beside the question until the
+  next one, so the first product of a determinant does not have to be held in your head
+  while you work out the second. Tapping a kept number drops it back into the sum.
 - **🔎 Show me the working.** Every question carries a way out for a player who is
   genuinely stuck: ask, and the problem is worked in front of you in numbered steps,
   ending on the answer. Twelve topics are worked from a hand-written ladder — pick *u*,
@@ -401,7 +473,8 @@ Reachable from the title screen and the map (⚙️).
 | 🔊 Sound | All synthesised audio. Off by default is never assumed — it respects your choice. |
 | ✨ Full motion | Screen shake, hit-stop, camera punch, slow-motion and particle volume. Turning it off keeps the game fully playable and legible; it defaults to off if your OS asks for reduced motion. |
 | 📳 Haptics | Vibration on hits and rewards, where the device supports it. |
-| 🧮 Scratch pad | The in-fight calculator. On by default. |
+| 🧮 Scratch pad | The in-fight calculator, with **Keep** to pin a result beside the question. On by default. |
+| 📖 Step-by-step lessons | New and faded topics are taught up the four rungs. Off asks everything in the four-answer form. On by default. |
 
 Verified free of horizontal overflow and undersized tap targets at 320×568, 375×667,
 390×844, 414×896, 768×1024 and 844×390 (landscape).
@@ -438,6 +511,10 @@ Inside `index.html` the code is organised as:
 | `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
 | `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
+| `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
+| `ROOM_STYLES`, `Quarters` | the knight's own room: trophies read off cleared champions, colours and crest on the roster, and room styles opened by play |
+| `Brew` | the Apothecary's mix: draws independent herbs, builds a target from hidden parts, and hands a right mix to the bench |
+| `RULES`, `Lesson` | a rule card for every topic, and the ladder a topic is asked up — rung read off faded mastery, the true-or-false and three-answer steps, and the tile-and-slot build |
 | `WaveEngine` | one foe curve for every setting — ramp, swell, thin air and champions in one place |
 | `Codec` | the knight code: a binary save encoder, base32 and checksummed, small enough for a QR |
 | `DESTINATIONS` | what the map offers and in what order, as a table rather than hand-written blocks |
@@ -487,6 +564,13 @@ the harness enforces is that a question figure may not carry a reveal flag (`par
 `tangent`, `legs`, `right`, `sum`) nor draw the answer vector — the payoff picture belongs
 in `figAnswer`.
 
+Give it a `codex:{rule, eg}` — one sentence of rule (200 characters at most) and one small
+worked instance — or add one to `RULES`. Every topic must have one, because it is what a
+first meeting shows; the `lesson` suite fails if any is missing. If the answer is a whole
+number, a row vector or a matrix it can be built from tiles automatically; if it has more
+than one right form (any multiple of an eigenvector, say), add the key to
+`Lesson.NO_BUILD`.
+
 Entries in `d` are either a bare string or `[text, "the mistake it represents"]`. Prefer
 the tagged form: it is what lets the game tell a player *what they did wrong* rather than
 only what the answer was. Reserve bare strings for filler with no teachable error behind
@@ -508,7 +592,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-three suites, 1,137 checks, about a minute:
+loop only exists once the page is running. Twenty-five suites, 1,329 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -532,8 +616,10 @@ loop only exists once the page is running. Twenty-three suites, 1,137 checks, ab
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
+| `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
+| `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
-| `map` | the places you can go are above the campaign, not below thirty-two fights |
+| `map` | the places you can go are above the campaign, not below thirty-two fights, and one card at the top says what to do next |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite

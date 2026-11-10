@@ -38,6 +38,8 @@ const SUITES = [
   require('./play/library'),     // S11b
   require('./play/crucible'),    // S12
   require('./play/working'),     // S13
+  require('./play/lesson'),      // S14
+  require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
   require('./play/map'),         // M1
   require('./play/cheat')        // T1

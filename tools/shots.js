@@ -166,7 +166,15 @@ const SCENES = [
   { name: 'forge', note: 'the Keep spends what the Deep gave up',
     go: () => { Game.s.gold = 900; Game.s.mats = { ore: 26, essence: 9 };
                 Game.s.runes = { r_edge: 1 };
-                UI.go('s-shop'); } },
+                Rooms.open('forge'); } },
+
+  { name: 'keep', note: 'every door says what can be done behind it',
+    go: () => { Game.s.mats = { ore: 9, essence: 18, herb: 38, page: 26 };
+                UI.go('s-keep'); } },
+
+  { name: 'brew', note: 'a recipe is a linear combination, mixed with the total showing',
+    go: () => { Game.s.mats = { ore: 0, essence: 0, herb: 38, page: 0 };
+                Rooms.open('apoth'); Brew.open('a_draught'); Brew.step(0, 1); Brew.step(1, 2); } },
 
   { name: 'shop', note: 'the Smithy, lockpicks included',
     go: () => { Game.s.gold = 900; UI.go('s-shop'); } },
