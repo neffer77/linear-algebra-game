@@ -440,6 +440,20 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .btile:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
 .bpad{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px;}
 .bpad .btile{min-width:0; padding:0;}
+/* ---- what next, at the top of the map ---- */
+#heroCard{border-color:rgba(242,193,78,.4); padding-bottom:12px;}
+#heroCard .hk{font-family:var(--serif); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold);}
+#heroCard .hn{font-family:var(--serif); font-size:23px; font-weight:800; line-height:1.15; margin-top:2px;}
+#heroCard .hd{font-size:13px; color:var(--dim); margin-top:5px;}
+#heroCard .hd b{color:var(--ink);}
+.hpips{display:flex; gap:5px; margin-top:8px;}
+.hpips i{flex:1; height:8px; border-radius:4px; background:#171129; border:1px solid var(--edge);}
+.hpips i.now{border-color:var(--gold); box-shadow:0 0 6px rgba(242,193,78,.6);}
+.hpips i.boss{flex:1.4;}
+.hchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;}
+.hchip{display:inline-flex; align-items:center; min-height:36px; padding:0 11px; border-radius:999px;
+  border:1px solid var(--edge); background:#1d1633; color:var(--ink); font:inherit; font-size:12.5px; font-weight:700;}
+button.hchip{cursor:pointer; border-color:var(--gold-dk);}
 /* ---- the Keep and its rooms ---- */
 .matrow{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
 .mat{display:flex; flex-direction:column; align-items:center; padding:6px 2px; border-radius:10px;
@@ -626,6 +640,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ MAP ============ -->
   <div class="screen" id="s-map">
     <div id="hud" class="hud"></div>
+    <div id="mapHero"></div>
     <div class="panel" style="padding:10px">
       <div class="row">
         <button class="btn sm" onclick="UI.go('s-keep')" id="btnKeep">🏰 Keep</button>
@@ -634,7 +649,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div class="row">
         <button class="btn sm ghost" onclick="UI.go('s-tome')">📖 Tome</button>
-        <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Training</button>
+        <button class="btn sm ghost" onclick="UI.go('s-train')">🎯 Train</button>
         <button class="btn sm ghost" onclick="Game.rest()">🔥 Rest</button>
         <button class="btn sm ghost" onclick="UI.go('s-prefs')" aria-label="Settings" style="flex:0 0 46px">⚙️</button>
       </div>
@@ -11154,10 +11169,82 @@ const UI = {
     // rather than won — both things a bug report needs to carry.
     paintBuild();
   },
+  /* The first uncleared fight of the campaign, in the order it is met. Realms
+     open on the champion before them and foes on the foe before them, so the
+     first one not yet beaten is always one that can be walked into. */
+  nextFoe(){
+    const g=Game.s;
+    for(let ri=0; ri<REALMS.length; ri++){
+      const r=REALMS[ri];
+      for(let fi=0; fi<r.foes.length; fi++)
+        if(!g.cleared[ri+':'+fi]) return {ri, fi, r, f:r.foes[fi]};
+    }
+    return null;
+  },
+  /* What to do next, as one card at the top of the map.
+   *
+   * The map is a long page and every part of it is a fair thing to do, which is
+   * exactly why a knight opening it had to read it to find out where they were.
+   * This answers that before anything else is read: the one thing the campaign
+   * is waiting on, with a single button — and beneath it, at most three smaller
+   * things the game happens to know are worth a visit right now. Each of those
+   * is read off state that already exists; none of them is a new thing to track.
+   *
+   * It is deliberately NOT one of the map's nodes. The order of those is a
+   * promise the map suite holds the page to — a descent in progress first, the
+   * open places above the campaign — and a card that joined the list would
+   * renumber all of it. */
+  hero(){
+    const g=Game.s;
+    const pend=Dungeon.pending(), nx=this.nextFoe();
+    let main;
+    if(pend){
+      const set=SETTINGS[pend.setting||'deep']||SETTINGS.deep;
+      main=`<div class="hk">Unfinished</div>
+        <div class="hn">Back to ${set.nm}</div>
+        <div class="hd">Room ${(pend.done||0)+1} · 🎒 ${pend.gold||0} gold still at risk · ❤️ ${pend.hp}</div>
+        <button class="btn gold" id="heroGo" data-hero="resume" onclick="Dungeon.resume()">🕯️ Return to the descent</button>`;
+    } else if(!g.firstRun){
+      main=`<div class="hk">Start here</div>
+        <div class="hn">The quartermaster is waiting</div>
+        <div class="hd">Three rooms in the cellar — nothing down there can finish you.</div>
+        <button class="btn gold" id="heroGo" data-hero="cellar" onclick="Quartermaster.open()">🗝️ Go down to the cellar</button>`;
+    } else if(nx){
+      const done=nx.r.foes.filter((f,i)=>g.cleared[nx.ri+':'+i]).length;
+      main=`<div class="hk">Continue · realm ${nx.ri+1} of ${REALMS.length}</div>
+        <div class="hn" style="color:${nx.r.col}">${nx.r.nm}</div>
+        <div class="hpips" aria-label="${done} of ${nx.r.foes.length} beaten">${nx.r.foes.map((f,i)=>
+          `<i class="${i<done?'on':i===done?'now':''}${f.boss?' boss':''}" style="${i<done?`background:${nx.r.col};border-color:${nx.r.col}`:''}"></i>`).join('')}</div>
+        <div class="hd">Next: <b>${nx.f.boss?'👑 ':''}${nx.f.nm}</b> · ❤️ ${nx.f.hp} · ⚔️ ${nx.f.atk}</div>
+        <button class="btn gold" id="heroGo" data-hero="fight" onclick="Battle.begin(${nx.ri},${nx.fi})">⚔️ Fight</button>`;
+    } else {
+      main=`<div class="hk">The campaign is won</div>
+        <div class="hn">Every champion is down</div>
+        <div class="hd">What is left goes further than any realm did.</div>
+        <button class="btn gold" id="heroGo" data-hero="deep" onclick="Dungeon.descend()">⛏️ Descend the Deep</button>`;
+    }
+    // The smaller things. Each is shown only when it is true, so an empty row
+    // means there is genuinely nothing else pressing.
+    const chips=[];
+    const days=(g.streak&&g.streak.days)||0;
+    if(days>1) chips.push(`<span class="hchip" data-chip="streak">🔥 ${days} days running</span>`);
+    const weak=Mastery.weakest(1)[0];
+    if(weak && Mastery.eff(weak)<0.6){
+      const st=Lesson.stage(weak);
+      chips.push(`<button type="button" class="hchip" data-chip="weak" data-key="${weak}"
+        onclick="UI.go('s-train');Train.startPool('${weak}')">${st!=='free'?Lesson.ICON[st]:'🎯'} Practise ${TOPIC_LABEL[weak]}</button>`);
+    }
+    const lit=ROOMS.filter(r=>r.id!=='crucible').map(r=>({r, s:Rooms.status(r.id)})).find(x=>x.s.go);
+    if(lit) chips.push(`<button type="button" class="hchip" data-chip="keep" data-room="${lit.r.id}"
+        onclick="Rooms.open('${lit.r.id}')">${lit.r.ic} ${lit.r.nm.replace(/^The /,'')}: ${lit.s.txt}</button>`);
+    return `<div class="panel" id="heroCard">${main}${chips.length?`<div class="hchips">${chips.join('')}</div>`:''}</div>`;
+  },
   renderMap(){
     if(!Game.s) return;
     Game.s.maxHp=Game.maxHp();
     Game.s.hp=Math.min(Game.s.hp,Game.s.maxHp);
+    const hero=document.getElementById('mapHero');
+    if(hero) hero.innerHTML=this.hero();
     ['hud','hud2','hud3'].forEach(id=>{const el=document.getElementById(id); if(el) el.innerHTML=this.hud();});
     const g=Game.s, list=document.getElementById('mapList');
     Bounty.ensure();

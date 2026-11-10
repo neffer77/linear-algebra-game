@@ -401,6 +401,12 @@ The game is built so that losing teaches you as much as winning.
   stakes its own thing on the answer, but a topic at its first meeting now arrives there
   with the rule above the question. That card draws nothing from the dice, so a room
   rebuilt from its seed on resuming a run is the room that was left.
+- **The map opens on what to do next.** One card above everything else names the single
+  thing the campaign is waiting on — the next foe, with the realm's progress as pips — and
+  has one button for it. A descent left in flight outranks it; a knight who has not seen
+  the cellar is sent there. Beneath, at most three smaller lines appear only when true: a
+  streak, the weakest topic (one tap drills it), and a bench with something to make. A
+  knight with nothing pressing sees none of them.
 - **The end of a fight says what it taught.** Under the gold and the experience, the
   victory and defeat panels list each topic whose mastery moved — *Dot Product 0% → 30%* —
   with the rung it will be asked on next. Falls are listed as well as rises; being shown
@@ -586,7 +592,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-five suites, 1,314 checks, about a minute:
+loop only exists once the page is running. Twenty-five suites, 1,329 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -613,7 +619,7 @@ loop only exists once the page is running. Twenty-five suites, 1,314 checks, abo
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
-| `map` | the places you can go are above the campaign, not below thirty-two fights |
+| `map` | the places you can go are above the campaign, not below thirty-two fights, and one card at the top says what to do next |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
