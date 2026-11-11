@@ -140,14 +140,89 @@ const VIEWPORTS = [
       R.unseed();
       Scribe.begin(spec,{depth:6,run:Dungeon.run},()=>{});
       Scribe.at=2; Scribe.pages=4; Scribe.precision=0.7; Scribe.slips=1;
-      Scribe.ask();` }
+      Scribe.ask();` },
+
+  /* The map's first screenful after the what-next card: one foe named, one
+     button, and the three lines that appear only when they are true. */
+  { key: 'mapnow', height: 700, setup: `
+      REALMS[0].foes.forEach((f,i)=>Game.s.cleared['0:'+i]=1);
+      Game.s.cleared['1:0']=1;
+      Game.s.firstRun=1; Game.s.gold=310; Game.s.lvl=6;
+      Game.s.streak={days:5,last:null};
+      Game.s.mats={ore:9,essence:2,herb:38,page:0};
+      Game.s.topicStats.matVec={c:1,w:3,m:0.22,seen:4,last:0,t:Date.now()};
+      UI.go('s-map');` },
+
+  /* The Keep, stocked: every door saying what can be done behind it. */
+  { key: 'keep', height: 900, setup: `
+      Game.s.firstRun=1;
+      Game.s.mats={ore:9,essence:18,herb:38,page:26};
+      Game.s.topicStats.limPoly={c:4,w:0,m:0.8,seen:4,last:0,t:Date.now()-20*864e5};
+      UI.go('s-keep');` },
+
+  /* The Apothecary mid-mix: one part short in both strengths, with the sum
+     written out so nothing has to be held in the head. */
+  { key: 'brew', height: 1000, setup: `
+      Game.s.firstRun=1; Game.s.mats={ore:0,essence:0,herb:38,page:0};
+      R.seed(4242);
+      Rooms.open('apoth'); Brew.open('a_draught');
+      R.unseed();
+      Brew.step(0,1);` },
+
+  /* A knight's own quarters: two champions down, a colour and a crest chosen. */
+  { key: 'quarters', height: 760, setup: `
+      Game.s.firstRun=1;
+      REALMS[0].foes.forEach((f,i)=>Game.s.cleared['0:'+i]=1);
+      REALMS[1].foes.forEach((f,i)=>Game.s.cleared['1:'+i]=1);
+      Quarters.set('col','#5aa9e6'); Quarters.set('crest','🐉');
+      Quarters.open();` },
+
+  /* The hall: a door for each knight on the device, the one being played lit. */
+  { key: 'hall', height: 760, setup: `
+      Game.s.firstRun=1;
+      Quarters.set('col','#5aa9e6'); Quarters.set('crest','🐉');
+      Profiles.make('Bram','🌙','#e5484d'); Profiles.make('Iris','🌿','#57cc7a'); Profiles.save();
+      Knights.open();` }
 ];
 
 /* One element, by selector, after a setup that puts it on screen. The panels
    above are found by the heading they carry inside a scrolling list; this is
    for the ones that are not in a list at all — the explanation panel, which is
    a sibling of the question rather than a child of anything. */
+const LESSON = `
+      Game.s.firstRun=1; Prefs.d.motion=false;
+      Battle.begin(0,1);
+      Battle.ehp=Battle.emax=1e6; Battle.charge=0; Battle.chargeMax=99; Battle.slamNext=false;`;
 const ELEMENTS = [
+  /* The ladder's four rungs, each on the same topic so the difference is the
+     rung and nothing else. Seeded, so the numbers are the same every build. */
+  { key: 'meet', sel: '#qpanel', height: 1100, setup: LESSON, then: `
+      delete Game.s.topicStats.det2;
+      Battle.realm=Object.assign({},REALMS[0],{pool:['det2']}); Mastery._last=null;
+      R.seed(20261110); Battle.nextQuestion(); R.unseed();` },
+  { key: 'judge', sel: '#qpanel', height: 900, setup: LESSON, then: `
+      Game.s.topicStats.det2={c:2,w:0,m:0.25,seen:2,last:0,t:Date.now()};
+      Battle.realm=Object.assign({},REALMS[0],{pool:['det2']}); Mastery._last=null;
+      R.seed(20261111); Battle.nextQuestion(); R.unseed();` },
+  { key: 'build', sel: '#qpanel', height: 1100, setup: LESSON, then: `
+      Game.s.topicStats.vecAdd={c:4,w:0,m:0.68,seen:4,last:0,t:Date.now()};
+      Battle.realm=Object.assign({},REALMS[0],{pool:['vecAdd']}); Mastery._last=null;
+      R.seed(20261112); Battle.nextQuestion(); R.unseed();
+      const first=Battle.cur.a.match(/−?\\d+/g)[0];
+      document.querySelector('#pstrike .btile[data-v="'+first+'"]').click();` },
+  { key: 'tiles', sel: '#qpanel', height: 900, setup: LESSON, then: `
+      Game.s.topicStats.det2={c:9,w:0,m:0.9,seen:9,last:0,t:Date.now()};
+      Battle.realm=Object.assign({},REALMS[0],{pool:['det2']}); Mastery._last=null;
+      R.seed(20261113); Battle.nextQuestion(); R.unseed();
+      document.querySelector('#choices .choice[data-correct="1"]').click();` },
+  /* The road, as a new knight two realms in sees it. */
+  { key: 'road', sel: '#realmPath', height: 1100, setup: `
+      Game.s.firstRun=1;
+      REALMS[0].foes.forEach((f,i)=>Game.s.cleared['0:'+i]=1);
+      REALMS[1].foes.forEach((f,i)=>Game.s.cleared['1:'+i]=1);
+      Game.s.cleared['2:0']=1;
+      UI.go('s-map');` },
+
   /* The working, shown. Posed on u-substitution because that is one of the
      twelve topics with a hand-authored ladder, so the picture shows the good
      case: four rungs, each with what was asked, what came out, and why. */

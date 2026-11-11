@@ -407,6 +407,21 @@ The game is built so that losing teaches you as much as winning.
   the cellar is sent there. Beneath, at most three smaller lines appear only when true: a
   streak, the weakest topic (one tap drills it), and a bench with something to make. A
   knight with nothing pressing sees none of them.
+- **The campaign is a road.** The eight realms are stones on a winding path — won,
+  where you are (with your progress), or sealed — with the road behind you in gold. Each
+  realm's fights fold away beneath its heading, and only the realm you are working through
+  is left open; tapping a stone opens its realm. Every fight is still on the page.
+- **The title knows you, and the hall has doors.** A returning knight sees their banner,
+  name, champions beaten and topics solid instead of the rules of play, which are kept for
+  somebody who has not been down to the cellar. *Switch* opens the hall: a door for each
+  knight, hung with their own banner, the one being played lit, with rename, move and
+  erase beneath it as before, and a door for a new knight.
+- **Answers are lettered tiles.** Short answers sit two by two so they can be compared at a
+  glance; anything longer than about fourteen characters keeps the full width, so a minus
+  sign is never squeezed out of sight. The tile you choose is marked ✓ or ✗ as well as
+  green or red. On a keyboard, **1–4** or **A–D** answers and **Enter** moves on — never
+  while the scratch pad is open, and never for an answer Insight has burned away. There is
+  deliberately no countdown ring: nothing moves on screen while a question is waiting.
 - **The end of a fight says what it taught.** Under the gold and the experience, the
   victory and defeat panels list each topic whose mastery moved — *Dot Product 0% → 30%* —
   with the rung it will be asked on next. Falls are listed as well as rises; being shown
@@ -592,7 +607,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-five suites, 1,329 checks, about a minute:
+loop only exists once the page is running. Twenty-five suites, 1,365 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -619,7 +634,7 @@ loop only exists once the page is running. Twenty-five suites, 1,329 checks, abo
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
-| `map` | the places you can go are above the campaign, not below thirty-two fights, and one card at the top says what to do next |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next, the campaign is a road with one realm open, and the hall has a door for each knight |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite

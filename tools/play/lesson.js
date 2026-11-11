@@ -575,6 +575,92 @@ module.exports = {
     t.ok('and a new fight begins with nothing to report', taught.fresh.n === 0 && taught.fresh.html === '');
 
     // ------------------------------------------------------------------
+    // Answer tiles: lettered, side by side when short, and answerable by key.
+    // ------------------------------------------------------------------
+    const tiles = await t.ev(() => {
+      const out = {};
+      const press = k => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true }));
+      const box = () => document.getElementById('choices');
+      __L.begin();
+      const s1 = __L.ask('det2', 0.9);
+      out.short = { grid: box().classList.contains('grid2'), tiles: box().classList.contains('tiles'),
+        letter: getComputedStyle(box().querySelector('.choice'), '::before').content,
+        markup: s1.choices.every(c => [...box().querySelectorAll('.choice')].some(b => b.innerHTML === c)) };
+      // "x = −3 and x = 3" is never fewer than fifteen characters
+      __L.ask('critical', 0.9);
+      out.long = box().classList.contains('grid2');
+      __L.ask('vecAdd', 0.25);
+      out.tf = box().classList.contains('grid2') && box().querySelectorAll('.choice').length === 2;
+
+      // a key answers: the letter of the right one
+      __L.ask('det2', 0.9);
+      const i = [...box().querySelectorAll('.choice')].findIndex(b => b.dataset.correct === '1');
+      const combo = Battle.combo;
+      press('abcd'[i]);
+      out.byLetter = { answered: Battle.answered, right: Battle.combo === combo + 1,
+        tick: getComputedStyle(box().querySelector('.choice.right'), '::before').content };
+      // a second key does nothing once the turn is answered
+      press('abcd'[(i + 1) % 4]);
+      out.noSecond = Battle.combo === combo + 1 && !box().querySelector('.choice.wrong');
+      // Enter moves on
+      press('Enter');
+      out.enterMoves = !Battle.answered;
+      // and digits work as letters do
+      const j = [...box().querySelectorAll('.choice')].findIndex(b => b.dataset.correct === '1');
+      press(String(j + 1));
+      out.byDigit = Battle.answered;
+      press('Enter');
+
+      // a faded answer cannot be picked by key
+      __L.ask('det2', 0.9);
+      const wrong = [...box().querySelectorAll('.choice')].map((b, k) => [b, k]).filter(([b]) => b.dataset.correct !== '1')[0];
+      wrong[0].classList.add('faded');
+      press('abcd'[wrong[1]]);
+      out.fadedIgnored = !Battle.answered;
+
+      // nor while the scratch pad is open, nor with a modifier held
+      Calc.open(); press('abcd'[wrong[1] === 0 ? 1 : 0]); out.calcBlocks = !Battle.answered; Calc.close();
+      const ri = [...box().querySelectorAll('.choice')].findIndex(b => b.dataset.correct === '1');
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'abcd'[ri], ctrlKey: true, bubbles: true }));
+      out.ctrlIgnored = !Battle.answered;
+
+      // and not at all on a screen that asks nothing
+      Battle.flee(); UI.go('s-map');
+      const before = document.querySelector('.screen.on').id;
+      press('a'); press('Enter');
+      out.mapIgnores = document.querySelector('.screen.on').id === before;
+
+      // the training yard lays out and answers the same way
+      Game.s.topicStats.det2 = { c: 9, w: 0, m: 0.9, seen: 9, last: 0, t: Date.now() };
+      UI.go('s-train'); Train.startPool('det2');
+      const tb = document.getElementById('tChoices');
+      out.yard = { grid: tb.classList.contains('grid2') };
+      const c0 = Train.c;
+      const yi = [...tb.querySelectorAll('.choice')].findIndex(b => b.dataset.correct === '1');
+      press(String(yi + 1));
+      out.yard.answered = Train.c === c0 + 1;
+      press('Enter');
+      out.yard.next = !!tb.querySelector('.choice:not(.right):not(.wrong):not(.faded)');
+      UI.go('s-title');
+      return out;
+    });
+    t.ok('short answers sit two by two, lettered, with their markup untouched',
+      tiles.short.grid && tiles.short.tiles && /counter\(tile/.test(tiles.short.letter) && tiles.short.markup, JSON.stringify(tiles.short));
+    t.ok('a long answer keeps the whole width', !tiles.long);
+    t.ok('true and false sit side by side', tiles.tf);
+    t.ok('pressing an answer\'s letter answers it', tiles.byLetter.answered && tiles.byLetter.right);
+    t.ok('and the tile it chose is marked with a tick, not colour alone', /✓/.test(tiles.byLetter.tick), tiles.byLetter.tick);
+    t.ok('a second key changes nothing once answered', tiles.noSecond);
+    t.ok('Enter moves on', tiles.enterMoves);
+    t.ok('a digit works as its letter does', tiles.byDigit);
+    t.ok('an answer burned away cannot be picked by key', tiles.fadedIgnored);
+    t.ok('keys go to the scratch pad while it is open', tiles.calcBlocks);
+    t.ok('and a key with Ctrl held is left to the browser', tiles.ctrlIgnored);
+    t.ok('a screen that asks nothing ignores them', tiles.mapIgnores);
+    t.ok('the training yard lays out and answers the same way',
+      tiles.yard.grid && tiles.yard.answered && tiles.yard.next, JSON.stringify(tiles.yard));
+
+    // ------------------------------------------------------------------
     // Kept numbers: the pad holds a sum so the knight does not have to.
     // ------------------------------------------------------------------
     const kept = await t.ev(() => {
