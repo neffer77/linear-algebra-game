@@ -465,6 +465,17 @@ The game is built so that losing teaches you as much as winning.
   whatever you do. And **the topic records nothing at all** — not a right answer, not a
   wrong one, and not a fresh timestamp either. Being shown is not knowing, so the question
   comes back.
+- **💡 A nudge first.** Most players who are stuck need the way in, not the way through.
+  Above the working sits a smaller door: the first step of the working on its own, stopped
+  short of the answer. Where that step runs on to the answer, it is cut at the sign just
+  before, so the sum is set up and left open — *Length is Pythagoras: √(7² + 24²) = …* — and
+  a ladder's nudge is its first rung's question, without the rung's answer. A piece of the
+  answer the question already shows does not count as a leak; the answer itself counts
+  wherever a sum lands on it. Where nothing survives the cut, the topic's rule stands in.
+  The question still has to be answered, and a right answer after a nudge lands for half
+  the damage and moves mastery by half, because it is only part yours. It is not offered
+  in the daily, on a ladder, or on a first meeting or a true-or-false rung, and nothing
+  about it is saved.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
 - **The same slip twice is called a pattern** — one diagnosis cannot say "again". When a
@@ -559,7 +570,7 @@ Inside `index.html` the code is organised as:
 | `SKILL_ABILITIES`, `Loadout` | the ten carried abilities, and the mastery bands their charges are read from |
 | `PASSAGE_SKILLS`, `Passage` | the four skills that are never carried: salvage, guard, memory, and where a climb starts you |
 | `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
-| `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation |
+| `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation — and cuts its first step into a nudge that stops short of the answer |
 | `Slips` | counts each misconception a knight repeats in a topic this sitting, for the "same slip as last time" and "not caught this time" notes |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
 | `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
@@ -644,7 +655,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-nine suites, 1,457 checks, about a minute:
+loop only exists once the page is running. Thirty suites, 1,494 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -668,6 +679,7 @@ loop only exists once the page is running. Twenty-nine suites, 1,457 checks, abo
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
+| `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
