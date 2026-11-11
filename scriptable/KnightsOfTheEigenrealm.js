@@ -675,6 +675,23 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   background:rgba(255,255,255,.06); color:var(--dim)}
 .sbadge.warn{background:rgba(229,72,77,.16); color:#ff9b9e}
 .strandBody{padding-bottom:6px}
+.ctrack{margin:14px 0 4px;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
+.cstrand{margin:0 0 4px}
+.cstrand.here{border-color:var(--gold-dk);box-shadow:0 0 0 1px var(--gold-dk) inset}
+.cstrand h3{margin:0;font-size:15px;display:flex;align-items:center;gap:8px}
+.cstrand h3 .cname{flex:1}
+.cstrand .cneeds{font-size:12px;color:var(--dim);margin:2px 0 6px}
+.clink{text-align:center;color:var(--dim);font-size:13px;line-height:1;margin:2px 0}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.cchip{display:flex;flex-direction:column;gap:3px;text-align:left;min-height:44px;padding:7px 8px;border-radius:10px;
+  background:rgba(255,255,255,.04);border:1px solid var(--edge);color:var(--ink);font:inherit;cursor:pointer}
+.cchip.unmet{opacity:.55}
+.cchip .cl{font-size:12px;font-weight:700;line-height:1.2}
+.cchip .cr{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.cpips{display:inline-flex;gap:3px}
+.cpips i{width:7px;height:7px;border-radius:50%;background:#3a2f5c;display:block}
+.cpips i.on{background:currentColor}
+.clegend{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:12px;color:var(--dim);margin-top:6px}
 .fig{display:block; width:100%; height:auto; border-radius:10px; margin:8px 0 2px;
   border:1px solid var(--edge); background:#171129;}
 .figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
@@ -840,6 +857,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div id="hud3" class="hud"></div>
     <div id="gearList"></div>
     <button class="btn ghost" onclick="UI.go('s-map')">← Back to the map</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ COMPETENCY MAP ============ -->
+  <div class="screen" id="s-comp">
+    <div id="compList"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
 
@@ -11286,6 +11310,140 @@ const Dungeon = {
 };
 
 /* ---------------------------------- UI ------------------------------------ */
+/* -------------------------- the competency map --------------------------- */
+/* The whole curriculum on one screen, and where this knight stands in it.
+ *
+ * The seven strands are the core competencies. They run in two tracks, linear
+ * algebra and calculus, each strand building on the one before it, and the
+ * tracks meet in multivariable calculus, which needs vectors and derivatives
+ * both. Every topic sits on the same ladder the lessons climb (first meeting,
+ * true or false, choose, build, then fluent), read off effective mastery, so
+ * the map shows what you know today and a topic that has faded drops a rung.
+ *
+ * Nothing here is stored. It is all derived from the mastery records the save
+ * already has, so a knight from before the map existed is placed on it the
+ * moment it opens, and a knight code carries it for free. */
+const Competency = {
+  TRACKS:[
+    ['Linear algebra', ['Vectors','Matrices','Eigen & Subspaces']],
+    ['Calculus',       ['Limits & Derivatives','Integrals','Applications']],
+    ['Where they meet',['Multivariable & Series']]
+  ],
+  NEEDS:{
+    'Matrices':['Vectors'],
+    'Eigen & Subspaces':['Matrices'],
+    'Integrals':['Limits & Derivatives'],
+    'Applications':['Limits & Derivatives'],
+    'Multivariable & Series':['Vectors','Limits & Derivatives']
+  },
+  /* The rungs, lowest first. The four lesson rungs keep their own names and
+     icons; the fifth is past the ladder, where any form of question is fair. */
+  RUNGS:['meet','tf','choose','build','fluent'],
+  ICON(i){ return i<0 ? '·' : i<4 ? Lesson.ICON[this.RUNGS[i]] : '✦'; },
+  NAME(i){ return i<0 ? 'not met yet' : i<4 ? Lesson.LABEL[this.RUNGS[i]] : 'fluent'; },
+
+  keys(name){ const s=STRANDS.find(x=>x[0]===name); return s ? s[1] : []; },
+  /* A topic's rung, from effective mastery and the lessons' own bands. It is
+     read whether lessons are switched on or not: the map reports what you know,
+     not which form of question comes next. −1 is a topic never met. */
+  rung(key){
+    const r=Game.s && Game.s.topicStats[key];
+    if(!r || !r.seen) return -1;
+    const e=Mastery.eff(key);
+    return e<Lesson.MEET ? 0 : e<Lesson.TF ? 1 : e<Lesson.CHOOSE ? 2 : e<Lesson.BUILD ? 3 : 4;
+  },
+  /* How much of a competency you hold: mean effective mastery over every topic
+     in it, with a topic never met counting zero. Averaging only the topics you
+     have tried would call a strand of one solid topic and ten unmet ones 90%. */
+  score(name){
+    const ks=this.keys(name);
+    return ks.length ? ks.reduce((a,k)=>a+Mastery.eff(k),0)/ks.length : 0;
+  },
+  count(keys){
+    const n={unmet:0, learning:0, fluent:0};
+    keys.forEach(k=>{ const r=this.rung(k); n[r<0?'unmet':r<4?'learning':'fluent']++; });
+    return n;
+  },
+  /* Where to work next on a track: its first strand you do not yet hold. */
+  here(track){
+    const t=this.TRACKS.find(x=>x[0]===track);
+    return t ? (t[1].find(nm=>this.score(nm)<Lesson.BUILD) || null) : null;
+  },
+  all(){ return Object.keys(TOPIC_LABEL); },
+  practise(key){ UI.go('s-train'); Train.startPool(key); },
+
+  pips(i, col){
+    return \`<span class="cpips" style="color:\${col}" aria-hidden="true">\${
+      [0,1,2,3,4].map(j=>\`<i class="\${j<=i?'on':''}"></i>\`).join('')}</span>\`;
+  },
+  chip(k){
+    const i=this.rung(k), e=Mastery.eff(k), r=Game.s.topicStats[k];
+    const col = i<0 ? 'var(--dim)' : Mastery.colour(e);
+    const faded = r && r.seen && (r.m-e) >= Mastery.DROP;
+    const say = \`\${TOPIC_LABEL[k]}: \${this.NAME(i)}\${i<0?'':', '+Math.round(e*100)+'%'}\${faded?', fading':''}\`;
+    return \`<button class="cchip\${i<0?' unmet':''}" data-key="\${k}" data-rung="\${i}" aria-label="\${say}"
+        onclick="Competency.practise('\${k}')">
+        <span class="cl">\${TOPIC_LABEL[k]}</span>
+        <span class="cr">\${this.pips(i,col)}<span>\${this.ICON(i)}</span>\${
+          i<0?'':\`<b style="color:\${col}">\${Math.round(e*100)}%</b>\`}\${faded?' <span title="It fades while you are away">↓</span>':''}</span>
+      </button>\`;
+  },
+  strand(nm, here){
+    const ks=this.keys(nm), sc=this.score(nm), n=this.count(ks), pct=Math.round(sc*100);
+    const needs=(this.NEEDS[nm]||[]).map(p=>\`\${p} <b style="color:\${Mastery.colour(this.score(p))}">\${Math.round(this.score(p)*100)}%</b>\`);
+    return \`<div class="panel cstrand\${here?' here':''}" data-strand="\${nm}">
+        <h3><span class="cname">\${nm}</span>\${here?'<span class="tag">you are here</span>':''}
+          <span style="color:\${Mastery.colour(sc)}">\${pct}%</span></h3>
+        <div class="cneeds">\${needs.length?'Builds on '+needs.join(' · ')+' · ':''}\${n.fluent} of \${ks.length} fluent\${
+          n.learning?\` · \${n.learning} learning\`:''}\${n.unmet?\` · \${n.unmet} not met\`:''}</div>
+        <div class="track thin"><div class="fill" style="width:\${pct}%;background:\${Mastery.colour(sc)}"></div></div>
+        <div class="cgrid">\${ks.map(k=>this.chip(k)).join('')}</div>
+      </div>\`;
+  },
+  render(){
+    const el=document.getElementById('compList');
+    if(!el || !Game.s) return;
+    const all=this.all(), n=this.count(all);
+    const sc=all.reduce((a,k)=>a+Mastery.eff(k),0)/all.length, pct=Math.round(sc*100);
+    const heres=new Set(this.TRACKS.slice(0,2).map(([t])=>this.here(t)).filter(Boolean));
+    el.innerHTML=\`<div class="panel"><h2>🧭 Competency Map</h2>
+        <div class="sub">The whole curriculum, and where you stand in it today. Tap a topic to practise it.</div>
+        <div class="row" style="margin-top:8px;text-align:center">
+          <div><b style="font-size:20px;color:var(--green)">\${n.fluent}</b><div class="small">fluent</div></div>
+          <div><b style="font-size:20px;color:var(--gold)">\${n.learning}</b><div class="small">learning</div></div>
+          <div><b style="font-size:20px;color:var(--dim)">\${n.unmet}</b><div class="small">not met yet</div></div>
+        </div>
+        <div class="small" style="margin-top:6px">Overall <b>\${pct}%</b> of \${all.length} topics</div>
+        <div class="track thin"><div class="fill" style="width:\${pct}%;background:\${Mastery.colour(sc)}"></div></div>
+        <div class="clegend">\${[0,1,2,3,4].map(i=>\`<span>\${this.ICON(i)} \${this.NAME(i)}</span>\`).join('<span>→</span>')}</div>
+      </div>
+      \${this.TRACKS.map(([t,names])=>\`<div class="ctrack">\${t}</div>\${
+        names.map((nm,i)=>this.link(names[i-1], nm)+this.strand(nm, heres.has(nm))).join('')}\`).join('')}\`;
+  },
+  /* An arrow between two strands only where the lower one really builds on the
+     upper: Applications sits under Integrals on the page but needs derivatives,
+     and an arrow there would teach the wrong order. */
+  link(above, nm){
+    if(!above) return '';
+    return (this.NEEDS[nm]||[]).includes(above) ? '<div class="clink" aria-hidden="true">↓</div>' : '<div style="height:8px"></div>';
+  },
+  /* The way in from the map: one line of how far you have come. */
+  node(){
+    if(!Game.s || !Mastery.all().length) return '';
+    const all=this.all(), n=this.count(all);
+    const sc=all.reduce((a,k)=>a+Mastery.eff(k),0)/all.length;
+    return \`<div class="node" id="compNode" style="margin:0 0 8px" onclick="UI.go('s-comp')">
+        <div class="ico" style="font-size:24px">🧭</div>
+        <div style="flex:1">
+          <div class="nm">Competency Map <span class="tag">\${n.fluent} of \${all.length} fluent</span></div>
+          <div class="dt">\${n.learning} learning · \${n.unmet} not met yet · overall \${Math.round(sc*100)}%</div>
+          <div class="track thin" style="margin-top:5px"><div class="fill" style="width:\${Math.round(sc*100)}%;background:\${Mastery.colour(sc)}"></div></div>
+        </div>
+        <div style="font-size:20px;color:var(--dim)">▶</div>
+      </div>\`;
+  }
+};
+
 const UI = {
   hist:[],
   go(id, noPush){
@@ -11302,6 +11460,7 @@ const UI = {
     if(id==='s-quarters') Quarters.render();
     if(id==='s-gear') this.renderGear();
     if(id==='s-tome') this.renderTome();
+    if(id==='s-comp') Competency.render();
     if(id==='s-train') Train.renderPick();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
@@ -11570,6 +11729,7 @@ const UI = {
         <div style="font-size:20px;color:var(--dim)">▶</div>
       </div>
       \${this.fadingNode()}
+      \${Competency.node()}
       <div class="small" style="margin:8px 0 4px;font-weight:800;color:var(--gold)">📜 Bounties</div>
       \${g.bounties.map(b=>{
         const pct=Math.round(b.p/b.n*100);
@@ -11842,6 +12002,7 @@ const UI = {
         \${rows.length?UI.chronicleBody(rows):'<div class="small">No riddles answered yet.</div>'}
         \${rows.length?\`<button class="btn sm" style="margin-top:10px"
            onclick="UI.go('s-train');Train.startPool('weak')">⚠️ Drill my weakest topics</button>\`:''}
+        <button class="btn sm ghost" id="ledgerComp" style="margin-top:6px" onclick="UI.go('s-comp')">🧭 See the whole competency map</button>
       </div>\`;
   },
   /** One bar per topic is a wall at seventy. Show the handful that actually
