@@ -537,7 +537,7 @@ Inside `index.html` the code is organised as:
 | `DESTINATIONS` | what the map offers and in what order, as a table rather than hand-written blocks |
 | `Profiles`, `Knights` | one save slot per player on a shared browser, plus the code that carries a knight to another device |
 | `Vault` | the second copy of every save, in IndexedDB, and the recovery that puts it back |
-| `Keep` | service-worker registration, the update prompt, and the install nudge |
+| `Keep` | service-worker registration, the update prompt (offered for a build found now, one left waiting, and one found when the game comes back into view), and the install nudge |
 | `Calc` | the scratch pad: a keypad and a small expression evaluator that never calls `eval` |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
@@ -609,7 +609,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-five suites, 1,365 checks, about a minute:
+loop only exists once the page is running. Twenty-six suites, 1,383 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -636,6 +636,7 @@ loop only exists once the page is running. Twenty-five suites, 1,365 checks, abo
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
+| `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
 | `map` | the places you can go are above the campaign, one card at the top says what to do next, the campaign is a road with one realm open, and the hall has a door for each knight |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
@@ -801,6 +802,25 @@ A single-file game cached aggressively could pin players to whatever build they 
 opened, so the deploy stamps `sw.js` with the commit SHA. That guarantees a byte-different
 worker per deploy, which is what makes a browser notice an update at all; the page then
 offers **A new version is ready → Reload** rather than swapping the game out mid-fight.
+
+Four things used to be able to leave a returning player on an old build, or looking at
+the wrong build number, and the `pwa` suite now deploys builds behind a running player to
+hold each one shut:
+
+- **Later meant never.** A build found on an earlier visit sits installed and waiting, and
+  the browser never announces it again, so a player who tapped *Later* — or closed the tab
+  before the bar appeared — while another copy of the game was open was never told. Any
+  waiting build is now offered on every load.
+- **The new worker could cache the old game.** GitHub Pages serves with a ten-minute
+  max-age, so the worker's precache could be filled from the browser's HTTP cache and
+  serve the old `index.html` under the new version's name. The precache now goes past the
+  HTTP cache.
+- **The build stamp could name the old build.** Settings shows which build is running so a
+  bug report can name it, but right after an update `build-info.json` came back from the
+  browser's HTTP cache, or from the old version's cache before it was swept. The worker now
+  answers only from its own version's cache and fetches anything else past the HTTP cache.
+- **A home-screen game is never navigated**, and a navigation is the only time a browser
+  looks for a new worker on its own. The game now looks whenever it comes back into view.
 
 ---
 
