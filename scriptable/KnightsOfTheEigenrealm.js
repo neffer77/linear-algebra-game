@@ -686,8 +686,8 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .cchip{display:flex;flex-direction:column;gap:3px;text-align:left;min-height:44px;padding:7px 8px;border-radius:10px;
   background:rgba(255,255,255,.04);border:1px solid var(--edge);color:var(--ink);font:inherit;cursor:pointer}
 .cchip.unmet{opacity:.55}
-.cchip .cl{font-size:12px;font-weight:700;line-height:1.2}
-.cchip .cr{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
+.cchip .clabel{font-size:12px;font-weight:700;line-height:1.2}
+.cchip .cmeta{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dim)}
 .cpips{display:inline-flex;gap:3px}
 .cpips i{width:7px;height:7px;border-radius:50%;background:#3a2f5c;display:block}
 .cpips i.on{background:currentColor}
@@ -11383,8 +11383,8 @@ const Competency = {
     const say = \`\${TOPIC_LABEL[k]}: \${this.NAME(i)}\${i<0?'':', '+Math.round(e*100)+'%'}\${faded?', fading':''}\`;
     return \`<button class="cchip\${i<0?' unmet':''}" data-key="\${k}" data-rung="\${i}" aria-label="\${say}"
         onclick="Competency.practise('\${k}')">
-        <span class="cl">\${TOPIC_LABEL[k]}</span>
-        <span class="cr">\${this.pips(i,col)}<span>\${this.ICON(i)}</span>\${
+        <span class="clabel">\${TOPIC_LABEL[k]}</span>
+        <span class="cmeta">\${this.pips(i,col)}<span>\${this.ICON(i)}</span>\${
           i<0?'':\`<b style="color:\${col}">\${Math.round(e*100)}%</b>\`}\${faded?' <span title="It fades while you are away">↓</span>':''}</span>
       </button>\`;
   },

@@ -118,9 +118,13 @@ module.exports = {
 
     // --- it fits a phone ---
     const fit = await t.ev(() => ({ sw: document.documentElement.scrollWidth, w: window.innerWidth,
-      small: [...document.querySelectorAll('#compList .cchip')].filter(c => c.getBoundingClientRect().height < 44).length }));
+      small: [...document.querySelectorAll('#compList .cchip')].filter(c => c.getBoundingClientRect().height < 44).length,
+      // the rung row is one short line; a style meant for something else
+      // (the crest picker's .cr was one) can swell it into a box
+      tall: [...document.querySelectorAll('#compList .cmeta')].filter(r => r.getBoundingClientRect().height > 24).length }));
     t.ok('the map fits a phone without sideways scrolling', fit.sw <= fit.w, JSON.stringify(fit));
     t.eq('and every topic is a full-size target', fit.small, 0);
+    t.eq("with each topic's rung on one short line", fit.tall, 0);
 
     // --- a topic is one tap from practice ---
     const train = await t.ev(() => {
