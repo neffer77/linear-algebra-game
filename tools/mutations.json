@@ -84,6 +84,13 @@
       "find": "id=\"ledgerComp\"",
       "replace": "id=\"ledgerCompX\"",
       "run": "play:competency"
+    },
+    {
+      "name": "a rung row styled as another screen's box",
+      "file": "index.html",
+      "find": "<span class=\"cmeta\">",
+      "replace": "<span class=\"cmeta cr\">",
+      "run": "play:competency"
     }
   ]
 }
