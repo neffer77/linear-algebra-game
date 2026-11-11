@@ -89,6 +89,10 @@ jobs:
   # Split from validate so a browser problem is never mistaken for a game one.
   playthrough:
     runs-on: ubuntu-latest
+    # A whole run takes about five minutes. Without a ceiling a hung step sits
+    # for GitHub's default six hours, and because the pages group never cancels
+    # a deploy in progress, every later merge queues behind it undeployed.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -126,15 +130,27 @@ jobs:
       # again rather than losing a deploy to someone else's mirror.
       #
       # Note the cache above does NOT cover this: it skips the browser download,
-      # not the apt update. The retry is what makes the step survive.
+      # not the apt update.
+      #
+      # And sometimes the Ubuntu archive cannot be reached at all. #25's deploy
+      # failed on exactly that - 'Temporary failure resolving archive.ubuntu.com'
+      # on every attempt, eighteen minutes of it - while every library Chromium
+      # needs was already on the runner image ("already the newest version").
+      # What apt could not fetch were extra fonts for scripts the game never
+      # shows. So apt is no longer the gate: the browser comes from Playwright's
+      # own CDN (or the cache above), the system packages are tried as a bonus
+      # with each attempt capped so a stall cannot hang the run, and what decides
+      # the step is whether Chromium actually launches.
       - name: Install Playwright
         run: |
+          npx playwright install chromium
           for attempt in 1 2 3; do
-            if npx playwright install --with-deps chromium; then
-              exit 0
+            # timeout signals the whole process group, so apt goes with it.
+            if timeout --kill-after=30 300 npx playwright install-deps chromium; then
+              break
             fi
+            echo "::warning::playwright install-deps failed (attempt ${attempt})"
             if [ "${attempt}" -lt 3 ]; then
-              echo "::warning::playwright install failed (attempt ${attempt}); clearing apt lists and retrying"
               # Expanded as root inside sh, not by this shell - and partial/ is
               # put back, because apt needs it to exist and will not always
               # recreate it itself.
@@ -142,8 +158,12 @@ jobs:
               sleep $(( attempt * 10 ))
             fi
           done
-          echo "::error::playwright install failed three times"
-          exit 1
+          if node -e "require('playwright').chromium.launch().then(b => b.close())"; then
+            echo "Chromium launches."
+          else
+            echo "::error::Chromium does not launch, and its system packages could not be installed"
+            exit 1
+          fi
 
       - name: Play the game
         run: npm run test:play
