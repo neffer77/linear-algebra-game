@@ -1,124 +1,75 @@
 {
-  "change": "A nudge offers the first step of the working, stopped short of the answer",
+  "change": "Every control can be reached, named and pressed from the keyboard",
   "mutations": [
     {
-      "name": "no cut: the whole first step is the nudge",
+      "name": "no watch on the page: controls drawn after it loads are left out",
       "file": "index.html",
-      "find": "    const i=this.firstLeak(text,toks);\n    if(i>=0){",
-      "replace": "    const i=-1;\n    if(i>=0){",
-      "run": "play:nudge"
+      "find": "      for(const r of recs) for(const n of r.addedNodes) this.mark(n);",
+      "replace": "      for(const r of recs) for(const n of r.addedNodes) void n;",
+      "run": "play:a11y"
     },
     {
-      "name": "the answer only counts as a leak where the question lacks it",
+      "name": "nothing is named as a button",
       "file": "index.html",
-      "find": "    if(a) toks.push({tok:a, after: this.at(q,a)<0 ? null : this.RESULT});",
-      "replace": "    if(a && this.at(q,a)<0) toks.push({tok:a});",
-      "run": "play:nudge"
+      "find": "      if(!el.hasAttribute('role')) el.setAttribute('role','button');\n",
+      "replace": "",
+      "run": "play:a11y"
     },
     {
-      "name": "the answer counts as a leak wherever it appears",
+      "name": "nothing is put in the tab order",
       "file": "index.html",
-      "find": "    if(a) toks.push({tok:a, after: this.at(q,a)<0 ? null : this.RESULT});",
-      "replace": "    if(a) toks.push({tok:a});",
-      "run": "play:nudge"
+      "find": "      if(!el.hasAttribute('tabindex')) el.tabIndex=0;\n",
+      "replace": "",
+      "run": "play:a11y"
     },
     {
-      "name": "a number after a minus sign taken for the same number",
+      "name": "no key presses a control",
       "file": "index.html",
-      "find": "'(?<![0-9A-Za-z.¹²³⁰-⁹−-])'",
-      "replace": "'(?<![0-9A-Za-z.¹²³⁰-⁹])'",
-      "run": "play:nudge"
+      "find": "    addEventListener('keydown', e=>this.key(e), true);\n",
+      "replace": "",
+      "run": "play:a11y"
     },
     {
-      "name": "spacing inside the answer must match exactly",
+      "name": "Space does not press a control",
       "file": "index.html",
-      "find": "map(c=>c.replace(/[.*+?^${}()|[\\]\\\\\\/]/g,'\\\\$&')).join('\\\\s*');",
-      "replace": "map(c=>c.replace(/[.*+?^${}()|[\\]\\\\\\/]/g,'\\\\$&')).join('');",
-      "run": "play:nudge"
+      "find": "    if(e.key!=='Enter' && e.key!==' ') return;",
+      "replace": "    if(e.key!=='Enter') return;",
+      "run": "play:a11y"
     },
     {
-      "name": "cut at the leak itself, leaving the sum that lands on it",
+      "name": "the key is heard after the battle's own Enter",
       "file": "index.html",
-      "find": "      const m=/\\s*(=|→)\\s*/.exec(text.slice(from, i));",
-      "replace": "      const m=null;",
-      "run": "play:nudge"
+      "find": "    addEventListener('keydown', e=>this.key(e), true);",
+      "replace": "    addEventListener('keydown', e=>this.key(e));",
+      "run": "play:a11y"
     },
     {
-      "name": "a ladder nudges with the rung's answer showing",
+      "name": "the key that pressed a control goes on to press continue too",
       "file": "index.html",
-      "find": "    let text=this.plain(this.hasLadder(st) ? st.motes[0].q : this.sentences(st.ex)[0]);",
-      "replace": "    let text=this.plain(this.hasLadder(st) ? st.motes[0].q+' '+st.motes[0].a : this.sentences(st.ex)[0]);",
-      "run": "play:nudge"
+      "find": "    e.preventDefault(); e.stopPropagation();\n    el.click();",
+      "replace": "    e.preventDefault();\n    el.click();",
+      "run": "play:a11y"
     },
     {
-      "name": "no rule to fall back on",
+      "name": "no ring shows where the keyboard is",
       "file": "index.html",
-      "find": "      const rule=this.plain(st.codex && st.codex.rule);",
-      "replace": "      const rule='';",
-      "run": "play:nudge"
+      "find": ":focus-visible{outline:2px solid var(--gold);outline-offset:2px;}\n",
+      "replace": "",
+      "run": "play:a11y"
     },
     {
-      "name": "a rule that leaks offered anyway",
+      "name": "the verdict is not read out when it lands",
       "file": "index.html",
-      "find": "      text = rule && this.firstLeak(rule,toks)<0 ? rule : null;",
-      "replace": "      text = rule || null;",
-      "run": "play:nudge"
+      "find": " aria-live=\"polite\"></div>",
+      "replace": "></div>",
+      "run": "play:a11y"
     },
     {
-      "name": "a nudged strike lands in full",
+      "name": "the game never starts the watch",
       "file": "index.html",
-      "find": "                  * (staked?3:1) * (this.nudged?0.5:1);",
-      "replace": "                  * (staked?3:1);",
-      "run": "play:nudge"
-    },
-    {
-      "name": "a nudged answer counts in full",
-      "file": "index.html",
-      "find": "                 : Lesson.weight(this.lesson && this.lesson.format)) * (this.nudged ? 0.5 : 1);",
-      "replace": "                 : Lesson.weight(this.lesson && this.lesson.format));",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the nudge follows into the next question",
-      "file": "index.html",
-      "find": "    this.shownWork=false;\n    this.nudged=null;\n",
-      "replace": "    this.shownWork=false;\n",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the nudge offered in the daily",
-      "file": "index.html",
-      "find": "    if(this.answered || this.mode==='daily' || this.rite) return false;",
-      "replace": "    if(this.answered || this.rite) return false;",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the nudge offered on a ladder",
-      "file": "index.html",
-      "find": "    if(this.answered || this.mode==='daily' || this.rite) return false;",
-      "replace": "    if(this.answered || this.mode==='daily') return false;",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the nudge offered on the first lesson rungs",
-      "file": "index.html",
-      "find": "    if(this.lessonIs('meet') || this.lessonIs('tf')) return false;\n    return !!Working.nudge",
-      "replace": "    return !!Working.nudge",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the nudge can be taken again",
-      "file": "index.html",
-      "find": "    const offer = !this.nudged && this.canNudge();",
-      "replace": "    const offer = this.canNudge();",
-      "run": "play:nudge"
-    },
-    {
-      "name": "the panel does not say what a nudge cost",
-      "file": "index.html",
-      "find": "      (ok && this.nudged && !inRite ? `<div class=\"miss nudged\">💡 Nudged: half the strike, and half the credit toward ${label}.</div>` : '')+",
-      "replace": "      ''+",
-      "run": "play:nudge"
+      "find": "  A11y.start();\n",
+      "replace": "",
+      "run": "play:a11y"
     }
   ]
 }
