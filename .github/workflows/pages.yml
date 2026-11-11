@@ -151,6 +151,16 @@ jobs:
       - name: Install Playwright
         run: |
           npx playwright install chromium
+          launches() { node -e "require('playwright').chromium.launch().then(b => b.close())"; }
+          # The runner image already carries every library Chromium needs, so
+          # try it before touching apt at all. When the Ubuntu archive is
+          # unreachable, three capped apt attempts cost twelve minutes of every
+          # run for fonts the game never shows - and with merges going out as
+          # soon as they are green, that is twelve minutes on every change.
+          if launches; then
+            echo "Chromium launches; no system packages needed."
+            exit 0
+          fi
           for attempt in 1 2 3; do
             # timeout signals the whole process group, so apt goes with it.
             if timeout --kill-after=30 300 npx playwright install-deps chromium; then
@@ -165,7 +175,7 @@ jobs:
               sleep $(( attempt * 10 ))
             fi
           done
-          if node -e "require('playwright').chromium.launch().then(b => b.close())"; then
+          if launches; then
             echo "Chromium launches."
           else
             echo "::error::Chromium does not launch, and its system packages could not be installed"
