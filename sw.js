@@ -34,7 +34,12 @@ self.addEventListener('install', e => {
     caches.open(CACHE)
       // One missing file must not fail the whole install, or a typo in this
       // list would leave players with no worker and no offline play at all.
-      .then(c => Promise.all(SHELL.map(u => c.add(u).catch(() => {}))))
+      // `reload` goes past the browser's HTTP cache. GitHub Pages serves with
+      // a ten-minute max-age, so a plain fetch made soon after the last visit
+      // can hand the NEW worker the OLD index.html - and it would then serve
+      // the old game under the new version's name until the next deploy.
+      .then(c => Promise.all(SHELL.map(u =>
+        c.add(new Request(u, { cache: 'reload' })).catch(() => {}))))
   );
 });
 

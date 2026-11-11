@@ -1,82 +1,26 @@
 {
-  "change": "Move CI to Node 24 actions, and check every branch before it merges",
+  "change": "Never leave a returning player on an old build",
   "mutations": [
     {
-      "name": "an action pinned back to a Node 20 major",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "        uses: actions/cache@v6",
-      "replace": "        uses: actions/cache@v4"
+      "name": "a build already waiting is never offered",
+      "file": "index.html",
+      "run": "play:pwa",
+      "find": "      if(reg.waiting && navigator.serviceWorker.controller) Keep.offerUpdate(reg.waiting);\n",
+      "replace": "\n"
     },
     {
-      "name": "the iOS publish downloads with a Node 20 action",
-      "file": ".github/workflows/ios.yml",
-      "run": "verify",
-      "find": "actions/download-artifact@v8",
-      "replace": "actions/download-artifact@v4"
+      "name": "the new worker fills its cache through the HTTP cache",
+      "file": "sw.js",
+      "run": "play:pwa",
+      "find": "c.add(new Request(u, { cache: 'reload' }))",
+      "replace": "c.add(u)"
     },
     {
-      "name": "an action with no Node floor on record",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "      - uses: actions/configure-pages@v6",
-      "replace": "      - uses: actions/configure-pages-next@v1"
-    },
-    {
-      "name": "the build job publishes from any branch",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "    if: github.ref == 'refs/heads/main'\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/configure-pages@v6",
-      "replace": "    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v7\n      - uses: actions/configure-pages@v6"
-    },
-    {
-      "name": "the deploy job publishes from any branch",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "    if: github.ref == 'refs/heads/main'\n    environment:",
-      "replace": "    environment:"
-    },
-    {
-      "name": "only main is checked, so a branch merges unchecked",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "on:\n  push:\n",
-      "replace": "on:\n  push:\n    branches: [main]\n"
-    },
-    {
-      "name": "a deploy on main can be cancelled mid-publish",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}",
-      "replace": "  cancel-in-progress: true"
-    },
-    {
-      "name": "main runs no longer share one deploy group",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "github.ref == 'refs/heads/main' && 'pages' || ",
-      "replace": ""
-    },
-    {
-      "name": "the deploy stops checking that the live site serves this commit",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "      - name: Confirm the live site serves this build\n",
-      "replace": "      - name: Confirm the live site serves this build\n        if: false\n"
-    },
-    {
-      "name": "a stale live site is reported but passes",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "          echo \"::error::${url} never reported ${GITHUB_SHA::7}\"\n          exit 1\n",
-      "replace": "          echo \"::error::${url} never reported ${GITHUB_SHA::7}\"\n"
-    },
-    {
-      "name": "the live-site check is dropped",
-      "file": ".github/workflows/pages.yml",
-      "run": "verify",
-      "find": "          url=\"${PAGE_URL%/}/build-info.json\"\n",
-      "replace": "          url=\"${PAGE_URL%/}/\"\n"
+      "name": "a game left open never looks for a new build",
+      "file": "index.html",
+      "run": "play:pwa",
+      "find": "        if(document.visibilityState==='visible') reg.update().catch(()=>{});",
+      "replace": "        if(document.visibilityState==='visible') void reg;"
     }
   ]
 }

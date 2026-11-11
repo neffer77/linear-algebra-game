@@ -41,6 +41,7 @@ const SUITES = [
   require('./play/lesson'),      // S14
   require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
+  require('./play/pwa'),         // the installed game finds the newest build
   require('./play/map'),         // M1
   require('./play/cheat')        // T1
 ];

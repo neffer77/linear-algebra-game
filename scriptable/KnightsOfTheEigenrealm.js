@@ -12840,6 +12840,19 @@ const Keep = {
           if(w.state==='installed' && navigator.serviceWorker.controller) Keep.offerUpdate(w);
         });
       });
+      /* A new build found on an earlier visit is already installed and
+         waiting, and "updatefound" never fires for it again. A player who
+         tapped Later, or closed the tab before the bar appeared, would
+         otherwise sit on the old build with nothing ever saying a newer one
+         is there. So whatever is waiting is offered on every load. */
+      if(reg.waiting && navigator.serviceWorker.controller) Keep.offerUpdate(reg.waiting);
+      /* An installed game is rarely navigated: it is opened from the home
+         screen, which resumes the same page for days. Browsers only look for
+         a new worker on a navigation, so look again whenever the game comes
+         back into view. */
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState==='visible') reg.update().catch(()=>{});
+      });
     }).catch(()=>{});
     let reloading=false;
     navigator.serviceWorker.addEventListener('controllerchange', ()=>{
