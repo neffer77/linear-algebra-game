@@ -473,6 +473,50 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .hchip{display:inline-flex; align-items:center; min-height:36px; padding:0 11px; border-radius:999px;
   border:1px solid var(--edge); background:#1d1633; color:var(--ink); font:inherit; font-size:12.5px; font-weight:700;}
 button.hchip{cursor:pointer; border-color:var(--gold-dk);}
+/* ---- the road of realms ---- */
+.road{position:relative; margin:8px 0 4px;}
+.road svg{position:absolute; inset:0; width:100%; height:100%;}
+.stone{position:absolute; transform:translate(-50%,-50%); padding:0; border:0; background:none; cursor:pointer;
+  display:flex; align-items:center; min-height:44px; color:var(--ink);}
+.stone .sdisc{width:42px; height:42px; border-radius:50%; display:grid; place-items:center; flex:none;
+  font-weight:900; font-size:15px; border:3px solid var(--rc); background:#171129;}
+.stone.won .sdisc{background:var(--rc); color:#120d1c;}
+.stone.here .sdisc{width:50px; height:50px; box-shadow:0 0 0 5px rgba(242,193,78,.18), 0 0 18px var(--rc);}
+.stone.sealed .sdisc{border-color:#3a2e5c; color:#8d80b3; font-size:13px;}
+.stone .slab{position:absolute; top:50%; transform:translateY(-50%); width:120px; font-size:12px; line-height:1.25;}
+.stone .slab.r{left:calc(100% + 8px); text-align:left;}
+.stone .slab.l{right:calc(100% + 8px); text-align:right;}
+.stone .slab b{display:block; font-family:var(--serif); font-size:13px; color:var(--rc);}
+.stone.sealed .slab b{color:#a99ccb;}
+.stone .slab i{font-style:normal; color:var(--dim);}
+details.realm>summary{list-style:none; cursor:pointer;}
+details.realm>summary::-webkit-details-marker{display:none}
+details.realm .realmhdr{min-height:44px;}
+details.realm .rcount{margin-left:auto; font-size:12px; color:var(--dim); font-weight:800;}
+details.realm .schev{color:var(--dim); transition:transform .18s ease; margin-left:6px;}
+details.realm[open] .schev{transform:rotate(90deg)}
+/* ---- the knight on the title, and the hall of doors ---- */
+.kcard{display:flex; align-items:center; gap:12px; margin:10px 0 8px; padding:10px 12px; border-radius:14px;
+  background:linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--edge);}
+.kbanner{width:42px; height:56px; flex:none; display:flex; justify-content:center; padding-top:8px; box-sizing:border-box;
+  background:var(--kc); clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%); font-size:20px;}
+.kname{font-family:var(--serif); font-weight:800; font-size:18px;}
+.hall{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 12px; margin:8px 0 12px;}
+.doorwrap{display:flex; flex-direction:column; align-items:center; text-align:center;}
+.doorwrap .ds{font-size:11.5px; color:var(--dim);}
+.kdoor{position:relative; width:100%; max-width:140px; aspect-ratio:3/4; border-radius:70px 70px 10px 10px; cursor:pointer;
+  background:repeating-linear-gradient(90deg,#5a3f2c 0 22%,#4a3324 22% 25%); border:6px solid #6b5a85;
+  box-shadow:0 8px 18px rgba(0,0,0,.4); padding:0;}
+.doorwrap.on .kdoor{box-shadow:0 0 0 3px var(--gold), 0 0 26px rgba(242,193,78,.35);}
+.kdbanner{position:absolute; left:50%; top:16%; transform:translateX(-50%); width:40%; height:44%;
+  background:var(--kc); clip-path:polygon(0 0,100% 0,100% 100%,50% 80%,0 100%);
+  display:flex; justify-content:center; padding-top:10%; box-sizing:border-box; font-size:20px;}
+.kdknob{position:absolute; right:12%; top:62%; width:9px; height:9px; border-radius:50%; background:var(--gold);}
+.kdnow{position:absolute; left:50%; bottom:-10px; transform:translateX(-50%); white-space:nowrap; font-size:10.5px;
+  font-weight:800; color:#1a1206; background:var(--gold); border-radius:999px; padding:2px 8px;}
+.kdoor.new{background:transparent; border:3px dashed #5b4f7d; box-shadow:none; color:#cfc4ea; font-size:30px;}
+.kdacts{display:flex; gap:5px; margin-top:6px; flex-wrap:wrap; justify-content:center;}
+.kdacts .kbd{min-height:32px; display:inline-flex; align-items:center; cursor:pointer;}
 /* ---- the Keep and its rooms ---- */
 .matrow{display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px;}
 .mat{display:flex; flex-direction:column; align-items:center; padding:6px 2px; border-radius:10px;
@@ -631,12 +675,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <button class="btn gold" onclick="Game.start()" id="btnBegin">⚔️ Begin the Quest</button>
       <button class="btn ghost" onclick="UI.go('s-tome')">📖 Tome of Lore (learn first)</button>
       <button class="btn ghost" onclick="UI.go('s-train')">🎯 Training Grounds</button>
-      <button class="btn ghost" onclick="Knights.open()">🛡️ Switch knight</button>
+      <button class="btn ghost" onclick="Knights.open()" id="btnSwitch">🛡️ Switch knight</button>
       <button class="btn ghost" onclick="UI.go('s-prefs')">⚙️ Settings &amp; Titles</button>
     </div>
-    <div class="panel sub">
+    <div class="panel sub" id="howItWorks">
       <b style="color:var(--gold)">How it works</b><br>
-      • Each turn you get a math riddle — tap one of four answers.<br>
+      • Each turn is a maths riddle. A new topic starts gently: the rule first, then an easy one,
+        then true-or-false, before you choose from four or build the answer yourself.<br>
       • <b style="color:var(--green)">Correct</b> → your knight strikes. Faster answers hit harder.<br>
       • <b style="color:var(--red)">Wrong</b> → the foe strikes you, and you're shown exactly why.<br>
       • Win gold &amp; loot → forge better blades, plate, and relics.
@@ -11105,12 +11150,21 @@ const UI = {
   refreshTitle(){
     const k=Profiles.active(), n=Profiles.list().length;
     const row=document.getElementById('knightRow');
+    /* A knight who has played before is shown as one: their crest on their
+       colour, and the two numbers that say how far they have come. The chip
+       stays the way to the hall, which is where every knight's door is. */
+    const g0 = (k && Game.s) ? Game.s : null;
+    const won0 = g0 ? REALMS.filter((r,ri)=>g0.cleared[ri+':'+(r.foes.length-1)]).length : 0;
+    const solid0 = g0 ? Object.keys(g0.topicStats||{}).filter(key=>Mastery.eff(key)>=0.85).length : 0;
     row.innerHTML = k
-      ? \`<div class="center" style="margin-bottom:8px">
-           <span class="knightchip" onclick="Knights.open()">
-             <span style="color:\${k.col}">\${k.crest}</span>
-             <span>\${Knights.esc(k.nm)}</span>
-             <span class="small" style="opacity:.75">\${n>1?'· switch':'· knights'}</span></span></div>\`
+      ? \`<div class="kcard" id="knightCard" style="--kc:\${col_(k)}">
+           <div class="kbanner">\${k.crest}</div>
+           <div style="flex:1;min-width:0">
+             <div class="kname">\${Knights.esc(k.nm)}</div>
+             <div class="small">\${g0 ? \`🏆 \${won0} of \${REALMS.length} champions · \${solid0} topic\${solid0===1?'':'s'} solid\` : 'Ready to begin'}</div>
+           </div>
+           <button type="button" class="kbd" id="kcardSwitch" style="min-height:40px;padding:0 12px;color:var(--ink)" onclick="Knights.open()">\${n>1?'Switch':'Knights'}</button>
+         </div>\`
       : (n ? \`<div class="center" style="margin-bottom:8px">
            <span class="knightchip" onclick="Knights.open()">🛡️ <span>Choose your knight</span></span></div>\` : '');
     /* The title card has three states and should look like it: nobody here
@@ -11119,6 +11173,13 @@ const UI = {
        of a saved run is that walking back into it is a decision. */
     const has=!!(k && Game.s);
     const pend=has ? Dungeon.pending() : null;
+    // The rules of play are for somebody who has not played. A returning
+    // knight has the Tome for that, and the title is for getting back in.
+    const how=document.getElementById('howItWorks');
+    if(how) how.style.display = (has && Game.s.firstRun) ? 'none' : '';
+    // The knight card carries its own way to the hall.
+    const sw=document.getElementById('btnSwitch');
+    if(sw) sw.style.display = k ? 'none' : '';
     const begin=document.getElementById('btnBegin'), cont=document.getElementById('btnContinue');
     const line=document.getElementById('titleState');
     cont.style.display = has ? '' : 'none';
@@ -11200,6 +11261,54 @@ const UI = {
     }
     return null;
   },
+  /* The road: every realm as a stone on a winding path, coloured by how far
+     the knight has got. A realm whose champion is down is filled; the one being
+     worked through glows and shows its fights as pips; one still sealed is
+     dark and says so. The path behind the knight is drawn in gold. */
+  realmPath(cur){
+    const g=Game.s, n=REALMS.length, STEP=74, H=STEP*(n-1)+60;
+    const xs=REALMS.map((_,i)=>i%2 ? 72 : 28);              // percent across
+    const ys=REALMS.map((_,i)=>30+i*STEP);
+    const pt=i=>\`\${xs[i]*3.6} \${ys[i]}\`;                     // in a 360-wide box
+    let road='', walked='';
+    for(let i=1;i<n;i++){
+      const seg=\`M\${pt(i-1)} C\${xs[i-1]*3.6} \${ys[i-1]+STEP*.55}, \${xs[i]*3.6} \${ys[i]-STEP*.55}, \${pt(i)}\`;
+      road+=seg+' ';
+      if(i<=cur) walked+=seg+' ';
+    }
+    const stones=REALMS.map((r,ri)=>{
+      const won=!!g.cleared[ri+':'+(r.foes.length-1)];
+      const sealed = ri>0 && !g.cleared[(ri-1)+':'+(REALMS[ri-1].foes.length-1)];
+      const beaten=r.foes.filter((f,fi)=>g.cleared[ri+':'+fi]).length;
+      const state = won ? 'won' : sealed ? 'sealed' : 'here';
+      const right = xs[ri] > 50;
+      return \`<button type="button" class="stone \${state}" data-realm="\${ri}" data-state="\${state}"
+          style="left:\${xs[ri]}%;top:\${ys[ri]}px;--rc:\${r.col}" onclick="UI.toRealm(\${ri})"
+          aria-label="\${r.nm}: \${won?'champion down':sealed?'sealed':beaten+' of '+r.foes.length+' beaten'}">
+          <span class="sdisc">\${won?'✓':sealed?'🔒':ri+1}</span>
+          <span class="slab \${right?'l':'r'}"><b>\${r.nm}</b>
+            <i>\${won?'champion down':sealed?'sealed':\`\${beaten} of \${r.foes.length}\`}</i></span>
+        </button>\`;
+    }).join('');
+    return \`<div class="panel realmpath" id="realmPath">
+      <div class="small" style="font-weight:800;color:var(--gold)">🗺️ The campaign</div>
+      <div class="road" style="height:\${H}px">
+        <svg viewBox="0 0 360 \${H}" preserveAspectRatio="none" aria-hidden="true">
+          <path d="\${road}" fill="none" stroke="#3a2e5c" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 11" vector-effect="non-scaling-stroke"/>
+          \${walked?\`<path d="\${walked}" fill="none" stroke="#f2c14e" stroke-width="5" stroke-linecap="round" vector-effect="non-scaling-stroke"/>\`:''}
+        </svg>
+        \${stones}
+      </div>
+    </div>\`;
+  },
+  // Open a realm's fights and bring them into view.
+  toRealm(ri){
+    const d=document.getElementById('realm-'+ri);
+    if(!d) return;
+    d.open=true;
+    d.scrollIntoView({block:'start', behavior: Prefs.d.motion ? 'smooth' : 'auto'});
+  },
+
   /* What to do next, as one card at the top of the map.
    *
    * The map is a long page and every part of it is a fair thing to do, which is
@@ -11295,13 +11404,24 @@ const UI = {
     /* The campaign, built into its own string so it can be placed last. It used
        to be appended straight onto \`out\`, which is what fixed it above the
        settings and made the order impossible to change without moving it. */
-    let realms='';
+    /* The campaign, as a road and then as rooms off it.
+     Thirty-two fights in eight lists was the longest thing in the game, and
+     almost all of it was either finished or out of reach. The road shows the
+     whole campaign at once — what is behind, where the knight stands, what is
+     sealed — and each realm's fights fold away beneath its own heading, with
+     only the realm being worked through left open. Every fight is still on
+     the page; tapping a place on the road opens its realm and goes to it. */
+    const ahead=this.nextFoe(), cur = ahead ? ahead.ri : REALMS.length-1;
+    let realms=this.realmPath(cur);
     REALMS.forEach((r,ri)=>{
       const prevBossKey=(ri-1)+':'+(REALMS[ri-1]?REALMS[ri-1].foes.length-1:0);
       const unlocked = ri===0 || !!g.cleared[prevBossKey];
-      realms+=\`<div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
-            <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}</div>
-            <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div>\`;
+      const beaten=r.foes.filter((f,fi)=>g.cleared[ri+':'+fi]).length;
+      realms+=\`<details class="realm" id="realm-\${ri}"\${ri===cur?' open':''}>
+          <summary><div class="realmhdr"><span class="dot" style="background:\${r.col}"></span>
+            <h2 style="color:\${r.col}">\${r.nm}</h2>\${unlocked?'':'<span class="tag">🔒 sealed</span>'}
+            <span class="rcount">\${beaten}/\${r.foes.length}</span><span class="schev">▸</span></div>
+            <div class="small" style="margin:2px 0 4px">\${r.pool.map(k=>TOPIC_LABEL[k]).join(' · ')}</div></summary>\`;
       r.foes.forEach((f,fi)=>{
         const done=!!g.cleared[ri+':'+fi];
         const prevDone = fi===0 || !!g.cleared[ri+':'+(fi-1)];
@@ -11315,6 +11435,7 @@ const UI = {
           <div style="font-size:20px;color:var(--dim)">\${open?'▶':'🔒'}</div>
         </div>\`;
       });
+      realms+='</details>';
     });
     /* A knight who never finished the cellar is offered it back before anything
        else — but the map is not locked behind it. Someone who walked out early
@@ -12706,32 +12827,41 @@ const Keep = {
 const Knights = {
   open(){ UI.go('s-knights'); this.render(); },
 
+  /* The hall: a door for every knight, each hung with that knight's banner.
+     The one being played is lit. What can be done to a knight — rename it,
+     carry it to another device, erase it — sits under its door, where it was
+     always to be found, so nothing moved that a player had learned. */
   render(){
     const list=Profiles.list(), act=Profiles.r.active;
     document.getElementById('knightList').innerHTML =
-      \`<div class="panel">
-        \${list.length ? list.map(k=>{
+      \`<div class="hall">
+        \${list.map(k=>{
           const p=Profiles.peek(k.id);
           const on = k.id===act;
-          return \`<div class="item\${on?' equipped':''}" style="align-items:center">
-            <div class="ic" style="color:\${k.col}">\${k.crest}</div>
-            <div style="flex:1;min-width:0">
-              <div class="nm">\${this.esc(k.nm)}\${on?' <span class="mtag" style="color:var(--gold)">playing</span>':''}</div>
-              <div class="ds">\${p ? \`Level \${p.lvl} · \${p.cleared}/\${p.total} nodes · \${p.mastered} topic\${p.mastered===1?'':'s'} mastered\`
-                                  : 'A fresh start'}</div>
+          return \`<div class="doorwrap\${on?' on':''}" data-knight="\${k.id}">
+            <button type="button" class="kdoor" style="--kc:\${col_(k)}" aria-label="\${on?'Playing':'Play'} as \${this.esc(k.nm)}"
+              onclick="\${on?"UI.go('s-title')":\`Knights.pick('\${k.id}')\`}">
+              <span class="kdbanner">\${k.crest}</span>
+              <span class="kdknob"></span>
+              \${on?'<span class="kdnow">playing</span>':''}
+            </button>
+            <div class="nm" style="margin-top:6px">\${this.esc(k.nm)}</div>
+            <div class="ds">\${p ? \`Level \${p.lvl} · \${p.cleared}/\${p.total} · \${p.mastered} mastered\` : 'A fresh start'}</div>
+            <div class="kdacts">
+              <span class="kbd" onclick="Knights.rename('\${k.id}')" aria-label="Rename">✏️</span>
+              <span class="kbd" onclick="Knights.carry('\${k.id}')" aria-label="Move to another device">📤 Move</span>
+              <span class="kbd" onclick="Knights.erase('\${k.id}')" aria-label="Erase">🗑</span>
             </div>
-            \${on?'':\`<button class="btn sm" style="width:auto;margin:0;padding:8px 12px"
-                       onclick="Knights.pick('\${k.id}')">Play</button>\`}
-          </div>
-          <div class="row" style="gap:6px;margin:0 0 10px;flex-wrap:wrap">
-            <span class="kbd" onclick="Knights.rename('\${k.id}')">✏️ Rename</span>
-            <span class="kbd" onclick="Knights.carry('\${k.id}')">📤 Move</span>
-            <span class="kbd" onclick="Knights.erase('\${k.id}')">🗑 Erase</span>
           </div>\`;
-        }).join('<hr>') : '<div class="sub">No knights yet.</div>'}
+        }).join('')}
+        <div class="doorwrap">
+          <button type="button" class="kdoor new" aria-label="New knight" onclick="Knights.newKnight()">＋</button>
+          <div class="nm" style="margin-top:6px">New knight</div>
+          <div class="ds">a fresh door</div>
+        </div>
       </div>
+      \${list.length?'':'<div class="sub center">No knights yet.</div>'}
       <div class="panel">
-        <button class="btn gold" onclick="Knights.newKnight()">＋ New knight</button>
         <button class="btn ghost" onclick="Knights.paste()">📜 Bring a knight from another device</button>
       </div>\`;
   },

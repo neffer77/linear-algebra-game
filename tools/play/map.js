@@ -294,5 +294,104 @@ module.exports = {
     t.ok('a descent in flight outranks the campaign', hero.pending && hero.resume.go === 'resume' && /at risk/.test(hero.resume.text),
       hero.resume.text.slice(0, 100));
     t.ok('and when every champion is down it points at what is left', hero.won.go === 'deep' && /Every champion is down/.test(hero.won.text));
+
+    // ------------------------------------------------------------------
+    // The campaign is a road, and each realm folds away beneath it.
+    // ------------------------------------------------------------------
+    const road = await t.ev(() => {
+      const out = {};
+      Game.s.cleared = {}; Game.s.firstRun = 1; delete Game.s.dungeon;
+      const read = () => {
+        UI.go('s-map');
+        return {
+          states: [...document.querySelectorAll('#realmPath .stone')].map(b => b.dataset.state),
+          open: [...document.querySelectorAll('#mapList details.realm')].filter(d => d.open).map(d => d.id),
+          walked: !!document.querySelector('#realmPath path[stroke="#f2c14e"]'),
+          nodes: document.querySelectorAll('#mapList details.realm .node').length
+        };
+      };
+      out.fresh = read();
+      REALMS[0].foes.forEach((f, i) => Game.s.cleared['0:' + i] = 1);
+      REALMS[1].foes.forEach((f, i) => Game.s.cleared['1:' + i] = 1);
+      Game.s.cleared['2:0'] = 1;
+      out.two = read();
+      out.hereSays = document.querySelector('#realmPath .stone[data-realm="2"]').textContent.replace(/\s+/g, ' ');
+      out.foes = REALMS.reduce((n, r) => n + r.foes.length, 0);
+      // the road is a way to a realm: tapping a stone opens it
+      document.querySelector('#realmPath .stone[data-realm="0"]').click();
+      out.tapped = document.getElementById('realm-0').open;
+      // every fight is still on the page, open or folded, and still fights
+      out.foldedStillFights = (() => {
+        const n = document.querySelector('#realm-1 .node');
+        return !!n && /Battle\.begin\(1,0\)/.test(n.getAttribute('onclick'));
+      })();
+      REALMS.forEach((r, ri) => r.foes.forEach((f, fi) => Game.s.cleared[ri + ':' + fi] = 1));
+      out.all = read();
+      return out;
+    });
+    t.eq('a new knight\'s road: the first realm is where they are, the rest sealed',
+      road.fresh.states, ['here', 'sealed', 'sealed', 'sealed', 'sealed', 'sealed', 'sealed', 'sealed']);
+    t.eq('and only that realm\'s fights are open', road.fresh.open, ['realm-0']);
+    t.ok('with nothing walked yet', !road.fresh.walked);
+    t.eq('two champions down: two stones won, the third is where they are',
+      road.two.states.slice(0, 4), ['won', 'won', 'here', 'sealed']);
+    t.eq('and that third realm is the one left open', road.two.open, ['realm-2']);
+    t.ok('the road behind is drawn in gold', road.two.walked);
+    t.ok('the stone they stand on counts their progress', /1 of 4/.test(road.hereSays), road.hereSays);
+    t.ok('tapping a stone opens its realm', road.tapped);
+    t.ok('a folded realm\'s fights are still there, and still begin a fight', road.foldedStillFights);
+    t.eq('every fight is on the page whether folded or not', road.two.nodes, road.foes);
+    t.ok('with everything won, every stone is won', road.all.states.every(x => x === 'won'), road.all.states.join());
+
+    // ------------------------------------------------------------------
+    // The title knows the knight, and the hall has a door for each.
+    // ------------------------------------------------------------------
+    const front = await t.ev(() => {
+      const out = {};
+      const k = Profiles.active();
+      Game.s.cleared = {}; REALMS[0].foes.forEach((f, i) => Game.s.cleared['0:' + i] = 1);
+      Game.s.firstRun = 1;
+      UI.go('s-title'); UI.refreshTitle();
+      const card = document.getElementById('knightCard');
+      out.card = { shown: !!card, text: card ? card.innerText : '', name: k.nm,
+        how: document.getElementById('howItWorks').style.display, switchBtn: document.getElementById('btnSwitch').style.display };
+      Game.s.firstRun = 0; UI.refreshTitle();
+      out.howForNew = document.getElementById('howItWorks').style.display;
+      Game.s.firstRun = 1;
+      document.getElementById('kcardSwitch').click();
+      out.toHall = document.querySelector('.screen.on').id;
+
+      Profiles.make('Second', CRESTS[3], CREST_COLS[3]); Profiles.save(); Knights.render();
+      const doors = [...document.querySelectorAll('#knightList .doorwrap[data-knight]')];
+      out.doors = doors.length;
+      out.lit = doors.filter(d => d.classList.contains('on')).map(d => d.dataset.knight);
+      out.activeId = k.id;
+      out.everyDoorActs = doors.every(d => d.querySelectorAll('.kdacts .kbd').length === 3);
+      out.banner = getComputedStyle(doors[1].querySelector('.kdoor')).getPropertyValue('--kc').trim();
+      out.newDoor = !!document.querySelector('#knightList .kdoor.new');
+      // the other door plays as the other knight
+      const second = doors.find(d => d.dataset.knight !== k.id);
+      second.querySelector('.kdoor').click();
+      out.switched = Profiles.r.active === second.dataset.knight;
+      // and back
+      Knights.open();
+      document.querySelector(`#knightList .doorwrap[data-knight="${k.id}"] .kdoor`).click();
+      out.back = Profiles.r.active === k.id;
+      Profiles.remove(second.dataset.knight);
+      return out;
+    });
+    t.ok('the title shows the knight by name, with their champions', front.card.shown
+      && front.card.text.includes(front.card.name) && /1 of 8 champions/.test(front.card.text), front.card.text);
+    t.eq('a returning knight is not told how to play', front.card.how, 'none');
+    t.eq('one who has not been down to the cellar still is', front.howForNew, '');
+    t.eq('the card carries the way to the hall, so the list does not repeat it', front.card.switchBtn, 'none');
+    t.eq('and it goes there', front.toHall, 's-knights');
+    t.eq('a door for every knight', front.doors, 2);
+    t.ok('the one being played is lit, and only that one', front.lit.length === 1 && front.lit[0] === front.activeId);
+    t.ok('each door keeps rename, move and erase beneath it', front.everyDoorActs);
+    t.eq('each hangs its knight\'s own colour', front.banner, '#e5484d');
+    t.ok('and there is a door for a new knight', front.newDoor);
+    t.ok('opening another door plays as that knight', front.switched);
+    t.ok('and opening the first goes back', front.back);
   }
 };
