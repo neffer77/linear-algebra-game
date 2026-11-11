@@ -440,6 +440,24 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .btile:active{transform:translateY(2px); box-shadow:0 1px 0 #150e28;}
 .bpad{display:grid; grid-template-columns:repeat(6,1fr); gap:6px; margin-top:10px;}
 .bpad .btile{min-width:0; padding:0;}
+/* ---- the fight: answer tiles, and the bars above it ---- */
+.tiles{counter-reset:tile;}
+.tiles .choice{counter-increment:tile; position:relative; display:flex; align-items:center; justify-content:center;
+  min-height:58px; padding:10px 12px 10px 48px; margin:8px 0;}
+.tiles .choice::before{content:counter(tile, upper-alpha); position:absolute; left:10px; top:50%; transform:translateY(-50%);
+  width:28px; height:28px; border-radius:8px; display:grid; place-items:center; font-size:13px; font-weight:900;
+  background:#3a2e5c; color:#cfc4ea; font-family:var(--serif);}
+.tiles .choice.right::before{content:'✓'; background:#57cc7a; color:#0d2416;}
+.tiles .choice.wrong::before{content:'✗'; background:#ff8b8b; color:#2a0a0f;}
+.tiles.grid2{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:8px;}
+.tiles.grid2 .choice{margin:0; min-height:64px; font-size:19px;}
+.bars{align-items:flex-end;}
+.bar .lbl{align-items:baseline;}
+#foeName{font-family:var(--serif); font-size:13px;}
+#comboTxt{display:inline-flex; align-items:center; padding:2px 9px; border-radius:999px; background:#1d1633;
+  border:1px solid var(--edge);}
+#comboTxt.hot{border-color:var(--gold); background:#2c2249;}
+#comboTxt.blaze{border-color:#ff9c3d; background:#3a2116;}
 /* ---- what next, at the top of the map ---- */
 #heroCard{border-color:rgba(242,193,78,.4); padding-bottom:12px;}
 #heroCard .hk{font-family:var(--serif); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--gold);}
@@ -6020,6 +6038,7 @@ const Battle = {
       b.onclick=()=>this.answer(b,c);
       box.appendChild(b);
     });
+    Tiles.lay(box, choices);
     this.renderPerfect();
     this.renderWork();
     // The power bar is re-read here because more than one ability's readiness
@@ -6088,6 +6107,7 @@ const Battle = {
   openPad(){
     const st=this.step();
     document.getElementById('choices').innerHTML='';
+    document.getElementById('choices').classList.remove('grid2');
     const p=document.getElementById('pstrike');
     /* A vector or a matrix is built from tiles, slot by slot. A whole number
        keeps the keypad it always had. */
@@ -6767,6 +6787,52 @@ const Working = {
     </div>`;
   }
 };
+
+/* ------------------------------ answer tiles ------------------------------- */
+/* How a set of answers is laid out. Four short answers stacked one above the
+   other made the eye travel the height of a phone to compare them, and pushed
+   the last one under the thumb's reach; side by side they are read at a glance.
+   A long answer — a matrix product, a polynomial, a sentence — still gets the
+   whole width, because squeezing it into half is how a minus sign gets lost.
+
+   The letters are drawn by the stylesheet, not written into the button, so a
+   button's markup is still exactly its answer: that is what the game compares
+   a choice against, and what the suites read. */
+const Tiles = {
+  WIDE: 14,                      // characters of plain text that fit half a phone
+  plain(html){ return String(html).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim(); },
+  fits(choices){
+    return choices.length>0 && choices.every(c=>this.plain(c).length<=this.WIDE);
+  },
+  lay(box, choices){
+    box.classList.add('tiles');
+    box.classList.toggle('grid2', this.fits(choices));
+  },
+  /* Keys for a keyboard: 1–4 or A–D picks an answer, Enter moves on. Only on
+     the two screens that ask questions, never while something is being typed,
+     and only answers still standing — a faded one cannot be picked by key any
+     more than by finger. */
+  key(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    const t=e.target;
+    if(t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.isContentEditable)) return;
+    const on=document.querySelector('.screen.on');
+    if(!on || (on.id!=='s-battle' && on.id!=='s-train')) return;
+    if(document.getElementById('calcPanel') && document.getElementById('calcPanel').classList.contains('on')) return;
+    const k=e.key.toLowerCase();
+    if(k==='enter'){
+      const go=on.querySelector('#contBtn') || (on.id==='s-train' && on.querySelector('#tExplain .btn.gold'));
+      if(go && go.offsetParent!==null){ e.preventDefault(); go.click(); }
+      return;
+    }
+    const i='1234'.indexOf(k)>=0 ? '1234'.indexOf(k) : 'abcd'.indexOf(k);
+    if(i<0) return;
+    const box=on.querySelector(on.id==='s-battle' ? '#choices' : '#tChoices');
+    const b=box && box.querySelectorAll('.choice')[i];
+    if(b && b.onclick && !b.classList.contains('faded')){ e.preventDefault(); b.click(); }
+  }
+};
+addEventListener('keydown', e=>Tiles.key(e));
 
 /* -------------------------------- lessons --------------------------------- */
 /* How a topic is asked, as distinct from which topic and how hard.
@@ -12483,16 +12549,19 @@ const Train = {
     document.getElementById('tCard').innerHTML = (this.lesson && this.lesson.card) || '';
     document.getElementById('tQ').innerHTML=st.q;
     const box=document.getElementById('tChoices'); box.innerHTML='';
+    box.classList.remove('tiles','grid2');
     if(this.lesson && this.lesson.format==='build'){
       Lesson.build(box, st.a, this.cur.choices, val=>this.answer(null, val), 'Check ▶');
     } else {
-      (st._choices || this.cur.choices).forEach(c=>{
+      const offered = st._choices || this.cur.choices;
+      offered.forEach(c=>{
         const b=document.createElement('button');
         b.className='btn choice'; b.innerHTML=c;
         if(c===st.a) b.dataset.correct='1';
         b.onclick=()=>this.answer(b,c);
         box.appendChild(b);
       });
+      Tiles.lay(box, offered);
     }
     document.getElementById('tScore').textContent=`✅ ${this.c}   ❌ ${this.w}`;
   },
