@@ -976,15 +976,164 @@
     </p>
     <p style="margin-top:6px">
       The suite is now twenty-five suites and 1,365 checks. The lessons, the Keep, the
-      quarters and the what-next card are merged and deployed. The road, the hall and the
-      lettered tiles are on the branch, tested and waiting for a merge.
+      quarters and the what-next card are merged and deployed, and the road, the hall and the
+      lettered tiles followed them to the live site.
+    </p>
+  </section>
+
+  <section>
+    <h2>Then the teaching was sharpened</h2>
+    <p>
+      The next stretch was asked for in one line: make it as fun and as habit-forming as
+      possible, and as good for learning as possible. Read against the design rules, that is
+      mostly a learning brief, because what keeps a knight coming back here is getting better
+      at something and being able to see it. Eleven changes followed, each merged as soon as
+      its checks were green and each confirmed on the live site before the next began.
+    </p>
+
+    <div class="step">
+      <div class="top"><span class="n">L1</span><h3>The build you play is the build that shipped</h3><span class="size">#27 #28</span></div>
+      <p>
+        Merging on green only works if green means something, so every branch push now runs
+        the playthrough and breaks each guard in the mutation file, and a deploy fails until
+        the live site names the commit it was given. Both workflows moved to Node 24 ahead of
+        GitHub retiring Node 20.
+      </p>
+      <p>
+        A player who tapped Later, or left with a second copy open, could stay on an old build
+        forever, because the browser announces a waiting build only once. Any waiting build is
+        now offered on every load and whenever the game comes back into view, and the worker
+        caches past GitHub's ten-minute header so a new build cannot cache the old game.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">L2</span><h3>The working is written the way a teacher writes it</h3><span class="size">#29</span></div>
+      <p>
+        Eighteen of the seventy question makers printed things no teacher would: y − −3,
+        5 + −1, −4² meaning (−4)², 2x² + 1x. A learner copies the notation they are shown, so
+        this was a teaching bug, not a cosmetic one. Three helpers now carry the convention,
+        and every test run reads about 1.25 million generated lines and fails on any of the
+        three.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">L3</span><h3>The same slip twice is named as a pattern</h3><span class="size">#30 #31</span></div>
+      <p>
+        One diagnosis cannot say "again". The second time a knight makes the same mistake in
+        a topic, a note beside the diagnosis says it is the same slip as last time and what to
+        check before the next pick. The first time they then answer right with that trap on
+        offer, the game says they walked past it. It is counted for the sitting only, so
+        nothing new is saved.
+      </p>
+    </div>
+
+    <figure>
+      <div class="shot"><img id="s-slip" alt="A missed dot product: the diagnosis says the two products were subtracted, and a second note says it is the same slip as last time and to check the sign before the next pick."></div>
+      <figcaption><b>The same slip as last time</b>, named before the working.</figcaption>
+    </figure>
+
+    <figure style="margin-top:8px">
+      <div class="shot"><img id="s-trap" alt="The next dot product answered right: a note says the trap that caught the knight before was right there, and they walked past it."></div>
+      <figcaption><b>Walked past it.</b> The trap was on offer and was not taken.</figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="top"><span class="n">L4</span><h3>What fades comes back, in a round that ends</h3><span class="size">#32</span></div>
+      <p>
+        Mastery already faded while a knight was away, but only the Ledger showed it. The map
+        now names what has slipped, right under the daily skirmish, with what each topic fell
+        to and from. One tap starts a review of just those topics: a right answer brings one
+        back and takes it off the list, a wrong one keeps it in, and when the last is back
+        the round says so and stops rather than asking more. It pays no gold.
+      </p>
+    </div>
+
+    <figure>
+      <div class="shot"><img id="s-fadeback" alt="A review round: a 2 by 2 determinant answered right, and a note says it is back at 91% and that was the last one, nothing is fading now, with a button back to the yard."></div>
+      <figcaption><b>The last one back.</b> The round ends when nothing is fading.</figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="top"><span class="n">L5</span><h3>Answer tiles stop pointing at the answer</h3><span class="size">#33</span></div>
+      <p>
+        The spare tiles in a build-it-yourself bank were near misses of the answer's own
+        numbers, so a player who simply picked the most crowded tiles found the answer about
+        45% more often than chance. They are now drawn around every number on offer, and the
+        same trick does about 15% better than chance. The tests draw 6,300 banks a run and fail
+        above 30%.
+      </p>
+    </div>
+
+    <div class="step">
+      <div class="top"><span class="n">L6</span><h3>The whole curriculum on one screen</h3><span class="size">#34 #35</span></div>
+      <p>
+        This one came from the player: a map of core competencies that shows progress. All
+        seventy topics now sit in seven strands, laid out as a linear algebra track and a
+        calculus track that meet in multivariable calculus. Each strand says what it builds on
+        and how much of it is held, each topic shows its rung on the lesson ladder, each track
+        marks where the knight is, and a tap on a topic practises it.
+      </p>
+    </div>
+
+    <figure>
+      <div class="shot"><img id="s-compmap" alt="The competency map: the end of the Eigen and Subspaces strand with no topics met, then the calculus track opening with Limits and Derivatives marked you are here at 24%, each topic with its rung dots and percentage."></div>
+      <figcaption><b>You are here.</b> Every topic, every rung, read off what the knight knows today.</figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="top"><span class="n">L7</span><h3>A nudge before the whole working</h3><span class="size">#36</span></div>
+      <p>
+        A stuck player needed the way in, not the way through. A nudge shows only the first
+        step of the working, cut just before the answer, for half the strike and half the
+        mastery credit, so the whole working still costs more. It is not offered on a first
+        meeting, a true-or-false rung or the daily, and it is never offered where the first
+        step would give the answer away.
+      </p>
+    </div>
+
+    <figure>
+      <div class="shot"><img id="s-nudge" alt="A matrix times vector question with four answers, and below them a box headed A way in that says each output row is that row dotted with the vector, above the link to the whole working."></div>
+      <figcaption><b>A way in.</b> The first step, and nothing past it.</figcaption>
+    </figure>
+
+    <div class="step">
+      <div class="top"><span class="n">L8</span><h3>Played from the keyboard, read by a screen reader</h3><span class="size">#37</span></div>
+      <p>
+        Much of the game was tapped on things that were not buttons, so a keyboard could not
+        reach them and a screen reader could not name them. Every one is now a named button in
+        the tab order, including the doors drawn mid-fight, Enter or Space presses it and
+        nothing else, a gold ring shows where the keyboard rests, and a turn's verdict is read
+        out when it lands.
+      </p>
+    </div>
+
+    <figure>
+      <div class="shot"><img id="s-keyring" alt="The top of the map with the gold keyboard ring on the Keep tile, above the quartermaster card and the Daily Skirmish, Fading and Competency Map nodes."></div>
+      <figcaption><b>Where the keyboard is.</b> The Keep tile could only be clicked before.</figcaption>
+    </figure>
+
+    <p class="aside" style="margin-top:6px">
+      The same rule held throughout: no change shipped until a deliberate break of each of its
+      parts was caught. Across these eleven that was eighty-four breaks, and every one was
+      caught. Three checks were wrong rather than the game: one assumed only a single old trap
+      could be on offer, one counted the hidden testing door in Settings as a missed control,
+      and one read the fight's doors before the page had finished marking them. All three were
+      fixed in the checks. The competency map's first build had a real flaw,
+      a rung row that borrowed the crest picker's class and drew inside a dark square; it was
+      seen on the live site, fixed, and a mutation that restores the clash is now caught.
+    </p>
+    <p style="margin-top:6px">
+      The suite is now thirty-one suites and 1,513 checks. Everything in this section is
+      merged and deployed, and nothing is waiting on the branch.
     </p>
   </section>
 
   <div class="foot">
-    <span>measured against bbd23fc</span>
-    <span>52ee90b deployed · the last three on the branch</span>
-    <span>1,365 checks · 25 suites</span>
+    <span>measured against 15c354a</span>
+    <span>15c354a deployed · nothing waiting on the branch</span>
+    <span>1,513 checks · 31 suites</span>
 
 
 
