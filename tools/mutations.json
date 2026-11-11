@@ -1,40 +1,45 @@
 {
-  "change": "Never leave a returning player on an old build",
+  "change": "Write the working the way a teacher would: no 5 + −1, −2² or 1x",
   "mutations": [
-    {
-      "name": "a build already waiting is never offered",
+    { "name": "negatives in working are no longer bracketed",
       "file": "index.html",
-      "run": "play:pwa",
-      "find": "      if(reg.waiting && navigator.serviceWorker.controller) Keep.offerUpdate(reg.waiting);\n",
-      "replace": "\n"
-    },
-    {
-      "name": "the new worker fills its cache through the HTTP cache",
-      "file": "sw.js",
-      "run": "play:pwa",
-      "find": "c.add(new Request(u, { cache: 'reload' }))",
-      "replace": "c.add(u)"
-    },
-    {
-      "name": "a game left open never looks for a new build",
+      "find": "const par = n => (n<0? '('+neg(n)+')' : String(n));",
+      "replace": "const par = n => neg(n);",
+      "run": "verify" },
+    { "name": "x − a stops folding the sign in",
       "file": "index.html",
-      "run": "play:pwa",
-      "find": "        if(document.visibilityState==='visible') reg.update().catch(()=>{});",
-      "replace": "        if(document.visibilityState==='visible') void reg;"
-    },
-    {
-      "name": "a file not yet cached comes back from the HTTP cache",
-      "file": "sw.js",
-      "run": "play:pwa",
-      "find": "fetch(req, req.mode === 'navigate' ? undefined : { cache: 'no-cache' })",
-      "replace": "fetch(req)"
-    },
-    {
-      "name": "every version's cache answers, not just this one's",
-      "file": "sw.js",
-      "run": "play:pwa",
-      "find": "mine.then(c => c.match(req, { ignoreSearch: true }))",
-      "replace": "caches.match(req, { ignoreSearch: true })"
-    }
+      "find": "const less = n => (n===0? '' : n<0? ` + ${-n}` : ` − ${n}`);",
+      "replace": "const less = n => ` − ${neg(n)}`;",
+      "run": "verify" },
+    { "name": "a coefficient of 1 is written out again",
+      "file": "index.html",
+      "find": "const lin = (c, v) => (c===1? v : c===-1? '−'+v : neg(c)+v);",
+      "replace": "const lin = (c, v) => neg(c)+v;",
+      "run": "verify" },
+    { "name": "the square of a negative loses its brackets",
+      "file": "index.html",
+      "find": "${neg(b)}(${par(a)}² + ${par(a)}·${par(c)} + ${par(c)}²)",
+      "replace": "${neg(b)}(${neg(a)}² + ${par(a)}·${par(c)} + ${neg(c)}²)",
+      "run": "verify" },
+    { "name": "a flat tangent line is written as 0(x − a)",
+      "file": "index.html",
+      "find": "${m===0 ? `y = ${neg(y)}, flat` :",
+      "replace": "${false ? `y = ${neg(y)}, flat` :",
+      "run": "verify" },
+    { "name": "a tangent-plane slope of 1 is written out",
+      "file": "index.html",
+      "find": "${Math.abs(c)===1?'':Math.abs(c)}(${v} ",
+      "replace": "${Math.abs(c)}(${v} ",
+      "run": "verify" },
+    { "name": "the gradient's partials go back to 4x + −8y",
+      "file": "index.html",
+      "find": "∂f/∂x = ${lin(2*a,'x')}${sgn(b,'y')},",
+      "replace": "∂f/∂x = ${neg(2*a)}x + ${neg(b)}y,",
+      "run": "verify" },
+    { "name": "the cover-up reason goes back to 6 − −2",
+      "file": "index.html",
+      "find": "which leaves ${neg(a)} − ${par(b)} underneath",
+      "replace": "which leaves ${neg(a)} − ${neg(b)} underneath",
+      "run": "verify" }
   ]
 }
