@@ -660,7 +660,8 @@ cannot start (no browser) is an **error** rather than a catch. Branch CI runs it
 
 `npm test` also holds the workflows themselves to three things: every action runs on
 Node 24 (an action below its floor, or one with no floor on record, fails), every branch
-is checked on push, and only `main` is ever built and deployed.
+is checked on push, only `main` is ever built and deployed, and a deploy cannot pass
+until the live site reads back the commit it published.
 
 The `wave` suite pins a hash on purpose: any change to the escalation numbers or the
 RNG call order will fail it. That is a balance change, so update the pin *and* say so
@@ -819,7 +820,9 @@ runs on `main` share one group and never cancel a deploy mid-publish.
   committed copy is not stale. A commit that fails any of these never reaches the site.
 - **build** — stages `index.html`, `README.md`, and `scriptable/` into the published
   artifact, plus `.nojekyll` and a `build-info.json` stamped with the commit SHA.
-- **deploy** — publishes the artifact to GitHub Pages.
+- **deploy** — publishes the artifact to GitHub Pages, then reads `build-info.json` back
+  from the live site, past every cache, and fails until it names the commit just built.
+  A green deploy therefore means players are being served it, not only that GitHub took it.
 
 Because the Scriptable file is generated, the sync check is what keeps the iOS build from
 silently falling behind `index.html` when someone forgets to run `node build-scriptable.js`.

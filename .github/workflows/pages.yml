@@ -290,3 +290,24 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      # A green deploy means GitHub accepted the artifact, not that players are
+      # being served it. Read the stamp back from the live site, past every
+      # cache, and fail until it names this commit. A browser cannot be trusted
+      # for this check: the service worker caches build-info.json with the game.
+      - name: Confirm the live site serves this build
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          url="${PAGE_URL%/}/build-info.json"
+          for attempt in $(seq 1 30); do
+            got=$(curl -fsSL -H 'Cache-Control: no-cache' "${url}?run=${GITHUB_RUN_ID}-${attempt}" | jq -r .version 2>/dev/null || true)
+            if [ -n "$got" ] && [ "${GITHUB_SHA#"$got"}" != "$GITHUB_SHA" ]; then
+              echo "${url} reports ${got}: this commit is live."
+              exit 0
+            fi
+            echo "attempt ${attempt}: ${url} reports '${got:-nothing}', waiting for ${GITHUB_SHA::7}"
+            sleep 10
+          done
+          echo "::error::${url} never reported ${GITHUB_SHA::7}"
+          exit 1

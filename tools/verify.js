@@ -1034,6 +1034,14 @@ const workflowNotes = (() => {
     else if (!/^    if: github\.ref == 'refs\/heads\/main'\s*$/m.test(body))
       fail('workflows', 'pages', `the ${name} job is not limited to main, so a branch could publish`);
   }
+  // A deploy is only done when the live site reads back this commit.
+  {
+    const step = (job('deploy').match(/^      - name: Confirm the live site serves this build\n([\s\S]*?)(?=^      - |(?![\s\S]))/m) || [])[1];
+    if (!step || !/build-info\.json/.test(step) || !/GITHUB_SHA/.test(step))
+      fail('workflows', 'pages', 'the deploy never reads the live build stamp back, so a stale site can pass');
+    else if (/^        if:/m.test(step) || /continue-on-error:\s*true/.test(step) || !/exit 1\s*$/.test(step))
+      fail('workflows', 'pages', 'the live build stamp is read back but a mismatch cannot fail the deploy');
+  }
   const conc = (pages.match(/^concurrency:\n([\s\S]*?)^\S/m) || [])[1] || '';
   if (!/cancel-in-progress:\s*\$\{\{\s*github\.ref != 'refs\/heads\/main'\s*\}\}/.test(conc))
     fail('workflows', 'pages', 'a deploy on main could be cancelled mid-publish');
