@@ -32,13 +32,17 @@ function loadGame() {
   const mathPart = script.slice(0, script.indexOf('/* ------------------------------ topic metadata'));
   const build = script.slice(script.indexOf('/* A distractor is either'),
                              script.indexOf('/* -------------------------------- battle'));
+  // The tile-and-slot build's own arithmetic, lifted out of Lesson so the bank
+  // it offers can be drawn here thousands of times without a page.
+  const shape = script.slice(script.indexOf('  shape(a){'), script.indexOf('  buildable(q)'));
+  const bank = script.slice(script.indexOf('  pieces(a){'), script.indexOf('  /* Draw the build into'));
   const out = {};
-  new Function('exports', mathPart + build +
+  new Function('exports', mathPart + build + ';const Build={' + shape + bank + '};' +
     ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
-    'exports.Figure=Figure;exports.figEval=figEval;')(out);
+    'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;')(out);
   return out;
 }
-const { GEN, buildQuestion, buildMote, mat, Figure, figEval } = loadGame();
+const { GEN, buildQuestion, buildMote, mat, Figure, figEval, Build } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1090,6 +1094,43 @@ const workflowNotes = (() => {
   return { files: files.length, uses };
 })();
 
+/* ------------------------------------------------------------ tile banks */
+/* A vector or matrix answer is built from a bank of number tiles: every number
+   in the answer, every number in the wrong answers, and near misses to make up
+   six. The bank must not point at the answer. The easiest tell to fall into is
+   making the near misses only around the answer's own numbers, which leaves
+   those numbers sitting in the middle of little clusters — so a player who
+   picks the most crowded tiles beats guessing without knowing any maths.
+
+   This plays that strategy on thousands of banks and compares it with picking
+   the same number of tiles at random. The bound is loose on purpose: some
+   crowding is honest (small answers like ⟨0, 1⟩ live among small numbers), but
+   a bank built around the answer alone lands well above it. */
+const bankTell = (() => {
+  const val = s => Number(String(s).replace('−', '-'));
+  let n = 0, hits = 0, chance = 0;
+  for (const key of Object.keys(GEN)) for (let d = 1; d <= 3; d++) for (let i = 0; i < 150; i++) {
+    const q = buildQuestion(key, d);
+    const sh = Build.shape(q.a);
+    if (sh !== 'vec' && sh !== 'mtx') continue;
+    const { nums } = Build.pieces(q.a);
+    const tiles = Build.bank(nums, q.choices).map(val);
+    const want = [...new Set(nums.map(val))];
+    if (!want.every(w => tiles.includes(w))) fail('tiles', key, `the bank for ${q.a} is missing a number the answer needs`);
+    const crowd = tiles.map(x => [x, tiles.filter(y => y !== x && Math.abs(y - x) <= 3).length])
+      .sort((a, b) => b[1] - a[1]).slice(0, want.length).map(x => x[0]);
+    n++;
+    if (want.every(w => crowd.includes(w))) hits++;
+    let ways = 1;
+    for (let j = 0; j < want.length; j++) ways *= (tiles.length - j) / (want.length - j);
+    chance += 1 / ways;
+  }
+  const ratio = hits / chance;
+  if (ratio > 1.3)
+    fail('tiles', 'bank', `picking the most crowded tiles finds the answer ${ratio.toFixed(2)}× as often as chance`);
+  return { n, ratio };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1117,6 +1158,7 @@ if (seenComplexity.size) {
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
 }
 console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
+console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);
 if (figKeys.size) {
   console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
   console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);

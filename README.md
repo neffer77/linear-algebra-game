@@ -756,6 +756,12 @@ The generators were also checked by:
   eighteen of the seventy generators doing at least one of the three, including a question that read `2x² + 1x`, a
   determinant expansion of `−1·−5 − 2·−8`, and a discriminant written `−4² − 4(4)` that
   means the opposite of what it says.
+- **6,300 tile banks drawn** for every vector and matrix answer that can be built from
+  tiles, asserting the bank holds every number the answer needs and does not point at
+  it: picking the most crowded tiles must not beat picking at random by more than 30%.
+  The first run found it beating chance by about 45%, because the spare tiles were all
+  near misses of the answer's own numbers; they are now drawn around every number on
+  offer, and the tell sits near 15%, which is what small answers like ⟨0, 1⟩ cost honestly.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
 - **Reachability of every one of the 70 topics** at 320×568, measured as the scroll

@@ -7138,12 +7138,15 @@ const Lesson = {
   },
   /* The tiles on offer: every number in the answer, every number in the wrong
      answers, and near misses to make up at least six. Sorted, not shuffled — a
-     number bank in order is quicker to read and gives nothing away. */
+     number bank in order is quicker to read and gives nothing away. The near
+     misses are drawn around every number on offer, not the answer's alone:
+     around the answer only, its numbers sat in the middle of little clusters,
+     and picking the most crowded tiles found it half again as often as chance. */
   bank(nums, choices){
     const val=s=>Number(String(s).replace('−','-'));
     const set=new Set(nums);
     for(const c of (choices||[])) for(const n of (String(c).match(/−?\\d+/g)||[])) set.add(n);
-    const base=nums.map(val);
+    const base=[...set].map(val);
     let guard=0;
     while(set.size<6 && guard++<80) set.add(neg(R.pick(base)+R.nz(-3,3)));
     let all=[...set];
