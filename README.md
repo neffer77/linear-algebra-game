@@ -726,6 +726,14 @@ The generators were also checked by:
 
 - **84,000 generated problems** across all 70 generators at every difficulty, asserting
   four unique choices, the answer present among them, and no malformed output.
+- **About 1.25 million lines of text read for notation** — every question, choice,
+  misconception, rule, worked explanation and mote step a player can be shown — asserting
+  they are written the way a teacher would write them: never two signs in a row
+  (`5 + −1`, `x − −3`, `3·−2`), never a negative squared without brackets (`−2²` is −4),
+  and never a coefficient of 1 or 0 spelled out (`1x`, `0(x + 1)`). The first run found
+  eighteen of the seventy generators doing at least one of the three, including a question that read `2x² + 1x`, a
+  determinant expansion of `−1·−5 − 2·−8`, and a discriminant written `−4² − 4(4)` that
+  means the opposite of what it says.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
 - **Reachability of every one of the 70 topics** at 320×568, measured as the scroll

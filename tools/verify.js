@@ -83,6 +83,36 @@ function checkFigure(spec, key, where) {
 const fails = [];
 const fail = (area, key, msg) => fails.push(`[${area}] ${key}: ${msg}`);
 
+/* Two signs in a row before a number or a letter ("x − −3", "5 + −1",
+   "4x + −8y") is how a template reads, not how anyone writes mathematics. A
+   negative being added or subtracted is either folded into the sign
+   ("x + 3") or set in brackets ("5 + (−1)"). Each place a text is found is
+   reported once, with the offending stretch, so one bad template does not
+   bury the rest. A negative number raised to a power is held to the same
+   standard, because −2² and (−2)² are different numbers. */
+let notationScanned = 0;
+const notationSeen = new Set();
+// −2² is −4, so a square of −2 has to be written (−2)².
+// Nobody writes 1x, −1y or 0(x + 1): the 1 is left out and a 0 term is dropped.
+const UNIT_COEF = /(^|[^\w.,\/⁰¹²³⁴⁵⁶⁷⁸⁹])[01](?=[xyz]\b|\([xyz])/;
+const NEG_POWER = /(^|[^\w)^⁰¹²³⁴⁵⁶⁷⁸⁹])−\d+(\^|[⁰¹²³⁴⁵⁶⁷⁸⁹])/;
+const DOUBLE_SIGN = /[+−\-·×]\s*[+−-]\s*[\w(√]/;
+function notation(key, where, html) {
+  if (html == null) return;
+  notationScanned++;
+  const text = String(html).replace(/<sup>/g, '^').replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
+  for (const [re, what] of [[DOUBLE_SIGN, 'two signs in a row'], [NEG_POWER, 'a negative number raised to a power without brackets'],
+                            [UNIT_COEF, 'a coefficient of 1 or 0 written out']]) {
+    const m = re.exec(text);
+    if (!m) continue;
+    const tag = `${key}/${where.replace(/\d+/g, 'n')}/${what}`;
+    if (notationSeen.has(tag)) continue;
+    notationSeen.add(tag);
+    fail('notation', key, `${where} has ${what}: "…${text.slice(Math.max(0, m.index - 25), m.index + 12)}…"`);
+  }
+}
+
 /* ------------------------------------------------------------- 1. structure */
 let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0, figsChecked = 0;
 const seenComplexity = new Set(), figKeys = new Set(), figKinds = new Set();
@@ -111,6 +141,13 @@ for (const key of Object.keys(GEN)) {
         if (!reason || reason.length < 12) fail('structure', key, `thin misconception: ${JSON.stringify(reason)}`);
       }
       for (const c of q.choices) { if (c !== q.a) { wrongShown++; if (q.why[c]) tagged++; } }
+      // Every line the player reads, the working included, is written the way
+      // a teacher would write it: never two signs in a row like "x − −3".
+      notation(key, 'question', q.q);
+      notation(key, 'working', q.ex);
+      q.choices.forEach(c => notation(key, 'choice', c));
+      Object.values(q.why).forEach(r => notation(key, 'reason', r));
+      if (q.codex) notation(key, 'rule', q.codex.rule);
 
       // Optional contract fields must be well formed when a generator supplies them.
       if (q.complexity !== undefined) {
@@ -138,6 +175,9 @@ for (const key of Object.keys(GEN)) {
               fail('contract', key, `mote ${n} distractor ${j} has a thin reason`);
           });
           if (!m.ex || m.ex.length < 20) fail('contract', key, `mote ${n} needs an explanation`);
+          notation(key, `mote ${n} question`, m.q);
+          notation(key, `mote ${n} working`, m.ex);
+          m.d.forEach(x => { if (Array.isArray(x)) notation(key, `mote ${n} reason`, x[1]); notation(key, `mote ${n} choice`, Array.isArray(x) ? x[0] : x); });
         });
       }
       if (q.codex !== undefined && (!q.codex.rule || q.codex.rule.length > 200))
@@ -1076,6 +1116,7 @@ if (seenComplexity.size) {
   console.log(`  generators with mote ladders ${pad(seenComplexity.size, 8)}`);
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
 }
+console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
 if (figKeys.size) {
   console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
   console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);

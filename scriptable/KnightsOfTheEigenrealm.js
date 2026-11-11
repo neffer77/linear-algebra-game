@@ -910,6 +910,13 @@ const R = {
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};
 const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
 const neg = n => (n<0? '−'+Math.abs(n) : String(n));      // true minus sign
+// A number as it is written inside working: a negative is bracketed, so a sum
+// reads 5 + (−1), a product 3·(−2) and a square (−2)², never 5 + −1 or −2².
+const par = n => (n<0? '('+neg(n)+')' : String(n));
+// "x − a" with the sign folded in: x − 3, x + 2, or just x when a is 0.
+const less = n => (n===0? '' : n<0? \` + \${-n}\` : \` − \${n}\`);
+// A coefficient on a letter: 3x, −x, x.
+const lin = (c, v) => (c===1? v : c===-1? '−'+v : neg(c)+v);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
 // column-major HTML matrix: mat([[a,b],[c,d]]) with rows given as rows
@@ -971,7 +978,7 @@ vecAdd(d){
        [vecR([u[0]+v[1],u[1]+v[0]]),'the components got crossed — first pairs with first, second with second'],
        [vecR([u[0]*v[0],u[1]*v[1]]),'that multiplies the components; addition is what was asked'],
        vecR([s[0],s[1]+R.nz(-3,3)])],
-    ex:\`Add matching slots, nothing else. \${neg(u[0])}+\${neg(v[0])} = \${neg(s[0])} on top, \${neg(u[1])}+\${neg(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
+    ex:\`Add matching slots, nothing else. \${neg(u[0])} + \${par(v[0])} = \${neg(s[0])} on top, \${neg(u[1])} + \${par(v[1])} = \${neg(s[1])} below. Geometrically you walk along u, then walk along v from wherever you landed.\`};
 },
 vecScale(d){
   // c = 1 would ask nothing at all, and would make the first distractor
@@ -989,7 +996,7 @@ vecScale(d){
        [vecR([c+v[0],c+v[1]]),'the scalar was added to each component instead of multiplied'],
        [vecR([-s[0],-s[1]]),'the direction is flipped — check the sign of the scalar'],
        vecR([s[1],s[0]])],
-    ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${neg(v[0])} = \${neg(s[0])} and \${neg(c)}·\${neg(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
+    ex:\`A scalar stretches every component by the same factor: \${neg(c)}·\${par(v[0])} = \${neg(s[0])} and \${neg(c)}·\${par(v[1])} = \${neg(s[1])}. \${c<0?'The negative sign flips the arrow to point the opposite way.':'The arrow keeps its direction and changes length by a factor of '+c+'.'}\`};
 },
 vecCombo(d){
   const a=R.i(2,3+d), b=R.i(2,3+d);
@@ -1029,7 +1036,7 @@ dot(d){
        [neg(u[0]*v[1]+u[1]*v[0]),'the components got crossed; multiply first with first, second with second'],
        [neg(-s),'a sign slipped somewhere in the products'],
        neg(s+R.nz(-6,6))],
-    ex:\`Multiply matching slots and add the results: (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(u[0]*v[0])} + \${neg(u[1]*v[1])} = \${neg(s)}. The dot product is a single number, never a vector — it measures how much the two arrows point the same way.\`};
+    ex:\`Multiply matching slots and add the results: (\${neg(u[0])})(\${neg(v[0])}) + (\${neg(u[1])})(\${neg(v[1])}) = \${neg(u[0]*v[0])} + \${par(u[1]*v[1])} = \${neg(s)}. The dot product is a single number, never a vector — it measures how much the two arrows point the same way.\`};
 },
 mag(){
   const t=R.pick([[3,4,5],[6,8,10],[5,12,13],[8,15,17],[9,12,15],[7,24,25],[20,21,29]]);
@@ -1164,7 +1171,7 @@ trace(){
        [neg(A[0][0]*A[1][1]),'the diagonal entries were multiplied instead of added'],
        [neg(A[0][0]*A[1][1]-A[0][1]*A[1][0]),'that is the determinant, not the trace'],
        neg(-s)],
-    ex:\`The trace is just the sum down the main diagonal: \${neg(A[0][0])} + \${neg(A[1][1])} = \${neg(s)}. It also equals the sum of the eigenvalues, which is why it shows up everywhere.\`};
+    ex:\`The trace is just the sum down the main diagonal: \${neg(A[0][0])} + \${par(A[1][1])} = \${neg(s)}. It also equals the sum of the eigenvalues, which is why it shows up everywhere.\`};
 },
 solve2(d){
   const x=R.nz(-5,5), y=R.nz(-5,5);
@@ -1239,7 +1246,7 @@ det3(){
        [neg(A[0][0]*A[1][1]*A[2][2]),'that is only the diagonal product; a 3×3 determinant needs all the cofactor terms'],
        [neg(A[0][0]*m(0,0)+A[0][1]*m(0,1)+A[0][2]*m(0,2)),'the middle term must be subtracted, not added'],
        neg(s+R.nz(-9,9))],
-    ex:\`Expand along the top row with alternating signs + − +: \${neg(A[0][0])}·\${neg(m(0,0))} − \${neg(A[0][1])}·\${neg(m(0,1))} + \${neg(A[0][2])}·\${neg(m(0,2))} = \${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.\`};
+    ex:\`Expand along the top row with alternating signs + − +: \${neg(A[0][0])}·\${par(m(0,0))} − \${par(A[0][1])}·\${par(m(0,1))} + \${par(A[0][2])}·\${par(m(0,2))} = \${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.\`};
 },
 cross(){
   const u=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)], v=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)];
@@ -1362,7 +1369,7 @@ limInf(){
   const k=R.pick([1,2]);
   if(k===1){
     return {topic:'Limit at Infinity',
-      q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x² + \${R.i(1,9)}x\`,\`\${b}x² − \${R.i(1,9)}\`)} = ?\`,
+      q:\`lim<sub>x→∞</sub> \${frac(\`\${a}x² + \${lin(R.i(1,9),'x')}\`,\`\${b}x² − \${R.i(1,9)}\`)} = ?\`,
       a:frac(a,b),
       d:[['∞','top and bottom grow at the same rate, so the ratio stays finite'],
          ['0','the numerator does not vanish — both sides grow like x²'],
@@ -1390,7 +1397,7 @@ powerRule(d){
        [poly(t.map(([c,p])=>[c,p-1]).filter(x=>x[1]>=0)),'the exponents dropped but the coefficients were never multiplied by them'],
        [poly(dPoly(dt)),'that is the second derivative — differentiated once too often'],
        poly(t.map(([c,p])=>[c*(p+1),p+1]))],
-    ex:\`Bring the power down and drop it by one: \${t.filter(x=>x[0]).map(([c,p])=>p===0?\`the constant \${neg(c)} → 0\`:\`\${neg(c)}x\${p===1?'':sup(p)} → \${neg(c*p)}\${p-1===0?'':'x'+(p-1===1?'':sup(p-1))}\`).join(', ')}. Result: \${poly(dt)}.\`};
+    ex:\`Bring the power down and drop it by one: \${t.filter(x=>x[0]).map(([c,p])=>p===0?\`the constant \${neg(c)} → 0\`:\`\${lin(c,'x'+(p===1?'':sup(p)))} → \${p-1===0?neg(c*p):lin(c*p,'x'+(p-1===1?'':sup(p-1)))}\`).join(', ')}. Result: \${poly(dt)}.\`};
 },
 evalDeriv(){
   const t=[[R.nz(1,4),3],[R.nz(-6,6),2],[R.nz(-8,8),1],[R.i(-9,9),0]];
@@ -1545,7 +1552,7 @@ tangent(){
        [neg(-m),'a sign slipped while substituting'],
        [neg(evalPoly(t,a)+m),'the function value and the slope were added together'],
        neg(m+R.nz(-6,6))],
-    ex:\`The tangent slope <i>is</i> the derivative. f′(x) = \${poly(dt)}, so f′(\${neg(a)}) = \${neg(m)}. (The full tangent line would be y − \${neg(y)} = \${neg(m)}(x − \${neg(a)}).)\`};
+    ex:\`The tangent slope <i>is</i> the derivative. f′(x) = \${poly(dt)}, so f′(\${neg(a)}) = \${neg(m)}. (The full tangent line would be \${m===0 ? \`y = \${neg(y)}, flat\` : \`y\${less(y)} = \${m===1 ? \`x\${less(a)}\` : \`\${m===-1?'−':neg(m)}(x\${less(a)})\`}\`}.)\`};
 },
 
 /* ---------- Realm 4 : integrals ---------- */
@@ -1558,7 +1565,7 @@ indefPower(){
        [\`\${poly([[c*n,n-1]])} + C\`,'that differentiates instead of integrating — the power went down'],
        [\`\${poly([[c/(n+1),n]])} + C\`,'the coefficient was divided but the power never rose'],
        \`\${poly([[c*(n+1),n+1]])} + C\`],
-    ex:\`Reverse the power rule: raise the power by one, then divide by the new power. x\${sup(n)} → x\${sup(n+1)}/\${n+1}, so \${c}x\${sup(n)} → \${c/(n+1)}x\${sup(n+1)}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.\`};
+    ex:\`Reverse the power rule: raise the power by one, then divide by the new power. x\${sup(n)} → x\${sup(n+1)}/\${n+1}, so \${lin(c,'x'+sup(n))} → \${lin(c/(n+1),'x'+sup(n+1))}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.\`};
 },
 defPoly(){
   const c=R.i(1,4)*2, b=R.nz(-5,5), hi=R.i(2,4);
@@ -1575,7 +1582,7 @@ defPoly(){
        d:[[poly([[c,2],[b,1]]),'the x² term must be divided by its new power, 2'],
           [poly(t),'that is the integrand, unchanged'],
           [poly([[c,0]]),'that differentiates rather than integrates']],
-       ex:\`Raise each power and divide by the new one: \${c}x → \${c/2}x², and \${neg(b)} → \${neg(b)}x.\`},
+       ex:\`Raise each power and divide by the new one: \${lin(c,'x')} → \${lin(c/2,'x²')}, and \${neg(b)} → \${lin(b,'x')}.\`},
       {q:\`Evaluate \${poly(F)} at x = \${hi}.\`,
        a:neg(evalPoly(F,hi)),
        d:[[neg(evalPoly(t,hi)),'that evaluates the integrand, not the antiderivative'],
@@ -1728,20 +1735,20 @@ partial(){
           [\`\${a}x²\`,'the y stays and the power drops'],
           [\`\${2*a}x²y\`,'the power must fall from 2 to 1']],
        ex:\`x² → 2x, and the constant factor \${a}y rides along: \${2*a}xy.\`},
-      {q:\`∂/∂x of \${ac}xy\${sup(3)} = ?\`,
-       a:\`\${ac}y\${sup(3)}\`,
+      {q:\`∂/∂x of \${lin(ac,'xy'+sup(3))} = ?\`,
+       a:\`\${lin(ac,'y'+sup(3))}\`,
        d:[[\`\${3*ac}xy²\`,'that differentiated with respect to y'],
-          [\`\${ac}xy\${sup(3)}\`,'the x had power 1, so differentiating removes it'],
+          [\`\${lin(ac,'xy'+sup(3))}\`,'the x had power 1, so differentiating removes it'],
           ['0','the term contains x, so it does not vanish']],
-       ex:\`x to the first power differentiates to 1, leaving the constant factor \${ac}y³.\`}
+       ex:\`x to the first power differentiates to 1, leaving the constant factor \${lin(ac,'y³')}.\`}
     ],
-    q:\`f(x,y) = \${a}x²y \${sgn} \${ac}xy\${sup(3)}<br>∂f/∂x = ?\`,
-    a:\`\${2*a}xy \${sgn} \${ac}y\${sup(3)}\`,
+    q:\`f(x,y) = \${a}x²y \${sgn} \${lin(ac,'xy'+sup(3))}<br>∂f/∂x = ?\`,
+    a:\`\${2*a}xy \${sgn} \${lin(ac,'y'+sup(3))}\`,
     d:[[\`\${a}x² \${sgn} \${Math.abs(3*c)}xy²\`,'that differentiated with respect to y instead of x'],
        [\`\${2*a}xy \${sgn} \${Math.abs(3*c)}xy²\`,'the first term is right, but the second was differentiated with respect to y'],
-       [\`\${2*a}x \${sgn} \${ac}y\${sup(3)}\`,'the y was dropped from the first term — y is held constant, not set to zero'],
-       [\`\${a}x²y \${sgn} \${ac}y\${sup(3)}\`,'the first term was never differentiated at all']],
-    ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${neg(c)}xy³ → \${neg(c)}y³ (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
+       [\`\${2*a}x \${sgn} \${lin(ac,'y'+sup(3))}\`,'the y was dropped from the first term — y is held constant, not set to zero'],
+       [\`\${a}x²y \${sgn} \${lin(ac,'y'+sup(3))}\`,'the first term was never differentiated at all']],
+    ex:\`Differentiate with respect to x and treat y as a frozen constant. \${a}x²y → \${2*a}xy, and \${lin(c,'xy³')} → \${lin(c,'y³')} (the x had power 1). This is the bridge from calculus to gradients, and gradients are how machines learn.\`};
 },
 
 
@@ -1819,7 +1826,7 @@ diagonalisable(d){
     q:\`Is \${mat(A)} diagonalisable over the reals?\`,
     a:OPT[kind],
     d:Object.keys(OPT).filter(x=>x!==kind).map(x=>[OPT[x], REASON[x]]),
-    ex:\`Trace \${neg(tr)}, determinant \${neg(dt)}, so the discriminant is \${neg(tr)}² − 4(\${neg(dt)}) = \${neg(disc)}. Here \${why}. \${
+    ex:\`Trace \${neg(tr)}, determinant \${neg(dt)}, so the discriminant is \${par(tr)}² − 4(\${neg(dt)}) = \${neg(disc)}. Here \${why}. \${
       kind==='distinct' ? 'Two distinct eigenvalues always give two independent eigenvectors, so it diagonalises.'
       : kind==='scalar' ? 'A multiple of the identity is already diagonal — every vector is an eigenvector.'
       : kind==='defective' ? 'The eigenvalue repeats but the matrix is not cI, so it has only a one-dimensional eigenspace and cannot be diagonalised.'
@@ -1846,7 +1853,7 @@ matPow(d){
        [mat(ds[2]),'the off-diagonal entry does change: it collects a contribution from both diagonal entries'],
        [mat(ds[3]),'the two diagonal entries have swapped places']],
     ex:\`Multiply it out: A² = \${mat([[a*a, b*(a+c)],[0,c*c]])}, because the top-right entry is (\${neg(a)})(\${neg(b)}) + (\${neg(b)})(\${neg(c)}) = \${neg(b*(a+c))}.\${
-      n===3 ? \` Multiplying once more gives the top-right entry \${neg(b)}(\${neg(a)}² + \${neg(a)}·\${neg(c)} + \${neg(c)}²) = \${neg(b*(a*a+a*c+c*c))}.\` : ''
+      n===3 ? \` Multiplying once more gives the top-right entry \${neg(b)}(\${par(a)}² + \${par(a)}·\${par(c)} + \${par(c)}²) = \${neg(b*(a*a+a*c+c*c))}.\` : ''
     } The diagonal entries just power up, which is the one part of the entrywise guess that happens to be right.\`};
 },
 nullSpace(d){
@@ -1950,7 +1957,7 @@ gramSchmidt(d){
        d:[[vecR([k*a,k*b]),'that is the projection you are subtracting, not what is left after subtracting it'],
           [vecR(u2),'the subtraction has not happened yet'],
           [vecR([m*b,-m*a]),'the subtraction ran the wrong way round']],
-       ex:\`\${vecR(u2)} − \${neg(k)}\${vecR(u1)} = \${vecR(w)}. Check it: \${vecR(w)} · \${vecR(u1)} = 0, so the leftover really is perpendicular to u₁.\`}
+       ex:\`\${vecR(u2)} − \${par(k)}\${vecR(u1)} = \${vecR(w)}. Check it: \${vecR(w)} · \${vecR(u1)} = 0, so the leftover really is perpendicular to u₁.\`}
     ],
     q:\`u₁ = \${vecR(u1)}, u₂ = \${vecR(u2)}.<br>Gram–Schmidt: what is u₂ − proj<sub>u₁</sub>(u₂)?\`,
     a:vecR(w),
@@ -2268,11 +2275,11 @@ partialFrac(d){
            eg:'For N/((x−a)(x−b)), covering (x−a) and putting x = a gives A = N/(a−b).'},
     q:\`\${frac(N, den)} = \${frac('A',\`x \${a<0?'+':'−'} \${Math.abs(a)}\`)} + \${frac('B',\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)}.<br>What is A?\`,
     a:rat(N, a-b),
-    d:[[rat(N, b-a),\`the sign is backwards — cover up (x \${a<0?'+':'−'} \${Math.abs(a)}) and put x = \${neg(a)}, which leaves \${neg(a)} − \${neg(b)} underneath\`],
+    d:[[rat(N, b-a),\`the sign is backwards — cover up (x \${a<0?'+':'−'} \${Math.abs(a)}) and put x = \${neg(a)}, which leaves \${neg(a)} − \${par(b)} underneath\`],
        [rat(N, a+b),'the two roots are subtracted, not added'],
        [rat(a-b, N),'the fraction is upside down'],
        [String(N),'that is the numerator itself; A is what survives after covering the factor up']],
-    ex:\`Multiply through by (x \${a<0?'+':'−'} \${Math.abs(a)}) and you get \${frac(N,\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)} = A + (that factor)·B. Now put x = \${neg(a)}: the B term vanishes and A = \${N}/(\${neg(a)} − \${neg(b)}) = \${rat(N,a-b)}. That shortcut is the cover-up method, and it works because the substitution kills every other term.\`};
+    ex:\`Multiply through by (x \${a<0?'+':'−'} \${Math.abs(a)}) and you get \${frac(N,\`x \${b<0?'+':'−'} \${Math.abs(b)}\`)} = A + (that factor)·B. Now put x = \${neg(a)}: the B term vanishes and A = \${N}/(\${neg(a)} − \${par(b)}) = \${rat(N,a-b)}. That shortcut is the cover-up method, and it works because the substitution kills every other term.\`};
 },
 improper(d){
   const p = R.chance(.3) ? 1 : R.i(2,5);
@@ -2357,7 +2364,7 @@ gradient(d){
        [vecR([2*a*x0,2*c*y0]),'the xy term was ignored, but it contributes to both partials'],
        [vecR([a*x0+b*y0, b*x0+c*y0]),'the 2 from differentiating the squared terms is missing'],
        [vecR([fx,fx]),'both slots hold ∂f/∂x; the second slot is the derivative in y']],
-    ex:\`Differentiate in x holding y still: ∂f/∂x = \${neg(2*a)}x + \${neg(b)}y, which at (\${neg(x0)}, \${neg(y0)}) is \${neg(fx)}. Then in y holding x still: ∂f/∂y = \${neg(b)}x + \${neg(2*c)}y = \${neg(fy)}. Stack them: ∇f = \${vecR([fx,fy])}. The xy term appears in both partials, which is exactly what a mixed term does.\`};
+    ex:\`Differentiate in x holding y still: ∂f/∂x = \${lin(2*a,'x')}\${sgn(b,'y')}, which at (\${neg(x0)}, \${neg(y0)}) is \${neg(fx)}. Then in y holding x still: ∂f/∂y = \${lin(b,'x')}\${sgn(2*c,'y')} = \${neg(fy)}. Stack them: ∇f = \${vecR([fx,fy])}. The xy term appears in both partials, which is exactly what a mixed term does.\`};
 },
 dirDeriv(d){
   const T=[[3,4,5],[4,3,5],[5,12,13],[12,5,13],[8,15,17],[6,8,10]];
@@ -2377,7 +2384,7 @@ dirDeriv(d){
        [rat(fx*q+fy*p,n),'the direction components are paired with the wrong partials'],
        [rat(dp,n*n),\`divided by ‖v‖² = \${n*n} instead of ‖v‖ = \${n}\`],
        [rat(-dp,n),'the sign is flipped — that is the rate in the opposite direction']],
-    ex:\`∇f = ⟨\${neg(2*a)}x, \${neg(2*b)}y⟩, which at (\${neg(x0)}, \${neg(y0)}) is \${vecR([fx,fy])}. The direction \${vecR([p,q])} has length √\${p*p+q*q} = \${n}, so û = (1/\${n})\${vecR([p,q])}. Then D_u f = \${vecR([fx,fy])} · û = (\${neg(fx)}·\${neg(p)} + \${neg(fy)}·\${neg(q)})/\${n} = \${rat(dp,n)}. Forgetting to normalise is the one mistake that scales the whole answer.\`};
+    ex:\`∇f = ⟨\${neg(2*a)}x, \${neg(2*b)}y⟩, which at (\${neg(x0)}, \${neg(y0)}) is \${vecR([fx,fy])}. The direction \${vecR([p,q])} has length √\${p*p+q*q} = \${n}, so û = (1/\${n})\${vecR([p,q])}. Then D_u f = \${vecR([fx,fy])} · û = (\${neg(fx)}·\${par(p)} + \${par(fy)}·\${par(q)})/\${n} = \${rat(dp,n)}. Forgetting to normalise is the one mistake that scales the whole answer.\`};
 },
 chainMulti(d){
   // Rendering helpers: a monomial in x and y, and a power of t, both written
@@ -2439,7 +2446,7 @@ tangentPlane(d){
     a=R.nz(-3,3); b=R.nz(-3,3); x0=R.nz(-3,3); y0=R.nz(-3,3);
     z0=a*x0*x0+b*y0*y0; fx=2*a*x0; fy=2*b*y0;
   }while(fx===fy || fx===0 || fy===0 || z0===0);
-  const T=(c,v,at)=>\`\${c<0?'−':'+'} \${Math.abs(c)}(\${v} \${at<0?'+':'−'} \${Math.abs(at)})\`;
+  const T=(c,v,at)=>\`\${c<0?'−':'+'} \${Math.abs(c)===1?'':Math.abs(c)}(\${v} \${at<0?'+':'−'} \${Math.abs(at)})\`;
   const P=(k,c1,c2)=>\`z = \${neg(k)} \${T(c1,'x',x0)} \${T(c2,'y',y0)}\`;
   return {topic:'Tangent Planes',
     codex:{rule:'z = f(a,b) + f_x(a,b)(x−a) + f_y(a,b)(y−b) — the height at the point, plus each slope times how far you have moved.',
