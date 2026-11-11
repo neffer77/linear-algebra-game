@@ -72,10 +72,10 @@
       "run": "play:competency"
     },
     {
-      "name": "topic chips smaller than a fingertip",
+      "name": "topic grid wider than a phone",
       "file": "index.html",
-      "find": ".cchip{display:flex;flex-direction:column;gap:3px;text-align:left;min-height:44px;padding:7px 8px;",
-      "replace": ".cchip{display:flex;flex-direction:column;gap:3px;text-align:left;min-height:0;padding:1px 8px;",
+      "find": ".cgrid{display:grid;grid-template-columns:1fr 1fr;",
+      "replace": ".cgrid{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));",
       "run": "play:competency"
     },
     {

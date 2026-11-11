@@ -18,10 +18,11 @@ const SEED = {
   det2:     { m: 0.50, seen: 6,  ago: 0 },    // choose
   mag:      { m: 0.25, seen: 3,  ago: 0 },    // true or false
   orth:     { m: 0.05, seen: 2,  ago: 0 },    // first meeting
+  transpose:{ m: 0.68, seen: 8,  ago: 0 },    // build
   cross:    { m: 0.95, seen: 10, ago: 20 },   // was fluent; has faded
   powerRule:{ m: 0.80, seen: 8,  ago: 0 }     // fluent, calculus side
 };
-const WANT = { dot: 4, vecAdd: 4, det2: 2, mag: 1, orth: 0, powerRule: 4, transpose: -1 };
+const WANT = { dot: 4, vecAdd: 4, transpose: 3, det2: 2, mag: 1, orth: 0, powerRule: 4, trace: -1 };
 
 module.exports = {
   name: 'competency',
@@ -70,7 +71,7 @@ module.exports = {
     });
     t.ok('the map shows the competency map once anything is met', !!node, node);
     t.ok('with how many topics are fluent out of all seventy', node && /3 of 70 fluent/.test(node), node);
-    t.ok('and how many are still being learned', node && /4 learning/.test(node) && /63 not met yet/.test(node), node);
+    t.ok('and how many are still being learned', node && /5 learning/.test(node) && /62 not met yet/.test(node), node);
 
     // --- one tap opens it, with every topic exactly once ---
     const map = await t.ev(() => {
