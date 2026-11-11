@@ -113,6 +113,10 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .miss{background:rgba(229,72,77,.13);border:1px solid rgba(229,72,77,.4);border-radius:9px;
   padding:8px 10px;margin:8px 0;font-size:14px;line-height:1.5}
 .miss b{color:#ffb3b6}
+.miss.slip{background:rgba(242,193,78,.12);border-color:rgba(242,193,78,.45)}
+.miss.slip b{color:var(--gold)}
+.miss.dodge{background:rgba(87,204,122,.12);border-color:rgba(87,204,122,.45)}
+.miss.dodge b{color:var(--green)}
 
 /* map */
 .node{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;
@@ -6357,6 +6361,9 @@ const Battle = {
     const why = st !== this.cur ? (st._why||{}) : this.cur.why;
     const met = !inRite && this.lessonIs('meet');
     const miss = !ok && why[picked];
+    const label = TOPIC_LABEL[this.cur.key]||this.cur.topic;
+    const slipNote = miss ? Slips.note(Slips.slip(this.cur.key, miss), label)
+      : (ok && Slips.dodge(this.cur.key, why, st._choices || this.cur.choices) ? Slips.dodgeNote() : '');
     const e=document.getElementById('explain');
 
     /* Shown rather than answered: the derivation replaces the verdict. No
@@ -6394,7 +6401,7 @@ const Battle = {
     e.innerHTML =
       `<div class="head" style="color:${ok?'var(--green)':'var(--red)'}">${head}</div>`+
       ((ok || st.quiet)?'':`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">${st.a}</b>.</div>`)+
-      (miss?`<div class="miss">You chose <b>${picked}</b>: ${miss}.</div>`:'')+
+      (miss?`<div class="miss">You chose <b>${picked}</b>: ${miss}.</div>`:'')+ slipNote +
       (this.lastSlam?`<div class="miss">⚡ ${this.foe.nm} unleashed its wind-up for <b>${this.lastSlam}</b> damage${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>`:'')+
       `<div>${st.ex}</div>`+ rule +
       `<div id="afig"></div>`+
@@ -6793,6 +6800,62 @@ const Working = {
       <div class="wkans">The answer is <b>${w.answer}</b>.</div>
     </div>`;
   }
+};
+
+/* ------------------------------ repeated slips ------------------------------ */
+/* A wrong answer is already explained on its own: "You chose 1: that is the
+   rank again…". What one explanation cannot say is that this is the second
+   time. A learner who keeps crossing the components of a dot product does not
+   need the dot product taught again; they need to be told that this one slip
+   is their pattern, so they can check for it before choosing. And the first
+   time they then walk past that same trap, it is worth saying so.
+
+   A slip is a misconception's text with its numbers (and their brackets) taken
+   out, so "the two roots are subtracted" on one question matches the same
+   slip on the next.
+   It is counted per knight and per topic, for this sitting only: nothing is
+   saved, because a slip from last week is not a pattern, and the game's
+   memory of what the player knows already lives in mastery. */
+const Slips = {
+  log:{},
+  sig(reason){
+    return String(reason).replace(/<[^>]+>/g,' ').replace(/[−-]?\d+(\.\d+)?/g,'#')
+      .replace(/\(#\)/g,'#').replace(/\s+/g,' ').trim().toLowerCase();
+  },
+  book(key){
+    const who=(typeof Profiles!=='undefined' && Profiles.activeKey && Profiles.activeKey()) || '_';
+    const k=this.log[who] || (this.log[who]={});
+    return k[key] || (k[key]={});
+  },
+  // Count a slip; returns how many times this one has now been made here.
+  slip(key, reason){
+    if(!key || !reason) return 0;
+    const b=this.book(key), g=this.sig(reason);
+    return (b[g]=(b[g]||0)+1);
+  },
+  /* Answered right with a trap on offer that caught this player before: the
+     trap was seen and passed. Its count starts again, so a later repeat is
+     news again rather than "the fourth time". */
+  dodge(key, why, offered){
+    if(!key || !why || !offered) return false;
+    const b=this.book(key);
+    let seen=false;
+    for(const c of offered){
+      const r=why[c]; if(!r) continue;
+      const g=this.sig(r);
+      if(b[g]>0){ b[g]=0; seen=true; }
+    }
+    return seen;
+  },
+  note(n, label){
+    if(n<2) return '';
+    return n===2
+      ? `<div class="miss slip">🔁 <b>The same slip as last time</b> in ${label}. Before you pick the next one, check for exactly this.</div>`
+      : `<div class="miss slip">🔁 <b>That slip again</b>, ${n} times now in ${label}. It is the one thing to watch for here.</div>`;
+  },
+  dodgeNote(){
+    return `<div class="miss dodge">🎯 <b>Not caught this time.</b> The trap that got you before was right there, and you walked past it.</div>`;
+  },
 };
 
 /* ------------------------------ answer tiles ------------------------------- */
@@ -12594,11 +12657,13 @@ const Train = {
     const e=document.getElementById('tExplain');
     const why = st!==this.cur ? (st._why||{}) : this.cur.why;
     const miss = !ok && why[choice];
+    const slipNote = miss ? Slips.note(Slips.slip(this.cur.key, miss), TOPIC_LABEL[this.cur.key]||this.cur.topic)
+      : (ok && Slips.dodge(this.cur.key, why, st._choices || this.cur.choices) ? Slips.dodgeNote() : '');
     e.style.display='block';
     e.innerHTML=`<div style="font-weight:900;color:${ok?'var(--green)':'var(--red)'};margin-bottom:6px">
         ${ok?'Correct.': st.quiet ? 'Not quite.'
             : 'Not quite — the answer was <span style="color:var(--gold)">'+st.a+'</span>.'}</div>
-      ${miss?`<div class="miss">You chose <b>${choice}</b>: ${miss}.</div>`:''}
+      ${miss?`<div class="miss">You chose <b>${choice}</b>: ${miss}.</div>`:''}${slipNote}
       <div>${st.ex}</div>
       <button class="btn gold" style="margin-top:10px" onclick="Train.next()">Next riddle ▶</button>`;
     document.getElementById('tScore').textContent=`✅ ${this.c}   ❌ ${this.w}`;
