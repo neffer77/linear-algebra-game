@@ -39,6 +39,7 @@ const SUITES = [
   require('./play/crucible'),    // S12
   require('./play/working'),     // S13
   require('./play/slips'),       // the same mistake twice is named
+  require('./play/review'),      // what has faded is named on the map and brought back
   require('./play/lesson'),      // S14
   require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
