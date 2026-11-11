@@ -63,6 +63,8 @@ h2{font-size:18px}
   border:1px solid var(--edge);border-radius:14px;padding:12px;margin:10px 0;
   box-shadow:0 6px 0 rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.06)}
 
+/* Where the keyboard is: a ring on whatever it would press, never on a tap. */
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 .btn{display:block;width:100%;padding:13px 14px;margin:8px 0;border-radius:12px;cursor:pointer;
   border:1px solid var(--edge);background:linear-gradient(180deg,#3a2e5e,#2a2148);color:var(--ink);
   font:inherit;font-size:16px;font-weight:700;text-align:left;
@@ -800,7 +802,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="showwork" style="display:none"></div>
     </div>
 
-    <div class="panel" id="explain" style="display:none"></div>
+    <div class="panel" id="explain" style="display:none" aria-live="polite"></div>
     <div id="powerbar"></div>
     <div class="center" style="margin-top:8px">
       <span class="kbd" id="fleeBtn" onclick="Battle.flee()">🏃 Retreat</span>
@@ -7065,6 +7067,55 @@ const Tiles = {
   }
 };
 addEventListener('keydown', e=>Tiles.key(e));
+
+/* ----------------------- keyboards and screen readers ----------------------- */
+/* Much of the game is tapped on things that are not buttons: the map's nodes,
+   the doors to the working and the nudge, the power bar, the settings rows,
+   the walk-away links. A finger does not mind. A keyboard cannot reach them,
+   and a screen reader reads them out as plain text, so nobody using either can
+   tell they do anything.
+
+   Rather than rewrite each one, anything with a click handler that is not
+   already a control is made one: it gets the button role and a place in the
+   tab order, and Enter or Space presses it. It runs on whatever the page
+   draws, as it draws it, so a screen added later is covered without having to
+   know this exists. The handler is the test: there is no list of classes to
+   keep up to date. */
+const A11y = {
+  NATIVE: /^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY|OPTION)$/,
+  needs(el){
+    return el.nodeType===1 && typeof el.onclick==='function' && !this.NATIVE.test(el.tagName)
+      && el!==document.body && el!==document.documentElement;
+  },
+  mark(root){
+    if(!root || root.nodeType!==1) return;
+    const els=[root, ...root.querySelectorAll('*')];
+    for(const el of els){
+      if(!this.needs(el)) continue;
+      if(!el.hasAttribute('role')) el.setAttribute('role','button');
+      if(!el.hasAttribute('tabindex')) el.tabIndex=0;
+    }
+  },
+  /* Before anything else hears the key: on a battle screen Enter also means
+     "continue", and a key that pressed this control must not press that too. */
+  key(e){
+    if(e.key!=='Enter' && e.key!==' ') return;
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    const el=e.target;
+    if(!el || el.nodeType!==1 || el.getAttribute('role')!=='button' || !this.needs(el)) return;
+    e.preventDefault(); e.stopPropagation();
+    el.click();
+  },
+  start(){
+    this.mark(document.body);
+    // Handlers are set in the same breath as the markup, and the observer
+    // reports after that breath, so a node is read with its handler on.
+    new MutationObserver(recs=>{
+      for(const r of recs) for(const n of r.addedNodes) this.mark(n);
+    }).observe(document.body, {childList:true, subtree:true});
+    addEventListener('keydown', e=>this.key(e), true);
+  }
+};
 
 /* -------------------------------- lessons --------------------------------- */
 /* How a topic is asked, as distinct from which topic and how hard.
@@ -13666,6 +13717,7 @@ const Cheats = {
 
 /* -------------------------------- boot ------------------------------------ */
 (function boot(){
+  A11y.start();
   Prefs.load();
   Keep.load();
   Keep.register();
