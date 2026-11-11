@@ -1,12 +1,89 @@
 {
-  "change": "Tile banks no longer cluster around the answer's own numbers",
+  "change": "A competency map shows every topic on its rung, strand by strand",
   "mutations": [
     {
-      "name": "near misses drawn around the answer alone",
+      "name": "unmet topics left out of a strand's score",
       "file": "index.html",
-      "find": "const base=[...set].map(val);",
-      "replace": "const base=nums.map(val);",
-      "run": "verify"
+      "find": "return ks.length ? ks.reduce((a,k)=>a+Mastery.eff(k),0)/ks.length : 0;",
+      "replace": "const met=ks.filter(k=>Mastery.eff(k)>0); return met.length ? met.reduce((a,k)=>a+Mastery.eff(k),0)/met.length : 0;",
+      "run": "play:competency"
+    },
+    {
+      "name": "rung read off what was known the day you left",
+      "file": "index.html",
+      "find": "const e=Mastery.eff(key);\n    return e<Lesson.MEET ? 0",
+      "replace": "const e=r.m;\n    return e<Lesson.MEET ? 0",
+      "run": "play:competency"
+    },
+    {
+      "name": "rung follows the lessons switch",
+      "file": "index.html",
+      "find": "if(!r || !r.seen) return -1;\n    const e=Mastery.eff(key);",
+      "replace": "if(!r || !r.seen) return -1;\n    if(!Lesson.on()) return 4;\n    const e=Mastery.eff(key);",
+      "run": "play:competency"
+    },
+    {
+      "name": "rungs one band off",
+      "file": "index.html",
+      "find": "e<Lesson.BUILD ? 3 : 4;",
+      "replace": "e<Lesson.BUILD ? 4 : 4;",
+      "run": "play:competency"
+    },
+    {
+      "name": "an arrow between every pair of strands",
+      "file": "index.html",
+      "find": "return (this.NEEDS[nm]||[]).includes(above) ?",
+      "replace": "return true ?",
+      "run": "play:competency"
+    },
+    {
+      "name": "Applications drawn as building on integrals",
+      "file": "index.html",
+      "find": "'Applications':['Limits & Derivatives'],",
+      "replace": "'Applications':['Integrals'],",
+      "run": "play:competency"
+    },
+    {
+      "name": "a topic left off its strand",
+      "file": "index.html",
+      "find": "<div class=\"cgrid\">${ks.map(k=>this.chip(k)).join('')}</div>",
+      "replace": "<div class=\"cgrid\">${ks.slice(1).map(k=>this.chip(k)).join('')}</div>",
+      "run": "play:competency"
+    },
+    {
+      "name": "the map node shown to a knight who has met nothing",
+      "file": "index.html",
+      "find": "if(!Game.s || !Mastery.all().length) return '';",
+      "replace": "if(!Game.s) return '';",
+      "run": "play:competency"
+    },
+    {
+      "name": "every strand marked as where you are",
+      "file": "index.html",
+      "find": "return t ? (t[1].find(nm=>this.score(nm)<Lesson.BUILD) || null) : null;",
+      "replace": "return t ? t[1][t[1].length-1] : null;",
+      "run": "play:competency"
+    },
+    {
+      "name": "fading not marked on the map",
+      "file": "index.html",
+      "find": "const faded = r && r.seen && (r.m-e) >= Mastery.DROP;\n    const say",
+      "replace": "const faded = false;\n    const say",
+      "run": "play:competency"
+    },
+    {
+      "name": "topic grid wider than a phone",
+      "file": "index.html",
+      "find": ".cgrid{display:grid;grid-template-columns:1fr 1fr;",
+      "replace": ".cgrid{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));",
+      "run": "play:competency"
+    },
+    {
+      "name": "no way in from the Ledger",
+      "file": "index.html",
+      "find": "id=\"ledgerComp\"",
+      "replace": "id=\"ledgerCompX\"",
+      "run": "play:competency"
     }
   ]
 }

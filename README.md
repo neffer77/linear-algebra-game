@@ -127,6 +127,18 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy topics in
+their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
+matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
+then integrals and applications) that meet in multivariable calculus. Each strand says
+what it builds on and how much of it you hold, with a topic you have never met counting
+as nothing, and each track marks *you are here* at its first strand you do not yet hold.
+Every topic shows the rung it is on, the same ladder the lessons climb (📖 first meeting,
+⚖️ true or false, 🎯 choose, 🧩 build, then ✦ fluent), read off what you know today, so a
+topic that has faded drops a rung and is marked ↓. One tap on a topic starts practising
+it. The map node shows how many topics are fluent, and the Ledger links there too.
+Nothing is stored: it is all read off the mastery records the save already has.
+
 **Progression.** Beating a foe earns gold and XP, and often loot. Levelling raises your
 maximum health and heals you fully. Clearing a realm's boss unlocks the next realm.
 
@@ -483,6 +495,8 @@ The game is built so that losing teaches you as much as winning.
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
   reading seventy bars.
+- **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
+  strand, with what each strand builds on and where you are on each track.
 - **Seventy topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
@@ -562,6 +576,7 @@ Inside `index.html` the code is organised as:
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
+| `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
 | `Sfx` | WebAudio synthesis — impacts, streak tones, fanfares; no audio files |
 | `Prefs`, `Haptic`, `Celebrate` | sound/motion/haptic preferences, vibration, and the single funnel every full-screen callout goes through |
@@ -629,7 +644,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-eight suites, 1,427 checks, about a minute:
+loop only exists once the page is running. Twenty-nine suites, 1,456 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -655,6 +670,7 @@ loop only exists once the page is running. Twenty-eight suites, 1,427 checks, ab
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
+| `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets; a tap practises a topic; the Ledger leads there; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
