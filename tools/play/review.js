@@ -60,6 +60,8 @@ module.exports = {
     await t.reload();
     t.eq('and it is the same after a reload, because nothing new is stored',
       await t.ev(() => Mastery.fading()), FADING);
+    // Every question below in the four-answer form, whatever rung it would be taught at.
+    await t.ev(() => { Prefs.d.lessons = false; });
 
     // --- the map names them, with what each fell from ---
     const map = await t.ev(() => {
@@ -89,8 +91,8 @@ module.exports = {
       UI.go('s-train');
       const pick = document.getElementById('trainPick');
       const btn = [...pick.querySelectorAll('button')].find(b => /what's fading/.test(b.innerText));
-      const dot = [...pick.querySelectorAll('.strandBody button')].find(b => b.innerText.startsWith('Dot Product'));
-      return { btn: btn ? btn.innerText : null, dotTag: dot ? dot.querySelector('.mtag').innerText : null,
+      const dot = pick.querySelector(`.strandBody button[onclick="Train.startPool('dot')"] .mtag`);
+      return { btn: btn ? btn.innerText : null, dotTag: dot ? dot.textContent : null,
                weakest: Mastery.weakest(2) };
     });
     t.ok('the yard offers to bring back what is fading', yard.btn && yard.btn.includes('Dot Product'), JSON.stringify(yard));
