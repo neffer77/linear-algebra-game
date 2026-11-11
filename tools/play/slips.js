@@ -16,13 +16,15 @@ const CROSSED = 'the components got crossed';             // another
 /* In the yard, with step-by-step lessons off so every question offers four
    answers: draw dot-product questions until one offers the trap named, then
    answer it — with the trap, or correctly — and report what was said. */
-async function yard(t, trap, right) {
-  return t.ev(([trap, right]) => {
+async function yard(t, trap, right, avoid) {
+  return t.ev(([trap, right, avoid]) => {
     for (let i = 0; i < 60; i++) {
       Train.next();
       const btns = [...document.querySelectorAll('#tChoices .choice')];
       const hit = btns.find(b => (Train.cur.why[b.innerHTML] || '').startsWith(trap));
       if (!hit) continue;
+      // a question that also offers another trap answers for that one too
+      if (avoid && btns.some(b => (Train.cur.why[b.innerHTML] || '').startsWith(avoid))) continue;
       (right ? btns.find(b => b.dataset.correct === '1') : hit).click();
       const e = document.getElementById('tExplain');
       const slip = e.querySelector('.miss.slip'), dodge = e.querySelector('.miss.dodge');
@@ -30,7 +32,7 @@ async function yard(t, trap, right) {
                reason: !right && e.innerText.includes(trap) };
     }
     return { none: true };
-  }, [trap, !!right]);
+  }, [trap, !!right, avoid || null]);
 }
 
 module.exports = {
@@ -59,11 +61,13 @@ module.exports = {
     t.ok('a different misconception is not called a repeat', r.reason && r.slip === null, JSON.stringify(r));
 
     // --- answering right with the old trap on offer is worth saying ---
-    r = await yard(t, SUBTRACTED, true);
+    // Asked with only the one old trap on offer, so what is said is about it
+    // alone: the crossed-components slip from just now is still waiting.
+    r = await yard(t, SUBTRACTED, true, CROSSED);
     t.ok('walking past a trap that caught you before is named',
       r.dodge && /not caught this time/i.test(r.dodge), JSON.stringify(r));
     t.ok('with no slip note beside it', r.slip === null, JSON.stringify(r));
-    r = await yard(t, SUBTRACTED, true);
+    r = await yard(t, SUBTRACTED, true, CROSSED);
     t.ok('but only the first time it is walked past', r.dodge === null, JSON.stringify(r));
     r = await yard(t, SUBTRACTED);
     t.ok('and a slip after that starts counting again', r.reason && r.slip === null, JSON.stringify(r));
