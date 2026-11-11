@@ -991,6 +991,65 @@ let codeNotes = null;
                 maxV: maxQR && maxQR.v, grownV: grownQR && grownQR.v };
 })();
 
+/* --------------------------------------------------------------- workflows */
+/* The deploy is part of the game: a merge is meant to go live as soon as its
+   checks are green, with nobody watching. So the workflows are held to three
+   things. Every action runs on a supported Node (GitHub retires old runtimes
+   and an action pinned below the floor starts warning, then failing). Every
+   branch is checked before it merges. And only main is ever published. */
+const workflowNotes = (() => {
+  const dir = path.join(__dirname, '..', '.github', 'workflows');
+  // The oldest major of each action that runs on Node 24. An action missing
+  // from this table fails too, so a new one is looked at before it is used.
+  const FLOOR = { checkout: 5, 'setup-node': 5, cache: 5, 'upload-artifact': 6,
+                  'download-artifact': 6, 'configure-pages': 6, 'upload-pages-artifact': 4,
+                  'deploy-pages': 5 };
+  let uses = 0;
+  const files = fs.readdirSync(dir).filter(f => /\.ya?ml$/.test(f));
+  const text = {};
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    text[f] = src;
+    for (const m of src.matchAll(/^\s*-?\s*uses:\s*([\w.-]+)\/([\w.-]+)@(\S+)/gm)) {
+      uses++;
+      const [, owner, name, ref] = m;
+      const where = `${owner}/${name}@${ref}`;
+      if (owner !== 'actions') { fail('workflows', f, `${where} is a third-party action; pin it by SHA and add it here`); continue; }
+      if (!(name in FLOOR)) { fail('workflows', f, `${where} has no Node floor on record`); continue; }
+      const major = +(/^v(\d+)$/.exec(ref) || [])[1];
+      if (!major) fail('workflows', f, `${where} is not pinned to a major version`);
+      else if (major < FLOOR[name]) fail('workflows', f, `${where} runs on a retired Node; use v${FLOOR[name]} or later`);
+    }
+  }
+  const pages = text['pages.yml'] || '';
+  // Branches are checked: the push trigger is not limited to main.
+  const on = (pages.match(/^on:\n([\s\S]*?)^\S/m) || [])[1] || '';
+  if (!/^\s+push:/m.test(on)) fail('workflows', 'pages', 'pages.yml no longer runs on push');
+  if (/push:\s*\n\s+branches:/.test(on)) fail('workflows', 'pages', 'pages.yml checks only some branches, so a change can merge unchecked');
+  // Only main is published, and a deploy in progress is never cancelled.
+  const job = name => (pages.match(new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  \\w[\\w-]*:\\n|(?![\\s\\S]))`, 'm')) || [])[1] || '';
+  for (const name of ['build', 'deploy']) {
+    const body = job(name);
+    if (!body) fail('workflows', 'pages', `pages.yml has no ${name} job`);
+    else if (!/^    if: github\.ref == 'refs\/heads\/main'\s*$/m.test(body))
+      fail('workflows', 'pages', `the ${name} job is not limited to main, so a branch could publish`);
+  }
+  // A deploy is only done when the live site reads back this commit.
+  {
+    const step = (job('deploy').match(/^      - name: Confirm the live site serves this build\n([\s\S]*?)(?=^      - |(?![\s\S]))/m) || [])[1];
+    if (!step || !/build-info\.json/.test(step) || !/GITHUB_SHA/.test(step))
+      fail('workflows', 'pages', 'the deploy never reads the live build stamp back, so a stale site can pass');
+    else if (/^        if:/m.test(step) || /continue-on-error:\s*true/.test(step) || !/exit 1\s*$/.test(step))
+      fail('workflows', 'pages', 'the live build stamp is read back but a mismatch cannot fail the deploy');
+  }
+  const conc = (pages.match(/^concurrency:\n([\s\S]*?)^\S/m) || [])[1] || '';
+  if (!/cancel-in-progress:\s*\$\{\{\s*github\.ref != 'refs\/heads\/main'\s*\}\}/.test(conc))
+    fail('workflows', 'pages', 'a deploy on main could be cancelled mid-publish');
+  if (!/github\.ref == 'refs\/heads\/main' && 'pages'/.test(conc))
+    fail('workflows', 'pages', 'main does not share one deploy group');
+  return { files: files.length, uses };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1026,6 +1085,7 @@ if (codeNotes) {
   console.log(`    QR symbols pinned                      (worst case ${codeNotes.worst}×${codeNotes.worst} modules)`);
   console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → v${codeNotes.maxV} (${codeNotes.maxSize}×${codeNotes.maxSize}), v${codeNotes.grownV} at eight settings`);
 }
+console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 
 if (fails.length) {

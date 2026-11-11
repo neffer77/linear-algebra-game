@@ -45,7 +45,7 @@ jobs:
     env:
       BUNDLE_ID: io.github.neffer77.eigenrealm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Toolchain
         run: |
@@ -171,7 +171,7 @@ jobs:
 
       - name: Keep the evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-simulator
           path: |
@@ -195,7 +195,7 @@ jobs:
       VERSION: 1.0.${{ github.run_number }}
       BUILD: ${{ github.run_number }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Build for iPhone, unsigned
         run: |
@@ -239,7 +239,7 @@ jobs:
           [[ " $ARCHS " == *" arm64 "* ]]
           echo "Eigenrealm $VERSION ($BUILD) for iPhone, $(du -h Eigenrealm.ipa | cut -f1)"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Eigenrealm-ipa
           path: Eigenrealm.ipa
@@ -259,7 +259,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TAG: ios-app
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: Eigenrealm-ipa
 

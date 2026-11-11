@@ -505,6 +505,8 @@ icons/                                 generated; run tools/make-icons.js
 build-scriptable.js                    packages index.html into the iOS script
 scriptable/KnightsOfTheEigenrealm.js   generated; paste into Scriptable
 ios/                                   the native iPhone app — open Eigenrealm.xcodeproj
+tools/verify.js, tools/play.js         the checks: `npm test` and `npm run test:play`
+tools/mutate.js, tools/mutations.json  breaks the latest change's guards to prove a check notices
 ```
 
 Inside `index.html` the code is organised as:
@@ -639,6 +641,27 @@ loop only exists once the page is running. Twenty-five suites, 1,365 checks, abo
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
 with `npm run test:play -- --suite run`, or watch it with `PLAY_HEADED=1`.
+
+### Mutations
+
+A check that cannot fail proves nothing, so each change is shipped with the guards it
+added broken on purpose. `tools/mutations.json` lists them for the latest change: the
+text of each guard, the broken version, and the suite that should notice.
+
+```bash
+node tools/mutate.js tools/mutations.json            # every break, one at a time
+node tools/mutate.js tools/mutations.json --only X   # one
+```
+
+Each break is applied alone, the named suite runs (`verify`, `play`, `play:<suite>` or
+`balance`), and the file is put back before the next. A break whose text no longer
+appears exactly once is reported as **stale** rather than skipped, and a suite that
+cannot start (no browser) is an **error** rather than a catch. Branch CI runs it.
+
+`npm test` also holds the workflows themselves to three things: every action runs on
+Node 24 (an action below its floor, or one with no floor on record, fails), every branch
+is checked on push, only `main` is ever built and deployed, and a deploy cannot pass
+until the live site reads back the commit it published.
 
 The `wave` suite pins a hash on purpose: any change to the escalation numbers or the
 RNG call order will fail it. That is a balance change, so update the pin *and* say so
@@ -784,14 +807,22 @@ offers **A new version is ready → Reload** rather than swapping the game out m
 ## Deployment
 
 Every push to `main` publishes to https://neffer77.github.io/linear-algebra-game/ via
-`.github/workflows/pages.yml`, which runs `validate → build → deploy`:
+`.github/workflows/pages.yml`, which runs `validate → playthrough → build → deploy`.
+Every push to any other branch runs the same `validate` and `playthrough` and stops
+there, so a change is checked before it merges rather than after. A branch run also
+breaks each guard listed in `tools/mutations.json` to confirm a check notices (see
+*Mutations* below), and keeps a set of screenshots from `npm run shots` as a build
+artifact. Branch runs get a concurrency group of their own and replace each other;
+runs on `main` share one group and never cancel a deploy mid-publish.
 
 - **validate** — syntax-checks JavaScript, confirms `index.html` has no missing local
   asset references, and regenerates `scriptable/KnightsOfTheEigenrealm.js` to verify the
   committed copy is not stale. A commit that fails any of these never reaches the site.
 - **build** — stages `index.html`, `README.md`, and `scriptable/` into the published
   artifact, plus `.nojekyll` and a `build-info.json` stamped with the commit SHA.
-- **deploy** — publishes the artifact to GitHub Pages.
+- **deploy** — publishes the artifact to GitHub Pages, then reads `build-info.json` back
+  from the live site, past every cache, and fails until it names the commit just built.
+  A green deploy therefore means players are being served it, not only that GitHub took it.
 
 Because the Scriptable file is generated, the sync check is what keeps the iOS build from
 silently falling behind `index.html` when someone forgets to run `node build-scriptable.js`.
