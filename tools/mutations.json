@@ -1,96 +1,124 @@
 {
-  "change": "A competency map shows every topic on its rung, strand by strand",
+  "change": "A nudge offers the first step of the working, stopped short of the answer",
   "mutations": [
     {
-      "name": "unmet topics left out of a strand's score",
+      "name": "no cut: the whole first step is the nudge",
       "file": "index.html",
-      "find": "return ks.length ? ks.reduce((a,k)=>a+Mastery.eff(k),0)/ks.length : 0;",
-      "replace": "const met=ks.filter(k=>Mastery.eff(k)>0); return met.length ? met.reduce((a,k)=>a+Mastery.eff(k),0)/met.length : 0;",
-      "run": "play:competency"
+      "find": "    const i=this.firstLeak(text,toks);\n    if(i>=0){",
+      "replace": "    const i=-1;\n    if(i>=0){",
+      "run": "play:nudge"
     },
     {
-      "name": "rung read off what was known the day you left",
+      "name": "the answer only counts as a leak where the question lacks it",
       "file": "index.html",
-      "find": "const e=Mastery.eff(key);\n    return e<Lesson.MEET ? 0",
-      "replace": "const e=r.m;\n    return e<Lesson.MEET ? 0",
-      "run": "play:competency"
+      "find": "    if(a) toks.push({tok:a, after: this.at(q,a)<0 ? null : this.RESULT});",
+      "replace": "    if(a && this.at(q,a)<0) toks.push({tok:a});",
+      "run": "play:nudge"
     },
     {
-      "name": "rung follows the lessons switch",
+      "name": "the answer counts as a leak wherever it appears",
       "file": "index.html",
-      "find": "if(!r || !r.seen) return -1;\n    const e=Mastery.eff(key);",
-      "replace": "if(!r || !r.seen) return -1;\n    if(!Lesson.on()) return 4;\n    const e=Mastery.eff(key);",
-      "run": "play:competency"
+      "find": "    if(a) toks.push({tok:a, after: this.at(q,a)<0 ? null : this.RESULT});",
+      "replace": "    if(a) toks.push({tok:a});",
+      "run": "play:nudge"
     },
     {
-      "name": "rungs one band off",
+      "name": "a number after a minus sign taken for the same number",
       "file": "index.html",
-      "find": "e<Lesson.BUILD ? 3 : 4;",
-      "replace": "e<Lesson.BUILD ? 4 : 4;",
-      "run": "play:competency"
+      "find": "'(?<![0-9A-Za-z.¹²³⁰-⁹−-])'",
+      "replace": "'(?<![0-9A-Za-z.¹²³⁰-⁹])'",
+      "run": "play:nudge"
     },
     {
-      "name": "an arrow between every pair of strands",
+      "name": "spacing inside the answer must match exactly",
       "file": "index.html",
-      "find": "return (this.NEEDS[nm]||[]).includes(above) ?",
-      "replace": "return true ?",
-      "run": "play:competency"
+      "find": "map(c=>c.replace(/[.*+?^${}()|[\\]\\\\\\/]/g,'\\\\$&')).join('\\\\s*');",
+      "replace": "map(c=>c.replace(/[.*+?^${}()|[\\]\\\\\\/]/g,'\\\\$&')).join('');",
+      "run": "play:nudge"
     },
     {
-      "name": "Applications drawn as building on integrals",
+      "name": "cut at the leak itself, leaving the sum that lands on it",
       "file": "index.html",
-      "find": "'Applications':['Limits & Derivatives'],",
-      "replace": "'Applications':['Integrals'],",
-      "run": "play:competency"
+      "find": "      const m=/\\s*(=|→)\\s*/.exec(text.slice(from, i));",
+      "replace": "      const m=null;",
+      "run": "play:nudge"
     },
     {
-      "name": "a topic left off its strand",
+      "name": "a ladder nudges with the rung's answer showing",
       "file": "index.html",
-      "find": "<div class=\"cgrid\">${ks.map(k=>this.chip(k)).join('')}</div>",
-      "replace": "<div class=\"cgrid\">${ks.slice(1).map(k=>this.chip(k)).join('')}</div>",
-      "run": "play:competency"
+      "find": "    let text=this.plain(this.hasLadder(st) ? st.motes[0].q : this.sentences(st.ex)[0]);",
+      "replace": "    let text=this.plain(this.hasLadder(st) ? st.motes[0].q+' '+st.motes[0].a : this.sentences(st.ex)[0]);",
+      "run": "play:nudge"
     },
     {
-      "name": "the map node shown to a knight who has met nothing",
+      "name": "no rule to fall back on",
       "file": "index.html",
-      "find": "if(!Game.s || !Mastery.all().length) return '';",
-      "replace": "if(!Game.s) return '';",
-      "run": "play:competency"
+      "find": "      const rule=this.plain(st.codex && st.codex.rule);",
+      "replace": "      const rule='';",
+      "run": "play:nudge"
     },
     {
-      "name": "every strand marked as where you are",
+      "name": "a rule that leaks offered anyway",
       "file": "index.html",
-      "find": "return t ? (t[1].find(nm=>this.score(nm)<Lesson.BUILD) || null) : null;",
-      "replace": "return t ? t[1][t[1].length-1] : null;",
-      "run": "play:competency"
+      "find": "      text = rule && this.firstLeak(rule,toks)<0 ? rule : null;",
+      "replace": "      text = rule || null;",
+      "run": "play:nudge"
     },
     {
-      "name": "fading not marked on the map",
+      "name": "a nudged strike lands in full",
       "file": "index.html",
-      "find": "const faded = r && r.seen && (r.m-e) >= Mastery.DROP;\n    const say",
-      "replace": "const faded = false;\n    const say",
-      "run": "play:competency"
+      "find": "                  * (staked?3:1) * (this.nudged?0.5:1);",
+      "replace": "                  * (staked?3:1);",
+      "run": "play:nudge"
     },
     {
-      "name": "topic grid wider than a phone",
+      "name": "a nudged answer counts in full",
       "file": "index.html",
-      "find": ".cgrid{display:grid;grid-template-columns:1fr 1fr;",
-      "replace": ".cgrid{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));",
-      "run": "play:competency"
+      "find": "                 : Lesson.weight(this.lesson && this.lesson.format)) * (this.nudged ? 0.5 : 1);",
+      "replace": "                 : Lesson.weight(this.lesson && this.lesson.format));",
+      "run": "play:nudge"
     },
     {
-      "name": "no way in from the Ledger",
+      "name": "the nudge follows into the next question",
       "file": "index.html",
-      "find": "id=\"ledgerComp\"",
-      "replace": "id=\"ledgerCompX\"",
-      "run": "play:competency"
+      "find": "    this.shownWork=false;\n    this.nudged=null;\n",
+      "replace": "    this.shownWork=false;\n",
+      "run": "play:nudge"
     },
     {
-      "name": "a rung row styled as another screen's box",
+      "name": "the nudge offered in the daily",
       "file": "index.html",
-      "find": "<span class=\"cmeta\">",
-      "replace": "<span class=\"cmeta cr\">",
-      "run": "play:competency"
+      "find": "    if(this.answered || this.mode==='daily' || this.rite) return false;",
+      "replace": "    if(this.answered || this.rite) return false;",
+      "run": "play:nudge"
+    },
+    {
+      "name": "the nudge offered on a ladder",
+      "file": "index.html",
+      "find": "    if(this.answered || this.mode==='daily' || this.rite) return false;",
+      "replace": "    if(this.answered || this.mode==='daily') return false;",
+      "run": "play:nudge"
+    },
+    {
+      "name": "the nudge offered on the first lesson rungs",
+      "file": "index.html",
+      "find": "    if(this.lessonIs('meet') || this.lessonIs('tf')) return false;\n    return !!Working.nudge",
+      "replace": "    return !!Working.nudge",
+      "run": "play:nudge"
+    },
+    {
+      "name": "the nudge can be taken again",
+      "file": "index.html",
+      "find": "    const offer = !this.nudged && this.canNudge();",
+      "replace": "    const offer = this.canNudge();",
+      "run": "play:nudge"
+    },
+    {
+      "name": "the panel does not say what a nudge cost",
+      "file": "index.html",
+      "find": "      (ok && this.nudged && !inRite ? `<div class=\"miss nudged\">💡 Nudged: half the strike, and half the credit toward ${label}.</div>` : '')+",
+      "replace": "      ''+",
+      "run": "play:nudge"
     }
   ]
 }

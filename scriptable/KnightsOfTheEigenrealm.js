@@ -396,6 +396,10 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
   text-align:center; font-size:13.5px; color:var(--dim);
   border:1px dashed var(--line); background:transparent;}
 #showwork .wbtn:active{background:rgba(255,255,255,.04);}
+#showwork .wbtn.nudge{margin-bottom:6px;}
+#showwork .wnudge{margin-bottom:6px; padding:10px 12px; border-radius:12px; font-size:14px; line-height:1.45;
+  border:1px solid rgba(255,212,121,.35); background:rgba(255,212,121,.06);}
+#showwork .wnudge b{color:var(--gold); font-size:12px; letter-spacing:.04em;}
 .wkbox{margin-top:4px;}
 .wkrule{border-left:2px solid var(--gold); padding:4px 0 4px 10px; margin-bottom:10px;
   font-size:13.5px; color:var(--dim);}
@@ -5971,6 +5975,7 @@ const Battle = {
     if(this.over) return;
     this.answered=false;
     this.shownWork=false;
+    this.nudged=null;
     const ex=document.getElementById('explain');
     ex.style.display='none'; ex.innerHTML='';     // drop the stale Continue button
     let key, diff;
@@ -6166,8 +6171,31 @@ const Battle = {
     const st=this.workStep();
     if(this.answered || !Working.has(st)){ w.style.display='none'; w.innerHTML=''; return; }
     w.style.display='';
-    w.innerHTML=\`<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>\`;
+    const offer = !this.nudged && this.canNudge();
+    w.innerHTML=(this.nudged ? \`<div class="wnudge"><b>💡 A way in</b><br><span></span></div>\`
+                : offer ? \`<div class="wbtn nudge" id="wnudge">💡 Nudge me — the first step, for half the strike</div>\` : '')+
+      \`<div class="wbtn" id="wgo">🔎 Show me the working — costs the strike, not blood</div>\`;
+    // Set as text: the step is plain words and sums, never markup.
+    if(this.nudged) w.querySelector('.wnudge span').textContent=this.nudged.text;
+    if(offer) document.getElementById('wnudge').onclick=()=>this.nudge();
     document.getElementById('wgo').onclick=()=>this.showWork();
+  },
+  /* A nudge is the first step of the working, stopped short of the answer
+     (see Working.nudge). It is the smaller door: the question still has to be
+     answered, and a right answer after it lands for half the damage and moves
+     mastery by half, because a nudged answer is part yours. Not offered in the
+     daily, which is the same contest for everyone; on a ladder, which is
+     already broken into steps; or on the first two lesson rungs, which are
+     about meeting the idea, not working it out. */
+  canNudge(){
+    if(this.answered || this.mode==='daily' || this.rite) return false;
+    if(this.lessonIs('meet') || this.lessonIs('tf')) return false;
+    return !!Working.nudge(this.workStep());
+  },
+  nudge(){
+    if(this.nudged || !this.canNudge()) return;
+    this.nudged = Working.nudge(this.workStep());
+    this.renderWork();
   },
   /* Routed through answer() with a sentinel rather than resolving the turn
      itself. The sentinel can never equal the answer, so the turn lands exactly
@@ -6235,8 +6263,8 @@ const Battle = {
 
     // A ladder step is one small piece of a topic, so it moves mastery by a
     // fraction; the parent problem still counts in full.
-    const weight = this.rite ? 1/Math.max(2,this.rite.motes.length)
-                 : Lesson.weight(this.lesson && this.lesson.format);
+    const weight = (this.rite ? 1/Math.max(2,this.rite.motes.length)
+                 : Lesson.weight(this.lesson && this.lesson.format)) * (this.nudged ? 0.5 : 1);
     /* Being shown the working tells the mastery model nothing at all — not a
        wrong answer, not a question answered, and not a fresh timestamp. See the
        Working module: recency is what pages buy, and this must not be a bench. */
@@ -6294,7 +6322,7 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1);
+                  * (staked?3:1) * (this.nudged?0.5:1);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
@@ -6468,6 +6496,7 @@ const Battle = {
       \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${head}</div>\`+
       ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+ slipNote +
+      (ok && this.nudged && !inRite ? \`<div class="miss nudged">💡 Nudged: half the strike, and half the credit toward \${label}.</div>\` : '')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${st.ex}</div>\`+ rule +
       \`<div id="afig"></div>\`+
@@ -6853,6 +6882,73 @@ const Working = {
   // Every question can be worked. If this ever returns false the button must
   // not be offered, and the suite checks it never does across all seventy.
   has(st){ const w=this.forStep(st); return !!(w && w.steps.length && w.answer!=null); },
+
+  /* A nudge: the first step of the working, stopped short of the answer.
+     Being shown the whole working costs the strike; most of the time a player
+     who is stuck needs only the way in. So the first step is offered on its
+     own, and wherever it would go on to give the answer away, it is cut at the
+     sign just before, so the sum is set up and left for them to finish:
+     "Length is Pythagoras: √(7² + 24²) = …".
+
+     What counts as giving it away: the whole answer, or any number-bearing
+     piece of it (a lone digit aside) that the question does not already show.
+     A number after a minus sign is a different number: −2 does not give away 2. A ladder's nudge is
+     its first rung's question, without the rung's answer. If nothing survives
+     the cut, the topic's rule is the nudge, and if even that would leak, none
+     is offered. */
+  plain(s){ return String(s==null?'':s).replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/\\s+/g,' ').trim(); },
+  /* A token is found with any spacing inside it ("4x − 4" is "4 x−4") and
+     never as part of a longer number. \`after\`, when given, is what the text
+     just before it must end with for it to count. */
+  pat(tok){
+    const body=[...tok.replace(/\\s+/g,'')].map(c=>c.replace(/[.*+?^\${}()|[\\]\\\\\\/]/g,'\\\\$&')).join('\\\\s*');
+    return new RegExp('(?<![0-9A-Za-z.¹²³⁰-⁹−-])'+body+'(?![0-9A-Za-z¹²³⁰-⁹]|\\\\.\\\\d)','g');
+  },
+  at(text, tok, after){
+    const re=this.pat(tok); let m;
+    while((m=re.exec(text))){
+      if(!after || after.test(text.slice(0,m.index))) return m.index;
+      re.lastIndex=m.index+1;
+    }
+    return -1;
+  },
+  /* The answer itself, if the question shows it too (−2 can be a component of
+     the vector and also the dot product), gives it away only where it comes
+     out of a sum: after =, →, "is" or a colon. */
+  RESULT: /(?:=|→|\\bis|:)\\s*$/,
+  leaks(st){
+    const q=this.plain(st.q), a=this.plain(st.a);
+    const toks=a.split(/[\\s,;⟨⟩()\\[\\]{}]+/).filter(x=>x.length>1 && /\\d/.test(x) && this.at(q,x)<0)
+      .map(tok=>({tok}));
+    if(a) toks.push({tok:a, after: this.at(q,a)<0 ? null : this.RESULT});
+    const yn=a.match(/^(Yes|No)\\b/); if(yn) toks.push({tok:yn[1]});
+    return toks;
+  },
+  firstLeak(text, toks){
+    let i=-1;
+    for(const t of toks){ const j=this.at(text,t.tok,t.after); if(j>=0 && (i<0 || j<i)) i=j; }
+    return i;
+  },
+  nudge(st){
+    if(!st) return null;
+    const toks=this.leaks(st);
+    let text=this.plain(this.hasLadder(st) ? st.motes[0].q : this.sentences(st.ex)[0]);
+    const i=this.firstLeak(text,toks);
+    if(i>=0){
+      // Cut at the first = or → after the last colon before the leak: the
+      // setup survives, the arithmetic that lands on the answer does not.
+      const from=text.lastIndexOf(':', i)+1;
+      const m=/\\s*(=|→)\\s*/.exec(text.slice(from, i));
+      text = m ? text.slice(0, from+m.index).trimEnd()+' '+m[1]+' …'
+               : text.slice(0, i).replace(/[\\s:;,—–]+$/,'')+' …';
+    }
+    if(text.replace(/[…=→\\s]/g,'').length<12 || this.firstLeak(text,toks)>=0){
+      const rule=this.plain(st.codex && st.codex.rule);
+      text = rule && this.firstLeak(rule,toks)<0 ? rule : null;
+      return text ? {text, from:'rule'} : null;
+    }
+    return {text, from:this.hasLadder(st)?'ladder':'explanation'};
+  },
 
   render(w){
     if(!w) return '';

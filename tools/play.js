@@ -38,6 +38,7 @@ const SUITES = [
   require('./play/library'),     // S11b
   require('./play/crucible'),    // S12
   require('./play/working'),     // S13
+  require('./play/nudge'),       // the first step of the working, stopped short of the answer
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung
