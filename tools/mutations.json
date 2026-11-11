@@ -1,45 +1,82 @@
 {
-  "change": "Name a repeated slip as a pattern, and say when its trap is walked past",
+  "change": "A fading-topic review: named on the map, read by effective mastery, and a round that ends",
   "mutations": [
-    { "name": "a second slip is not yet called a pattern",
+    {
+      "name": "fading ignores how far a topic has slipped",
       "file": "index.html",
-      "find": "    if(n<2) return '';",
-      "replace": "    if(n<3) return '';",
-      "run": "play:slips" },
-    { "name": "numbers are left in, so each question is a new slip",
+      "find": "this.daysSince(x.r)>=this.dueDays(x.r) && this.drop(x.k)>=this.DROP)",
+      "replace": "this.daysSince(x.r)>=this.dueDays(x.r))",
+      "run": "play:review"
+    },
+    {
+      "name": "fading ignores the review point",
       "file": "index.html",
-      "find": ".replace(/[−-]?\\d+(\\.\\d+)?/g,'#')\n      .replace(/\\(#\\)/g,'#')",
-      "replace": "\n      .replace(/\\(#\\)/g,'#')",
-      "run": "play:slips" },
-    { "name": "brackets split one slip into two",
+      "find": "this.daysSince(x.r)>=this.dueDays(x.r) && this.drop(x.k)>=this.DROP)",
+      "replace": "this.drop(x.k)>=this.DROP)",
+      "run": "play:review"
+    },
+    {
+      "name": "fading lists the least slipped first",
       "file": "index.html",
-      "find": ".replace(/\\(#\\)/g,'#').replace(/\\s+/g,' ')",
-      "replace": ".replace(/\\s+/g,' ')",
-      "run": "play:slips" },
-    { "name": "walking past the trap does not restart the count",
+      "find": ".sort((a,b)=>this.drop(b.k)-this.drop(a.k))",
+      "replace": ".sort((a,b)=>this.drop(a.k)-this.drop(b.k))",
+      "run": "play:review"
+    },
+    {
+      "name": "weakest sorted by stored mastery",
       "file": "index.html",
-      "find": "      if(b[g]>0){ b[g]=0; seen=true; }",
-      "replace": "      if(b[g]>0){ seen=true; }",
-      "run": "play:slips" },
-    { "name": "every knight shares one book",
+      "find": ".sort((a,b)=>this.eff(a.k)-this.eff(b.k)).slice(0,n)",
+      "replace": ".sort((a,b)=>a.r.m-b.r.m).slice(0,n)",
+      "run": "play:review"
+    },
+    {
+      "name": "Ledger sorted by stored mastery",
       "file": "index.html",
-      "find": "    const k=this.log[who] || (this.log[who]={});",
-      "replace": "    const k=this.log._ || (this.log._={});",
-      "run": "play:slips" },
-    { "name": "every topic shares one count",
+      "find": ".sort((x,y)=>Mastery.eff(x[0])-Mastery.eff(y[0]));",
+      "replace": ".sort((x,y)=>x[1].m-y[1].m);",
+      "run": "play:review"
+    },
+    {
+      "name": "yard labels by stored mastery",
       "file": "index.html",
-      "find": "    return k[key] || (k[key]={});",
-      "replace": "    return k._all || (k._all={});",
-      "run": "play:slips" },
-    { "name": "a fight never shows the note",
+      "find": "const m = r&&r.seen ? Mastery.eff(k) : 0;",
+      "replace": "const m = r&&r.seen ? r.m : 0;",
+      "run": "play:review"
+    },
+    {
+      "name": "map shows nothing fading",
       "file": "index.html",
-      "find": "${miss}.</div>`:'')+ slipNote +",
-      "replace": "${miss}.</div>`:'')+",
-      "run": "play:slips" },
-    { "name": "the yard never shows the note",
+      "find": "      ${this.fadingNode()}\n",
+      "replace": "",
+      "run": "play:review"
+    },
+    {
+      "name": "tapping the map opens the pick screen",
       "file": "index.html",
-      "find": "${miss}.</div>`:''}${slipNote}",
-      "replace": "${miss}.</div>`:''}",
-      "run": "play:slips" }
+      "find": "    UI.go('s-train');\n    this.startPool('fading');\n",
+      "replace": "    UI.go('s-train');\n",
+      "run": "play:review"
+    },
+    {
+      "name": "a wrong answer brings a topic back",
+      "file": "index.html",
+      "find": "this.mode==='fading' && ok && Game.s",
+      "replace": "this.mode==='fading' && Game.s",
+      "run": "play:review"
+    },
+    {
+      "name": "a topic brought back stays in the round",
+      "file": "index.html",
+      "find": "      this.pool=this.pool.filter(k=>k!==this.cur.key);\n",
+      "replace": "",
+      "run": "play:review"
+    },
+    {
+      "name": "the round never ends",
+      "file": "index.html",
+      "find": "      ${done ? `<button",
+      "replace": "      ${false ? `<button",
+      "run": "play:review"
+    }
   ]
 }

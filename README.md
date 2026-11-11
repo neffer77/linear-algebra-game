@@ -119,6 +119,14 @@ one. Difficulty follows the same signal: a topic you are failing is asked at the
 tier, one you have mastered at the hardest. When a weak topic is deliberately brought back
 it is marked ⟳ review, so the targeting is visible rather than mysterious.
 
+**What fades comes back.** Mastery fades while you are away, and a topic that has slipped
+past its review point is named on the map, right under the daily skirmish, with what it has
+fallen to and from — *Dot Product 35% ↓ from 95%*. One tap starts a review round of just
+those topics. Each right answer brings one back and takes it off the list; a wrong one
+keeps it in to come round again; and when the last is back the round says nothing is
+fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
+the list is read off the same two fields the fade already uses.
+
 **Progression.** Beating a foe earns gold and XP, and often loot. Levelling raises your
 maximum health and heals you fully. Clearing a realm's boss unlocks the next realm.
 
@@ -465,10 +473,13 @@ The game is built so that losing teaches you as much as winning.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
-  gold. Two adaptive drills sit at the top: **Drill my weakest** pulls from your six worst
-  topics, and **Review what's due** pulls whatever the spaced-repetition schedule says has
-  gone stale. Neither requires you to know what you're bad at.
-- **📜 Chronicle** (on the Gear screen) — the five topics that need you most, in full, then
+  gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
+  round, **Drill my weakest** pulls from your six worst topics as you know them now, and
+  **Review what's due** pulls whatever the spaced-repetition schedule says has gone stale.
+  None requires you to know what you're bad at, and every topic's label there reads what
+  you know today rather than the day you last practised.
+- **📜 Chronicle** (on the Gear screen) — the five topics that need you most now (a topic
+  that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
   reading seventy bars.
@@ -524,7 +535,7 @@ Inside `index.html` the code is organised as:
 | `GEN` | the 70 problem generators; each returns a question, answer, explanation, and distractors tagged with the mistake they represent |
 | `REALMS`, `WEAPONS`, `ARMORS`, `ITEMS`, `TOME` | all game content, as plain data |
 | `STRANDS` | the seven strands topics are grouped into; the Training picker and the Chronicle both fold into them |
-| `Mastery` | per-topic mastery model, spaced-repetition schedule, and weighted topic selection |
+| `Mastery` | per-topic mastery model, spaced-repetition schedule, the fading list across days, and weighted topic selection |
 | `Figure` | the six diagram kinds; a generator declares `fig` and/or `figAnswer` as plain data |
 | `Arena`, `BOONS` | endless mode: wave scaling, generated foes, and the run-scoped boon draft |
 | `SETTINGS`, `VOICES`, `SETTING_ORDER` | the eight settings as plain data: curve, room plan, strands, material, and the words each place is spoken about in |
@@ -618,7 +629,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-seven suites, 1,404 checks, about a minute:
+loop only exists once the page is running. Twenty-eight suites, 1,427 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -643,6 +654,7 @@ loop only exists once the page is running. Twenty-seven suites, 1,404 checks, ab
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
+| `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
