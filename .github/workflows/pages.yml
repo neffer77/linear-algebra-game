@@ -89,6 +89,10 @@ jobs:
   # Split from validate so a browser problem is never mistaken for a game one.
   playthrough:
     runs-on: ubuntu-latest
+    # A whole run takes about five minutes. Without a ceiling a hung step sits
+    # for GitHub's default six hours, and because the pages group never cancels
+    # a deploy in progress, every later merge queues behind it undeployed.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -127,10 +131,15 @@ jobs:
       #
       # Note the cache above does NOT cover this: it skips the browser download,
       # not the apt update. The retry is what makes the step survive.
+      #
+      # A mirror can also stall rather than fail, and a stall never reaches the
+      # retry: #25 sat in this step for over a quarter of an hour. Each attempt
+      # is therefore given eight minutes, after which it counts as a failure.
+      # timeout signals the whole process group, so apt goes with it.
       - name: Install Playwright
         run: |
           for attempt in 1 2 3; do
-            if npx playwright install --with-deps chromium; then
+            if timeout --kill-after=30 480 npx playwright install --with-deps chromium; then
               exit 0
             fi
             if [ "${attempt}" -lt 3 ]; then
