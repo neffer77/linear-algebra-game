@@ -1,8 +1,12 @@
 name: Deploy Knights of the Eigenrealm to GitHub Pages
 
+# Every branch is checked; only main is deployed. A change is meant to merge
+# as soon as it is green, so the checks have to run on the branch, before the
+# merge, not only on main after it. A branch is restarted from main before each
+# change, so the commit checked here is the commit that merges. The build and
+# deploy jobs below gate on main themselves.
 on:
   push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -11,17 +15,20 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
-  # Never cancel a deploy that is already publishing - a cancelled deploy can
-  # leave the live site on a half-uploaded artifact.
-  cancel-in-progress: false
+  # Main shares one group and never cancels a deploy that is already
+  # publishing - a cancelled deploy can leave the live site on a half-uploaded
+  # artifact. A branch or a pull request only checks, so it gets a group of its
+  # own (a branch run must never queue in front of a deploy) and a newer push
+  # replaces an older run.
+  group: ${{ github.ref == 'refs/heads/main' && 'pages' || format('check-{0}', github.ref) }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -94,8 +101,8 @@ jobs:
     # a deploy in progress, every later merge queues behind it undeployed.
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -115,7 +122,7 @@ jobs:
       # safe: the install below verifies what is there and re-fetches anything
       # missing.
       - name: Cache the Playwright browser
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
@@ -200,12 +207,38 @@ jobs:
       - name: Check the stacks still have an end
         run: npm run balance -- --setting library --lvl 17 --weapon 5 --armor 5 --depth 40
 
+      # A check that cannot fail proves nothing. tools/mutations.json lists the
+      # guards the latest change added, each with a deliberate break; this
+      # applies one break at a time, runs the suite that should notice, and
+      # fails if any break goes unnoticed. Branches only: main has already had
+      # this run on the commit that merged.
+      - name: Break each new guard and confirm a check notices
+        if: github.ref != 'refs/heads/main' && hashFiles('tools/mutations.json') != ''
+        run: node tools/mutate.js tools/mutations.json
+
+      # Pictures of the change, so it can be looked at rather than described.
+      - name: Take the screenshots
+        if: github.ref != 'refs/heads/main'
+        run: npm run shots -- --out shots
+
+      - name: Keep the screenshots
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v7
+        with:
+          name: shots
+          path: shots
+          retention-days: 14
+          if-no-files-found: ignore
+
   build:
     needs: [validate, playthrough]
+    # Only main is published. A dispatch from another branch checks it and
+    # stops here.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
         with:
           # Turn Pages on for the repo if it is not already enabled.
           enablement: true
@@ -232,12 +265,13 @@ jobs:
           JSON
           echo "Built _site ($(find _site -type f | wc -l) files)"
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/main'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -245,4 +279,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
