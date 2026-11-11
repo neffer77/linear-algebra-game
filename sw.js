@@ -61,16 +61,26 @@ self.addEventListener('fetch', e => {
   // Cache first: the game is a single static file, so the cached copy is
   // always correct for the version this worker installed. Freshness is the
   // update flow's job, not this one's.
+  //
+  // Only this version's own cache answers. Right after an update the old
+  // version's cache is still being swept while the page reloads, and a lookup
+  // across every cache could hand the new game an old build's files.
+  //
+  // Anything not cached yet is fetched past the HTTP cache: a file the old
+  // version fetched minutes ago (build-info.json, above all) would otherwise
+  // come back from the browser's ten-minute cache and stamp the new build
+  // with the old one's number.
+  const mine = caches.open(CACHE);
   e.respondWith(
-    caches.match(req, { ignoreSearch: true }).then(hit => {
+    mine.then(c => c.match(req, { ignoreSearch: true })).then(hit => {
       if (hit) return hit;
-      return fetch(req).then(res => {
+      return fetch(req, req.mode === 'navigate' ? undefined : { cache: 'no-cache' }).then(res => {
         if (res && res.ok && res.type === 'basic') {
           const copy = res.clone();
           caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
         }
         return res;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => mine.then(c => c.match('./index.html')));
     })
   );
 });

@@ -803,8 +803,9 @@ opened, so the deploy stamps `sw.js` with the commit SHA. That guarantees a byte
 worker per deploy, which is what makes a browser notice an update at all; the page then
 offers **A new version is ready → Reload** rather than swapping the game out mid-fight.
 
-Three things used to be able to leave a returning player on an old build, and the `pwa`
-suite now deploys builds behind a running player to hold each one shut:
+Four things used to be able to leave a returning player on an old build, or looking at
+the wrong build number, and the `pwa` suite now deploys builds behind a running player to
+hold each one shut:
 
 - **Later meant never.** A build found on an earlier visit sits installed and waiting, and
   the browser never announces it again, so a player who tapped *Later* — or closed the tab
@@ -814,6 +815,10 @@ suite now deploys builds behind a running player to hold each one shut:
   max-age, so the worker's precache could be filled from the browser's HTTP cache and
   serve the old `index.html` under the new version's name. The precache now goes past the
   HTTP cache.
+- **The build stamp could name the old build.** Settings shows which build is running so a
+  bug report can name it, but right after an update `build-info.json` came back from the
+  browser's HTTP cache, or from the old version's cache before it was swept. The worker now
+  answers only from its own version's cache and fetches anything else past the HTTP cache.
 - **A home-screen game is never navigated**, and a navigation is the only time a browser
   looks for a new worker on its own. The game now looks whenever it comes back into view.
 

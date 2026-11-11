@@ -21,6 +21,20 @@
       "run": "play:pwa",
       "find": "        if(document.visibilityState==='visible') reg.update().catch(()=>{});",
       "replace": "        if(document.visibilityState==='visible') void reg;"
+    },
+    {
+      "name": "a file not yet cached comes back from the HTTP cache",
+      "file": "sw.js",
+      "run": "play:pwa",
+      "find": "fetch(req, req.mode === 'navigate' ? undefined : { cache: 'no-cache' })",
+      "replace": "fetch(req)"
+    },
+    {
+      "name": "every version's cache answers, not just this one's",
+      "file": "sw.js",
+      "run": "play:pwa",
+      "find": "mine.then(c => c.match(req, { ignoreSearch: true }))",
+      "replace": "caches.match(req, { ignoreSearch: true })"
     }
   ]
 }
