@@ -1,82 +1,12 @@
 {
-  "change": "A fading-topic review: named on the map, read by effective mastery, and a round that ends",
+  "change": "Tile banks no longer cluster around the answer's own numbers",
   "mutations": [
     {
-      "name": "fading ignores how far a topic has slipped",
+      "name": "near misses drawn around the answer alone",
       "file": "index.html",
-      "find": "this.daysSince(x.r)>=this.dueDays(x.r) && this.drop(x.k)>=this.DROP)",
-      "replace": "this.daysSince(x.r)>=this.dueDays(x.r))",
-      "run": "play:review"
-    },
-    {
-      "name": "fading ignores the review point",
-      "file": "index.html",
-      "find": "this.daysSince(x.r)>=this.dueDays(x.r) && this.drop(x.k)>=this.DROP)",
-      "replace": "this.drop(x.k)>=this.DROP)",
-      "run": "play:review"
-    },
-    {
-      "name": "fading lists the least slipped first",
-      "file": "index.html",
-      "find": ".sort((a,b)=>this.drop(b.k)-this.drop(a.k))",
-      "replace": ".sort((a,b)=>this.drop(a.k)-this.drop(b.k))",
-      "run": "play:review"
-    },
-    {
-      "name": "weakest sorted by stored mastery",
-      "file": "index.html",
-      "find": ".sort((a,b)=>this.eff(a.k)-this.eff(b.k)).slice(0,n)",
-      "replace": ".sort((a,b)=>a.r.m-b.r.m).slice(0,n)",
-      "run": "play:review"
-    },
-    {
-      "name": "Ledger sorted by stored mastery",
-      "file": "index.html",
-      "find": ".sort((x,y)=>Mastery.eff(x[0])-Mastery.eff(y[0]));",
-      "replace": ".sort((x,y)=>x[1].m-y[1].m);",
-      "run": "play:review"
-    },
-    {
-      "name": "yard labels by stored mastery",
-      "file": "index.html",
-      "find": "const m = r&&r.seen ? Mastery.eff(k) : 0;",
-      "replace": "const m = r&&r.seen ? r.m : 0;",
-      "run": "play:review"
-    },
-    {
-      "name": "map shows nothing fading",
-      "file": "index.html",
-      "find": "      ${this.fadingNode()}\n",
-      "replace": "",
-      "run": "play:review"
-    },
-    {
-      "name": "tapping the map opens the pick screen",
-      "file": "index.html",
-      "find": "    UI.go('s-train');\n    this.startPool('fading');\n",
-      "replace": "    UI.go('s-train');\n",
-      "run": "play:review"
-    },
-    {
-      "name": "a wrong answer brings a topic back",
-      "file": "index.html",
-      "find": "this.mode==='fading' && ok && Game.s",
-      "replace": "this.mode==='fading' && Game.s",
-      "run": "play:review"
-    },
-    {
-      "name": "a topic brought back stays in the round",
-      "file": "index.html",
-      "find": "      this.pool=this.pool.filter(k=>k!==this.cur.key);\n",
-      "replace": "",
-      "run": "play:review"
-    },
-    {
-      "name": "the round never ends",
-      "file": "index.html",
-      "find": "      ${done ? `<button",
-      "replace": "      ${false ? `<button",
-      "run": "play:review"
+      "find": "const base=[...set].map(val);",
+      "replace": "const base=nums.map(val);",
+      "run": "verify"
     }
   ]
 }
