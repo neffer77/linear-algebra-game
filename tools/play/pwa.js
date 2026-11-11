@@ -142,14 +142,28 @@ module.exports = {
         caches.open('eigenrealm-B').then(c => Promise.all(['./', './index.html'].map(u =>
           c.match(u).then(r => r ? r.text() : '')))).then(ts => ts.map(x => (x.match(/test-build" content="(\w+)"/) || [])[1] || null)));
       t.eq('the cached game is B, not an HTTP-cached A', cached, ['B', 'B']);
+      // Right after an update the old version's cache can outlive the reload
+      // for a moment. Whatever it holds must never answer for the new build.
+      fs.writeFileSync(path.join(dir, 'probe.txt'), 'fresh');
+      const probe = await page.evaluate(() =>
+        caches.open('eigenrealm-A').then(c => c.put('probe.txt', new Response('stale')))
+          .then(() => fetch('probe.txt')).then(r => r.text())
+          .finally(() => caches.delete('eigenrealm-A')));
+      t.eq("an old version's leftover cache never answers for the new build", probe, 'fresh');
 
       // --- a game left open is told about C when it comes back into view ---
       deploy(dir, 'C');
-      t.ok('a game left open hears nothing while it is out of sight',
-        !(await until(page, barOn, 1500)));
+      // Count the checks the game asks for, so coming into view is seen to
+      // ask for one rather than the browser happening to look by itself.
+      await page.evaluate(() => {
+        window.__updates = 0;
+        const real = ServiceWorkerRegistration.prototype.update;
+        ServiceWorkerRegistration.prototype.update = function () { window.__updates++; return real.call(this); };
+      });
       await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-      t.ok('and is offered C when it comes back into view',
-        await until(page, barOn, 10000), 'a home-screen game never checks for a new build');
+      t.eq('coming back into view looks for a new build', await page.evaluate(() => window.__updates), 1);
+      t.ok('and is offered C', await until(page, barOn, 10000),
+        'a home-screen game never checks for a new build');
       await page.close();
 
       t.ok('the served game raised no errors', errors.length === 0, errors.join(' | '));
