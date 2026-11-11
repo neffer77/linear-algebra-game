@@ -447,6 +447,14 @@ The game is built so that losing teaches you as much as winning.
   comes back.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
+- **The same slip twice is called a pattern** — one diagnosis cannot say "again". When a
+  knight makes the same mistake a second time in a topic (the same misconception, whatever
+  numbers it came with this time), the note beside it says so and asks them to check for
+  exactly that before the next pick; a third time says how many. And the first time they
+  then answer correctly with that very trap among the choices, the game says they walked
+  past it. Counted per knight and per topic, for the sitting only: nothing is saved,
+  because last week's slip is not this week's pattern, and what a player knows already
+  lives in mastery.
 - **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
   question, and a second one beside the explanation. The split is deliberate: the question
   figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
@@ -527,6 +535,7 @@ Inside `index.html` the code is organised as:
 | `PASSAGE_SKILLS`, `Passage` | the four skills that are never carried: salvage, guard, memory, and where a climb starts you |
 | `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
 | `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation |
+| `Slips` | counts each misconception a knight repeats in a topic this sitting, for the "same slip as last time" and "not caught this time" notes |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
 | `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
 | `ROOM_STYLES`, `Quarters` | the knight's own room: trophies read off cleared champions, colours and crest on the roster, and room styles opened by play |
@@ -609,7 +618,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Twenty-six suites, 1,383 checks, about a minute:
+loop only exists once the page is running. Twenty-seven suites, 1,404 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -633,6 +642,7 @@ loop only exists once the page is running. Twenty-six suites, 1,383 checks, abou
 | `library` | the stacks age the questions, and pages buy recency but never mastery |
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
+| `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
