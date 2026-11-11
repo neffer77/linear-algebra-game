@@ -20,6 +20,9 @@ function strays(t) {
     const out = [], seen = { n: 0 };
     for (const el of document.querySelectorAll('body *')) {
       if (typeof el.onclick !== 'function' || NATIVE.test(el.tagName)) continue;
+      // The build line in Settings is the testing door, found only by knocking
+      // on it; it is meant to read as text, not to be offered as a control.
+      if (el.id === 'buildStamp') continue;
       if (!el.getClientRects().length) continue;           // not on screen
       seen.n++;
       if (el.getAttribute('role') !== 'button' || el.tabIndex !== 0)
@@ -95,17 +98,21 @@ module.exports = {
     // --- in a fight: the doors added as the question is drawn are controls too ---
     await t.ev(() => { Prefs.d.lessons = false; Battle.begin(0, 0); });
     await sleep(350);
-    const fight = await t.ev(() => {
+    await t.ev(() => {
       R.seed(4242); Battle.cur = buildQuestion('mag', 2); R.unseed();
       Battle.rite = null; Battle.lesson = null; Battle.nudged = null;
       Battle.answered = false; Battle.slamNext = false; Battle.ehp = 99999;
       Battle.renderStep();
+    });
+    // The page marks what was drawn once the drawing is done, before anything
+    // can reach it, so the doors are read on the next turn of the page.
+    const fight2 = await t.ev(() => {
       const n = document.getElementById('wnudge'), w = document.getElementById('wgo');
       return { nudge: n && n.getAttribute('role') + ' ' + n.tabIndex, work: w && w.getAttribute('role') + ' ' + w.tabIndex };
     });
     // Drawn after the page loaded, so only a watch on the page catches them.
-    t.eq('the nudge door, drawn mid-fight, is a button in the tab order', fight.nudge, 'button 0');
-    t.eq('and so is the door to the whole working', fight.work, 'button 0');
+    t.eq('the nudge door, drawn mid-fight, is a button in the tab order', fight2.nudge, 'button 0');
+    t.eq('and so is the door to the whole working', fight2.work, 'button 0');
     await press(t, '#wnudge', 'Enter');
     const took = await t.ev(() => ({ nudged: !!Battle.nudged, answered: Battle.answered,
       box: !!document.querySelector('#showwork .wnudge') }));
