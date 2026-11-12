@@ -80,9 +80,9 @@ prefilled — tap through it and you need never touch a keyboard again.
   Each foe says a line as the fight opens, gloats now and then when its blow lands, cries
   out at a crit, worries when your streak reaches five, begs once when nearly beaten, and
   has last words on the killing blow. On a phone the page glides down to the verdict and
-  takes the bubble with it, so the verdict repeats what the foe just said. Slimes blorp, golems speak in capitals, and the
-  eight realm bosses talk about their own mathematics: the Determinant Golem's is not
-  zero, so it can undo anything, until it is. A foe gloats about the blow, never about
+  takes the bubble with it, so the verdict repeats what the foe just said. Slimes blorp,
+  golems speak in capitals, and the eight realm bosses talk about their own mathematics:
+  the Determinant Golem's is not zero, so it can undo anything, until it is. A foe gloats about the blow, never about
   you. It is all decoration: the bubble is hidden from screen readers, the daily's straw
   knight keeps silent, it never touches the seeded draw that makes the daily the same
   for everyone, and nothing of it is saved.
@@ -93,7 +93,9 @@ its own tap with its own small hit and rising tone, ending in one scaled finishe
 fast wins read better than one hard question, and they happen to be how procedure is
 actually learnt. A clean ladder deals **5.8× weapon damage** against **3.6×** for a single
 correct answer, so taking the long way is rewarded rather than taxed. The foe still acts
-once per ladder, on the finisher.
+once per ladder, on the finisher. A trail above the ladder keeps each rung taken and its
+answer, with its mathematics still drawn: a matrix stays a matrix and a power stays raised,
+where it used to be read off column by column as a flat run of numbers.
 
 **Scaffolding fades into damage.** Clear a topic's ladder three times at high mastery and
 the game stops offering the ladder and hands you the whole problem instead — marked
@@ -701,7 +703,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,604 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,608 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -733,7 +735,7 @@ loop only exists once the page is running. Thirty-four suites, 1,604 checks, abo
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
-| `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught |
+| `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught; a rite's trail draws each rung's matrices as the matrices that were asked |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
@@ -847,6 +849,12 @@ The generators were also checked by:
   than the other two; the verdict lays out all three with the squire's marked and says
   what the problem comes to; and a wrong pick would not be recorded as a slip. At least
   sixty topics must be askable this way; sixty-seven are.
+- **45,600 rite trail lines**, one for every rung rendered, asserting each keeps the
+  question's own words from its start, draws every matrix, fraction and power it reaches
+  exactly as the question drew it, keeps no other markup, says when it was cut, cuts
+  only after a whole word, and reads in 64 characters or fewer. Stripping the markup,
+  as the trail used to, turned the first matrix rung into "Row 1 of −1 2 −3 −2 dotted
+  with c".
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
 - **Reachability of every one of the 70 topics** at 320×568, measured as the scroll

@@ -42,11 +42,11 @@ function loadGame() {
   const out = {};
   new Function('exports', mathPart + build + ';const Build={' + shape + bank + '};' +
     ';const Slip={' + slip + '};' +
-    ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
+    ';exports.GEN=GEN;exports.trailQ=trailQ;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;')(out);
   return out;
 }
-const { GEN, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -122,7 +122,36 @@ function notation(key, where, html) {
 }
 
 /* ------------------------------------------------------------- 1. structure */
-let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0, figsChecked = 0;
+let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0, figsChecked = 0, trailsChecked = 0, trailsCut = 0;
+
+/* The trail beside a rite records each rung as one line. Its mathematics must
+   arrive drawn, whole and unchanged (a matrix stripped of its markup reads
+   column by column), its words must be the question's own from the start, and
+   a long rung must be cut after a whole word. */
+const plainT = h => String(h).replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+// Its own reading of what counts as drawn mathematics, so that a change to the
+// game's list cannot quietly agree with itself.
+const DRAWN = /<span class="mtx">(?:<span class="col">(?:<span>[^<]*<\/span>)*<\/span>)*<\/span>|<span class="frac"><span>[^<]*<\/span><span>[^<]*<\/span><\/span>|<sup>[^<]*<\/sup>|<sub>[^<]*<\/sub>/g;
+const TRAIL_MAX = 64;
+function trailCheck(key, n, q) {
+  const tr = trailQ(q), cut = tr.endsWith('…');
+  trailsChecked++; if (cut) trailsCut++;
+  const asked = q.match(new RegExp(DRAWN.source, 'g')) || [];
+  const kept = tr.match(new RegExp(DRAWN.source, 'g')) || [];
+  if (kept.some((x, i) => x !== asked[i])) fail('trail', key, `rung ${n} draws mathematics the question did not ask`);
+  if (!cut && kept.length !== asked.length) fail('trail', key, `rung ${n} flattens its mathematics into plain text`);
+  const opens = (tr.match(/<span\b/g) || []).length, shuts = (tr.match(/<\/span>/g) || []).length;
+  if (opens !== shuts) fail('trail', key, `rung ${n} cuts through a drawn sum: ${tr}`);
+  if (tr.replace(new RegExp(DRAWN.source, 'g'), '').includes('<')) fail('trail', key, `rung ${n} keeps markup that is not mathematics`);
+  const p = plainT(tr).replace(/…$/, '').trim(), full = plainT(q);
+  if (!full.startsWith(p)) fail('trail', key, `rung ${n} is not the question's own words: "${p}"`);
+  else if (cut && /[A-Za-z]/.test(p.slice(-1)) && /[A-Za-z]/.test(full.charAt(p.length)))
+    fail('trail', key, `rung ${n} is cut inside a word: "${p}…"`);
+  if (!cut && p !== full) fail('trail', key, `rung ${n} lost words without saying so`);
+  // Counted as read, a matrix's entries spaced apart, the way the game counts it.
+  const read = plainT(tr.replace(new RegExp(DRAWN.source, 'g'), x => ' ' + x.replace(/<[^>]+>/g, ' ') + ' ')).replace(/…$/, '').trim();
+  if (read.length > TRAIL_MAX) fail('trail', key, `rung ${n} reads ${read.length} characters, too long for its line`);
+}
 const seenComplexity = new Set(), figKeys = new Set(), figKinds = new Set();
 
 /** Parse ⟨a, b⟩ out of a rendered answer, or null if it is not a 2-vector. */
@@ -183,6 +212,7 @@ for (const key of Object.keys(GEN)) {
               fail('contract', key, `mote ${n} distractor ${j} has a thin reason`);
           });
           if (!m.ex || m.ex.length < 20) fail('contract', key, `mote ${n} needs an explanation`);
+          trailCheck(key, n, m.q);
           notation(key, `mote ${n} question`, m.q);
           notation(key, `mote ${n} working`, m.ex);
           m.d.forEach(x => { if (Array.isArray(x)) notation(key, `mote ${n} reason`, x[1]); notation(key, `mote ${n} choice`, Array.isArray(x) ? x[0] : x); });
@@ -1211,6 +1241,7 @@ console.log(`    verified against maths                 (${(verified / total * 1
 if (seenComplexity.size) {
   console.log(`  generators with mote ladders ${pad(seenComplexity.size, 8)}`);
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
+  console.log(`    rite trail lines checked ${pad(trailsChecked.toLocaleString(), 11)}  (${trailsCut.toLocaleString()} cut at a word, mathematics drawn)`);
 }
 console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
 console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);

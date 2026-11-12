@@ -1,33 +1,61 @@
 {
-  "change": "What a foe says mid-fight is repeated in the verdict",
+  "change": "A rite's trail draws its mathematics instead of flattening it",
   "mutations": [
     {
-      "name": "the verdict never repeats what the foe said",
+      "name": "the trail strips the question's markup again, flattening its matrices",
       "file": "index.html",
-      "find": "      (Talk.turn && !inRite ? `<div class=\"foesay\"",
-      "replace": "      (false && Talk.turn ? `<div class=\"foesay\"",
-      "run": "play:talk"
+      "find": "r.steps.push(`${trailQ(st.q)} → ",
+      "replace": "r.steps.push(`${st.q.replace(/<[^>]+>/g,' ').trim().slice(0,44)} → ",
+      "run": "play:lesson"
     },
     {
-      "name": "screen readers read the repeated line out",
+      "name": "a fraction in a rung is flattened",
       "file": "index.html",
-      "find": "<div class=\"foesay\" aria-hidden=\"true\">",
-      "replace": "<div class=\"foesay\">",
-      "run": "play:talk"
+      "find": "|<span class=\"frac\"><span>[^<]*<\\/span><span>[^<]*<\\/span><\\/span>|<su[pb]>",
+      "replace": "|<su[pb]>",
+      "run": "verify"
     },
     {
-      "name": "a line said on an earlier turn is repeated in a later verdict",
+      "name": "a power in a rung is no longer raised",
       "file": "index.html",
-      "find": "    this.answered=true; clearInterval(this.timer);\n    Talk.turn=null;\n",
-      "replace": "    this.answered=true; clearInterval(this.timer);\n",
-      "run": "play:talk"
+      "find": "|<su[pb]>[^<]*<\\/su[pb]>/g;",
+      "replace": "/g;",
+      "run": "verify"
     },
     {
-      "name": "what the foe says is not kept for the verdict",
+      "name": "a long rung is cut inside a word",
       "file": "index.html",
-      "find": "    this.turn={moment, text};\n",
-      "replace": "",
-      "run": "play:talk"
+      "find": "out+= sp>0 ? head.slice(0,sp) : '';",
+      "replace": "out+= head;",
+      "run": "verify"
+    },
+    {
+      "name": "a long rung is never cut",
+      "file": "index.html",
+      "find": "if(n+t.length<=max){",
+      "replace": "if(true){",
+      "run": "verify"
+    },
+    {
+      "name": "a cut rung does not say it was cut",
+      "file": "index.html",
+      "find": "const cut=()=>out.replace(/\\s+$/,'')+'…';",
+      "replace": "const cut=()=>out.replace(/\\s+$/,'');",
+      "run": "verify"
+    },
+    {
+      "name": "markup that is not mathematics is kept in the trail",
+      "file": "index.html",
+      "find": "const t=p.t.replace(/<br\\s*\\/?>/g,' ').replace(/<[^>]+>/g,'')",
+      "replace": "const t=p.t.replace(/<br\\s*\\/?>/g,' ')",
+      "run": "verify"
+    },
+    {
+      "name": "the trail's line is allowed to run long",
+      "file": "index.html",
+      "find": "function trailQ(html, max=64){",
+      "replace": "function trailQ(html, max=90){",
+      "run": "verify"
     }
   ]
 }
