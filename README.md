@@ -494,6 +494,14 @@ The game is built so that losing teaches you as much as winning.
   past it. Counted per knight and per topic, for the sitting only: nothing is saved,
   because last week's slip is not this week's pattern, and what a player knows already
   lives in mastery.
+- **↺ One like it, straight after a miss.** An explanation is only worth something if it is
+  used, and the usual draw might not bring the topic round again for several questions. So
+  in a fight, a miss (or a turn spent being shown the working) makes the next question a
+  fresh one on the same topic at the same difficulty, marked *↺ one like it*, and the
+  verdict says it is coming. It happens once: a miss on the second go returns to the usual
+  draw, so a struggling knight is never held on one topic. Landing it is named. A first
+  meeting is left to the lesson ladder, the daily is left as the same twelve for everyone,
+  and nothing is saved.
 - **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
   question, and a second one beside the explanation. The split is deliberate: the question
   figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
@@ -595,7 +603,7 @@ Inside `index.html` the code is organised as:
 | `Calc` | the scratch pad: a keypad and a small expression evaluator that never calls `eval` |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
-| `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode` |
+| `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
 | `Sfx` | WebAudio synthesis — impacts, streak tones, fanfares; no audio files |
@@ -664,7 +672,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-one suites, 1,516 checks, about a minute:
+loop only exists once the page is running. Thirty-two suites, 1,538 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -690,6 +698,7 @@ loop only exists once the page is running. Thirty-one suites, 1,516 checks, abou
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
 | `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
+| `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |

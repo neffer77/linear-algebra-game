@@ -1,40 +1,89 @@
 {
-  "change": "A button the keyboard has Tabbed onto keeps its own Enter",
+  "change": "A miss is followed by a fresh question on the same topic",
   "mutations": [
     {
-      "name": "Enter always moves the turn on, whatever the keyboard rests on",
+      "name": "a miss never brings its topic back",
       "file": "index.html",
-      "find": "      if(A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
-      "replace": "      if(false && A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
-      "run": "play:a11y"
+      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
+      "replace": "    this.redo = (false && !ok && !this.cur.redo && !this.lessonIs('meet'))\n",
+      "run": "play:again"
     },
     {
-      "name": "a clicked button takes Enter too, so a picked answer stops moving on",
+      "name": "a miss on the second go queues a third",
       "file": "index.html",
-      "find": "      if(A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
-      "replace": "      if(t && t!==go && t.nodeType===1 && !t.disabled &&\n",
-      "run": "play:a11y"
+      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
+      "replace": "    this.redo = (!ok && !this.lessonIs('meet'))\n",
+      "run": "play:again"
     },
     {
-      "name": "Tab is never noticed",
+      "name": "a right answer brings its topic back too",
       "file": "index.html",
-      "find": "    addEventListener('keydown', e=>{ if(e.key==='Tab') this.tabbed=true; }, true);\n",
+      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
+      "replace": "    this.redo = (!this.cur.redo && !this.lessonIs('meet'))\n",
+      "run": "play:again"
+    },
+    {
+      "name": "a missed first meeting is pulled out of the lesson ladder",
+      "file": "index.html",
+      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
+      "replace": "    this.redo = (!ok && !this.cur.redo)\n",
+      "run": "play:again"
+    },
+    {
+      "name": "the next question ignores the miss",
+      "file": "index.html",
+      "find": "      if(this.redo){ key=this.redo.key; diff=this.redo.diff; }\n",
       "replace": "",
-      "run": "play:a11y"
+      "run": "play:again"
     },
     {
-      "name": "a pointer never clears the Tab",
+      "name": "the topic comes back at whatever difficulty the draw says",
       "file": "index.html",
-      "find": "    addEventListener('pointerdown', ()=>{ this.tabbed=false; }, true);\n",
+      "find": "      if(this.redo){ key=this.redo.key; diff=this.redo.diff; }",
+      "replace": "      if(this.redo){ key=this.redo.key; }",
+      "run": "play:again"
+    },
+    {
+      "name": "the second go is not marked",
+      "file": "index.html",
+      "find": "    if(again) this.cur.redo = true;\n",
       "replace": "",
-      "run": "play:a11y"
+      "run": "play:again"
     },
     {
-      "name": "a native button with a live handler is not recognised",
+      "name": "a new fight inherits the last fight's miss",
       "file": "index.html",
-      "find": "((t.tagName==='BUTTON' && typeof t.onclick==='function')",
-      "replace": "((t.tagName==='BUTTONS' && typeof t.onclick==='function')",
-      "run": "play:a11y"
+      "find": "    this.redo=null;                  // a miss's second go does not follow it out\n",
+      "replace": "",
+      "run": "play:again"
+    },
+    {
+      "name": "the question shows no one-like-it tag",
+      "file": "index.html",
+      "find": "      (this.cur.redo ? ' <span class=\"rev again\">↺ one like it</span>' : '') +\n",
+      "replace": "",
+      "run": "play:again"
+    },
+    {
+      "name": "the verdict does not say what comes next",
+      "file": "index.html",
+      "find": "      (!inRite && this.redo && Game.s.hp>0 ? `",
+      "replace": "      (false && this.redo && Game.s.hp>0 ? `",
+      "run": "play:again"
+    },
+    {
+      "name": "a landed second go is not named",
+      "file": "index.html",
+      "find": "      (!inRite && ok && this.cur.redo ? `",
+      "replace": "      (false && ok && this.cur.redo ? `",
+      "run": "play:again"
+    },
+    {
+      "name": "the shown working does not say what comes next",
+      "file": "index.html",
+      "find": "        (this.redo ? `<div class=\"miss again\">",
+      "replace": "        (false ? `<div class=\"miss again\">",
+      "run": "play:again"
     }
   ]
 }

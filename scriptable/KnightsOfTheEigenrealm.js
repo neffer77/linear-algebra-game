@@ -140,6 +140,9 @@ canvas{display:block;width:100%;height:auto;image-rendering:auto}
 .miss.back{background:rgba(160,107,214,.14);border-color:rgba(160,107,214,.5)}
 .miss.back b{color:#c9a6f2}
 .miss.dodge b{color:var(--green)}
+.miss.again{background:rgba(95,170,230,.12);border-color:rgba(95,170,230,.45)}
+.miss.again b{color:#9fd3ff}
+.rev.again{background:#1f3550;border-color:#5faae6;color:#9fd3ff}
 
 /* map */
 .node{display:flex;align-items:center;gap:10px;padding:11px;margin:7px 0;border-radius:12px;
@@ -5778,6 +5781,7 @@ const Battle = {
     this.capeCol  = me ? shadeCol(col_(me), -70) : null;
     this.plumeCol = me ? col_(me) : null;
     this.learned={};                 // what moved in the mastery model, this fight
+    this.redo=null;                  // a miss's second go does not follow it out
     // Skill abilities recharge every fight — they are what you know, not what
     // you own, so they cannot be hoarded or run out for good.
     this.skillLeft={};
@@ -6006,10 +6010,13 @@ const Battle = {
                  // strange shelf where only the chests got older.
                  + (this.mode==='dungeon' ? Dungeon.stacks() : 0);
       diff = Lesson.diff(key, Mastery.adjustDiff(key, base));
-
+      if(this.redo){ key=this.redo.key; diff=this.redo.diff; }
     }
+    const again = !!this.redo && this.mode!=='daily';
+    this.redo = null;
     this.curDiff = diff;
     this.cur = buildQuestion(key, diff);
+    if(again) this.cur.redo = true;
     // A complex topic arrives as a ladder until it has been cleared enough
     // times; after that the whole problem is offered for far more damage.
     this.rite = null;
@@ -6087,6 +6094,7 @@ const Battle = {
     document.getElementById('qtopic').innerHTML = this.cur.topic +
       Lesson.chip(this.lesson) +
       (Mastery.isReview(this.cur.key) ? ' <span class="rev">⟳ review</span>' : '') +
+      (this.cur.redo ? ' <span class="rev again">↺ one like it</span>' : '') +
       (this.unassisted ? ' <span class="rev" style="border-color:var(--gold);color:var(--gold)">unassisted ×2</span>' : '');
 
     // Codex chip
@@ -6315,6 +6323,13 @@ const Battle = {
       this.showExplain(ok, choice);
       return;
     }
+    /* Missed, or shown the working: the next question is a fresh one on the
+       same topic at the same difficulty, while the explanation is still on the
+       screen and in mind. Once only — a miss on that second go returns to the
+       usual draw, so a struggling knight is never held on one topic. A first
+       meeting is the lesson ladder's to pace, so it is left to it. */
+    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))
+      ? {key:this.cur.key, diff:this.curDiff} : null;
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
@@ -6475,6 +6490,7 @@ const Battle = {
            but no blow either. Nothing was recorded against
            \${TOPIC_LABEL[this.cur.key]||this.cur.topic}: being shown is not knowing, so the
            question will come back.</div>\`+
+        (this.redo ? \`<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>\` : '')+
         (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage.</div>\`:'')+
         \`<div id="afig"></div>\`+
         \`<button class="btn gold" style="margin-top:10px" id="contBtn">Continue ▶</button>\`;
@@ -6499,6 +6515,8 @@ const Battle = {
       ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+ slipNote +
       (ok && this.nudged && !inRite ? \`<div class="miss nudged">💡 Nudged: half the strike, and half the credit toward \${label}.</div>\` : '')+
+      (!inRite && this.redo && Game.s.hp>0 ? \`<div class="miss again">↺ <b>The next one is like it</b>, so you can use this straight away.</div>\` : '')+
+      (!inRite && ok && this.cur.redo ? \`<div class="miss again">↺ <b>Got it this time.</b> The second go landed.</div>\` : '')+
       (this.lastSlam?\`<div class="miss">⚡ \${this.foe.nm} unleashed its wind-up for <b>\${this.lastSlam}</b> damage\${this.lastBraced?' — braced, so you took a fraction of it':''}.</div>\`:'')+
       \`<div>\${st.ex}</div>\`+ rule +
       \`<div id="afig"></div>\`+
