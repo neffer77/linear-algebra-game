@@ -393,5 +393,36 @@ module.exports = {
     t.ok('and there is a door for a new knight', front.newDoor);
     t.ok('opening another door plays as that knight', front.switched);
     t.ok('and opening the first goes back', front.back);
+
+    /* What to save for. The pointer under the bounties named the cheapest
+       blade or plate not yet owned, even once it was affordable (a knight with
+       420 gold read "420/60" and nothing to tap), and even when it was weaker
+       than what the knight already wore. */
+    const unlock = await t.ev(() => {
+      const g = Game.s, out = {};
+      const keep = { gold: g.gold, owned: Object.assign({}, g.owned), weapon: g.weapon, armor: g.armor };
+      const read = () => {
+        UI.renderMap();
+        const ready = document.getElementById('unlockReady');
+        const list = document.getElementById('mapList').innerText;
+        return { ready: ready ? ready.innerText : '', go: ready ? ready.getAttribute('onclick') : '',
+                 bar: (list.match(/Next unlock:[^\n]*/) || [''])[0], next: (Bounty.nextUnlock() || {}).nm };
+      };
+      g.owned = {}; g.weapon = 'w0'; g.armor = 'a0';
+      g.gold = 10; out.poor = read();
+      g.gold = 420; out.rich = read();
+      g.owned = { wD: 1 }; g.weapon = 'wD'; out.forged = read();
+      WEAPONS.concat(ARMORS).forEach(x => g.owned[x.id] = 1); out.all = read();
+      out.allText = document.getElementById('mapList').innerText.includes('Nothing at the Smithy beats what you wear');
+      Object.assign(g, keep); UI.renderMap();
+      return out;
+    });
+    t.ok('short of the price, the next unlock is a bar towards it', /Iron Shortsword/.test(unlock.poor.bar) && !unlock.poor.ready, unlock.poor.bar);
+    t.ok('once it can be paid for, it says so and is a way to the Smithy',
+      /Iron Shortsword is ready at the Smithy/.test(unlock.rich.ready) && /s-shop/.test(unlock.rich.go) && !unlock.rich.bar,
+      unlock.rich.ready);
+    t.ok('and says what it does against what is worn', /hits for 14 against your Rusted Trainer's 9/.test(unlock.rich.ready), unlock.rich.ready);
+    t.eq('a blade weaker than one already forged is never the thing to save for', unlock.forged.next, 'Leather Jerkin');
+    t.ok('with nothing better on sale it says so', !unlock.all.next && unlock.allText);
   }
 };

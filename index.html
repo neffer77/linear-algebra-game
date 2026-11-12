@@ -8404,11 +8404,25 @@ const Bounty = {
       ()=>{Sfx.milestone(); Haptic.win();});
   },
   // The cheapest thing you cannot yet afford — a visible next step.
+  /* The next thing worth saving for: the cheapest blade or plate on sale that
+     beats the best of its kind already owned. It used to be the cheapest not
+     yet owned, so a knight with a forged Deepsteel Edge was still pointed at
+     an Iron Shortsword, half as sharp. */
   nextUnlock(){
     const g=Game.s; if(!g) return null;
-    const all=WEAPONS.concat(ARMORS).filter(x=>x.cost>0 && !g.owned[x.id]);
+    const has=x=>!!g.owned[x.id] || x.id===g.weapon || x.id===g.armor;
+    const top=(list,f)=>Math.max(0, ...list.filter(has).map(f));
+    const bw=top(WEAPONS, x=>x.dmg), ba=top(ARMORS, x=>x.def);
+    const all=WEAPONS.filter(x=>x.dmg>bw).concat(ARMORS.filter(x=>x.def>ba))
+      .filter(x=>x.cost>0 && !x.forge && !has(x));
     all.sort((a,b)=>a.cost-b.cost);
     return all[0]||null;
+  },
+  /* What the next unlock does for this knight, against what they wear now. */
+  gain(x){
+    const g=Game.s, w=WEAPONS.find(v=>v.id===g.weapon)||WEAPONS[0], a=ARMORS.find(v=>v.id===g.armor)||ARMORS[0];
+    return WEAPONS.includes(x) ? `hits for ${x.dmg} against your ${w.nm}'s ${w.dmg}`
+      : `blocks ${x.def} a blow, +${x.hp} health, against your ${a.nm}'s ${a.def} and +${a.hp}`;
   }
 };
 
@@ -12102,11 +12116,16 @@ const UI = {
             <span class="coin">🪙 ${b.gold} <span class="small">${b.p}/${b.n}</span></span></div>
           <div class="track thin"><div class="fill" style="width:${pct}%;background:var(--gold)"></div></div>
         </div>`;}).join('')}
-      ${nx?`<hr><div style="display:flex;justify-content:space-between;font-size:12px">
+      ${nx && g.gold>=nx.cost?`<hr><div class="node" id="unlockReady" onclick="UI.go('s-shop')">
+          <div class="ico" style="font-size:24px">${nx.ic}</div>
+          <div style="flex:1"><div class="nm">${nx.nm} is ready at the Smithy</div>
+            <div class="dt">🪙 ${nx.cost} of your ${g.gold} · ${Bounty.gain(nx)}</div></div>
+          <div style="font-size:20px;color:var(--dim)">▶</div></div>`
+      : nx?`<hr><div style="display:flex;justify-content:space-between;font-size:12px">
           <span>Next unlock: <b>${nx.ic} ${nx.nm}</b></span>
           <span class="coin">${g.gold}/${nx.cost}</span></div>
         <div class="track thin"><div class="fill" style="width:${clamp(g.gold/nx.cost*100,0,100)}%;background:linear-gradient(90deg,#5aa9e6,#a06bd6)"></div></div>`
-        :'<hr><div class="small">Every weapon and every plate is yours.</div>'}
+        :'<hr><div class="small">Nothing at the Smithy beats what you wear.</div>'}
     </div>`;
     /* The campaign, built into its own string so it can be placed last. It used
        to be appended straight onto `out`, which is what fixed it above the
