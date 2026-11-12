@@ -7303,13 +7303,25 @@ const Lesson = {
     const a=this.plain(ans).replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&');
     return !!a && new RegExp('(^|[^\\\\w.])'+a+'($|[^\\\\w.])').test(this.plain(text));
   },
+  STOPW:new Set('the a an and or of to in on is are be it its that this they them their you your not no with for by as at from than then into only one two any all has have was were would'.split(' ')),
+  words(h){ return new Set(this.plain(h).toLowerCase().replace(/[^a-z\\s]/g,' ').split(/\\s+/)
+    .filter(w=>w.length>2 && !this.STOPW.has(w)).map(w=>w.replace(/(ing|ed|es|s)$/,''))); },
+  shared(a, b){ const B=this.words(b); let n=0; for(const w of this.words(a)) if(B.has(w)) n++; return n; },
+  echoes(opts, names, shown){
+    const i=opts.indexOf(shown), sc=names.map(n=>this.shared(n, shown));
+    return sc[i]>0 && sc.every((v,j)=>j===i || v<sc[i]);
+  },
   slipStep(q){
     const traps=q.choices.filter(c=>c!==q.a && q.why && q.why[c]);
     if(traps.length<3) return null;
     const opts=traps.slice(0,3), names=opts.map(c=>this.cap(q.why[c]));
     if(new Set(names).size<3) return null;
     if(names.some(n=>q.choices.some(c=>this.quotes(n, c)))) return null;
-    const shown=R.pick(opts), a=this.cap(q.why[shown]);
+    // The squire's answer must not give its own slip away by sharing more of
+    // its words with it than with either of the others.
+    const shown=R.shuffle(opts.slice()).find(c=>!this.echoes(opts, names, c));
+    if(shown===undefined) return null;
+    const a=this.cap(q.why[shown]);
     const table=opts.map((c,i)=>\`<div class="sl\${c===shown?' was':''}"><span>\${names[i]}</span><b>→ \${c}</b></div>\`).join('');
     return { lesson:'slip', topic:q.topic, shown, quiet:true,
              q:\`\${q.q}<div class="claim"><span>A squire answered</span>\${shown}</div>

@@ -509,8 +509,12 @@ The game is built so that losing teaches you as much as winning.
   mistakes made it, which is only answerable by working the problem and then working each
   mistake far enough to see where it lands. The three are the generator's own diagnoses of
   that question's wrong answers, all different; a question whose diagnoses would quote an
-  answer on offer, and so hand the match over, is asked the plain way instead. Sixty-seven
-  of the seventy topics can be asked it. The verdict lays each mistake beside the answer it
+  answer on offer, and so hand the match over, is asked the plain way instead. Nor is the
+  squire ever given an answer whose own mistake shares more of its words than the others
+  do: "You would need the angle between them" beside "You never need the angle" can be
+  matched without working anything, so the squire answers something else, and a question
+  where every answer would echo is asked the plain way. Sixty-seven of the seventy topics
+  can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
   wrong mistake is not recorded as making it. The Training Grounds ask it too; the daily
@@ -686,7 +690,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-three suites, 1,575 checks, about a minute:
+loop only exists once the page is running. Thirty-three suites, 1,577 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -712,7 +716,7 @@ loop only exists once the page is running. Thirty-three suites, 1,575 checks, ab
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
 | `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
-| `findslip` | a held topic can be asked as find the slip, tagged, with the squire's answer and the question; three different mistakes, all this question's own diagnoses, the right pick being the diagnosis of the answer shown; none marked a trap; a matrix in the claim keeps its shape; no Perfect Strike, the working still offered; a right pick strikes, counts whole and lays out all three with the squire's marked and the answer done right; a wrong pick is struck, is not recorded as a slip of the knight's own, and brings one like it; never on a topic not yet held, nor with lessons off; a diagnosis quoting an answer sends the question back to plain; about one in five; never on a ladder or in the daily; the yard asks and explains it the same way; nothing is saved |
+| `findslip` | a held topic can be asked as find the slip, tagged, with the squire's answer and the question; three different mistakes, all this question's own diagnoses, the right pick being the diagnosis of the answer shown; none marked a trap; a matrix in the claim keeps its shape; no Perfect Strike, the working still offered; a right pick strikes, counts whole and lays out all three with the squire's marked and the answer done right; a wrong pick is struck, is not recorded as a slip of the knight's own, and brings one like it; never on a topic not yet held, nor with lessons off; a diagnosis quoting an answer sends the question back to plain; a mistake sharing more of the squire's words than the others is caught as an echo, a tie or a shared word singles nothing out, and the squire never gives an answer whose own slip echoes it; about one in five; never on a ladder or in the daily; the yard asks and explains it the same way; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
@@ -824,10 +828,11 @@ The generators were also checked by:
   The first run found it beating chance by about 45%, because the spare tiles were all
   near misses of the answer's own numbers; they are now drawn around every number on
   offer, and the tell sits near 15%, which is what small answers like ⟨0, 1⟩ cost honestly.
-- **About 4,700 find-the-slip questions** asked of every topic at every difficulty,
+- **About 4,600 find-the-slip questions** asked of every topic at every difficulty,
   asserting three different mistakes, each one of that question's own diagnoses; the one
   to pick is the diagnosis of the squire's answer, which is a wrong one; no mistake quotes
-  an answer on offer; the verdict lays out all three with the squire's marked and says
+  an answer on offer, and the one to pick never shares more words with the squire's answer
+  than the other two; the verdict lays out all three with the squire's marked and says
   what the problem comes to; and a wrong pick would not be recorded as a slip. At least
   sixty topics must be askable this way; sixty-seven are.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and

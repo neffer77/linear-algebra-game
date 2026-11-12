@@ -1,89 +1,47 @@
 {
-  "change": "A mastered topic is now and then asked as find the slip",
+  "change": "Find the slip no longer gives itself away by echoing the squire",
   "mutations": [
     {
-      "name": "a mistake that quotes an answer on offer is asked anyway",
+      "name": "the squire may give an answer whose own slip echoes it",
       "file": "index.html",
-      "find": "    if(names.some(n=>q.choices.some(c=>this.quotes(n, c)))) return null;\n",
+      "find": "    const shown=R.shuffle(opts.slice()).find(c=>!this.echoes(opts, names, c));\n",
+      "replace": "    const shown=R.pick(opts);\n",
+      "run": "verify"
+    },
+    {
+      "name": "an echo is only caught when every word is shared",
+      "file": "index.html",
+      "find": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<sc[i]);\n",
+      "replace": "    return sc[i]>0 && sc[i]>=this.words(names[i]).size && sc.every((v,j)=>j===i || v<sc[i]);\n",
+      "run": "verify"
+    },
+    {
+      "name": "words that differ only by an ending are not matched",
+      "file": "index.html",
+      "find": ".map(w=>w.replace(/(ing|ed|es|s)$/,''))); },\n",
+      "replace": ".map(w=>w)); },\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "short content words are dropped, so 'need' is not seen",
+      "file": "index.html",
+      "find": "    .filter(w=>w.length>2 && !this.STOPW.has(w))",
+      "replace": "    .filter(w=>w.length>4 && !this.STOPW.has(w))",
+      "run": "play:findslip"
+    },
+    {
+      "name": "a tie counts as an echo, so fair questions are lost",
+      "file": "index.html",
+      "find": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<sc[i]);\n",
+      "replace": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<=sc[i]);\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "when every answer echoes, the question is asked with no squire's answer",
+      "file": "index.html",
+      "find": "    if(shown===undefined) return null;\n",
       "replace": "",
       "run": "verify"
-    },
-    {
-      "name": "the squire's answer is the right one",
-      "file": "index.html",
-      "find": "    const shown=R.pick(opts), a=this.cap(q.why[shown]);\n",
-      "replace": "    const shown=q.a, a=this.cap(q.why[R.pick(opts)]);\n",
-      "run": "verify"
-    },
-    {
-      "name": "the mistake to pick is not the one that gave the answer",
-      "file": "index.html",
-      "find": "    const shown=R.pick(opts), a=this.cap(q.why[shown]);\n",
-      "replace": "    const shown=R.pick(opts), a=names[0];\n",
-      "run": "verify"
-    },
-    {
-      "name": "only two mistakes are on offer",
-      "file": "index.html",
-      "find": "    const opts=traps.slice(0,3), names=opts.map(c=>this.cap(q.why[c]));\n",
-      "replace": "    const opts=traps.slice(0,2), names=opts.map(c=>this.cap(q.why[c]));\n",
-      "run": "verify"
-    },
-    {
-      "name": "the verdict leaves out where each mistake lands",
-      "file": "index.html",
-      "find": "    const table=opts.map(",
-      "replace": "    const table='';[].map(",
-      "run": "verify"
-    },
-    {
-      "name": "picking the wrong mistake is recorded as making it",
-      "file": "index.html",
-      "find": "             why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,\n             _choices:R.shuffle(names.slice()) };",
-      "replace": "             why:{}, _why:Object.fromEntries(names.map(n=>[n,n])), fig:q.fig, figAnswer:q.figAnswer,\n             _choices:R.shuffle(names.slice()) };",
-      "run": "verify"
-    },
-    {
-      "name": "a held topic is never asked as find the slip",
-      "file": "index.html",
-      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "replace": "    if(false && stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "it is asked on every rung of the ladder",
-      "file": "index.html",
-      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "replace": "    if(this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "it is asked with lessons switched off",
-      "file": "index.html",
-      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "replace": "    if(stage==='free' && Game.s && R.chance(this.SLIP)){\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "it is asked four times as often",
-      "file": "index.html",
-      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
-      "replace": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP*4)){\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "the question carries no tag",
-      "file": "index.html",
-      "find": "    if(p && p.format==='slip')\n      return `<span class=\"lsn\" data-stage=\"free\" data-format=\"slip\">${this.ICON.slip} ${this.LABEL.slip}</span>`;\n",
-      "replace": "",
-      "run": "play:findslip"
-    },
-    {
-      "name": "the claim's label style swallows a matrix in it",
-      "file": "index.html",
-      "find": ".claim>span:first-child{display:block;",
-      "replace": ".claim span{display:block;",
-      "run": "play:findslip"
     }
   ]
 }

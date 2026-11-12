@@ -10,7 +10,7 @@
  * These checks pin down the shape of that: it is only ever asked of a topic
  * past the ladder, with lessons on, outside the daily; the three mistakes are
  * the generator's own, all different, and none of them quotes an answer on
- * offer; it is a whole question that strikes and is struck like any other,
+ * offer, nor echoes the squire's own words; it is a whole question that strikes and is struck like any other,
  * with no Perfect Strike and the working still on offer; picking the wrong
  * mistake is not recorded as making it; the yard asks it too; and nothing is
  * saved.
@@ -139,6 +139,34 @@ module.exports = {
     t.ok('where a mistake names an answer on offer, it is asked the plain way', angle.format === 'choose' && angle.choices.length === 4, angle.format);
     const leak = await t.ev(() => Lesson.quotes('45° needs cos θ = 0.71', '45°') && !Lesson.quotes('the 2 from differentiating', '−2'));
     t.ok('a quoted answer is told from a number that only looks like it', leak);
+
+    // --- a mistake that echoes the squire's words would give itself away ---
+    const echo = await t.ev(() => {
+      const opts = ['You would need the angle between them', 'Only if they have the same length', 'Yes — they are perpendicular'];
+      const names = ['You never need the angle; the dot product settles it',
+                     'Equal length has nothing to do with meeting at a right angle',
+                     'Their dot product is 14, not 0'];
+      const flagged = Lesson.echoes(opts, names, opts[0]) && Lesson.echoes(opts, names, opts[1]);
+      const fair = !Lesson.echoes(opts, names, opts[2])
+        // a word two mistakes share with the answer singles neither out
+        && !Lesson.echoes(['Only if both have the same length', 'No', 'Yes'],
+                          ['Equal length is beside the point', 'A length of zero', 'The dot product decides'],
+                          'Only if both have the same length')
+        // and a word is the same word whatever its ending
+        && Lesson.shared('the columns depend on it', 'one column depends on the others') === 2;
+      Game.s.topicStats.orth = __F.held();
+      let asked = 0, echoed = 0;
+      for (let i = 0; i < 300; i++) {
+        const q = buildQuestion('orth', 2), st = Lesson.slipStep(q);
+        if (!st) continue;
+        asked++;
+        const o = q.choices.filter(c => c !== q.a && q.why[c]).slice(0, 3);
+        if (Lesson.echoes(o, o.map(c => Lesson.cap(q.why[c])), st.shown)) echoed++;
+      }
+      return { flagged, fair, asked, echoed };
+    });
+    t.ok("a mistake sharing the squire's words is caught as an echo", echo.flagged && echo.fair, JSON.stringify(echo));
+    t.ok('and the squire never gives an answer whose own slip echoes it', echo.asked > 200 && echo.echoed === 0, JSON.stringify(echo));
 
     // --- how often: now and then, not every time ---
     const share = await t.ev(() => {
