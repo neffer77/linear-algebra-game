@@ -195,6 +195,8 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 #say:after{content:"";position:absolute;bottom:-7px;left:58%;border:7px solid transparent;
   border-bottom:0;border-top-color:rgba(250,244,230,.96)}
 #say.on{opacity:1;transform:none}
+.foesay{margin:-2px 0 8px;font-size:13px;font-style:italic;color:var(--dim)}
+.foesay b{font-style:normal;color:var(--ink)}
 #say.boss{background:rgba(255,226,160,.97)}
 #say.boss:after{border-top-color:rgba(255,226,160,.97)}
 #bigBanner{position:fixed;left:0;right:0;top:34%;z-index:60;pointer-events:none;
@@ -5822,7 +5824,8 @@ const Talk = {
     'The Gradient Itself':  { meet:'I point up the steepest climb.', low:'Every way… is downhill…', fall:'A critical point… my last…' }
   },
   said:{}, timer:0,
-  reset(){ this.said={}; this.hide(); },
+  turn:null,          // what the foe said in answer to this turn, if anything
+  reset(){ this.said={}; this.turn=null; this.hide(); },
   hide(){ clearTimeout(this.timer); const el=document.getElementById('say'); if(el) el.classList.remove('on'); },
   pick(a){ return a[Math.floor(Math.random()*a.length)]; },
   line(f, moment){
@@ -5840,6 +5843,7 @@ const Talk = {
     const text=this.line(f, moment), el=document.getElementById('say');
     if(!text || !el) return null;
     el.textContent=text;
+    this.turn={moment, text};
     el.classList.toggle('boss', !!f.boss);
     el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
     clearTimeout(this.timer);
@@ -6364,6 +6368,7 @@ const Battle = {
   answer(btn, choice){
     if(this.answered) return;
     this.answered=true; clearInterval(this.timer);
+    Talk.turn=null;
     const st = this.step();
     const ok = choice===st.a;
     const el = performance.now()-this.qStart;
@@ -6624,6 +6629,9 @@ const Battle = {
     e.style.display='block';
     e.innerHTML =
       \`<div class="head" style="color:\${ok?'var(--green)':'var(--red)'}">\${head}</div>\`+
+      // On a phone the page glides down to here, taking the scene and its
+      // speech bubble off screen, so what the foe just said comes too.
+      (Talk.turn && !inRite ? \`<div class="foesay" aria-hidden="true"><b>\${this.foe.nm}:</b> “\${Talk.turn.text}”</div>\` : '')+
       ((ok || st.quiet)?'':\`<div style="margin-bottom:6px">The answer was <b style="color:var(--gold)">\${st.a}</b>.</div>\`)+
       (miss?\`<div class="miss">You chose <b>\${picked}</b>: \${miss}.</div>\`:'')+ slipNote +
       (ok && this.nudged && !inRite ? \`<div class="miss nudged">💡 Nudged: half the strike, and half the credit toward \${label}.</div>\` : '')+
