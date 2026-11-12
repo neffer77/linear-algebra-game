@@ -480,8 +480,9 @@ The game is built so that losing teaches you as much as winning.
   things that are not buttons: map doors, the nudge and the working, the settings rows. Every
   one of them is now a named button in the tab order, including the ones drawn mid-fight, so
   Tab reaches it, Enter or Space presses it, and a gold ring shows where the keyboard rests.
-  A key that presses a control presses only that one, so Enter on a door never also waves the
-  turn on. What a turn's verdict says is read out when it lands. Number keys still pick an
+  A key that presses a control presses only that one, so Enter on a door, or on a button
+  Tabbed onto, never also waves the turn on; a button merely clicked still lets Enter move on,
+  the way a picked answer always has. What a turn's verdict says is read out when it lands. Number keys still pick an
   answer, and nothing about it is saved.
 - **Wrong answers are diagnosed, not just corrected** — the game names the misconception
   your specific choice came from before explaining the right method.
@@ -578,7 +579,7 @@ Inside `index.html` the code is organised as:
 | `PASSAGE_SKILLS`, `Passage` | the four skills that are never carried: salvage, guard, memory, and where a climb starts you |
 | `MATERIALS`, `Crucible` | the four currencies, and Alchemy's diffusion bench that converts between them |
 | `Working` | turns any question into numbered steps — the mote ladder where one exists, otherwise the instance's own explanation — and cuts its first step into a nudge that stops short of the answer |
-| `A11y` | makes every element with a click handler a named button in the tab order, as the page loads and as anything is drawn after, and presses it on Enter or Space before any other key handler hears the key |
+| `A11y` | makes every element with a click handler a named button in the tab order, as the page loads and as anything is drawn after, and presses it on Enter or Space before any other key handler hears the key; notes whether focus last moved by Tab or by a pointer |
 | `Slips` | counts each misconception a knight repeats in a topic this sitting, for the "same slip as last time" and "not caught this time" notes |
 | `FORGE`, `RUNES`, `APOTHECARY`, `SCRIPTORIUM` and their modules | the Keep's four spending benches |
 | `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
@@ -663,7 +664,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-one suites, 1,513 checks, about a minute:
+loop only exists once the page is running. Thirty-one suites, 1,516 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -688,7 +689,7 @@ loop only exists once the page is running. Thirty-one suites, 1,513 checks, abou
 | `crucible` | the rate follows the gradient, a round trip always loses, and a pour never buys mastery |
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
-| `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
+| `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |

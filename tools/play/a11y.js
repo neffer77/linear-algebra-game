@@ -143,6 +143,43 @@ module.exports = {
       before.cont && after.cont && after.shown, JSON.stringify([before, after]));
     await t.ev(() => { const d = document.getElementById('__door'); if (d) d.remove(); });
 
+    // A native button Tabbed onto keeps its own Enter: it presses itself and
+    // the turn does not move on underneath it.
+    await t.ev(() => {
+      const e = document.getElementById('explain');
+      window.__nb = 0;
+      for (const id of ['__pre', '__nb']) {
+        const b = document.createElement('button'); b.id = id; b.textContent = id;
+        b.onclick = id === '__nb' ? () => { window.__nb++; } : () => {};
+        e.parentNode.insertBefore(b, e);
+      }
+      document.getElementById('__pre').focus();
+    });
+    await t.page.keyboard.press('Tab');
+    await sleep(60);
+    t.eq('Tab moves the keyboard onto the next button', await t.ev(() => document.activeElement.id), '__nb');
+    await t.page.keyboard.press('Enter');
+    await sleep(120);
+    const tabbed = await t.ev(() => ({ pressed: window.__nb, cont: !!document.getElementById('contBtn') }));
+    t.ok('Enter on a button Tabbed onto presses that button, and does not move the turn on',
+      tabbed.pressed === 1 && tabbed.cont, JSON.stringify(tabbed));
+
+    // A button merely clicked keeps focus too, but Enter there still means
+    // "move on", the way a picked answer has always worked.
+    await t.ev(() => {
+      window.__nb2 = 0;
+      const b = document.getElementById('__nb'); b.id = '__nb2'; b.onclick = () => { window.__nb2++; };
+    });
+    await t.page.click('#__nb2');
+    await sleep(60);
+    await t.page.keyboard.press('Enter');
+    await sleep(200);
+    const clicked = await t.ev(() => ({ pressed: window.__nb2, cont: !!document.getElementById('contBtn'),
+      focus: document.activeElement && document.activeElement.id }));
+    t.ok('Enter after clicking a button still moves the turn on, and presses nothing twice',
+      clicked.pressed === 1 && !clicked.cont, JSON.stringify(clicked));
+    await t.ev(() => { for (const id of ['__pre', '__nb2']) { const d = document.getElementById(id); if (d) d.remove(); } });
+
     // --- the answers themselves are still picked by number ---
     const keyed = await t.ev(() => {
       R.seed(77); Battle.cur = buildQuestion('dot', 2); R.unseed();
