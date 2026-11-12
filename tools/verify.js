@@ -1144,7 +1144,12 @@ const bankTell = (() => {
    match over), and the verdict lays every mistake beside the answer it gives. */
 const slipNotes = (() => {
   const plain = h => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-  let n = 0;
+  const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
+    'for by as at from than then into only one two any all has have was were would').split(' '));
+  const words = h => new Set(plain(h).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 2 && !STOP.has(w)).map(w => w.replace(/(ing|ed|es|s)$/, '')));
+  const overlap = (a, b) => { const B = words(b); return [...words(a)].filter(w => B.has(w)).length; };
+  let n = 0, echoChecked = 0;
   const topics = new Set();
   for (const key of Object.keys(GEN)) {
     for (let d = 1; d <= 3; d++) {
@@ -1162,6 +1167,12 @@ const slipNotes = (() => {
         if (Slip.cap(q.why[st.shown]) !== st.a) fail('slip', key, 'the mistake to pick is not the one that gives the answer shown');
         for (const c of st._choices) for (const x of q.choices)
           if (Slip.quotes(c, x)) fail('slip', key, `"${plain(c).slice(0, 50)}" quotes the answer ${plain(x)}`);
+        // The right mistake must not be the one that shares the most words
+        // with the squire's answer, or it can be matched without working.
+        const sc = st._choices.map(c => overlap(c, st.shown)), mine = sc[st._choices.indexOf(st.a)];
+        if (mine > 0 && sc.every((v, j) => st._choices[j] === st.a || v < mine))
+          fail('slip', key, `"${plain(st.a).slice(0, 50)}" echoes the squire's answer ${plain(st.shown)}`);
+        echoChecked++;
         const tab = (st.ex.match(/<div class="sl( was)?">/g) || []).length;
         if (tab !== 3 || (st.ex.match(/class="sl was"/g) || []).length !== 1)
           fail('slip', key, `the verdict lays out ${tab} mistakes, not 3 with the squire's marked`);
@@ -1171,6 +1182,7 @@ const slipNotes = (() => {
     }
   }
   if (topics.size < 60) fail('slip', 'coverage', `only ${topics.size} topics can be asked as find the slip`);
+  if (echoChecked !== n) fail('slip', 'echo', 'not every question was checked for an echo');
   return { n, topics: topics.size };
 })();
 
@@ -1202,7 +1214,7 @@ if (seenComplexity.size) {
 }
 console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
 console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);
-console.log(`  find-the-slip questions    ${pad(slipNotes.n.toLocaleString(), 11)}  (${slipNotes.topics} topics, none quoting an answer)`);
+console.log(`  find-the-slip questions    ${pad(slipNotes.n.toLocaleString(), 11)}  (${slipNotes.topics} topics, none quoting an answer or echoing the squire)`);
 if (figKeys.size) {
   console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
   console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);
