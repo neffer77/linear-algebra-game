@@ -442,7 +442,8 @@ The game is built so that losing teaches you as much as winning.
 - **The map opens on what to do next.** One card above everything else names the single
   thing the campaign is waiting on — the next foe, with the realm's progress as pips — and
   has one button for it. A descent left in flight outranks it; a knight who has not seen
-  the cellar is sent there. Beneath, at most three smaller lines appear only when true: a
+  the cellar and has beaten nothing is sent there, while one who walked out early and has
+  fought since keeps the campaign, with the cellar still offered first below. Beneath, at most three smaller lines appear only when true: a
   streak, the weakest topic (one tap drills it), and a bench with something to make. A
   knight with nothing pressing sees none of them.
 - **The campaign is a road.** The eight realms are stones on a winding path — won,
@@ -711,7 +712,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,615 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,617 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -747,7 +748,7 @@ loop only exists once the page is running. Thirty-four suites, 1,615 checks, abo
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
-| `map` | the places you can go are above the campaign, one card at the top says what to do next, the campaign is a road with one realm open, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
