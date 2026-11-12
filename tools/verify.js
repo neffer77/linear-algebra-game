@@ -418,6 +418,35 @@ for (const [key, check] of Object.entries(ALGEBRA)) {
   }
 }
 
+/* A determinant's working has to say what the number does, worked out here
+   from the matrix the player was shown: its size is the new area (2×2) or
+   volume (3×3), a negative one turns the shape over, and zero presses it flat.
+   The 2×2 answer figure's caption says the same. */
+let detMeaning = 0;
+for (const [key, unit, size, det] of [['det2', 'square', 'area', det2], ['det3', 'cube', 'volume', det3]]) {
+  for (let i = 0; i < REPS * 3; i++) {
+    const p = GEN[key](2), D = det(mats(p.q)[0]);
+    detMeaning++;
+    const ex = p.ex.replace(/<[^>]+>/g, ''), at = ex.indexOf(`unit ${unit}`);
+    if (at < 0) { fail('meaning', key, `working never says what ${p.q} does to the unit ${unit}`); continue; }
+    const says = ex.slice(at);
+    const tell = (txt, where) => {
+      if (D === 0) {
+        if (!/flat/.test(txt) || !new RegExp(`${size}( becomes)? 0\\b`).test(txt))
+          fail('meaning', key, `${where} for determinant 0 should say the ${unit} is pressed flat: ${txt}`);
+        return;
+      }
+      if (!new RegExp(`${size} ${Math.abs(D)}\\b`).test(txt))
+        fail('meaning', key, `${where} gives the wrong ${size} for determinant ${D}: ${txt}`);
+      if (/flipped/.test(txt) !== (D < 0))
+        fail('meaning', key, `${where} gets the flip wrong for determinant ${D}: ${txt}`);
+      if (/flat/.test(txt)) fail('meaning', key, `${where} calls determinant ${D} flat: ${txt}`);
+    };
+    tell(says, 'working');
+    if (key === 'det2') tell(p.figAnswer.caption, 'answer caption');
+  }
+}
+
 /* -------------------------------------------------------------- 3. analysis */
 const DDX = /^<span class="frac"><span>d<\/span><span>dx<\/span><\/span>\s*/;
 const stripD = q => q.replace(DDX, '').replace(/\s*=\s*\?\s*$/, '');
@@ -1226,6 +1255,7 @@ console.log('─'.repeat(58));
 console.log(`  generators                 ${pad(total, 10)}`);
 console.log(`  problems generated         ${pad(generated.toLocaleString(), 10)}`);
 console.log(`  algebraic identities       ${pad(algebraChecks.toLocaleString(), 10)}`);
+console.log(`  determinants explained     ${pad(detMeaning.toLocaleString(), 10)}  (area or volume, flipped, or pressed flat)`);
 console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(), 10)}`);
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
