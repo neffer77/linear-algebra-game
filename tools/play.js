@@ -42,6 +42,7 @@ const SUITES = [
   require('./play/a11y'),        // every control can be reached, named and pressed from the keyboard
   require('./play/again'),       // a miss is followed by a fresh question on the same topic
   require('./play/findslip'),    // a mastered topic is now and then asked as find the slip
+  require('./play/talk'),        // foes speak: an opening line, gloats, worries and last words
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung
