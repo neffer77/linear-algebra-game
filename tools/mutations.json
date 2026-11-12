@@ -1,68 +1,26 @@
 {
-  "change": "A determinant's working says what its number does to the unit square or cube",
+  "change": "A wind-up that was due dies with the foe the answer beats",
   "mutations": [
     {
-      "name": "a negative determinant is not called a flip",
+      "name": "a beaten foe still lands its wind-up",
       "file": "index.html",
-      "find": "+ (s<0 ? 'flipped over: the minus sign is the flip.' : 'the same way round.');",
-      "replace": "+ (s>0 ? 'flipped over: the minus sign is the flip.' : 'the same way round.');",
-      "run": "verify"
+      "find": "    if(this.slamNext && this.ehp<=0) this.slamNext=false;\n    else if(this.slamNext){",
+      "replace": "    if(false) this.slamNext=false;\n    else if(this.slamNext){",
+      "run": "play:talk"
     },
     {
-      "name": "the area keeps the determinant's sign",
+      "name": "no wind-up ever lands on a correct answer",
       "file": "index.html",
-      "find": "of ${size} ${Math.abs(s)}, `",
-      "replace": "of ${size} ${s}, `",
-      "run": "verify"
+      "find": "    if(this.slamNext && this.ehp<=0) this.slamNext=false;",
+      "replace": "    if(this.slamNext && ok) this.slamNext=false;",
+      "run": "play:talk"
     },
     {
-      "name": "a zero determinant reads as a shape of area 0",
+      "name": "the wind-up is dropped but still reported",
       "file": "index.html",
-      "find": "  if(s===0) return `So the unit ${unit} is pressed flat",
-      "replace": "  if(false) return `So the unit ${unit} is pressed flat",
-      "run": "verify"
-    },
-    {
-      "name": "the 3×3 working talks about a square",
-      "file": "index.html",
-      "find": "const [unit, size] = cube ? ['cube','volume'] : ['square','area'];",
-      "replace": "const [unit, size] = ['square','area'];",
-      "run": "verify"
-    },
-    {
-      "name": "the 3×3 working never says what its number does",
-      "file": "index.html",
-      "find": "deleting that entry's row and column. ${detMeans(s, true)}`};",
-      "replace": "deleting that entry's row and column.`};",
-      "run": "verify"
-    },
-    {
-      "name": "the 2×2 working never says what its number does",
-      "file": "index.html",
-      "find": "= ${neg(s)}. ${detMeans(s)}`};",
-      "replace": "= ${neg(s)}.`};",
-      "run": "verify"
-    },
-    {
-      "name": "the answer caption gets the flip backwards",
-      "file": "index.html",
-      "find": "area ${Math.abs(s)}, ${s<0?'flipped over':'the same way round'}.`;",
-      "replace": "area ${Math.abs(s)}, ${s>0?'flipped over':'the same way round'}.`;",
-      "run": "verify"
-    },
-    {
-      "name": "the answer caption calls a zero determinant a shape",
-      "file": "index.html",
-      "find": "const detCaption = s => s===0 ? 'The unit square is pressed flat onto a line: area 0.'",
-      "replace": "const detCaption = s => false ? 'The unit square is pressed flat onto a line: area 0.'",
-      "run": "verify"
-    },
-    {
-      "name": "the answer caption gives the old generic line",
-      "file": "index.html",
-      "find": "figAnswer:{kind:'grid', m:A, caption:detCaption(s)},",
-      "replace": "figAnswer:{kind:'grid', m:A, caption:'The unit square becomes this: the determinant is the area factor.'},",
-      "run": "verify"
+      "find": "    this.lastSlam=0; this.lastBraced=ok;\n",
+      "replace": "    this.lastSlam=this.slamNext&&this.ehp<=0?9:0; this.lastBraced=ok;\n",
+      "run": "play:talk"
     }
   ]
 }

@@ -166,14 +166,29 @@ module.exports = {
     t.ok('nearly beaten, the foe begs', low[0].startsWith('low:'), JSON.stringify(low));
     t.ok('and does not beg twice', low.filter(s => s.startsWith('low:')).length === 1, JSON.stringify(low));
 
-    // --- and has last words ---
+    // --- a wind-up still lands on a foe left standing, braced ---
+    const braced = await t.ev(() => {
+      Battle.ehp = Battle.emax = 1e6; Battle.slamNext = true; Battle.answered = false;
+      const hp = Game.s.hp;
+      Battle.answer(null, Battle.cur.a);
+      const ex = document.getElementById('explain').textContent;
+      return { took: hp - Game.s.hp, wind: /wind-up/.test(ex), braced: /braced/.test(ex) };
+    });
+    t.ok('a wind-up due on a foe left standing still lands, braced',
+      braced.took > 0 && braced.wind && braced.braced, JSON.stringify(braced));
+
+    // --- and has last words, and no blow after them ---
     const fall = await t.ev(() => {
       document.getElementById('say').dataset.last = '';
-      Battle.ehp = 1; Battle.answered = false;
+      Battle.ehp = 1; Battle.slamNext = true; Battle.answered = false;
+      const hp = Game.s.hp;
       Battle.answer(null, Battle.cur.a);
-      return { last: document.getElementById('say').dataset.last, ehp: Battle.ehp };
+      return { last: document.getElementById('say').dataset.last, ehp: Battle.ehp, took: hp - Game.s.hp,
+               wind: /wind-up/.test(document.getElementById('explain').textContent) };
     });
     t.ok('the killing blow draws last words', fall.ehp === 0 && /^fall:/.test(fall.last), JSON.stringify(fall));
+    t.ok('and a wind-up that was due dies with the foe: nothing lands after its last words',
+      fall.took === 0 && !fall.wind, JSON.stringify(fall));
 
     // --- a new fight starts quiet ---
     const fresh = await t.ev(() => { Battle.flee(); Battle.begin(0, 1); return { said: Talk.said }; });

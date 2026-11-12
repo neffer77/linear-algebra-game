@@ -6573,7 +6573,10 @@ const Battle = {
       : '';
     this.perfect=false; this.finisher=1;
     this.lastSlam=0; this.lastBraced=ok;
-    if(this.slamNext){
+    /* A foe beaten by this answer has no blow left in it: the wind-up dies
+       with it, rather than landing after its last words. */
+    if(this.slamNext && this.ehp<=0) this.slamNext=false;
+    else if(this.slamNext){
       this.slamNext=false;
       this.lastSlam=this.spendWard(Combat.slam(this.foe.atk, this.defStat(), ok));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
