@@ -94,6 +94,7 @@ function simulate({ accuracies, runs, maxDepth, waves, knight, scryCharges, sett
         combo = 0;
         st.hp -= takeHit(st, Combat.foeHit(foe.atk, st.def, 0.85 + rnd() * 0.3));
       }
+      if (ehp <= 0) break;            // a beaten foe's wind-up dies with it
       if (slamNext) {
         slamNext = false;
         st.hp -= takeHit(st, Combat.slam(foe.atk, st.def, ok));
