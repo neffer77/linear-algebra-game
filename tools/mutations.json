@@ -1,61 +1,33 @@
 {
-  "change": "A rite's trail draws its mathematics instead of flattening it",
+  "change": "The map points at an upgrade worth buying, and says when it can be bought",
   "mutations": [
     {
-      "name": "the trail strips the question's markup again, flattening its matrices",
+      "name": "the next unlock is the cheapest not owned, however weak",
       "file": "index.html",
-      "find": "r.steps.push(`${trailQ(st.q)} → ",
-      "replace": "r.steps.push(`${st.q.replace(/<[^>]+>/g,' ').trim().slice(0,44)} → ",
-      "run": "play:lesson"
+      "find": "    const all=WEAPONS.filter(x=>x.dmg>bw).concat(ARMORS.filter(x=>x.def>ba))\n",
+      "replace": "    const all=WEAPONS.concat(ARMORS)\n",
+      "run": "play:map"
     },
     {
-      "name": "a fraction in a rung is flattened",
+      "name": "an affordable unlock is still only a bar",
       "file": "index.html",
-      "find": "|<span class=\"frac\"><span>[^<]*<\\/span><span>[^<]*<\\/span><\\/span>|<su[pb]>",
-      "replace": "|<su[pb]>",
-      "run": "verify"
+      "find": "      ${nx && g.gold>=nx.cost?`<hr><div class=\"node\" id=\"unlockReady\"",
+      "replace": "      ${nx && false?`<hr><div class=\"node\" id=\"unlockReady\"",
+      "run": "play:map"
     },
     {
-      "name": "a power in a rung is no longer raised",
+      "name": "the ready row does not go to the Smithy",
       "file": "index.html",
-      "find": "|<su[pb]>[^<]*<\\/su[pb]>/g;",
-      "replace": "/g;",
-      "run": "verify"
+      "find": "id=\"unlockReady\" onclick=\"UI.go('s-shop')\"",
+      "replace": "id=\"unlockReady\" onclick=\"UI.go('s-map')\"",
+      "run": "play:map"
     },
     {
-      "name": "a long rung is cut inside a word",
+      "name": "the ready row compares against the wrong blade",
       "file": "index.html",
-      "find": "out+= sp>0 ? head.slice(0,sp) : '';",
-      "replace": "out+= head;",
-      "run": "verify"
-    },
-    {
-      "name": "a long rung is never cut",
-      "file": "index.html",
-      "find": "if(n+t.length<=max){",
-      "replace": "if(true){",
-      "run": "verify"
-    },
-    {
-      "name": "a cut rung does not say it was cut",
-      "file": "index.html",
-      "find": "const cut=()=>out.replace(/\\s+$/,'')+'…';",
-      "replace": "const cut=()=>out.replace(/\\s+$/,'');",
-      "run": "verify"
-    },
-    {
-      "name": "markup that is not mathematics is kept in the trail",
-      "file": "index.html",
-      "find": "const t=p.t.replace(/<br\\s*\\/?>/g,' ').replace(/<[^>]+>/g,'')",
-      "replace": "const t=p.t.replace(/<br\\s*\\/?>/g,' ')",
-      "run": "verify"
-    },
-    {
-      "name": "the trail's line is allowed to run long",
-      "file": "index.html",
-      "find": "function trailQ(html, max=64){",
-      "replace": "function trailQ(html, max=90){",
-      "run": "verify"
+      "find": "hits for ${x.dmg} against your ${w.nm}'s ${w.dmg}",
+      "replace": "hits for ${x.dmg} against your ${WEAPONS[1].nm}'s ${WEAPONS[1].dmg}",
+      "run": "play:map"
     }
   ]
 }

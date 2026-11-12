@@ -161,7 +161,11 @@ source of upgrades. A boss never drops common.
 
 **Bounties.** Three rotating goals sit on the map — solve twenty riddles, land six crits,
 win a fight without a single miss — each paying gold and rolling a replacement the moment
-it completes. Beside them, the next unlock you are saving toward and how close you are.
+it completes. Beside them, the next unlock you are saving toward and how close you are:
+the cheapest blade or plate on sale that beats the best of its kind you own, so a knight
+with a forged edge is never pointed back at a weaker sword. Once you can pay for it, the
+bar becomes a way to the Smithy that says what it does against what you wear, such as
+*hits for 14 against your Rusted Trainer's 9*.
 
 **🗡️ Daily Skirmish.** Twelve riddles drawn from a seed derived from the date, so the run
 is *identical on every device that day* — it deliberately ignores your mastery model,
@@ -703,7 +707,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,608 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,613 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -739,7 +743,7 @@ loop only exists once the page is running. Thirty-four suites, 1,608 checks, abo
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
-| `map` | the places you can go are above the campaign, one card at the top says what to do next, the campaign is a road with one realm open, and the hall has a door for each knight |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next, the campaign is a road with one realm open, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
