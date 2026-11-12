@@ -84,11 +84,16 @@ module.exports = {
     const a11y = await t.ev(() => document.getElementById('say').getAttribute('aria-hidden'));
     t.eq('the bubble is hidden from screen readers, who have the verdict', a11y, 'true');
     const fits = await t.ev(() => {
-      const b = document.getElementById('say').getBoundingClientRect(),
-            w = document.getElementById('sceneWrap').getBoundingClientRect();
+      // Measured with the longest line any foe says, not the one it happened to pick.
+      const el = document.getElementById('say'), was = el.textContent;
+      const all = [...Object.values(Talk.ART).flatMap(o => Object.values(o).flat()),
+                   ...Object.values(Talk.BOSS).flatMap(o => Object.values(o))];
+      el.textContent = all.reduce((a, b) => b.length > a.length ? b : a);
+      const b = el.getBoundingClientRect(), w = document.getElementById('sceneWrap').getBoundingClientRect();
+      el.textContent = was;
       return b.left >= w.left - 1 && b.right <= w.right + 1 && b.top >= w.top - 1 && b.bottom <= w.bottom + 1;
     });
-    t.ok('and fits inside the scene on a 320px phone', fits);
+    t.ok('and fits inside the scene on a 320px phone, even at its longest', fits);
     await sleep(2900);
     t.ok('and goes away by itself', !(await bubble(t)).on);
 
