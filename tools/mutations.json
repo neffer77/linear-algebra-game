@@ -1,33 +1,68 @@
 {
-  "change": "The map points at an upgrade worth buying, and says when it can be bought",
+  "change": "A determinant's working says what its number does to the unit square or cube",
   "mutations": [
     {
-      "name": "the next unlock is the cheapest not owned, however weak",
+      "name": "a negative determinant is not called a flip",
       "file": "index.html",
-      "find": "    const all=WEAPONS.filter(x=>x.dmg>bw).concat(ARMORS.filter(x=>x.def>ba))\n",
-      "replace": "    const all=WEAPONS.concat(ARMORS)\n",
-      "run": "play:map"
+      "find": "+ (s<0 ? 'flipped over: the minus sign is the flip.' : 'the same way round.');",
+      "replace": "+ (s>0 ? 'flipped over: the minus sign is the flip.' : 'the same way round.');",
+      "run": "verify"
     },
     {
-      "name": "an affordable unlock is still only a bar",
+      "name": "the area keeps the determinant's sign",
       "file": "index.html",
-      "find": "      ${nx && g.gold>=nx.cost?`<hr><div class=\"node\" id=\"unlockReady\"",
-      "replace": "      ${nx && false?`<hr><div class=\"node\" id=\"unlockReady\"",
-      "run": "play:map"
+      "find": "of ${size} ${Math.abs(s)}, `",
+      "replace": "of ${size} ${s}, `",
+      "run": "verify"
     },
     {
-      "name": "the ready row does not go to the Smithy",
+      "name": "a zero determinant reads as a shape of area 0",
       "file": "index.html",
-      "find": "id=\"unlockReady\" onclick=\"UI.go('s-shop')\"",
-      "replace": "id=\"unlockReady\" onclick=\"UI.go('s-map')\"",
-      "run": "play:map"
+      "find": "  if(s===0) return `So the unit ${unit} is pressed flat",
+      "replace": "  if(false) return `So the unit ${unit} is pressed flat",
+      "run": "verify"
     },
     {
-      "name": "the ready row compares against the wrong blade",
+      "name": "the 3×3 working talks about a square",
       "file": "index.html",
-      "find": "hits for ${x.dmg} against your ${w.nm}'s ${w.dmg}",
-      "replace": "hits for ${x.dmg} against your ${WEAPONS[1].nm}'s ${WEAPONS[1].dmg}",
-      "run": "play:map"
+      "find": "const [unit, size] = cube ? ['cube','volume'] : ['square','area'];",
+      "replace": "const [unit, size] = ['square','area'];",
+      "run": "verify"
+    },
+    {
+      "name": "the 3×3 working never says what its number does",
+      "file": "index.html",
+      "find": "deleting that entry's row and column. ${detMeans(s, true)}`};",
+      "replace": "deleting that entry's row and column.`};",
+      "run": "verify"
+    },
+    {
+      "name": "the 2×2 working never says what its number does",
+      "file": "index.html",
+      "find": "= ${neg(s)}. ${detMeans(s)}`};",
+      "replace": "= ${neg(s)}.`};",
+      "run": "verify"
+    },
+    {
+      "name": "the answer caption gets the flip backwards",
+      "file": "index.html",
+      "find": "area ${Math.abs(s)}, ${s<0?'flipped over':'the same way round'}.`;",
+      "replace": "area ${Math.abs(s)}, ${s>0?'flipped over':'the same way round'}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "the answer caption calls a zero determinant a shape",
+      "file": "index.html",
+      "find": "const detCaption = s => s===0 ? 'The unit square is pressed flat onto a line: area 0.'",
+      "replace": "const detCaption = s => false ? 'The unit square is pressed flat onto a line: area 0.'",
+      "run": "verify"
+    },
+    {
+      "name": "the answer caption gives the old generic line",
+      "file": "index.html",
+      "find": "figAnswer:{kind:'grid', m:A, caption:detCaption(s)},",
+      "replace": "figAnswer:{kind:'grid', m:A, caption:'The unit square becomes this: the determinant is the area factor.'},",
+      "run": "verify"
     }
   ]
 }

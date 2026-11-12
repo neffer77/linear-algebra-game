@@ -541,7 +541,10 @@ The game is built so that losing teaches you as much as winning.
   figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
   there; the parallelogram and the resultant only appear once you have answered. A
   determinant question draws nothing, and then shows you the unit square turned into the
-  parallelogram whose area is the answer. Six kinds cover it — the plane, a transformed
+  parallelogram whose area is the answer's size. The working says it in words too: a
+  determinant of −12 makes "a shape of area 12, flipped over: the minus sign is the
+  flip", and 0 presses the square flat onto a line; a 3×3 says the same of the unit
+  cube's volume. Six kinds cover it — the plane, a transformed
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
@@ -859,6 +862,12 @@ The generators were also checked by:
   only after a whole word, and reads in 64 characters or fewer. Stripping the markup,
   as the trail used to, turned the first matrix rung into "Row 1 of −1 2 −3 −2 dotted
   with c".
+- **2,400 determinant workings**, 2×2 and 3×3, recomputed from the matrix shown and
+  asserting the working says what the number does to the unit square or cube: its size
+  as the new area or volume, "flipped over" exactly when it is negative, and pressed flat
+  exactly when it is zero. The 2×2 answer figure's caption must say the same. The
+  working used to call the number a "signed area scaling factor" and stop, so a −25
+  never said what its minus sign meant.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
 - **Reachability of every one of the 70 topics** at 320×568, measured as the scroll

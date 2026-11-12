@@ -953,6 +953,18 @@ const neg = n => (n<0? '−'+Math.abs(n) : String(n));      // true minus sign
 // A number as it is written inside working: a negative is bracketed, so a sum
 // reads 5 + (−1), a product 3·(−2) and a square (−2)², never 5 + −1 or −2².
 const par = n => (n<0? '('+neg(n)+')' : String(n));
+/* What a determinant does to the unit square (or cube), said in plain words:
+   its size is the new area (or volume), a minus sign means the shape was
+   turned over, and zero means it was pressed flat. The number alone teaches
+   the recipe; this sentence teaches what the recipe is for. */
+const detMeans = (s, cube) => {
+  const [unit, size] = cube ? ['cube','volume'] : ['square','area'];
+  if(s===0) return `So the unit ${unit} is pressed flat${cube?'':' onto a line'}: its ${size} becomes 0.`;
+  return `So the unit ${unit} becomes a ${cube?'solid':'shape'} of ${size} ${Math.abs(s)}, `
+       + (s<0 ? 'flipped over: the minus sign is the flip.' : 'the same way round.');
+};
+const detCaption = s => s===0 ? 'The unit square is pressed flat onto a line: area 0.'
+  : `The unit square becomes this: area ${Math.abs(s)}, ${s<0?'flipped over':'the same way round'}.`;
 // "x − a" with the sign folded in: x − 3, x + 2, or just x when a is 0.
 const less = n => (n===0? '' : n<0? ` + ${-n}` : ` − ${n}`);
 // A coefficient on a letter: 3x, −x, x.
@@ -1167,12 +1179,12 @@ det2(d){
   return {topic:'Determinant (2×2)',
     q:`det ${mat(A)} = ?`,
     a:neg(s),
-    figAnswer:{kind:'grid', m:A, caption:'The unit square becomes this — the determinant is the area factor.'},
+    figAnswer:{kind:'grid', m:A, caption:detCaption(s)},
     d:[[neg(A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the two products were added — the determinant subtracts the second'],
        [neg(-s),'the subtraction ran backwards; it is ad − bc, in that order'],
        [neg(A[0][0]+A[1][1]),'that is the trace (the diagonal sum), not the determinant'],
        neg(s+R.nz(-7,7))],
-    ex:`For a 2×2 it's (top-left)(bottom-right) − (top-right)(bottom-left) = (${neg(A[0][0])})(${neg(A[1][1])}) − (${neg(A[0][1])})(${neg(A[1][0])}) = ${neg(s)}. That number is the signed area scaling factor of the transformation; zero would mean it squashes the plane flat.`};
+    ex:`For a 2×2 it's (top-left)(bottom-right) − (top-right)(bottom-left) = (${neg(A[0][0])})(${neg(A[1][1])}) − (${neg(A[0][1])})(${neg(A[1][0])}) = ${neg(s)}. ${detMeans(s)}`};
 },
 transpose(){
   const A=[[R.nz(-9,9),R.i(-9,9)],[R.i(-9,9),R.nz(-9,9)]];
@@ -1312,7 +1324,7 @@ det3(){
        [neg(A[0][0]*A[1][1]*A[2][2]),'that is only the diagonal product; a 3×3 determinant needs all the cofactor terms'],
        [neg(A[0][0]*m(0,0)+A[0][1]*m(0,1)+A[0][2]*m(0,2)),'the middle term must be subtracted, not added'],
        neg(s+R.nz(-9,9))],
-    ex:`Expand along the top row with alternating signs + − +: ${neg(A[0][0])}·${par(m(0,0))} − ${par(A[0][1])}·${par(m(0,1))} + ${par(A[0][2])}·${par(m(0,2))} = ${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column.`};
+    ex:`Expand along the top row with alternating signs + − +: ${neg(A[0][0])}·${par(m(0,0))} − ${par(A[0][1])}·${par(m(0,1))} + ${par(A[0][2])}·${par(m(0,2))} = ${neg(s)}. Each small number is the 2×2 determinant left after deleting that entry's row and column. ${detMeans(s, true)}`};
 },
 cross(){
   const u=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)], v=[R.nz(-4,4),R.nz(-4,4),R.nz(-4,4)];
