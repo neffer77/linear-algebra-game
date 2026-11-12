@@ -60,14 +60,14 @@ module.exports = {
     t.eq('the next question is on the same topic', two.key, first.key);
     t.eq('at the same difficulty', two.diff, 2);
     t.ok('and is a new question, not the same one again', two.q !== first.q, two.q);
-    t.ok('it is marked as one like it', two.redo && /one like it/.test(two.tag), two.tag);
+    t.ok('it is marked as one like it', two.redo && /one like it/i.test(two.tag), two.tag);
 
     // --- a miss on the second go does not hold the knight on the topic ---
     await wrong(t);
     t.eq('missing the second go queues no third', await t.ev(() => Battle.redo), null);
     t.ok('and the verdict promises nothing more', !/The next one is like it/.test(await verdict(t)));
     const three = await next(t);
-    t.ok('the question after it is drawn as usual, not marked', !three.redo && !/one like it/.test(three.tag), three.tag);
+    t.ok('the question after it is drawn as usual, not marked', !three.redo && !/one like it/i.test(three.tag), three.tag);
 
     // --- the second go landed ---
     await pose(t, 'det2', 77);
