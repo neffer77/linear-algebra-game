@@ -36,13 +36,17 @@ function loadGame() {
   // it offers can be drawn here thousands of times without a page.
   const shape = script.slice(script.indexOf('  shape(a){'), script.indexOf('  buildable(q)'));
   const bank = script.slice(script.indexOf('  pieces(a){'), script.indexOf('  /* Draw the build into'));
+  // Find the slip's question, lifted the same way: it is built from a
+  // generated question alone, so every topic can be asked it here.
+  const slip = script.slice(script.indexOf('  SLIP:'), script.indexOf('  /* end of find the slip */'));
   const out = {};
   new Function('exports', mathPart + build + ';const Build={' + shape + bank + '};' +
+    ';const Slip={' + slip + '};' +
     ';exports.GEN=GEN;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
-    'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;')(out);
+    'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;')(out);
   return out;
 }
-const { GEN, buildQuestion, buildMote, mat, Figure, figEval, Build } = loadGame();
+const { GEN, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1131,6 +1135,45 @@ const bankTell = (() => {
   return { n, ratio };
 })();
 
+/* -------------------------------------------------------- find the slip */
+/* A mastered topic is now and then asked from the other side: a squire's wrong
+   answer, and which of three named mistakes made it. Asked of every topic at
+   every difficulty: the three are this question's own diagnoses and all
+   different, the one to pick is the diagnosis of the answer shown, the shown
+   answer is wrong, no mistake quotes an answer on offer (that would hand the
+   match over), and the verdict lays every mistake beside the answer it gives. */
+const slipNotes = (() => {
+  const plain = h => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  let n = 0;
+  const topics = new Set();
+  for (const key of Object.keys(GEN)) {
+    for (let d = 1; d <= 3; d++) {
+      for (let i = 0; i < Math.max(20, Math.round(REPS / 10)); i++) {
+        const q = buildQuestion(key, d);
+        const st = Slip.slipStep(q);
+        if (!st) continue;
+        n++; topics.add(key);
+        const names = q.choices.filter(c => c !== q.a && q.why && q.why[c]).map(c => Slip.cap(q.why[c]));
+        if (st._choices.length !== 3) fail('slip', key, `${st._choices.length} mistakes on offer, not 3`);
+        if (new Set(st._choices).size !== st._choices.length) fail('slip', key, 'two mistakes on offer read the same');
+        if (!st._choices.every(c => names.includes(c))) fail('slip', key, "a mistake on offer is not one of this question's own");
+        if (st._choices.filter(c => c === st.a).length !== 1) fail('slip', key, 'the mistake to pick is not on offer exactly once');
+        if (st.shown === q.a || !q.choices.includes(st.shown)) fail('slip', key, "the squire's answer is not one of the wrong answers");
+        if (Slip.cap(q.why[st.shown]) !== st.a) fail('slip', key, 'the mistake to pick is not the one that gives the answer shown');
+        for (const c of st._choices) for (const x of q.choices)
+          if (Slip.quotes(c, x)) fail('slip', key, `"${plain(c).slice(0, 50)}" quotes the answer ${plain(x)}`);
+        const tab = (st.ex.match(/<div class="sl( was)?">/g) || []).length;
+        if (tab !== 3 || (st.ex.match(/class="sl was"/g) || []).length !== 1)
+          fail('slip', key, `the verdict lays out ${tab} mistakes, not 3 with the squire's marked`);
+        if (!st.ex.includes(q.a)) fail('slip', key, 'the verdict never says what it comes to done right');
+        if (Object.keys(st.why).length || Object.keys(st._why).length) fail('slip', key, 'a wrong pick would be recorded as a slip of the knight\'s own');
+      }
+    }
+  }
+  if (topics.size < 60) fail('slip', 'coverage', `only ${topics.size} topics can be asked as find the slip`);
+  return { n, topics: topics.size };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1159,6 +1202,7 @@ if (seenComplexity.size) {
 }
 console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
 console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);
+console.log(`  find-the-slip questions    ${pad(slipNotes.n.toLocaleString(), 11)}  (${slipNotes.topics} topics, none quoting an answer)`);
 if (figKeys.size) {
   console.log(`  generators with figures      ${pad(figKeys.size, 8)}`);
   console.log(`  figure specs checked       ${pad(figsChecked.toLocaleString(), 11)}  (${figKinds.size}/${Figure.KINDS.length} kinds)`);

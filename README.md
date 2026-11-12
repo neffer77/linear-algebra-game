@@ -406,6 +406,7 @@ The game is built so that losing teaches you as much as winning.
   | ⚖️ true or false | A claimed answer, and you say whether it is right. A false claim is always one of the mistakes the question can diagnose, and the reason is read out either way. |
   | 🎯 choose | The question as it always was: four answers. |
   | 🧩 build it | No answers offered. A vector or matrix is assembled from number tiles, slot by slot; a whole number is typed. It strikes as a Perfect Strike does, ×3. |
+  | 🔍 find the slip | Past the ladder, about one question in five. A squire's wrong answer, and which of three named mistakes made it. |
 
   **Where a topic stands is not stored anywhere.** It is read off *effective* mastery —
   the faded number that already sets difficulty — so a topic left alone for a month walks
@@ -502,6 +503,19 @@ The game is built so that losing teaches you as much as winning.
   draw, so a struggling knight is never held on one topic. Landing it is named. A first
   meeting is left to the lesson ladder, the daily is left as the same twelve for everyone,
   and nothing is saved.
+- **🔍 Find the slip.** Choosing among four answers tests a method from one side: getting
+  it right. Once a topic is past the ladder, about one question in five asks it from the
+  other side. A squire's wrong answer is shown, and the question is which of three named
+  mistakes made it, which is only answerable by working the problem and then working each
+  mistake far enough to see where it lands. The three are the generator's own diagnoses of
+  that question's wrong answers, all different; a question whose diagnoses would quote an
+  answer on offer, and so hand the match over, is asked the plain way instead. Sixty-seven
+  of the seventy topics can be asked it. The verdict lays each mistake beside the answer it
+  gives, with the squire's marked, and then what the problem comes to done right. It
+  strikes and is struck like any other question and counts as a whole answer; picking the
+  wrong mistake is not recorded as making it. The Training Grounds ask it too; the daily
+  and the ladders of complex topics do not, and nothing is saved. Building it also fixed
+  the true-or-false claim, whose label style was shrinking a matrix claimed inside it.
 - **Figures you can read at a glance** — twenty topics carry a drawn diagram beside the
   question, and a second one beside the explanation. The split is deliberate: the question
   figure is a *prompt*, never a solution. Vector addition draws **u** and **v** and stops
@@ -593,7 +607,7 @@ Inside `index.html` the code is organised as:
 | `ROOMS`, `Rooms` | the Keep: the hub, what each door says, each room's drawn scene, and the bench lists |
 | `ROOM_STYLES`, `Quarters` | the knight's own room: trophies read off cleared champions, colours and crest on the roster, and room styles opened by play |
 | `Brew` | the Apothecary's mix: draws independent herbs, builds a target from hidden parts, and hands a right mix to the bench |
-| `RULES`, `Lesson` | a rule card for every topic, and the ladder a topic is asked up — rung read off faded mastery, the true-or-false and three-answer steps, and the tile-and-slot build |
+| `RULES`, `Lesson` | a rule card for every topic, and the ladder a topic is asked up — rung read off faded mastery, the true-or-false and three-answer steps, and the tile-and-slot build, and find the slip (`slipStep`) |
 | `WaveEngine` | one foe curve for every setting — ramp, swell, thin air and champions in one place |
 | `Codec` | the knight code: a binary save encoder, base32 and checksummed, small enough for a QR |
 | `DESTINATIONS` | what the map offers and in what order, as a table rather than hand-written blocks |
@@ -672,7 +686,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-two suites, 1,538 checks, about a minute:
+loop only exists once the page is running. Thirty-three suites, 1,575 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -698,6 +712,7 @@ loop only exists once the page is running. Thirty-two suites, 1,538 checks, abou
 | `working` | being shown the steps costs the strike and moves nothing in the mastery model |
 | `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
 | `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
+| `findslip` | a held topic can be asked as find the slip, tagged, with the squire's answer and the question; three different mistakes, all this question's own diagnoses, the right pick being the diagnosis of the answer shown; none marked a trap; a matrix in the claim keeps its shape; no Perfect Strike, the working still offered; a right pick strikes, counts whole and lays out all three with the squire's marked and the answer done right; a wrong pick is struck, is not recorded as a slip of the knight's own, and brings one like it; never on a topic not yet held, nor with lessons off; a diagnosis quoting an answer sends the question back to plain; about one in five; never on a ladder or in the daily; the yard asks and explains it the same way; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
@@ -809,6 +824,12 @@ The generators were also checked by:
   The first run found it beating chance by about 45%, because the spare tiles were all
   near misses of the answer's own numbers; they are now drawn around every number on
   offer, and the tell sits near 15%, which is what small answers like ⟨0, 1⟩ cost honestly.
+- **About 4,700 find-the-slip questions** asked of every topic at every difficulty,
+  asserting three different mistakes, each one of that question's own diagnoses; the one
+  to pick is the diagnosis of the squire's answer, which is a wrong one; no mistake quotes
+  an answer on offer; the verdict lays out all three with the squire's marked and says
+  what the problem comes to; and a wrong pick would not be recorded as a slip. At least
+  sixty topics must be askable this way; sixty-seven are.
 - **27,000 matrix identities** — rendered matrices parsed back out of the HTML and
   recomputed independently, including `A · adj(A) = det(A) · I` for the inverse.
 - **Reachability of every one of the 70 topics** at 320×568, measured as the scroll
