@@ -451,7 +451,14 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .lcard .lnow{margin-top:8px; font-size:12px; color:var(--dim);}
 .claim{margin-top:10px; padding:9px 10px; border-radius:10px; border:1px dashed var(--gold);
   background:rgba(242,193,78,.07); font-size:17px;}
-.claim span{display:block; font-family:var(--serif); font-size:10px; letter-spacing:.16em;
+.slipq{margin-top:8px; font-weight:800; color:var(--gold);}
+.sltab{display:grid; gap:4px; margin:4px 0 6px;}
+.sltab .sl{display:flex; justify-content:space-between; align-items:center; gap:10px; padding:6px 9px;
+  border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); font-size:13px;}
+.sltab .sl b{white-space:nowrap; color:var(--dim); font-weight:700;}
+.sltab .sl.was{border-color:var(--gold); background:rgba(242,193,78,.08);}
+.sltab .sl.was b{color:var(--gold);}
+.claim>span:first-child{display:block; font-family:var(--serif); font-size:10px; letter-spacing:.16em;
   text-transform:uppercase; color:var(--gold); margin-bottom:3px;}
 /* Building an answer out of its pieces. The slots sit inside the answer's own
    shape — brackets, commas and all — so what is being assembled looks like the
@@ -7186,8 +7193,8 @@ const Lesson = {
   MEET:0.15, TF:0.35, CHOOSE:0.60, BUILD:0.75,
   ORDER:['meet','tf','choose','build'],
   WEIGHT:{meet:0.6, tf:0.6},
-  LABEL:{meet:'first meeting', tf:'true or false', choose:'choose', build:'build it'},
-  ICON:{meet:'📖', tf:'⚖️', choose:'🎯', build:'🧩'},
+  LABEL:{meet:'first meeting', tf:'true or false', choose:'choose', build:'build it', slip:'find the slip'},
+  ICON:{meet:'📖', tf:'⚖️', choose:'🎯', build:'🧩', slip:'🔍'},
   TRUE:'✔ True', FALSE:'✘ False',
 
   /* Answers that have more than one right form. "Which vector is an
@@ -7237,6 +7244,11 @@ const Lesson = {
     if(stage==='meet') p.step=this.meetStep(q);
     else if(stage==='tf') p.step=this.tfStep(q);
     else if(stage==='free' || (stage==='build' && !this.buildable(q))) p.format='choose';
+    // Past the ladder, now and then the same problem is asked from the other side.
+    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){
+      const s=this.slipStep(q);
+      if(s){ p.format='slip'; p.step=s; }
+    }
     return p;
   },
 
@@ -7271,6 +7283,45 @@ const Lesson = {
              why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,
              _choices:[this.TRUE, this.FALSE] };
   },
+
+  /* Find the slip. Past the ladder, a topic is asked as plain as it gets, and
+     choosing among four answers tests the method only from one side: getting it
+     right. This asks it from the other. A squire's wrong answer is shown, and
+     the question is which mistake made it — which is only answerable by working
+     the problem and then working each mistake far enough to see where it lands.
+
+     The mistakes on offer are the ones the generator already diagnoses: every
+     wrong answer it can name the cause of. All three must be named and named
+     differently, or the question is a guess between fewer. A diagnosis that
+     quotes an answer on offer would hand the match over, so such a question is
+     asked the plain way instead. Nothing is recorded as a slip of the knight's
+     own, so \`why\` is empty: picking the wrong mistake is not making it. */
+  SLIP:0.2,
+  cap(s){ s=String(s); return s.charAt(0).toUpperCase()+s.slice(1); },
+  plain(h){ return String(h).replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ').trim(); },
+  quotes(text, ans){
+    const a=this.plain(ans).replace(/[.*+?^\${}()|[\\]\\\\]/g,'\\\\$&');
+    return !!a && new RegExp('(^|[^\\\\w.])'+a+'($|[^\\\\w.])').test(this.plain(text));
+  },
+  slipStep(q){
+    const traps=q.choices.filter(c=>c!==q.a && q.why && q.why[c]);
+    if(traps.length<3) return null;
+    const opts=traps.slice(0,3), names=opts.map(c=>this.cap(q.why[c]));
+    if(new Set(names).size<3) return null;
+    if(names.some(n=>q.choices.some(c=>this.quotes(n, c)))) return null;
+    const shown=R.pick(opts), a=this.cap(q.why[shown]);
+    const table=opts.map((c,i)=>\`<div class="sl\${c===shown?' was':''}"><span>\${names[i]}</span><b>→ \${c}</b></div>\`).join('');
+    return { lesson:'slip', topic:q.topic, shown, quiet:true,
+             q:\`\${q.q}<div class="claim"><span>A squire answered</span>\${shown}</div>
+                <div class="slipq">Which slip gives that?</div>\`,
+             a,
+             ex:\`<div style="margin-bottom:6px">The squire's slip: <b>\${a}</b>.</div>
+                 <div class="sltab">\${table}</div>
+                 <div style="margin:6px 0">Done right, it comes to <b style="color:var(--gold)">\${q.a}</b>.</div>\${q.ex}\`,
+             why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,
+             _choices:R.shuffle(names.slice()) };
+  },
+  /* end of find the slip */
 
   /* The card a first meeting opens with: the rule, one small instance of it,
      and — folded away, because it is long — a whole problem worked through.
@@ -7313,6 +7364,8 @@ const Lesson = {
 
   // The tag beside the topic's name: which rung, and how far up the ladder.
   chip(p){
+    if(p && p.format==='slip')
+      return \`<span class="lsn" data-stage="free" data-format="slip">\${this.ICON.slip} \${this.LABEL.slip}</span>\`;
     if(!p || p.stage==='free') return '';
     if(p.format==='rite' && p.stage!=='meet') return '';
     const f = p.format==='rite' ? 'meet' : p.format;

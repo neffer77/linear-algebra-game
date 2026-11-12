@@ -1,89 +1,89 @@
 {
-  "change": "A miss is followed by a fresh question on the same topic",
+  "change": "A mastered topic is now and then asked as find the slip",
   "mutations": [
     {
-      "name": "a miss never brings its topic back",
+      "name": "a mistake that quotes an answer on offer is asked anyway",
       "file": "index.html",
-      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
-      "replace": "    this.redo = (false && !ok && !this.cur.redo && !this.lessonIs('meet'))\n",
-      "run": "play:again"
-    },
-    {
-      "name": "a miss on the second go queues a third",
-      "file": "index.html",
-      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
-      "replace": "    this.redo = (!ok && !this.lessonIs('meet'))\n",
-      "run": "play:again"
-    },
-    {
-      "name": "a right answer brings its topic back too",
-      "file": "index.html",
-      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
-      "replace": "    this.redo = (!this.cur.redo && !this.lessonIs('meet'))\n",
-      "run": "play:again"
-    },
-    {
-      "name": "a missed first meeting is pulled out of the lesson ladder",
-      "file": "index.html",
-      "find": "    this.redo = (!ok && !this.cur.redo && !this.lessonIs('meet'))\n",
-      "replace": "    this.redo = (!ok && !this.cur.redo)\n",
-      "run": "play:again"
-    },
-    {
-      "name": "the next question ignores the miss",
-      "file": "index.html",
-      "find": "      if(this.redo){ key=this.redo.key; diff=this.redo.diff; }\n",
+      "find": "    if(names.some(n=>q.choices.some(c=>this.quotes(n, c)))) return null;\n",
       "replace": "",
-      "run": "play:again"
+      "run": "verify"
     },
     {
-      "name": "the topic comes back at whatever difficulty the draw says",
+      "name": "the squire's answer is the right one",
       "file": "index.html",
-      "find": "      if(this.redo){ key=this.redo.key; diff=this.redo.diff; }",
-      "replace": "      if(this.redo){ key=this.redo.key; }",
-      "run": "play:again"
+      "find": "    const shown=R.pick(opts), a=this.cap(q.why[shown]);\n",
+      "replace": "    const shown=q.a, a=this.cap(q.why[R.pick(opts)]);\n",
+      "run": "verify"
     },
     {
-      "name": "the second go is not marked",
+      "name": "the mistake to pick is not the one that gave the answer",
       "file": "index.html",
-      "find": "    if(again) this.cur.redo = true;\n",
+      "find": "    const shown=R.pick(opts), a=this.cap(q.why[shown]);\n",
+      "replace": "    const shown=R.pick(opts), a=names[0];\n",
+      "run": "verify"
+    },
+    {
+      "name": "only two mistakes are on offer",
+      "file": "index.html",
+      "find": "    const opts=traps.slice(0,3), names=opts.map(c=>this.cap(q.why[c]));\n",
+      "replace": "    const opts=traps.slice(0,2), names=opts.map(c=>this.cap(q.why[c]));\n",
+      "run": "verify"
+    },
+    {
+      "name": "the verdict leaves out where each mistake lands",
+      "file": "index.html",
+      "find": "    const table=opts.map(",
+      "replace": "    const table='';[].map(",
+      "run": "verify"
+    },
+    {
+      "name": "picking the wrong mistake is recorded as making it",
+      "file": "index.html",
+      "find": "             why:{}, _why:{}, fig:q.fig, figAnswer:q.figAnswer,\n             _choices:R.shuffle(names.slice()) };",
+      "replace": "             why:{}, _why:Object.fromEntries(names.map(n=>[n,n])), fig:q.fig, figAnswer:q.figAnswer,\n             _choices:R.shuffle(names.slice()) };",
+      "run": "verify"
+    },
+    {
+      "name": "a held topic is never asked as find the slip",
+      "file": "index.html",
+      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "replace": "    if(false && stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "it is asked on every rung of the ladder",
+      "file": "index.html",
+      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "replace": "    if(this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "it is asked with lessons switched off",
+      "file": "index.html",
+      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "replace": "    if(stage==='free' && Game.s && R.chance(this.SLIP)){\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "it is asked four times as often",
+      "file": "index.html",
+      "find": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP)){\n",
+      "replace": "    if(stage==='free' && this.on() && Game.s && R.chance(this.SLIP*4)){\n",
+      "run": "play:findslip"
+    },
+    {
+      "name": "the question carries no tag",
+      "file": "index.html",
+      "find": "    if(p && p.format==='slip')\n      return `<span class=\"lsn\" data-stage=\"free\" data-format=\"slip\">${this.ICON.slip} ${this.LABEL.slip}</span>`;\n",
       "replace": "",
-      "run": "play:again"
+      "run": "play:findslip"
     },
     {
-      "name": "a new fight inherits the last fight's miss",
+      "name": "the claim's label style swallows a matrix in it",
       "file": "index.html",
-      "find": "    this.redo=null;                  // a miss's second go does not follow it out\n",
-      "replace": "",
-      "run": "play:again"
-    },
-    {
-      "name": "the question shows no one-like-it tag",
-      "file": "index.html",
-      "find": "      (this.cur.redo ? ' <span class=\"rev again\">↺ one like it</span>' : '') +\n",
-      "replace": "",
-      "run": "play:again"
-    },
-    {
-      "name": "the verdict does not say what comes next",
-      "file": "index.html",
-      "find": "      (!inRite && this.redo && Game.s.hp>0 ? `",
-      "replace": "      (false && this.redo && Game.s.hp>0 ? `",
-      "run": "play:again"
-    },
-    {
-      "name": "a landed second go is not named",
-      "file": "index.html",
-      "find": "      (!inRite && ok && this.cur.redo ? `",
-      "replace": "      (false && ok && this.cur.redo ? `",
-      "run": "play:again"
-    },
-    {
-      "name": "the shown working does not say what comes next",
-      "file": "index.html",
-      "find": "        (this.redo ? `<div class=\"miss again\">",
-      "replace": "        (false ? `<div class=\"miss again\">",
-      "run": "play:again"
+      "find": ".claim>span:first-child{display:block;",
+      "replace": ".claim span{display:block;",
+      "run": "play:findslip"
     }
   ]
 }

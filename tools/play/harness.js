@@ -70,10 +70,15 @@ class Play {
   text() { return this.ev(() => document.querySelector('.screen.on').innerText); }
   reload() { return this.page.reload().then(() => this.ready()); }
 
-  ready() {
-    return this.page.waitForFunction(
+  /* A mastered topic is now and then asked as "find the slip" instead of with
+   * its four answers, on a roll of the dice. Suites that pin down the plain
+   * question would fail one run in five on that roll, so it is off here unless
+   * a suite turns it on (`slips: true`); the find-the-slip suite does. */
+  async ready() {
+    await this.page.waitForFunction(
       () => typeof Game !== 'undefined' && typeof Dungeon !== 'undefined'
          && typeof Mastery !== 'undefined' && typeof Profiles !== 'undefined');
+    if (!this.slips) await this.ev(() => { Lesson.SLIP = 0; });
   }
   /* The game opens on the title screen with nobody playing. Most suites want a
    * knight in hand; the front-door suite deliberately does not call this. */
@@ -174,6 +179,7 @@ async function runSuite(browser, suite) {
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   const t = new Play(page, errors);
+  t.slips = !!suite.slips;
   let crash = null;
   try {
     await page.goto(URL);
