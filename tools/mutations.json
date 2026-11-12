@@ -1,74 +1,39 @@
 {
-  "change": "Every control can be reached, named and pressed from the keyboard",
+  "change": "A button the keyboard has Tabbed onto keeps its own Enter",
   "mutations": [
     {
-      "name": "no watch on the page: controls drawn after it loads are left out",
+      "name": "Enter always moves the turn on, whatever the keyboard rests on",
       "file": "index.html",
-      "find": "      for(const r of recs) for(const n of r.addedNodes) this.mark(n);",
-      "replace": "      for(const r of recs) for(const n of r.addedNodes) void n;",
+      "find": "      if(A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
+      "replace": "      if(false && A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
       "run": "play:a11y"
     },
     {
-      "name": "nothing is named as a button",
+      "name": "a clicked button takes Enter too, so a picked answer stops moving on",
       "file": "index.html",
-      "find": "      if(!el.hasAttribute('role')) el.setAttribute('role','button');\n",
+      "find": "      if(A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&\n",
+      "replace": "      if(t && t!==go && t.nodeType===1 && !t.disabled &&\n",
+      "run": "play:a11y"
+    },
+    {
+      "name": "Tab is never noticed",
+      "file": "index.html",
+      "find": "    addEventListener('keydown', e=>{ if(e.key==='Tab') this.tabbed=true; }, true);\n",
       "replace": "",
       "run": "play:a11y"
     },
     {
-      "name": "nothing is put in the tab order",
+      "name": "a pointer never clears the Tab",
       "file": "index.html",
-      "find": "      if(!el.hasAttribute('tabindex')) el.tabIndex=0;\n",
+      "find": "    addEventListener('pointerdown', ()=>{ this.tabbed=false; }, true);\n",
       "replace": "",
       "run": "play:a11y"
     },
     {
-      "name": "no key presses a control",
+      "name": "a native button with a live handler is not recognised",
       "file": "index.html",
-      "find": "    addEventListener('keydown', e=>this.key(e), true);\n",
-      "replace": "",
-      "run": "play:a11y"
-    },
-    {
-      "name": "Space does not press a control",
-      "file": "index.html",
-      "find": "    if(e.key!=='Enter' && e.key!==' ') return;",
-      "replace": "    if(e.key!=='Enter') return;",
-      "run": "play:a11y"
-    },
-    {
-      "name": "the key is heard after the battle's own Enter",
-      "file": "index.html",
-      "find": "    addEventListener('keydown', e=>this.key(e), true);",
-      "replace": "    addEventListener('keydown', e=>this.key(e));",
-      "run": "play:a11y"
-    },
-    {
-      "name": "the key that pressed a control goes on to press continue too",
-      "file": "index.html",
-      "find": "    e.preventDefault(); e.stopPropagation();\n    el.click();",
-      "replace": "    e.preventDefault();\n    el.click();",
-      "run": "play:a11y"
-    },
-    {
-      "name": "no ring shows where the keyboard is",
-      "file": "index.html",
-      "find": ":focus-visible{outline:2px solid var(--gold);outline-offset:2px;}\n",
-      "replace": "",
-      "run": "play:a11y"
-    },
-    {
-      "name": "the verdict is not read out when it lands",
-      "file": "index.html",
-      "find": " aria-live=\"polite\"></div>",
-      "replace": "></div>",
-      "run": "play:a11y"
-    },
-    {
-      "name": "the game never starts the watch",
-      "file": "index.html",
-      "find": "  A11y.start();\n",
-      "replace": "",
+      "find": "((t.tagName==='BUTTON' && typeof t.onclick==='function')",
+      "replace": "((t.tagName==='BUTTONS' && typeof t.onclick==='function')",
       "run": "play:a11y"
     }
   ]

@@ -7043,8 +7043,9 @@ const Tiles = {
     box.classList.toggle('grid2', this.fits(choices));
   },
   /* Keys for a keyboard: 1–4 or A–D picks an answer, Enter moves on. Only on
-     the two screens that ask questions, never while something is being typed,
-     and only answers still standing — a faded one cannot be picked by key any
+     the two screens that ask questions, never while something is being typed
+     or the keyboard has been Tabbed onto another control, and only answers
+     still standing — a faded one cannot be picked by key any
      more than by finger. */
   key(e){
     if(e.metaKey || e.ctrlKey || e.altKey) return;
@@ -7056,6 +7057,11 @@ const Tiles = {
     const k=e.key.toLowerCase();
     if(k==='enter'){
       const go=on.querySelector('#contBtn') || (on.id==='s-train' && on.querySelector('#tExplain .btn.gold'));
+      // With the keyboard Tabbed onto some other live control, Enter is that
+      // control's, and it presses itself. A control merely clicked keeps focus
+      // too (a picked answer, a draught), and there Enter still moves on.
+      if(A11y.tabbed && t && t!==go && t.nodeType===1 && !t.disabled &&
+         ((t.tagName==='BUTTON' && typeof t.onclick==='function') || /^(A|SELECT|SUMMARY)$/.test(t.tagName))) return;
       if(go && go.offsetParent!==null){ e.preventDefault(); go.click(); }
       return;
     }
@@ -7083,6 +7089,9 @@ addEventListener('keydown', e=>Tiles.key(e));
    keep up to date. */
 const A11y = {
   NATIVE: /^(BUTTON|A|INPUT|SELECT|TEXTAREA|SUMMARY|OPTION)$/,
+  // Whether focus last moved by Tab rather than by a pointer. A clicked
+  // button keeps focus without the player meaning to rest there.
+  tabbed: false,
   needs(el){
     return el.nodeType===1 && typeof el.onclick==='function' && !this.NATIVE.test(el.tagName)
       && el!==document.body && el!==document.documentElement;
@@ -7114,6 +7123,8 @@ const A11y = {
       for(const r of recs) for(const n of r.addedNodes) this.mark(n);
     }).observe(document.body, {childList:true, subtree:true});
     addEventListener('keydown', e=>this.key(e), true);
+    addEventListener('keydown', e=>{ if(e.key==='Tab') this.tabbed=true; }, true);
+    addEventListener('pointerdown', ()=>{ this.tabbed=false; }, true);
   }
 };
 
