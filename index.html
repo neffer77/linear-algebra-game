@@ -381,6 +381,8 @@ hr:after{content:"◆"; position:absolute; left:50%; top:50%;
 .rp.now{border-color:var(--gold); box-shadow:0 0 8px var(--gold);}
 #riteTrail{font-size:12px; color:var(--dim); line-height:1.7; margin-bottom:6px;}
 #riteTrail b{color:var(--ink);}
+#riteTrail .mtx{gap:0 6px;padding:1px 7px;line-height:1.2;margin:1px 2px}
+#riteTrail .mtx:before,#riteTrail .mtx:after{width:4px;border-width:1.5px}
 .qchip{display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:34px;
   margin-left:6px; border-radius:9px; border:1px solid var(--gold-dk); background:#2b2247;
   color:var(--gold); font-weight:900; cursor:pointer; vertical-align:middle;}
@@ -967,6 +969,32 @@ function mat(rows){
     out+='</span>';
   }
   return out+'</span>';
+}
+// A rung of a rite as the trail beside the ladder shows it: the question's own
+// words with its mathematics still drawn (a matrix as a matrix, a fraction as a
+// fraction, a power raised), cut after a whole word and never inside a sum.
+// Stripping the tags instead flattened a matrix column by column, so
+// [−1 −3; 2 −2] read "−1 2 −3 −2", and e³ˣ read "e 3x".
+const TRAIL_MATH = /<span class="mtx">(?:<span class="col">(?:<span>[^<]*<\/span>)*<\/span>)*<\/span>|<span class="frac"><span>[^<]*<\/span><span>[^<]*<\/span><\/span>|<su[pb]>[^<]*<\/su[pb]>/g;
+function trailQ(html, max=64){
+  const re=new RegExp(TRAIL_MATH.source,'g'), parts=[]; let last=0, m;
+  while((m=re.exec(html))){ if(m.index>last) parts.push({t:html.slice(last,m.index)}); parts.push({m:m[0]}); last=re.lastIndex; }
+  if(last<html.length) parts.push({t:html.slice(last)});
+  let out='', n=0;
+  const cut=()=>out.replace(/\s+$/,'')+'…';
+  for(const p of parts){
+    if(p.m){
+      const w=p.m.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().length;
+      if(n+w>max) return cut();
+      out+=p.m; n+=w; continue;
+    }
+    const t=p.t.replace(/<br\s*\/?>/g,' ').replace(/<[^>]+>/g,'').replace(/\s+/g,' ');
+    if(n+t.length<=max){ out+=t; n+=t.length; continue; }
+    const head=t.slice(0, max-n+1), sp=head.lastIndexOf(' ');
+    out+= sp>0 ? head.slice(0,sp) : '';
+    return cut();
+  }
+  return out.trim();
 }
 const vec = a => mat(a.map(x=>[x]));                       // column vector
 const vecR= a => '⟨'+a.map(neg).join(', ')+'⟩';            // inline row vector
@@ -6380,7 +6408,7 @@ const Battle = {
       const r=this.rite;
       r.trail.push(ok);
       r.steps = r.steps || [];
-      r.steps.push(`${st.q.replace(/<[^>]+>/g,' ').trim().slice(0,44)} → ${ok?st.a:'<span style="color:var(--red)">'+st.a+'</span>'}`);
+      r.steps.push(`${trailQ(st.q)} → ${ok?st.a:'<span style="color:var(--red)">'+st.a+'</span>'}`);
       if(ok){
         r.clean++;
         this.combo++;

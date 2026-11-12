@@ -437,6 +437,35 @@ module.exports = {
     t.ok('and only its first', rite.second.rite && !rite.second.card);
     t.ok('once met, the ladder is the whole of its teaching', rite.later.format === 'rite' && !rite.later.card && rite.later.chip === '');
 
+    // The trail beside the ladder records each rung taken. It used to strip
+    // the question's markup, which flattened a matrix column by column, so
+    // [−1 −3; 2 −2] read "−1 2 −3 −2" and a cut fell mid-word: "dotted with c".
+    const trail = await t.ev(() => {
+      const s = __L.ask('matMul', undefined);
+      const rungs = [];
+      for (let i = 0; i < 2 && Battle.rite; i++) {
+        rungs.push(Battle.step().q);
+        __L.answer(true); __L.next();
+      }
+      const el = document.getElementById('riteTrail');
+      const mt = [...el.querySelectorAll('.mtx')];
+      const fits = mt.every(m => m.getBoundingClientRect().right <= el.getBoundingClientRect().right + 1);
+      const asked = document.createElement('div'); asked.innerHTML = rungs[1] || '';
+      const want = [...asked.querySelectorAll('.mtx')].map(m => m.outerHTML);
+      const bare = el.cloneNode(true);             // the words, with the drawn matrices lifted out
+      bare.querySelectorAll('.mtx').forEach(m => m.replaceWith('[M]'));
+      return { shown: el.style.display !== 'none', lines: el.innerHTML.split('<br>').length,
+               mats: mt.map(m => m.outerHTML), want, fits,
+               text: bare.textContent, h: el.getBoundingClientRect().height };
+    });
+    t.ok('the trail beside a ladder shows each rung taken', trail.shown && trail.lines === 2, trail.text);
+    t.ok('a matrix in a rung is drawn there as the matrix that was asked',
+      trail.want.length === 2 && trail.mats.length === 2 && trail.want.every((m, i) => m === trail.mats[i]),
+      JSON.stringify(trail.mats).slice(0, 200));
+    t.ok('never read off as a flat run of numbers', /Row 1 of \[M\] dotted with column 1 of \[M\]/.test(trail.text)
+      && !/[−\d]+\s+[−\d]+\s+[−\d]+/.test(trail.text), trail.text);
+    t.ok('and the drawn matrices stay inside the trail on a phone', trail.fits && trail.h < 160, String(trail.h));
+
     // ------------------------------------------------------------------
     // The daily is the same twelve problems for everyone.
     // ------------------------------------------------------------------
