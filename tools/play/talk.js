@@ -103,6 +103,22 @@ module.exports = {
     // --- a blow lands: the foe gloats about the blow ---
     await fight(t, 0, 1);
     t.ok('when its blow lands, the foe gloats', /^gloat:/.test(await answer(t, false)));
+    const echo = await t.ev(() => {
+      const f = document.querySelector('#explain .foesay');
+      return f ? { text: f.innerText, hidden: f.getAttribute('aria-hidden'), said: Talk.turn && Talk.turn.text } : null;
+    });
+    t.ok('and the verdict, where a phone scrolls to, repeats what it said',
+      echo && echo.text.includes(echo.said) && echo.text.includes('Bramble Goblin'), JSON.stringify(echo));
+    t.eq('again hidden from screen readers', echo && echo.hidden, 'true');
+    await fight(t, 0, 2);
+    const first = await t.ev(() => {
+      Talk.ODDS.gloat = 0;
+      Battle.answered = false;
+      Battle.answer(null, Battle.cur.choices.find(x => x !== Battle.cur.a));
+      Talk.ODDS.gloat = 1;
+      return !!document.querySelector('#explain .foesay');
+    });
+    t.ok('the opening line is not carried into the first verdict', !first);
 
     // --- a crit stings ---
     await fight(t, 0, 1);
@@ -112,6 +128,8 @@ module.exports = {
       await t.ev(() => { document.getElementById('say').dataset.last = ''; });
       return answer(t, true, false);
     })(), '');
+    t.ok("and its verdict carries no line left over from the last turn",
+      !(await t.ev(() => !!document.querySelector('#explain .foesay'))));
 
     // --- a streak of five worries it, once ---
     const worry = await t.ev(() => {
