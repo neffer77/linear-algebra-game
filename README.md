@@ -76,6 +76,15 @@ prefilled — tap through it and you need never touch a keyboard again.
   turn, and when it flashes ⚡ the next blow lands *regardless of your answer*. Answering
   correctly braces it down to about a third; armour subtracts from what's left. This is
   why gear, draughts and gold matter even to a player who never misses.
+- **Foes talk.** A fight is a duel, and a duel is better with someone on the other side.
+  Each foe says a line as the fight opens, gloats now and then when its blow lands, cries
+  out at a crit, worries when your streak reaches five, begs once when nearly beaten, and
+  has last words on the killing blow. Slimes blorp, golems speak in capitals, and the
+  eight realm bosses talk about their own mathematics: the Determinant Golem's is not
+  zero, so it can undo anything, until it is. A foe gloats about the blow, never about
+  you. It is all decoration: the bubble is hidden from screen readers, the daily's straw
+  knight keeps silent, it never touches the seeded draw that makes the daily the same
+  for everyone, and nothing of it is saved.
 
 **⛓️ Rites.** A topic that is genuinely complex does not arrive as one hard question. It
 arrives as a ladder of five-second steps — *pick u · find du · rewrite · integrate* — each
@@ -621,6 +630,7 @@ Inside `index.html` the code is organised as:
 | `Calc` | the scratch pad: a keypad and a small expression evaluator that never calls `eval` |
 | `Game` | state, saving to `localStorage`, save migration, levelling |
 | `Anim` | the canvas render loop: knights, foes, lunges, particles, damage numbers, screen shake |
+| `Talk` | what foes say as a fight opens, when a blow lands either way, at a streak of five, when nearly beaten and on the killing blow; a voice for each kind of foe and one for each realm boss |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
@@ -690,7 +700,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-three suites, 1,577 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,600 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -717,6 +727,7 @@ loop only exists once the page is running. Thirty-three suites, 1,577 checks, ab
 | `nudge` | across every topic at every difficulty a nudge exists and never contains the answer, nor is it the working entire; a length, a dot product and a derivative are set up and left open, and a ladder asks its first rung; the rule stands in when nothing survives the cut, and nothing is offered when the rule would leak; in a fight it is offered once, shown above the choices, fits a phone, and costs half the strike and half the credit; it does not follow into the next question; it is not offered on a ladder, a first meeting, a true-or-false rung or in the daily; nothing is saved |
 | `a11y` | on the title screen and every screen a knight walks through, everything that can be tapped is a named button in the tab order; Enter and Space press a door and a settings row with real keys; the nudge and working doors drawn mid-fight are buttons too, and Enter takes the nudge without answering; a key that presses a control does not also continue past the verdict; Enter on a native button Tabbed onto presses it and not Continue, while Enter after a click still moves on; the verdict is read out when it lands; number keys still pick an answer; a focus ring is styled; nothing is saved |
 | `findslip` | a held topic can be asked as find the slip, tagged, with the squire's answer and the question; three different mistakes, all this question's own diagnoses, the right pick being the diagnosis of the answer shown; none marked a trap; a matrix in the claim keeps its shape; no Perfect Strike, the working still offered; a right pick strikes, counts whole and lays out all three with the squire's marked and the answer done right; a wrong pick is struck, is not recorded as a slip of the knight's own, and brings one like it; never on a topic not yet held, nor with lessons off; a diagnosis quoting an answer sends the question back to plain; a mistake sharing more of the squire's words than the others is caught as an echo, a tie or a shared word singles nothing out, and the squire never gives an answer whose own slip echoes it; about one in five; never on a ladder or in the daily; the yard asks and explains it the same way; nothing is saved |
+| `talk` | every kind of foe has a line for every moment and every boss its own, none too long for the bubble; a foe speaks as the fight opens, in its own voice, with a boss's line its own; the bubble is hidden from screen readers, fits the scene at 320px even at its longest line and goes away by itself; a landed blow draws a gloat, a crit a cry and an ordinary hit nothing; a streak of five draws one worry, nearly beaten one plea, and the killing blow last words; a new fight starts quiet; the daily's straw knight keeps silent and talk never moves the daily's seeded draw; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |

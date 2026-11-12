@@ -169,6 +169,15 @@ hr{border:0;border-top:1px solid var(--edge);margin:10px 0}
 .track .fill{position:relative;z-index:1}
 #sceneWrap{position:relative}
 #flash{position:absolute;inset:0;pointer-events:none;opacity:0;background:#fff;mix-blend-mode:screen}
+#say{position:absolute;right:4%;top:6%;max-width:46%;padding:7px 11px;border-radius:12px;
+  background:rgba(250,244,230,.96);color:#2a1d12;font-weight:700;font-size:13px;line-height:1.3;
+  box-shadow:0 3px 0 rgba(0,0,0,.35);pointer-events:none;opacity:0;transform:translateY(4px) scale(.92);
+  transform-origin:70% 100%;transition:opacity .25s,transform .25s}
+#say:after{content:"";position:absolute;bottom:-7px;left:58%;border:7px solid transparent;
+  border-bottom:0;border-top-color:rgba(250,244,230,.96)}
+#say.on{opacity:1;transform:none}
+#say.boss{background:rgba(255,226,160,.97)}
+#say.boss:after{border-top-color:rgba(255,226,160,.97)}
 #bigBanner{position:fixed;left:0;right:0;top:34%;z-index:60;pointer-events:none;
   text-align:center;opacity:0;transition:opacity .16s}
 #bigBanner.on{opacity:1}
@@ -772,7 +781,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
         <div class="track"><div class="ghost" id="eGhost"></div><div class="fill foe" id="eHp"></div></div>
       </div>
     </div>
-    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas><div id="flash"></div></div>
+    <div id="sceneWrap"><canvas id="scene" width="800" height="400"></canvas><div id="flash"></div><div id="say" aria-hidden="true"></div></div>
     <div class="track thin" style="margin-top:6px"><div class="fill time" id="timeBar"></div></div>
     <div style="display:flex;justify-content:space-between;margin-top:4px">
       <span class="small" id="comboTxt">Combo ×1.0</span>
@@ -5733,6 +5742,93 @@ const Combat = {
   }
 };
 
+/* --------------------------------- talk ---------------------------------- */
+/* Foes are people, of a sort. Each one says a line as the fight opens, a word
+   when it lands a blow or takes a hard one, worries when the knight's streak
+   reaches five, begs once when nearly beaten, and has last words. It is
+   decoration, so it never touches the seeded draw that keeps the daily the
+   same for everyone (Math.random, not R), never speaks for the daily's straw
+   knight, is hidden from screen readers (the verdict is what they need), and
+   nothing of it is saved. A foe gloats about the blow, never about the
+   knight: a miss is a thing that happened, not a thing they are.          */
+const Talk = {
+  ODDS:{ gloat:0.5, reel:0.7 },
+  SHOW_MS:2600,
+  ART:{
+    slime:{ meet:['Blorp. You look crunchy.','Squelch! A fresh knight!'],
+            gloat:['Blorp! Got you.','Squish!'], reel:['Bloop?! That stung!','My goo!'],
+            worry:['Slow down, slow down!'], low:["I'm… evaporating…"], fall:['Blorp…','Splat.'] },
+    goblin:{ meet:['Shiny armour! Mine soon.','Gold first, questions later!'],
+            gloat:['Hah! Wrong road!','Goblin wins that one!'], reel:['Ow! Not the ears!','Lucky swing!'],
+            worry:["It's doing maths at me!"], low:["Truce? I'll share the gold!"],
+            fall:['Fine! Take the gold!','Tell my brothers… nothing.'] },
+    golem:{ meet:['I. AM. SOLID.','STONE. DOES. NOT. BEND.'],
+            gloat:['CRUSH.','IMPACT. CONFIRMED.'], reel:['CRACK DETECTED.','…OW.'],
+            worry:['THREAT LEVEL. RISING.'], low:['STRUCTURE. FAILING.'], fall:['RETURNING. TO. GRAVEL.'] },
+    skeleton:{ meet:['Rattle rattle. Fresh bones?',"I've no skin in this game."],
+            gloat:['Clack clack!','Right in the ribs!'], reel:['My femur!',"That's a humerus hit."],
+            worry:["You're rattling me!"], low:["I'm coming apart at the joints!"],
+            fall:['Back in the box…','Bones… to dust…'] },
+    wisp:{ meet:['Follow meee… if you can.','A light in the dark? That is me.'],
+            gloat:['Flicker! Got you.','Ooh, the wrong way!'], reel:['My glow!','Dimming!'],
+            worry:["You're too bright for me!"], low:['Fading… fading…'], fall:['…pff.','Snuffed out.'] },
+    wraith:{ meet:['You cannot strike a shadow.','The cold has found you.'],
+            gloat:['Feel the chill.','Shadows strike back.'], reel:['You touched me?!','Aaah!'],
+            worry:['How do you keep finding me?'], low:['The dark… grows thin…'],
+            fall:['Back… to the gloom…'] },
+    dragon:{ meet:['Another snack in a tin.','My hoard grows heavier today.'],
+            gloat:['Toasted.','Your armour is a cooking pot.'], reel:['A scale! You took a scale!','Rrraagh!'],
+            worry:['This one is… persistent.'], low:["Enough! I'll fly away… soon…"],
+            fall:['My hoard… is yours…'] },
+    lich:{ meet:['I have studied for centuries.','Death is just a limit, knight.'],
+            gloat:['Another soul for the ledger.','Centuries of practice.'], reel:["You've been reading!",'My phylactery!'],
+            worry:['Where did you learn that?'], low:['My power… approaches zero…'],
+            fall:['Even I… reach my end…'] },
+    knightfoe:{ meet:['En garde!','Draw your blade, knight.'],
+            gloat:['Parried!','Your guard was open.'], reel:['A fine stroke!','Well struck!'],
+            worry:['You fight like a scholar!'], low:['I yield… nearly…'],
+            fall:['Well fought. Truly.','I salute you.'] },
+    harpy:{ meet:['Skree! Intruder!','Mine! All of it, mine!'],
+            gloat:['Ha-ha-haaa!','Talons win!'], reel:['My feathers!','Skreee!'],
+            worry:["You're ruffling me!"], low:['Wings… too heavy…'], fall:['Skree…'] }
+  },
+  BOSS:{
+    'The Vector Wyrm':      { meet:'I have magnitude AND direction.', low:'My direction… lost…', fall:'Down… to the zero vector…' },
+    'The Determinant Golem':{ meet:'MY DETERMINANT IS NOT ZERO. I UNDO ALL.', low:'DETERMINANT. NEARING. ZERO.', fall:'SINGULAR. NO WAY BACK.' },
+    'The Tangent Wraith':   { meet:'I touch your curve and match its slope.', low:'My slope… flattening…', fall:'Horizontal… at last…' },
+    'The Lich of Limits':   { meet:"Approach me. You'll never quite arrive.", low:'My strength… tends to zero…', fall:'The limit exists… and it is you.' },
+    'The Eigen Dragon':     { meet:'Transform me. I keep my direction.', low:'Scaled… down…', fall:'My eigenvalue… is zero…' },
+    'The Spectral Sovereign':{ meet:'Kneel before the spectrum.', low:'My spectrum… narrows…', fall:'A sovereign… dethroned…' },
+    'The Unbounded':        { meet:'I have no ceiling, knight.', low:'Bounded?! Me?!', fall:'Converging… to nothing…' },
+    'The Gradient Itself':  { meet:'I point up the steepest climb.', low:'Every way… is downhill…', fall:'A critical point… my last…' }
+  },
+  said:{}, timer:0,
+  reset(){ this.said={}; this.hide(); },
+  hide(){ clearTimeout(this.timer); const el=document.getElementById('say'); if(el) el.classList.remove('on'); },
+  pick(a){ return a[Math.floor(Math.random()*a.length)]; },
+  line(f, moment){
+    const b=f.boss && this.BOSS[f.nm];
+    if(b && b[moment]) return b[moment];
+    const pool=(this.ART[f.art]||this.ART.goblin)[moment];
+    return pool && pool.length ? this.pick(pool) : null;
+  },
+  // once: a moment that may only be said a single time in a fight.
+  say(moment, once){
+    const f=Battle.foe;
+    if(!f || f.dummy) return null;
+    if(once){ if(this.said[moment]) return null; this.said[moment]=true; }
+    if(moment in this.ODDS && Math.random()>=this.ODDS[moment]) return null;
+    const text=this.line(f, moment), el=document.getElementById('say');
+    if(!text || !el) return null;
+    el.textContent=text;
+    el.classList.toggle('boss', !!f.boss);
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    clearTimeout(this.timer);
+    this.timer=setTimeout(()=>el.classList.remove('on'), this.SHOW_MS);
+    return text;
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -5788,10 +5884,12 @@ const Battle = {
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
     Anim.reset();
+    Talk.reset();
     UI.go('s-battle');
     fitCanvas(); Anim.go();
     this.updateBars();
     this.nextQuestion();
+    Talk.say('meet');
   },
   // Weapon and armour as they stand right now, including any arena boons.
   wStats(){
@@ -6336,6 +6434,12 @@ const Battle = {
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
       this.ehp=Math.max(0,this.ehp-dmg);
       Anim.strike('p',dmg,crit,null,this.ehp<=0);
+      // The foe answers the blow: nearly beaten (once), rattled by a streak of
+      // five, or stung by a crit; and the killing blow draws its last words.
+      if(this.ehp<=0) Talk.say('fall');
+      else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);
+      else if(this.combo===5) Talk.say('worry', true);
+      else if(crit) Talk.say('reel');
       // A bigger blow is a longer blow: a crit throws half again as many
       // sparks, and a killing one drops into slow motion, which stretches the
       // whole thing. revealScroll waits this out before moving the page.
@@ -6404,6 +6508,7 @@ const Battle = {
         dmg += this.takeHit(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
+      if(Game.s.hp>0) Talk.say('gloat');
       this.settleMs = 820;
       Sfx.bad();
       this.missed++;
@@ -6711,7 +6816,7 @@ const Battle = {
   },
 
   flee(){
-    clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1);
+    clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1); Talk.hide();
     if(this.mode==='arena'){ Arena.retire(); return; }
     if(this.mode==='dungeon'){ Dungeon.leave(true); return; }
     UI.go('s-map');

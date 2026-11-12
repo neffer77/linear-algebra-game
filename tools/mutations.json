@@ -1,47 +1,103 @@
 {
-  "change": "Find the slip no longer gives itself away by echoing the squire",
+  "change": "Foes talk: an opening line, gloats, worries and last words",
   "mutations": [
     {
-      "name": "the squire may give an answer whose own slip echoes it",
+      "name": "no foe speaks as the fight opens",
       "file": "index.html",
-      "find": "    const shown=R.shuffle(opts.slice()).find(c=>!this.echoes(opts, names, c));\n",
-      "replace": "    const shown=R.pick(opts);\n",
-      "run": "verify"
+      "find": "    this.nextQuestion();\n    Talk.say('meet');\n",
+      "replace": "    this.nextQuestion();\n",
+      "run": "play:talk"
     },
     {
-      "name": "an echo is only caught when every word is shared",
+      "name": "a foe never gloats when its blow lands",
       "file": "index.html",
-      "find": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<sc[i]);\n",
-      "replace": "    return sc[i]>0 && sc[i]>=this.words(names[i]).size && sc.every((v,j)=>j===i || v<sc[i]);\n",
-      "run": "verify"
-    },
-    {
-      "name": "words that differ only by an ending are not matched",
-      "file": "index.html",
-      "find": ".map(w=>w.replace(/(ing|ed|es|s)$/,''))); },\n",
-      "replace": ".map(w=>w)); },\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "short content words are dropped, so 'need' is not seen",
-      "file": "index.html",
-      "find": "    .filter(w=>w.length>2 && !this.STOPW.has(w))",
-      "replace": "    .filter(w=>w.length>4 && !this.STOPW.has(w))",
-      "run": "play:findslip"
-    },
-    {
-      "name": "a tie counts as an echo, so fair questions are lost",
-      "file": "index.html",
-      "find": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<sc[i]);\n",
-      "replace": "    return sc[i]>0 && sc.every((v,j)=>j===i || v<=sc[i]);\n",
-      "run": "play:findslip"
-    },
-    {
-      "name": "when every answer echoes, the question is asked with no squire's answer",
-      "file": "index.html",
-      "find": "    if(shown===undefined) return null;\n",
+      "find": "      if(Game.s.hp>0) Talk.say('gloat');\n",
       "replace": "",
-      "run": "verify"
+      "run": "play:talk"
+    },
+    {
+      "name": "a foe begs every time it is hit when low",
+      "file": "index.html",
+      "find": "      else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);\n",
+      "replace": "      else if(this.ehp<=this.emax*0.3) Talk.say('low');\n",
+      "run": "play:talk"
+    },
+    {
+      "name": "a foe worries at every hit past five",
+      "file": "index.html",
+      "find": "      else if(this.combo===5) Talk.say('worry', true);\n",
+      "replace": "      else if(this.combo>=5) Talk.say('worry');\n",
+      "run": "play:talk"
+    },
+    {
+      "name": "the killing blow draws no last words",
+      "file": "index.html",
+      "find": "      if(this.ehp<=0) Talk.say('fall');\n",
+      "replace": "      if(this.ehp<=0);\n",
+      "run": "play:talk"
+    },
+    {
+      "name": "a crit draws no cry",
+      "file": "index.html",
+      "find": "      else if(crit) Talk.say('reel');\n",
+      "replace": "",
+      "run": "play:talk"
+    },
+    {
+      "name": "the daily's straw knight talks",
+      "file": "index.html",
+      "find": "    if(!f || f.dummy) return null;\n",
+      "replace": "    if(!f) return null;\n",
+      "run": "play:talk"
+    },
+    {
+      "name": "talk draws from the daily's seeded dice",
+      "file": "index.html",
+      "find": "  pick(a){ return a[Math.floor(Math.random()*a.length)]; },",
+      "replace": "  pick(a){ return R.pick(a); },",
+      "run": "play:talk"
+    },
+    {
+      "name": "screen readers read the bubble out",
+      "file": "index.html",
+      "find": "<div id=\"say\" aria-hidden=\"true\"></div>",
+      "replace": "<div id=\"say\"></div>",
+      "run": "play:talk"
+    },
+    {
+      "name": "bosses speak like any other foe",
+      "file": "index.html",
+      "find": "    const b=f.boss && this.BOSS[f.nm];\n",
+      "replace": "    const b=null;\n",
+      "run": "play:talk"
+    },
+    {
+      "name": "the bubble never goes away",
+      "file": "index.html",
+      "find": "    this.timer=setTimeout(()=>el.classList.remove('on'), this.SHOW_MS);\n",
+      "replace": "",
+      "run": "play:talk"
+    },
+    {
+      "name": "a new fight remembers what the last one said",
+      "file": "index.html",
+      "find": "  reset(){ this.said={}; this.hide(); },",
+      "replace": "  reset(){ this.hide(); },",
+      "run": "play:talk"
+    },
+    {
+      "name": "the bubble runs off the scene on a phone",
+      "file": "index.html",
+      "find": "#say{position:absolute;right:4%;top:6%;max-width:46%;",
+      "replace": "#say{position:absolute;right:4%;top:6%;white-space:nowrap;",
+      "run": "play:talk"
+    },
+    {
+      "name": "a slime has no last words",
+      "file": "index.html",
+      "find": "fall:['Blorp…','Splat.'] },",
+      "replace": "fall:[] },",
+      "run": "play:talk"
     }
   ]
 }
