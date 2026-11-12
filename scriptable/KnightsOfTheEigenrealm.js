@@ -12064,7 +12064,10 @@ const UI = {
         <div class="hn">Back to \${set.nm}</div>
         <div class="hd">Room \${(pend.done||0)+1} · 🎒 \${pend.gold||0} gold still at risk · ❤️ \${pend.hp}</div>
         <button class="btn gold" id="heroGo" data-hero="resume" onclick="Dungeon.resume()">🕯️ Return to the descent</button>\`;
-    } else if(!g.firstRun){
+    } else if(!g.firstRun && !Object.keys(g.cleared||{}).length){
+      /* Only a knight with nothing beaten yet is sent to the cellar. One who
+         walked out early and has been fighting since keeps the campaign here;
+         the cellar is still offered first among the nodes below. */
       main=\`<div class="hk">Start here</div>
         <div class="hn">The quartermaster is waiting</div>
         <div class="hd">Three rooms in the cellar — nothing down there can finish you.</div>

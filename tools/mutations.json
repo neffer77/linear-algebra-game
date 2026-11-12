@@ -1,26 +1,26 @@
 {
-  "change": "A wind-up that was due dies with the foe the answer beats",
+  "change": "A knight who walked out of the cellar and has fought since keeps the campaign at the top of the map",
   "mutations": [
     {
-      "name": "a beaten foe still lands its wind-up",
+      "name": "the cellar hero ignores what the knight has beaten",
       "file": "index.html",
-      "find": "    if(this.slamNext && this.ehp<=0) this.slamNext=false;\n    else if(this.slamNext){",
-      "replace": "    if(false) this.slamNext=false;\n    else if(this.slamNext){",
-      "run": "play:talk"
+      "find": "} else if(!g.firstRun && !Object.keys(g.cleared||{}).length){",
+      "replace": "} else if(!g.firstRun){",
+      "run": "play:map"
     },
     {
-      "name": "no wind-up ever lands on a correct answer",
+      "name": "the cellar hero is never shown",
       "file": "index.html",
-      "find": "    if(this.slamNext && this.ehp<=0) this.slamNext=false;",
-      "replace": "    if(this.slamNext && ok) this.slamNext=false;",
-      "run": "play:talk"
+      "find": "} else if(!g.firstRun && !Object.keys(g.cleared||{}).length){",
+      "replace": "} else if(false){",
+      "run": "play:map"
     },
     {
-      "name": "the wind-up is dropped but still reported",
+      "name": "the cellar node row goes when the hero leaves it",
       "file": "index.html",
-      "find": "    this.lastSlam=0; this.lastBraced=ok;\n",
-      "replace": "    this.lastSlam=this.slamNext&&this.ehp<=0?9:0; this.lastBraced=ok;\n",
-      "run": "play:talk"
+      "find": "if(!g.firstRun && !Dungeon.pending()) head+=`",
+      "replace": "if(!g.firstRun && !Dungeon.pending() && !Object.keys(g.cleared||{}).length) head+=`",
+      "run": "play:map"
     }
   ]
 }

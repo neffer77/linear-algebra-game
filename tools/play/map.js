@@ -219,6 +219,13 @@ module.exports = {
       // a knight who has not been down to the cellar is sent there
       Game.s.firstRun = 0;
       out.cellar = card();
+      // one who walked out of the cellar and has beaten a foe since keeps the campaign
+      Game.s.cleared['0:0'] = 1;
+      out.walkedOut = card();
+      out.walkedOutNext = REALMS[0].foes[1].nm;
+      const firstNode = document.querySelector('#mapList .node');
+      out.walkedOutFirstNode = firstNode ? firstNode.getAttribute('onclick') || '' : '';
+      Game.s.cleared = {};
       Game.s.firstRun = 1;
 
       // a new campaign: the first foe of the first realm
@@ -271,6 +278,10 @@ module.exports = {
       return out;
     });
     t.eq('a knight who has not seen the cellar is sent there first', hero.cellar.go, 'cellar');
+    t.ok('but one who has beaten a foe since walking out is pointed at the next foe',
+      hero.walkedOut.go === 'fight' && hero.walkedOut.text.includes(hero.walkedOutNext), hero.walkedOut.text.slice(0, 100));
+    t.ok('and the cellar is still offered first among the nodes',
+      hero.walkedOutFirstNode.indexOf('Quartermaster.open') >= 0, hero.walkedOutFirstNode);
     t.ok('a new campaign is pointed at its first foe',
       hero.start.go === 'fight' && hero.start.text.includes(hero.startNames.realm) && hero.start.text.includes(hero.startNames.foe),
       hero.start.text.slice(0, 100));
