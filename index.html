@@ -11908,7 +11908,9 @@ const UI = {
     // The rules of play are for somebody who has not played. A returning
     // knight has the Tome for that, and the title is for getting back in.
     const how=document.getElementById('howItWorks');
-    if(how) how.style.display = (has && Game.s.firstRun) ? 'none' : '';
+    /* How it works is for someone new: a knight who has finished the cellar,
+       or has beaten a foe after walking out of it, already knows. */
+    if(how) how.style.display = (has && (Game.s.firstRun || Object.keys(Game.s.cleared||{}).length)) ? 'none' : '';
     // The knight card carries its own way to the hall.
     const sw=document.getElementById('btnSwitch');
     if(sw) sw.style.display = k ? 'none' : '';

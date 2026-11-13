@@ -1,39 +1,18 @@
 {
-  "change": "A topic bounty names only a topic the knight has met or one from a realm reached",
+  "change": "How it works is hidden for a knight who has beaten a foe after walking out of the cellar",
   "mutations": [
     {
-      "name": "topic bounties come from all seventy topics again",
+      "name": "How it works ignores what the knight has beaten",
       "file": "index.html",
-      "find": "k:R.pick(Bounty.topics())}",
-      "replace": "k:R.pick(Object.keys(TOPIC_LABEL))}",
+      "find": "(has && (Game.s.firstRun || Object.keys(Game.s.cleared||{}).length))",
+      "replace": "(has && Game.s.firstRun)",
       "run": "play:map"
     },
     {
-      "name": "the realm walk does not stop at the realm being fought through",
+      "name": "How it works is hidden from everyone with a knight",
       "file": "index.html",
-      "find": "        if(REALMS[ri].foes.some((f,fi)=>!(g.cleared||{})[ri+':'+fi])) break;\n",
-      "replace": "",
-      "run": "play:map"
-    },
-    {
-      "name": "topics met elsewhere are left out",
-      "file": "index.html",
-      "find": "if(r && r.seen>0 && TOPIC_LABEL[k]) out.add(k);",
-      "replace": "if(false) out.add(k);",
-      "run": "play:map"
-    },
-    {
-      "name": "an untouched out-of-reach bounty is left on the board",
-      "file": "index.html",
-      "find": "g.bounties = g.bounties.filter(b=>!(b.id==='topic' && !b.p && reach.indexOf(b.k)<0));",
-      "replace": "",
-      "run": "play:map"
-    },
-    {
-      "name": "a started bounty out of reach is thrown away too",
-      "file": "index.html",
-      "find": "b.id==='topic' && !b.p && reach.indexOf(b.k)<0",
-      "replace": "b.id==='topic' && reach.indexOf(b.k)<0",
+      "find": "(has && (Game.s.firstRun || Object.keys(Game.s.cleared||{}).length))",
+      "replace": "(has)",
       "run": "play:map"
     }
   ]
