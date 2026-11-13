@@ -1,25 +1,39 @@
 {
-  "change": "A knight who walked out of the cellar and has fought since keeps the campaign at the top of the map",
+  "change": "A topic bounty names only a topic the knight has met or one from a realm reached",
   "mutations": [
     {
-      "name": "the cellar hero ignores what the knight has beaten",
+      "name": "topic bounties come from all seventy topics again",
       "file": "index.html",
-      "find": "} else if(!g.firstRun && !Object.keys(g.cleared||{}).length){",
-      "replace": "} else if(!g.firstRun){",
+      "find": "k:R.pick(Bounty.topics())}",
+      "replace": "k:R.pick(Object.keys(TOPIC_LABEL))}",
       "run": "play:map"
     },
     {
-      "name": "the cellar hero is never shown",
+      "name": "the realm walk does not stop at the realm being fought through",
       "file": "index.html",
-      "find": "} else if(!g.firstRun && !Object.keys(g.cleared||{}).length){",
-      "replace": "} else if(false){",
+      "find": "        if(REALMS[ri].foes.some((f,fi)=>!(g.cleared||{})[ri+':'+fi])) break;\n",
+      "replace": "",
       "run": "play:map"
     },
     {
-      "name": "the cellar node row goes when the hero leaves it",
+      "name": "topics met elsewhere are left out",
       "file": "index.html",
-      "find": "if(!g.firstRun && !Dungeon.pending()) head+=`",
-      "replace": "if(!g.firstRun && !Dungeon.pending() && !Object.keys(g.cleared||{}).length) head+=`",
+      "find": "if(r && r.seen>0 && TOPIC_LABEL[k]) out.add(k);",
+      "replace": "if(false) out.add(k);",
+      "run": "play:map"
+    },
+    {
+      "name": "an untouched out-of-reach bounty is left on the board",
+      "file": "index.html",
+      "find": "g.bounties = g.bounties.filter(b=>!(b.id==='topic' && !b.p && reach.indexOf(b.k)<0));",
+      "replace": "",
+      "run": "play:map"
+    },
+    {
+      "name": "a started bounty out of reach is thrown away too",
+      "file": "index.html",
+      "find": "b.id==='topic' && !b.p && reach.indexOf(b.k)<0",
+      "replace": "b.id==='topic' && reach.indexOf(b.k)<0",
       "run": "play:map"
     }
   ]
