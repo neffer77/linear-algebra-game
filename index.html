@@ -8422,10 +8422,14 @@ const Bounty = {
     g.bounties = g.bounties || [];
     /* A topic bounty rolled before that rule, still untouched and out of
        reach, is rolled again rather than left on the board. */
-    const reach=this.topics();
+    const reach=this.topics(), had=g.bounties.length;
     g.bounties = g.bounties.filter(b=>!(b.id==='topic' && !b.p && reach.indexOf(b.k)<0));
-    let guard=0;
-    while(g.bounties.length<3 && guard++<30) g.bounties.push(this.make(g.bounties));
+    let guard=0, made=0;
+    while(g.bounties.length<3 && guard++<30){ g.bounties.push(this.make(g.bounties)); made++; }
+    /* What was rolled is written down at once. The map draws this on every
+       visit, and an unsaved roll came up different after each reload, so a
+       knight could reload the board until it paid best. */
+    if(made || g.bounties.length!==had) Game.save();
   },
   make(existing){
     let kind, guard=0;

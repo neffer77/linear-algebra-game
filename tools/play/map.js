@@ -524,6 +524,11 @@ module.exports = {
       UI.renderMap();
       out.after = g.bounties.map(b => b.id + ':' + (b.k || '') + ':' + b.p);
       out.count = g.bounties.length;
+      const stored = () => (JSON.parse(localStorage.getItem(Profiles.activeKey())) || {}).bounties || [];
+      const sig = list => list.map(b => b.id + ':' + (b.k || '') + ':' + b.n + ':' + b.gold).join(' ');
+      out.saved = sig(stored()) === sig(g.bounties);
+      out.board = sig(g.bounties);
+      UI.renderMap(); out.again = sig(g.bounties);
       out.inflectLabel = TOPIC_LABEL.inflection;
       out.listText = document.getElementById('mapList').innerText;
       Object.assign(g, keep); UI.renderMap();
@@ -539,5 +544,7 @@ module.exports = {
       !bounty.after.some(x => x.startsWith('topic:inflection')) && !bounty.listText.includes('× ' + bounty.inflectLabel)
       && bounty.count === 3, JSON.stringify(bounty.after));
     t.ok('but one with progress on it is kept', bounty.after.includes('topic:taylor:2'), JSON.stringify(bounty.after));
+    t.ok('and the board as rolled is saved, so a reload cannot roll it again', bounty.saved, bounty.board);
+    t.eq('drawing the map again leaves it as it is', bounty.again, bounty.board);
   }
 };

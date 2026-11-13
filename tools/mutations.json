@@ -1,46 +1,11 @@
 {
-  "change": "The map card and the fall screen offer a priced rest when the knight is low",
+  "change": "A bounty rolled on the map is saved at once",
   "mutations": [
     {
-      "name": "The card never warns about low health",
+      "name": "A rolled bounty is left unsaved",
       "file": "index.html",
-      "find": "if(!f || g.hp>=g.maxHp/2) return null;",
-      "replace": "return null;",
-      "run": "play:map"
-    },
-    {
-      "name": "The warning comes at full health too",
-      "file": "index.html",
-      "find": "if(!f || g.hp>=g.maxHp/2) return null;",
-      "replace": "if(!f) return null;",
-      "run": "play:map"
-    },
-    {
-      "name": "The cost of a miss ignores armour",
-      "file": "index.html",
-      "find": "hit:Combat.foeHit(f.atk, def, 1)",
-      "replace": "hit:Combat.foeHit(f.atk, 0, 1)",
-      "run": "play:map"
-    },
-    {
-      "name": "Rest is offered to a knight who cannot pay",
-      "file": "index.html",
-      "find": "afford:g.gold>=this.restCost() };",
-      "replace": "afford:true };",
-      "run": "play:map"
-    },
-    {
-      "name": "Rest does not report success",
-      "file": "index.html",
-      "find": "    UI.toast(`🔥 Rested by the fire. Full health for ${cost} gold.`);\n    return true;",
-      "replace": "    UI.toast(`🔥 Rested by the fire. Full health for ${cost} gold.`);",
-      "run": "play:map"
-    },
-    {
-      "name": "The fall screen never offers the camp",
-      "file": "index.html",
-      "find": "${g.gold>=Game.restCost()\n",
-      "replace": "${false\n",
+      "find": "    if(made || g.bounties.length!==had) Game.save();\n",
+      "replace": "",
       "run": "play:map"
     }
   ]
