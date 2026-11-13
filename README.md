@@ -453,7 +453,7 @@ The game is built so that losing teaches you as much as winning.
   is left open; tapping a stone opens its realm. Every fight is still on the page.
 - **The title knows you, and the hall has doors.** A returning knight sees their banner,
   name, champions beaten and topics solid instead of the rules of play, which are kept for
-  somebody who has not been down to the cellar. *Switch* opens the hall: a door for each
+  somebody who has not been down to the cellar and has beaten nothing. *Switch* opens the hall: a door for each
   knight, hung with their own banner, the one being played lit, with rename, move and
   erase beneath it as before, and a door for a new knight.
 - **Answers are lettered tiles.** Short answers sit two by two so they can be compared at a
@@ -713,7 +713,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,622 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,623 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -749,7 +749,7 @@ loop only exists once the page is running. Thirty-four suites, 1,622 checks, abo
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
-| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, the rules of play show only for a knight who has beaten nothing, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite

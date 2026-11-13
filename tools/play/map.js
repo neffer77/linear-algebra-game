@@ -367,7 +367,10 @@ module.exports = {
       out.card = { shown: !!card, text: card ? card.innerText : '', name: k.nm,
         how: document.getElementById('howItWorks').style.display, switchBtn: document.getElementById('btnSwitch').style.display };
       Game.s.firstRun = 0; UI.refreshTitle();
+      out.howWalkedOut = document.getElementById('howItWorks').style.display;
+      const beaten = Game.s.cleared; Game.s.cleared = {}; UI.refreshTitle();
       out.howForNew = document.getElementById('howItWorks').style.display;
+      Game.s.cleared = beaten;
       Game.s.firstRun = 1;
       document.getElementById('kcardSwitch').click();
       out.toHall = document.querySelector('.screen.on').id;
@@ -394,7 +397,8 @@ module.exports = {
     t.ok('the title shows the knight by name, with their champions', front.card.shown
       && front.card.text.includes(front.card.name) && /1 of 8 champions/.test(front.card.text), front.card.text);
     t.eq('a returning knight is not told how to play', front.card.how, 'none');
-    t.eq('one who has not been down to the cellar still is', front.howForNew, '');
+    t.eq('one who has not been down to the cellar and has beaten nothing still is', front.howForNew, '');
+    t.eq('but one who walked out of the cellar and has beaten a realm since is not', front.howWalkedOut, 'none');
     t.eq('the card carries the way to the hall, so the list does not repeat it', front.card.switchBtn, 'none');
     t.eq('and it goes there', front.toHall, 's-knights');
     t.eq('a door for every knight', front.doors, 2);
