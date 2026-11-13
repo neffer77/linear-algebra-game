@@ -8373,15 +8373,34 @@ const BOUNTY_KINDS = [
    txt:b=>`Win ${b.n} fight${b.n>1?'s':''} without a single miss`, gold:b=>170*b.n},
   {id:'solve',  mk:()=>({n:R.i(15,30)}),
    txt:b=>`Solve ${b.n} riddles`,                            gold:b=>7*b.n},
-  {id:'topic',  mk:()=>({n:R.i(4,8), k:R.pick(Object.keys(TOPIC_LABEL))}),
+  {id:'topic',  mk:()=>({n:R.i(4,8), k:R.pick(Bounty.topics())}),
    txt:b=>`Solve ${b.n} × ${TOPIC_LABEL[b.k]||b.k}`,         gold:b=>18*b.n}
 ];
 
 const Bounty = {
   kind(id){ return BOUNTY_KINDS.find(k=>k.id===id); },
+  /* The topics a bounty may name: any the knight has already met, and the
+     pools of every realm up to the one being fought through. It used to be any
+     of the seventy, so a knight in the second realm was asked for five
+     Inflection Points, a topic three sealed realms away and never taught. */
+  topics(){
+    const g=Game.s, out=new Set();
+    if(g){
+      for(const k in (g.topicStats||{})){ const r=g.topicStats[k]; if(r && r.seen>0 && TOPIC_LABEL[k]) out.add(k); }
+      for(let ri=0; ri<REALMS.length; ri++){
+        REALMS[ri].pool.forEach(k=>{ if(TOPIC_LABEL[k]) out.add(k); });
+        if(REALMS[ri].foes.some((f,fi)=>!(g.cleared||{})[ri+':'+fi])) break;
+      }
+    }
+    return out.size ? [...out] : Object.keys(TOPIC_LABEL);
+  },
   ensure(){
     const g=Game.s; if(!g) return;
     g.bounties = g.bounties || [];
+    /* A topic bounty rolled before that rule, still untouched and out of
+       reach, is rolled again rather than left on the board. */
+    const reach=this.topics();
+    g.bounties = g.bounties.filter(b=>!(b.id==='topic' && !b.p && reach.indexOf(b.k)<0));
     let guard=0;
     while(g.bounties.length<3 && guard++<30) g.bounties.push(this.make(g.bounties));
   },

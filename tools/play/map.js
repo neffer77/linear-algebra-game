@@ -435,5 +435,43 @@ module.exports = {
     t.ok('and says what it does against what is worn', /hits for 14 against your Rusted Trainer's 9/.test(unlock.rich.ready), unlock.rich.ready);
     t.eq('a blade weaker than one already forged is never the thing to save for', unlock.forged.next, 'Leather Jerkin');
     t.ok('with nothing better on sale it says so', !unlock.all.next && unlock.allText);
+
+    /* What a bounty may ask for. A topic bounty was drawn from all seventy
+       topics, so a knight in the second realm was asked for Inflection Points,
+       three sealed realms away and never taught. */
+    const bounty = await t.ev(() => {
+      const g = Game.s, out = {};
+      const keep = { cleared: g.cleared, topicStats: g.topicStats, bounties: g.bounties };
+      const roll = () => { const ks = new Set();
+        for (let i = 0; i < 400; i++) ks.add(Bounty.kind('topic').mk().k);
+        return [...ks]; };
+      g.cleared = {}; g.topicStats = {};
+      out.fresh = roll(); out.vale = REALMS[0].pool.slice();
+      REALMS[0].foes.forEach((f, i) => g.cleared['0:' + i] = 1);
+      out.second = roll(); out.marches = REALMS[0].pool.concat(REALMS[1].pool);
+      g.topicStats = { taylor: { c: 2, w: 0, m: 0.5, seen: 2, last: 0, t: Date.now() } };
+      out.met = roll();
+      // an untouched bounty out of reach is rolled again; one already started stays
+      g.topicStats = {};
+      g.bounties = [{ id: 'topic', n: 5, k: 'inflection', p: 0, gold: 90 },
+                    { id: 'topic', n: 5, k: 'taylor', p: 2, gold: 90 }];
+      UI.renderMap();
+      out.after = g.bounties.map(b => b.id + ':' + (b.k || '') + ':' + b.p);
+      out.count = g.bounties.length;
+      out.inflectLabel = TOPIC_LABEL.inflection;
+      out.listText = document.getElementById('mapList').innerText;
+      Object.assign(g, keep); UI.renderMap();
+      return out;
+    });
+    t.ok('a new knight\'s topic bounties come only from the first realm',
+      bounty.fresh.length > 1 && bounty.fresh.every(k => bounty.vale.includes(k)), JSON.stringify(bounty.fresh));
+    t.ok('a realm on, they come from the realms reached so far, the new one included',
+      bounty.second.every(k => bounty.marches.includes(k)) && bounty.second.some(k => !bounty.vale.includes(k)),
+      JSON.stringify(bounty.second));
+    t.ok('and a topic already met elsewhere can be asked for too', bounty.met.includes('taylor'), JSON.stringify(bounty.met));
+    t.ok('an untouched bounty for a topic out of reach is rolled again',
+      !bounty.after.some(x => x.startsWith('topic:inflection')) && !bounty.listText.includes('× ' + bounty.inflectLabel)
+      && bounty.count === 3, JSON.stringify(bounty.after));
+    t.ok('but one with progress on it is kept', bounty.after.includes('topic:taylor:2'), JSON.stringify(bounty.after));
   }
 };
