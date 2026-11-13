@@ -307,6 +307,68 @@ module.exports = {
     t.ok('and when every champion is down it points at what is left', hero.won.go === 'deep' && /Every champion is down/.test(hero.won.text));
 
     // ------------------------------------------------------------------
+    // Health carries between fights, so the card says when to rest first.
+    // ------------------------------------------------------------------
+    const low = await t.ev(async () => {
+      const out = {};
+      Game.s.cleared = { '0:0': 1 }; Game.s.firstRun = 1; delete Game.s.dungeon;
+      const armor0 = Game.s.armor; Game.s.armor = 'a2';   // armour that turns some of a blow
+      const foe = REALMS[0].foes[1];
+      const read = () => { UI.go('s-map'); const c = document.getElementById('heroCard');
+        const lo = c.querySelector('#heroLow'), rest = c.querySelector('#heroRest');
+        return { low: lo ? lo.innerText : null, rest: rest ? rest.innerText : null,
+          fightGold: c.querySelector('#heroGo').classList.contains('gold') }; };
+      Game.s.maxHp = Game.maxHp();
+      out.foeName = foe.nm;
+      out.max = Game.s.maxHp; out.cost = 25 + Game.s.lvl * 5;
+      out.hit = Math.max(4, Math.round(foe.atk - Game.armor().def - Runes.def()));
+      Game.s.hp = Math.ceil(out.max / 2); Game.s.gold = 500;
+      out.half = read();
+      Game.s.hp = Math.floor(out.max / 2) - 1; out.lowHp = Game.s.hp;
+      out.hurt = read();
+      document.getElementById('heroRest').click();
+      out.rested = { hp: Game.s.hp, gold: Game.s.gold, card: read() };
+      Game.s.hp = 20; Game.s.gold = out.cost - 1;
+      out.poor = read();
+
+      // a fall: the retry offers the camp first when the purse can pay for it
+      const fall = async gold => {
+        Game.s.gold = gold; Game.s.hp = 5;
+        Battle.begin(0, 1); Battle.lose();
+        await new Promise(r => setTimeout(r, 1100));
+        const ra = document.getElementById('restAgain'), ta = document.getElementById('tryAgain');
+        return { screen: document.querySelector('.screen.on').id, hp: Game.s.hp, gold: Game.s.gold,
+          restAgain: ra ? ra.innerText : null, tryAgain: ta ? ta.innerText : null,
+          tryGold: ta ? ta.classList.contains('gold') : null };
+      };
+      out.fallRich = await fall(500);
+      document.getElementById('restAgain').click();
+      out.restedIn = { screen: document.querySelector('.screen.on').id, hp: Game.s.hp, max: Game.s.maxHp, foe: Battle.foe.nm };
+      Battle.flee();
+      out.fallPoor = await fall(0);
+      Game.s.armor = armor0; UI.go('s-map');
+      return out;
+    });
+    t.eq('at half health or more, the card says nothing about it', [low.half.low, low.half.rest], [null, null]);
+    t.ok('below half, it gives your health and what a miss costs, worked out for you',
+      low.hurt.low && low.hurt.low.includes(low.lowHp + ' of ' + low.max) && low.hurt.low.includes('about ' + low.hit), low.hurt.low);
+    t.ok('and offers a night\'s camp first, priced, ahead of the fight',
+      low.hurt.rest && low.hurt.rest.includes(String(low.cost)) && !low.hurt.fightGold, JSON.stringify(low.hurt));
+    t.ok('resting there heals to full for that price, and the card is back to the fight',
+      low.rested.hp === low.max && low.rested.gold === 500 - low.cost && low.rested.card.low === null && low.rested.card.fightGold,
+      JSON.stringify(low.rested));
+    t.ok('a knight who cannot pay is still told, and the fight stays the way forward',
+      low.poor.low && low.poor.rest === null && low.poor.fightGold, JSON.stringify(low.poor));
+    t.ok('after a fall, resting and trying again is offered first, priced, beside a retry that says what it starts at',
+      low.fallRich.screen === 's-result' && low.fallRich.restAgain && low.fallRich.restAgain.includes(String(low.cost))
+      && low.fallRich.tryAgain.includes('❤️ ' + low.fallRich.hp) && !low.fallRich.tryGold, JSON.stringify(low.fallRich));
+    t.ok('and it walks back in at full health against the same foe',
+      low.restedIn.screen === 's-battle' && low.restedIn.hp === low.restedIn.max && low.restedIn.foe === low.foeName,
+      JSON.stringify(low.restedIn));
+    t.ok('a purse too light for the camp keeps the plain retry first',
+      low.fallPoor.restAgain === null && low.fallPoor.tryGold, JSON.stringify(low.fallPoor));
+
+    // ------------------------------------------------------------------
     // The campaign is a road, and each realm folds away beneath it.
     // ------------------------------------------------------------------
     const road = await t.ev(() => {
