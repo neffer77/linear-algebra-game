@@ -319,6 +319,7 @@ module.exports = {
         return { low: lo ? lo.innerText : null, rest: rest ? rest.innerText : null,
           fightGold: c.querySelector('#heroGo').classList.contains('gold') }; };
       Game.s.maxHp = Game.maxHp();
+      out.foeName = foe.nm;
       out.max = Game.s.maxHp; out.cost = 25 + Game.s.lvl * 5;
       out.hit = Math.max(4, Math.round(foe.atk - Game.armor().def - Runes.def()));
       Game.s.hp = Math.ceil(out.max / 2); Game.s.gold = 500;
@@ -362,7 +363,7 @@ module.exports = {
       low.fallRich.screen === 's-result' && low.fallRich.restAgain && low.fallRich.restAgain.includes(String(low.cost))
       && low.fallRich.tryAgain.includes('❤️ ' + low.fallRich.hp) && !low.fallRich.tryGold, JSON.stringify(low.fallRich));
     t.ok('and it walks back in at full health against the same foe',
-      low.restedIn.screen === 's-battle' && low.restedIn.hp === low.restedIn.max && low.restedIn.foe === REALMS[0].foes[1].nm,
+      low.restedIn.screen === 's-battle' && low.restedIn.hp === low.restedIn.max && low.restedIn.foe === low.foeName,
       JSON.stringify(low.restedIn));
     t.ok('a purse too light for the camp keeps the plain retry first',
       low.fallPoor.restAgain === null && low.fallPoor.tryGold, JSON.stringify(low.fallPoor));
