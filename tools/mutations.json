@@ -1,18 +1,46 @@
 {
-  "change": "How it works is hidden for a knight who has beaten a foe after walking out of the cellar",
+  "change": "The map card and the fall screen offer a priced rest when the knight is low",
   "mutations": [
     {
-      "name": "How it works ignores what the knight has beaten",
+      "name": "The card never warns about low health",
       "file": "index.html",
-      "find": "(has && (Game.s.firstRun || Object.keys(Game.s.cleared||{}).length))",
-      "replace": "(has && Game.s.firstRun)",
+      "find": "if(!f || g.hp>=g.maxHp/2) return null;",
+      "replace": "return null;",
       "run": "play:map"
     },
     {
-      "name": "How it works is hidden from everyone with a knight",
+      "name": "The warning comes at full health too",
       "file": "index.html",
-      "find": "(has && (Game.s.firstRun || Object.keys(Game.s.cleared||{}).length))",
-      "replace": "(has)",
+      "find": "if(!f || g.hp>=g.maxHp/2) return null;",
+      "replace": "if(!f) return null;",
+      "run": "play:map"
+    },
+    {
+      "name": "The cost of a miss ignores armour",
+      "file": "index.html",
+      "find": "hit:Combat.foeHit(f.atk, def, 1)",
+      "replace": "hit:Combat.foeHit(f.atk, 0, 1)",
+      "run": "play:map"
+    },
+    {
+      "name": "Rest is offered to a knight who cannot pay",
+      "file": "index.html",
+      "find": "afford:g.gold>=this.restCost() };",
+      "replace": "afford:true };",
+      "run": "play:map"
+    },
+    {
+      "name": "Rest does not report success",
+      "file": "index.html",
+      "find": "    UI.toast(`🔥 Rested by the fire. Full health for ${cost} gold.`);\n    return true;",
+      "replace": "    UI.toast(`🔥 Rested by the fire. Full health for ${cost} gold.`);",
+      "run": "play:map"
+    },
+    {
+      "name": "The fall screen never offers the camp",
+      "file": "index.html",
+      "find": "${g.gold>=Game.restCost()\n",
+      "replace": "${false\n",
       "run": "play:map"
     }
   ]

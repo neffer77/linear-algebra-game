@@ -4347,12 +4347,27 @@ const Game = {
     // new knight does is answer a question and hit something with the answer.
     Opening.play(()=>Quartermaster.open());
   },
+  restCost(){ return 25 + this.s.lvl*5; },
+  // True when the knight is now at full health, so a caller can go on to fight.
   rest(){
-    const cost = 25 + this.s.lvl*5;
-    if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return; }
-    if(this.s.gold<cost){ UI.toast(\`A night's camp costs \${cost} gold.\`); return; }
+    const cost = this.restCost();
+    if(this.s.hp>=this.s.maxHp){ UI.toast('You are already at full health.'); return true; }
+    if(this.s.gold<cost){ UI.toast(\`A night's camp costs \${cost} gold.\`); return false; }
     this.s.gold-=cost; this.s.hp=this.s.maxHp; this.save(); UI.renderMap();
     UI.toast(\`🔥 Rested by the fire. Full health for \${cost} gold.\`);
+    return true;
+  },
+  /* Whether the next campaign fight is one to rest before. Health carries from
+     fight to fight, and a fall costs more gold than a night's camp and leaves
+     the knight at two-fifths health, so walking in below half is how a knight
+     falls twice. The card says so, with the numbers, rather than leaving the
+     knight to add them up; the fight itself is never taken away. */
+  lowFor(f){
+    const g=this.s;
+    if(!f || g.hp>=g.maxHp/2) return null;
+    const def=this.armor().def + Runes.def();
+    return { hp:Math.round(g.hp), max:g.maxHp, hit:Combat.foeHit(f.atk, def, 1),
+             cost:this.restCost(), afford:g.gold>=this.restCost() };
   },
   // Returns the new streak length if today is a fresh day, else null.
   touchStreak(){
@@ -6878,12 +6893,20 @@ const Battle = {
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
           \${this.learnedHtml()}
         </div>
-        <button class="btn gold" onclick="Battle.begin(\${this.ri},\${this.fi})">⚔️ Try again</button>
+        \${g.gold>=Game.restCost()
+          ? \`<button class="btn gold" id="restAgain" onclick="Battle.restAgain()">🔥 Rest, then try again · 🪙 \${Game.restCost()}</button>
+             <button class="btn" id="tryAgain" onclick="Battle.begin(\${this.ri},\${this.fi})">⚔️ Try again at ❤️ \${g.hp}</button>\`
+          : \`<button class="btn gold" id="tryAgain" onclick="Battle.begin(\${this.ri},\${this.fi})">⚔️ Try again</button>\`}
         <button class="btn" onclick="UI.go('s-tome')">📖 Study the Tome</button>
         <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>\`;
       Anim.stop();
     },900);
   },
+
+  /* A fall leaves the knight at two-fifths health, so the plain retry walks
+     back in already half beaten. When the purse can pay for a night's camp,
+     that is offered first, priced, and the plain retry says what it starts at. */
+  restAgain(){ if(Game.rest()) this.begin(this.ri,this.fi); },
 
   flee(){
     clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1); Talk.hide();
@@ -12099,8 +12122,11 @@ const UI = {
         <div class="hn" style="color:\${nx.r.col}">\${nx.r.nm}</div>
         <div class="hpips" aria-label="\${done} of \${nx.r.foes.length} beaten">\${nx.r.foes.map((f,i)=>
           \`<i class="\${i<done?'on':i===done?'now':''}\${f.boss?' boss':''}" style="\${i<done?\`background:\${nx.r.col};border-color:\${nx.r.col}\`:''}"></i>\`).join('')}</div>
-        <div class="hd">Next: <b>\${nx.f.boss?'👑 ':''}\${nx.f.nm}</b> · ❤️ \${nx.f.hp} · ⚔️ \${nx.f.atk}</div>
-        <button class="btn gold" id="heroGo" data-hero="fight" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight</button>\`;
+        <div class="hd">Next: <b>\${nx.f.boss?'👑 ':''}\${nx.f.nm}</b> · ❤️ \${nx.f.hp} · ⚔️ \${nx.f.atk}</div>\`;
+      const low=Game.lowFor(nx.f);
+      if(low) main+=\`<div class="hd" id="heroLow" style="color:var(--red)">You are at ❤️ \${low.hp} of \${low.max} · a miss costs about \${low.hit}</div>\`
+        +(low.afford?\`<button class="btn gold" id="heroRest" onclick="Game.rest()">🔥 Rest first · 🪙 \${low.cost}</button>\`:'');
+      main+=\`<button class="btn\${low&&low.afford?'':' gold'}" id="heroGo" data-hero="fight" onclick="Battle.begin(\${nx.ri},\${nx.fi})">⚔️ Fight</button>\`;
     } else {
       main=\`<div class="hk">The campaign is won</div>
         <div class="hn">Every champion is down</div>

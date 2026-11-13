@@ -215,7 +215,9 @@ existed keeps their progress: the old save is adopted as the first knight, and t
 is left in place as a backup rather than moved.
 
 **Losing** costs 15% of your gold and nothing else. You keep every item, level, and piece
-of gear. Death is a speed bump, not a wall.
+of gear. Death is a speed bump, not a wall. A fall leaves you at two-fifths health, so when
+you can pay for it the first button rests you and puts you straight back in, and the plain
+retry says what health it starts at.
 
 **Game feel.** A landed blow is four things arriving together and decaying at different
 rates, which is what reads as force: a slash crescent sweeping through the point of
@@ -444,7 +446,10 @@ The game is built so that losing teaches you as much as winning.
   thing the campaign is waiting on — the next foe, with the realm's progress as pips — and
   has one button for it. A descent left in flight outranks it; a knight who has not seen
   the cellar and has beaten nothing is sent there, while one who walked out early and has
-  fought since keeps the campaign, with the cellar still offered first below. Beneath, at most three smaller lines appear only when true: a
+  fought since keeps the campaign, with the cellar still offered first below. Health
+  carries from fight to fight, so a knight below half is shown their health and what a miss
+  against that foe costs, worked out, with a priced night's camp offered ahead of the fight
+  when the purse can pay for it. Beneath, at most three smaller lines appear only when true: a
   streak, the weakest topic (one tap drills it), and a bench with something to make. A
   knight with nothing pressing sees none of them.
 - **The campaign is a road.** The eight realms are stones on a winding path — won,
@@ -713,7 +718,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,623 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,631 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -749,7 +754,7 @@ loop only exists once the page is running. Thirty-four suites, 1,623 checks, abo
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
-| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, the rules of play show only for a knight who has beaten nothing, and the hall has a door for each knight; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, the rules of play show only for a knight who has beaten nothing, and the hall has a door for each knight; below half health the card gives the cost of a miss and offers a priced rest first, and after a fall resting and trying again comes first when affordable; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
