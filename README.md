@@ -876,7 +876,9 @@ The generators were also checked by:
   choice of `10/0`, an inverse written `1/−3` in front of its matrix, and a limit at
   infinity answered `6/9`. A root is simplified unless the next step works it out: a
   matrix's complex eigenvalues read `4 ± 2i`, not `4 ± i√4`, and a length of `√25` in the
-  angle working is written `5`.
+  angle working is written `5`. A cosine rounded to two places is written `≈ −0.71`, never
+  `= −0.71`, and the characteristic polynomial is worked on the matrix's own numbers,
+  `(4 − λ)(−5 − λ) − (2)(3)`, not on letters `a − λ` and `d − λ`.
 - **6,300 tile banks drawn** for every vector and matrix answer that can be built from
   tiles, asserting the bank holds every number the answer needs and does not point at
   it: picking the most crowded tiles must not beat picking at random by more than 30%.

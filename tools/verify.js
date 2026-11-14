@@ -339,6 +339,10 @@ const ALGEBRA = {
     const M = mats(p.q)[0], tr = M[0][0] + M[1][1], dt = det2(M);
     const f = compile(String(p.a).replace(/λ/g, 'x'));
     algebraChecks += 4;
+    // The working subtracts λ from this matrix's own diagonal, not from a and d.
+    const n = v => String(v).replace('-', '−');
+    const ex = String(p.ex).replace(/<[^>]+>/g, ' ');
+    if (!ex.includes(`(${n(M[0][0])} − λ)(${n(M[1][1])} − λ)`) || /[ad]−λ/.test(ex)) return false;
     return [-2, -0.5, 1.3, 4].every(x => close(f({ x }), x * x - tr * x + dt, 1e-9));
   },
 
@@ -446,6 +450,10 @@ const ALGEBRA = {
     const deg = +String(p.a).match(/(\d+)°/)[1];
     const cos = (u[0] * v[0] + u[1] * v[1]) /
                 (Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1]));
+    // A cosine rounded to two places is written ≈; one that is exact is =.
+    const shown = String(p.ex).replace(/<[^>]+>/g, ' ').match(/cos θ = [^=≈]*\) ([=≈]) (−?\d+\.\d\d)/);
+    if (!shown || +shown[2].replace('−', '-') !== Math.round(cos * 100) / 100
+        || (shown[1] === '=') !== (Math.abs(cos * 100 - Math.round(cos * 100)) < 1e-9)) return false;
     return close(cos, Math.cos(deg * Math.PI / 180), 1e-9);
   }
 };

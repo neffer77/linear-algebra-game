@@ -1,67 +1,25 @@
 {
-  "change": "Every fraction and root is written in simplest form",
+  "change": "The characteristic polynomial is worked on the matrix's own numbers, and a rounded cosine reads ≈",
   "mutations": [
     {
-      "name": "the inverse puts its minus sign under the line",
+      "name": "the characteristic polynomial's working subtracts λ from a and d",
       "file": "index.html",
-      "find": "const show=m=>`${rat(1,det)} ${mat(m)}`;",
-      "replace": "const show=m=>`${frac(1,det)} ${mat(m)}`;",
+      "find": "whose determinant is (${neg(A[0][0])} − λ)(",
+      "replace": "whose determinant is (a − λ)(",
       "run": "verify"
     },
     {
-      "name": "an inverse drill may have a determinant of ±1",
+      "name": "the λ matrix in the working goes back to letters",
       "file": "index.html",
-      "find": "degenerate = Math.abs(det)<2 ||",
-      "replace": "degenerate = det===0 ||",
+      "find": "[[`${neg(A[0][0])} − λ`,neg(A[0][1])]",
+      "replace": "[['a−λ',neg(A[0][1])]",
       "run": "verify"
     },
     {
-      "name": "the scalar projection answer is left unreduced",
+      "name": "a rounded cosine is written with =",
       "file": "index.html",
-      "find": "a: rat(dp,t[2]),",
-      "replace": "a: frac(dp,t[2]),",
-      "run": "verify"
-    },
-    {
-      "name": "the scalar projection answer is not u·v / ‖v‖",
-      "file": "index.html",
-      "find": "a: rat(dp,t[2]),",
-      "replace": "a: rat(dp+1,t[2]),",
-      "run": "verify"
-    },
-    {
-      "name": "the upside-down limit choice is left unreduced",
-      "file": "index.html",
-      "find": "[rat(b,a),'the ratio is upside down",
-      "replace": "[frac(b,a),'the ratio is upside down",
-      "run": "verify"
-    },
-    {
-      "name": "the improper integral works 1/1 in front of the bracket",
-      "file": "index.html",
-      "find": "${p===2 ? '' : frac(1,p-1)}",
-      "replace": "${frac(1,p-1)}",
-      "run": "verify"
-    },
-    {
-      "name": "the area choice under y = x is left unreduced",
-      "file": "index.html",
-      "find": "[rat(a*a,2),'that is the area under y = x",
-      "replace": "[frac(a*a,2),'that is the area under y = x",
-      "run": "verify"
-    },
-    {
-      "name": "complex eigenvalues keep the root unsimplified",
-      "file": "index.html",
-      "find": "while(m%(f*f)===0){ m/=f*f; k*=f; }",
-      "replace": "while(false){ m/=f*f; k*=f; }",
-      "run": "verify"
-    },
-    {
-      "name": "the angle working leaves √25 for a length of 5",
-      "file": "index.html",
-      "find": "const rootOf=n=>Number.isInteger(Math.sqrt(n)) ? String(Math.sqrt(n)) : '√'+n;",
-      "replace": "const rootOf=n=>'√'+n;",
+      "find": "${Math.abs(cosT*100-Math.round(cosT*100))<1e-9 ? '=' : '≈'}",
+      "replace": "=",
       "run": "verify"
     }
   ]
