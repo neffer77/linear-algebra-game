@@ -1,11 +1,39 @@
 {
-  "change": "A bounty rolled on the map is saved at once",
+  "change": "The daily's straw knight shows the score to beat",
   "mutations": [
     {
-      "name": "A rolled bounty is left unsaved",
+      "name": "The bar drains by one a hit, as before",
       "file": "index.html",
-      "find": "    if(made || g.bounties.length!==had) Game.save();\n",
+      "find": "        this.ehp=Math.max(0,this.emax-(Daily.score||0));\n",
+      "replace": "        this.ehp=Math.max(0,this.ehp-1);\n",
+      "run": "play:map"
+    },
+    {
+      "name": "Today's best is ignored for the best ever",
+      "file": "index.html",
+      "find": "    if(st.best) return {pts:st.best, label:\"today's best\"};\n",
       "replace": "",
+      "run": "play:map"
+    },
+    {
+      "name": "Passing the mark goes unsaid",
+      "file": "index.html",
+      "find": "          UI.toast(`🎯 Past ${c.label}`+(left>0?` with ${left} to go`:'')+'!');\n",
+      "replace": "",
+      "run": "play:map"
+    },
+    {
+      "name": "The bar keeps its old health reading",
+      "file": "index.html",
+      "find": "    document.getElementById('eHpTxt').textContent = this.mode==='daily'\n",
+      "replace": "    document.getElementById('eHpTxt').textContent = false\n",
+      "run": "play:map"
+    },
+    {
+      "name": "A short run is not told by how much",
+      "file": "index.html",
+      "find": " · ${st.best-this.score} short</div>",
+      "replace": "</div>",
       "run": "play:map"
     }
   ]
