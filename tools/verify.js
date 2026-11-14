@@ -298,6 +298,23 @@ function vecsOf(html) {
     .map(m => [num(m[1]), num(m[2])]);
 }
 const vecOf1 = html => vecsOf(html)[0] || null;
+/** Every ⟨…⟩ in a string, with any number of components. */
+const vecsN = html => [...String(html).replace(/<[^>]+>/g, '')
+  .matchAll(/⟨([^⟩]*)⟩/g)].map(m => m[1].split(',').map(num));
+const dotN = (u, v) => u.reduce((t, x, i) => t + x * v[i], 0);
+/** The arithmetic steps in a working ("4 + (−2) = 2", "−3·(−2) = 6",
+    "(a)(b) + (c)(d) = e + f = g"): how many there are, or −1 if any is false. */
+function workedTrue(ex) {
+  const t = String(ex).replace(/<[^>]+>/g, ' ').replace(/−/g, '-');
+  let n = 0;
+  for (const m of t.matchAll(/(-?\d+) \+ \(?(-?\d+)\)? = (-?\d+)/g)) {
+    if (+m[1] + +m[2] !== +m[3]) return -1; n++; }
+  for (const m of t.matchAll(/(-?\d+)·\(?(-?\d+)\)? = (-?\d+)/g)) {
+    if (+m[1] * +m[2] !== +m[3]) return -1; n++; }
+  for (const m of t.matchAll(/\((-?\d+)\)\((-?\d+)\) \+ \((-?\d+)\)\((-?\d+)\) = (-?\d+) \+ \(?(-?\d+)\)? = (-?\d+)/g)) {
+    if (+m[1] * +m[2] !== +m[5] || +m[3] * +m[4] !== +m[6]) return -1; n++; }
+  return n;
+}
 const det2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
 const det3 = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
                - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
@@ -331,6 +348,51 @@ const ALGEBRA = {
                  const f = String(p.a).match(/<span class="frac"><span>(−?\d+)<\/span><span>(−?\d+)<\/span><\/span>/);
                  const [n, k] = f ? [+f[1].replace('−', '-'), +f[2].replace('−', '-')] : [1, 1];
                  return same(mm(M, B, 2).map(r => r.map(v => n * v)), [[k, 0], [0, k]]); },
+
+  /* --- The first realm, and the yes/no and root-set answers. Each is checked
+     against what the answer has to satisfy, not against the generator's sum. --- */
+  vecAdd:   p => { const [u, v] = vecsN(p.q), [s] = vecsN(p.a);
+                   return same(s, u.map((x, i) => x + v[i])) && workedTrue(p.ex) >= 2; },
+  vecScale: p => { const c = num(p.q.match(/^(−?\d+) ·/)[1]), [v] = vecsN(p.q), [s] = vecsN(p.a);
+                   return c !== 1 && same(s, v.map(x => c * x)) && workedTrue(p.ex) >= 2; },
+  vecCombo: p => { const [u, v] = vecsN(p.q), [s] = vecsN(p.a);
+                   const m = p.q.replace(/<[^>]+>/g, ' ').match(/(\d+)u − (\d+)v = \?/);
+                   return !!m && same(s, u.map((x, i) => +m[1] * x - +m[2] * v[i])); },
+  dot:      p => { const [u, v] = vecsN(p.q);
+                   return num(p.a) === dotN(u, v) && workedTrue(p.ex) >= 2; },
+  // A length squared is the sum of the squared components (Pythagoras).
+  mag:      p => { const [v] = vecsN(p.q), L = num(p.a);
+                   return L > 0 && L * L === dotN(v, v); },
+  // Perpendicular means some quarter turn of u lies along v.
+  orth:     p => { const [u, v] = vecsN(p.q.replace(/<[^>]+>/g, ' '));
+                   const turned = [-u[1], u[0]];
+                   const along = turned[0] * v[1] - turned[1] * v[0] === 0;
+                   return /^(Yes|No) /.test(p.a) && (p.a.startsWith('Yes') === along); },
+  // u × v is pinned down by three facts: it is at right angles to u and to v,
+  // its length squared is ‖u‖²‖v‖² − (u·v)² (Lagrange), and u, v, u × v
+  // turn the right-handed way, so det[u; v; u × v] = ‖u × v‖² ≥ 0.
+  cross:    p => { const [u, v] = vecsN(p.q), [s] = vecsN(p.a);
+                   if (!s || s.length !== 3) return false;
+                   return dotN(s, u) === 0 && dotN(s, v) === 0
+                     && dotN(s, s) === dotN(u, u) * dotN(v, v) - dotN(u, v) ** 2
+                     && det3([u, v, s]) === dotN(s, s); },
+  // Dependent exactly when column 2 is k × column 1 (every entry here is nonzero,
+  // so k = col2[0] / col1[0], tested without division).
+  rank:     p => { const M = mats(p.q)[0];
+                   const multiple = M[0][1] * M[1][0] === M[1][1] * M[0][0];
+                   return /^(Yes|No) /.test(p.a) && (p.a.startsWith('Yes') === !multiple); },
+  // Each eigenvalue makes A − λI singular, and the two add up to the trace.
+  eigen2:   p => { const A = mats(p.q)[0];
+                   const L = [...p.a.matchAll(/−?\d+/g)].map(m => num(m[0]));
+                   return L.length === 2 && L[0] < L[1]
+                     && L.every(l => det2([[A[0][0] - l, A[0][1]], [A[1][0], A[1][1] - l]]) === 0)
+                     && L[0] + L[1] === A[0][0] + A[1][1]; },
+  // f′ is zero at each answer, and nowhere else between −10 and 10.
+  critical: p => { const fp = compile(p.q.match(/f′\(x\) = (.*?)<br>/)[1]);
+                   const xs = [...p.a.matchAll(/x = (−?\d+)/g)].map(m => num(m[1]));
+                   if (!fp || xs.length !== 2) return false;
+                   const zeros = []; for (let x = -10; x <= 10; x++) if (Math.abs(fp({ x })) < 1e-9) zeros.push(x);
+                   return same(zeros, xs); },
 
   /* --- Spectral Reach --- */
 
