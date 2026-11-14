@@ -1,39 +1,39 @@
 {
-  "change": "The daily's straw knight shows the score to beat",
+  "change": "A daily run names what it missed, with a drill on those topics",
   "mutations": [
     {
-      "name": "The bar drains by one a hit, as before",
+      "name": "A miss in the daily is not recorded",
       "file": "index.html",
-      "find": "        this.ehp=Math.max(0,this.emax-(Daily.score||0));\n",
-      "replace": "        this.ehp=Math.max(0,this.ehp-1);\n",
-      "run": "play:map"
-    },
-    {
-      "name": "Today's best is ignored for the best ever",
-      "file": "index.html",
-      "find": "    if(st.best) return {pts:st.best, label:\"today's best\"};\n",
+      "find": "        if(k && m.indexOf(k)<0) m.push(k);\n",
       "replace": "",
       "run": "play:map"
     },
     {
-      "name": "Passing the mark goes unsaid",
+      "name": "A topic missed twice is listed twice",
       "file": "index.html",
-      "find": "          UI.toast(`🎯 Past ${c.label}`+(left>0?` with ${left} to go`:'')+'!');\n",
+      "find": "        if(k && m.indexOf(k)<0) m.push(k);\n",
+      "replace": "        if(k) m.push(k);\n",
+      "run": "play:map"
+    },
+    {
+      "name": "The drill has no pool for the daily's misses",
+      "file": "index.html",
+      "find": "    else if(what==='daily'){ this.pool=(Daily.missed||[]).slice(); this.title=\"Today's misses\"; }\n",
       "replace": "",
       "run": "play:map"
     },
     {
-      "name": "The bar keeps its old health reading",
+      "name": "A new run keeps the last run's misses",
       "file": "index.html",
-      "find": "    document.getElementById('eHpTxt').textContent = this.mode==='daily'\n",
-      "replace": "    document.getElementById('eHpTxt').textContent = false\n",
+      "find": "    this.missed=[];                  // topics missed this run, for the drill after it\n",
+      "replace": "",
       "run": "play:map"
     },
     {
-      "name": "A short run is not told by how much",
+      "name": "Running it again leads even after misses",
       "file": "index.html",
-      "find": " · ${st.best-this.score} short</div>",
-      "replace": "</div>",
+      "find": "<button class=\"btn${miss.length?'':' gold'}\" id=\"dAgain\"",
+      "replace": "<button class=\"btn gold\" id=\"dAgain\"",
       "run": "play:map"
     }
   ]
