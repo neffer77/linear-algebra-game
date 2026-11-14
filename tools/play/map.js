@@ -444,6 +444,66 @@ module.exports = {
       JSON.stringify(chase.keys));
 
     // ------------------------------------------------------------------
+    // A daily run names what it missed, with a drill on just those topics.
+    // ------------------------------------------------------------------
+    const dm = await t.ev(async () => {
+      const out = {}, g = Game.s, lessons = Prefs.d.lessons;
+      Prefs.d.lessons = false;
+      const keep = JSON.stringify(g.daily || null);
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const prep = () => { Battle.answered = false; Battle.shownWork = false; Battle.rite = null; Battle.cur.redo = false; };
+      const right = () => { prep(); Battle.answer(null, Battle.cur.a); };
+      const wrong = () => { prep(); Battle.answer(null, Battle.cur.choices.find(c => c !== Battle.cur.a)); };
+      const shown = el => !!el && el.offsetParent !== null;
+
+      Daily.start(); await wait(300);
+      const missedKeys = [];
+      wrong(); missedKeys.push(Battle.cur.key); Battle.afterTurn(); await wait(100);
+      right(); Battle.afterTurn(); await wait(100);
+      wrong(); if (!missedKeys.includes(Battle.cur.key)) missedKeys.push(Battle.cur.key);
+      // the same topic missed twice is named once
+      Battle.cur = buildQuestion(missedKeys[0], 2); wrong();
+      out.expect = missedKeys.map(k => TOPIC_LABEL[k]);
+      out.missed = (Daily.missed || []).slice();
+      out.keys = missedKeys;
+      Battle.flee(); R.unseed();
+      Daily.finish(); await wait(200);
+      const box = document.getElementById('dMissed'), drill = document.getElementById('dDrill'), again = document.getElementById('dAgain');
+      out.list = box ? box.innerText : null;
+      out.drill = shown(drill) ? drill.innerText : null;
+      out.drillGold = drill ? drill.classList.contains('gold') : null;
+      out.againGold = again ? again.classList.contains('gold') : null;
+      out.cleanLine = !!document.getElementById('dClean');
+      drill.click(); await wait(200);
+      out.train = { screen: document.querySelector('.screen.on').id, pool: Train.pool.slice(), title: Train.title,
+        topic: document.getElementById('tTopic').innerText };
+
+      // a clean run says so, and the run again button leads
+      Daily.start(); await wait(300);
+      out.fresh = (Daily.missed || []).length;
+      right(); Battle.flee(); R.unseed();
+      Daily.finish(); await wait(200);
+      const again2 = document.getElementById('dAgain');
+      out.clean = { line: !!document.getElementById('dClean'), drill: !!document.getElementById('dDrill'),
+        list: !!document.getElementById('dMissed'), againGold: again2 ? again2.classList.contains('gold') : null };
+      out.dailyKeys = Object.keys(g.daily).sort();
+      g.daily = JSON.parse(keep) || undefined; if (!g.daily) delete g.daily;
+      Prefs.d.lessons = lessons; Game.save(); UI.go('s-map');
+      return out;
+    });
+    t.eq('every topic missed in a run is kept, each once, in the order missed', dm.missed, dm.keys);
+    t.ok('the result screen names them', dm.list && dm.expect.every(l => dm.list.includes(l)) && !dm.cleanLine, String(dm.list));
+    t.ok('and offers a drill on just those, ahead of running it again',
+      dm.drill && dm.drill.includes(dm.keys.length === 1 ? 'Practise it' : 'Practise these ' + dm.keys.length)
+      && dm.drillGold && !dm.againGold, JSON.stringify(dm));
+    t.ok('the drill opens the Training Grounds on exactly the topics missed',
+      dm.train.screen === 's-train' && JSON.stringify(dm.train.pool) === JSON.stringify(dm.keys), JSON.stringify(dm.train));
+    t.ok('a new run starts with nothing missed', dm.fresh === 0, String(dm.fresh));
+    t.ok('a clean run says so, offers no drill, and running it again leads',
+      dm.clean.line && !dm.clean.drill && !dm.clean.list && dm.clean.againGold, JSON.stringify(dm.clean));
+    t.eq('nothing about the misses goes into the save', dm.dailyKeys, ['allTimeBest', 'best', 'day', 'runs']);
+
+    // ------------------------------------------------------------------
     // The campaign is a road, and each realm folds away beneath it.
     // ------------------------------------------------------------------
     const road = await t.ev(() => {

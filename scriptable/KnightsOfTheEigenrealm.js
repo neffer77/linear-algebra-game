@@ -6494,7 +6494,11 @@ const Battle = {
         }
         Anim.strike('p', pts, this.combo>=5, 'PTS');
         Sfx.good(this.combo); this.comboBeat();
-      } else { Anim.strike('e', 0, false, 'MISS'); Sfx.bad(); }
+      } else {
+        Anim.strike('e', 0, false, 'MISS'); Sfx.bad();
+        const k=this.cur.key, m=Daily.missed||(Daily.missed=[]);
+        if(k && m.indexOf(k)<0) m.push(k);
+      }
       Game.save();
       setTimeout(()=>this.updateBars(),420);
       this.showExplain(ok, choice);
@@ -8550,6 +8554,7 @@ const Daily = {
     this.state();
     this.score=0; this.n=0;
     this.chase=this.goal();
+    this.missed=[];                  // topics missed this run, for the drill after it
     R.seed(this.seedFor());
     Battle.beginDaily();
   },
@@ -8572,6 +8577,9 @@ const Daily = {
     Titles.check();
     Anim.stop();
     UI.go('s-result');
+    /* What went wrong is the most useful thing a run turns up, so it is named
+       here with a drill on just those topics. It lives for this run only. */
+    const miss=(this.missed||[]).filter(k=>TOPIC_LABEL[k]);
     document.getElementById('resultBody').innerHTML=\`
       <div class="center crest">🗡️</div>
       <div class="panel center">
@@ -8584,8 +8592,13 @@ const Daily = {
           \`<div class="small" style="margin-top:8px" id="dShort">Today's best: \${st.best} · \${st.best-this.score} short</div>\`}
         <hr>
         <div class="small">All-time best: \${st.allTimeBest} · runs today: \${st.runs}</div>
+        \${miss.length?\`<hr><div id="dMissed"><div class="small" style="margin-bottom:4px;font-weight:800;color:var(--gold)">Missed this run</div>
+          <div class="small" style="line-height:1.7">\${miss.map(k=>TOPIC_LABEL[k]||k).join(' · ')}</div></div>\`
+          :\`<hr><div class="small" id="dClean" style="color:var(--green);font-weight:800">A clean run: nothing missed.</div>\`}
+        \${Battle.learnedHtml()}
       </div>
-      <button class="btn gold" onclick="Daily.start()">↻ Run it again</button>
+      \${miss.length?\`<button class="btn gold" id="dDrill" onclick="UI.go('s-train');Train.startPool('daily')">🎯 Practise \${miss.length===1?'it':\`these \${miss.length}\`} now</button>\`:''}
+      <button class="btn\${miss.length?'':' gold'}" id="dAgain" onclick="Daily.start()">↻ Run it again</button>
       <button class="btn ghost" onclick="UI.go('s-map')">🗺️ Back to the map</button>
       <div style="height:20px"></div>\`;
     countUp(document.getElementById('dScore'), this.score, 1100);
@@ -13328,6 +13341,7 @@ const Train = {
     if(what==='weak'){ this.pool=Mastery.weakest(6); this.title='Weakest topics'; }
     else if(what==='due'){ this.pool=Mastery.dueList(); this.title='Due for review'; }
     else if(what==='fading'){ this.pool=Mastery.fading(); this.title='Fading'; }
+    else if(what==='daily'){ this.pool=(Daily.missed||[]).slice(); this.title="Today's misses"; }
     else { this.pool=[what]; this.title=TOPIC_LABEL[what]; }
     if(!this.pool.length){ UI.toast('Nothing to drill yet — play a few rounds first.'); return; }
     this.c=0; this.w=0;
