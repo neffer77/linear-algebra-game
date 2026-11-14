@@ -315,6 +315,19 @@ function workedTrue(ex) {
     if (+m[1] * +m[2] !== +m[5] || +m[3] * +m[4] !== +m[6]) return -1; n++; }
   return n;
 }
+/** The cross product's working: three lines "(a)(b) − (c)(d) = p ± q = r", one per
+    component in order, each crossing the other two slots of u and v, and true. */
+function crossWorked(ex, u, v, s) {
+  const t = String(ex).replace(/<[^>]+>/g, ' ').replace(/−/g, '-');
+  const lines = [...t.matchAll(/\((-?\d+)\)\((-?\d+)\) - \((-?\d+)\)\((-?\d+)\) = (-?\d+) ([+-]) (\d+) = (-?\d+)/g)];
+  if (lines.length !== 3) return false;
+  return [[1, 2], [2, 0], [0, 1]].every(([i, j], k) => {
+    const m = lines[k].slice(1).map((x, n) => n === 5 ? x : +x);
+    const q = m[5] === '+' ? -m[6] : m[6];
+    return m[0] === u[i] && m[1] === v[j] && m[2] === u[j] && m[3] === v[i]
+      && m[4] === u[i] * v[j] && q === u[j] * v[i] && m[7] === m[4] - q && m[7] === s[k];
+  });
+}
 const det2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
 const det3 = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1])
                - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
@@ -375,7 +388,7 @@ const ALGEBRA = {
                    if (!s || s.length !== 3) return false;
                    return dotN(s, u) === 0 && dotN(s, v) === 0
                      && dotN(s, s) === dotN(u, u) * dotN(v, v) - dotN(u, v) ** 2
-                     && det3([u, v, s]) === dotN(s, s); },
+                     && det3([u, v, s]) === dotN(s, s) && crossWorked(p.ex, u, v, s); },
   // Dependent exactly when column 2 is k × column 1 (every entry here is nonzero,
   // so k = col2[0] / col1[0], tested without division).
   rank:     p => { const M = mats(p.q)[0];

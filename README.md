@@ -855,7 +855,8 @@ identity gives, and turn the right-handed way, so v × u is caught as surely as 
 sign. Each eigenvalue must make A − λI singular, each critical point must zero the
 derivative with no other integer root between −10 and 10, and a vector's length squared
 must equal the sum of its squared components. The sums and products written out in the
-vector workings, such as (−3)(4) + (2)(5) = −12 + 10 = −2, are re-added too.
+vector workings, such as (−3)(4) + (2)(5) = −12 + 10 = −2, are re-added too. The cross product's working is written on the riddle's own numbers, one
+line per component, and each line must cross the right two slots and come out true.
 Mote ladders are checked the same way, on the choices a player is actually
 shown rather than the authored list — 45,600 rendered steps per run.
 
