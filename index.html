@@ -933,6 +933,29 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SLOPE WORKSHOP ============ -->
+  <div class="screen" id="s-slope">
+    <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
+    <div class="panel">
+      <div id="slCurves" class="wsModes" role="group" aria-label="Curve"></div>
+      <div id="slFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="slALo" onclick="Slope.moveA(-1)" aria-label="Move the point left">−</button>
+          <b id="slA" style="font-size:19px;min-width:0"></b>
+          <button id="slAHi" onclick="Slope.moveA(1)" aria-label="Move the point right">+</button></div>
+        <div class="wsCell"><button id="slHLo" onclick="Slope.moveH(1)" aria-label="Bring h closer to 0">−</button>
+          <b id="slH" style="font-size:19px;min-width:0"></b>
+          <button id="slHHi" onclick="Slope.moveH(-1)" aria-label="Move h further from 0">+</button></div>
+      </div>
+      <button class="btn sm ghost" id="slSide" onclick="Slope.flip()"></button>
+      <div id="slRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="slGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ WORKSHOP ============ -->
   <div class="screen" id="s-workshop">
     <div class="panel"><h2>🛠 Matrix Workshop</h2><div class="sub">Turn the four numbers and watch the plane bend. Nothing here is graded: it is for seeing what a matrix does.</div></div>
@@ -5840,6 +5863,12 @@ const Figure = {
       g.moveTo(X(x0), Y(ya+m*(x0-a)));
       g.lineTo(X(x1), Y(ya+m*(x1-a)));
       g.stroke(); g.setLineDash([]);
+    }
+    // a secant: the straight line through two points of the curve
+    if(s.secant){
+      const [p,q]=s.secant, yp=figEval(s.f,p), m=(figEval(s.f,q)-yp)/(q-p);
+      g.strokeStyle=FIG_COL.a; g.lineWidth=2;
+      g.beginPath(); g.moveTo(X(x0), Y(yp+m*(x0-p))); g.lineTo(X(x1), Y(yp+m*(x1-p))); g.stroke();
     }
     (s.pts||[]).forEach(p=>{
       const x=p[0], y=p.length>1?p[1]:figEval(s.f,x);
@@ -12050,6 +12079,7 @@ const UI = {
     if(id==='s-comp') Competency.render();
     if(id==='s-train') Train.renderPick();
     if(id==='s-workshop') Workshop.render();
+    if(id==='s-slope') Slope.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12659,6 +12689,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative.</div>
+         <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
@@ -13528,6 +13563,90 @@ const Workshop = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('WORKSHOP MASTERED','every shape made','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------------------------- slope workshop ----------------------------- */
+/* The derivative, seen being made. A secant through (a, f(a)) and
+   (a + h, f(a + h)) has slope (f(a + h) − f(a))/h, worked out in the readout
+   for the numbers on screen; bringing h towards 0 turns the secant into the
+   tangent, and its slope settles on f′(a). Both sides can be watched, since a
+   limit has to agree from the left and the right. Like the matrix workshop,
+   nothing is timed or graded and nothing goes in the save. */
+const Slope = {
+  CURVES:[
+    {id:'sq',   name:'x²',      f:{poly:[[1,2]]}},
+    {id:'cube', name:'x³ − 3x', f:{poly:[[1,3],[-3,1]]}},
+    {id:'cap',  name:'4 − x²',  f:{poly:[[4,0],[-1,2]]}}
+  ],
+  HS:[1, 0.5, 0.1, 0.01, 0.001],
+  ci:0, a:1, hi:0, side:1,
+  done:new Set(),
+  GOALS:[
+    {id:'close', t:'Bring h close enough that the secant slope is within 0.01 of f′(a).',
+     ok:S=>Math.abs(S.secant()-S.dfa())<0.01},
+    {id:'left',  t:'Watch it from the other side too: h below 0, as close as it goes.',
+     ok:S=>S.side<0&&S.hi===S.HS.length-1},
+    {id:'flat',  t:'Find a point where the tangent is flat: f′(a) = 0.',
+     ok:S=>S.dfa()===0},
+    {id:'fall',  t:'Find a point where the curve is falling: f′(a) below 0.',
+     ok:S=>S.dfa()<0},
+    {id:'steep', t:'Find the steepest point on offer, where f′(a) is 9 or more.',
+     ok:S=>S.dfa()>=9}
+  ],
+  curve(){ return this.CURVES[this.ci]; },
+  h(){ return this.side*this.HS[this.hi]; },
+  f(x){ return figEval(this.curve().f, x); },
+  // The derivative of a polynomial, term by term: c·xᵖ gives p·c·xᵖ⁻¹.
+  dfa(){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*p*Math.pow(this.a,p-1):0),0); },
+  secant(){ const h=this.h(); return (this.f(this.a+h)-this.f(this.a))/h; },
+  /* A value as the readout prints it, with no trailing zeros. Nine places is
+     exact for every value on offer (a cube of a number with three places has
+     nine), so the working on screen is true to the last digit it shows. */
+  num(x){
+    const r=+x.toFixed(9);
+    return neg(Object.is(r,-0)?0:r);
+  },
+  // The same, bracketed when it is negative, as working writes it: 4 − (−2).
+  pn(x){ const t=this.num(x); return t.startsWith('−')?'('+t+')':t; },
+  open(){ UI.go('s-slope'); },
+  pick(i){ this.ci=i; this.render(); },
+  moveA(by){ const v=this.a+by; if(v<-2||v>2) return; this.a=v; this.render(); },
+  moveH(by){ const v=this.hi+by; if(v<0||v>=this.HS.length) return; this.hi=v; this.render(); },
+  flip(){ this.side=-this.side; this.render(); },
+  render(){
+    const C=this.curve(), a=this.a, h=this.h(), b=a+h, fa=this.f(a), fb=this.f(b), m=this.secant(), d=this.dfa();
+    const near=this.hi===this.HS.length-1;
+    document.getElementById('slCurves').innerHTML=this.CURVES.map((c,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.ci}" onclick="Slope.pick(${i})">f(x) = ${c.name}</button>`).join('');
+    document.getElementById('slA').textContent=`a = ${neg(a)}`;
+    document.getElementById('slH').textContent=`h = ${this.num(h)}`;
+    document.getElementById('slALo').disabled=a<=-2;
+    document.getElementById('slAHi').disabled=a>=2;
+    document.getElementById('slHLo').disabled=near;
+    document.getElementById('slHHi').disabled=this.hi===0;
+    document.getElementById('slSide').textContent=this.side>0?'Come in from the left instead (h below 0)':'Come in from the right instead (h above 0)';
+    Figure.render({kind:'curve', f:C.f, lo:-2.5, hi:2.5, secant:[a,b], tangent:near?a:undefined,
+      pts:[[a,fa,FIG_COL.d],[b,fb,FIG_COL.a]],
+      caption:near?'The secant (blue) now lies along the tangent (dashed red).':'The secant (blue) through the red point and the blue one.'},
+      document.getElementById('slFig'));
+    document.getElementById('slRead').innerHTML=
+      `<div>slope = (f(a + h) − f(a)) / h = (f(${this.num(b)}) − f(${neg(a)})) / ${this.pn(h)}
+         = (${this.num(fb)} − ${this.pn(fa)}) / ${this.pn(h)} = <b>${this.num(m)}</b></div>
+       <div>${near
+         ? `With h this close, the secant has all but become the tangent. Its slope is heading for <b>f′(${neg(a)}) = ${neg(d)}</b>, the derivative.`
+         : 'Bring h closer to 0 and watch where this slope settles.'}</div>`;
+    const fresh=[];
+    for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('slGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
     }
   }

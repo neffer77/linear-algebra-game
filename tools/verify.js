@@ -46,6 +46,7 @@ function loadGame() {
     // The workshop's arithmetic, lifted out of its object so every matrix it
     // can show is checked here: the determinant, the directions it keeps, and
     // whether each goal can be made inside its range at all.
+    ';const Slope={' + script.slice(script.indexOf('  CURVES:['), script.indexOf('  open(){ UI.go(\'s-slope\'); },')) + '};exports.Slope=Slope;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
   return out;
@@ -59,7 +60,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1530,6 +1531,41 @@ const workshopNotes = (() => {
   return { n, goals: W.GOALS.length, targets };
 })();
 
+/* ---------------------------------------------------------- slope workshop */
+/* Every state the slope workshop can be in: three curves, five points, five
+   sizes of h, and both sides. Its derivative must be the true one (checked
+   against a symmetric difference, not its own rule), its secant the slope
+   through the two points drawn, and the working it prints must be true of
+   the numbers it prints. At the closest h the secant must be within 0.01 of
+   the derivative, or the sentence saying it has all but become the tangent
+   would be false; both points must lie on the drawn plot; and each goal must
+   be findable. */
+const slopeNotes = (() => {
+  const S = Slope, found = {}, unnum = t => +String(t).replace('−', '-');
+  let n = 0;
+  for (let ci = 0; ci < S.CURVES.length; ci++) for (let a = -2; a <= 2; a++)
+  for (let hi = 0; hi < S.HS.length; hi++) for (const side of [1, -1]) {
+    Object.assign(S, { ci, a, hi, side });
+    const key = `${S.curve().name} a=${a} h=${S.h()}`, h = S.h(), F = x => figEval(S.curve().f, x);
+    n++;
+    const sym = (F(a + 1e-5) - F(a - 1e-5)) / 2e-5;
+    if (Math.abs(S.dfa() - sym) > 1e-4) fail('slope', key, `f′(a) is ${S.dfa()}, the curve says ${sym}`);
+    if (!Number.isInteger(S.dfa())) fail('slope', key, 'a derivative that is not a whole number');
+    if (Math.abs(S.secant() - (F(a + h) - F(a)) / h) > 1e-9) fail('slope', key, 'the secant is not the slope through its two points');
+    const fb = unnum(S.num(F(a + h))), fa = unnum(S.num(F(a))), hh = unnum(S.num(h)), m = unnum(S.num(S.secant()));
+    if (Math.abs((fb - fa) / hh - m) > 1e-6) fail('slope', key, `the working (${fb} − ${fa}) / ${hh} does not give ${m}`);
+    if (hh !== h) fail('slope', key, 'h is printed as something else');
+    if (hi === S.HS.length - 1 && !(Math.abs(S.secant() - S.dfa()) < 0.01)) fail('slope', key, 'at the closest h the secant is still far from the tangent');
+    if (Math.abs(a + h) > 3.1) fail('slope', key, 'the second point is off the plot');
+    if (S.pn(-2) !== '(−2)' || S.pn(2) !== '2') fail('slope', 'pn', 'a negative is not bracketed in the working');
+    for (const g of S.GOALS) if (g.ok(S)) found[g.id] = (found[g.id] || 0) + 1;
+  }
+  for (const g of S.GOALS) if (!found[g.id]) fail('slope', g.id, 'this goal cannot be found');
+  Object.assign(S, { ci: 0, a: 1, hi: 0, side: 1 });
+  if (S.GOALS.some(g => g.ok(S))) fail('slope', 'start', 'a goal is already met where the workshop opens');
+  return { n, goals: S.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1572,6 +1608,7 @@ if (codeNotes) {
 }
 console.log(`  workshop matrices checked  ${pad(workshopNotes.n.toLocaleString(), 10)}  (kept directions, eigenvalues, ${workshopNotes.goals} goals makeable)`);
 console.log(`    shapes to match drawn    ${pad(workshopNotes.targets.toLocaleString(), 12)}  (on the grid, never flat, never twice running)`);
+console.log(`  slope workshop states      ${pad(slopeNotes.n.toLocaleString(), 10)}  (derivative, secant, working, ${slopeNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

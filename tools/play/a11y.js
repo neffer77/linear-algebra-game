@@ -51,7 +51,7 @@ module.exports = {
     // --- every screen a knight walks through ---
     let total = 0;
     const bad = [];
-    for (const id of ['s-map', 's-keep', 's-shop', 's-gear', 's-prefs', 's-train', 's-tome', 's-workshop']) {
+    for (const id of ['s-map', 's-keep', 's-shop', 's-gear', 's-prefs', 's-train', 's-tome', 's-workshop', 's-slope']) {
       await t.ev(id => UI.go(id), id);
       await sleep(80);
       s = await strays(t);
