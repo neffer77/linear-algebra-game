@@ -369,6 +369,81 @@ module.exports = {
       low.fallPoor.restAgain === null && low.fallPoor.tryGold, JSON.stringify(low.fallPoor));
 
     // ------------------------------------------------------------------
+    // The daily's straw knight cannot fall, so its bar is the mark to beat.
+    // ------------------------------------------------------------------
+    const chase = await t.ev(async () => {
+      const out = {}, g = Game.s, lessons = Prefs.d.lessons;
+      Prefs.d.lessons = false;
+      const keep = JSON.stringify(g.daily || null);
+      const st = Daily.state();
+      const bar = () => ({ name: document.getElementById('foeName').innerText,
+        txt: document.getElementById('eHpTxt').innerText, ehp: Battle.ehp, emax: Battle.emax });
+      const right = () => { Battle.answered = false; Battle.cur.redo = false; Battle.answer(null, Battle.cur.a); };
+      const wrong = () => { Battle.answered = false; Battle.cur.redo = false;
+        Battle.answer(null, Battle.cur.choices.find(c => c !== Battle.cur.a)); };
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+
+      st.best = 0; st.allTimeBest = 0;
+      Daily.start(); await wait(500); out.par = bar();
+      right(); await wait(500);
+      out.afterHit = Object.assign(bar(), { score: Daily.score });
+      wrong(); await wait(500);
+      out.afterMiss = Object.assign(bar(), { score: Daily.score });
+      Battle.flee(); R.unseed();
+
+      st.allTimeBest = 1500;
+      Daily.start(); await wait(300); out.ever = bar(); Battle.flee(); R.unseed();
+
+      st.best = 60;
+      Daily.start(); await wait(300); out.today = bar();
+      document.querySelectorAll('.toast').forEach(d => d.remove());
+      right(); await wait(500);
+      const toasts = [...document.querySelectorAll('.toast')].map(d => d.innerText);
+      const lbl = document.getElementById('eHpTxt').parentElement;
+      out.passed = Object.assign(bar(), { toast: toasts.join(' | '), screen: document.querySelector('.screen.on').id,
+        over: Battle.over, mode: Battle.mode });
+      // the bar's label fits a phone even at its longest
+      const shell = document.getElementById('app') || document.body, w0 = shell.style.width;
+      Battle.emax = 2400; Battle.ehp = 2399; Battle.updateBars();     // the longest it gets
+      shell.style.width = '320px'; await wait(50);
+      out.fits = lbl.scrollWidth <= lbl.clientWidth + 1;
+      out.fitWidths = [lbl.scrollWidth, lbl.clientWidth];
+      shell.style.width = w0;
+
+      // a run that falls short is told by how much
+      Battle.flee(); R.unseed();
+      Daily.score = 20; st.best = 500; Daily.finish(); await wait(200);
+      const short = document.getElementById('dShort');
+      out.short = short ? short.innerText : null;
+      out.keys = Object.keys(g.daily).sort();
+      out.saveHasChase = /chase|"par"/i.test(JSON.stringify(g));
+      g.daily = JSON.parse(keep) || undefined; if (!g.daily) delete g.daily;
+      Prefs.d.lessons = lessons; Game.save(); UI.go('s-map');
+      return out;
+    });
+    t.ok('a first run chases a par, named on the bar with what is left to score',
+      /par/.test(chase.par.name) && chase.par.emax === 900 && chase.par.txt === '900 to go', JSON.stringify(chase.par));
+    t.ok('a right answer drains the bar by exactly the points it scored',
+      chase.afterHit.score > 0 && chase.afterHit.ehp === 900 - chase.afterHit.score
+      && chase.afterHit.txt === (900 - chase.afterHit.score) + ' to go', JSON.stringify(chase.afterHit));
+    t.ok('a miss leaves it where it was',
+      chase.afterMiss.ehp === chase.afterHit.ehp && chase.afterMiss.score === chase.afterHit.score, JSON.stringify(chase.afterMiss));
+    t.ok('with no run yet today, the bar is your best ever',
+      /your best/.test(chase.ever.name) && chase.ever.emax === 1500, JSON.stringify(chase.ever));
+    t.ok("once there is a run today, it is today's best",
+      /today's best/.test(chase.today.name) && chase.today.emax === 60, JSON.stringify(chase.today));
+    t.ok('passing it empties the bar, says so, and says how many riddles are left',
+      chase.passed.ehp === 0 && /passed/.test(chase.passed.txt) && /Past today's best with 11 to go/.test(chase.passed.toast),
+      JSON.stringify(chase.passed));
+    t.ok('and the run goes on: an empty bar ends nothing',
+      chase.passed.screen === 's-battle' && chase.passed.mode === 'daily' && !chase.passed.over, JSON.stringify(chase.passed));
+    t.ok('the bar\'s label fits a 320px phone', chase.fits, JSON.stringify(chase.fitWidths));
+    t.ok('a run that falls short is told by how much', chase.short && /480 short/.test(chase.short), String(chase.short));
+    t.ok('nothing new goes into the save for it',
+      JSON.stringify(chase.keys) === JSON.stringify(['allTimeBest', 'best', 'day', 'runs']) && !chase.saveHasChase,
+      JSON.stringify(chase.keys));
+
+    // ------------------------------------------------------------------
     // The campaign is a road, and each realm folds away beneath it.
     // ------------------------------------------------------------------
     const road = await t.ev(() => {

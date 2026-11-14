@@ -5901,8 +5901,11 @@ const Battle = {
   beginDaily(){
     this.mode='daily';
     this.realm=REALMS[0]; this.ri=0; this.fi=2;
+    // The straw knight cannot fall, so its bar is the mark to beat instead:
+    // it drains as points come in and is empty once the run has passed it.
+    const goal=Daily.chase||Daily.goal();
     this._start({nm:'Straw Knight', art:'knightfoe', col:'#c9b8a0',
-                 hp:999999, atk:0, gold:0, xp:0, dummy:true});
+                 hp:goal.pts, atk:0, gold:0, xp:0, dummy:true});
   },
   beginArena(foe, wave){
     this.mode='arena';
@@ -5966,12 +5969,16 @@ const Battle = {
     document.getElementById('pGhost').style.width = pPct+'%';   // trails behind, showing the wound
     document.getElementById('eGhost').style.width = ePct+'%';
     document.getElementById('pHpTxt').textContent = Math.max(0,Math.round(g.hp))+'/'+g.maxHp;
-    document.getElementById('eHpTxt').textContent = Math.max(0,Math.round(this.ehp))+'/'+this.emax;
+    document.getElementById('eHpTxt').textContent = this.mode==='daily'
+      ? (this.ehp>0 ? Math.round(this.ehp)+' to go' : '🎯 passed')
+      : Math.max(0,Math.round(this.ehp))+'/'+this.emax;
     this.tension(g.hp/g.maxHp);
     const pips = this.slamNext ? '⚡ WIND-UP'
       : '●'.repeat(this.charge)+'○'.repeat(Math.max(0,this.chargeMax-this.charge));
-    document.getElementById('foeName').innerHTML =
-      (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
+    // In the daily the bar is the mark to beat, so it is named for that.
+    document.getElementById('foeName').innerHTML = this.mode==='daily'
+      ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
+      : (this.foe.boss?'👑 ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>';
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? `🏟️ Wave ${Arena.wave}  ·  ` : '') +
       (this.mode==='dungeon' ? `⛏️ Depth ${Dungeon.run.depth}  ·  ` : '') +
@@ -6460,7 +6467,12 @@ const Battle = {
       this.combo = ok ? this.combo+1 : 0;
       const pts=Daily.award(ok, el, this.combo);
       if(ok){
-        this.ehp=Math.max(0,this.ehp-1);
+        const was=this.ehp;
+        this.ehp=Math.max(0,this.emax-(Daily.score||0));
+        if(was>0 && this.ehp===0){
+          const left=Daily.LEN-Daily.n-1, c=Daily.chase||Daily.goal();
+          UI.toast(`🎯 Past ${c.label}`+(left>0?` with ${left} to go`:'')+'!');
+        }
         Anim.strike('p', pts, this.combo>=5, 'PTS');
         Sfx.good(this.combo); this.comboBeat();
       } else { Anim.strike('e', 0, false, 'MISS'); Sfx.bad(); }
@@ -8505,9 +8517,20 @@ const Daily = {
     if(g.daily.day!==this.today()){ g.daily.day=this.today(); g.daily.best=0; g.daily.runs=0; }
     return g.daily;
   },
+  PAR:900,
+  /* What a run chases: today's best once there is one, else the best ever,
+     else a par for a first run. Worked out as the run starts and kept only
+     for it, so nothing new goes into the save. */
+  goal(){
+    const st=this.state();
+    if(st.best) return {pts:st.best, label:"today's best"};
+    if(st.allTimeBest) return {pts:st.allTimeBest, label:'your best'};
+    return {pts:this.PAR, label:'par'};
+  },
   start(){
     this.state();
     this.score=0; this.n=0;
+    this.chase=this.goal();
     R.seed(this.seedFor());
     Battle.beginDaily();
   },
@@ -8539,7 +8562,7 @@ const Daily = {
         <div style="font-size:34px;font-weight:900;color:var(--gold)" id="dScore">0</div>
         <div class="small">points</div>
         ${record?'<div style="color:var(--green);font-weight:800;margin-top:8px">🏅 Best of the day!</div>':
-          `<div class="small" style="margin-top:8px">Today's best: ${st.best}</div>`}
+          `<div class="small" style="margin-top:8px" id="dShort">Today's best: ${st.best} · ${st.best-this.score} short</div>`}
         <hr>
         <div class="small">All-time best: ${st.allTimeBest} · runs today: ${st.runs}</div>
       </div>

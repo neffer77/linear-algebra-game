@@ -174,6 +174,11 @@ bar becomes a way to the Smithy that says what it does against what you wear, su
 is *identical on every device that day* — it deliberately ignores your mastery model,
 which would otherwise personalise the questions and make the score meaningless. No health,
 no death; the only thing at stake is the number. Best of the day and all-time are kept.
+The straw knight cannot fall, so its bar is the mark to beat instead: today's best once
+there is one, else your best ever, else a par of 900. Each right answer drains it by the
+points it scored, a toast says when you pass it and how many riddles are left, and a run
+that falls short is told by how much. The mark is worked out as the run starts and never
+saved.
 
 **Near death.** Below a third health a red vignette pulses at heartbeat tempo and a low
 thump plays on each new question. Below a sixth, it quickens.
@@ -719,7 +724,7 @@ npm run test:all    # both
 `npm test` covers what can be checked without a browser — the mathematics below, and
 the knight codec. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,633 checks, about a minute:
+loop only exists once the page is running. Thirty-four suites, 1,643 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -755,7 +760,7 @@ loop only exists once the page is running. Thirty-four suites, 1,633 checks, abo
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |
 | `pwa` | served over HTTP like the live site, a player who tapped Later, left the game open, or met a stale HTTP cache still lands on the newest build, and only it stays cached |
-| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, the rules of play show only for a knight who has beaten nothing, and the hall has a door for each knight; below half health the card gives the cost of a miss and offers a priced rest first, and after a fall resting and trying again comes first when affordable; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again; the board as rolled is saved, so a reload leaves it as it was |
+| `map` | the places you can go are above the campaign, one card at the top says what to do next (the cellar only for a knight who has beaten nothing), the campaign is a road with one realm open, the rules of play show only for a knight who has beaten nothing, and the hall has a door for each knight; below half health the card gives the cost of a miss and offers a priced rest first, and after a fall resting and trying again comes first when affordable; the next unlock beats what is owned and, once affordable, goes to the Smithy; a topic bounty names only a topic met or one from a realm reached, and an untouched one beyond that is rolled again; the board as rolled is saved, so a reload leaves it as it was; the daily's bar is the mark to beat (a par, then your best ever, then today's best), drains by each answer's points and not by a miss, says when it is passed and how many are left without ending the run, fits a 320px phone, a short run is told by how much, and nothing of it is saved |
 | `cheat` | the testing door opens for nobody who has not typed it |
 
 It needs Playwright (`npm install && npx playwright install chromium`). Run one suite
