@@ -1,40 +1,26 @@
 {
-  "change": "A daily run names what it missed, with a drill on those topics",
+  "change": "The daily's counter names the riddle on screen",
   "mutations": [
     {
-      "name": "A miss in the daily is not recorded",
+      "name": "the counter is not redrawn as the run moves on",
       "file": "index.html",
-      "find": "        if(k && m.indexOf(k)<0) m.push(k);\n",
-      "replace": "",
-      "run": "play:map"
+      "find": "this.nextQuestion(); this.updateBars(); return;",
+      "replace": "this.nextQuestion(); return;",
+      "run": "play"
     },
     {
-      "name": "A topic missed twice is listed twice",
+      "name": "the counter counts the riddles answered instead",
       "file": "index.html",
-      "find": "        if(k && m.indexOf(k)<0) m.push(k);\n",
-      "replace": "        if(k) m.push(k);\n",
-      "run": "play:map"
+      "find": "`🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}",
+      "replace": "`🗡️ ${Daily.n}/${Daily.LEN}",
+      "run": "play"
     },
     {
-      "name": "The drill has no pool for the daily's misses",
+      "name": "the counter can run past the last riddle",
       "file": "index.html",
-      "find": "    else if(what==='daily'){ this.pool=(Daily.missed||[]).slice(); this.title=\"Today's misses\"; }\n",
-      "replace": "",
-      "run": "play:map"
-    },
-    {
-      "name": "A new run keeps the last run's misses",
-      "file": "index.html",
-      "find": "    this.missed=[];                  // topics missed this run, for the drill after it\n",
-      "replace": "",
-      "run": "play:map"
-    },
-    {
-      "name": "Running it again leads even after misses",
-      "file": "index.html",
-      "find": "<button class=\"btn${miss.length?'':' gold'}\" id=\"dAgain\"",
-      "replace": "<button class=\"btn gold\" id=\"dAgain\"",
-      "run": "play:map"
+      "find": "`🗡️ ${Math.min(Daily.n+1,Daily.LEN)}/${Daily.LEN}",
+      "replace": "`🗡️ ${Daily.n+2}/${Daily.LEN}",
+      "run": "play"
     }
   ]
 }

@@ -504,6 +504,38 @@ module.exports = {
     t.eq('nothing about the misses goes into the save', dm.dailyKeys, ['allTimeBest', 'best', 'day', 'runs']);
 
     // ------------------------------------------------------------------
+    // The daily's counter names the riddle on screen, not the one before it.
+    // ------------------------------------------------------------------
+    const dc = await t.ev(async () => {
+      const out = {}, g = Game.s, lessons = Prefs.d.lessons;
+      Prefs.d.lessons = false;
+      const keep = JSON.stringify(g.daily || null);
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const prep = () => { Battle.answered = false; Battle.shownWork = false; Battle.rite = null; Battle.cur.redo = false; };
+      const count = () => (document.getElementById('comboTxt').textContent.match(/(\d+)\/(\d+)/) || [])[0];
+      const pts = () => (document.getElementById('comboTxt').textContent.match(/(\d+) pts/) || [])[1];
+      Daily.start(); await wait(300);
+      out.first = count();
+      prep(); Battle.answer(null, Battle.cur.a); out.answered = count();
+      Battle.afterTurn(); await wait(100);
+      out.second = count(); out.pts = pts(); out.score = String(Daily.score);
+      prep(); Battle.answer(null, Battle.cur.choices.find(c => c !== Battle.cur.a)); Battle.afterTurn(); await wait(100);
+      out.third = count();
+      while (Daily.n < Daily.LEN - 1) { prep(); Battle.answer(null, Battle.cur.a); Battle.afterTurn(); await wait(20); }
+      out.last = count(); out.len = Daily.LEN;
+      Battle.flee(); R.unseed();
+      g.daily = JSON.parse(keep) || undefined; if (!g.daily) delete g.daily;
+      Prefs.d.lessons = lessons; Game.save(); UI.go('s-map');
+      return out;
+    });
+    t.eq('the daily opens on riddle 1', dc.first, '1/' + dc.len);
+    t.eq('answering keeps the number of the riddle just answered', dc.answered, '1/' + dc.len);
+    t.eq('the next riddle shows its own number at once', dc.second, '2/' + dc.len);
+    t.eq('and the points earned so far', dc.pts, dc.score);
+    t.eq('a miss moves the count on too', dc.third, '3/' + dc.len);
+    t.eq('the last riddle reads as the last', dc.last, dc.len + '/' + dc.len);
+
+    // ------------------------------------------------------------------
     // The campaign is a road, and each realm folds away beneath it.
     // ------------------------------------------------------------------
     const road = await t.ev(() => {
