@@ -1055,6 +1055,8 @@ function elim2(a,b,p,c,e,q,x,y){
     + (a===1 ? `, so x = ${neg(x)}` : `, so ${poly([[a,1]],'x')} = ${neg(a*x)} and x = ${neg(x)}`);
   return `${how}: the x terms cancel and ${yLine}. Put y = ${neg(y)} into the first equation: ${xLine}.`;
 }
+// √25 is written 5; any other root is left as a root.
+const rootOf=n=>Number.isInteger(Math.sqrt(n)) ? String(Math.sqrt(n)) : '√'+n;
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
 /* A polynomial with a number put in for x, written the way it is worked by
    hand: 3x² − 4x + 5 at x = −2 is 3(−2)² − 4(−2) + 5 = 12 + 8 + 5. A zero term
@@ -1312,11 +1314,14 @@ inv2(){
     det=A[0][0]*A[1][1]-A[0][1]*A[1][0];
     // Equal diagonal entries make "swap the diagonal" a no-op, which both
     // weakens the drill and collapses the distractors onto each other.
-    degenerate = det===0 || Math.abs(det)>6 || A[0][0]===A[1][1];
+    // A determinant of ±1 would leave no 1/det to divide by, and dividing by
+    // det or by −det would then just be the matrix or its negative.
+    degenerate = Math.abs(det)<2 || Math.abs(det)>6 || A[0][0]===A[1][1];
   } while(degenerate && guard++<400);
   if(degenerate){ A=[[3,1],[2,3]]; det=7; }
   const adj=[[A[1][1],-A[0][1]],[-A[1][0],A[0][0]]];
-  const show=m=>`${frac(1,det)} ${mat(m)}`;
+  // 1/det is written with its sign on top: −1/3, never 1/−3.
+  const show=m=>`${rat(1,det)} ${mat(m)}`;
   return {topic:'Inverse of a 2×2',
     complexity:3,
     codex:{rule:'Swap the diagonal entries, negate the other two, then divide the whole thing by the determinant.',
@@ -1345,9 +1350,9 @@ inv2(){
     a:show(adj),
     d:[[show([[A[0][0],A[0][1]],[A[1][0],A[1][1]]]),'the entries were left where they were — you must swap the diagonal and negate the off-diagonal'],
        [show([[A[1][1],A[0][1]],[A[1][0],A[0][0]]]),'the diagonal was swapped but the off-diagonal entries were never negated'],
-       [`${frac(1,-det)} ${mat(adj)}`,'the right matrix, but divided by −det instead of det'],
+       [`${rat(1,-det)} ${mat(adj)}`,'the right matrix, but divided by −det instead of det'],
        show([[-A[1][1],A[0][1]],[A[1][0],-A[0][0]]])],
-    ex:`The recipe: swap the diagonal entries, flip the sign of the other two, then divide by the determinant. det = ${neg(det)}, so the inverse is ${frac(1,det)} times ${mat(adj)}. If the determinant were 0 no inverse would exist.`};
+    ex:`The recipe: swap the diagonal entries, flip the sign of the other two, then divide by the determinant. det = ${neg(det)}, so the inverse is ${rat(1,det)} times ${mat(adj)}. If the determinant were 0 no inverse would exist.`};
 },
 det3(){
   const A=[[R.nz(-4,4),R.i(-3,3),R.i(-3,3)],[R.i(-3,3),R.nz(-4,4),R.i(-3,3)],[R.i(-3,3),R.i(-3,3),R.nz(-4,4)]];
@@ -1434,19 +1439,22 @@ eigen2(){
 },
 proj(){
   const t=R.pick([[3,4,5],[6,8,10],[5,12,13]]);
-  const v=[t[0],t[1]], u=[R.nz(-6,6),R.nz(-6,6)];
-  const dp=u[0]*v[0]+u[1]*v[1];
+  const v=[t[0],t[1]];
+  // u·v of 0 is the perpendicular case (its own topic), and |u·v| = ‖v‖ makes
+  // the upside-down fraction equal the answer, so both are drawn again.
+  let u, dp;
+  do{ u=[R.nz(-6,6),R.nz(-6,6)]; dp=u[0]*v[0]+u[1]*v[1]; } while(dp===0 || Math.abs(dp)===t[2]);
   return {topic:'Scalar Projection',
     q:`How much of u = ${vecR(u)} points along v = ${vecR(v)}?<br><span class="small">(the scalar projection u·v / ‖v‖)</span>`,
     fig:{kind:'plane', vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
     figAnswer:{kind:'plane', proj:true, caption:'Gold is u&rsquo;s shadow on the line through v.',
       vecs:[{v:u,col:'#5aa9e6',label:'u'},{v:v,col:'#57cc7a',label:'v'}]},
-    a: frac(dp,t[2]),
-    d:[[frac(dp,t[2]*t[2]),'that divides by ‖v‖², which is the coefficient for the vector projection, not the scalar one'],
+    a: rat(dp,t[2]),
+    d:[[rat(dp,t[2]*t[2]),'that divides by ‖v‖², which is the coefficient for the vector projection, not the scalar one'],
        [neg(dp),'that is just u·v — it still needs dividing by the length of v'],
-       [frac(t[2],dp),'the fraction is upside down'],
-       frac(-dp,t[2])],
-    ex:`Scalar projection = u·v / ‖v‖. Here u·v = ${neg(dp)} and ‖v‖ = √(${t[0]}²+${t[1]}²) = ${t[2]}, giving ${frac(dp,t[2])}. It is the length of u's shadow cast onto the line through v.`};
+       [rat(t[2],dp),'the fraction is upside down'],
+       rat(-dp,t[2])],
+    ex:`Scalar projection = u·v / ‖v‖. Here u·v = ${neg(dp)} and ‖v‖ = √(${t[0]}²+${t[1]}²) = ${t[2]}, giving ${neg(dp)}/${t[2]}${gcd(dp,t[2])>1 ? ` = ${rat(dp,t[2])}` : ''}. It is the length of u's shadow cast onto the line through v.`};
 },
 
 /* ---------- Realm 3 : limits & derivatives ---------- */
@@ -1480,25 +1488,27 @@ limRational(){
     ex:`Substituting gives 0/0, so factor first: x² − ${a*a} = (x − ${a})(x + ${a}). Cancel the (x − ${a}) and you're left with x + ${a}, which at x = ${a} equals ${neg(s)}. The hole in the graph doesn't affect the limit.`};
 },
 limInf(){
-  const a=R.i(2,9), b=R.i(2,9);
+  // a = b makes a/b and b/a the same choice, and 4/2 is also a − b.
+  let a, b;
+  do{ a=R.i(2,9); b=R.i(2,9); } while(a===b || a===b*(a-b));
   const k=R.pick([1,2]);
   if(k===1){
     return {topic:'Limit at Infinity',
       q:`lim<sub>x→∞</sub> ${frac(`${a}x² + ${lin(R.i(1,9),'x')}`,`${b}x² − ${R.i(1,9)}`)} = ?`,
-      a:frac(a,b),
+      a:rat(a,b),
       d:[['∞','top and bottom grow at the same rate, so the ratio stays finite'],
          ['0','the numerator does not vanish — both sides grow like x²'],
-         [frac(b,a),'the ratio is upside down; it is the top leading coefficient over the bottom one'],
+         [rat(b,a),'the ratio is upside down; it is the top leading coefficient over the bottom one'],
          neg(a-b)],
-      ex:`When top and bottom have the same highest power, the limit is the ratio of those leading coefficients: ${a}/${b}. Everything of lower degree becomes negligible once x is enormous.`};
+      ex:`When top and bottom have the same highest power, the limit is the ratio of those leading coefficients: ${a}/${b}${gcd(a,b)>1 ? ` = ${rat(a,b)}` : ''}. Everything of lower degree becomes negligible once x is enormous.`};
   }
   return {topic:'Limit at Infinity',
     q:`lim<sub>x→∞</sub> ${frac(`${a}x + ${R.i(1,9)}`,`${b}x² + ${R.i(1,9)}`)} = ?`,
     a:'0',
     d:[['∞','the denominator grows faster, so the fraction shrinks rather than blows up'],
-       [frac(a,b),'that would be right if the powers matched, but the bottom is a whole power higher'],
+       [rat(a,b),'that would be right if the powers matched, but the bottom is a whole power higher'],
        ['1','the two sides grow at different rates, so the ratio never settles at 1'],
-       frac(b,a)],
+       rat(b,a)],
     ex:`The bottom grows like x² while the top only grows like x, so the denominator wins by a whole power of x and the fraction is crushed to 0.`};
 },
 powerRule(d){
@@ -1796,8 +1806,8 @@ area(){
     figAnswer:{kind:'bars', f:{poly:[[1,2]]}, lo:0, hi:a, n:8,
       caption:'Slice it finer and finer and the rectangles become the integral.'},
     d:[[String(a*a*a),'the antiderivative x³/3 was used without dividing by 3'],
-       [frac(a*a,2),'that is the area under y = x, not y = x²'],
-       [frac(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
+       [rat(a*a,2),'that is the area under y = x, not y = x²'],
+       [rat(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
        String(a*a*a*2)],
     ex:`Area = ∫₀${sup(a)} x² dx = [x³/3]₀${sup(a)} = ${a}³/3 = ${a*a*a}/3. Notice it's a third of the ${a}×${a*a} bounding rectangle — the parabola leaves two thirds empty.`};
 },
@@ -1921,7 +1931,10 @@ diagonalisable(d){
     A=[[c,b],[0,c2]]; why=`its eigenvalues are ${neg(Math.min(c,c2))} and ${neg(Math.max(c,c2))}`; }
   else if(kind==='defective'){ A=[[c,b],[0,c]]; why=`its only eigenvalue is ${neg(c)}`; }
   else if(kind==='scalar'){ A=[[c,0],[0,c]]; why=`it is ${neg(c)} times the identity`; }
-  else { A=[[c,b],[-e,c]]; why=`its eigenvalues are ${neg(c)} ± i√${b*e}`; }
+  else { A=[[c,b],[-e,c]];
+    // √(be) is simplified the way it is by hand: i√4 is 2i, i√12 is 2i√3.
+    let k=1, m=b*e; for(let f=2; f*f<=m; f++) while(m%(f*f)===0){ m/=f*f; k*=f; }
+    why=`its eigenvalues are ${neg(c)} ± ${k===1?'':k}i${m===1?'':'√'+m}`; }
   const OPT={
     distinct:'Yes — two different eigenvalues',
     scalar:'Yes — it is already a multiple of the identity',
@@ -2139,7 +2152,7 @@ angleVec(d){
     a:`${kind}°`,
     d:Object.keys(COS).filter(x=>x!==kind).map(x=>[`${x}°`,
       `${x}° needs cos θ = ${show(COS[x])}; here u·v = ${neg(dp)} and the lengths give cos θ = ${show(cosT)}`]),
-    ex:`u · v = ${neg(dp)}, ‖u‖ = √${u[0]*u[0]+u[1]*u[1]} and ‖v‖ = √${a*a+b*b}. So cos θ = ${neg(dp)}/(√${u[0]*u[0]+u[1]*u[1]}·√${a*a+b*b}) = ${show(cosT)}, and the angle with that cosine is ${kind}°. ${
+    ex:`u · v = ${neg(dp)}, ‖u‖ = ${rootOf(u[0]*u[0]+u[1]*u[1])} and ‖v‖ = ${rootOf(a*a+b*b)}. So cos θ = ${neg(dp)}/(${rootOf(u[0]*u[0]+u[1]*u[1])}·${rootOf(a*a+b*b)}) = ${show(cosT)}, and the angle with that cosine is ${kind}°. ${
       kind==='90' ? 'A dot product of zero is exactly what perpendicular means.'
       : kind==='0' ? 'u is a positive multiple of v, so they point the same way.'
       : kind==='180' ? 'u is a negative multiple of v, so they point exactly opposite ways.'
@@ -2414,7 +2427,7 @@ improper(d){
          [rat(1,2),'that is the value for p = 3, not for p = 1'],
          ['ln 2','that is ∫₁² dx/x; here the upper limit runs off to infinity, and ln b has no ceiling']],
     ex: conv
-      ? `Take it as a limit: ∫₁^b x^(−${p}) dx = [x^(${1-p})/(${1-p})]₁^b = ${frac(1,p-1)}(1 − b^(${1-p})). As b → ∞ that last term vanishes because ${p} > 1, leaving ${rat(1,p-1)}. The bigger p is, the faster the tail dies and the smaller the total.`
+      ? `Take it as a limit: ∫₁^b x^(−${p}) dx = [x^(${1-p})/(${1-p})]₁^b = ${p===2 ? '' : frac(1,p-1)}(1 − b^(${1-p})). As b → ∞ that last term vanishes because ${p} > 1, leaving ${rat(1,p-1)}. The bigger p is, the faster the tail dies and the smaller the total.`
       : `The antiderivative of 1/x is ln x, not a power, so ∫₁^b dx/x = ln b — and ln b grows without bound. The area under 1/x past x = 1 is infinite even though the curve itself drops to zero. p = 1 is exactly the borderline case.`};
 },
 avgValue(d){
