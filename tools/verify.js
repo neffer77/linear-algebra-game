@@ -561,6 +561,22 @@ const simpson = (f, lo, hi, n) => {
   return s * h / 3;
 };
 
+// A value worked by hand: "f′(−3) = 6(−3) + 7 = −18 + 7 = −11". The term values
+// before the answer must add up to it, and the substitution must be shown.
+function workedSum(key, ex, a) {
+  const m = flat(ex).match(/f′\(−?\d+\) = ([^.]*?) = (−?\d+)\.(?:\s|$)/);
+  analysisChecks++;
+  if (!m) { fail('analysis', key, `no worked substitution in: ${flat(ex)}`); return; }
+  const steps = m[1].split(' = ');
+  if (!/\(−?\d+\)/.test(steps[0])) fail('analysis', key, `the number is never put in: ${m[0]}`);
+  const vals = steps[steps.length - 1];
+  if (steps.length > 1 || !/\(/.test(vals)) {
+    const terms = vals.replace(/−\s*/g, '-').replace(/\+\s*/g, '').split(/\s+/).map(Number);
+    const sum = terms.reduce((x, y) => x + y, 0);
+    if (terms.some(isNaN) || String(sum).replace('-', '−') !== String(a) || m[2] !== String(a))
+      fail('analysis', key, `the worked values ${vals} do not add up to ${a}`);
+  }
+}
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -577,10 +593,12 @@ const ANALYSIS = {
 
   evalDeriv:   p => { const f = compile(fnLine(p.q));
                       const at = parseFloat(p.q.match(/f′\((.*?)\)/)[1].replace('−', '-'));
-                      valueCheck('evalDeriv', ddx(f, 'x', { x: at }), p.a, 5e-4); },
+                      valueCheck('evalDeriv', ddx(f, 'x', { x: at }), p.a, 5e-4);
+                      workedSum('evalDeriv', p.ex, p.a); },
   tangent:     p => { const f = compile(fnLine(p.q));
                       const at = parseFloat(p.q.match(/at x = (.*?)\?/)[1].replace('−', '-'));
-                      valueCheck('tangent', ddx(f, 'x', { x: at }), p.a, 5e-4); },
+                      valueCheck('tangent', ddx(f, 'x', { x: at }), p.a, 5e-4);
+                      workedSum('tangent', p.ex, p.a); },
   limPoly:     p => { const f = compile(parens(p.q.replace(/^lim<sub>.*?<\/sub>\s*/, '')));
                       const at = parseFloat(p.q.match(/x→(.*?)<\/sub>/)[1].replace('−', '-'));
                       valueCheck('limPoly', f({ x: at }), p.a);

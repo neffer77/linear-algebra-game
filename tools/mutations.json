@@ -1,25 +1,25 @@
 {
-  "change": "The characteristic polynomial is worked on the matrix's own numbers, and a rounded cosine reads ≈",
+  "change": "A slope at a point shows the number put in, term by term",
   "mutations": [
     {
-      "name": "the characteristic polynomial's working subtracts λ from a and d",
+      "name": "the tangent working skips the substitution",
       "file": "index.html",
-      "find": "whose determinant is (${neg(A[0][0])} − λ)(",
-      "replace": "whose determinant is (a − λ)(",
+      "find": "so f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(m)}.",
+      "replace": "so f′(${neg(a)}) = ${neg(m)}.",
       "run": "verify"
     },
     {
-      "name": "the λ matrix in the working goes back to letters",
+      "name": "the derivative-at-a-point working skips the substitution",
       "file": "index.html",
-      "find": "[[`${neg(A[0][0])} − λ`,neg(A[0][1])]",
-      "replace": "[['a−λ',neg(A[0][1])]",
+      "find": "f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(s)}.",
+      "replace": "f′(${neg(a)}) = ${neg(s)}.",
       "run": "verify"
     },
     {
-      "name": "a rounded cosine is written with =",
+      "name": "the substitution is worked on f instead of f′",
       "file": "index.html",
-      "find": "${Math.abs(cosT*100-Math.round(cosT*100))<1e-9 ? '=' : '≈'}",
-      "replace": "=",
+      "find": "so f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(m)}.",
+      "replace": "so f′(${neg(a)}) = ${plugIn(t,a)} = ${neg(m)}.",
       "run": "verify"
     }
   ]
