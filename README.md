@@ -579,6 +579,15 @@ The game is built so that losing teaches you as much as winning.
   asks you to work it out. `npm test` checks all 6,561 matrices it can show: every
   direction it draws is really kept, every eigenvalue is a root of λ² − (trace)λ + det,
   "no direction" means a negative discriminant, and each goal can be made in range.
+
+  **🧩 Match the shape** turns it round: a matrix is drawn only as a dashed picture, its
+  outline and where its î and ĵ end, and you turn your numbers until your gold shape
+  sits on it. The picture is the whole clue. Reading where the dashed î ends on the grid
+  gives the first column, and that reading is the skill, so the target's numbers are
+  never shown. Each column is judged on its own ("î ✓ on its mark · ĵ not yet"), and a
+  match sets the next shape at once. Targets keep to −2 to 2 so every corner sits on a
+  grid line, are never flat (a flat shape hides where ĵ went), never the identity, and
+  never the one just matched.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -743,7 +752,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-five suites, 1,688 checks, about a minute:
+loop only exists once the page is running. Thirty-five suites, 1,698 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -775,7 +784,7 @@ loop only exists once the page is running. Thirty-five suites, 1,688 checks, abo
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
-| `workshop` | the Tome opens the matrix workshop on the identity; each tap of a real button redraws the plane and the readout, where î and ĵ land, the determinant worked with negatives bracketed and the sign folded in, and the directions kept with their eigenvalues; a goal is ticked when, and only when, the matrix on screen makes it, and stays ticked through Start again; the numbers stop at −4 and 4; every button says which number it moves; Surprise me stays in range; it fits a phone; all nine goals can be made; nothing is saved |
+| `workshop` | the Tome opens the matrix workshop on the identity; each tap of a real button redraws the plane and the readout, where î and ĵ land, the determinant worked with negatives bracketed and the sign folded in, and the directions kept with their eigenvalues; a goal is ticked when, and only when, the matrix on screen makes it, and stays ticked through Start again; the numbers stop at −4 and 4; every button says which number it moves; Surprise me stays in range; it fits a phone; all nine goals can be made; Match the shape says how to read the dashed picture and never gives the target as numbers, judges each column on its own, counts a match and sets a different, never-flat shape at once, and steps the goals aside until free play is back; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |

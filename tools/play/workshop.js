@@ -7,6 +7,8 @@
  * directions the matrix keeps. They make goals the way a player would and
  * check each is ticked once and only when it is true, that the range holds at
  * its ends, that it fits a phone, and that nothing is added to the save.
+ * In Match the shape a matrix is shown only as a dashed picture, and each
+ * column is judged on its own until both are on their marks.
  */
 'use strict';
 
@@ -118,6 +120,36 @@ module.exports = {
     // --- all nine made ---
     for (const M of [[[0, 1], [1, 0]], [[0, -1], [1, 0]], [[2, 0], [0, 3]], [[3, 0], [0, 3]]]) await setM(t, M);
     t.eq('every goal can be made with the buttons', (await ticked(t)).length, 9);
+
+    // --- match the shape: a matrix shown only as its picture ---
+    await t.tapText(/Match the shape/);
+    const m0 = await t.ev(() => ({
+      goal: Workshop.goal, pressed: document.querySelector('#wsMode [aria-pressed="true"]').textContent,
+      task: document.getElementById('wsTask').innerText, read: document.getElementById('wsRead').innerText,
+      goals: document.getElementById('wsGoalPanel').style.display, surprise: document.getElementById('wsSurprise').style.display
+    }));
+    t.ok('match the shape is a mode you can switch to, and says it is on', /Match the shape/.test(m0.pressed), m0.pressed);
+    t.ok('it says how to read the dashed shape', /dashed î ends on the grid: those two numbers are the first column/.test(m0.task), m0.task);
+    t.ok('the target is never given as numbers', !m0.task.includes('⟨') && !m0.read.includes(JSON.stringify(m0.goal)), m0.task);
+    t.ok('the goals and Surprise me step aside while matching', m0.goals === 'none' && m0.surprise === 'none', JSON.stringify(m0));
+    t.ok('nothing is matched yet', /0 matched this visit/.test(m0.task), m0.task);
+
+    // one column right is named, the other not yet
+    const G = m0.goal;
+    await setM(t, [[G[0][0], G[0][1] === 2 ? 1 : G[0][1] + 1], [G[1][0], G[1][1]]]);
+    let task = await t.ev(() => document.getElementById('wsTask').innerText);
+    t.ok('with the first column right, î is on its mark and ĵ is not yet', /î ✓ on its mark · ĵ not yet/.test(task), task);
+
+    // the whole matrix right is a match, and a new shape follows
+    await setM(t, G);
+    const m1 = await t.ev(() => ({ goal: Workshop.goal, task: document.getElementById('wsTask').innerText }));
+    t.ok('matching both columns counts one shape', /1 matched this visit/.test(m1.task), m1.task);
+    t.ok('and a different shape is set at once', JSON.stringify(m1.goal) !== JSON.stringify(G), JSON.stringify([G, m1.goal]));
+    t.ok('which is never flat', await t.ev(() => Workshop.det(Workshop.goal) !== 0));
+
+    // back to free play, and the goals return
+    await t.tapText(/Free play/);
+    t.ok('free play brings the goals back', await t.ev(() => document.getElementById('wsGoalPanel').style.display === '' && document.getElementById('wsTask').style.display === 'none'));
 
     // --- nothing is stored ---
     t.ok('the workshop changes nothing in the save', await t.ev(b => JSON.stringify(Game.s) === b, before));

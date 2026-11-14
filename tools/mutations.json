@@ -1,7 +1,13 @@
 {
-  "change": "Close the Tome's workshop card, and check the whole page script parses",
+  "change": "Match the shape: read a matrix back from its picture",
   "mutations": [
-    {"name": "the Tome's first card left without its closing quote", "file": "index.html",
-     "find": "         <button class=\"btn sm\" style=\"width:auto;margin-top:8px\" onclick=\"Opening.reread()\">Read it again</button>\n       </div>` +", "replace": "         <button class=\"btn sm\" style=\"width:auto;margin-top:8px\" onclick=\"Opening.reread()\">Read it again</button>\n       </div>", "run": "verify"}
+    {"name": "a flat shape set as a target", "file": "index.html",
+     "find": "      if(this.det(T)===0) continue;\n", "replace": "", "run": "verify"},
+    {"name": "î judged by its first number alone", "file": "index.html",
+     "find": "cols:(M,T)=>[M[0][0]===T[0][0]&&M[1][0]===T[1][0],", "replace": "cols:(M,T)=>[M[0][0]===T[0][0],", "run": "verify"},
+    {"name": "the shape just matched can come straight back", "file": "index.html",
+     "find": "      if(not && JSON.stringify(T)===JSON.stringify(not)) continue;\n", "replace": "", "run": "verify"},
+    {"name": "targets drawn off the grid lines", "file": "index.html",
+     "find": "const T=[[R.i(-2,2),R.i(-2,2)],[R.i(-2,2),R.i(-2,2)]];", "replace": "const T=[[R.i(-3,3),R.i(-2,2)],[R.i(-2,2),R.i(-2,2)]];", "run": "verify"}
   ]
 }
