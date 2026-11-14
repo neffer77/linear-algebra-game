@@ -1537,7 +1537,7 @@ evalDeriv(){
        [neg(evalPoly(dPoly(dt),a)),'that is f″(a), the second derivative'],
        [neg(-s),'a sign slipped while substituting a negative value'],
        neg(s+R.nz(-9,9))],
-    ex:`First differentiate: f′(x) = ${poly(dt)}. Then substitute x = ${neg(a)} to get ${neg(s)}. That number is the slope of the curve at that exact point — and the instantaneous rate of change.`};
+    ex:`First differentiate: f′(x) = ${poly(dt)}. Then substitute x = ${neg(a)}: f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(s)}. That number is the slope of the curve at that exact point — and the instantaneous rate of change.`};
 },
 trigDeriv(){
   const k=R.i(2,6);
@@ -1677,7 +1677,7 @@ tangent(){
        [neg(-m),'a sign slipped while substituting'],
        [neg(evalPoly(t,a)+m),'the function value and the slope were added together'],
        neg(m+R.nz(-6,6))],
-    ex:`The tangent slope <i>is</i> the derivative. f′(x) = ${poly(dt)}, so f′(${neg(a)}) = ${neg(m)}. (The full tangent line would be ${m===0 ? `y = ${neg(y)}, flat` : `y${less(y)} = ${m===1 ? `x${less(a)}` : `${m===-1?'−':neg(m)}(x${less(a)})`}`}.)`};
+    ex:`The tangent slope <i>is</i> the derivative. f′(x) = ${poly(dt)}, so f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(m)}. (The full tangent line would be ${m===0 ? `y = ${neg(y)}, flat` : `y${less(y)} = ${m===1 ? `x${less(a)}` : `${m===-1?'−':neg(m)}(x${less(a)})`}`}.)`};
 },
 
 /* ---------- Realm 4 : integrals ---------- */
@@ -1809,7 +1809,7 @@ area(){
        [rat(a*a,2),'that is the area under y = x, not y = x²'],
        [rat(a*a*a,2),'divided by 2 instead of 3 — the antiderivative of x² is x³/3'],
        String(a*a*a*2)],
-    ex:`Area = ∫₀${sup(a)} x² dx = [x³/3]₀${sup(a)} = ${a}³/3 = ${a*a*a}/3. Notice it's a third of the ${a}×${a*a} bounding rectangle — the parabola leaves two thirds empty.`};
+    ex:`Area = ∫₀${sup(a)} x² dx = [x³/3]₀${sup(a)} = ${a}³/3 = ${a*a*a}/3${a===3 ? ' = 9' : ''}. Notice it's a third of the ${a}×${a*a} bounding rectangle — the parabola leaves two thirds empty.`};
 },
 
 /* ---------- Realm 5 : mixed mastery ---------- */
