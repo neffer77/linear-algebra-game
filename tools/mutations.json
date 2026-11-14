@@ -1,39 +1,67 @@
 {
-  "change": "Linear systems are worked by hand: eliminate x, solve for y, put y back",
+  "change": "Every fraction and root is written in simplest form",
   "mutations": [
     {
-      "name": "the elimination uses the wrong multiple",
+      "name": "the inverse puts its minus sign under the line",
       "file": "index.html",
-      "find": "const k=c/a; cy=e-k*b;",
-      "replace": "const k=c/a+1; cy=e-k*b;",
+      "find": "const show=m=>`${rat(1,det)} ${mat(m)}`;",
+      "replace": "const show=m=>`${frac(1,det)} ${mat(m)}`;",
       "run": "verify"
     },
     {
-      "name": "the y put back is multiplied by x instead",
+      "name": "an inverse drill may have a determinant of ±1",
       "file": "index.html",
-      "find": "const by=b*y;",
-      "replace": "const by=b*x;",
+      "find": "degenerate = Math.abs(det)<2 ||",
+      "replace": "degenerate = det===0 ||",
       "run": "verify"
     },
     {
-      "name": "the explanation only states the answer again",
+      "name": "the scalar projection answer is left unreduced",
       "file": "index.html",
-      "find": "${elim2(a,b,p,c,e,q2,x,y)}",
-      "replace": "and it is x = ${neg(x)}, y = ${neg(y)}.",
+      "find": "a: rat(dp,t[2]),",
+      "replace": "a: frac(dp,t[2]),",
       "run": "verify"
     },
     {
-      "name": "scaling both equations subtracts the right sides the wrong way round",
+      "name": "the scalar projection answer is not u·v / ‖v‖",
       "file": "index.html",
-      "find": "cy=c*b-a*e; r=c*p-a*q;",
-      "replace": "cy=c*b-a*e; r=a*q-c*p;",
+      "find": "a: rat(dp,t[2]),",
+      "replace": "a: rat(dp+1,t[2]),",
       "run": "verify"
     },
     {
-      "name": "add and subtract are swapped in the step's wording",
+      "name": "the upside-down limit choice is left unreduced",
       "file": "index.html",
-      "find": "${k>0?'Subtract':'Add'} ${times(k)}the first",
-      "replace": "${k>0?'Add':'Subtract'} ${times(k)}the first",
+      "find": "[rat(b,a),'the ratio is upside down",
+      "replace": "[frac(b,a),'the ratio is upside down",
+      "run": "verify"
+    },
+    {
+      "name": "the improper integral works 1/1 in front of the bracket",
+      "file": "index.html",
+      "find": "${p===2 ? '' : frac(1,p-1)}",
+      "replace": "${frac(1,p-1)}",
+      "run": "verify"
+    },
+    {
+      "name": "the area choice under y = x is left unreduced",
+      "file": "index.html",
+      "find": "[rat(a*a,2),'that is the area under y = x",
+      "replace": "[frac(a*a,2),'that is the area under y = x",
+      "run": "verify"
+    },
+    {
+      "name": "complex eigenvalues keep the root unsimplified",
+      "file": "index.html",
+      "find": "while(m%(f*f)===0){ m/=f*f; k*=f; }",
+      "replace": "while(false){ m/=f*f; k*=f; }",
+      "run": "verify"
+    },
+    {
+      "name": "the angle working leaves √25 for a length of 5",
+      "file": "index.html",
+      "find": "const rootOf=n=>Number.isInteger(Math.sqrt(n)) ? String(Math.sqrt(n)) : '√'+n;",
+      "replace": "const rootOf=n=>'√'+n;",
       "run": "verify"
     }
   ]

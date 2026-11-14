@@ -836,7 +836,7 @@ structure (four unique choices, answer present, misconceptions substantial), alg
 integrals differentiated back to their integrand so the `+ C` cancels, definite integrals
 against Simpson's rule, limits by direct evaluation).
 
-**59 of 70 generators are independently verified against the mathematics**, up from 8 when
+**60 of 70 generators are independently verified against the mathematics**, up from 8 when
 the harness could only parse polynomials. Every one of the 32 topics added with Spectral
 Reach, Infinite Expanse and Gradient Summit is in that number, and each is checked against
 the mathematics rather than against the formula that produced it: an eigenvector is fed back through its
@@ -847,8 +847,9 @@ must share the surface's height *and* both of its slopes at the point; a Taylor 
 must match the function's value, slope and curvature at zero. A 2×2 system's worked
 solution is a hand elimination, and the harness rebuilds it from the two equations: the
 step it names must really cancel x and leave the y equation shown, and y put back into
-the first equation must give the x the answer claims. The remaining
-eleven have answers that are not scalar expressions — yes/no judgements, sets of roots,
+the first equation must give the x the answer claims. A scalar projection is recomputed
+as u·v / ‖v‖ from the two vectors in the riddle. The remaining
+ten have answers that are not scalar expressions — yes/no judgements, sets of roots,
 prose — and the harness now names them in its report rather than leaving the gap to
 arithmetic. Mote ladders are checked the same way, on the choices a player is actually
 shown rather than the authored list — 45,600 rendered steps per run.
@@ -869,6 +870,13 @@ The generators were also checked by:
   answer `10(5x + 5)¹`, a limit worked as `(3)(−1)² + (0)(−1)¹ + (−4)(−1)⁰`, and a double
   integral of 1 worked as `3¹/1 = 3`. A limit by substitution is now worked as by hand,
   `3(−2)² − 4(−2) + 5 = 12 + 8 + 5`, and a check adds up the term values against the answer.
+  Every fraction is written with its sign on top and never over 0 or 1 (`1/−3`, `5/0`,
+  `1/1`), and no choice offers one in higher terms (`40/10` where `4` is meant). That
+  rule found five generators: a scalar projection answered `20/5`, or `0/10` beside a
+  choice of `10/0`, an inverse written `1/−3` in front of its matrix, and a limit at
+  infinity answered `6/9`. A root is simplified unless the next step works it out: a
+  matrix's complex eigenvalues read `4 ± 2i`, not `4 ± i√4`, and a length of `√25` in the
+  angle working is written `5`.
 - **6,300 tile banks drawn** for every vector and matrix answer that can be built from
   tiles, asserting the bank holds every number the answer needs and does not point at
   it: picking the most crowded tiles must not beat picking at random by more than 30%.

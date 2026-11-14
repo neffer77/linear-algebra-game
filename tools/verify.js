@@ -109,9 +109,42 @@ const DOUBLE_SIGN = /[+−\-·×]\s*[+−-]\s*[\w(√]/;
 // worked as 0(−1). A product of two entries, (0)(5), is a step and stays.
 const POWER_01 = /[)\w][⁰¹](?![⁰¹²³⁴⁵⁶⁷⁸⁹])/;
 const ZERO_TERM = /(^|[\s+−-])0\(−?\d/;
+// A fraction is written in lowest terms with its sign on top: never 1/−3,
+// 1/1, 0/10 or 5/0, and a choice never offers 40/10 where 4 is meant.
+const FRAC = /<span class="frac"><span>(−?\d+)<\/span><span>(−?\d+)<\/span><\/span>/g;
+function fractionForm(raw, choice) {
+  const gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
+  for (const m of String(raw).matchAll(FRAC)) {
+    const n = +m[1].replace('−', '-'), d = +m[2].replace('−', '-'), at = `${m[1]}/${m[2]}`;
+    if (d === 0) return `a division by zero, ${at}`;
+    if (d < 0) return `a minus sign under the line, ${at}`;
+    if (d === 1) return `a fraction over 1, ${at}`;
+    if (n === 0) return `a fraction worth 0, ${at}`;
+    if (choice && gcd(n, d) > 1) return `a fraction not in lowest terms, ${at}`;
+  }
+  return null;
+}
+// A root is simplified unless the next step works it out: √25 = 5 is a step,
+// but an answer of 3 ± i√4 is 3 ± 2i, and i√12 is 2i√3.
+function rootForm(raw) {
+  const text = String(raw).replace(/<[^>]+>/g, ' ');
+  const sq = n => Number.isInteger(Math.sqrt(n));
+  const factor = n => { for (let f = 2; f * f <= n; f++) if (n % (f * f) === 0) return true; return false; };
+  for (const m of text.matchAll(/(i?)√(\d+)(?![\d²])(\s*=)?/g)) {
+    const n = +m[2];
+    if (n > 1 && sq(n) && !m[3]) return `a root of a perfect square left unworked, ${m[0].trim()}`;
+    if (m[1] && factor(n)) return `a root that can be simplified, ${m[0].trim()}`;
+  }
+  return null;
+}
 function notation(key, where, html) {
   if (html == null) return;
   notationScanned++;
+  const bad = fractionForm(html, /choice|answer/.test(where)) || rootForm(html);
+  if (bad) {
+    const tag = `${key}/${where.replace(/\d+/g, 'n')}/fraction`;
+    if (!notationSeen.has(tag)) { notationSeen.add(tag); fail('notation', key, `${where} has ${bad}`); }
+  }
   const text = String(html).replace(/<sup>/g, '^').replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
   for (const [re, what] of [[DOUBLE_SIGN, 'two signs in a row'], [NEG_POWER, 'a negative number raised to a power without brackets'],
@@ -292,9 +325,12 @@ const ALGEBRA = {
   matVec: p => { const [A, v] = mats(p.q), [s] = mats(p.a);
                  return same([[A[0][0] * v[0][0] + A[0][1] * v[1][0]],
                               [A[1][0] * v[0][0] + A[1][1] * v[1][0]]], s); },
-  // The inverse is displayed as (1/det)·adj, so verify A·adj = det·I.
-  inv2:   p => { const M = mats(p.q)[0], adj = mats(p.a)[0], d = det2(M);
-                 return same(mm(M, adj, 2), [[d, 0], [0, d]]); },
+  // The inverse is displayed as n/k times a matrix (or the matrix alone when
+  // the determinant is ±1), so verify A · (n/k)B = I, read as n·(A·B) = k·I.
+  inv2:   p => { const M = mats(p.q)[0], B = mats(p.a)[0];
+                 const f = String(p.a).match(/<span class="frac"><span>(−?\d+)<\/span><span>(−?\d+)<\/span><\/span>/);
+                 const [n, k] = f ? [+f[1].replace('−', '-'), +f[2].replace('−', '-')] : [1, 1];
+                 return same(mm(M, B, 2).map(r => r.map(v => n * v)), [[k, 0], [0, k]]); },
 
   /* --- Spectral Reach --- */
 
@@ -553,6 +589,11 @@ const ANALYSIS = {
                         if (terms.some(isNaN) || String(sum).replace('-', '−') !== String(p.a))
                           fail('analysis', 'limPoly', `the term values ${steps[steps.length - 2]} do not add up to ${p.a}`);
                       } },
+  // u·v / ‖v‖ worked from the two vectors in the riddle.
+  proj:        p => { const vs = [...flat(p.q).matchAll(/⟨(−?\d+), (−?\d+)⟩/g)].map(m => [+m[1].replace('−', '-'), +m[2].replace('−', '-')]);
+                      if (vs.length < 2) { fail('analysis', 'proj', `cannot read the vectors in: ${flat(p.q)}`); return; }
+                      const [u, v] = vs;
+                      valueCheck('proj', (u[0] * v[0] + u[1] * v[1]) / Math.hypot(v[0], v[1]), p.a); },
   // The worked solution is a hand elimination: a stated combination of the two
   // equations that really cancels x, the y equation it leaves, and y put back
   // into the first equation. Each number is recomputed from the riddle itself.
@@ -1325,7 +1366,7 @@ if (seenComplexity.size) {
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
   console.log(`    rite trail lines checked ${pad(trailsChecked.toLocaleString(), 11)}  (${trailsCut.toLocaleString()} cut at a word, mathematics drawn)`);
 }
-console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x, x¹)`);
+console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x, x¹, 1/−3)`);
 console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);
 console.log(`  find-the-slip questions    ${pad(slipNotes.n.toLocaleString(), 11)}  (${slipNotes.topics} topics, none quoting an answer or echoing the squire)`);
 if (figKeys.size) {
