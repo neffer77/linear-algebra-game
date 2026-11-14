@@ -6790,7 +6790,10 @@ const Battle = {
     if(this.mode==='daily'){
       Daily.n++;
       if(Daily.n>=Daily.LEN){ this.over='daily'; clearInterval(this.timer); Daily.finish(); return; }
-      this.nextQuestion(); return;
+      /* The counter over the riddle reads off Daily.n, so it has to be redrawn
+         as the run moves on: without this it showed the riddle just answered
+         until the new one was answered too. */
+      this.nextQuestion(); this.updateBars(); return;
     }
     if(this.ehp<=0){ this.win(); return; }
     if(Game.s.hp<=0){
