@@ -127,7 +127,7 @@ function fractionForm(raw, choice) {
 // A root is simplified unless the next step works it out: √25 = 5 is a step,
 // but an answer of 3 ± i√4 is 3 ± 2i, and i√12 is 2i√3.
 function rootForm(raw) {
-  const text = String(raw).replace(/<[^>]+>/g, ' ');
+  const text = String(raw).replace(/<\/?[a-z][^>]*>/gi, ' ');
   const sq = n => Number.isInteger(Math.sqrt(n));
   const factor = n => { for (let f = 2; f * f <= n; f++) if (n % (f * f) === 0) return true; return false; };
   for (const m of text.matchAll(/(i?)√(\d+)(?![\d²])(\s*=)?/g)) {
@@ -145,7 +145,7 @@ function notation(key, where, html) {
     const tag = `${key}/${where.replace(/\d+/g, 'n')}/fraction`;
     if (!notationSeen.has(tag)) { notationSeen.add(tag); fail('notation', key, `${where} has ${bad}`); }
   }
-  const text = String(html).replace(/<sup>/g, '^').replace(/<[^>]+>/g, ' ')
+  const text = String(html).replace(/<sup>/g, '^').replace(/<\/?[a-z][^>]*>/gi, ' ')
     .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
   for (const [re, what] of [[DOUBLE_SIGN, 'two signs in a row'], [NEG_POWER, 'a negative number raised to a power without brackets'],
                             [UNIT_COEF, 'a coefficient of 1 or 0 written out'],
@@ -166,7 +166,7 @@ let generated = 0, tagged = 0, wrongShown = 0, motesChecked = 0, figsChecked = 0
    arrive drawn, whole and unchanged (a matrix stripped of its markup reads
    column by column), its words must be the question's own from the start, and
    a long rung must be cut after a whole word. */
-const plainT = h => String(h).replace(/<br\s*\/?>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const plainT = h => String(h).replace(/<br\s*\/?>/g, ' ').replace(/<\/?[a-z][^>]*>/gi, '').replace(/\s+/g, ' ').trim();
 // Its own reading of what counts as drawn mathematics, so that a change to the
 // game's list cannot quietly agree with itself.
 const DRAWN = /<span class="mtx">(?:<span class="col">(?:<span>[^<]*<\/span>)*<\/span>)*<\/span>|<span class="frac"><span>[^<]*<\/span><span>[^<]*<\/span><\/span>|<sup>[^<]*<\/sup>|<sub>[^<]*<\/sub>/g;
@@ -187,14 +187,14 @@ function trailCheck(key, n, q) {
     fail('trail', key, `rung ${n} is cut inside a word: "${p}…"`);
   if (!cut && p !== full) fail('trail', key, `rung ${n} lost words without saying so`);
   // Counted as read, a matrix's entries spaced apart, the way the game counts it.
-  const read = plainT(tr.replace(new RegExp(DRAWN.source, 'g'), x => ' ' + x.replace(/<[^>]+>/g, ' ') + ' ')).replace(/…$/, '').trim();
+  const read = plainT(tr.replace(new RegExp(DRAWN.source, 'g'), x => ' ' + x.replace(/<\/?[a-z][^>]*>/gi, ' ') + ' ')).replace(/…$/, '').trim();
   if (read.length > TRAIL_MAX) fail('trail', key, `rung ${n} reads ${read.length} characters, too long for its line`);
 }
 const seenComplexity = new Set(), figKeys = new Set(), figKinds = new Set();
 
 /** Parse ⟨a, b⟩ out of a rendered answer, or null if it is not a 2-vector. */
 function vecOf(html) {
-  const m = String(html).replace(/<[^>]+>/g, '').match(/⟨\s*(−?-?\d+)\s*,\s*(−?-?\d+)\s*⟩/);
+  const m = String(html).replace(/<\/?[a-z][^>]*>/gi, '').match(/⟨\s*(−?-?\d+)\s*,\s*(−?-?\d+)\s*⟩/);
   return m ? [m[1], m[2]].map(s => parseInt(s.replace(/−/g, '-'), 10)) : null;
 }
 
@@ -293,19 +293,19 @@ function mats(html) {
 }
 /** Every ⟨a, b⟩ in a string, as number pairs. */
 function vecsOf(html) {
-  return [...String(html).replace(/<[^>]+>/g, '')
+  return [...String(html).replace(/<\/?[a-z][^>]*>/gi, '')
     .matchAll(/⟨\s*(−?-?\d+)\s*,\s*(−?-?\d+)\s*⟩/g)]
     .map(m => [num(m[1]), num(m[2])]);
 }
 const vecOf1 = html => vecsOf(html)[0] || null;
 /** Every ⟨…⟩ in a string, with any number of components. */
-const vecsN = html => [...String(html).replace(/<[^>]+>/g, '')
+const vecsN = html => [...String(html).replace(/<\/?[a-z][^>]*>/gi, '')
   .matchAll(/⟨([^⟩]*)⟩/g)].map(m => m[1].split(',').map(num));
 const dotN = (u, v) => u.reduce((t, x, i) => t + x * v[i], 0);
 /** The arithmetic steps in a working ("4 + (−2) = 2", "−3·(−2) = 6",
     "(a)(b) + (c)(d) = e + f = g"): how many there are, or −1 if any is false. */
 function workedTrue(ex) {
-  const t = String(ex).replace(/<[^>]+>/g, ' ').replace(/−/g, '-');
+  const t = String(ex).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/−/g, '-');
   let n = 0;
   for (const m of t.matchAll(/(-?\d+) \+ \(?(-?\d+)\)? = (-?\d+)/g)) {
     if (+m[1] + +m[2] !== +m[3]) return -1; n++; }
@@ -318,7 +318,7 @@ function workedTrue(ex) {
 /** The cross product's working: three lines "(a)(b) − (c)(d) = p ± q = r", one per
     component in order, each crossing the other two slots of u and v, and true. */
 function crossWorked(ex, u, v, s) {
-  const t = String(ex).replace(/<[^>]+>/g, ' ').replace(/−/g, '-');
+  const t = String(ex).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/−/g, '-');
   const lines = [...t.matchAll(/\((-?\d+)\)\((-?\d+)\) - \((-?\d+)\)\((-?\d+)\) = (-?\d+) ([+-]) (\d+) = (-?\d+)/g)];
   if (lines.length !== 3) return false;
   return [[1, 2], [2, 0], [0, 1]].every(([i, j], k) => {
@@ -326,6 +326,20 @@ function crossWorked(ex, u, v, s) {
     const q = m[5] === '+' ? -m[6] : m[6];
     return m[0] === u[i] && m[1] === v[j] && m[2] === u[j] && m[3] === v[i]
       && m[4] === u[i] * v[j] && q === u[j] * v[i] && m[7] === m[4] - q && m[7] === s[k];
+  });
+}
+/** A matrix product's working: one line per entry, in reading order, each
+    "(a)(b) + (c)(d) = p ± q = r" taking the right row and column, and true. */
+function entriesWorked(ex, A, B, C) {
+  const t = String(ex).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/−/g, '-');
+  const lines = [...t.matchAll(/row (\d) · column (\d): \((-?\d+)\)\((-?\d+)\) \+ \((-?\d+)\)\((-?\d+)\) = (-?\d+) ([+-]) (\d+) = (-?\d+)/g)];
+  if (lines.length !== 4) return false;
+  return [[0, 0], [0, 1], [1, 0], [1, 1]].every(([i, j], k) => {
+    const m = lines[k].slice(1).map((x, n) => n === 7 ? x : +x);
+    const q = m[7] === '-' ? -m[8] : m[8];
+    return m[0] === i + 1 && m[1] === j + 1
+      && m[2] === A[i][0] && m[3] === B[0][j] && m[4] === A[i][1] && m[5] === B[1][j]
+      && m[6] === A[i][0] * B[0][j] && q === A[i][1] * B[1][j] && m[9] === m[6] + q && m[9] === C[i][j];
   });
 }
 const det2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
@@ -346,7 +360,7 @@ if (!same(mats(mat([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))[0], [[1, 2, 3], [4, 5, 6]
 
 let algebraChecks = 0;
 const ALGEBRA = {
-  matMul: p => { const [A, B] = mats(p.q), [C] = mats(p.a); return same(mm(A, B, 2), C); },
+  matMul: p => { const [A, B] = mats(p.q), [C] = mats(p.a); return same(mm(A, B, 2), C) && entriesWorked(p.ex, A, B, C); },
   det2:   p => det2(mats(p.q)[0]) === num(p.a),
   det3:   p => det3(mats(p.q)[0]) === num(p.a),
   trace:  p => { const M = mats(p.q)[0]; return M[0][0] + M[1][1] === num(p.a); },
@@ -369,7 +383,7 @@ const ALGEBRA = {
   vecScale: p => { const c = num(p.q.match(/^(−?\d+) ·/)[1]), [v] = vecsN(p.q), [s] = vecsN(p.a);
                    return c !== 1 && same(s, v.map(x => c * x)) && workedTrue(p.ex) >= 2; },
   vecCombo: p => { const [u, v] = vecsN(p.q), [s] = vecsN(p.a);
-                   const m = p.q.replace(/<[^>]+>/g, ' ').match(/(\d+)u − (\d+)v = \?/);
+                   const m = p.q.replace(/<\/?[a-z][^>]*>/gi, ' ').match(/(\d+)u − (\d+)v = \?/);
                    return !!m && same(s, u.map((x, i) => +m[1] * x - +m[2] * v[i])); },
   dot:      p => { const [u, v] = vecsN(p.q);
                    return num(p.a) === dotN(u, v) && workedTrue(p.ex) >= 2; },
@@ -377,7 +391,7 @@ const ALGEBRA = {
   mag:      p => { const [v] = vecsN(p.q), L = num(p.a);
                    return L > 0 && L * L === dotN(v, v); },
   // Perpendicular means some quarter turn of u lies along v.
-  orth:     p => { const [u, v] = vecsN(p.q.replace(/<[^>]+>/g, ' '));
+  orth:     p => { const [u, v] = vecsN(p.q.replace(/<\/?[a-z][^>]*>/gi, ' '));
                    const turned = [-u[1], u[0]];
                    const along = turned[0] * v[1] - turned[1] * v[0] === 0;
                    return /^(Yes|No) /.test(p.a) && (p.a.startsWith('Yes') === along); },
@@ -416,7 +430,7 @@ const ALGEBRA = {
     algebraChecks += 4;
     // The working subtracts λ from this matrix's own diagonal, not from a and d.
     const n = v => String(v).replace('-', '−');
-    const ex = String(p.ex).replace(/<[^>]+>/g, ' ');
+    const ex = String(p.ex).replace(/<\/?[a-z][^>]*>/gi, ' ');
     if (!ex.includes(`(${n(M[0][0])} − λ)(${n(M[1][1])} − λ)`) || /[ad]−λ/.test(ex)) return false;
     return [-2, -0.5, 1.3, 4].every(x => close(f({ x }), x * x - tr * x + dt, 1e-9));
   },
@@ -526,7 +540,7 @@ const ALGEBRA = {
     const cos = (u[0] * v[0] + u[1] * v[1]) /
                 (Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1]));
     // A cosine rounded to two places is written ≈; one that is exact is =.
-    const shown = String(p.ex).replace(/<[^>]+>/g, ' ').match(/cos θ = [^=≈]*\) ([=≈]) (−?\d+\.\d\d)/);
+    const shown = String(p.ex).replace(/<\/?[a-z][^>]*>/gi, ' ').match(/cos θ = [^=≈]*\) ([=≈]) (−?\d+\.\d\d)/);
     if (!shown || +shown[2].replace('−', '-') !== Math.round(cos * 100) / 100
         || (shown[1] === '=') !== (Math.abs(cos * 100 - Math.round(cos * 100)) < 1e-9)) return false;
     return close(cos, Math.cos(deg * Math.PI / 180), 1e-9);
@@ -551,7 +565,7 @@ for (const [key, unit, size, det] of [['det2', 'square', 'area', det2], ['det3',
   for (let i = 0; i < REPS * 3; i++) {
     const p = GEN[key](2), D = det(mats(p.q)[0]);
     detMeaning++;
-    const ex = p.ex.replace(/<[^>]+>/g, ''), at = ex.indexOf(`unit ${unit}`);
+    const ex = p.ex.replace(/<\/?[a-z][^>]*>/gi, ''), at = ex.indexOf(`unit ${unit}`);
     if (at < 0) { fail('meaning', key, `working never says what ${p.q} does to the unit ${unit}`); continue; }
     const says = ex.slice(at);
     const tell = (txt, where) => {
@@ -759,14 +773,14 @@ const numDeriv = (f, x, h) => (f(x + (h || 1e-5)) - f(x - (h || 1e-5))) / (2 * (
 const nums = (str, re) => [...String(str).matchAll(re)].map(m => m.slice(1).map(num));
 const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹';
 /** Plain text with unicode superscripts flattened back to digits. */
-const flat = s => String(s).replace(/<[^>]+>/g, '').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, c => String(SUPS.indexOf(c)));
+const flat = s => String(s).replace(/<\/?[a-z][^>]*>/gi, '').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, c => String(SUPS.indexOf(c)));
 /** An expression lifted out of a sentence, without the sentence's full stop. */
 const expr = s => String(s).replace(/\.\s*$/, '');
 
 Object.assign(ANALYSIS, {
   // Differentiate the curve itself — y(x) = √((c − ax²)/b) — and compare.
   implicitDiff: p => {
-    const m = p.q.replace(/<[^>]+>/g, '').match(/^(\d*)x² \+ (\d*)y² = (\d+)/);
+    const m = p.q.replace(/<\/?[a-z][^>]*>/gi, '').match(/^(\d*)x² \+ (\d*)y² = (\d+)/);
     const a = m[1] === '' ? 1 : +m[1], b = m[2] === '' ? 1 : +m[2], c = +m[3];
     const y = x => Math.sqrt((c - a * x * x) / b);
     const f = compile(p.a);
@@ -779,7 +793,7 @@ Object.assign(ANALYSIS, {
 
   // Evaluate the original quotient just short of the limit point.
   lhopital: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     let f, m;
     if ((m = t.match(/sin\((\d+)x\)(\d+)x/))) f = x => Math.sin(m[1] * x) / (m[2] * x);
     else if ((m = t.match(/e(\d+)x − 1(\d+)x/))) f = x => (Math.exp(m[1] * x) - 1) / (m[2] * x);
@@ -791,7 +805,7 @@ Object.assign(ANALYSIS, {
   },
 
   relatedRates: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     const a = compile(String(p.a).replace(/π/g, 'pi').replace(/ (m|cm)[²]?\/s/, ''));
     let want;
     if (t.includes('ladder')) {
@@ -808,7 +822,7 @@ Object.assign(ANALYSIS, {
 
   // Maximise the objective by dense sampling rather than by the formula.
   optimisation: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     let obj, lo, hi;
     if (t.includes('fence')) {
       const P = +t.match(/have (\d+) m of fence/)[1];
@@ -837,7 +851,7 @@ Object.assign(ANALYSIS, {
   },
 
   invTrigDeriv: p => {
-    const m = p.q.replace(/<[^>]+>/g, '').match(/arc(sin|cos|tan)\((\d+)x\)/);
+    const m = p.q.replace(/<\/?[a-z][^>]*>/gi, '').match(/arc(sin|cos|tan)\((\d+)x\)/);
     const k = +m[2];
     const g = m[1] === 'sin' ? Math.asin : m[1] === 'cos' ? Math.acos : Math.atan;
     const a = compile(p.a);
@@ -850,7 +864,7 @@ Object.assign(ANALYSIS, {
   },
 
   logDiff: p => {
-    const k = +(p.q.replace(/<[^>]+>/g, '').match(/x(\d*)x/) || [0, ''])[1] || 1;
+    const k = +(p.q.replace(/<\/?[a-z][^>]*>/gi, '').match(/x(\d*)x/) || [0, ''])[1] || 1;
     const a = compile(p.a);
     for (const x of [0.6, 1.4, 2.3]) {
       const want = numDeriv(t => Math.pow(t, k * t), x), got = a({ x });
@@ -864,7 +878,7 @@ Object.assign(ANALYSIS, {
 
   // A must make the two partial fractions add back up to the original.
   partialFrac: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     const m = t.match(/^(\d+)\(x ([+−]) (\d+)\)\(x ([+−]) (\d+)\)/);
     const N = +m[1], a = (m[2] === '−' ? 1 : -1) * +m[3], b = (m[4] === '−' ? 1 : -1) * +m[5];
     const A = compile(p.a)({}), B = N / (b - a);
@@ -878,7 +892,7 @@ Object.assign(ANALYSIS, {
   },
 
   improper: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     const pw = +(flat(p.q).match(/1x(\d*) dx/)[1] || 1);
     analysisChecks++;
     if (pw === 1) {
@@ -893,14 +907,14 @@ Object.assign(ANALYSIS, {
   },
 
   avgValue: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     const [[n, b]] = nums(flat(p.q), /y = x(\d) on \[0, (\d+)\]/g);
     const want = simpson(({ x }) => Math.pow(x, n), 0, b) / b;
     valueCheck('avgValue', want, p.a, 1e-6);
   },
 
   volRev: p => {
-    const t = p.q.replace(/<[^>]+>/g, '');
+    const t = p.q.replace(/<\/?[a-z][^>]*>/gi, '');
     const m = flat(p.q).match(/y = x(\d?) on \[0, (\d+)\]/);
     const n = m[1] === '' ? 1 : +m[1], b = +m[2];
     const want = Math.PI * simpson(({ x }) => Math.pow(x, 2 * n), 0, b);
@@ -1396,7 +1410,7 @@ const bankTell = (() => {
    answer is wrong, no mistake quotes an answer on offer (that would hand the
    match over), and the verdict lays every mistake beside the answer it gives. */
 const slipNotes = (() => {
-  const plain = h => String(h).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const plain = h => String(h).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
     'for by as at from than then into only one two any all has have was were would').split(' '));
   const words = h => new Set(plain(h).toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/)

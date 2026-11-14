@@ -857,6 +857,10 @@ derivative with no other integer root between −10 and 10, and a vector's lengt
 must equal the sum of its squared components. The sums and products written out in the
 vector workings, such as (−3)(4) + (2)(5) = −12 + 10 = −2, are re-added too. The cross product's working is written on the riddle's own numbers, one
 line per component, and each line must cross the right two slots and come out true.
+A matrix product's working does the same for all four entries, each taking the right row
+and column. Markup is stripped by matching real tags only, so a literal "|r| < 1" in a
+working no longer hides the text after it from the notation check; that let
+"1 − −1/4" through in the geometric series working.
 Mote ladders are checked the same way, on the choices a player is actually
 shown rather than the authored list — 45,600 rendered steps per run.
 
