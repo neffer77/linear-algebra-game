@@ -1507,7 +1507,27 @@ const workshopNotes = (() => {
   if (W.GOALS.find(g => g.id === 'stretch').ok([[1,0],[0,1]])) fail('workshop', 'stretch', 'the identity already counts');
   if (W.GOALS.find(g => g.id === 'flat').ok([[0,0],[0,0]])) fail('workshop', 'flat', 'the zero matrix counts as pressing flat');
   if (W.GOALS.find(g => g.id === 'shear').ok([[1,1],[1,1]])) fail('workshop', 'shear', 'a matrix leaning both ways counts as a shear');
-  return { n, goals: W.GOALS.length };
+  /* Match the shape: every target is a real puzzle. Its numbers sit on the
+     grid's lines (−2 to 2), it is never flat (a flat shape hides where ĵ
+     went) and never the identity the workshop starts on, and the next one
+     is never the one just matched. A column is on its mark exactly when
+     both its numbers are. */
+  let targets = 0;
+  for (let i = 0; i < REPS * 10; i++) {
+    const prev = W.target(), T = W.target(prev), key = JSON.stringify(T);
+    targets++;
+    if (T.flat().some(v => v < -2 || v > 2 || !Number.isInteger(v))) fail('workshop', key, 'a target off the grid lines');
+    if (W.det(T) === 0) fail('workshop', key, 'a flat target');
+    if (key === '[[1,0],[0,1]]') fail('workshop', key, 'the identity as a target');
+    if (key === JSON.stringify(prev)) fail('workshop', key, 'the same target twice running');
+    const [ci, cj] = W.cols(T, T);
+    if (!ci || !cj) fail('workshop', key, 'a shape is not on its own marks');
+    const off = T.map(r => r.slice()); off[1][0] += 1;
+    if (W.cols(off, T)[0] || !W.cols(off, T)[1]) fail('workshop', key, 'î is judged by more or less than the first column');
+    const off2 = T.map(r => r.slice()); off2[0][1] -= 1;
+    if (!W.cols(off2, T)[0] || W.cols(off2, T)[1]) fail('workshop', key, 'ĵ is judged by more or less than the second column');
+  }
+  return { n, goals: W.GOALS.length, targets };
 })();
 
 /* ----------------------------------------------------------------- report */
@@ -1551,6 +1571,7 @@ if (codeNotes) {
   console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → v${codeNotes.maxV} (${codeNotes.maxSize}×${codeNotes.maxSize}), v${codeNotes.grownV} at eight settings`);
 }
 console.log(`  workshop matrices checked  ${pad(workshopNotes.n.toLocaleString(), 10)}  (kept directions, eigenvalues, ${workshopNotes.goals} goals makeable)`);
+console.log(`    shapes to match drawn    ${pad(workshopNotes.targets.toLocaleString(), 12)}  (on the grid, never flat, never twice running)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

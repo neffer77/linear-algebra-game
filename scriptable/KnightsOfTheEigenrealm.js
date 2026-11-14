@@ -736,6 +736,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .wsCell button{width:40px;height:40px;border-radius:10px;border:1px solid var(--edge);
   background:var(--panel2);color:var(--ink);font-size:20px;font-weight:800;cursor:pointer}
 .wsCell button:disabled{opacity:.35}
+.wsModes{display:flex;gap:8px;margin:0 0 4px}
+.wsModes button{flex:1;margin:0}
+.wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 .wsGoal{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px;border-top:1px solid rgba(140,125,190,.15)}
 .wsGoal i{font-style:normal;width:20px;flex:none;text-align:center}
 .wsGoal.done{color:var(--gold)}
@@ -952,16 +955,18 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ WORKSHOP ============ -->
   <div class="screen" id="s-workshop">
     <div class="panel"><h2>🛠 Matrix Workshop</h2><div class="sub">Turn the four numbers and watch the plane bend. Nothing here is graded: it is for seeing what a matrix does.</div></div>
+    <div id="wsMode" class="wsModes" role="group" aria-label="Workshop mode"></div>
     <div class="panel">
+      <div id="wsTask" class="small center" style="display:none"></div>
       <div id="wsMat" class="wsMat"></div>
       <div id="wsFig"></div>
       <div id="wsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
       <div style="display:flex;gap:8px">
         <button class="btn sm ghost" onclick="Workshop.reset()">Start again</button>
-        <button class="btn sm ghost" onclick="Workshop.surprise()">Surprise me</button>
+        <button class="btn sm ghost" id="wsSurprise" onclick="Workshop.surprise()">Surprise me</button>
       </div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to make</h2>
+    <div class="panel" id="wsGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to make</h2>
       <div id="wsGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -5736,7 +5741,7 @@ const Figure = {
     // The span has to follow the matrix: a determinant of 40 throws the unit
     // square right out of a frame sized for the identity. Everything that gets
     // drawn — corners and arrows alike — votes on how far out the view reaches.
-    const reach=Math.max(1, ...[c1,c2,c3, ...(s.vecs||[]).map(o=>o.raw?o.v:T(o.v[0],o.v[1]))]
+    const reach=Math.max(1, ...[c1,c2,c3, ...(s.ghost?[[s.ghost[0][0],s.ghost[1][0]],[s.ghost[0][1],s.ghost[1][1]],[s.ghost[0][0]+s.ghost[0][1],s.ghost[1][0]+s.ghost[1][1]]]:[]), ...(s.vecs||[]).map(o=>o.raw?o.v:T(o.v[0],o.v[1]))]
       .flatMap(p=>[Math.abs(p[0]),Math.abs(p[1])]));
     const span=s.span||Math.max(2.6, reach*1.18);
     const cx0=FIG_W/2, cy0=FIG_H/2, k=Math.min(FIG_W,FIG_H)/(2.2*span);
@@ -5758,6 +5763,17 @@ const Figure = {
       g.strokeStyle='rgba(169,156,203,.55)'; g.setLineDash([4,3]); g.lineWidth=1.6;
       g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(1),Y(0)); g.lineTo(X(1),Y(1)); g.lineTo(X(0),Y(1));
       g.closePath(); g.stroke(); g.setLineDash([]);
+    }
+    // A shape to match, drawn dashed under the player's own: its outline, and
+    // where its î and ĵ end, in their colours, so the columns can be read off.
+    if(s.ghost){
+      const G=s.ghost, g1=[G[0][0],G[1][0]], g2=[G[0][1],G[1][1]], g3=[g1[0]+g2[0],g1[1]+g2[1]];
+      g.setLineDash([5,4]); g.strokeStyle='rgba(255,122,182,.8)'; g.lineWidth=1.8;
+      g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(g1[0]),Y(g1[1])); g.lineTo(X(g3[0]),Y(g3[1]));
+      g.lineTo(X(g2[0]),Y(g2[1])); g.closePath(); g.stroke();
+      this.arrow(g, X(0),Y(0), X(g1[0]),Y(g1[1]), 'rgba(90,169,230,.6)', '', 1.8);
+      this.arrow(g, X(0),Y(0), X(g2[0]),Y(g2[1]), 'rgba(87,204,122,.6)', '', 1.8);
+      g.setLineDash([]);
     }
     g.fillStyle=FIG_COL.fill;
     g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(c1[0]),Y(c1[1]));
@@ -13431,6 +13447,28 @@ const Workshop = {
     if(Math.abs(2*x-Math.round(2*x))<1e-9) return neg(Math.round(2*x))+'/2';
     return (x<0?'−':'')+Math.abs(x).toFixed(2);
   },
+  /* Match the shape: a matrix drawn only as its picture, to be read back into
+     numbers. Entries from −2 to 2, so every corner sits on a line of the
+     grid; never flat (a flat shape hides which way ĵ went) and never the
+     identity, which is where the workshop starts. */
+  target(not){
+    for(let g=0;g<200;g++){
+      const T=[[R.i(-2,2),R.i(-2,2)],[R.i(-2,2),R.i(-2,2)]];
+      if(this.det(T)===0) continue;
+      if(T[0][0]===1&&T[0][1]===0&&T[1][0]===0&&T[1][1]===1) continue;
+      if(not && JSON.stringify(T)===JSON.stringify(not)) continue;
+      return T;
+    }
+    return [[2,1],[0,1]];
+  },
+  // Which columns are on their marks: î is the first column, ĵ the second.
+  cols:(M,T)=>[M[0][0]===T[0][0]&&M[1][0]===T[1][0], M[0][1]===T[0][1]&&M[1][1]===T[1][1]],
+  mode:'free', goal:null, matched:0, best:null, taps:0,
+  setMode(m){
+    this.mode=m;
+    if(m==='match' && !this.goal){ this.goal=this.target(this.M); this.taps=0; }
+    this.render();
+  },
   open(){ UI.go('s-workshop'); },
   reset(){ this.M=[[1,0],[0,1]]; this.render(); },
   surprise(){
@@ -13441,10 +13479,13 @@ const Workshop = {
     const v=this.M[i][j]+by;
     if(v<this.LO||v>this.HI) return;
     this.M[i][j]=v;
+    this.taps++;
     this.render();
   },
   render(){
-    const M=this.M;
+    const M=this.M, match=this.mode==='match' && this.goal;
+    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape']]
+      .map(([m,t])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Workshop.setMode('\${m}')">\${t}</button>\`).join('');
     document.getElementById('wsMat').innerHTML=[0,1].map(i=>[0,1].map(j=>{
       const v=M[i][j], nm=this.NAMES[i][j];
       return \`<div class="wsCell c\${j}">
@@ -13459,7 +13500,26 @@ const Workshop = {
       const L=Math.hypot(v[0],v[1])||1, s=1.6/L;
       return {v:[v[0]*s,v[1]*s], raw:true, col:k?'#ff7ab6':FIG_COL.d, label:'λ='+this.fmt(e.L[k])};
     });
-    Figure.render({kind:'grid', m:M, vecs, caption:detCaption(D)}, document.getElementById('wsFig'));
+    Figure.render(match ? {kind:'grid', m:M, ghost:this.goal, span:5.2, before:false, caption:'Your shape is gold. Match the dashed one.'}
+      : {kind:'grid', m:M, vecs, caption:detCaption(D)}, document.getElementById('wsFig'));
+    const task=document.getElementById('wsTask');
+    task.style.display=match?'':'none';
+    if(match){
+      const [ci,cj]=this.cols(M,this.goal);
+      task.innerHTML=\`Read where the dashed <b style="color:#5aa9e6">î</b> ends on the grid: those two numbers are the first column. The dashed <b style="color:#57cc7a">ĵ</b> gives the second.
+        <div style="margin-top:4px;font-size:14px">î \${ci?'✓ on its mark':'not yet'} · ĵ \${cj?'✓ on its mark':'not yet'} · \${this.matched} matched this visit</div>\`;
+      if(ci&&cj){
+        this.matched++;
+        const in_=this.taps;
+        if(this.best===null||in_<this.best) this.best=in_;
+        Sfx.good();
+        if(this.matched===5||this.matched===10||this.matched===25)
+          Celebrate.banner('SHAPE READER', this.matched+' shapes read','var(--gold)',()=>Sfx.milestone());
+        else UI.toast(\`✓ Matched in \${in_} tap\${in_===1?'':'s'}. Here is another.\`);
+        this.goal=this.target(this.goal); this.taps=0;
+        return this.render();
+      }
+    }
 
     let keep;
     if(e.kind==='none') keep='No direction stays on its line: this matrix turns every arrow. (Its characteristic polynomial has no real roots.)';
@@ -13472,7 +13532,12 @@ const Workshop = {
       \`<div>î lands on <b style="color:#5aa9e6">⟨\${neg(a)}, \${neg(c)}⟩</b>, the first column. ĵ lands on <b style="color:#57cc7a">⟨\${neg(b)}, \${neg(d)}⟩</b>, the second.</div>
        <div>det = ad − bc = \${par(a)}·\${par(d)} − \${par(b)}·\${par(c)} = \${neg(p)} \${q<0?'+':'−'} \${Math.abs(q)} = <b>\${neg(D)}</b>. \${detMeans(D)}</div>
        <div>\${keep}</div>\`;
+    if(match) document.getElementById('wsRead').innerHTML=
+      \`<div>Yours: î lands on <b style="color:#5aa9e6">⟨\${neg(a)}, \${neg(c)}⟩</b> and ĵ on <b style="color:#57cc7a">⟨\${neg(b)}, \${neg(d)}⟩</b>.</div>\`;
+    document.getElementById('wsSurprise').style.display=match?'none':'';
 
+    document.getElementById('wsGoalPanel').style.display=match?'none':'';
+    if(match) return;
     const fresh=[];
     for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(M)){ this.done.add(g.id); fresh.push(g); }
     document.getElementById('wsGoals').innerHTML=
