@@ -1,19 +1,40 @@
 {
-  "change": "The daily's mastery recap is headed as a run",
+  "change": "Linear systems are worked by hand: eliminate x, solve for y, put y back",
   "mutations": [
     {
-      "name": "the daily recap is headed as a fight again",
+      "name": "the elimination uses the wrong multiple",
       "file": "index.html",
-      "find": "What this ${this.mode==='daily'?'run':'fight'} taught",
-      "replace": "What this fight taught",
-      "run": "play:map"
+      "find": "const k=c/a; cy=e-k*b;",
+      "replace": "const k=c/a+1; cy=e-k*b;",
+      "run": "verify"
     },
     {
-      "name": "every recap is headed as a run",
+      "name": "the y put back is multiplied by x instead",
       "file": "index.html",
-      "find": "What this ${this.mode==='daily'?'run':'fight'} taught",
-      "replace": "What this run taught",
-      "run": "play:lesson"
+      "find": "const by=b*y;",
+      "replace": "const by=b*x;",
+      "run": "verify"
+    },
+    {
+      "name": "the explanation only states the answer again",
+      "file": "index.html",
+      "find": "${elim2(a,b,p,c,e,q2,x,y)}",
+      "replace": "and it is x = ${neg(x)}, y = ${neg(y)}.",
+      "run": "verify"
+    },
+    {
+      "name": "scaling both equations subtracts the right sides the wrong way round",
+      "file": "index.html",
+      "find": "cy=c*b-a*e; r=c*p-a*q;",
+      "replace": "cy=c*b-a*e; r=a*q-c*p;",
+      "run": "verify"
+    },
+    {
+      "name": "add and subtract are swapped in the step's wording",
+      "file": "index.html",
+      "find": "${k>0?'Subtract':'Add'} ${times(k)}the first",
+      "replace": "${k>0?'Add':'Subtract'} ${times(k)}the first",
+      "run": "verify"
     }
   ]
 }

@@ -553,6 +553,40 @@ const ANALYSIS = {
                         if (terms.some(isNaN) || String(sum).replace('-', '−') !== String(p.a))
                           fail('analysis', 'limPoly', `the term values ${steps[steps.length - 2]} do not add up to ${p.a}`);
                       } },
+  // The worked solution is a hand elimination: a stated combination of the two
+  // equations that really cancels x, the y equation it leaves, and y put back
+  // into the first equation. Each number is recomputed from the riddle itself.
+  solve2:      p => { const num = t => +t.replace('−', '-');
+                      const coef = (sg, d) => (sg === '−' ? -1 : 1) * (d === '' ? 1 : +d);
+                      const eqs = flat(p.q.replace(/<br>/g, '\n')).split('\n').map(l => {
+                        const m = l.trim().match(/^(−?)(\d*)x ([+−]) (\d*)y = (−?\d+)$/);
+                        return m && [coef(m[1], m[2]), coef(m[3], m[4]), num(m[5])]; });
+                      const ans = flat(p.a).match(/x = (−?\d+), y = (−?\d+)/);
+                      const ex = flat(p.ex);
+                      analysisChecks++;
+                      if (!eqs[0] || !eqs[1] || !ans) { fail('analysis', 'solve2', `cannot read: ${flat(p.q)} / ${flat(p.a)}`); return; }
+                      const [X, Y] = [num(ans[1]), num(ans[2])];
+                      for (const [u, v, w] of eqs) if (u * X + v * Y !== w) fail('analysis', 'solve2', `the answer does not satisfy ${u}x + ${v}y = ${w}`);
+                      let l1, l2, m;
+                      if (/Add the two equations/.test(ex)) [l1, l2] = [1, 1];
+                      else if (/Subtract the first equation from the second/.test(ex)) [l1, l2] = [-1, 1];
+                      else if ((m = ex.match(/(Add|Subtract) (\d+)× the (first|second) equation (to|from) the (first|second)/))) {
+                        const k = (m[1] === 'Add' ? 1 : -1) * +m[2];
+                        [l1, l2] = m[3] === 'first' ? [k, 1] : [1, k]; }
+                      else if ((m = ex.match(/Multiply the first equation by (−?\d+) and the second by (−?\d+), then subtract/)))
+                        [l1, l2] = [num(m[1]), -num(m[2])];
+                      if (l1 === undefined) { fail('analysis', 'solve2', `no elimination step in: ${ex}`); return; }
+                      const comb = [0, 1, 2].map(i => l1 * eqs[0][i] + l2 * eqs[1][i]);
+                      if (comb[0] !== 0) fail('analysis', 'solve2', `the stated step leaves ${comb[0]}x: ${ex}`);
+                      const ym = ex.match(/the x terms cancel and (−?\d*)y = (−?\d+)/);
+                      if (!ym || coef(ym[1][0] === '−' ? '−' : '', ym[1].replace('−', '')) !== comb[1] || num(ym[2]) !== comb[2])
+                        fail('analysis', 'solve2', `the y equation shown is not ${comb[1]}y = ${comb[2]}: ${ex}`);
+                      const xm = ex.match(/first equation: (−?\d*)x ([+−]) (\d+) = (−?\d+)/);
+                      if (!xm || coef(xm[1][0] === '−' ? '−' : '', xm[1].replace('−', '')) !== eqs[0][0]
+                          || coef(xm[2], xm[3]) !== eqs[0][1] * Y || num(xm[4]) !== eqs[0][2])
+                        fail('analysis', 'solve2', `putting y = ${Y} into the first equation is not shown right: ${ex}`);
+                      if (!new RegExp(`x = ${ans[1]}\\.`).test(ex)) fail('analysis', 'solve2', `the worked solution does not end on x = ${ans[1]}`);
+                      covered.add('solve2'); },
   defPoly:     p => { const f = compile(p.q.match(/\((.*?)\)\s*dx/)[1]);
                       const hi = parseInt(p.q.match(/<sup>(\d+)<\/sup>/)[1], 10);
                       valueCheck('defPoly', simpson(f, 0, hi), p.a, 1e-4); },

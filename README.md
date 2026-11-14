@@ -836,7 +836,7 @@ structure (four unique choices, answer present, misconceptions substantial), alg
 integrals differentiated back to their integrand so the `+ C` cancels, definite integrals
 against Simpson's rule, limits by direct evaluation).
 
-**58 of 70 generators are independently verified against the mathematics**, up from 8 when
+**59 of 70 generators are independently verified against the mathematics**, up from 8 when
 the harness could only parse polynomials. Every one of the 32 topics added with Spectral
 Reach, Infinite Expanse and Gradient Summit is in that number, and each is checked against
 the mathematics rather than against the formula that produced it: an eigenvector is fed back through its
@@ -844,8 +844,11 @@ own matrix, a rank is recomputed by elimination, an optimum is found by dense sa
 implicit derivative is compared against the slope of the curve itself, and a Riemann sum is
 summed for 200,000 terms and matched to the integral the answer claims. A tangent plane
 must share the surface's height *and* both of its slopes at the point; a Taylor polynomial
-must match the function's value, slope and curvature at zero. The remaining
-twelve have answers that are not scalar expressions — yes/no judgements, sets of roots,
+must match the function's value, slope and curvature at zero. A 2×2 system's worked
+solution is a hand elimination, and the harness rebuilds it from the two equations: the
+step it names must really cancel x and leave the y equation shown, and y put back into
+the first equation must give the x the answer claims. The remaining
+eleven have answers that are not scalar expressions — yes/no judgements, sets of roots,
 prose — and the harness now names them in its report rather than leaving the gap to
 arithmetic. Mote ladders are checked the same way, on the choices a player is actually
 shown rather than the authored list — 45,600 rendered steps per run.
