@@ -5780,6 +5780,16 @@ const Figure = {
     g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
     g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
     g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+    // Numbers along the axes, where a shape has to be read off the grid: the
+    // player should count nothing in their head.
+    if(s.ticks){
+      g.fillStyle=FIG_COL.dim; g.font='10px system-ui,sans-serif';
+      for(let i=-L;i<=L;i+=step){
+        if(!i) continue;
+        g.textAlign='center'; g.textBaseline='top'; g.fillText(neg(i), X(i), Y(0)+3);
+        g.textAlign='right'; g.textBaseline='middle'; g.fillText(neg(i), X(0)-4, Y(i));
+      }
+    }
 
     // the unit square, before and after
     if(s.before!==false){
@@ -5794,8 +5804,8 @@ const Figure = {
       g.setLineDash([5,4]); g.strokeStyle='rgba(255,122,182,.8)'; g.lineWidth=1.8;
       g.beginPath(); g.moveTo(X(0),Y(0)); g.lineTo(X(g1[0]),Y(g1[1])); g.lineTo(X(g3[0]),Y(g3[1]));
       g.lineTo(X(g2[0]),Y(g2[1])); g.closePath(); g.stroke();
-      this.arrow(g, X(0),Y(0), X(g1[0]),Y(g1[1]), 'rgba(90,169,230,.6)', '', 1.8);
-      this.arrow(g, X(0),Y(0), X(g2[0]),Y(g2[1]), 'rgba(87,204,122,.6)', '', 1.8);
+      this.arrow(g, X(0),Y(0), X(g1[0]),Y(g1[1]), 'rgba(90,169,230,.6)', 'î', 1.8);
+      this.arrow(g, X(0),Y(0), X(g2[0]),Y(g2[1]), 'rgba(87,204,122,.6)', 'ĵ', 1.8);
       g.setLineDash([]);
     }
     g.fillStyle=FIG_COL.fill;
@@ -13535,7 +13545,7 @@ const Workshop = {
       const L=Math.hypot(v[0],v[1])||1, s=1.6/L;
       return {v:[v[0]*s,v[1]*s], raw:true, col:k?'#ff7ab6':FIG_COL.d, label:'λ='+this.fmt(e.L[k])};
     });
-    Figure.render(match ? {kind:'grid', m:M, ghost:this.goal, span:5.2, before:false, caption:'Your shape is gold. Match the dashed one.'}
+    Figure.render(match ? {kind:'grid', m:M, ghost:this.goal, ticks:true, before:false, caption:'Your shape is gold. Match the dashed one.'}
       : {kind:'grid', m:M, vecs, caption:detCaption(D)}, document.getElementById('wsFig'));
     const task=document.getElementById('wsTask');
     task.style.display=match?'':'none';
