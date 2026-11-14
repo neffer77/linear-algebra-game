@@ -1915,7 +1915,7 @@ charPoly(d){
        [P(-tr,-dt),'the determinant enters as itself, not negated'],
        [P(-dt,tr),'the trace and the determinant have swapped places'],
        [P(-tr, A[0][0]*A[1][1]+A[0][1]*A[1][0]),'the determinant subtracts the two products; this one added them']],
-    ex:\`Subtracting λ down the diagonal gives \${mat([['a−λ','b'],['c','d−λ']])}, whose determinant is (\${neg(A[0][0])}−λ)(\${neg(A[1][1])}−λ) − (\${neg(A[0][1])})(\${neg(A[1][0])}). Multiply out and you always land on λ² − (trace)λ + det: trace \${neg(tr)}, determinant \${neg(dt)}, so \${P(-tr,dt)}. Its roots are the eigenvalues.\`};
+    ex:\`Subtracting λ down the diagonal gives \${mat([[\`\${neg(A[0][0])} − λ\`,neg(A[0][1])],[neg(A[1][0]),\`\${neg(A[1][1])} − λ\`]])}, whose determinant is (\${neg(A[0][0])} − λ)(\${neg(A[1][1])} − λ) − (\${neg(A[0][1])})(\${neg(A[1][0])}). Multiply out and you always land on λ² − (trace)λ + det: trace \${neg(tr)}, determinant \${neg(dt)}, so \${P(-tr,dt)}. Its roots are the eigenvalues.\`};
 },
 eigenvec(d){
   const k=[2,2,3][d-1]||2;
@@ -2171,7 +2171,7 @@ angleVec(d){
     a:\`\${kind}°\`,
     d:Object.keys(COS).filter(x=>x!==kind).map(x=>[\`\${x}°\`,
       \`\${x}° needs cos θ = \${show(COS[x])}; here u·v = \${neg(dp)} and the lengths give cos θ = \${show(cosT)}\`]),
-    ex:\`u · v = \${neg(dp)}, ‖u‖ = \${rootOf(u[0]*u[0]+u[1]*u[1])} and ‖v‖ = \${rootOf(a*a+b*b)}. So cos θ = \${neg(dp)}/(\${rootOf(u[0]*u[0]+u[1]*u[1])}·\${rootOf(a*a+b*b)}) = \${show(cosT)}, and the angle with that cosine is \${kind}°. \${
+    ex:\`u · v = \${neg(dp)}, ‖u‖ = \${rootOf(u[0]*u[0]+u[1]*u[1])} and ‖v‖ = \${rootOf(a*a+b*b)}. So cos θ = \${neg(dp)}/(\${rootOf(u[0]*u[0]+u[1]*u[1])}·\${rootOf(a*a+b*b)}) \${Math.abs(cosT*100-Math.round(cosT*100))<1e-9 ? '=' : '≈'} \${show(cosT)}, and the angle with that cosine is \${kind}°. \${
       kind==='90' ? 'A dot product of zero is exactly what perpendicular means.'
       : kind==='0' ? 'u is a positive multiple of v, so they point the same way.'
       : kind==='180' ? 'u is a negative multiple of v, so they point exactly opposite ways.'
