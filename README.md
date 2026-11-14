@@ -858,10 +858,14 @@ The generators were also checked by:
   misconception, rule, worked explanation and mote step a player can be shown — asserting
   they are written the way a teacher would write them: never two signs in a row
   (`5 + −1`, `x − −3`, `3·−2`), never a negative squared without brackets (`−2²` is −4),
-  and never a coefficient of 1 or 0 spelled out (`1x`, `0(x + 1)`). The first run found
-  eighteen of the seventy generators doing at least one of the three, including a question that read `2x² + 1x`, a
+  never a coefficient of 1 or 0 spelled out (`1x`, `0(x + 1)`), never a power of 1 or 0
+  written out (`x¹`, `(−1)⁰`), and never a term worth nothing worked as `0(−1)`. The first
+  run found eighteen of the seventy generators doing at least one of the first three, including a question that read `2x² + 1x`, a
   determinant expansion of `−1·−5 − 2·−8`, and a discriminant written `−4² − 4(4)` that
-  means the opposite of what it says.
+  means the opposite of what it says. The rule on powers found six more generators doing it, among them a chain-rule
+  answer `10(5x + 5)¹`, a limit worked as `(3)(−1)² + (0)(−1)¹ + (−4)(−1)⁰`, and a double
+  integral of 1 worked as `3¹/1 = 3`. A limit by substitution is now worked as by hand,
+  `3(−2)² − 4(−2) + 5 = 12 + 8 + 5`, and a check adds up the term values against the answer.
 - **6,300 tile banks drawn** for every vector and matrix answer that can be built from
   tiles, asserting the bank holds every number the answer needs and does not point at
   it: picking the most crowded tiles must not beat picking at random by more than 30%.

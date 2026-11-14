@@ -949,6 +949,8 @@ const R = {
 };
 const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};
 const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');
+// A power as it is written after something: x² but plain x, never x¹.
+const supP = n => n===1 ? '' : sup(n);
 const neg = n => (n<0? '−'+Math.abs(n) : String(n));      // true minus sign
 // A number as it is written inside working: a negative is bracketed, so a sum
 // reads 5 + (−1), a product 3·(−2) and a square (−2)², never 5 + −1 or −2².
@@ -1033,6 +1035,20 @@ const rat=(n,dm)=>{ if(dm<0){n=-n;dm=-dm;} const g=gcd(n,dm); n/=g; dm/=g;
 const sgn=(c,body)=>` ${c<0?'−':'+'} ${Math.abs(c)===1&&body?'':Math.abs(c)}${body}`;
 const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
+/* A polynomial with a number put in for x, written the way it is worked by
+   hand: 3x² − 4x + 5 at x = −2 is 3(−2)² − 4(−2) + 5 = 12 + 8 + 5. A zero term
+   is dropped, x¹ and x⁰ are not written out, and the values follow when there
+   is more than one term to add. */
+function plugIn(terms,x){
+  const t=terms.filter(([c])=>c!==0);
+  if(!t.length) return '0';
+  const join=(xs,f)=>xs.map((v,i)=>(i?(v<0?' − ':' + '):(v<0?'−':''))+f(Math.abs(v))).join('');
+  const work=t.map(([c,p],i)=>{ const k=Math.abs(c);
+    const body = p===0 ? String(k) : (k===1?'':String(k)) + `(${neg(x)})` + (p===1?'':sup(p));
+    return (i?(c<0?' − ':' + '):(c<0?'−':''))+body; }).join('');
+  if(t.length<2) return work;
+  return work+' = '+join(t.map(([c,p])=>c*Math.pow(x,p)),String);
+}
 
 /* --------------------------- problem generators -------------------------- */
 /* Each generator returns {q, a, d:[distractors], ex} where `a` is the exact
@@ -1426,7 +1442,7 @@ limPoly(){
        ['Does not exist','polynomials are continuous everywhere, so this limit always exists'],
        [neg(-s),'a sign slipped — watch the negative value being squared'],
        neg(s+R.nz(-6,6))],
-    ex:`Polynomials are continuous everywhere, so you may simply plug in x = ${neg(a)}: ${t.map(([c,p])=>`(${neg(c)})(${neg(a)})${p?sup(p):'⁰'}`).join(' + ')} = ${neg(s)}. Substitution only fails when it produces something like 0/0.`};
+    ex:`Polynomials are continuous everywhere, so you may simply plug in x = ${neg(a)}: ${plugIn(t,a)} = ${neg(s)}. Substitution only fails when it produces something like 0/0.`};
 },
 limRational(){
   const a=R.nz(1,6);
@@ -1587,7 +1603,7 @@ chainRule(){
   return {topic:'Chain Rule',
     complexity:3,
     codex:{rule:'Differentiate the outside, leaving the inside alone, then multiply by the derivative of the inside.',
-           eg:`(${inner})${sup(n)} → ${n}(${inner})${sup(n-1)} · ${a}`},
+           eg:`(${inner})${sup(n)} → ${n}(${inner})${supP(n-1)} · ${a}`},
     motes:[
       {q:`In (${inner})${sup(n)}, what is the inner function?`,
        a:inner,
@@ -1601,20 +1617,20 @@ chainRule(){
           [String(a*n),'that is the two factors already multiplied together'],
           ['1','the coefficient on x survives differentiation']],
        ex:`${inner} differentiates to ${a} — the constant vanishes and the coefficient remains.`},
-      {q:`Now assemble: ${n}(${inner})${sup(n-1)} × ${a} = ?`,
-       a:`${n*a}(${inner})${sup(n-1)}`,
-       d:[[`${n}(${inner})${sup(n-1)}`,'the inner derivative was dropped at the last step'],
+      {q:`Now assemble: ${n}(${inner})${supP(n-1)} × ${a} = ?`,
+       a:`${n*a}(${inner})${supP(n-1)}`,
+       d:[[`${n}(${inner})${supP(n-1)}`,'the inner derivative was dropped at the last step'],
           [`${n*a}(${inner})${sup(n)}`,'the outer power was never reduced'],
-          [`${n*a}x${sup(n-1)}`,'the bracket stays intact inside the power']],
+          [`${n*a}x${supP(n-1)}`,'the bracket stays intact inside the power']],
        ex:`Multiply the outer derivative by the inner one: ${n} × ${a} = ${n*a}, and the bracket keeps its reduced power.`}
     ],
     q:`${frac('d','dx')} (${inner})${sup(n)} = ?`,
-    a:`${n*a}(${inner})${sup(n-1)}`,
-    d:[[`${n}(${inner})${sup(n-1)}`,`the inner derivative was forgotten — differentiating ${inner} gives ${a}`],
+    a:`${n*a}(${inner})${supP(n-1)}`,
+    d:[[`${n}(${inner})${supP(n-1)}`,`the inner derivative was forgotten — differentiating ${inner} gives ${a}`],
        [`${n*a}(${inner})${sup(n)}`,'the outer power was never reduced by one'],
-       [`${a}(${inner})${sup(n-1)}`,'the outer power was never brought down as a factor'],
-       `${n*a}(${a})${sup(n-1)}`],
-    ex:`Outside first, then inside. The outer power gives ${n}(inner)${sup(n-1)}; the inner function ${inner} has derivative ${a}. Multiply: ${n*a}(${inner})${sup(n-1)}. Forgetting that inner ${a} is the single most common calculus slip.`};
+       [`${a}(${inner})${supP(n-1)}`,'the outer power was never brought down as a factor'],
+       `${n*a}(${a})${supP(n-1)}`],
+    ex:`Outside first, then inside. The outer power gives ${n}(inner)${supP(n-1)}; the inner function ${inner} has derivative ${a}. Multiply: ${n*a}(${inner})${supP(n-1)}. Forgetting that inner ${a} is the single most common calculus slip.`};
 },
 tangent(){
   const t=[[R.nz(1,4),2],[R.nz(-7,7),1],[R.i(-7,7),0]];
@@ -1643,7 +1659,7 @@ indefPower(){
        [`${poly([[c*n,n-1]])} + C`,'that differentiates instead of integrating — the power went down'],
        [`${poly([[c/(n+1),n]])} + C`,'the coefficient was divided but the power never rose'],
        `${poly([[c*(n+1),n+1]])} + C`],
-    ex:`Reverse the power rule: raise the power by one, then divide by the new power. x${sup(n)} → x${sup(n+1)}/${n+1}, so ${lin(c,'x'+sup(n))} → ${lin(c/(n+1),'x'+sup(n+1))}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.`};
+    ex:`Reverse the power rule: raise the power by one, then divide by the new power. x${supP(n)} → x${sup(n+1)}/${n+1}, so ${lin(c,'x'+supP(n))} → ${lin(c/(n+1),'x'+sup(n+1))}. Never forget the + C — every constant differentiates to zero, so infinitely many antiderivatives fit.`};
 },
 defPoly(){
   const c=R.i(1,4)*2, b=R.nz(-5,5), hi=R.i(2,4);
@@ -1713,7 +1729,7 @@ uSub(){
        a:`${frac(1,n+1)}u${sup(n+1)} + C`,
        d:[[`${frac(1,n)}u${sup(n)} + C`,'the power must rise by one first'],
           [`u${sup(n+1)} + C`,'the division by the new power is missing'],
-          [`${n}u${sup(n-1)} + C`,'that differentiates instead of integrating']],
+          [`${n}u${supP(n-1)} + C`,'that differentiates instead of integrating']],
        ex:`Reverse the power rule: raise the power, divide by the new power. Then put u = x² + ${a} back.`}
     ],
     q:`∫ 2x(x² + ${a})${sup(n)} dx = ?`,
@@ -2413,13 +2429,13 @@ riemannToInt(d){
   return {topic:'Riemann Sums',
     codex:{rule:'In a limit of sums, (b−a)/n is the dx and the sample point becomes x. Read off the interval from where the sample points run.',
            eg:'Σ(i/n)²(1/n) → ∫₀¹x²dx, because i/n sweeps [0,1] and 1/n is the width.'},
-    q:`lim<sub>n→∞</sub> <span style="font-size:18px">Σ</span><sub>i=1</sub><sup>n</sup> ${frac(1,'n')}(${frac('i','n')})${sup(k)}<br>Which integral is this?`,
-    a:`∫<sub>0</sub><sup>1</sup> x${sup(k)} dx`,
-    d:[[`∫<sub>0</sub><sup>n</sup> x${sup(k)} dx`,'i/n runs from 0 to 1 however large n gets, so n never appears in the limits'],
-       [`∫<sub>1</sub><sup>n</sup> x${sup(k)} dx`,'the index i runs from 1 to n, but the variable is i/n, which runs over [0, 1]'],
-       [`∫<sub>0</sub><sup>1</sup> ${frac(1,'x')}x${sup(k)} dx`,'the 1/n is the width dx, not another factor inside the integrand'],
+    q:`lim<sub>n→∞</sub> <span style="font-size:18px">Σ</span><sub>i=1</sub><sup>n</sup> ${frac(1,'n')}(${frac('i','n')})${supP(k)}<br>Which integral is this?`,
+    a:`∫<sub>0</sub><sup>1</sup> x${supP(k)} dx`,
+    d:[[`∫<sub>0</sub><sup>n</sup> x${supP(k)} dx`,'i/n runs from 0 to 1 however large n gets, so n never appears in the limits'],
+       [`∫<sub>1</sub><sup>n</sup> x${supP(k)} dx`,'the index i runs from 1 to n, but the variable is i/n, which runs over [0, 1]'],
+       [`∫<sub>0</sub><sup>1</sup> ${frac(1,'x')}x${supP(k)} dx`,'the 1/n is the width dx, not another factor inside the integrand'],
        [rat(1,k+1),'that is the value the integral comes to, not the integral itself']],
-    ex:`Match it to ∫ₐᵇ f(x)dx = lim Σ f(xᵢ)Δx. Here Δx = 1/n, so b − a = 1; the sample point is xᵢ = i/n, which sweeps from 0 up to 1; and f(xᵢ) = (i/n)${sup(k)}, so f(x) = x${sup(k)}. That gives ∫₀¹x${sup(k)}dx, which evaluates to ${rat(1,k+1)} — but the question asked which integral, not its value.`};
+    ex:`Match it to ∫ₐᵇ f(x)dx = lim Σ f(xᵢ)Δx. Here Δx = 1/n, so b − a = 1; the sample point is xᵢ = i/n, which sweeps from 0 up to 1; and f(xᵢ) = (i/n)${supP(k)}, so f(x) = x${supP(k)}. That gives ∫₀¹x${supP(k)}dx, which evaluates to ${rat(1,k+1)} — but the question asked which integral, not its value.`};
 },
 
 /* ---------- Realm 8 : Gradient Summit (multivariable & series) ---------- */
@@ -2552,7 +2568,7 @@ doubleInt(d){
        [String(A*B),'both divisions by the new powers are missing'],
        [rat(A*B, m+n+1),'the two denominators were added rather than multiplied'],
        [rat(Math.pow(a,n+1)*Math.pow(b,m+1), (m+1)*(n+1)),'the two limits have been swapped between the variables']],
-    ex:`Do the inner integral first, treating x as a constant: ∫₀<sup>${b}</sup> ${pw('y',n)||'1'} dy = ${b}${sup(n+1)}/${n+1} = ${rat(B,n+1)}. That constant comes outside, leaving ${rat(B,n+1)}∫₀<sup>${a}</sup> ${pw('x',m)||'1'} dx = ${rat(B,n+1)}·${rat(A,m+1)} = ${rat(A*B,(m+1)*(n+1))}. Over a rectangle with a product integrand the two integrals simply multiply.`};
+    ex:`Do the inner integral first, treating x as a constant: ∫₀<sup>${b}</sup> ${pw('y',n)||'1'} dy = ${n ? `${b}${sup(n+1)}/${n+1} = ` : ''}${rat(B,n+1)}. That constant comes outside, leaving ${rat(B,n+1)}∫₀<sup>${a}</sup> ${pw('x',m)||'1'} dx = ${rat(B,n+1)}·${rat(A,m+1)} = ${rat(A*B,(m+1)*(n+1))}. Over a rectangle with a product integrand the two integrals simply multiply.`};
 },
 geoSeries(d){
   if(R.chance(.25)){
