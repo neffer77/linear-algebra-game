@@ -50,6 +50,15 @@ function loadGame() {
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
   return out;
 }
+/* The whole page script must parse. The checks below lift pieces of it, so a
+   slip outside those pieces (a template string left open in a screen that
+   no generator touches) would pass every one of them and still stop the page
+   from loading at all. */
+{
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
+  catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
+}
 const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each

@@ -739,7 +739,9 @@ npm run test:all    # both
 ```
 
 `npm test` covers what can be checked without a browser — the mathematics below, and
-the knight codec. `npm run test:play` covers what cannot: it drives the real
+the knight codec. It first parses the whole page script, because its other checks lift
+pieces of it, and a slip outside those pieces would pass them all and still stop the page
+loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
 loop only exists once the page is running. Thirty-five suites, 1,688 checks, about a minute:
 
