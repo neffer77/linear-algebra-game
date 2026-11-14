@@ -567,6 +567,18 @@ The game is built so that losing teaches you as much as winning.
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
+- **🛠 Matrix Workshop** — opened from the Tome. A 2×2 matrix you turn by hand, four
+  numbers from −4 to 4 each with a − and a + button, and the plane redrawn on every tap.
+  Beside it: where î and ĵ land (the first column is coloured like î and the second like
+  ĵ, because a column is where a basis arrow goes), the determinant worked out with what
+  it does to the unit square, and the directions the matrix keeps, drawn in red and pink
+  with their eigenvalues. Nine things to make give the turning a point: stretch î alone,
+  swap î and ĵ, a quarter-turn, a flip, a shear, an area of exactly 6, a press flat onto
+  a line, a scale by 3, and a matrix that turns every arrow. Nothing is graded or timed,
+  and nothing is saved: it is where you come to see what a matrix does before a drill
+  asks you to work it out. `npm test` checks all 6,561 matrices it can show: every
+  direction it draws is really kept, every eigenvalue is a root of λ² − (trace)λ + det,
+  "no direction" means a negative discriminant, and each goal can be made in range.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -727,9 +739,11 @@ npm run test:all    # both
 ```
 
 `npm test` covers what can be checked without a browser — the mathematics below, and
-the knight codec. `npm run test:play` covers what cannot: it drives the real
+the knight codec. It first parses the whole page script, because its other checks lift
+pieces of it, and a slip outside those pieces would pass them all and still stop the page
+loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-four suites, 1,658 checks, about a minute:
+loop only exists once the page is running. Thirty-five suites, 1,688 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -761,6 +775,7 @@ loop only exists once the page is running. Thirty-four suites, 1,658 checks, abo
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
+| `workshop` | the Tome opens the matrix workshop on the identity; each tap of a real button redraws the plane and the readout, where î and ĵ land, the determinant worked with negatives bracketed and the sign folded in, and the directions kept with their eigenvalues; a goal is ticked when, and only when, the matrix on screen makes it, and stays ticked through Start again; the numbers stop at −4 and 4; every button says which number it moves; Surprise me stays in range; it fits a phone; all nine goals can be made; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |

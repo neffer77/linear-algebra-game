@@ -1,33 +1,7 @@
 {
- "change": "Work every entry of a matrix product",
- "mutations": [
-  {
-   "name": "the matrix product working shows only the top-left entry",
-   "file": "index.html",
-   "find": "<br>Top-left, row 1 · column 1: ${entry(0,0)}<br>Top-right, row 1 · column 2: ${entry(0,1)}<br>Bottom-left, row 2 · column 1: ${entry(1,0)}<br>Bottom-right, row 2 · column 2: ${entry(1,1)}<br>",
-   "replace": "<br>Top-left: ${entry(0,0)}. Repeat for the other three.<br>",
-   "run": "verify"
-  },
-  {
-   "name": "the top-right entry is worked from row 2",
-   "file": "index.html",
-   "find": "Top-right, row 1 · column 2: ${entry(0,1)}",
-   "replace": "Top-right, row 1 · column 2: ${entry(1,1)}",
-   "run": "verify"
-  },
-  {
-   "name": "a negative product is added with a plus sign",
-   "file": "index.html",
-   "find": "${neg(p)} ${q<0?'−':'+'} ${Math.abs(q)} = ${neg(p+q)}",
-   "replace": "${neg(p)} ${q<0?'+':'−'} ${Math.abs(q)} = ${neg(p+q)}",
-   "run": "verify"
-  },
-  {
-   "name": "the series working subtracts a negative ratio",
-   "file": "index.html",
-   "find": "a/(1 − r) = ${a}/(1 ${s<0?'+':'−'} ${rat(1,k)}) = ",
-   "replace": "a/(1 − r) = ${a}/(1 − ${rat(s,k)}) = ",
-   "run": "verify"
-  }
- ]
+  "change": "Close the Tome's workshop card, and check the whole page script parses",
+  "mutations": [
+    {"name": "the Tome's first card left without its closing quote", "file": "index.html",
+     "find": "         <button class=\"btn sm\" style=\"width:auto;margin-top:8px\" onclick=\"Opening.reread()\">Read it again</button>\n       </div>` +", "replace": "         <button class=\"btn sm\" style=\"width:auto;margin-top:8px\" onclick=\"Opening.reread()\">Read it again</button>\n       </div>", "run": "verify"}
+  ]
 }

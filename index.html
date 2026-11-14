@@ -706,6 +706,22 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   border:1px solid var(--edge); background:#171129;}
 .figcap{font-size:11px; color:var(--dim); text-align:center; margin-bottom:4px;}
 #afig .fig{margin-top:10px;}
+/* The workshop: a 2×2 matrix you can turn by hand. The first column is
+   coloured like î and the second like ĵ, because a column is where the
+   basis arrow lands and the colours are how the figure says so. */
+.wsMat{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px;margin:6px auto 4px;max-width:290px;
+  padding:6px 12px;border-left:3px solid var(--dim);border-right:3px solid var(--dim);border-radius:8px}
+.wsCell{display:flex;align-items:center;justify-content:space-between;gap:4px}
+.wsCell b{font-size:24px;min-width:34px;text-align:center}
+.wsCell.c0 b{color:#5aa9e6} .wsCell.c1 b{color:#57cc7a}
+.wsCell button{width:40px;height:40px;border-radius:10px;border:1px solid var(--edge);
+  background:var(--panel2);color:var(--ink);font-size:20px;font-weight:800;cursor:pointer}
+.wsCell button:disabled{opacity:.35}
+.wsGoal{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px;border-top:1px solid rgba(140,125,190,.15)}
+.wsGoal i{font-style:normal;width:20px;flex:none;text-align:center}
+.wsGoal.done{color:var(--gold)}
+.wsGoal .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wsGoal.done span{text-decoration:line-through;text-decoration-color:rgba(242,193,78,.5)}
 </style>
 </head>
 <body>
@@ -911,6 +927,24 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <button class="btn ghost" onclick="Train.quit()">← Leave the yard</button>
     </div>
     <button class="btn ghost" id="trainBack" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ WORKSHOP ============ -->
+  <div class="screen" id="s-workshop">
+    <div class="panel"><h2>🛠 Matrix Workshop</h2><div class="sub">Turn the four numbers and watch the plane bend. Nothing here is graded: it is for seeing what a matrix does.</div></div>
+    <div class="panel">
+      <div id="wsMat" class="wsMat"></div>
+      <div id="wsFig"></div>
+      <div id="wsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn sm ghost" onclick="Workshop.reset()">Start again</button>
+        <button class="btn sm ghost" onclick="Workshop.surprise()">Surprise me</button>
+      </div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to make</h2>
+      <div id="wsGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
 
@@ -11999,6 +12033,7 @@ const UI = {
     if(id==='s-tome') this.renderTome();
     if(id==='s-comp') Competency.render();
     if(id==='s-train') Train.renderPick();
+    if(id==='s-workshop') Workshop.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12603,6 +12638,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📜 Why a blade of mathematics</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">The tale you were told at the gate, in three cards.</div>
          <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps.</div>
+         <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
@@ -13320,6 +13360,113 @@ const Quarters = {
 };
 // The active knight's colour, or the first on the list if it is somehow not one.
 function col_(k){ return (k && CREST_COLS.indexOf(k.col)>=0) ? k.col : CREST_COLS[0]; }
+
+/* ------------------------------- workshop -------------------------------- */
+/* A matrix you can turn by hand. Every drill asks what a matrix does to one
+   arrow; this lets the player find out by trying, with the plane redrawn on
+   each tap, the determinant worked beside it, and the directions the matrix
+   keeps drawn on the figure. The goals give the trying a direction. They are
+   remembered for the visit only: nothing here goes in the save, and nothing
+   is timed or scored, because this is where you come to look. */
+const Workshop = {
+  LO:-4, HI:4,
+  M:[[1,0],[0,1]],
+  done:new Set(),
+  NAMES:[['top-left','top-right'],['bottom-left','bottom-right']],
+  GOALS:[
+    {id:'stretch', t:'Stretch î to twice its length and leave ĵ where it is.',
+     ok:([[a,b],[c,d]])=>a===2&&c===0&&b===0&&d===1},
+    {id:'swap', t:'Swap î and ĵ, so each lands where the other began.',
+     ok:([[a,b],[c,d]])=>a===0&&c===1&&b===1&&d===0},
+    {id:'quarter', t:'Turn the whole plane a quarter-turn.',
+     ok:([[a,b],[c,d]])=>a===0&&d===0&&Math.abs(b)===1&&c===-b},
+    {id:'flip', t:'Flip the square over, so the determinant goes negative.',
+     ok:M=>Workshop.det(M)<0},
+    {id:'shear', t:'Lean the square over without changing its area: a shear.',
+     ok:([[a,b],[c,d]])=>a===1&&d===1&&((b!==0)!==(c!==0))},
+    {id:'six', t:'Make the square into a shape of area exactly 6.',
+     ok:M=>Math.abs(Workshop.det(M))===6},
+    {id:'flat', t:'Press the square flat onto a line, with at least one number not 0.',
+     ok:M=>Workshop.det(M)===0&&M.flat().some(x=>x!==0)},
+    {id:'scale', t:'Make every arrow three times as long, pointing the same way.',
+     ok:([[a,b],[c,d]])=>a===3&&d===3&&b===0&&c===0},
+    {id:'spin', t:'Find a matrix that turns every arrow: no direction stays on its line.',
+     ok:M=>Workshop.eig(M).kind==='none'}
+  ],
+  det:([[a,b],[c,d]])=>a*d-b*c,
+  /* The directions the matrix keeps. A real eigenvalue λ has a direction v
+     with Av = λv; the characteristic polynomial λ² − (trace)λ + det gives
+     them, and its discriminant says whether there are two, one or none. */
+  eig(M){
+    const [[a,b],[c,d]]=M, t=a+d, D=this.det(M), disc=t*t-4*D;
+    if(disc<0) return {kind:'none', t, D};
+    if(b===0&&c===0) return a===d ? {kind:'all', L:[a], t, D}
+      : {kind:'two', L:[Math.min(a,d),Math.max(a,d)], V:a<d?[[1,0],[0,1]]:[[0,1],[1,0]], t, D};
+    const r=Math.sqrt(disc), L=disc===0?[t/2]:[(t-r)/2,(t+r)/2];
+    const V=L.map(l=> b!==0 ? [b, l-a] : [l-d, c]);
+    return {kind:disc===0?'one':'two', L, V, t, D, disc};
+  },
+  // A number as the readout prints it: whole, a half, or two places.
+  fmt(x){
+    if(Math.abs(x-Math.round(x))<1e-9) return neg(Math.round(x));
+    if(Math.abs(2*x-Math.round(2*x))<1e-9) return neg(Math.round(2*x))+'/2';
+    return (x<0?'−':'')+Math.abs(x).toFixed(2);
+  },
+  open(){ UI.go('s-workshop'); },
+  reset(){ this.M=[[1,0],[0,1]]; this.render(); },
+  surprise(){
+    this.M=[[R.i(-3,3),R.i(-3,3)],[R.i(-3,3),R.i(-3,3)]];
+    this.render();
+  },
+  step(i,j,by){
+    const v=this.M[i][j]+by;
+    if(v<this.LO||v>this.HI) return;
+    this.M[i][j]=v;
+    this.render();
+  },
+  render(){
+    const M=this.M;
+    document.getElementById('wsMat').innerHTML=[0,1].map(i=>[0,1].map(j=>{
+      const v=M[i][j], nm=this.NAMES[i][j];
+      return `<div class="wsCell c${j}">
+        <button onclick="Workshop.step(${i},${j},-1)" aria-label="Lower the ${nm} number"${v<=this.LO?' disabled':''}>−</button>
+        <b aria-label="${nm}: ${neg(v)}">${neg(v)}</b>
+        <button onclick="Workshop.step(${i},${j},1)" aria-label="Raise the ${nm} number"${v>=this.HI?' disabled':''}>+</button>
+      </div>`;
+    }).join('')).join('');
+
+    const [[a,b],[c,d]]=M, p=a*d, q=b*c, D=p-q, e=this.eig(M);
+    const vecs=(e.V||[]).map((v,k)=>{
+      const L=Math.hypot(v[0],v[1])||1, s=1.6/L;
+      return {v:[v[0]*s,v[1]*s], raw:true, col:k?'#ff7ab6':FIG_COL.d, label:'λ='+this.fmt(e.L[k])};
+    });
+    Figure.render({kind:'grid', m:M, vecs, caption:detCaption(D)}, document.getElementById('wsFig'));
+
+    let keep;
+    if(e.kind==='none') keep='No direction stays on its line: this matrix turns every arrow. (Its characteristic polynomial has no real roots.)';
+    else if(e.kind==='all') keep=e.L[0]===0 ? 'Every arrow is sent to the origin.'
+      : `Every direction stays on its line: each arrow is scaled by ${neg(e.L[0])}.`;
+    else if(e.kind==='one') keep=`One direction stays on its line, scaled by λ = ${this.fmt(e.L[0])}. It is drawn in red.`;
+    else keep=`Two directions stay on their lines, scaled by λ = ${this.fmt(e.L[0])} and λ = ${this.fmt(e.L[1])}. They are drawn in red and pink.`;
+
+    document.getElementById('wsRead').innerHTML=
+      `<div>î lands on <b style="color:#5aa9e6">⟨${neg(a)}, ${neg(c)}⟩</b>, the first column. ĵ lands on <b style="color:#57cc7a">⟨${neg(b)}, ${neg(d)}⟩</b>, the second.</div>
+       <div>det = ad − bc = ${par(a)}·${par(d)} − ${par(b)}·${par(c)} = ${neg(p)} ${q<0?'+':'−'} ${Math.abs(q)} = <b>${neg(D)}</b>. ${detMeans(D)}</div>
+       <div>${keep}</div>`;
+
+    const fresh=[];
+    for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(M)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('wsGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} made</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(made)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('WORKSHOP MASTERED','every shape made','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
 
 const Train = {
   pool:[], title:'', mode:null, c:0, w:0, cur:null, lesson:null,
