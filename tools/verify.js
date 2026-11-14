@@ -43,10 +43,14 @@ function loadGame() {
   new Function('exports', mathPart + build + ';const Build={' + shape + bank + '};' +
     ';const Slip={' + slip + '};' +
     ';exports.GEN=GEN;exports.trailQ=trailQ;exports.buildQuestion=buildQuestion;exports.buildMote=buildMote;exports.mat=mat;exports.R=R;' +
-    'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;')(out);
+    // The workshop's arithmetic, lifted out of its object so every matrix it
+    // can show is checked here: the determinant, the directions it keeps, and
+    // whether each goal can be made inside its range at all.
+    ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
+    'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
   return out;
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1453,6 +1457,50 @@ const slipNotes = (() => {
   return { n, topics: topics.size };
 })();
 
+/* --------------------------------------------------------------- workshop */
+/* Every matrix the workshop can be turned to, 9⁴ of them. Each direction it
+   draws must really be kept (Av is λv, and v is not zero), the eigenvalues
+   must be the roots of λ² − (trace)λ + det, "no direction" must mean a
+   negative discriminant, and every goal must be makeable in range and true
+   of the matrix the README names for it. */
+const workshopNotes = (() => {
+  const W = Workshop, made = {};
+  let n = 0;
+  for (let a = W.LO; a <= W.HI; a++) for (let b = W.LO; b <= W.HI; b++)
+  for (let c = W.LO; c <= W.HI; c++) for (let d = W.LO; d <= W.HI; d++) {
+    const M = [[a, b], [c, d]], key = `[[${a},${b}],[${c},${d}]]`, e = W.eig(M);
+    n++;
+    if (W.det(M) !== a * d - b * c) fail('workshop', key, 'determinant is not ad − bc');
+    const t = a + d, D = a * d - b * c, disc = t * t - 4 * D;
+    if ((e.kind === 'none') !== (disc < 0)) fail('workshop', key, `says ${e.kind} with discriminant ${disc}`);
+    for (const l of e.L || [])
+      if (Math.abs(l * l - t * l + D) > 1e-9) fail('workshop', key, `λ = ${l} is not a root of the characteristic polynomial`);
+    if (e.kind === 'two' && !(e.L[0] < e.L[1])) fail('workshop', key, 'two directions with one eigenvalue');
+    if (e.kind === 'one' && e.L.length !== 1) fail('workshop', key, `a repeated eigenvalue is listed ${e.L.length} times`);
+    if (disc === 0 && !(b === 0 && c === 0) && e.kind !== 'one') fail('workshop', key, 'a repeated eigenvalue with one direction is not reported as one');
+    (e.V || []).forEach((v, k) => {
+      const l = e.L[k], Av = [a * v[0] + b * v[1], c * v[0] + d * v[1]];
+      if (Math.hypot(v[0], v[1]) < 1e-9) fail('workshop', key, 'draws a zero direction');
+      if (Math.abs(Av[0] - l * v[0]) > 1e-9 || Math.abs(Av[1] - l * v[1]) > 1e-9)
+        fail('workshop', key, `the direction drawn for λ = ${l} is not kept`);
+    });
+    if (e.kind !== 'none' && e.kind !== 'all' && !(e.V && e.V.length === e.L.length))
+      fail('workshop', key, 'an eigenvalue with no direction drawn');
+    for (const g of W.GOALS) if (g.ok(M)) made[g.id] = (made[g.id] || 0) + 1;
+  }
+  for (const g of W.GOALS) if (!made[g.id]) fail('workshop', g.id, 'this goal cannot be made in range');
+  const EXAMPLE = { stretch: [[2,0],[0,1]], swap: [[0,1],[1,0]], quarter: [[0,-1],[1,0]], flip: [[1,0],[0,-1]],
+    shear: [[1,1],[0,1]], six: [[2,0],[0,3]], flat: [[1,2],[2,4]], scale: [[3,0],[0,3]], spin: [[0,-1],[1,0]] };
+  for (const g of W.GOALS) {
+    if (!EXAMPLE[g.id]) fail('workshop', g.id, 'no worked example to check it against');
+    else if (!g.ok(EXAMPLE[g.id])) fail('workshop', g.id, 'is not true of its own example');
+  }
+  if (W.GOALS.find(g => g.id === 'stretch').ok([[1,0],[0,1]])) fail('workshop', 'stretch', 'the identity already counts');
+  if (W.GOALS.find(g => g.id === 'flat').ok([[0,0],[0,0]])) fail('workshop', 'flat', 'the zero matrix counts as pressing flat');
+  if (W.GOALS.find(g => g.id === 'shear').ok([[1,1],[1,1]])) fail('workshop', 'shear', 'a matrix leaning both ways counts as a shear');
+  return { n, goals: W.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1493,6 +1541,7 @@ if (codeNotes) {
   console.log(`    QR symbols pinned                      (worst case ${codeNotes.worst}×${codeNotes.worst} modules)`);
   console.log(`    a ${codeNotes.maxQ.toLocaleString()}-question knight ${String(codeNotes.maxChars).padStart(7)} chars → v${codeNotes.maxV} (${codeNotes.maxSize}×${codeNotes.maxSize}), v${codeNotes.grownV} at eight settings`);
 }
+console.log(`  workshop matrices checked  ${pad(workshopNotes.n.toLocaleString(), 10)}  (kept directions, eigenvalues, ${workshopNotes.goals} goals makeable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

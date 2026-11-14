@@ -1,33 +1,17 @@
 {
- "change": "Work every entry of a matrix product",
- "mutations": [
-  {
-   "name": "the matrix product working shows only the top-left entry",
-   "file": "index.html",
-   "find": "<br>Top-left, row 1 · column 1: ${entry(0,0)}<br>Top-right, row 1 · column 2: ${entry(0,1)}<br>Bottom-left, row 2 · column 1: ${entry(1,0)}<br>Bottom-right, row 2 · column 2: ${entry(1,1)}<br>",
-   "replace": "<br>Top-left: ${entry(0,0)}. Repeat for the other three.<br>",
-   "run": "verify"
-  },
-  {
-   "name": "the top-right entry is worked from row 2",
-   "file": "index.html",
-   "find": "Top-right, row 1 · column 2: ${entry(0,1)}",
-   "replace": "Top-right, row 1 · column 2: ${entry(1,1)}",
-   "run": "verify"
-  },
-  {
-   "name": "a negative product is added with a plus sign",
-   "file": "index.html",
-   "find": "${neg(p)} ${q<0?'−':'+'} ${Math.abs(q)} = ${neg(p+q)}",
-   "replace": "${neg(p)} ${q<0?'+':'−'} ${Math.abs(q)} = ${neg(p+q)}",
-   "run": "verify"
-  },
-  {
-   "name": "the series working subtracts a negative ratio",
-   "file": "index.html",
-   "find": "a/(1 − r) = ${a}/(1 ${s<0?'+':'−'} ${rat(1,k)}) = ",
-   "replace": "a/(1 − r) = ${a}/(1 − ${rat(s,k)}) = ",
-   "run": "verify"
-  }
- ]
+  "change": "Matrix Workshop: a 2×2 matrix turned by hand",
+  "mutations": [
+    {"name": "a kept direction drawn the wrong way along its line", "file": "index.html",
+     "find": "const V=L.map(l=> b!==0 ? [b, l-a] : [l-d, c]);", "replace": "const V=L.map(l=> b!==0 ? [b, a-l] : [l-d, c]);", "run": "verify"},
+    {"name": "the determinant adds the cross terms", "file": "index.html",
+     "find": "  det:([[a,b],[c,d]])=>a*d-b*c,", "replace": "  det:([[a,b],[c,d]])=>a*d+b*c,", "run": "verify"},
+    {"name": "the discriminant uses 2·det", "file": "index.html",
+     "find": "const [[a,b],[c,d]]=M, t=a+d, D=this.det(M), disc=t*t-4*D;", "replace": "const [[a,b],[c,d]]=M, t=a+d, D=this.det(M), disc=t*t-2*D;", "run": "verify"},
+    {"name": "a shear may lean both ways", "file": "index.html",
+     "find": "ok:([[a,b],[c,d]])=>a===1&&d===1&&((b!==0)!==(c!==0))}", "replace": "ok:([[a,b],[c,d]])=>a===1&&d===1&&((b!==0)||(c!==0))}", "run": "verify"},
+    {"name": "the zero matrix counts as pressing flat", "file": "index.html",
+     "find": "ok:M=>Workshop.det(M)===0&&M.flat().some(x=>x!==0)}", "replace": "ok:M=>Workshop.det(M)===0}", "run": "verify"},
+    {"name": "a repeated eigenvalue reported as two", "file": "index.html",
+     "find": "const r=Math.sqrt(disc), L=disc===0?[t/2]:[(t-r)/2,(t+r)/2];", "replace": "const r=Math.sqrt(disc), L=[(t-r)/2,(t+r)/2];", "run": "verify"}
+  ]
 }
