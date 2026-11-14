@@ -105,13 +105,18 @@ const notationSeen = new Set();
 const UNIT_COEF = /(^|[^\w.,\/⁰¹²³⁴⁵⁶⁷⁸⁹])[01](?=[xyz]\b|\([xyz])/;
 const NEG_POWER = /(^|[^\w)^⁰¹²³⁴⁵⁶⁷⁸⁹])−\d+(\^|[⁰¹²³⁴⁵⁶⁷⁸⁹])/;
 const DOUBLE_SIGN = /[+−\-·×]\s*[+−-]\s*[\w(√]/;
+// x¹ and x⁰ are written x and 1, and a term worth nothing is left out, not
+// worked as 0(−1). A product of two entries, (0)(5), is a step and stays.
+const POWER_01 = /[)\w][⁰¹](?![⁰¹²³⁴⁵⁶⁷⁸⁹])/;
+const ZERO_TERM = /(^|[\s+−-])0\(−?\d/;
 function notation(key, where, html) {
   if (html == null) return;
   notationScanned++;
   const text = String(html).replace(/<sup>/g, '^').replace(/<[^>]+>/g, ' ')
     .replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ');
   for (const [re, what] of [[DOUBLE_SIGN, 'two signs in a row'], [NEG_POWER, 'a negative number raised to a power without brackets'],
-                            [UNIT_COEF, 'a coefficient of 1 or 0 written out']]) {
+                            [UNIT_COEF, 'a coefficient of 1 or 0 written out'],
+                            [POWER_01, 'a power of 1 or 0 written out'], [ZERO_TERM, 'a zero term written out']]) {
     const m = re.exec(text);
     if (!m) continue;
     const tag = `${key}/${where.replace(/\d+/g, 'n')}/${what}`;
@@ -534,7 +539,20 @@ const ANALYSIS = {
                       valueCheck('tangent', ddx(f, 'x', { x: at }), p.a, 5e-4); },
   limPoly:     p => { const f = compile(parens(p.q.replace(/^lim<sub>.*?<\/sub>\s*/, '')));
                       const at = parseFloat(p.q.match(/x→(.*?)<\/sub>/)[1].replace('−', '-'));
-                      valueCheck('limPoly', f({ x: at }), p.a); },
+                      valueCheck('limPoly', f({ x: at }), p.a);
+                      // The working is the hand calculation: the number put in for x, then
+                      // the value of each term, which add up to the answer. No term worth 0.
+                      const work = flat(p.ex).match(/plug in x = [^:]*: (.*?)\. Substitution/);
+                      if (!work) { fail('analysis', 'limPoly', `no worked substitution in: ${flat(p.ex)}`); return; }
+                      const steps = work[1].split(' = ');
+                      analysisChecks++;
+                      if (/(^|[+−] )0( |$)/.test(steps[0])) fail('analysis', 'limPoly', `a term worth 0 is worked out: ${work[1]}`);
+                      if (steps.length > 2) {
+                        const terms = steps[steps.length - 2].replace(/−\s*/g, '-').replace(/\+\s*/g, '').split(/\s+/).map(Number);
+                        const sum = terms.reduce((x, y) => x + y, 0);
+                        if (terms.some(isNaN) || String(sum).replace('-', '−') !== String(p.a))
+                          fail('analysis', 'limPoly', `the term values ${steps[steps.length - 2]} do not add up to ${p.a}`);
+                      } },
   defPoly:     p => { const f = compile(p.q.match(/\((.*?)\)\s*dx/)[1]);
                       const hi = parseInt(p.q.match(/<sup>(\d+)<\/sup>/)[1], 10);
                       valueCheck('defPoly', simpson(f, 0, hi), p.a, 1e-4); },
@@ -715,7 +733,7 @@ Object.assign(ANALYSIS, {
 
   // The stated integral must actually equal the limit of the sum.
   riemannToInt: p => {
-    const k = +flat(p.q).match(/in\)(\d)/)[1];
+    const k = +(flat(p.q).match(/in\)(\d?)/)[1] || 1);   // a power of 1 is not written
     const m = String(p.a).match(/∫<sub>(\d+)<\/sub><sup>(\d+)<\/sup> x(\S*) dx/);
     if (!m) { fail('analysis', 'riemannToInt', `answer is not an integral: ${p.a}`); return; }
     const lo = +m[1], hi = +m[2], pw = +(flat(m[3]) || 1);
@@ -1273,7 +1291,7 @@ if (seenComplexity.size) {
   console.log(`  mote steps rendered        ${pad(motesChecked.toLocaleString(), 11)}`);
   console.log(`    rite trail lines checked ${pad(trailsChecked.toLocaleString(), 11)}  (${trailsCut.toLocaleString()} cut at a word, mathematics drawn)`);
 }
-console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x)`);
+console.log(`  lines read for notation    ${pad(notationScanned.toLocaleString(), 11)}  (no 5 + −1, −2², 1x, x¹)`);
 console.log(`  tile banks drawn           ${pad(bankTell.n.toLocaleString(), 11)}  (crowding tell ${bankTell.ratio.toFixed(2)}× chance)`);
 console.log(`  find-the-slip questions    ${pad(slipNotes.n.toLocaleString(), 11)}  (${slipNotes.topics} topics, none quoting an answer or echoing the squire)`);
 if (figKeys.size) {
