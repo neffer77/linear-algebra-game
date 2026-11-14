@@ -1,15 +1,11 @@
 {
-  "change": "Slope Workshop: a secant becomes a tangent as h closes in",
+  "change": "Match the shape: numbered axes, named dashed arrows, a view sized to the shapes",
   "mutations": [
-    {"name": "the derivative forgets to bring the power down", "file": "index.html",
-     "find": "(p?c*p*Math.pow(this.a,p-1):0)", "replace": "(p?c*Math.pow(this.a,p-1):0)", "run": "verify"},
-    {"name": "the secant divides by the size of h, not h", "file": "index.html",
-     "find": "  secant(){ const h=this.h(); return (this.f(this.a+h)-this.f(this.a))/h; },", "replace": "  secant(){ const h=this.h(); return (this.f(this.a+h)-this.f(this.a))/Math.abs(h); },", "run": "verify"},
-    {"name": "the working is printed to four places", "file": "index.html",
-     "find": "    const r=+x.toFixed(9);", "replace": "    const r=+x.toFixed(4);", "run": "verify"},
-    {"name": "h stops at 0.01", "file": "index.html",
-     "find": "  HS:[1, 0.5, 0.1, 0.01, 0.001],", "replace": "  HS:[1, 0.5, 0.1, 0.01],", "run": "verify"},
-    {"name": "a negative is left unbracketed in the working", "file": "index.html",
-     "find": "return t.startsWith('−')?'('+t+')':t; },", "replace": "return t; },", "run": "verify"}
+    {"name": "the axes lose their numbers", "file": "index.html",
+     "find": "    if(s.ticks){", "replace": "    if(false){", "run": "play:workshop"},
+    {"name": "the dashed î goes unnamed", "file": "index.html",
+     "find": "'rgba(90,169,230,.6)', 'î', 1.8", "replace": "'rgba(90,169,230,.6)', '', 1.8", "run": "play:workshop"},
+    {"name": "the view is fixed wide again", "file": "index.html",
+     "find": "ghost:this.goal, ticks:true,", "replace": "ghost:this.goal, span:5.2, ticks:true,", "run": "play:workshop"}
   ]
 }

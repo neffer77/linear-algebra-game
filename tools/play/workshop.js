@@ -134,6 +134,20 @@ module.exports = {
     t.ok('the goals and Surprise me step aside while matching', m0.goals === 'none' && m0.surprise === 'none', JSON.stringify(m0));
     t.ok('nothing is matched yet', /0 matched this visit/.test(m0.task), m0.task);
 
+    // the grid can be read without counting: numbers on the axes, the dashed
+    // arrows named, and a view sized to the shapes rather than fixed wide
+    const drawn = await t.ev(() => {
+      const said = [], real = CanvasRenderingContext2D.prototype.fillText;
+      let spec = null; const render = Figure.render;
+      CanvasRenderingContext2D.prototype.fillText = function (s, ...r) { said.push(String(s)); return real.call(this, s, ...r); };
+      Figure.render = function (s, ...r) { spec = s; return render.call(this, s, ...r); };
+      try { Workshop.render(); } finally { CanvasRenderingContext2D.prototype.fillText = real; Figure.render = render; }
+      return { said, ticks: spec.ticks, span: spec.span === undefined ? null : spec.span };
+    });
+    t.ok('the axes carry their numbers while matching', drawn.ticks === true && ['1', '2', '−1', '−2'].every(n => drawn.said.includes(n)), JSON.stringify(drawn.said));
+    t.ok('the dashed î and ĵ are named as well as the gold ones', drawn.said.filter(s => s === 'î').length === 2 && drawn.said.filter(s => s === 'ĵ').length === 2, JSON.stringify(drawn.said));
+    t.ok('the view is sized to the shapes, not fixed wide', drawn.span === null, String(drawn.span));
+
     // one column right is named, the other not yet
     const G = m0.goal;
     await setM(t, [[G[0][0], G[0][1] === 2 ? 1 : G[0][1] + 1], [G[1][0], G[1][1]]]);
