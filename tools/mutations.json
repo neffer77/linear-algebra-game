@@ -1,26 +1,82 @@
 {
-  "change": "A slope at a point shows the number put in, term by term",
-  "mutations": [
-    {
-      "name": "the tangent working skips the substitution",
-      "file": "index.html",
-      "find": "so f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(m)}.",
-      "replace": "so f′(${neg(a)}) = ${neg(m)}.",
-      "run": "verify"
-    },
-    {
-      "name": "the derivative-at-a-point working skips the substitution",
-      "file": "index.html",
-      "find": "f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(s)}.",
-      "replace": "f′(${neg(a)}) = ${neg(s)}.",
-      "run": "verify"
-    },
-    {
-      "name": "the substitution is worked on f instead of f′",
-      "file": "index.html",
-      "find": "so f′(${neg(a)}) = ${plugIn(dt,a)} = ${neg(m)}.",
-      "replace": "so f′(${neg(a)}) = ${plugIn(t,a)} = ${neg(m)}.",
-      "run": "verify"
-    }
-  ]
+ "change": "Check the last ten topics against the mathematics",
+ "mutations": [
+  {
+   "name": "vecAdd working adds wrong",
+   "file": "index.html",
+   "find": "${neg(u[1])} + ${par(v[1])} = ${neg(s[1])} below",
+   "replace": "${neg(u[1])} + ${par(v[1])} = ${neg(s[1]+1)} below",
+   "run": "verify"
+  },
+  {
+   "name": "vecScale answer adds the scalar to one component",
+   "file": "index.html",
+   "find": "const s=[c*v[0],c*v[1]];",
+   "replace": "const s=[c*v[0],c+v[1]];",
+   "run": "verify"
+  },
+  {
+   "name": "vecCombo crosses v's components",
+   "file": "index.html",
+   "find": "s=[a*u[0]-b*v[0], a*u[1]-b*v[1]];",
+   "replace": "s=[a*u[0]-b*v[0], a*u[1]-b*v[0]];",
+   "run": "verify"
+  },
+  {
+   "name": "dot working multiplies across",
+   "file": "index.html",
+   "find": "= ${neg(u[0]*v[0])} + ${par(u[1]*v[1])} = ${neg(s)}",
+   "replace": "= ${neg(u[0]*v[1])} + ${par(u[1]*v[1])} = ${neg(s)}",
+   "run": "verify"
+  },
+  {
+   "name": "vector length answer is a leg",
+   "file": "index.html",
+   "find": "a:String(t[2]),",
+   "replace": "a:String(t[1]),",
+   "run": "verify"
+  },
+  {
+   "name": "orthogonality says yes for any positive dot product",
+   "file": "index.html",
+   "find": "const truth = s===0;",
+   "replace": "const truth = s>=0;",
+   "run": "verify"
+  },
+  {
+   "name": "cross product is v × u",
+   "file": "index.html",
+   "find": "const s=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];",
+   "replace": "const s=[u[2]*v[1]-u[1]*v[2], u[0]*v[2]-u[2]*v[0], u[1]*v[0]-u[0]*v[1]];",
+   "run": "verify"
+  },
+  {
+   "name": "cross product middle sign flipped",
+   "file": "index.html",
+   "find": "const s=[u[1]*v[2]-u[2]*v[1], u[2]*v[0]-u[0]*v[2], u[0]*v[1]-u[1]*v[0]];",
+   "replace": "const s=[u[1]*v[2]-u[2]*v[1], u[0]*v[2]-u[2]*v[0], u[0]*v[1]-u[1]*v[0]];",
+   "run": "verify"
+  },
+  {
+   "name": "independence decided by the determinant's sign",
+   "file": "index.html",
+   "find": "const truth=det!==0;",
+   "replace": "const truth=det>0;",
+   "run": "verify"
+  },
+  {
+   "name": "eigenvalue matrix no longer triangular",
+   "file": "index.html",
+   "find": "const A=[[l1,b],[0,l2]];",
+   "replace": "const A=[[l1,b],[1,l2]];",
+   "run": "verify"
+  },
+  {
+   "name": "critical point sign read off wrong",
+   "file": "index.html",
+   "find": "a:`x = ${neg(a)} and x = ${neg(b)}`,",
+   "replace": "a:`x = ${neg(-a)} and x = ${neg(b)}`,",
+   "run": "verify"
+  }
+ ]
 }

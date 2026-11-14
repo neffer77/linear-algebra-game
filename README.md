@@ -836,7 +836,7 @@ structure (four unique choices, answer present, misconceptions substantial), alg
 integrals differentiated back to their integrand so the `+ C` cancels, definite integrals
 against Simpson's rule, limits by direct evaluation).
 
-**60 of 70 generators are independently verified against the mathematics**, up from 8 when
+**All 70 generators are independently verified against the mathematics**, up from 8 when
 the harness could only parse polynomials. Every one of the 32 topics added with Spectral
 Reach, Infinite Expanse and Gradient Summit is in that number, and each is checked against
 the mathematics rather than against the formula that produced it: an eigenvector is fed back through its
@@ -848,10 +848,15 @@ must match the function's value, slope and curvature at zero. A 2×2 system's wo
 solution is a hand elimination, and the harness rebuilds it from the two equations: the
 step it names must really cancel x and leave the y equation shown, and y put back into
 the first equation must give the x the answer claims. A scalar projection is recomputed
-as u·v / ‖v‖ from the two vectors in the riddle. The remaining
-ten have answers that are not scalar expressions — yes/no judgements, sets of roots,
-prose — and the harness now names them in its report rather than leaving the gap to
-arithmetic. Mote ladders are checked the same way, on the choices a player is actually
+as u·v / ‖v‖ from the two vectors in the riddle. The last ten, the
+first topics a player meets plus the yes/no and root-set answers, are checked the same way.
+A cross product must be at right angles to both vectors, have the length Lagrange's
+identity gives, and turn the right-handed way, so v × u is caught as surely as a slipped
+sign. Each eigenvalue must make A − λI singular, each critical point must zero the
+derivative with no other integer root between −10 and 10, and a vector's length squared
+must equal the sum of its squared components. The sums and products written out in the
+vector workings, such as (−3)(4) + (2)(5) = −12 + 10 = −2, are re-added too.
+Mote ladders are checked the same way, on the choices a player is actually
 shown rather than the authored list — 45,600 rendered steps per run.
 
 The generators were also checked by:
