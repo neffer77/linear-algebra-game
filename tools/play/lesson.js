@@ -601,6 +601,7 @@ module.exports = {
     t.ok('one that fell is listed too', taught.rows.includes('det2') && taught.learned.det2.to < taught.learned.det2.from);
     t.ok('one that was only shown is not: nothing moved', !taught.rows.includes('dot') && !taught.learned.dot);
     t.ok('rises come before falls', taught.rows.indexOf('vecAdd') < taught.rows.indexOf('det2'));
+    t.ok('and is headed as a fight', /What this fight taught/.test(taught.text), taught.text.slice(0, 60));
     t.ok('and a new fight begins with nothing to report', taught.fresh.n === 0 && taught.fresh.html === '');
 
     // ------------------------------------------------------------------

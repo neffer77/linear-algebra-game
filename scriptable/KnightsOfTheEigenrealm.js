@@ -6836,7 +6836,7 @@ const Battle = {
       .filter(x=>Math.round(x.d.to*100)!==Math.round(x.d.from*100))
       .sort((a,b)=>(b.d.to-b.d.from)-(a.d.to-a.d.from)).slice(0,5);
     if(!rows.length) return '';
-    return \`<hr><div id="learned"><div class="small" style="margin-bottom:4px;font-weight:800;color:var(--gold)">What this fight taught</div>
+    return \`<hr><div id="learned"><div class="small" style="margin-bottom:4px;font-weight:800;color:var(--gold)">What this \${this.mode==='daily'?'run':'fight'} taught</div>
       \${rows.map(({k,d})=>{
         const up=d.to>d.from, st=Lesson.stage(k);
         return \`<div class="small" data-learned="\${k}" style="display:flex;justify-content:space-between;gap:8px;line-height:1.9">

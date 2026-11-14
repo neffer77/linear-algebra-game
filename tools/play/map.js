@@ -474,6 +474,8 @@ module.exports = {
       out.drillGold = drill ? drill.classList.contains('gold') : null;
       out.againGold = again ? again.classList.contains('gold') : null;
       out.cleanLine = !!document.getElementById('dClean');
+      const learned = document.querySelector('#learned > div');
+      out.learnedHead = learned ? learned.innerText : null;
       drill.click(); await wait(200);
       out.train = { screen: document.querySelector('.screen.on').id, pool: Train.pool.slice(), title: Train.title,
         topic: document.getElementById('tTopic').innerText };
@@ -498,6 +500,7 @@ module.exports = {
       && dm.drillGold && !dm.againGold, JSON.stringify(dm));
     t.ok('the drill opens the Training Grounds on exactly the topics missed',
       dm.train.screen === 's-train' && JSON.stringify(dm.train.pool) === JSON.stringify(dm.keys), JSON.stringify(dm.train));
+    t.eq('what the run moved in mastery is headed as a run, not a fight', dm.learnedHead, 'What this run taught');
     t.ok('a new run starts with nothing missed', dm.fresh === 0, String(dm.fresh));
     t.ok('a clean run says so, offers no drill, and running it again leads',
       dm.clean.line && !dm.clean.drill && !dm.clean.list && dm.clean.againGold, JSON.stringify(dm.clean));

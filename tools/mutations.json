@@ -1,40 +1,19 @@
 {
-  "change": "Worked steps write a number put in for x the way it is done by hand",
+  "change": "The daily's mastery recap is headed as a run",
   "mutations": [
     {
-      "name": "the limit working goes back to writing every power",
+      "name": "the daily recap is headed as a fight again",
       "file": "index.html",
-      "find": "(k===1?'':String(k)) + `(${neg(x)})` + (p===1?'':sup(p));",
-      "replace": "`(${neg(c)})(${neg(x)})${p?sup(p):'⁰'}`;",
-      "run": "verify"
+      "find": "What this ${this.mode==='daily'?'run':'fight'} taught",
+      "replace": "What this fight taught",
+      "run": "play:map"
     },
     {
-      "name": "a term worth nothing is kept in the limit working",
+      "name": "every recap is headed as a run",
       "file": "index.html",
-      "find": "const t=terms.filter(([c])=>c!==0);\n  if(!t.length) return '0';\n  const join",
-      "replace": "const t=terms;\n  if(!t.length) return '0';\n  const join",
-      "run": "verify"
-    },
-    {
-      "name": "the term values are left unsigned",
-      "file": "index.html",
-      "find": "return work+' = '+join(t.map(([c,p])=>c*Math.pow(x,p)),String);",
-      "replace": "return work+' = '+t.map(([c,p])=>Math.abs(c*Math.pow(x,p))).join(' + ');",
-      "run": "verify"
-    },
-    {
-      "name": "a power of one is written out after all",
-      "file": "index.html",
-      "find": "const supP = n => n===1 ? '' : sup(n);",
-      "replace": "const supP = n => sup(n);",
-      "run": "verify"
-    },
-    {
-      "name": "the double integral works a power of one out again",
-      "file": "index.html",
-      "find": "dy = ${n ? `${b}${sup(n+1)}/${n+1} = ` : ''}${rat(B,n+1)}",
-      "replace": "dy = ${b}${sup(n+1)}/${n+1} = ${rat(B,n+1)}",
-      "run": "verify"
+      "find": "What this ${this.mode==='daily'?'run':'fight'} taught",
+      "replace": "What this run taught",
+      "run": "play:lesson"
     }
   ]
 }
