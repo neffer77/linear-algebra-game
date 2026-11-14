@@ -1053,6 +1053,27 @@ const rat=(n,dm)=>{ if(dm<0){n=-n;dm=-dm;} const g=gcd(n,dm); n/=g; dm/=g;
 // " + 3xy" or " − xy" — so a negative coefficient never renders as "+ −3xy".
 const sgn=(c,body)=>\` \${c<0?'−':'+'} \${Math.abs(c)===1&&body?'':Math.abs(c)}\${body}\`;
 const dPoly = t => t.map(([c,p])=>[c*p,p-1]).filter(([c,p])=>p>=0 && c!==0);
+/* Solve a 2×2 system the way it is done by hand: make x cancel, solve the one
+   equation left for y, then put y back into the first equation for x. When one
+   x coefficient divides the other a single multiple does it; otherwise both
+   equations are scaled. Every number shown is one the player can check. */
+function elim2(a,b,p,c,e,q,x,y){
+  const times=k=>Math.abs(k)===1?'':\`\${Math.abs(k)}× \`;
+  let how, cy, r;
+  if(c%a===0){ const k=c/a; cy=e-k*b; r=q-k*p;
+    how = k===1 ? 'Subtract the first equation from the second'
+        : k===-1 ? 'Add the two equations'
+        : \`\${k>0?'Subtract':'Add'} \${times(k)}the first equation \${k>0?'from':'to'} the second\`; }
+  else if(a%c===0){ const k=a/c; cy=b-k*e; r=p-k*q;
+    how = \`\${k>0?'Subtract':'Add'} \${times(k)}the second equation \${k>0?'from':'to'} the first\`; }
+  else { cy=c*b-a*e; r=c*p-a*q;
+    how = \`Multiply the first equation by \${neg(c)} and the second by \${neg(a)}, then subtract\`; }
+  const yLine = cy===1 ? \`y = \${neg(r)}\` : \`\${poly([[cy,1]],'y')} = \${neg(r)}, so y = \${neg(y)}\`;
+  const by=b*y;
+  const xLine = \`\${poly([[a,1]],'x')} \${by<0?'−':'+'} \${Math.abs(by)} = \${neg(p)}\`
+    + (a===1 ? \`, so x = \${neg(x)}\` : \`, so \${poly([[a,1]],'x')} = \${neg(a*x)} and x = \${neg(x)}\`);
+  return \`\${how}: the x terms cancel and \${yLine}. Put y = \${neg(y)} into the first equation: \${xLine}.\`;
+}
 const evalPoly=(t,x)=>t.reduce((s,[c,p])=>s+c*Math.pow(x,p),0);
 /* A polynomial with a number put in for x, written the way it is worked by
    hand: 3x² − 4x + 5 at x = −2 is 3(−2)² − 4(−2) + 5 = 12 + 8 + 5. A zero term
@@ -1299,7 +1320,7 @@ solve2(d){
        [\`x = \${neg(-x)}, y = \${neg(y)}\`,'the sign of x is wrong — substitute back into the first equation and it fails'],
        ['No solution','the determinant is not zero, so there is exactly one solution'],
        \`x = \${neg(x+1)}, y = \${neg(y-1)}\`],
-    ex:\`Written as a matrix equation this is \${mat([[a,b],[c,e]])}\${vec(['x','y'])} = \${vec([p,q2])}. Since the determinant \${neg(a*e-b*c)} is not zero there is exactly one solution, and it is x = \${neg(x)}, y = \${neg(y)}. Substitute back to check both equations.\`};
+    ex:\`Written as a matrix equation this is \${mat([[a,b],[c,e]])}\${vec(['x','y'])} = \${vec([p,q2])}. The determinant \${neg(a*e-b*c)} is not zero, so there is exactly one solution. \${elim2(a,b,p,c,e,q2,x,y)} Substitute both back to check the second equation.\`};
 },
 inv2(){
   // Equal diagonal entries make "swap the diagonal" a no-op, and b = −c makes
