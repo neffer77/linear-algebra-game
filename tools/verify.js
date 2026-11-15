@@ -90,6 +90,7 @@ function loadGame() {
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcSets')")) + 'render(){}};exports.PathChain=PathChain;' +
+    ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiSets')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -108,7 +109,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2701,6 +2702,123 @@ const ladderNotes = (() => {
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
   return { n, goals: Object.keys(found).length };
+})();
+
+/* The growth integral workshop: every curve, every number in front, every
+   lift and both forms. Whether F fits is decided here by nudging F and
+   comparing with Math's own e^(kx) at many x, never from c·k = 1; every
+   number the readout works is checked against those; every sentence's
+   condition is decided independently; and the slope field and the curve are
+   read back. */
+const expIntNotes = (() => {
+  const W = ExpInt;
+  const num = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const frv = t => { const s = t.replace(/[()]/g, '').replace(/−/g, '-'), [a, b] = s.split('/'); return b === undefined ? +a : +a / +b; };
+  const r3 = v => Math.round(v * 1000) / 1000;
+  const near3 = (t, v) => Math.abs(num(t) - r3(v)) < 1e-9;
+  const nearF = (t, v) => Math.abs(frv(t) - v) < 1e-9;
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  const K = { two: 2, neg: -2, half: 0.5 }, EX = { two: '2x', neg: '−2x', half: 'x/2' }, UP = { two: '3x', neg: '−x', half: '3x/2' };
+  if (W.SETS.map(S => S.id).join() !== 'two,neg,half') fail('expint', 'sets', W.SETS.map(S => S.id).join());
+  if (W.FORMS.join() !== 'Keep the exponent,Raise it, as the power rule does') fail('expint', 'forms', W.FORMS.join());
+  if (W.LIFT.join() !== '-2,-1.5,-1,-0.5,0,0.5,1,1.5,2') fail('expint', 'lifts', W.LIFT.join());
+  if (W.si !== 0 || W.ci !== W.SETS[0].start || W.li !== 4 || W.form !== 0 || W.LIFT[4] !== 0) fail('expint', 'open', 'the workshop does not open on e^(2x) with F = e^(2x), no lift and the exponent kept');
+  const reset = () => { W.touched = false; W.si = 0; W.ci = W.SETS[0].start; W.li = 4; W.form = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('expint', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.form = 1; W.ci = 0; W.li = 0; W.pick(si);
+    if (W.form !== 0 || W.ci !== S.start || W.li !== 4) fail('expint', S.id, 'picking a curve does not start F again');
+    if (W.c() !== 1) fail('expint', S.id, 'F does not start as e^(kx) itself');
+    for (const g of W.GOALS) if (g.ok(W)) fail('expint', g.id, `met where ${S.id} starts, so picking it gives the goal away`);
+    W.ci = S.C.length - 1; W.moveC(1); if (W.ci !== S.C.length - 1) fail('expint', S.id, 'the number in front does not stop at its last step');
+    W.ci = 0; W.moveC(-1); if (W.ci !== 0) fail('expint', S.id, 'the number in front does not stop at its first step');
+    W.li = 8; W.moveL(1); W.li = 0; W.moveL(-1); if (W.li !== 0) fail('expint', S.id, 'the lift does not stop at its ends');
+    const cs = S.C.map(v => typeof v === 'string' ? frv(v) : v);
+    if (!cs.some(c => Math.abs(c * K[S.id] - 1) < 1e-12)) fail('expint', S.id, 'no number in front fits');
+    if (!cs.some(c => c === K[S.id])) fail('expint', S.id, 'k itself is not offered, so the multiply slip cannot be tried');
+    if (!cs.some(c => Math.abs(c * (K[S.id] + 1) - 1) < 1e-12)) fail('expint', S.id, 'the power rule’s number is not offered'); });
+  const found = {}; let n = 0, pts = 0, dashes = 0;
+  W.SETS.forEach((S, si) => {
+    const k = K[S.id], f = x => Math.exp(k * x), [a, b] = S.D, [c0, d0] = S.R;
+    S.C.forEach((cv, ci) => W.LIFT.forEach((L, li) => [0, 1].forEach(form => {
+      reset(); W.si = si; W.ci = ci; W.li = li; W.form = form; W.touched = true; n++;
+      const c = typeof cv === 'string' ? frv(cv) : cv, m = form ? k + 1 : k, F = x => c * Math.exp(m * x) + L;
+      const key = `${S.id} c=${cv} C=${L} form ${form}`, got = W.working(), txt = got.join(' ');
+      const fits = [-1, -0.3, 0, 0.4, 1].every(x => Math.abs(sl(F, x) - f(x)) < 1e-6 * Math.max(1, f(x)));
+      const q = sl(F, 0) / Math.exp(0), through = Math.abs(F(0) - 1) < 1e-9;
+      if (W.fits() !== fits) fail('expint', key, `fits says ${W.fits()}, the nudges say ${fits}`);
+      if (got[0] !== `f(x) = e^(${EX[S.id]}). An antiderivative F is any curve whose slope at every x is f(x). The short dashes show that slope, and F has to run along them.`) fail('expint', key, got[0]);
+      const m1 = got[1].match(/^You have F\(x\) = (.+?)\. Differentiating multiplies by the number in front of x, (\S+), so F′\(x\) = (\S+) × (\S+)·e\^\((\S+)\) = (.+)\.$/);
+      const ex = form ? UP[S.id] : EX[S.id];
+      if (!m1) fail('expint', key, `F′ is not worked: ${got[1]}`);
+      else {
+        const fm = m1[1].match(/^(−?)(?:\((\S+)\)·|(\S+)·)?e\^\((\S+)\)(?: ([+−]) (\S+))?$/);
+        const cf = fm && (fm[2] || fm[3] ? frv(fm[2] || fm[3]) : 1) * (fm[1] ? -1 : 1);
+        if (!fm || Math.abs(cf - c) > 1e-12 || fm[4] !== ex || (fm[5] ? (fm[5] === '+' ? 1 : -1) * frv(fm[6]) : 0) !== L) fail('expint', key, `F is not written as it is: ${m1[1]}`);
+        if (!nearF(m1[2], m) || !nearF(m1[3], c) || !nearF(m1[4], m) || m1[5] !== ex) fail('expint', key, `the chain rule step is wrong: ${got[1]}`);
+        const fq = m1[6].match(/^(−?)(?:\((\S+)\)·|(\S+)·)?e\^\((\S+)\)$/), qv = fq && (fq[2] || fq[3] ? frv(fq[2] || fq[3]) : 1) * (fq[1] ? -1 : 1);
+        if (!fq || Math.abs(qv - c * m) > 1e-9 || fq[4] !== ex) fail('expint', key, `F′ is wrong: ${m1[6]}`);
+        if (/× −|· ?\d+\/\d+·e/.test(got[1]) || /× \d+\/\d+/.test(got[1])) fail('expint', key, `a negative or a fraction is multiplied bare: ${got[1]}`);
+      }
+      const v = got[2];
+      if (form === 1) {
+        if (v !== `That is not f at all: raising the exponent is the power rule, but e^(${EX[S.id]}) is not a power of x. An exponential keeps its exponent, so F′ is a multiple of e^(${UP[S.id]}), not of e^(${EX[S.id]}), and F cuts across the dashes.`) fail('expint', key, `the raised form is not caught: ${v}`);
+      } else if (fits) {
+        const ks = { two: '2', neg: '−2', half: '1/2' }[S.id], ans = { two: '(1/2)·e^(2x)', neg: '−(1/2)·e^(−2x)', half: '2·e^(x/2)' }[S.id];
+        if (!v.startsWith(`That is exactly f(x), so F runs along every dash. Dividing by the k inside, ${ks}, undoes the ${ks} that differentiating brings out: ∫ e^(${EX[S.id]}) dx = ${ans} + C.`)) fail('expint', key, `the fit is not said: ${v}`);
+        if ((k < 0) !== v.includes('the minus comes along') || (k === 0.5) !== v.includes('Dividing by a half doubles.')) fail('expint', key, `a note on k shows at the wrong time: ${v}`);
+      } else if (c === k) {
+        const m = v.match(/^That is (\S+) times f: multiplying by (\S+) is what differentiating does\. Integrating has to divide by it instead, so the number in front should be 1\/k = (\S+)\.$/);
+        if (!m || !nearF(m[1], k * k) || !nearF(m[2], k) || !nearF(m[3], 1 / k)) fail('expint', key, `the multiply slip is not caught: ${v}`);
+      } else {
+        const m = v.match(/^That is (\S+) times f, (sloping the wrong way|too steep|too shallow)\. For F′ to be exactly f, the number in front times (\S+) must be 1\.$/);
+        const want = c * k < 0 ? 'sloping the wrong way' : c * k > 1 ? 'too steep' : 'too shallow';
+        if (!m || !nearF(m[1], c * k) || m[2] !== want || !nearF(m[3], k)) fail('expint', key, `a wrong number in front is not explained: ${v}`);
+      }
+      const nl = got[3].match(/^Check with a nudge at x = 0\.5: F goes from about (\S+) to about (\S+), so ΔF\/Δx ≈ (\S+), against f\(0\.5\) ≈ (\S+)\.$/);
+      if (!nl || Math.abs(num(nl[1]) - F(0.499)) > 1e-6 || Math.abs(num(nl[2]) - F(0.501)) > 1e-6 || !near3(nl[3], sl(F, 0.5)) || !near3(nl[4], f(0.5))) fail('expint', key, `the nudge is wrong: ${got[3]}`);
+      const rest = got.slice(4).join(' ');
+      if (!fits && got.length !== 4) fail('expint', key, `a fit is talked about where F does not fit: ${rest}`);
+      if (fits) {
+        if ((L !== 0) !== /the whole curve without changing a single slope, so it still fits: that is the \+ C\./.test(rest) || (L !== 0 && !rest.includes(`${L > 0 ? '+ ' : '− '}`) ) || (L !== 0 && !rest.includes(L > 0 ? 'lifts' : 'lowers'))) fail('expint', key, `the + C is wrong: ${rest}`);
+        if (through !== /this is the one antiderivative through the gold point \(0, 1\)\./.test(rest)) fail('expint', key, `the gold point is said at the wrong time: ${rest}`);
+        const m0 = rest.match(/It meets x = 0 at F\(0\) = (\S+)\./);
+        if (!through && (!m0 || !nearF(m0[1], F(0)))) fail('expint', key, `F(0) is wrong: ${rest}`);
+      }
+      /* the drawing: every dash along f's slope, F on its own values, coloured by whether it fits */
+      const svg = W.svg(), sx = W.W / (b - a), sy = W.Hh / (d0 - c0);
+      const PX = v => W.L + (v - a) * sx, PY = v => W.T + W.Hh - (v - c0) * sy;
+      const ds = [...svg.matchAll(/data-k="dash" data-x="([\d.-]+)" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/g)];
+      if (ds.length !== 88) fail('expint', key, `the field has ${ds.length} dashes, not 88`);
+      for (const d of ds) { dashes++;
+        const [x, x1, y1, x2, y2] = d.slice(1).map(Number), s = -((y2 - y1) / sy) / ((x2 - x1) / sx);
+        if (Math.abs(s - f(x)) > 0.03 * Math.max(1, f(x)) || x < a || x > b || Math.min(y1, y2) < W.T - 7 || Math.max(y1, y2) > W.T + W.Hh + 7) { fail('expint', key, `a dash does not point along f at x = ${x}`); break; } }
+      const polys = [...svg.matchAll(/data-k="F" points="([^"]+)" fill="none" stroke="([^"]+)"/g)];
+      if (!polys.length) fail('expint', key, 'F is not drawn');
+      for (const p of polys) {
+        if (p[2] !== (fits ? '#57cc7a' : '#5aa9e6')) fail('expint', key, 'F is not green exactly when it fits');
+        for (const qq of p[1].split(' ')) { const [qx, qy] = qq.split(',').map(Number), vx = a + (qx - W.L) / sx; pts++;
+          if (Math.abs(qy - PY(F(vx))) > 0.02 + Math.abs(sl(F, vx)) * sy / sx * 0.006 || qy < W.T - 0.5 || qy > W.T + W.Hh + 0.5) { fail('expint', key, `F leaves its values at ${qq}`); break; } }
+      }
+      const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+      if (!pt || Math.abs(+pt[1] - PX(0)) > 0.01 || Math.abs(+pt[2] - PY(1)) > 0.01) fail('expint', key, 'the gold point is not at (0, 1)');
+      const al = (svg.match(/aria-label="([^"]+)"/) || [])[1] || '';
+      if (fits !== al.includes('runs along every dash') || through !== al.includes('through the gold point')) fail('expint', key, `the figure's description is wrong: ${al}`);
+      const truth = {
+        fit: S.id === 'two' && fits, neg: S.id === 'neg' && fits, half: S.id === 'half' && fits,
+        times: form === 0 && c === k && !fits, raise: form === 1 && Math.abs(c * (k + 1) - 1) < 1e-12,
+        lift: fits && L !== 0, through: fits && through,
+      };
+      for (const g of W.GOALS) {
+        if (!(g.id in truth)) { fail('expint', g.id, 'a goal with no check'); continue; }
+        if (!!g.ok(W) !== truth[g.id]) fail('expint', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+        if (truth[g.id]) found[g.id] = 1;
+      }
+    })));
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('expint', g.id, 'no setting finds this goal');
+  reset();
+  return { n, pts, dashes, goals: Object.keys(found).length };
 })();
 
 /* The path chain workshop: every hill, every t and every method. The true
@@ -6097,6 +6215,7 @@ console.log(`  tangent planes ${pad(tanPlaneNotes.n.toLocaleString(), 17)}  (the
 console.log(`  inverse slopes ${pad(invSlopeNotes.n.toLocaleString(), 17)}  (true slopes found by nudging Math's own arcsin, arccos and arctan, never from the identities; every number worked checked, every sentence, ${invSlopeNotes.pts.toLocaleString()} curve points read back, ${invSlopeNotes.goals} goals findable)`);
 console.log(`  log slopes ${pad(logDiffNotes.n.toLocaleString(), 21)}  (true slopes found by nudging Math's own x to its power, never from ln x + 1; every number worked checked, every sentence, ${logDiffNotes.pts.toLocaleString()} curve points read back, ${logDiffNotes.goals} goals findable)`);
 console.log(`  path chain rates ${pad(pathChainNotes.n.toLocaleString(), 15)}  (true rates found by nudging z along Math's own path, each part by nudging the hill and the path; every number worked checked, every sentence, the bars read back, ${pathChainNotes.pts.toLocaleString()} curve points, ${pathChainNotes.goals} goals findable)`);
+console.log(`  growth integrals ${pad(expIntNotes.n.toLocaleString(), 15)}  (whether F fits decided by nudging F against Math's own e^(kx) at many x; every number worked checked, every sentence, ${expIntNotes.dashes.toLocaleString()} field dashes and ${expIntNotes.pts.toLocaleString()} curve points read back, ${expIntNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
