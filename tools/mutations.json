@@ -264,7 +264,7 @@
    "name": "the grids run off a phone",
    "file": "index.html",
    "find": "style=\"display:grid;grid-template-columns:repeat(${m},40px);gap:5px\"",
-   "replace": "style=\"display:grid;grid-template-columns:repeat(${m},90px);gap:5px\"",
+   "replace": "style=\"display:grid;grid-template-columns:repeat(${m},160px);gap:5px\"",
    "run": "play:transpose"
   }
  ]
