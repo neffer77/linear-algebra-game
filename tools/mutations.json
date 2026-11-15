@@ -1,278 +1,292 @@
 {
- "change": "The Trig Integral Workshop: divide by the k inside",
+ "change": "The Tangent Plane Workshop: a height and two slopes",
  "mutations": [
   {
-   "name": "cos 2x is really cos x",
+   "name": "the bowl is touched at (1, 3)",
    "file": "index.html",
-   "find": "{id:'cos2', btn:'cos 2x', g:'cos', a:1, k:2,",
-   "replace": "{id:'cos2', btn:'cos 2x', g:'cos', a:1, k:1,",
+   "find": "{id:'bowl', btn:'Bowl', name:'a bowl', a:1, b:1, x0:1, y0:2,",
+   "replace": "{id:'bowl', btn:'Bowl', name:'a bowl', a:1, b:1, x0:1, y0:3,",
    "run": "verify"
   },
   {
-   "name": "6 cos 3x loses its 6",
+   "name": "f_x forgets the 2",
    "file": "index.html",
-   "find": "{id:'big', btn:'6 cos 3x', g:'cos', a:6, k:3,",
-   "replace": "{id:'big', btn:'6 cos 3x', g:'cos', a:3, k:3,",
+   "find": "  fx(){ const S=this.set(); return 2*S.a*S.x0; },",
+   "replace": "  fx(){ const S=this.set(); return S.a*S.x0; },",
    "run": "verify"
   },
   {
-   "name": "the slope of cos has no minus",
+   "name": "f_y is read at x",
    "file": "index.html",
-   "find": "  dk(){ const v=this.c()*this.set().k*(this.g==='cos'?-1:1);",
-   "replace": "  dk(){ const v=this.c()*this.set().k*(this.g==='cos'?1:1);",
+   "find": "  fy(){ const S=this.set(); return 2*S.b*S.y0; },",
+   "replace": "  fy(){ const S=this.set(); return 2*S.b*S.x0; },",
    "run": "verify"
   },
   {
-   "name": "the slope forgets the k inside",
+   "name": "the height drops the minus of y²",
    "file": "index.html",
-   "find": "  dk(){ const v=this.c()*this.set().k*",
-   "replace": "  dk(){ const v=this.c()*1*",
+   "find": "return S.a*S.x0*S.x0+S.b*S.y0*S.y0; },",
+   "replace": "return S.a*S.x0*S.x0+Math.abs(S.b)*S.y0*S.y0; },",
    "run": "verify"
   },
   {
-   "name": "the slope keeps the same wave",
+   "name": "a match ignores the height",
    "file": "index.html",
-   "find": "  dg(){ return this.other(this.g); },",
-   "replace": "  dg(){ return this.g; },",
+   "find": "  match(){ return this.h===this.f() && ",
+   "replace": "  match(){ return true && ",
    "run": "verify"
   },
   {
-   "name": "a match ignores the wave",
+   "name": "a bracket keeps the point's sign",
    "file": "index.html",
-   "find": "match(){ const S=this.set(); return this.dg()===S.g && this.dk()===S.a; },",
-   "replace": "match(){ const S=this.set(); return this.dk()===S.a; },",
+   "find": "  br(v,at){ return at===0 ? v : `(${v} ${at<0?'+':'−'} ${Math.abs(at)})`; },",
+   "replace": "  br(v,at){ return at===0 ? v : `(${v} ${at<0?'−':'+'} ${Math.abs(at)})`; },",
    "run": "verify"
   },
   {
-   "name": "c loses −1/3",
+   "name": "a slope loses its minus",
    "file": "index.html",
-   "find": "  C:[-3,-2,-1,-1/2,-1/3,1/3,1/2,1,2,3],",
-   "replace": "  C:[-3,-2,-1,-1/2,1/3,1/2,1,2,3],",
+   "find": "  term(c,v,at){ return `${c<0?'−':'+'} ",
+   "replace": "  term(c,v,at){ return `${'+'} ",
    "run": "verify"
   },
   {
-   "name": "picking a target keeps the guess",
+   "name": "the dome's height loses its minus",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  fun(g){ this.g=g;",
-   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  fun(g){ this.g=g;",
+   "find": "return `${S.a<0?'−':''}${this.ev(S.a,S.x0,S.a<0)}",
+   "replace": "return `${''}${this.ev(S.a,S.x0,S.a<0)}",
    "run": "verify"
   },
   {
-   "name": "a target starts on its own wave",
+   "name": "a 2 in front is dropped when worked",
    "file": "index.html",
-   "find": "  start(){ this.g=this.other(this.set().g);",
-   "replace": "  start(){ this.g=this.set().g;",
+   "find": "return (m===1?'':m+'·')+(br||v<0",
+   "replace": "return ('')+(br||v<0",
    "run": "verify"
   },
   {
-   "name": "a third reads as a decimal",
+   "name": "below and above are swapped",
    "file": "index.html",
-   "find": "    for(let d=1; d<=6; d++){ const n=Math.round(a*d);",
-   "replace": "    for(let d=1; d<=2; d++){ const n=Math.round(a*d);",
+   "find": "${this.h<f?'below':'above'} the point.`));",
+   "replace": "${this.h<f?'above':'below'} the point.`));",
    "run": "verify"
   },
   {
-   "name": "a fraction in front loses its brackets",
+   "name": "the gap keeps its sign",
    "file": "index.html",
-   "find": "(Number.isInteger(m) ? m : `(${this.fr(m)})`)+'·'+w); },",
-   "replace": "(Number.isInteger(m) ? m : this.fr(m))+'·'+w); },",
+   "find": "your plane passes ${Math.abs(this.h-f)} ",
+   "replace": "your plane passes ${(this.h-f)} ",
    "run": "verify"
   },
   {
-   "name": "a negative c loses its brackets",
+   "name": "the x slice holds y at x₀",
    "file": "index.html",
-   "find": "  par(v){ return v<0 || !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },",
-   "replace": "  par(v){ return !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },",
+   "find": "out.push(`Along x, y stays at ${neg(S.y0)}",
+   "replace": "out.push(`Along x, y stays at ${neg(S.x0)}",
    "run": "verify"
   },
   {
-   "name": "x/2 is written 0.5x",
+   "name": "the x slice touches with f_y",
    "file": "index.html",
-   "find": "  arg(k){ return k===1 ? 'x' : k===0.5 ? 'x/2' : k+'x'; },",
-   "replace": "  arg(k){ return k===1 ? 'x' : k+'x'; },",
+   "find": "(this.p===fx ? ': that slice touches.'",
+   "replace": "(this.p===fy ? ': that slice touches.'",
    "run": "verify"
   },
   {
-   "name": "the sine line writes its slope as a sine",
+   "name": "the swap is named with the height wrong",
    "file": "index.html",
-   "find": "· cos(${this.arg(k)}) = ${this.wave(d,'cos',k)}.`);",
-   "replace": "· cos(${this.arg(k)}) = ${this.wave(d,'sin',k)}.`);",
+   "find": "    else if(this.h===f && this.p===fy && this.q===fx)",
+   "replace": "    else if(this.p===fy && this.q===fx)",
    "run": "verify"
   },
   {
-   "name": "the cosine line drops its minus",
+   "name": "the height slip needs only the x slope",
    "file": "index.html",
-   "find": "F′(x) = −${this.par(c)} · ${this.par(k)} · sin(",
-   "replace": "F′(x) = ${this.par(c)} · ${this.par(k)} · sin(",
+   "find": "    else if(this.p===fx && this.q===fy)\n      out.push(`Both",
+   "replace": "    else if(this.p===fx)\n      out.push(`Both",
    "run": "verify"
   },
   {
-   "name": "the integral is written without its F",
+   "name": "one slice is said when neither touches",
    "file": "index.html",
-   "find": "dx = ${this.Fs()} + C.`);",
-   "replace": "dx = F + C.`);",
+   "find": "    else if(this.h===f && (this.p===fx)!==(this.q===fy))\n      out.push(`One slice",
+   "replace": "    else if(this.h===f && true)\n      out.push(`One slice",
    "run": "verify"
   },
   {
-   "name": "the half sentence shows on every target",
+   "name": "the saddle is called a bowl",
    "file": "index.html",
-   "find": "      out.push(k===0.5\n",
-   "replace": "      out.push(true\n",
+   "find": "out.push(S.a>0 && S.b>0 ? `The bowl curves up",
+   "replace": "out.push(S.a>0 ? `The bowl curves up",
    "run": "verify"
   },
   {
-   "name": "the wrong-wave sentence names F's wave as f's",
+   "name": "the swap goal takes any height",
    "file": "index.html",
-   "find": "F has to be a ${S.g==='sin'?'cosine':'sine'}.`);",
-   "replace": "F has to be a ${S.g==='sin'?'sine':'cosine'}.`);",
+   "find": "ok:K=>K.h===K.f() && K.p===K.fy() && K.q===K.fx()},",
+   "replace": "ok:K=>K.p===K.fy() && K.q===K.fx()},",
    "run": "verify"
   },
   {
-   "name": "the ratio is upside down",
+   "name": "the lift goal takes the right height",
    "file": "index.html",
-   "find": "      const r=d/S.a;",
-   "replace": "      const r=S.a/d;",
+   "find": "ok:K=>K.p===K.fx() && K.q===K.fy() && K.h!==K.f()},",
+   "replace": "ok:K=>K.p===K.fx() && K.q===K.fy()},",
    "run": "verify"
   },
   {
-   "name": "the sign flip is never said",
+   "name": "the edge goal takes any height",
    "file": "index.html",
-   "find": "+(r<0 ? ' with its sign flipped' : '')}.`);\n      if(r===-1 && S.g==='sin')",
-   "replace": "}.`);\n      if(r===-1 && S.g==='sin')",
+   "find": "ok:K=>K.h===K.f() && (K.p===K.fx())!==(K.q===K.fy())},",
+   "replace": "ok:K=>(K.p===K.fx())!==(K.q===K.fy())},",
    "run": "verify"
   },
   {
-   "name": "the two minus notes are swapped",
+   "name": "the dome goal takes the lopsided bowl",
    "file": "index.html",
-   "find": "      if(r===-1 && S.g==='sin') out.push(`The slope of cos carries",
-   "replace": "      if(r===-1 && S.g==='cos') out.push(`The slope of cos carries",
+   "find": "ok:K=>K.si===3 && K.match()}\n  ],\n  set(){ return this.SETS[this.si]; },\n  /* the height and the two slopes",
+   "replace": "ok:K=>K.si>=2 && K.match()}\n  ],\n  set(){ return this.SETS[this.si]; },\n  /* the height and the two slopes",
    "run": "verify"
   },
   {
-   "name": "the slip is named for any c",
+   "name": "a new surface keeps the height",
    "file": "index.html",
-   "find": "if(S.id==='cos2' && this.g==='sin' && c===2) out.push(`Multiplying",
-   "replace": "if(S.id==='cos2' && this.g==='sin' && c!==1) out.push(`Multiplying",
+   "find": "  start(){ this.h=0; this.p=0; this.q=0; },",
+   "replace": "  start(){ this.p=0; this.q=0; },",
    "run": "verify"
   },
   {
-   "name": "the slope is drawn as F",
+   "name": "picking a surface keeps the plane",
    "file": "index.html",
-   "find": "for(const s of this.path(this.fn(d,this.dg(),S.k))) out+=",
-   "replace": "for(const s of this.path(this.fn(this.c(),this.g,S.k))) out+=",
+   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  move(k,by)",
+   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(k,by)",
    "run": "verify"
   },
   {
-   "name": "the target is drawn without its number",
+   "name": "the steppers run past 6",
    "file": "index.html",
-   "find": "for(const s of this.path(this.fn(S.a,S.g,S.k))) out+=",
-   "replace": "for(const s of this.path(this.fn(1,S.g,S.k))) out+=",
+   "find": "  move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI) return;",
+   "replace": "  move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI+1) return;",
    "run": "verify"
   },
   {
-   "name": "the waves run off the chart",
+   "name": "the steppers stop at −5",
    "file": "index.html",
-   "find": "if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(t).toFixed(2)},${this.PY(v).toFixed(2)}`); }\n    if(seg.length>1) segs.push(seg); return segs; },\n  fn(a,g,k)",
-   "replace": "if(!isFinite(v)){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(t).toFixed(2)},${this.PY(v).toFixed(2)}`); }\n    if(seg.length>1) segs.push(seg); return segs; },\n  fn(a,g,k)",
+   "find": "  LO:-6, HI:6,\n  si:0, h:0, p:0, q:0,",
+   "replace": "  LO:-5, HI:6,\n  si:0, h:0, p:0, q:0,",
    "run": "verify"
   },
   {
-   "name": "the slow wave is marked π and 2π",
+   "name": "the x slice drops the y² term",
    "file": "index.html",
-   "find": "for(const [t,l] of (S.X>7 ? [[2*Math.PI,'2π'],[4*Math.PI,'4π']] : [[Math.PI,'π'],[2*Math.PI,'2π']]))",
-   "replace": "for(const [t,l] of [[Math.PI,'π'],[2*Math.PI,'2π']])",
+   "find": "const curve=[u=>S.a*(S.x0+u)**2+S.b*S.y0*S.y0,",
+   "replace": "const curve=[u=>S.a*(S.x0+u)**2,",
    "run": "verify"
   },
   {
-   "name": "the figure says the waves meet when they do not",
+   "name": "the x slice draws the y slope",
    "file": "index.html",
-   "find": "for x from 0 to ${S.X>7?'4π':'2π'}${this.match()?': they lie",
-   "replace": "for x from 0 to ${S.X>7?'4π':'2π'}${this.dg()===this.set().g?': they lie",
+   "find": "const line=[u=>this.h+this.p*u, u=>this.h+this.q*u];",
+   "replace": "const line=[u=>this.h+this.q*u, u=>this.h+this.q*u];",
    "run": "verify"
   },
   {
-   "name": "the slip goal takes c = 3",
+   "name": "the dot sits at the plane's height",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.g==='sin' && K.c()===2},",
-   "replace": "ok:K=>K.si===0 && K.g==='sin' && K.c()>=2},",
+   "find": "cy=\"${f(this.PY(fz))}\" r=\"5\"",
+   "replace": "cy=\"${f(this.PY(this.h))}\" r=\"5\"",
    "run": "verify"
   },
   {
-   "name": "the sign goal takes any negative",
+   "name": "the lines run out of their boxes",
    "file": "index.html",
-   "find": "ok:K=>K.g!==K.set().g && K.dk()===-K.set().a},",
-   "replace": "ok:K=>K.g!==K.set().g && K.dk()<0},",
+   "find": "if(v<z0 || v>z1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(side,u)",
+   "replace": "if(!isFinite(v)){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(side,u)",
    "run": "verify"
   },
   {
-   "name": "the half goal takes 6 cos 3x",
+   "name": "the figure says touch when the height matches",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.match()}",
-   "replace": "ok:K=>K.si>=2 && K.match()}",
+   "find": "${this.match()?': both lines touch':''}",
+   "replace": "${this.h===this.f()?': both lines touch':''}",
    "run": "verify"
   },
   {
-   "name": "the c stepper is never switched off",
+   "name": "the slices are drawn upside down",
    "file": "index.html",
-   "find": "document.getElementById('itCHi').disabled=this.ci>=this.C.length-1;",
-   "replace": "document.getElementById('itCHi').disabled=false;",
-   "run": "play:trigint"
+   "find": "  PY(z){ const [z0,z1]=this.set().z; return this.B-(z-z0)/(z1-z0)*(this.B-this.T); },",
+   "replace": "  PY(z){ const [z0,z1]=this.set().z; return this.T+(z-z0)/(z1-z0)*(this.B-this.T); },",
+   "run": "verify"
   },
   {
-   "name": "the wave buttons do not show which is pressed",
+   "name": "the steppers are never switched off at the top",
    "file": "index.html",
-   "find": "`<button class=\"btn sm ghost\" aria-pressed=\"${this.g===g}\" onclick=\"TrigInt.fun",
-   "replace": "`<button class=\"btn sm ghost\" aria-pressed=\"false\" onclick=\"TrigInt.fun",
-   "run": "play:trigint"
+   "find": "document.getElementById('tq'+k+'Hi').disabled=this[k]>=this.HI;",
+   "replace": "document.getElementById('tq'+k+'Hi').disabled=false;",
+   "run": "play:tanplane"
   },
   {
-   "name": "a wave button loses its name",
+   "name": "the surface buttons do not show which is pressed",
    "file": "index.html",
-   "find": "aria-label=\"Make F a ${g==='sin'?'sine':'cosine'}\"",
-   "replace": "data-x=\"Make F a ${g==='sin'?'sine':'cosine'}\"",
-   "run": "play:trigint"
+   "find": "aria-pressed=\"${i===this.si}\" onclick=\"TanPlane.pick(${i})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"TanPlane.pick(${i})\"",
+   "run": "play:tanplane"
   },
   {
-   "name": "the guess is not shown big",
+   "name": "a surface button loses its name",
    "file": "index.html",
-   "find": "document.getElementById('itF').textContent=`F(x) = ${this.Fs()}`;",
-   "replace": "document.getElementById('itF').textContent=`F(x)`;",
-   "run": "play:trigint"
+   "find": "onclick=\"TanPlane.pick(${i})\" aria-label=\"${s.btn}: z = ",
+   "replace": "onclick=\"TanPlane.pick(${i})\" data-x=\"${s.btn}: z = ",
+   "run": "play:tanplane"
   },
   {
-   "name": "the target buttons run in one row",
+   "name": "the plane is not shown big",
    "file": "index.html",
-   "find": "<div id=\"itSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"itSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:trigint"
+   "find": "document.getElementById('tqP').textContent=this.plane(this.h,this.p,this.q);",
+   "replace": "document.getElementById('tqP').textContent='z';",
+   "run": "play:tanplane"
+  },
+  {
+   "name": "a stepper shows a plain minus",
+   "file": "index.html",
+   "find": "document.getElementById('tq'+k).textContent=`${lbl} = ${neg(this[k])}`;",
+   "replace": "document.getElementById('tq'+k).textContent=`${lbl} = ${this[k]}`;",
+   "run": "play:tanplane"
+  },
+  {
+   "name": "the surface buttons run in one row",
+   "file": "index.html",
+   "find": "<div id=\"tqSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"tqSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:tanplane"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:trigint"
+   "run": "play:tanplane"
   },
   {
-   "name": "the Tome loses the trig integral workshop",
+   "name": "the Tome loses the tangent plane workshop",
    "file": "index.html",
-   "find": "id=\"tomeTrigInt\"",
-   "replace": "id=\"tomeTrigIntX\"",
-   "run": "play:trigint"
+   "find": "id=\"tomeTanPlane\"",
+   "replace": "id=\"tomeTanPlaneX\"",
+   "run": "play:tanplane"
   },
   {
-   "name": "the workshop saves its c",
+   "name": "the workshop saves its plane",
    "file": "index.html",
-   "find": "  moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i;",
-   "replace": "  moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i; Game.s.trigC=i;",
-   "run": "play:trigint"
+   "find": "this[k]=v; this.touched=true; this.render(); },",
+   "replace": "this[k]=v; Game.s.tq=v; this.touched=true; this.render(); },",
+   "run": "play:tanplane"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">The dashed gold wave is the target f.",
-   "replace": "<div class=\"figcapX\">The dashed gold wave is the target f.",
-   "run": "play:trigint"
+   "find": "<div class=\"figcap\">Each side is a slice",
+   "replace": "<div class=\"figcapX\">Each side is a slice",
+   "run": "play:tanplane"
   }
  ]
 }

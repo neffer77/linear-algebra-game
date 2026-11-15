@@ -86,6 +86,7 @@ function loadGame() {
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
+    ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -104,7 +105,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2696,6 +2697,106 @@ const ladderNotes = (() => {
   });
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
+/* The tangent plane workshop: every surface, every height and both slopes.
+   The surface's height and slopes are found here by nudging the surface
+   itself, never from 2ax; every plane the readout writes is parsed back and
+   evaluated; every number it works out is checked against the surface; every
+   sentence's condition is decided independently; and both slices of the
+   drawing are read back. */
+const tanPlaneNotes = (() => {
+  const W = TanPlane;
+  const num = t => +t.replace(/−/g, '-');
+  const calc = t => Function('return ' + t.replace(/−/g, '-').replace(/·/g, '*').replace(/(\([^()]*\)|[\d.]+|[a-z])²/g, '($1**2)').replace(/(\d)\(/g, '$1*('))();
+  const parsePlane = t => { const m = t.match(/^z = (−?\d+) ([+−]) (\d+)(?:\(x ([+−]) (\d+)\)|x) ([+−]) (\d+)(?:\(y ([+−]) (\d+)\)|y)$/);
+    if (!m) return null; const sg = c => c === '−' ? -1 : 1;
+    const H = num(m[1]), P = sg(m[2]) * +m[3], X = m[4] ? -sg(m[4]) * +m[5] : 0, Q = sg(m[6]) * +m[7], Y = m[8] ? -sg(m[8]) * +m[9] : 0;
+    return (x, y) => H + P * (x - X) + Q * (y - Y); };
+  const same = (g, h) => [[0.3, -1.2], [2.1, 0.7], [-1.6, 2.4]].every(([x, y]) => Math.abs(g(x, y) - h(x, y)) < 1e-9);
+  if (W.SETS.map(S => `${S.id}:${S.a}:${S.b}:${S.x0}:${S.y0}`).join() !== 'bowl:1:1:1:2,saddle:1:-1:2:1,lop:2:1:-1:1,dome:-1:-1:1:-1') fail('tanplane', 'sets', W.SETS.map(S => S.id).join());
+  const reset = () => { W.touched = false; W.si = 0; W.start(); W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('tanplane', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.h = 3; W.p = -2; W.q = 5; W.pick(si);
+    if (W.h || W.p || W.q) fail('tanplane', S.id, 'picking a surface does not start the plane flat again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('tanplane', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  const found = {}; let n = 0, drawn = 0;
+  W.SETS.forEach((S, si) => {
+    const Fz = (x, y) => S.a * x * x + S.b * y * y, e = 1e-5;
+    const f = Fz(S.x0, S.y0), fx = Math.round((Fz(S.x0 + e, S.y0) - Fz(S.x0 - e, S.y0)) / (2 * e)), fy = Math.round((Fz(S.x0, S.y0 + e) - Fz(S.x0, S.y0 - e)) / (2 * e));
+    const tan = (x, y) => f + fx * (x - S.x0) + fy * (y - S.y0);
+    const [z0, z1] = S.z, Zi = py => z0 + (182 - py) / 160 * (z1 - z0);
+    const pts = `(${S.x0 < 0 ? '−' + -S.x0 : S.x0}, ${S.y0 < 0 ? '−' + -S.y0 : S.y0})`;
+    for (let h = -6; h <= 6; h++) for (let pp = -6; pp <= 6; pp++) for (let q = -6; q <= 6; q++) {
+      reset(); W.si = si; W.h = h; W.p = pp; W.q = q; n++;
+      const key = `${S.id} h=${h} p=${pp} q=${q}`, mine = (x, y) => h + pp * (x - S.x0) + q * (y - S.y0);
+      const hOK = h === f, pOK = pp === fx, qOK = q === fy, all = hOK && pOK && qOK;
+      const got = W.working(), txt = got.join(' ');
+      if (!got[0].startsWith(`The surface is z = `) || !got[0].endsWith(`. Build the plane that touches it at ${pts}.`)) fail('tanplane', key, got[0]);
+      else { const sf = got[0].slice(19, got[0].indexOf(',')); const g = (x, y) => calc(sf.replace(/x/g, `(${x})`).replace(/y/g, `(${y})`));
+        if (!same(g, Fz)) fail('tanplane', key, `the surface is written wrong: ${sf}`); }
+      const m1 = got[1].match(/^Your plane is (.+)\.$/);
+      if (!m1 || !parsePlane(m1[1]) || !same(parsePlane(m1[1]), mine)) fail('tanplane', key, `the plane is written wrong: ${got[1]}`);
+      const m2 = got[2].match(/^At \((.+)\) both brackets are 0, so your plane has height (\S+) there\. The surface has f\((.+)\) = (.+) = (\S+?)(: the heights match\.|, so your plane passes (\d+) (below|above) the point\.)$/);
+      if (!m2) fail('tanplane', key, `the height line is not worked: ${got[2]}`);
+      else {
+        if (`(${m2[1]})` !== pts || `(${m2[3]})` !== pts || num(m2[2]) !== h) fail('tanplane', key, `the point or the plane's height is named wrong: ${got[2]}`);
+        if (num(m2[5]) !== f || Math.abs(calc(m2[4]) - f) > 1e-9) fail('tanplane', key, `the surface's height is worked wrong: ${got[2]}`);
+        if (!!m2[6].startsWith(':') !== hOK) fail('tanplane', key, `the heights are said to ${hOK ? 'differ' : 'match'}: ${got[2]}`);
+        if (!hOK && (+m2[7] !== Math.abs(h - f) || m2[8] !== (h < f ? 'below' : 'above'))) fail('tanplane', key, `the gap is wrong: ${got[2]}`);
+      }
+      [[3, 'x', 'y', S.y0, S.x0, fx, pp, pOK, S.a], [4, 'y', 'x', S.x0, S.y0, fy, q, qOK, S.b]].forEach(([li, v, o, hold, at, tru, mineS, ok, c]) => {
+        const m = got[li].match(new RegExp(`^Along ${v}, ${o} stays at (\\S+) and only the ${v}² term changes, so the slope is f_${v} = (−?\\d+)${v} = (\\S+) at ${v} = (\\S+)\\. Your plane has slope (\\S+) along ${v}(: that slice touches\\.|, so in that slice the line cuts across the curve\\.)$`));
+        if (!m) { fail('tanplane', key, `the ${v} slope line is not worked: ${got[li]}`); return; }
+        if (num(m[1]) !== hold || num(m[4]) !== at) fail('tanplane', key, `the slice is held or read at the wrong place: ${got[li]}`);
+        if (num(m[2]) * at !== tru || num(m[3]) !== tru || num(m[2]) !== 2 * c) fail('tanplane', key, `the ${v} slope is worked wrong: ${got[li]}`);
+        if (num(m[5]) !== mineS) fail('tanplane', key, `the plane's ${v} slope is named wrong: ${got[li]}`);
+        if (m[6].startsWith(':') !== ok) fail('tanplane', key, `the ${v} slice is said to ${ok ? 'cut across' : 'touch'}: ${got[li]}`);
+      });
+      const ml = got.find(l => l.startsWith('All three match'));
+      if (!!ml !== all) fail('tanplane', key, 'the tangent plane is announced at the wrong time');
+      if (ml) { const m = ml.match(/^All three match, so this is the tangent plane: (.+?)\. It is y = f\(a\) \+ f′\(a\)\(x − a\) with a second slope/);
+        if (!m || !parsePlane(m[1]) || !same(parsePlane(m[1]), tan)) fail('tanplane', key, `the tangent plane is written wrong: ${ml}`); }
+      const up = S.a > 0 && S.b > 0, down = S.a < 0 && S.b < 0;
+      if (/curves up away from the plane in every direction/.test(txt) !== (all && up)) fail('tanplane', key, 'the bowl sentence shows at the wrong time');
+      if (/curves down away from the plane in every direction/.test(txt) !== (all && down)) fail('tanplane', key, 'the dome sentence shows at the wrong time');
+      if (/a saddle crosses its own tangent plane/.test(txt) !== (all && !up && !down)) fail('tanplane', key, 'the saddle sentence shows at the wrong time');
+      const swap = hOK && pp === fy && q === fx;
+      if (/Those are the two slopes in each other’s places/.test(txt) !== swap) fail('tanplane', key, 'the swap is named at the wrong time');
+      if (/Both slopes are right, so the plane is tilted correctly/.test(txt) !== (pOK && qOK && !hOK)) fail('tanplane', key, 'the height slip is named at the wrong time');
+      if (/One slice touches and the other cuts across/.test(txt) !== (hOK && pOK !== qOK)) fail('tanplane', key, 'the one-slice sentence shows at the wrong time');
+      if (got.length !== 5 + (all ? 2 : swap || (pOK && qOK && !hOK) || (hOK && pOK !== qOK) ? 1 : 0)) fail('tanplane', key, `the readout has ${got.length} sentences`);
+      // the drawing
+      const svg = W.svg();
+      if (/both lines touch/.test(svg) !== all) fail('tanplane', key, 'the figure says the lines touch when they do not, or the other way round');
+      for (const side of [0, 1]) {
+        const [l, r] = side ? [188, 340] : [20, 172], U = px => (px - l) / (r - l) * 5 - 2.5;
+        const crv = side ? u => Fz(S.x0, S.y0 + u) : u => Fz(S.x0 + u, S.y0), lin = side ? u => mine(S.x0, S.y0 + u) : u => mine(S.x0 + u, S.y0);
+        const read = (k, fn) => { let c = 0;
+          for (const pl of svg.matchAll(new RegExp(`data-k="${k}" points="([^"]+)"`, 'g'))) for (const pt of pl[1].split(' ')) {
+            const [px, py] = pt.split(',').map(Number); c++;
+            if (px < l - 0.01 || px > r + 0.01 || py < 21.99 || py > 182.01 || Math.abs(Zi(py) - fn(U(px))) > 0.002 * (z1 - z0)) { fail('tanplane', key, `${k} leaves its line at ${pt}`); break; }
+          } return c; };
+        if (read('curve' + side, crv) < 40) fail('tanplane', key, `slice ${side} of the surface is not drawn`);
+        drawn += read('plane' + side, lin);
+        const dot = svg.match(new RegExp(`data-k="point${side}" cx="([\\d.]+)" cy="([\\d.]+)"`));
+        if (!dot || Math.abs(U(+dot[1])) > 0.01 || Math.abs(Zi(+dot[2]) - f) > 0.01 * (z1 - z0)) fail('tanplane', key, `the point is not on slice ${side} of the surface`);
+      }
+      const meant = { bowl: si === 0 && all, swap, lift: pOK && qOK && !hOK, edge: hOK && pOK !== qOK,
+        saddle: si === 1 && all, lop: si === 2 && all, dome: si === 3 && all };
+      for (const gl of W.GOALS) { if (!!gl.ok(W) !== meant[gl.id]) fail('tanplane', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`); if (gl.ok(W)) found[gl.id] = found[gl.id] || key; }
+    }
+    reset(); W.si = si;
+    for (const k of ['h', 'p', 'q']) {
+      for (let t = 0; t < 20; t++) W.move(k, 1); if (W[k] !== 6) fail('tanplane', S.id, `${k} does not stop at 6`);
+      for (let t = 0; t < 20; t++) W.move(k, -1); if (W[k] !== -6) fail('tanplane', S.id, `${k} does not stop at −6`);
+    }
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('tanplane', g.id, 'this goal cannot be found');
+  if (drawn < 1000) fail('tanplane', 'plane', 'the plane is hardly ever drawn');
+  reset();
   return { n, goals: Object.keys(found).length };
 })();
 
@@ -5628,6 +5729,7 @@ console.log(`  antiderivatives guessed ${pad(antiNotes.n.toLocaleString(), 10)} 
 console.log(`  transpose moves played ${pad(transposeNotes.n.toLocaleString(), 10)}  (where each entry belongs decided from (Aᵀ)ₚq = A_qp, never by the workshop; every entry tried in every slot and 900 games at random, every sentence parsed back, both grids read cell by cell, ${transposeNotes.goals} goals findable)`);
 console.log(`  diagonal workshop states ${pad(diagNotes.n.toLocaleString(), 10)}  (eigenvectors decided from A·p and p, P⁻¹AP from the inverse formula, never by the workshop; every pair of columns on every matrix and 40 games at random, every number parsed back, the figure read from its spec, ${diagNotes.goals} goals findable)`);
 console.log(`  trig integral guesses ${pad(trigIntNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the chain rule; every wave written parsed back and checked against F, f and F′, every sentence, both curves read back, ${trigIntNotes.goals} goals findable)`);
+console.log(`  tangent planes ${pad(tanPlaneNotes.n.toLocaleString(), 17)}  (the height and slopes found by nudging the surface, never from 2ax; every plane written parsed back and evaluated, every number worked checked, every sentence, both slices read back, ${tanPlaneNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
