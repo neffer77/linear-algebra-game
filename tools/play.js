@@ -71,6 +71,7 @@ const SUITES = [
   require('./play/geo'),         // an endless sum, term by term
   require('./play/bend'),        // the slope of the slope, and where the bend flips
   require('./play/avg'),         // the average value as the height an area settles at
+  require('./play/tail'),        // improper integrals: which endless areas stay finite
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
