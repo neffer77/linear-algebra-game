@@ -68,6 +68,7 @@ const SUITES = [
   require('./play/ladder'),      // a sliding ladder's two speeds
   require('./play/null'),        // the arrows a matrix crushes
   require('./play/gram'),        // taking a shadow away
+  require('./play/geo'),         // an endless sum, term by term
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

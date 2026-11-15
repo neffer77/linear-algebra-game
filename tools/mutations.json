@@ -1,186 +1,193 @@
 {
- "change": "The Gram–Schmidt Workshop: take away the shadow",
+ "change": "The Geometric Series Workshop: an endless sum",
  "mutations": [
   {
-   "name": "w adds the copies instead of taking them away",
+   "name": "a term uses n instead of n − 1 powers",
    "file": "index.html",
-   "find": "return [S.u2[0]-c*S.u1[0], S.u2[1]-c*S.u1[1]]; },",
-   "replace": "return [S.u2[0]+c*S.u1[0], S.u2[1]+c*S.u1[1]]; },",
+   "find": "  term(k){ const S=this.set(); return S.a*S.p**k/S.q**k; },",
+   "replace": "  term(k){ const S=this.set(); return S.a*S.p**(k+1)/S.q**(k+1); },",
    "run": "verify"
   },
   {
-   "name": "the dot product crosses its slots",
+   "name": "the running total skips the last term",
    "file": "index.html",
-   "find": "return this.r(w[0]*u[0]+w[1]*u[1]); },",
-   "replace": "return this.r(w[0]*u[1]+w[1]*u[0]); },",
+   "find": "S(m=this.n){ let t=0; for(let k=0;k<m;k++) t+=this.term(k); return t; },",
+   "replace": "S(m=this.n){ let t=0; for(let k=0;k<m-1;k++) t+=this.term(k); return t; },",
    "run": "verify"
   },
   {
-   "name": "u₁ · u₁ adds instead of squaring",
+   "name": "the endless sum is a(1 − r)",
    "file": "index.html",
-   "find": "d=this.dot(), nn=u[0]*u[0]+u[1]*u[1];",
-   "replace": "d=this.dot(), nn=u[0]+u[1];",
+   "find": "  total(){ return this.set().a/(1-this.r()); },",
+   "replace": "  total(){ return this.set().a*(1-this.r()); },",
    "run": "verify"
   },
   {
-   "name": "the shadow divides the wrong way",
+   "name": "the endless sum loses the sign of r",
    "file": "index.html",
-   "find": "const dp=S.u2[0]*u[0]+S.u2[1]*u[1], best=dp/nn;",
-   "replace": "const dp=S.u2[0]*u[0]+S.u2[1]*u[1], best=nn/dp;",
+   "find": "  total(){ return this.set().a/(1-this.r()); },",
+   "replace": "  total(){ return this.set().a/(1-Math.abs(this.r())); },",
    "run": "verify"
   },
   {
-   "name": "the half pair needs a whole copy",
+   "name": "r = 1 counts as converging",
    "file": "index.html",
-   "find": "{id:'half', btn:'Half', u1:[3,1], u2:[1,2]}",
-   "replace": "{id:'half', btn:'Half', u1:[3,1], u2:[5,5]}",
+   "find": "  conv(){ return Math.abs(this.r())<1; },",
+   "replace": "  conv(){ return Math.abs(this.r())<=2; },",
    "run": "verify"
   },
   {
-   "name": "the square pair is not at right angles",
+   "name": "the swinging series does not swing",
    "file": "index.html",
-   "find": "{id:'none', btn:'Square', u1:[1,1], u2:[-2,2]}",
-   "replace": "{id:'none', btn:'Square', u1:[1,1], u2:[-2,3]}",
+   "find": "{id:'swing', btn:'Swinging', a:1, p:-1, q:2}",
+   "replace": "{id:'swing', btn:'Swinging', a:1, p:1, q:2}",
    "run": "verify"
   },
   {
-   "name": "the stepper skips the halves",
+   "name": "the fraction is not reduced",
    "file": "index.html",
-   "find": "  C:[-1,-0.5,0,0.5,1,1.5,2,2.5,3],",
-   "replace": "  C:[-1,0,1,2,3],",
+   "find": "const g=gcd(n,d); n/=g; d/=g; return d===1",
+   "replace": "const g=1; n/=g; d/=g; return d===1",
    "run": "verify"
   },
   {
-   "name": "a negative entry loses its brackets",
+   "name": "the alternating terms read + −",
    "file": "index.html",
-   "find": "    const par=n=>n<0?`(${this.num(n)})`:this.num(n);\n    const L=",
-   "replace": "    const par=n=>this.num(n);\n    const L=",
+   "find": "(t[0]==='−' ? ' − '+t.slice(1) : ' + '+t)",
+   "replace": "(' + '+t)",
    "run": "verify"
   },
   {
-   "name": "too much reads as too little",
+   "name": "a rounded total reads as exact",
    "file": "index.html",
-   "find": "      (d>0 ? `: more than 0",
-   "replace": "      (d<0 ? `: more than 0",
+   "find": "return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },",
+   "replace": "return '= '+this.num(v,d); },",
    "run": "verify"
   },
   {
-   "name": "an irrational length reads as exact",
+   "name": "a tiny gap reads as 0",
    "file": "index.html",
-   "find": "${exact?'=':'≈'} ${this.num(L)}",
-   "replace": "= ${this.num(L)}",
+   "find": "by = G<0.00005 ? 'less than 0.0001' : ",
+   "replace": "by = false ? 'less than 0.0001' : ",
    "run": "verify"
   },
   {
-   "name": "the shortest claim shows everywhere",
+   "name": "over and short swap",
    "file": "index.html",
-   "find": "      (d===0 ? `, the shortest w can be:",
-   "replace": "      (true ? `, the shortest w can be:",
+   "find": "`${by} ${g>0?'short of':'over'} it`",
+   "replace": "`${by} ${g<0?'short of':'over'} it`",
    "run": "verify"
   },
   {
-   "name": "the over goal takes any lean",
+   "name": "the 0.01 test is too loose",
    "file": "index.html",
-   "find": "     ok:K=>K.dot()<0},",
-   "replace": "     ok:K=>K.dot()!==0},",
+   "find": "      out.push(Math.abs(g)<=0.01\n",
+   "replace": "      out.push(Math.abs(g)<=0.1\n",
    "run": "verify"
   },
   {
-   "name": "the square goal ignores c",
+   "name": "the half goal takes any total",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.c()===0 && K.dot()===0}",
-   "replace": "ok:K=>K.si===2}",
+   "find": "ok:K=>K.si===0 && K.conv() && Math.abs(K.gap())<=0.01},",
+   "replace": "ok:K=>K.si===0},",
    "run": "verify"
   },
   {
-   "name": "w is drawn upside down",
+   "name": "the run goal takes 100",
    "file": "index.html",
-   "find": "const P=p=>[(O[0]+p[0]*k).toFixed(2), (O[1]-p[1]*k).toFixed(2)];",
-   "replace": "const P=p=>[(O[0]+p[0]*k).toFixed(2), (O[1]+p[1]*k).toFixed(2)];",
+   "find": "ok:K=>K.si===3 && K.S()>1000}",
+   "replace": "ok:K=>K.si===3 && K.S()>100}",
    "run": "verify"
   },
   {
-   "name": "the dashed copy of w starts at the origin",
+   "name": "a bar starts at 0",
    "file": "index.html",
-   "find": "seg(cu,S.u2,FIG_COL.d,'wcopy',true,2)",
-   "replace": "seg([0,0],S.u2,FIG_COL.d,'wcopy',true,2)",
+   "find": "w=Math.max(Math.abs(X(b)-X(a)),0.5), x=Math.min(X(a),X(b),340-w)",
+   "replace": "w=Math.max(Math.abs(X(b)-X(0)),0.5), x=Math.min(X(0),X(b),340-w)",
    "run": "verify"
   },
   {
-   "name": "dashed arrows show with nothing taken away",
+   "name": "a bar going back keeps the adding colour",
    "file": "index.html",
-   "find": "    if(c!==0) out+=seg([0,0],cu,",
-   "replace": "    if(true) out+=seg([0,0],cu,",
+   "find": "fill=\"${b>=a?FIG_COL.a:FIG_COL.d}\"",
+   "replace": "fill=\"${FIG_COL.a}\"",
    "run": "verify"
   },
   {
-   "name": "the plane is drawn too big for the picture",
+   "name": "the gold line stands at the last total",
    "file": "index.html",
-   "find": "const S=this.set(), c=this.c(), w=this.w(), O=[180,105], k=15;",
-   "replace": "const S=this.set(), c=this.c(), w=this.w(), O=[180,105], k=25;",
+   "find": "if(this.conv()){ const t=X(this.total()).toFixed(2);",
+   "replace": "if(this.conv()){ const t=X(this.S()).toFixed(2);",
    "run": "verify"
   },
   {
-   "name": "a new pair keeps the old c",
+   "name": "the picture stops fitting the endless sum",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveC(",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveC(",
-   "run": "play:gram"
+   "find": "    if(this.conv()) hi=Math.max(hi,this.total());\n",
+   "replace": "",
+   "run": "verify"
   },
   {
-   "name": "the caption forgets the dashed copy",
+   "name": "a new series keeps the old count",
    "file": "index.html",
-   "find": "drawn from the origin and again from the dashed tip to u₂.</div>`;",
-   "replace": "drawn from the origin.</div>`;",
-   "run": "play:gram"
+   "find": "pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },",
+   "run": "play:geo"
+  },
+  {
+   "name": "the caption forgets the gold line",
+   "file": "index.html",
+   "find": "${this.conv()?' The gold dashed line is the endless sum.':' Redrawn to fit as it grows.'}",
+   "replace": "${this.conv()?'':' Redrawn to fit as it grows.'}",
+   "run": "play:geo"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:gram"
+   "find": "'MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:geo"
   },
   {
    "name": "the stepper never stops",
    "file": "index.html",
-   "find": "    document.getElementById('gsCHi').disabled=this.k>=this.C.length-1;\n",
+   "find": "    document.getElementById('gnNHi').disabled=this.n>=this.N;\n",
    "replace": "",
-   "run": "play:gram"
+   "run": "play:geo"
   },
   {
-   "name": "the pair buttons lose their names",
+   "name": "one term reads as plural",
    "file": "index.html",
-   "find": "onclick=\"Gram.pick(${i})\" aria-label=\"${s.btn}: u₁ = ${this.v(s.u1)}, u₂ = ${this.v(s.u2)}\">",
-   "replace": "onclick=\"Gram.pick(${i})\">",
-   "run": "play:gram"
+   "find": "document.getElementById('gnN').textContent=`${this.n} term${this.n>1?'s':''}`;",
+   "replace": "document.getElementById('gnN').textContent=`${this.n} terms`;",
+   "run": "play:geo"
   },
   {
-   "name": "the drawing forgets the right angle",
+   "name": "the series buttons lose their names",
    "file": "index.html",
-   "find": "${this.dot()===0?', at a right angle to u₁':''}\">",
-   "replace": "\">",
-   "run": "play:gram"
+   "find": "onclick=\"Geo.pick(${i})\" aria-label=\"${s.btn}: start at ${s.a}, r = ${this.fr(s.p,s.q)}\">",
+   "replace": "onclick=\"Geo.pick(${i})\">",
+   "run": "play:geo"
+  },
+  {
+   "name": "the drawing loses its name",
+   "file": "index.html",
+   "find": "role=\"img\" aria-label=\"${this.n} term",
+   "replace": "role=\"img\" data-x=\"${this.n} term",
+   "run": "play:geo"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeGram\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeGramX\"",
-   "run": "play:gram"
+   "find": "<button class=\"btn sm\" id=\"tomeGeo\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeGeoX\"",
+   "run": "play:geo"
   },
   {
-   "name": "the c stepper loses its name",
+   "name": "geometric series points nowhere",
    "file": "index.html",
-   "find": "<button id=\"gsCLo\" onclick=\"Gram.moveC(-1)\" aria-label=\"Take half a copy of u₁ less\">",
-   "replace": "<button id=\"gsCLo\" onclick=\"Gram.moveC(-1)\">",
-   "run": "play:gram"
-  },
-  {
-   "name": "Gram–Schmidt points nowhere",
-   "file": "index.html",
-   "find": "    Gram:    [\"📐 Gram–Schmidt Workshop\", ['gramSchmidt']],",
-   "replace": "    Gram:    [\"📐 Gram–Schmidt Workshop\", ['gramSchmit']],",
+   "find": "    Geo:     [\"🧮 Geometric Series Workshop\", ['geoSeries']],",
+   "replace": "    Geo:     [\"🧮 Geometric Series Workshop\", ['geoSerie']],",
    "run": "verify"
   }
  ]
