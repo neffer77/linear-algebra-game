@@ -2783,6 +2783,122 @@ const wsIndexNotes = (() => {
   return { chips: items.length, strands: gs.length, cases: cases.length };
 })();
 
+/* Spot the eigenvector: the pick-an-arrow round in the eigenvector hunt. The
+   matrix is checked to keep the arrow offered as right by multiplying it out
+   here, and every other arrow to be knocked off its line by a visible angle;
+   every button, drawing, sentence and tap is read back, over many seeded
+   rounds. */
+const eigSpotNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {axis:'#6b5f92', a:'#5aa9e6', b:'#f2c14e'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Eigen = {render(){ env.renders++; }};" +
+    cut('const EigSpot = {', '/* ============ SPAN WORKSHOP ============') + 'return EigSpot;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const Mv = (A, v) => [A[0][0] * v[0] + A[0][1] * v[1], A[1][0] * v[0] + A[1][1] * v[1]];
+  const cross = (u, v) => u[0] * v[1] - u[1] * v[0];
+  const deg = (A, v) => { const w = Mv(A, v), c = Math.abs(cross(v, w)) / Math.hypot(...v) / Math.hypot(...w); return Math.asin(Math.min(1, c)) * 180 / Math.PI; };
+  const pn = n => n < 0 ? '(' + ng(n) + ')' : String(n);
+  const sum = (s, t) => `${ng(s)} ${t < 0 ? '−' : '+'} ${Math.abs(t)}`;
+  const work = (A, v) => { const [[a, b], [c, d]] = A, [x, y] = v;
+    return `A·${vec(v)} = ⟨${pn(a)}·${pn(x)} + ${pn(b)}·${pn(y)}, ${pn(c)}·${pn(x)} + ${pn(d)}·${pn(y)}⟩ = ⟨${sum(a * x, b * y)}, ${sum(c * x, d * y)}⟩ = ${vec(Mv(A, v))}.`; };
+  const read = () => { const h = S.html(); return txt(h.split('id="esRead"')[1].replace(/^[^>]*>/, '')); };
+  if (S.RULE !== 'An eigenvector stays on its own line: A may stretch it, shrink it or turn it right round, but never knock it off. Which arrow stays on its dotted line?') fail('eigspot', 'rule', 'the rule is not stated');
+  if (S.round !== null || S.matched !== 0) fail('eigspot', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0;
+  const lams = new Set(), slots = new Set();
+  for (let seed = 1; seed <= 400; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`;
+      rounds++;
+      if (A.flat().some(v => !Number.isInteger(v) || Math.abs(v) > 4) || (A[0][1] === 0 && A[1][0] === 0)) fail('eigspot', key, `the matrix ${JSON.stringify(A)} is not a fair one`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(A)) fail('eigspot', key, 'the same matrix comes twice in a row');
+      // its eigenvalues from the characteristic polynomial, worked here
+      const t = A[0][0] + A[1][1], D = A[0][0] * A[1][1] - A[0][1] * A[1][0], disc = t * t - 4 * D;
+      const ev = disc > 0 ? [(t - Math.sqrt(disc)) / 2, (t + Math.sqrt(disc)) / 2] : [];
+      if (ev.length !== 2 || ev.some(l => !Number.isInteger(l) || l === 0)) fail('eigspot', key, `the eigenvalues ${ev} are not two whole numbers other than 0`);
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('eigspot', key, 'there is not one right arrow among four');
+      const ri = r.opts.findIndex(o => o.k === 'right'), right = r.opts[ri];
+      slots.add(ri); lams.add(right.lam);
+      const Av = Mv(A, right.v);
+      if (cross(right.v, Av) !== 0 || Av[0] !== right.lam * right.v[0] || Av[1] !== right.lam * right.v[1] || !ev.includes(right.lam)) fail('eigspot', key, `${vec(right.v)} is not kept with λ = ${right.lam}`);
+      // every other arrow knocked off by a visible angle, each on its own line
+      const lines = r.opts.map(o => o.v);
+      for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (cross(lines[i], lines[j]) === 0) fail('eigspot', key, 'two arrows share a line');
+      for (const o of r.opts) {
+        if (o.v.some(c => Math.abs(c) > 2) || (!o.v[0] && !o.v[1])) fail('eigspot', key, `the arrow ${vec(o.v)} is out of range`);
+        if (o.k !== 'right' && (cross(o.v, Mv(A, o.v)) === 0 || deg(A, o.v) < 12 - 1e-9)) fail('eigspot', key, `${vec(o.v)} is too close to its line to see`);
+      }
+      // the nearest miss there is, among all short arrows, is one of them
+      let best = 90;
+      for (let x = -2; x <= 2; x++) for (let y = -2; y <= 2; y++) { const w = [x, y];
+        if ((!x && !y) || (Math.abs(x) === 2 && Math.abs(y) === 2) || cross(w, Mv(A, w)) === 0) continue; const d = deg(A, w); if (d >= 12 - 1e-9 && d < best) best = d; }
+      if (Math.abs(Math.min(...r.opts.filter(o => o.k !== 'right').map(o => deg(A, o.v))) - best) > 1e-6) fail('eigspot', key, 'the nearest miss is left out');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` A = ${ng(A[0][0])} ${ng(A[0][1])} ${ng(A[1][0])} ${ng(A[1][1])} Green: the arrow v and its dotted line. Gold: where A sends it.`)) fail('eigspot', key, 'the rule and the matrix are not shown first');
+      if (!h0.includes(`role="img" aria-label="A has rows ${ng(A[0][0])}, ${ng(A[0][1])} and ${ng(A[1][0])}, ${ng(A[1][1])}"`)) fail('eigspot', key, 'the matrix is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="EigSpot\.choose\((\d)\)" aria-label="Arrow ([ABCD]): v = (⟨[^⟩]+⟩), sent to (⟨[^⟩]+⟩)(\. Not an eigenvector)?"[^>]*>\s*<svg[^>]*>([\s\S]*?)<\/svg><b>([ABCD])<\/b>/g)];
+      if (btns.length !== 4 || btns.some((b, i) => b[1] !== 'ABCD'[i] || b[2] || +b[3] !== i || b[4] !== 'ABCD'[i] || b[9] !== 'ABCD'[i] || b[5] !== vec(r.opts[i].v) || b[6] !== vec(Mv(A, r.opts[i].v)) || b[7])) fail('eigspot', key, 'the four arrows are not offered as they are, A to D');
+      // each panel: v in green, A·v in gold, both ending where they should, and v's line through both ends of the frame
+      btns.forEach((b, i) => {
+        const v = r.opts[i].v, w = Mv(A, v), ls = [...b[8].matchAll(/<line (data-k="line" )?x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" stroke="([^"]+)"/g)];
+        const ends = ls.slice(2).map(l => ({ dot: !!l[1], x: +l[4] - 60, y: 50 - +l[5], col: l[6] }));
+        const lineL = ends.find(e => e.dot), gold = ends.find(e => !e.dot && e.col === '#f2c14e'), green = ends.filter(e => !e.dot && e.col === '#57cc7a');
+        if (!lineL || !gold || green.length !== 1) { fail('eigspot', key, `panel ${'ABCD'[i]} does not draw v, A·v and v's line`); return; }
+        const along = (e, u) => Math.abs(e.x * u[1] - e.y * u[0]) <= 0.15 * Math.hypot(...u) && e.x * u[0] + e.y * u[1] > 0;
+        if (!along(gold, w) || !along(green[0], v) || !along(lineL, v)) fail('eigspot', key, `panel ${'ABCD'[i]} points an arrow the wrong way`);
+        const sc = gold.x ? gold.x / w[0] : gold.y / w[1], sv = green[0].x ? green[0].x / v[0] : green[0].y / v[1];
+        if (Math.abs(sc - sv) > 0.2) fail('eigspot', key, `panel ${'ABCD'[i]} draws v and A·v to different scales`);
+        if ([gold, green[0]].some(e => Math.abs(e.x) > 60 || Math.abs(e.y) > 50)) fail('eigspot', key, `panel ${'ABCD'[i]} runs off its frame`);
+      });
+      if (k === 0 ? read() !== `${S.matched} spotted this visit, ${S.firstTry} on the first try.` : !read().startsWith('A·')) fail('eigspot', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], v = r.opts[i].v, m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('eigspot', key, 'a miss is counted, or not crossed off');
+        const d = deg(A, v), rd = Math.round(d);
+        const want = `${work(A, v)} That is knocked ${Math.abs(d - rd) < 1e-9 ? '' : 'about '}${rd}° off the dotted line through ${vec(v)}, so arrow ${'ABCD'[i]} is not an eigenvector. ${S.matched} spotted this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want) fail('eigspot', key, `the miss is explained as: ${read()} | want ${want}`);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${'ABCD'[i]}" disabled onclick="EigSpot\\.choose\\(${i}\\)" aria-label="Arrow ${'ABCD'[i]}: [^"]+\\. Not an eigenvector"`).test(h)) fail('eigspot', key, 'a missed arrow is not shut and told as not an eigenvector');
+        if ((h.match(/ disabled /g) || []).length !== q + 1 || (h.match(/stroke="#e5484d"/g) || []).length !== 2 * (q + 1)) fail('eigspot', key, 'the wrong number of arrows are shut and drawn in red');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('eigspot', key, 'tapping a missed arrow again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('eigspot', key, 'a pick does not redraw the hunt');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('eigspot', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('eigspot', key, 'no fresh matrix after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'EIGEN SPOTTER / 5 eigenvectors spotted') fail('eigspot', key, 'no banner at five'); }
+      else { const tries = missN + 1, want = `✓ Arrow ${'ABCD'[ri]} stays on its line, spotted ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== want || env.banners.length !== nb) fail('eigspot', key, `the toast is ${env.toasts[nt]}`); }
+      const L = right.lam;
+      const after = `${work(A, right.v)} ${vec(Av)} = ${ng(L)} × ${vec(right.v)}: it stays on its own line${L < 0 ? ', turned right round' : ''}, so ${vec(right.v)} is an eigenvector with λ = ${ng(L)}.${L < 0 ? ' Turned round still counts: an eigenvector keeps its line, not its direction.' : ''} Here is a new matrix. ${S.matched} spotted this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('eigspot', key, `after a pick: ${read()}`);
+      prev = A;
+    }
+  }
+  for (const l of [-2, -1, 2, 3]) if (!lams.has(l)) fail('eigspot', 'λ', `no arrow kept with λ = ${l} is ever offered`);
+  if (slots.size !== 4) fail('eigspot', 'deal', `the right arrow only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 40) fail('eigspot', 'banner', `five eigenvectors were spotted ${fives} times, not 40`);
+  return { rounds, misses };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -6516,6 +6632,7 @@ console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
 console.log(`  f′ picked out     ${pad(slopeMatchNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-f′, f′ checked as the slope of f by nudging f at ${slopeMatchNotes.n.toLocaleString()} points; every wrong graph checked to be its slip and caught where it breaks the rule, ${slopeMatchNotes.misses.toLocaleString()} misses explained; every graph told as words read back)`);
 console.log(`  matrices picked   ${pad(matPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-matrix, each wrong matrix checked to be its slip by where it sends î and ĵ; ${matPickNotes.misses.toLocaleString()} wrong picks drawn and explained, ${matPickNotes.picks.toLocaleString()} right picks counted)`);
+console.log(`  eigen spotted     ${pad(eigSpotNotes.rounds.toLocaleString(), 15)}  (rounds of spot-the-eigenvector, the kept arrow multiplied out and every other knocked a visible angle off its line; ${eigSpotNotes.misses.toLocaleString()} wrong picks worked and explained; every panel's arrows read back)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);

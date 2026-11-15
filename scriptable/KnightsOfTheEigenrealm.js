@@ -1020,13 +1020,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ EIGENVECTOR HUNT ============ -->
   <div class="screen" id="s-eig">
     <div class="panel"><h2>👑 Eigenvector Hunt</h2><div class="sub">A matrix knocks almost every arrow off its line. Pick a matrix, point v anywhere, and hunt for the directions that only get stretched: the eigenvectors.</div></div>
+    <div id="egMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt by hand or spot one"></div>
     <div class="panel">
+      <div id="egSpot"></div>
       <div id="egMats" class="wsModes" role="group" aria-label="Matrix"></div>
       <div id="egVec" class="wsMat dtVecs" role="group" aria-label="The arrow v"></div>
       <div id="egFig"></div>
       <div id="egRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="egGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="egGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13957,7 +13959,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">👑 Eigenvector Hunt</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line. Then turn it round: see four arrows, and spot the one that stays.</div>
          <button class="btn sm" id="tomeEig" style="width:auto;margin-top:8px" onclick="Eigen.open()">Open the eigenvector hunt</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15518,6 +15520,8 @@ const Eigen = {
     }
     return out;
   },
+  mode:'hunt',
+  setMode(m){ this.mode=m; this.render(); },
   open(){ UI.go('s-eig'); },
   pick(i){ this.mi=i; this.touched=true; this.render(); },
   step(i, by){
@@ -15527,6 +15531,12 @@ const Eigen = {
   },
   render(){
     const names=['first','second'];
+    document.getElementById('egMode').innerHTML=[['hunt','🏹 Hunt by hand','Point v by hand and hunt for the directions a matrix keeps'],['spot','🔎 Spot one','See four arrows and spot the one that stays on its line']]
+      .map(([m,t,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Eigen.setMode('\${m}')" aria-label="\${l}">\${t}</button>\`).join('');
+    const spot=this.mode==='spot';
+    for(const id of ['egMats','egVec','egFig','egRead','egGoalPanel']) document.getElementById(id).style.display=spot?'none':'';
+    document.getElementById('egSpot').innerHTML=spot ? EigSpot.html() : '';
+    if(spot) return;
     document.getElementById('egMats').innerHTML=this.MATS.map((o,i)=>
       \`<button class="btn sm ghost egMat" aria-pressed="\${i===this.mi}" onclick="Eigen.pick(\${i})"
         aria-label="Matrix \${i+1}: rows \${neg(o.m[0][0])}, \${neg(o.m[0][1])} and \${neg(o.m[1][0])}, \${neg(o.m[1][1])}"><span class="egM">\${neg(o.m[0][0])}&nbsp;\${neg(o.m[0][1])}<br>\${neg(o.m[1][0])}&nbsp;\${neg(o.m[1][1])}</span></button>\`).join('');
@@ -15554,6 +15564,137 @@ const Eigen = {
         Celebrate.banner('EIGEN HUNTER','every kept direction found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/^On the \\w+ matrix, (\\w)/,(m,c)=>c.toUpperCase()).replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------------------- spot the eigenvector (eigenvector hunt) --------------------- */
+/* The hunt turned round: a matrix and four arrows, each drawn with where the
+   matrix sends it. One stays on its own line. The others are knocked off it,
+   one of them only a little, so the eye has to check the line and not guess.
+   The one that stays is often turned right round (a negative eigenvalue), or
+   stretched without being turned, which is the point: an eigenvector keeps
+   its line, not its direction or its length. The matrix is built as P·D·P⁻¹
+   from two whole-number directions with det P = ±1, so every entry, every
+   arrow and every eigenvalue is a whole number. Nothing is saved. */
+const EigSpot = {
+  DIRS:[[1,0],[0,1],[1,1],[1,-1],[1,2],[2,1],[1,-2],[2,-1]],
+  LAMS:[-2,-1,2,3],
+  RULE:'An eigenvector stays on its own line: A may stretch it, shrink it or turn it right round, but never knock it off. Which arrow stays on its dotted line?',
+  par:(u,v)=>u[0]*v[1]-u[1]*v[0]===0,
+  mul:(A,v)=>[A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]],
+  // how far A·v is knocked off v's line, 0° to 90°
+  off(A,v){
+    const [x,y]=v, [p,q]=this.mul(A,v), t=Math.abs(Math.atan2(x*q-y*p, x*p+y*q))*180/Math.PI;
+    return Math.min(t,180-t);
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const u1=R.pick(this.DIRS), u2=R.pick(this.DIRS), dp=u1[0]*u2[1]-u2[0]*u1[1];
+      if(Math.abs(dp)!==1) continue;
+      const l1=R.pick(this.LAMS), l2=R.pick(this.LAMS);
+      if(l1===l2) continue;
+      // A = P D P⁻¹, P with columns u1, u2; P⁻¹ = adj(P)/det P
+      const P=[[u1[0],u2[0]],[u1[1],u2[1]]], Pi=[[P[1][1]*dp,-P[0][1]*dp],[-P[1][0]*dp,P[0][0]*dp]];
+      const PD=[[P[0][0]*l1,P[0][1]*l2],[P[1][0]*l1,P[1][1]*l2]];
+      const A=[0,1].map(i=>[0,1].map(j=>PD[i][0]*Pi[0][j]+PD[i][1]*Pi[1][j]));
+      if(A.flat().some(v=>Math.abs(v)>4)) continue;
+      if(A[0][1]===0&&A[1][0]===0) continue;   // diagonal: î and ĵ give it away
+      return {A, U:[u1,u2], L:[l1,l2]};
+    }
+    return {A:[[2,1],[1,2]], U:[[1,1],[1,-1]], L:[3,1]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prevA=this.round && this.round.A;
+    let B;
+    for(let g=0;g<50;g++){ B=this.build(); if(!prevA||JSON.stringify(B.A)!==JSON.stringify(prevA)) break; }
+    const {A,U,L}=B, k=R.i(0,1), s=R.pick([1,-1]), v=[U[k][0]*s,U[k][1]*s];
+    // every other short arrow, off both kept lines and on a line of its own
+    const pool=[];
+    for(let x=-2;x<=2;x++) for(let y=-2;y<=2;y++){
+      const w=[x,y];
+      if((!x&&!y)||this.par(w,U[0])||this.par(w,U[1])) continue;
+      if(Math.abs(x)===2&&Math.abs(y)===2) continue;
+      if(this.off(A,w)<12) continue;
+      if(pool.some(o=>this.par(o,w))) continue;
+      pool.push(w);
+    }
+    // one near miss, the arrow knocked off least, then two more at random
+    pool.sort((a,b)=>this.off(A,a)-this.off(A,b));
+    const near=pool.shift(), wrong=[near];
+    while(wrong.length<3 && pool.length) wrong.push(pool.splice(R.i(0,pool.length-1),1)[0]);
+    const opts=[{k:'right',v,lam:L[k]},...wrong.map(w=>({k:'off',v:w}))];
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,U,L,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('EIGEN SPOTTER', this.matched+' eigenvectors spotted','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ Arrow \${'ABCD'[i]} stays on its line, spotted \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={A:r.A, o:r.opts[i]};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Eigen.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>\`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`,
+  // A·v worked for the numbers on screen
+  work(A,v){
+    const pn=n=>n<0?'('+neg(n)+')':String(n), [[a,b],[c,d]]=A, [x,y]=v, [p,q]=this.mul(A,v);
+    const sum=(s,t)=>\`\${neg(s)} \${t<0?'−':'+'} \${Math.abs(t)}\`;
+    return \`A·\${this.vec(v)} = ⟨\${pn(a)}·\${pn(x)} + \${pn(b)}·\${pn(y)}, \${pn(c)}·\${pn(x)} + \${pn(d)}·\${pn(y)}⟩ = ⟨\${sum(a*x,b*y)}, \${sum(c*x,d*y)}⟩ = \${this.vec([p,q])}.\`;
+  },
+  kept(A,o){
+    const L=o.lam, Av=this.mul(A,o.v);
+    return \`\${this.vec(Av)} = \${neg(L)} × \${this.vec(o.v)}: it stays on its own line\${L<0?', turned right round':''}, so \${this.vec(o.v)} is an eigenvector with λ = \${neg(L)}.\`
+      +(L<0?' Turned round still counts: an eigenvector keeps its line, not its direction.':'');
+  },
+  why(i){
+    const r=this.round, w=r.opts[i].v, o=this.off(r.A,w), d=Math.round(o);
+    return [this.work(r.A,w), \`That is knocked \${Math.abs(o-d)<1e-9?'':'about '}\${d}° off the dotted line through \${this.vec(w)}, so arrow \${'ABCD'[i]} is not an eigenvector.\`];
+  },
+  // one arrow and where A sends it, in a panel of its own, scaled to fit both
+  panel(A,v,W,H,gone){
+    const Av=this.mul(A,v), m=Math.max(Math.abs(v[0]),Math.abs(v[1]),Math.abs(Av[0]),Math.abs(Av[1]),1);
+    const k=(Math.min(W,H)/2-8)/m, cx=W/2, cy=H/2, X=x=>(cx+x*k).toFixed(1), Y=y=>(cy-y*k).toFixed(1);
+    const n=Math.hypot(v[0],v[1]), ux=v[0]/n*W, uy=v[1]/n*W;
+    const arrow=(p,col,dash)=>{
+      const a=Math.atan2(-p[1],p[0]), tx=+X(p[0]), ty=+Y(p[1]), h=7;
+      return \`<line x1="\${cx}" y1="\${cy}" x2="\${tx}" y2="\${ty}" stroke="\${col}" stroke-width="2.4"\${dash?' stroke-dasharray="4 3"':''}/>\`+
+        \`<polygon points="\${tx},\${ty} \${(tx-h*Math.cos(a-0.45)).toFixed(1)},\${(ty-h*Math.sin(a-0.45)).toFixed(1)} \${(tx-h*Math.cos(a+0.45)).toFixed(1)},\${(ty-h*Math.sin(a+0.45)).toFixed(1)}" fill="\${col}"/>\`;
+    };
+    return \`<line x1="0" y1="\${cy}" x2="\${W}" y2="\${cy}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="\${cx}" y1="0" x2="\${cx}" y2="\${H}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`+
+      \`<line data-k="line" x1="\${(cx-ux).toFixed(1)}" y1="\${(cy+uy).toFixed(1)}" x2="\${(cx+ux).toFixed(1)}" y2="\${(cy-uy).toFixed(1)}" stroke="\${gone?'#e5484d':'#57cc7a'}" stroke-width="1.2" stroke-dasharray="2 4" opacity=".8"/>\`+
+      arrow(Av,gone?'#e5484d':FIG_COL.b,false)+arrow(v,'#57cc7a',false);
+  },
+  html(){
+    this.start();
+    const r=this.round, A=r.A;
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div style="text-align:center;margin-bottom:4px" role="img" aria-label="A has rows \${neg(A[0][0])}, \${neg(A[0][1])} and \${neg(A[1][0])}, \${neg(A[1][1])}">A = <span class="egM" aria-hidden="true">\${neg(A[0][0])}&nbsp;\${neg(A[0][1])}<br>\${neg(A[1][0])}&nbsp;\${neg(A[1][1])}</span></div>\`;
+    out+=\`<div class="small center" style="margin-bottom:4px">Green: the arrow v and its dotted line. Gold: where A sends it.</div>\`;
+    out+=\`<div id="esPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), Av=this.mul(A,o.v);
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="EigSpot.choose(\${i})" aria-label="Arrow \${'ABCD'[i]}: v = \${this.vec(o.v)}, sent to \${this.vec(Av)}\${gone?'. Not an eigenvector':''}" style="margin:0;padding:4px">
+        <svg viewBox="0 0 120 100" style="width:100%;height:auto;display:block" aria-hidden="true">\${this.panel(A,o.v,120,100,gone)}</svg><b>\${'ABCD'[i]}</b></button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[], m=this.miss();
+    if(m!==null) lines.push(...this.why(m));
+    else if(this.last){ lines.push(this.work(this.last.A,this.last.o.v)); lines.push(this.kept(this.last.A,this.last.o)+' Here is a new matrix.'); }
+    lines.push(\`\${this.matched} spotted this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="esRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
   }
 };
 
