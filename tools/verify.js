@@ -75,6 +75,7 @@ function loadGame() {
     ';const Detect={' + script.slice(script.indexOf("  SETS:[\n    {id:'pair', btn:'Two roots'"), script.indexOf("  open(){ UI.go('s-detect'); },")) + '};exports.Detect=Detect;' +
     ';const Hill={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Round bowl'"), script.indexOf("  open(){ UI.go('s-hill'); },")) + '};exports.Hill=Hill;' +
     ';const Cofactor={' + script.slice(script.indexOf("  SETS:[\n    {id:'gap', btn:'Two zeros'"), script.indexOf("  open(){ UI.go('s-cof'); },")) + '};exports.Cofactor=Cofactor;' +
+    ';const Cover={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'Two factors'"), script.indexOf("  open(){ UI.go('s-cover'); },")) + '};exports.Cover=Cover;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -93,7 +94,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2688,6 +2689,110 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The cover-up workshop: every fraction, every x, every set of kept
+   equations. The split must really equal f: the cleared identity is checked
+   at every x on the stepper and at many in between, the pieces must add back
+   to f wherever f is defined, and the antiderivative must differentiate back
+   to f. Which unknowns count as found is worked out afresh, by cover-up at a
+   root or by the kept equations pinning every unknown down, for every
+   choice of up to three kept x values; the readout's equation, its vanishing
+   terms and its answers are rebuilt, the drawing is read back, and every
+   goal, including solving without either root, is found by a real history. */
+const coverNotes = (() => {
+  const W = Cover;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const fac = r => (r === 0 ? 'x' : r > 0 ? `x − ${r}` : `x + ${-r}`);
+  if (W.SETS.map(S => S.id).join() !== 'two,three,rep') fail('cover', 'sets', W.SETS.map(S => S.id).join());
+  const reset = () => { W.touched = false; W.k = W.START; W.used.forEach(u => u.clear()); };
+  reset(); W.si = 0;
+  if (W.isRoot()) fail('cover', 'start', 'the workshop opens on a root, where f is not defined');
+  for (const g of W.GOALS) if (g.ok(W)) fail('cover', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.si = si; if (W.isRoot()) fail('cover', S.id, 'starts on a root'); for (const g of W.GOALS) if (g.ok(W)) fail('cover', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0;
+  const found = {}, tryCols = { root: new Set(), ok: new Set() };
+  const subsets = (xs, k) => { const out = [[]]; for (const x of xs) { const m = out.length; for (let q = 0; q < m; q++) if (out[q].length < k) out.push([...out[q], x]); } return out; };
+  W.SETS.forEach((S, si) => {
+    const V = W.VAL[si], nP = S.P.length;
+    const Nf = x => S.N.reduce((a, c) => a * x + c, 0), Df = x => S.den.reduce((a, r) => a * (x - r), 1);
+    const piece = (j, x) => S.P[j].r.reduce((a, r) => a * (x - r), 1);
+    // the coefficient of piece j once cleared: the whole bottom divided by the piece's own
+    const coef = (j, x) => Df(x) / piece(j, x);
+    const coefAt = (j, x) => { const rs = [...S.den]; for (const r of S.P[j].r) rs.splice(rs.indexOf(r), 1); return rs.reduce((a, r) => a * (x - r), 1); };
+    // the identity holds for every x, roots included
+    for (let x = -4; x <= 4; x += 0.125) {
+      const lhs = Nf(x), rhs = S.P.reduce((a, _, j) => a + V[j] * coefAt(j, x), 0);
+      if (Math.abs(lhs - rhs) > 1e-9) fail('cover', `${S.id} x=${x}`, `the cleared identity fails: ${lhs} ≠ ${rhs}`);
+      if (!S.den.includes(x)) {
+        if (Math.abs(coef(0, x) - coefAt(0, x)) > 1e-9) fail('cover', `${S.id} x=${x}`, 'the cleared coefficient is not the bottom over its own piece');
+        const f = Nf(x) / Df(x), sum = S.P.reduce((a, _, j) => a + V[j] / piece(j, x), 0);
+        if (Math.abs(f - sum) > 1e-9) fail('cover', `${S.id} x=${x}`, `the pieces add to ${sum}, but f is ${f}`);
+        // the antiderivative: a single factor gives V ln|x − r|, a squared one gives −V/(x − r)
+        const F = t => S.P.reduce((a, p, j) => a + (p.r.length === 1 ? V[j] * Math.log(Math.abs(t - p.r[0])) : -V[j] / (t - p.r[0])), 0);
+        const h = 1e-5, dF = (F(x + h) - F(x - h)) / (2 * h);
+        if (Math.abs(dF - f) > 1e-4 * Math.max(1, Math.abs(f))) fail('cover', `${S.id} x=${x}`, `the antiderivative's slope is ${dF}, but f is ${f}`);
+      }
+      n++;
+    }
+    if (W.X.join() !== '-4,-3,-2,-1,0,1,2,3,4') fail('cover', S.id, 'the stepper should run −4 to 4');
+    const roots = [...new Set(S.den)];
+    if (!roots.every(r => W.X.includes(r))) fail('cover', S.id, 'a root is out of the stepper\'s reach');
+    // which unknowns a set of kept x values pins down
+    const det2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+    const det3 = M => M[0][0] * det2([[M[1][1], M[1][2]], [M[2][1], M[2][2]]]) - M[0][1] * det2([[M[1][0], M[1][2]], [M[2][0], M[2][2]]]) + M[0][2] * det2([[M[1][0], M[1][1]], [M[2][0], M[2][1]]]);
+    const pins = xs => subsets(xs, nP).some(c => c.length === nP && (nP === 2 ? det2 : det3)(c.map(x => S.P.map((_, j) => coefAt(j, x)))) !== 0);
+    const coverOf = (j, xs) => xs.filter(x => S.P.every((_, q) => (coefAt(q, x) === 0) !== (q === j)));
+    for (const kept of subsets(W.X, 3)) {
+      for (const at of [W.START, ...W.X.map((_, k) => k).filter(k => kept.includes(W.X[k]))]) {
+        reset(); W.si = si; W.k = at; W.touched = true; kept.forEach(x => W.used[si].add(x)); n++;
+        const x = W.x(), key = `${S.id} kept ${kept.join(',') || 'none'} at ${x}`;
+        const all = pins(kept), want = S.P.map((_, j) => j).filter(j => all || coverOf(j, kept).length);
+        if (W.found().join() !== want.join()) fail('cover', key, `found reads ${W.found()}, expected ${want}`);
+        const got = W.working(), cs = S.P.map((_, j) => coefAt(j, x)), live = cs.map((c, j) => j).filter(j => cs[j] !== 0);
+        if (!got[1].startsWith(`At x = ${neg(x)}: ${neg(Nf(x))} = `)) fail('cover', key, got[1]);
+        if (live.length === 1 && !new RegExp(`${S.P[live[0]].L} = (.* = )?${neg(V[live[0]])}( at once)?\\.$`).test(got[1])) fail('cover', key, `cover-up gives the wrong value: ${got[1]}`);
+        if (live.length === 1 && Nf(x) / cs[live[0]] !== V[live[0]]) fail('cover', key, 'dividing out does not give the value');
+        if (got.some(l => /f itself is not defined/.test(l)) !== S.den.includes(x)) fail('cover', key, 'the not-defined note is wrong');
+        if (want.length === nP) {
+          const dec = got.find(l => l.startsWith('So f(x) = '));
+          if (!dec) fail('cover', key, 'no decomposition once every unknown is found');
+          else { const want2 = 'So f(x) = ' + S.P.map((p, j) => `${neg(V[j])}/${p.r.length === 1 ? (p.r[0] === 0 ? 'x' : `(${fac(p.r[0])})`) : `(${fac(p.r[0])})²`}`).join(' + ').replace(/\+ −/g, '− ') + ',';
+            if (!dec.startsWith(want2)) fail('cover', key, `the decomposition reads ${dec}, expected ${want2}`);
+            // the antiderivative as written, the same pieces the slope check above differentiated
+            const integ = '∫ f(x) dx = ' + S.P.map((p, j) => p.r.length === 1
+              ? `${Math.abs(V[j]) === 1 ? (V[j] < 0 ? '−' : '') : neg(V[j]) + ' '}ln|${fac(p.r[0])}|`
+              : `${neg(-V[j])}/${p.r[0] === 0 ? 'x' : `(${fac(p.r[0])})`}`).join(' + ').replace(/\+ −/g, '− ') + ' + C.';
+            if (!dec.endsWith(integ)) fail('cover', key, `the integral reads ${dec}, expected it to end ${integ}`); }
+          if (got.some(l => /^Solving the equations kept/.test(l)) !== S.P.some((_, j) => !coverOf(j, kept).length)) fail('cover', key, 'the solving sentence is wrong');
+          if (!S.den.includes(x) && !got.some(l => l.startsWith(`Check at x = ${neg(x)}:`))) fail('cover', key, 'no check at a defined x');
+        } else {
+          if (!got.some(l => l.includes('Still to find: ' + W.and(S.P.map((p, j) => j).filter(j => !want.includes(j)).map(j => S.P[j].L))))) fail('cover', key, 'the still-to-find list is wrong');
+          if (got.some(l => l.startsWith('So f(x) ='))) fail('cover', key, 'the decomposition shows before it is found');
+        }
+        const svg = W.svg();
+        if ((svg.match(/data-k="asym"/g) || []).length !== roots.length) fail('cover', key, 'the dashed lines are not one per root');
+        if (/data-k="piece"/.test(svg) !== (want.length === nP)) fail('cover', key, 'the pieces are drawn at the wrong time');
+        if (!/data-k="f"/.test(svg)) fail('cover', key, 'f is not drawn');
+        const tryCol = (svg.match(/data-k="try"[^>]*stroke="([^"]+)"/) || [])[1];
+        const ptFill = (svg.match(/data-k="pt"[^>]*fill="([^"]+)"/) || [])[1];
+        if (S.den.includes(x)) { if (ptFill) fail('cover', key, 'a point is drawn where f is not defined'); tryCols.root.add(tryCol); }
+        else { if (ptFill && ptFill !== tryCol) fail('cover', key, 'the upright line and the point differ in colour'); tryCols.ok.add(tryCol); }
+        const ks = new Set(kept);
+        const meant = { a: si === 0 && ks.has(1), b: si === 0 && ks.has(-2), solve: si === 0 && kept.filter(v => v !== 1 && v !== -2).length >= 2,
+          three: si === 1 && want.length === 3, rep: si === 2 && want.length === 2 };
+        for (const gl of W.GOALS) {
+          if (!!gl.ok(W) !== meant[gl.id]) fail('cover', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`);
+          if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+        }
+      }
+    }
+    if (S.id === 'rep') { reset(); W.si = si; W.used[si].add(-1); if (coverOf(0, [-1]).length || !coverOf(1, [-1]).length) fail('cover', 'rep', 'cover-up should reach B and not A'); }
+  });
+  if (tryCols.root.size !== 1 || tryCols.ok.size !== 1 || [...tryCols.root][0] === [...tryCols.ok][0]) fail('cover', 'colours', 'the upright line should take one colour at a root and another elsewhere');
+  for (const g of W.GOALS) if (!found[g.id]) fail('cover', g.id, 'this goal cannot be found');
+  reset(); W.si = 0; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The cofactor workshop: every row and column of every matrix. det A is
    worked by the rule of Sarrus, which never expands along anything, and each
    line's expansion must land on it; each minor is rebuilt by striking out
@@ -4393,6 +4498,7 @@ console.log(`  splits tried            ${pad(partsNotes.n.toLocaleString(), 10)}
 console.log(`  λ stepped               ${pad(detectNotes.n.toLocaleString(), 10)}  (det(A − λI) against the characteristic polynomial, each eigenvalue against the quadratic formula, each crushed arrow multiplied out, the trace and determinant checked, the curve measured, ${detectNotes.goals} goals findable)`);
 console.log(`  headings faced          ${pad(hillNotes.n.toLocaleString(), 10)}  (∇f against numerical partials, each slope ∇f · û against a central difference, steepest, level and steepest down exactly along, across and against ∇f, every contour drawn on its level, ${hillNotes.goals} goals findable)`);
 console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  (det A by the rule of Sarrus against every row and column, each minor struck out afresh, each sign from the checkerboard, the grid read back, two lines tried agreeing, ${cofNotes.goals} goals findable)`);
+console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}  (the cleared identity at every x, the pieces adding back to f, the antiderivative differentiated back, every choice of kept equations, the drawing read back, ${coverNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
