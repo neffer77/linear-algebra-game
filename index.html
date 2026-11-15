@@ -735,6 +735,11 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .wsCell button:disabled{opacity:.35}
 .wsModes{display:flex;gap:8px;margin:0 0 4px}
 .wsModes button{flex:1;margin:0}
+.wiStrand{font-size:12px;color:var(--gold);letter-spacing:.04em;text-transform:uppercase;margin:10px 0 4px}
+.wiRow{display:flex;flex-wrap:wrap;gap:6px}
+.btn.wiChip{width:auto;margin:0;padding:6px 10px}
+.btn.wiChip.solid{border-color:var(--green)}
+.btn.wiChip.weak{border-color:var(--gold)}
 .wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 .wsModes.wrap{flex-wrap:wrap}
 .wsModes.wrap button{flex:1 1 28%;min-width:0}
@@ -3852,6 +3857,60 @@ const WORKSHOP_FOR = (() => {
   for (const mod in W) for (const k of W[mod][1]) out[k] = {mod, name:W[mod][0]};
   return out;
 })();
+
+
+/* The workshop index. Forty-eight workshops one under another is a long walk
+   down the Tome, so the top of it lists every one as a chip, under the strand
+   of the topic it was built for, and one tap opens it. A chip turns green with
+   a ✓ once every topic it covers is solid, and is ringed in gold while one of
+   them needs work, as the Training Grounds count it, which is where a visit
+   pays most. Both are read off
+   mastery as it stands; nothing is saved. */
+const WorkshopIndex = {
+  SOLID:0.85, WEAK:0.6,
+  groups(){
+    const pos={};
+    STRANDS.forEach(([,ks],si)=>ks.forEach((k,i)=>{ pos[k]=[si,i]; }));
+    const by={};
+    for(const k of Object.keys(WORKSHOP_FOR)){
+      const w=WORKSHOP_FOR[k];
+      (by[w.mod] || (by[w.mod]={mod:w.mod, name:w.name, topics:[]})).topics.push(k);
+    }
+    const out=STRANDS.map(([s])=>({strand:s, items:[]}));
+    for(const w of Object.values(by)){
+      // The topic a workshop was built for is the first it lists.
+      w.at=pos[w.topics[0]];
+      const sp=w.name.indexOf(' ');
+      w.emoji=w.name.slice(0,sp);
+      w.title=w.name.slice(sp+1);
+      w.short=w.title.replace(/ Workshop$/,'');
+      out[w.at[0]].items.push(w);
+    }
+    out.forEach(g=>g.items.sort((a,b)=>a.at[1]-b.at[1]));
+    return out.filter(g=>g.items.length);
+  },
+  state(w){
+    const t=Game.s && Game.s.topicStats;
+    if(!t) return '';
+    const seen=w.topics.filter(k=>t[k] && t[k].seen);
+    if(seen.length===w.topics.length && seen.every(k=>Mastery.eff(k)>=this.SOLID)) return 'solid';
+    if(seen.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';
+    return '';
+  },
+  chip(w){
+    const st=this.state(w);
+    const note=st==='solid' ? ', every topic it covers solid' : st==='weak' ? ', a topic it covers needs work' : '';
+    return `<button class="btn sm ghost wiChip${st?' '+st:''}" data-ws="${w.mod}" data-state="${st}" onclick="${w.mod}.open()" aria-label="Open ${w.title}${note}">${w.emoji} ${w.short}${st==='solid'?' ✓':''}</button>`;
+  },
+  html(){
+    const gs=this.groups(), n=gs.reduce((s,g)=>s+g.items.length,0);
+    return `<div class="panel" id="wsIndex" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🧭 Every workshop, by strand</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">${n} hands-on workshops. Tap one to open it. Green with a ✓ means every topic it covers is solid; a gold ring means one of its topics needs work, so a visit pays.</div>
+         ${gs.map(g=>`<div class="wiStrand">${g.strand}</div><div class="wiRow">${g.items.map(w=>this.chip(w)).join('')}</div>`).join('\n         ')}
+       </div>`;
+  }
+};
 
 /* ------------------------------- mastery --------------------------------- */
 /* Per-topic mastery drives three things: which topic comes up next, how hard
@@ -13856,6 +13915,7 @@ const UI = {
          <div class="sub" style="margin-top:6px;font-size:14px">The tale you were told at the gate, in three cards.</div>
          <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
        </div>` +
+      WorkshopIndex.html() +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps.</div>

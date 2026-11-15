@@ -1,369 +1,180 @@
 {
- "change": "The Growth Integral Workshop: ∫ e^(kx) dx divides by the k inside",
+ "change": "The workshop index: every workshop one tap from the top of the Tome",
  "mutations": [
   {
-   "name": "e^(2x) is built on k = 1",
+   "name": "a workshop is filed under its last topic",
    "file": "index.html",
-   "find": "{id:'two', btn:'e^(2x)', k:2,",
-   "replace": "{id:'two', btn:'e^(2x)', k:1,",
+   "find": "      w.at=pos[w.topics[0]];",
+   "replace": "      w.at=pos[w.topics[w.topics.length-1]];",
    "run": "verify"
   },
   {
-   "name": "e^(−2x) loses its minus",
+   "name": "a strand's row is not sorted",
    "file": "index.html",
-   "find": "{id:'neg', btn:'e^(−2x)', k:-2,",
-   "replace": "{id:'neg', btn:'e^(−2x)', k:2,",
-   "run": "verify"
-  },
-  {
-   "name": "the half's raised exponent is wrong",
-   "file": "index.html",
-   "find": "ex:'x/2', up:'3x/2'",
-   "replace": "ex:'x/2', up:'x/2'",
-   "run": "verify"
-  },
-  {
-   "name": "−1/2 reads as 1/2",
-   "file": "index.html",
-   "find": "val(v){ if(typeof v!=='string') return v; const s=v.replace('−','-')",
-   "replace": "val(v){ if(typeof v!=='string') return v; const s=v.replace('−','')",
-   "run": "verify"
-  },
-  {
-   "name": "the power rule's 1/3 is not offered",
-   "file": "index.html",
-   "find": "C:['−1/2','1/3','1/2',1,2,3]",
-   "replace": "C:['−1/2','1/4','1/2',1,2,3]",
-   "run": "verify"
-  },
-  {
-   "name": "e^(2x) starts on its fit",
-   "file": "index.html",
-   "find": "C:['−1/2','1/3','1/2',1,2,3], start:3",
-   "replace": "C:['−1/2','1/3','1/2',1,2,3], start:2",
-   "run": "verify"
-  },
-  {
-   "name": "the lift starts at 1/2",
-   "file": "index.html",
-   "find": "  si:0, ci:3, li:4, form:0,",
-   "replace": "  si:0, ci:3, li:5, form:0,",
-   "run": "verify"
-  },
-  {
-   "name": "F′ forgets the k inside",
-   "file": "index.html",
-   "find": "  ratio(){ return this.r(this.c()*this.m()); },",
-   "replace": "  ratio(){ return this.r(this.c()); },",
-   "run": "verify"
-  },
-  {
-   "name": "the raised form is said to fit",
-   "file": "index.html",
-   "find": "  fits(){ return this.form===0 && this.ratio()===1; },",
-   "replace": "  fits(){ return this.ratio()===1; },",
-   "run": "verify"
-  },
-  {
-   "name": "raising keeps the exponent",
-   "file": "index.html",
-   "find": "  m(){ return this.form ? this.set().k+1 : this.set().k; },",
-   "replace": "  m(){ return this.set().k; },",
-   "run": "verify"
-  },
-  {
-   "name": "F forgets its lift",
-   "file": "index.html",
-   "find": "  F(x){ return this.c()*Math.exp(this.m()*x)+this.lift(); },",
-   "replace": "  F(x){ return this.c()*Math.exp(this.m()*x); },",
-   "run": "verify"
-  },
-  {
-   "name": "the nudge is one-sided",
-   "file": "index.html",
-   "find": "  nudge(x){ return (this.F(x+this.H)-this.F(x-this.H))/(2*this.H); },",
-   "replace": "  nudge(x){ return (this.F(x+this.H)-this.F(x))/this.H; },",
-   "run": "verify"
-  },
-  {
-   "name": "fractions drop their minus",
-   "file": "index.html",
-   "find": "return (n<0?'−':'')+Math.abs(n)+'/'+d; }",
-   "replace": "return Math.abs(n)+'/'+d; }",
-   "run": "verify"
-  },
-  {
-   "name": "a negative is multiplied bare",
-   "file": "index.html",
-   "find": "  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },",
-   "replace": "  pf(v){ return this.fr(v); },",
-   "run": "verify"
-  },
-  {
-   "name": "a negative fraction loses its minus in front",
-   "file": "index.html",
-   "find": "(s[0]==='−' ? `−(${s.slice(1)})·${e}` : `(${s})·${e}`)",
-   "replace": "(s[0]==='−' ? `(${s.slice(1)})·${e}` : `(${s})·${e}`)",
-   "run": "verify"
-  },
-  {
-   "name": "a lowering is written as a lift",
-   "file": "index.html",
-   "find": ": L>0 ? ` + ${this.fr(L)}` : ` − ${this.fr(-L)}`); },",
-   "replace": ": ` + ${this.fr(Math.abs(L))}`); },",
-   "run": "verify"
-  },
-  {
-   "name": "the chain step names the wrong number",
-   "file": "index.html",
-   "find": "Differentiating multiplies by the number in front of x, ${this.fr(m)},",
-   "replace": "Differentiating multiplies by the number in front of x, ${this.fr(this.set().k)},",
-   "run": "verify"
-  },
-  {
-   "name": "F′ is written with the old exponent",
-   "file": "index.html",
-   "find": "= ${this.term(q,this.exS())}.`);",
-   "replace": "= ${this.term(q,this.set().ex)}.`);",
-   "run": "verify"
-  },
-  {
-   "name": "the fit names the wrong antiderivative",
-   "file": "index.html",
-   "find": "∫ e^(${S.ex}) dx = ${this.term(c,S.ex)} + C.`;",
-   "replace": "∫ e^(${S.ex}) dx = ${this.term(1,S.ex)} + C.`;",
-   "run": "verify"
-  },
-  {
-   "name": "the minus note shows for any k",
-   "file": "index.html",
-   "find": "      if(k<0) s+=` The k is negative, so the minus comes along.`;",
-   "replace": "      s+=` The k is negative, so the minus comes along.`;",
-   "run": "verify"
-  },
-  {
-   "name": "the halving note shows for any k",
-   "file": "index.html",
-   "find": "      if(k===0.5) s+=` Dividing by a half doubles.`;",
-   "replace": "      if(k<1) s+=` Dividing by a half doubles.`;",
-   "run": "verify"
-  },
-  {
-   "name": "the multiply slip is never caught",
-   "file": "index.html",
-   "find": "    } else if(c===k) out.push(`That is ${this.fr(q)} times f: multiplying",
-   "replace": "    } else if(false) out.push(`That is ${this.fr(q)} times f: multiplying",
-   "run": "verify"
-  },
-  {
-   "name": "the multiply slip names the wrong fix",
-   "file": "index.html",
-   "find": "so the number in front should be 1/k = ${this.fr(1/k)}.`);",
-   "replace": "so the number in front should be 1/k = ${this.fr(k)}.`);",
-   "run": "verify"
-  },
-  {
-   "name": "too steep and too shallow are swapped",
-   "file": "index.html",
-   "find": "q<0 ? 'sloping the wrong way' : q>1 ? 'too steep' : 'too shallow'",
-   "replace": "q<0 ? 'sloping the wrong way' : q>1 ? 'too shallow' : 'too steep'",
-   "run": "verify"
-  },
-  {
-   "name": "a wrong-way slope is called too shallow",
-   "file": "index.html",
-   "find": "q<0 ? 'sloping the wrong way' : q>1",
-   "replace": "q<-9 ? 'sloping the wrong way' : q>1",
-   "run": "verify"
-  },
-  {
-   "name": "the nudge reads f at the wrong x",
-   "file": "index.html",
-   "find": "against f(${X}) ≈ ${this.num(this.f(X))}.`);",
-   "replace": "against f(${X}) ≈ ${this.num(this.f(0))}.`);",
-   "run": "verify"
-  },
-  {
-   "name": "the + C is said without a lift",
-   "file": "index.html",
-   "find": "      if(L!==0) out.push(`The ${L>0?'+':'−'}",
-   "replace": "      if(true) out.push(`The ${L>0?'+':'−'}",
-   "run": "verify"
-  },
-  {
-   "name": "lowering is called lifting",
-   "file": "index.html",
-   "find": "${L>0?'lifts':'lowers'} the whole curve",
-   "replace": "lifts the whole curve",
-   "run": "verify"
-  },
-  {
-   "name": "the gold point is said for any curve",
-   "file": "index.html",
-   "find": "      out.push(F0===1 ? `And F(0) =",
-   "replace": "      out.push(F0!==9 ? `And F(0) =",
-   "run": "verify"
-  },
-  {
-   "name": "F(0) leaves out the lift",
-   "file": "index.html",
-   "find": "const L=this.lift(), F0=this.r(c+L);",
-   "replace": "const L=this.lift(), F0=this.r(c);",
-   "run": "verify"
-  },
-  {
-   "name": "the dashes follow F, not f",
-   "file": "index.html",
-   "find": "dx=sx, dy=-this.f(x)*sy,",
-   "replace": "dx=sx, dy=-this.c()*this.m()*Math.exp(this.m()*x)*sy,",
-   "run": "verify"
-  },
-  {
-   "name": "the dashes are all flat",
-   "file": "index.html",
-   "find": "dx=sx, dy=-this.f(x)*sy,",
-   "replace": "dx=sx, dy=0,",
-   "run": "verify"
-  },
-  {
-   "name": "a dash is missing from each column",
-   "file": "index.html",
-   "find": "for(let j=0;j<=7;j++){",
-   "replace": "for(let j=0;j<7;j++){",
-   "run": "verify"
-  },
-  {
-   "name": "F is drawn off the chart",
-   "file": "index.html",
-   "find": "if(y>=c && y<=d) cur.push(",
-   "replace": "if(true) cur.push(",
-   "run": "verify"
-  },
-  {
-   "name": "F is green whether or not it fits",
-   "file": "index.html",
-   "find": "stroke=\"${fit?FIG_COL.c:FIG_COL.a}\" stroke-width=\"3\"",
-   "replace": "stroke=\"${FIG_COL.c}\" stroke-width=\"3\"",
-   "run": "verify"
-  },
-  {
-   "name": "the gold point sits at (0, 0)",
-   "file": "index.html",
-   "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(0))}\" cy=\"${f(this.PY(1))}\"",
-   "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(0))}\" cy=\"${f(this.PY(0))}\"",
-   "run": "verify"
-  },
-  {
-   "name": "the figure's description always says it fits",
-   "file": "index.html",
-   "find": "which ${fit?'runs along every dash':'cuts across the dashes'}",
-   "replace": "which runs along every dash",
-   "run": "verify"
-  },
-  {
-   "name": "picking a curve keeps the raised form",
-   "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.ci=this.SETS[i].start; this.li=4; this.form=0;",
-   "replace": "  pick(i){ this.si=i; this.ci=this.SETS[i].start; this.li=4;",
-   "run": "verify"
-  },
-  {
-   "name": "the number in front runs past its last step",
-   "file": "index.html",
-   "find": "const v=this.ci+by; if(v<0 || v>=this.set().C.length) return;",
-   "replace": "const v=this.ci+by; if(v<0 || v>this.set().C.length) return;",
-   "run": "verify"
-  },
-  {
-   "name": "the times goal takes any c",
-   "file": "index.html",
-   "find": "ok:K=>K.form===0 && K.c()===K.set().k && !K.fits()},",
-   "replace": "ok:K=>K.form===0 && !K.fits()},",
-   "run": "verify"
-  },
-  {
-   "name": "the raise goal takes any raised F",
-   "file": "index.html",
-   "find": "ok:K=>K.form===1 && K.r(K.c()*(K.set().k+1))===1},",
-   "replace": "ok:K=>K.form===1},",
-   "run": "verify"
-  },
-  {
-   "name": "the lift goal takes an unlifted F",
-   "file": "index.html",
-   "find": "ok:K=>K.fits() && K.lift()!==0},",
-   "replace": "ok:K=>K.fits()},",
-   "run": "verify"
-  },
-  {
-   "name": "the through goal takes a miss",
-   "file": "index.html",
-   "find": "ok:K=>K.fits() && K.r(K.c()+K.lift())===1}",
-   "replace": "ok:K=>K.fits() && K.r(K.c())===1}",
-   "run": "verify"
-  },
-  {
-   "name": "the neg goal takes e^(2x)",
-   "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.fits()},",
-   "replace": "ok:K=>K.si!==2 && K.fits()},",
-   "run": "verify"
-  },
-  {
-   "name": "the curve buttons run in one row",
-   "file": "index.html",
-   "find": "<div id=\"xiSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"xiSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:expint"
-  },
-  {
-   "name": "a form button loses its name",
-   "file": "index.html",
-   "find": "aria-label=\"${['Keep the exponent of e as it is',",
-   "replace": "aria-label=\"${['',",
-   "run": "play:expint"
-  },
-  {
-   "name": "the form buttons do not show which is pressed",
-   "file": "index.html",
-   "find": "aria-pressed=\"${i===this.form}\" onclick=\"ExpInt.setForm",
-   "replace": "aria-pressed=\"false\" onclick=\"ExpInt.setForm",
-   "run": "play:expint"
-  },
-  {
-   "name": "the lift stepper is never switched off",
-   "file": "index.html",
-   "find": "document.getElementById('xiLHi').disabled=this.li>=this.LIFT.length-1;",
+   "find": "    out.forEach(g=>g.items.sort((a,b)=>a.at[1]-b.at[1]));\n",
    "replace": "",
-   "run": "play:expint"
+   "run": "verify"
   },
   {
-   "name": "no toast for a goal found",
+   "name": "a strand's row runs backwards",
    "file": "index.html",
-   "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:expint"
+   "find": "g.items.sort((a,b)=>a.at[1]-b.at[1])",
+   "replace": "g.items.sort((a,b)=>b.at[1]-a.at[1])",
+   "run": "verify"
   },
   {
-   "name": "the Tome loses the growth integral workshop",
+   "name": "a workshop is listed once per topic",
    "file": "index.html",
-   "find": "id=\"tomeExpInt\"",
-   "replace": "id=\"tomeExpIntX\"",
-   "run": "play:expint"
+   "find": "      (by[w.mod] || (by[w.mod]={mod:w.mod, name:w.name, topics:[]})).topics.push(k);",
+   "replace": "      (by[w.mod+k]={mod:w.mod, name:w.name, topics:[k]});",
+   "run": "verify"
   },
   {
-   "name": "the workshop saves its number in front",
+   "name": "the strands are put in name order",
    "file": "index.html",
-   "find": "this.ci=v; this.touched=true; this.render(); },",
-   "replace": "this.ci=v; Game.s.xi=v; this.touched=true; this.render(); },",
-   "run": "play:expint"
+   "find": "    return out.filter(g=>g.items.length);",
+   "replace": "    return out.filter(g=>g.items.length).sort((a,b)=>a.strand<b.strand?-1:1);",
+   "run": "verify"
   },
   {
-   "name": "the caption is dropped",
+   "name": "the emoji is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">The short dashes show the slope f(x) wherever you stand.",
-   "replace": "<div class=\"figcapX\">The short dashes show the slope f(x) wherever you stand.",
-   "run": "play:expint"
+   "find": "      w.emoji=w.name.slice(0,sp);",
+   "replace": "      w.emoji='';",
+   "run": "verify"
+  },
+  {
+   "name": "the short name keeps Workshop",
+   "file": "index.html",
+   "find": "      w.short=w.title.replace(/ Workshop$/,'');",
+   "replace": "      w.short=w.title;",
+   "run": "verify"
+  },
+  {
+   "name": "one solid topic makes it solid",
+   "file": "index.html",
+   "find": "    if(seen.length===w.topics.length && seen.every(",
+   "replace": "    if(seen.length && seen.every(",
+   "run": "verify"
+  },
+  {
+   "name": "solid is any mastery",
+   "file": "index.html",
+   "find": "seen.every(k=>Mastery.eff(k)>=this.SOLID)) return 'solid';",
+   "replace": "seen.every(k=>Mastery.eff(k)>=0)) return 'solid';",
+   "run": "verify"
+  },
+  {
+   "name": "solid takes more than it should",
+   "file": "index.html",
+   "find": "seen.every(k=>Mastery.eff(k)>=this.SOLID)",
+   "replace": "seen.every(k=>Mastery.eff(k)>this.SOLID)",
+   "run": "verify"
+  },
+  {
+   "name": "weak needs every topic low",
+   "file": "index.html",
+   "find": "    if(seen.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "replace": "    if(seen.length && seen.every(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "run": "verify"
+  },
+  {
+   "name": "weak counts unseen topics",
+   "file": "index.html",
+   "find": "    if(seen.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "replace": "    if(w.topics.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "run": "verify"
+  },
+  {
+   "name": "weak takes the edge",
+   "file": "index.html",
+   "find": "Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "replace": "Mastery.eff(k)<=this.WEAK)) return 'weak';",
+   "run": "verify"
+  },
+  {
+   "name": "a chip forgets its state's colour",
+   "file": "index.html",
+   "find": "class=\"btn sm ghost wiChip${st?' '+st:''}\"",
+   "replace": "class=\"btn sm ghost wiChip\"",
+   "run": "verify"
+  },
+  {
+   "name": "the ✓ shows on every chip",
+   "file": "index.html",
+   "find": "${st==='solid'?' ✓':''}</button>",
+   "replace": " ✓</button>",
+   "run": "verify"
+  },
+  {
+   "name": "a screen reader is not told it is solid",
+   "file": "index.html",
+   "find": "const note=st==='solid' ? ', every topic it covers solid' :",
+   "replace": "const note=st==='solid' ? '' :",
+   "run": "verify"
+  },
+  {
+   "name": "a screen reader is not told one needs work",
+   "file": "index.html",
+   "find": ": st==='weak' ? ', a topic it covers needs work' : '';",
+   "replace": ": '';",
+   "run": "verify"
+  },
+  {
+   "name": "a chip opens the wrong workshop",
+   "file": "index.html",
+   "find": "onclick=\"${w.mod}.open()\" aria-label",
+   "replace": "onclick=\"Workshop.open()\" aria-label",
+   "run": "verify"
+  },
+  {
+   "name": "the count is wrong",
+   "file": "index.html",
+   "find": "${n} hands-on workshops.",
+   "replace": "${gs.length} hands-on workshops.",
+   "run": "verify"
+  },
+  {
+   "name": "a strand heading is dropped",
+   "file": "index.html",
+   "find": "${gs.map(g=>`<div class=\"wiStrand\">${g.strand}</div>",
+   "replace": "${gs.map(g=>`<div>${g.strand}</div>",
+   "run": "verify"
+  },
+  {
+   "name": "the Tome leaves the index out",
+   "file": "index.html",
+   "find": "      WorkshopIndex.html() +\n",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "the chips run in one row",
+   "file": "index.html",
+   "find": ".wiRow{display:flex;flex-wrap:wrap;gap:6px}",
+   "replace": ".wiRow{display:flex;flex-wrap:nowrap;gap:6px;white-space:nowrap}",
+   "run": "play:wsindex"
+  },
+  {
+   "name": "the chips stretch the full width",
+   "file": "index.html",
+   "find": ".btn.wiChip{width:auto;margin:0;padding:6px 10px}",
+   "replace": ".btn.wiChip{margin:0;padding:6px 10px}",
+   "run": "play:wsindex"
+  },
+  {
+   "name": "the green ring is not drawn",
+   "file": "index.html",
+   "find": ".btn.wiChip.solid{border-color:var(--green)}",
+   "replace": ".wiChip.solidX{border-color:var(--green)}",
+   "run": "play:wsindex"
+  },
+  {
+   "name": "the index saves what it read",
+   "file": "index.html",
+   "find": "  html(){\n    const gs=this.groups(),",
+   "replace": "  html(){\n    if(Game.s) Game.s.wsSeen=1;\n    const gs=this.groups(),",
+   "run": "play:wsindex"
   }
  ]
 }
