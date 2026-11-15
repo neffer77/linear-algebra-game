@@ -1052,6 +1052,22 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ UNDO WORKSHOP ============ -->
+  <div class="screen" id="s-undo">
+    <div class="panel"><h2>↩️ Undo Workshop</h2><div class="sub">A matrix A moves the plane. Turn the four numbers of B until B puts everything back: follow î and ĵ through A, then through B, and bring both home. The B that does it is A⁻¹, the inverse of A.</div></div>
+    <div class="panel">
+      <div id="uvMats" class="wsModes wrap" role="group" aria-label="The matrix A"></div>
+      <div class="small" style="margin:8px 0 2px;text-align:center">B</div>
+      <div id="uvB" class="wsMat" role="group" aria-label="The matrix B"></div>
+      <div id="uvFig"></div>
+      <div id="uvRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="uvGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
@@ -12395,6 +12411,7 @@ const UI = {
     if(id==='s-compose') Compose.render();
     if(id==='s-span') Span.render();
     if(id==='s-elim') Elim.render();
+    if(id==='s-undo') Undo.render();
     if(id==='s-limit') Limit.render();
     if(id==='s-descent') Descent.render();
     Calc.syncButton();
@@ -13031,6 +13048,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⚖️ Elimination Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put.</div>
          <button class="btn sm" id="tomeElim" style="width:auto;margin-top:8px" onclick="Elim.open()">Open the elimination workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">↩️ Undo Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo.</div>
+         <button class="btn sm" id="tomeUndo" style="width:auto;margin-top:8px" onclick="Undo.open()">Open the undo workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
@@ -14600,6 +14622,105 @@ const Elim = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ROW REDUCER','every system settled','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ UNDO WORKSHOP ============
+   A matrix A moves the plane; the player turns the four numbers of a second
+   matrix B until B puts everything back. The readout follows î and ĵ through
+   A and then B, one column at a time, so "BA = I" is seen as both arrows
+   coming home rather than as a formula for the inverse. The last matrix
+   squashes the plane onto a line, and the readout says why no B can undo it. */
+const Undo = {
+  MATS:[
+    {m:[[1,1],[0,1]],  btn:'Shear',  is:'a shear'},
+    {m:[[0,-1],[1,0]], btn:'Turn',   is:'a quarter-turn anticlockwise'},
+    {m:[[0,1],[1,0]],  btn:'Flip',   is:'a flip over the line y = x'},
+    {m:[[2,1],[1,1]],  btn:'Tilt',   is:'a tilt that stretches one way and squeezes the other'},
+    {m:[[1,2],[2,4]],  btn:'Squash', is:'a squash'}
+  ],
+  NAMES:[['top-left','top-right'],['bottom-left','bottom-right']],
+  LO:-2, HI:2,
+  mi:0, B:[[1,0],[0,1]], moved:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'shear', t:'Undo the shear.', toast:'Undid the shear', ok:U=>U.mi===0 && U.undone()},
+    {id:'turn',  t:'Undo the quarter-turn.', toast:'Undid the quarter-turn', ok:U=>U.mi===1 && U.undone()},
+    {id:'self',  t:'Undo the flip, and see what its undo looks like.', toast:'Undid the flip', ok:U=>U.mi===2 && U.undone()},
+    {id:'tilt',  t:'Undo the tilt.', toast:'Undid the tilt', ok:U=>U.mi===3 && U.undone()},
+    {id:'half',  t:'Bring one arrow home while the other is still away.', toast:'Brought one arrow home',
+     ok:U=>U.moved && U.home(0)!==U.home(1)},
+    {id:'none',  t:'Try to undo the squash, and find out why nothing can.', toast:'Found the matrix nothing undoes',
+     ok:U=>U.mi===4 && U.moved}
+  ],
+  A(){ return this.MATS[this.mi].m; },
+  col:(M,j)=>[M[0][j], M[1][j]],
+  app:([[a,b],[c,d]],[x,y])=>[a*x+b*y, c*x+d*y],
+  det:([[a,b],[c,d]])=>a*d-b*c,
+  // where î (j = 0) or ĵ (j = 1) ends up after A and then B
+  end(j){ return this.app(this.B, this.col(this.A(), j)); },
+  home(j){ const e=this.end(j); return e[0]===(j?0:1) && e[1]===(j?1:0); },
+  undone(){ return this.home(0) && this.home(1); },
+  vec(w){ return \`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`; },
+  amt(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  rows(M){ return \`rows \${neg(M[0][0])}, \${neg(M[0][1])} and \${neg(M[1][0])}, \${neg(M[1][1])}\`; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const A=this.A(), B=this.B, out=[];
+    out.push(\`A is \${this.MATS[this.mi].is}: it sends î to \${this.vec(this.col(A,0))} and ĵ to \${this.vec(this.col(A,1))}.\`);
+    [0,1].forEach(j=>{
+      const v=this.col(A,j), e=this.end(j), nm=j?'ĵ':'î';
+      out.push(\`B sends A\${nm} = \${this.vec(v)} to ⟨\${neg(B[0][0])}·\${this.amt(v[0])} + \${this.amt(B[0][1])}·\${this.amt(v[1])}, \${neg(B[1][0])}·\${this.amt(v[0])} + \${this.amt(B[1][1])}·\${this.amt(v[1])}⟩ = \${this.vec(e)}: \`+
+        (this.home(j) ? \`\${nm} is back home.\` : \`\${nm} should come back to \${j?'⟨0, 1⟩':'⟨1, 0⟩'}.\`));
+    });
+    const d=this.det(A);
+    if(!d){
+      const z=[A[0][1], -A[0][0]];
+      out.push(\`det A = \${neg(A[0][0])}·\${this.amt(A[1][1])} − \${this.amt(A[0][1])}·\${this.amt(A[1][0])} = 0: A squashes the whole plane onto one line, and \${this.vec(z)} lands on ⟨0, 0⟩ just as ⟨0, 0⟩ does. No B can send one point back to two places, so nothing undoes A.\`);
+    } else if(this.undone()){
+      out.push(\`Both are home, so BA = I and B undoes A: B is A⁻¹, with \${this.rows(B)}.\`+
+        (A.every((r,i)=>r.every((x,j)=>x===B[i][j])) ? ' A is its own undo: doing it twice puts everything back.' : ''));
+    } else
+      out.push(\`Not yet: B undoes A only when both arrows come home. B's first column is where it sends î, and its second where it sends ĵ.\`);
+    return out;
+  },
+  open(){ UI.go('s-undo'); },
+  pick(i){ this.mi=i; this.B=[[1,0],[0,1]]; this.moved=false; this.touched=true; this.render(); },
+  step(i, j, by){
+    const x=this.B[i][j]+by;
+    if(x<this.LO || x>this.HI) return;
+    this.B[i][j]=x; this.moved=true; this.touched=true; this.render();
+  },
+  render(){
+    const A=this.A(), B=this.B;
+    document.getElementById('uvMats').innerHTML=this.MATS.map((o,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.mi}" onclick="Undo.pick(\${i})"
+        aria-label="\${o.btn}: \${this.rows(o.m)}">\${o.btn}</button>\`).join('');
+    document.getElementById('uvB').innerHTML=[0,1].map(i=>[0,1].map(j=>{
+      const v=B[i][j], nm=this.NAMES[i][j];
+      return \`<div class="wsCell c\${j}">
+        <button onclick="Undo.step(\${i},\${j},-1)" aria-label="Lower B's \${nm} number"\${v<=this.LO?' disabled':''}>−</button>
+        <b aria-label="B's \${nm} number: \${neg(v)}">\${neg(v)}</b>
+        <button onclick="Undo.step(\${i},\${j},1)" aria-label="Raise B's \${nm} number"\${v>=this.HI?' disabled':''}>+</button>
+      </div>\`;}).join('')).join('');
+    const vecs=[];
+    [0,1].forEach(j=>{ const v=this.col(A,j); if(v[0]||v[1]) vecs.push({v, col:FIG_COL.dim, label:j?'Aĵ':'Aî'}); });
+    [0,1].forEach(j=>{ const e=this.end(j); if(e[0]||e[1]) vecs.push({v:e, col:j?FIG_COL.c:FIG_COL.a, label:j?'ĵ':'î'}); });
+    Figure.render({kind:'plane', span:5, vecs, marks:[[1,0],[0,1]],
+      caption:'Grey: where A sends î and ĵ. Blue and green: where B then sends them. The rings are home.'},
+      document.getElementById('uvFig'));
+    document.getElementById('uvRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('uvGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('UNDOER','every move put back','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

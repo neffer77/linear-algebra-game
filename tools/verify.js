@@ -53,6 +53,7 @@ function loadGame() {
     ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
     ';const Span={' + script.slice(script.indexOf('  PAIRS:[\n    {u:[2,1],'), script.indexOf('  open(){ UI.go(\'s-span\'); },')) + '};exports.Span=Span;' +
     ';const Elim={' + script.slice(script.indexOf('  SYSTEMS:[\n    [[1,2,5],'), script.indexOf('  open(){ UI.go(\'s-elim\'); },')) + '};exports.Elim=Elim;' +
+    ';const Undo={' + script.slice(script.indexOf('  MATS:[\n    {m:[[1,1],[0,1]],  btn:\'Shear\''), script.indexOf('  open(){ UI.go(\'s-undo\'); },')) + '};exports.Undo=Undo;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -70,7 +71,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2105,6 +2106,68 @@ const elimNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The undo workshop: every B from −2 to 2 for each A, 3,125 states. Each
+   arrow is followed through A and B here, the worked sums are read back and
+   checked, and the verdict must match: exactly one B in range undoes each
+   matrix that can be undone, and it is the inverse from ad − bc; none
+   undoes the squash, whose stated point really does land on ⟨0, 0⟩. */
+const undoNotes = (() => {
+  const U = Undo, num = x => +String(x).replace(/[()]/g, '').replace(/−/g, '-');
+  const found = {};
+  let n = 0;
+  if (U.mi !== 0 || U.B.join() !== '1,0,0,1' || U.moved || U.touched) fail('undo', 'start', 'the workshop does not open on the shear with B = I, untouched');
+  for (const g of U.GOALS) if (g.ok(U)) fail('undo', 'start', `${g.id} is met before anything is pressed`);
+  const V = '⟨(−?\\d+), (−?\\d+)⟩', F = '(\\(−\\d+\\)|−?\\d+)';
+  const br = s => /\(/.test(s) === (num(s) < 0);
+  U.MATS.forEach((M, mi) => {
+    const A = M.m, d = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+    const inv = d ? [[A[1][1] / d, -A[0][1] / d], [-A[1][0] / d, A[0][0] / d]] : null;
+    const undoers = [];
+    for (let p = 0; p < 625; p++) {
+      const B = [[p % 5 - 2, Math.floor(p / 5) % 5 - 2], [Math.floor(p / 25) % 5 - 2, Math.floor(p / 125) - 2]];
+      U.mi = mi; U.B = B; U.moved = true; U.touched = true; n++;
+      const key = `${M.btn} B=${B.join(';')}`, L = U.working();
+      const cols = [[A[0][0], A[1][0]], [A[0][1], A[1][1]]];
+      if (L[0] !== `A is ${M.is}: it sends î to ⟨${cols[0].map(x => x < 0 ? '−' + -x : x).join(', ')}⟩ and ĵ to ⟨${cols[1].map(x => x < 0 ? '−' + -x : x).join(', ')}⟩.`) fail('undo', key, `the first line reads: ${L[0]}`);
+      const ends = [0, 1].map(j => {
+        const nm = j ? 'ĵ' : 'î';
+        const m = new RegExp(`^B sends A${nm} = ${V} to ⟨${F}·${F} \\+ ${F}·${F}, ${F}·${F} \\+ ${F}·${F}⟩ = ${V}: (.*)$`).exec(L[1 + j]);
+        if (!m) { fail('undo', key, `${nm}'s line reads: ${L[1 + j]}`); return null; }
+        const N = m.slice(1, 13).map(num), [x, y] = cols[j];
+        if (N[0] !== x || N[1] !== y) fail('undo', key, `A${nm} is not A's column`);
+        if (N[2] !== B[0][0] || N[3] !== x || N[4] !== B[0][1] || N[5] !== y || N[6] !== B[1][0] || N[7] !== x || N[8] !== B[1][1] || N[9] !== y)
+          fail('undo', key, `${nm}'s sums do not use B's rows and A${nm}: ${L[1 + j]}`);
+        if (![4, 5, 6, 8, 9, 10].every(k => br(m[k])) || /\(/.test(m[3]) || /\(/.test(m[7]))
+          fail('undo', key, `${nm}'s factors are bracketed wrongly: ${L[1 + j]}`);
+        const e = [B[0][0] * x + B[0][1] * y, B[1][0] * x + B[1][1] * y];
+        if (N[10] !== e[0] || N[11] !== e[1] || N[2] * N[3] + N[4] * N[5] !== N[10] || N[6] * N[7] + N[8] * N[9] !== N[11]) fail('undo', key, `${nm}'s sum is wrong: ${L[1 + j]}`);
+        const home = e[0] === (j ? 0 : 1) && e[1] === (j ? 1 : 0);
+        if (m[13] !== (home ? `${nm} is back home.` : `${nm} should come back to ${j ? '⟨0, 1⟩' : '⟨1, 0⟩'}.`)) fail('undo', key, `${nm}'s verdict reads: ${m[13]}`);
+        return home;
+      });
+      if (ends.includes(null)) continue;
+      const both = ends[0] && ends[1];
+      if (both !== U.undone()) fail('undo', key, 'undone() disagrees with the arrows');
+      if (both) undoers.push(B);
+      if (!d) {
+        const z = (/and ⟨(−?\d+), (−?\d+)⟩ lands on ⟨0, 0⟩/.exec(L[3]) || []).slice(1).map(num);
+        if (L.length !== 4 || !/^det A = 1·4 − 2·2 = 0: /.test(L[3]) || z.length !== 2 || (!z[0] && !z[1]) || A[0][0] * z[0] + A[0][1] * z[1] || A[1][0] * z[0] + A[1][1] * z[1])
+          fail('undo', key, `the squash is not explained: ${L[3]}`);
+      } else if (both) {
+        const own = A.every((r, i) => r.every((x, j) => x === B[i][j]));
+        if (L.length !== 4 || L[3] !== `Both are home, so BA = I and B undoes A: B is A⁻¹, with rows ${B[0].map(x => x < 0 ? '−' + -x : x).join(', ')} and ${B[1].map(x => x < 0 ? '−' + -x : x).join(', ')}.${own ? ' A is its own undo: doing it twice puts everything back.' : ''}`)
+          fail('undo', key, `the undo is not said: ${L[3]}`);
+      } else if (L.length !== 4 || !/^Not yet: B undoes A only when both arrows come home\./.test(L[3])) fail('undo', key, `not yet is not said: ${L[3]}`);
+      for (const g of U.GOALS) if (g.ok(U)) found[g.id] = found[g.id] || key;
+    }
+    if (!d && undoers.length) fail('undo', M.btn, 'a B undoes the squash');
+    if (d && (undoers.length !== 1 || undoers[0].join() !== inv.join())) fail('undo', M.btn, `the B that undoes it is not exactly the inverse ${inv.join(';')}`);
+  });
+  for (const g of U.GOALS) if (!found[g.id]) fail('undo', g.id, 'this goal cannot be found');
+  U.mi = 0; U.B = [[1, 0], [0, 1]]; U.moved = false; U.touched = false; U.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2336,6 +2399,7 @@ console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 
 console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
 console.log(`  span workshop states       ${pad(spanNotes.n.toLocaleString(), 10)}  (a·u + b·v, the target, what the pair spans, ${spanNotes.goals} goals findable)`);
 console.log(`  elimination states         ${pad(elimNotes.n.toLocaleString(), 10)}  (each row operation redone, worked, the crossing kept, ${elimNotes.goals} goals findable)`);
+console.log(`  undo workshop states       ${pad(undoNotes.n.toLocaleString(), 10)}  (î and ĵ followed through A and B, the one inverse, ${undoNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
