@@ -65,6 +65,7 @@ function loadGame() {
     ';const Kernel={' + script.slice(script.indexOf("  SETS:[\n    {id:'flat', btn:'Flat'"), script.indexOf("  open(){ UI.go('s-null'); },")) + '};exports.Kernel=Kernel;' +
     ';const Gram={' + script.slice(script.indexOf("  SETS:[\n    {id:'tilt', btn:'Tilted'"), script.indexOf("  open(){ UI.go('s-gram'); },")) + '};exports.Gram=Gram;' +
     ';const Geo={' + script.slice(script.indexOf("  SETS:[\n    {id:'half', btn:'Halves'"), script.indexOf("  open(){ UI.go('s-geo'); },")) + '};exports.Geo=Geo;' +
+    ';const Bend={' + script.slice(script.indexOf("  SETS:[\n    {id:'s', btn:'S-curve'"), script.indexOf("  open(){ UI.go('s-bend'); },")) + '};exports.Bend=Bend;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -83,7 +84,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2678,6 +2679,114 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The bend workshop: every curve at every point. Each curve's f′ and f″ are
+   worked here from its own coefficients, every sentence is rebuilt from them,
+   the slope half a step either side must move the way f″ says, a point where
+   the slope is the same both sides must be its lowest, the curve must really
+   sit above or below its tangent where the readout says, the drawing must put
+   the curve, the point and the tangent where they belong, and every goal is
+   rebuilt here. */
+const bendNotes = (() => {
+  const B = Bend;
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; return ng(Object.is(q, -0) ? 0 : q); };
+  const ex = v => Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10;
+  const C = { s: [0, -3, 0, 1], shift: [0, 0, -1, 1 / 3], flat: [0, 0, 0, 0, 1 / 4] };
+  const W = { s: ['x³ − 3x', '3x² − 3', '6x'], shift: ['x³/3 − x²', 'x² − 2x', '2x − 2'], flat: ['x⁴/4', 'x³', '3x²'] };
+  const dv = c => c.slice(1).map((a, i) => a * (i + 1));
+  const ev = (c, x) => { const v = c.reduce((t, a, i) => t + a * x ** i, 0), q = Math.round(v * 1e9) / 1e9; return Object.is(q, -0) ? 0 : q; };
+  if (B.SETS.map(S => S.id).join() !== 's,shift,flat') fail('bend', 'sets', B.SETS.map(S => S.id).join());
+  if (B.X.join() !== '-2,-1.5,-1,-0.5,0,0.5,1,1.5,2') fail('bend', 'steps', B.X.join());
+  B.touched = false; B.si = 0; B.k = B.START;
+  for (const g of B.GOALS) if (g.ok(B)) fail('bend', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {}, cols = { up: new Set(), down: new Set(), zero: new Set() };
+  B.SETS.forEach((S, si) => {
+    const c0 = C[S.id], c1 = dv(c0), c2 = dv(c1);
+    if (S.fs !== W[S.id][0] || S.d1s !== W[S.id][1] || S.d2s !== W[S.id][2]) fail('bend', S.id, 'the formulas it shows are not this curve\'s');
+    for (let t = -3; t <= 3; t += 0.25)
+      if (Math.abs(S.f(t) - ev(c0, t)) > 1e-9 || Math.abs(S.d1(t) - ev(c1, t)) > 1e-9 || Math.abs(S.d2(t) - ev(c2, t)) > 1e-9)
+        fail('bend', S.id, `f, f′ or f″ is wrong at x = ${t}`);
+    B.si = si;
+    B.X.forEach((x, k) => {
+      B.k = k; n++;
+      const key = `${S.id} x=${x}`, X = num(x), L = num(x - 0.5), R = num(x + 0.5);
+      const y = ev(c0, x), s = ev(c1, x), c = ev(c2, x), lo = ev(c1, x - 0.5), hi = ev(c1, x + 0.5);
+      if (B.f1() !== s || B.f2() !== c) fail('bend', key, `reads f′ ${B.f1()} and f″ ${B.f2()}, worked here ${s} and ${c}`);
+      if (c !== 0 && Math.sign(hi - lo) !== Math.sign(c)) fail('bend', key, 'the slope half a step either side moves against f″');
+      if (hi === lo && !(s < lo)) fail('bend', key, 'the slope is the same both sides but is not lowest here');
+      // the curve really is above or below its tangent near the point, as f″ says
+      for (const d of [-0.9, -0.45, 0.45, 0.9]) {
+        const t = x + d; if (t < B.D[0] || t > B.D[1]) continue;
+        const gap = ev(c0, t) - (y + s * d);
+        if (c !== 0 && Math.sign(gap) !== Math.sign(c)) fail('bend', key, `the curve is on the wrong side of its tangent at x = ${t}`);
+      }
+      const a2 = ev(c2, x - 0.5), b2 = ev(c2, x + 0.5), flip = c === 0 && a2 * b2 < 0;
+      if (B.infl() !== flip) fail('bend', key, `reads ${B.infl() ? 'a flip' : 'no flip'}, worked here ${flip ? 'a flip' : 'no flip'}`);
+      const want = [
+        `f(x) = ${W[S.id][0]}, so its slope is f′(x) = ${W[S.id][1]}, and the slope of that, f″(x) = ${W[S.id][2]}, says how fast the slope itself is changing.`,
+        `At x = ${X}: f(${X}) ${ex(y) ? '=' : '≈'} ${num(y)}, the tangent's slope is f′(${X}) = ${num(s)}, and f″(${X}) = ${num(c)}.`,
+        `Half a step either side, the slope goes from f′(${L}) = ${num(lo)} to f′(${R}) = ${num(hi)}` +
+          (hi > lo ? ': it is rising.' : hi < lo ? ': it is falling.' : `, the same both sides, while f′(${X}) = ${num(s)} is lower than either: the slope bottoms out right here and turns from falling to rising.`),
+        c > 0 ? `f″(${X}) = ${num(c)} is more than 0, which says the same in one number: the curve bends up like a cup and sits above its tangent.`
+        : c < 0 ? `f″(${X}) = ${num(c)} is less than 0, which says the same in one number: the curve bends down like a cap and sits below its tangent.`
+        : flip ? `f″(${X}) = 0, and half a step either side f″(${L}) = ${num(a2)} and f″(${R}) = ${num(b2)} have opposite signs: the bend flips from ${a2 < 0 ? 'cap to cup' : 'cup to cap'} here. That is an inflection point, and the tangent crosses the curve.`
+        : `f″(${X}) = 0, but half a step either side f″(${L}) = ${num(a2)} and f″(${R}) = ${num(b2)} are both ${a2 > 0 ? 'more' : 'less'} than 0: the curve bends ${a2 > 0 ? 'up' : 'down'} on both sides, so this is not an inflection point. f″ = 0 says where to look, not that the bend flips.`
+      ];
+      if (s === 0) want.push(c !== 0
+        ? `The tangent is flat and the curve bends ${c < 0 ? 'down' : 'up'} away from it, so this is a ${c < 0 ? 'hilltop, a local maximum' : 'valley floor, a local minimum'}. Reading f″ at a flat tangent like this is the second derivative test.`
+        : (() => { const fl = ev(c0, x - 0.5), fr = ev(c0, x + 0.5), up = fl > y && fr > y, dn = fl < y && fr < y;
+            return `The tangent is flat here too, and with f″ = 0 the second derivative test cannot tell a hilltop from a valley floor, so look either side: f(${L}) ${ex(fl) ? '=' : '≈'} ${num(fl)} and f(${R}) ${ex(fr) ? '=' : '≈'} ${num(fr)} are ${up ? 'both higher, so this is a valley floor all the same' : dn ? 'both lower, so this is a hilltop all the same' : 'one higher and one lower, so this is neither'}.`; })());
+      if (s === 0) { // a flat tangent: the point really is the top or bottom of its neighbours
+        const nb = [ev(c0, x - 0.25), ev(c0, x + 0.25)];
+        if (c < 0 && !(nb[0] < y && nb[1] < y)) fail('bend', key, 'called a hilltop but it is not');
+        if (c > 0 && !(nb[0] > y && nb[1] > y)) fail('bend', key, 'called a valley floor but it is not');
+      }
+      const got = B.working();
+      if (got.length !== want.length) fail('bend', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('bend', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      if (flip) { // the tangent crosses the curve: one side above, the other below
+        const g1 = ev(c0, x - 0.45) - (y - s * 0.45), g2 = ev(c0, x + 0.45) - (y + s * 0.45);
+        if (!(g1 * g2 < 0)) fail('bend', key, 'the tangent does not cross the curve at the flip');
+      }
+      // the drawing, read back into the curve's own units
+      const svg = B.svg();
+      let ylo = Infinity, yhi = -Infinity;
+      for (let i = 0; i <= 90; i++) { const v = ev(c0, B.D[0] + (B.D[1] - B.D[0]) * i / 90); ylo = Math.min(ylo, v); yhi = Math.max(yhi, v); }
+      const pad = (yhi - ylo) * 0.08; ylo -= pad; yhi += pad;
+      const UX = px => B.D[0] + (px - 20) / 320 * (B.D[1] - B.D[0]), UY = py => ylo + (188 - py) / 176 * (yhi - ylo);
+      const tol = (yhi - ylo) / 176 * 0.02 + 1e-6;
+      const pl = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!pl) fail('bend', key, 'no curve');
+      else for (const pt of pl[1].split(' ')) { const [px, py] = pt.split(',').map(Number);
+        if (Math.abs(UY(py) - ev(c0, UX(px))) > tol * 3 + 0.0005 * (yhi - ylo)) { fail('bend', key, `the curve is off at x = ${UX(px)}`); break; } }
+      const ptm = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+      if (!ptm || Math.abs(UX(+ptm[1]) - x) > 0.001 || Math.abs(UY(+ptm[2]) - y) > tol * 2) fail('bend', key, 'the gold point is not at (x, f(x))');
+      const tn = svg.match(/data-k="tan" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)" stroke="([^"]+)"/);
+      if (!tn) fail('bend', key, 'no tangent');
+      else {
+        const [x1, y1, x2, y2] = tn.slice(1, 5).map(v => +v);
+        if (Math.abs(UX(x1) - Math.max(x - 0.9, B.D[0])) > 0.001 || Math.abs(UX(x2) - Math.min(x + 0.9, B.D[1])) > 0.001) fail('bend', key, 'the tangent does not run 0.9 either side');
+        for (const [qx, qy] of [[x1, y1], [x2, y2]]) if (Math.abs(UY(qy) - (y + s * (UX(qx) - x))) > tol * 3) fail('bend', key, 'the tangent does not have the slope f′(x) through the point');
+        cols[c > 0 ? 'up' : c < 0 ? 'down' : 'zero'].add(tn[5]);
+      }
+      B.touched = true;
+      const meant = { top: si === 0 && s === 0 && c < 0, floor: si === 0 && s === 0 && c > 0, flip: si === 0 && flip, shift: si === 1 && flip, fake: si === 2 && c === 0 && !flip };
+      if (si === 0 && flip !== (x === 0)) fail('bend', key, 'the S-curve should flip at 0 and only there');
+      if (si === 1 && flip !== (x === 1)) fail('bend', key, 'the shifted curve should flip at 1 and only there');
+      for (const gl of B.GOALS) {
+        if (!!gl.ok(B) !== meant[gl.id]) fail('bend', key, `goal ${gl.id} is ${gl.ok(B) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(B)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const w in cols) if (cols[w].size !== 1) fail('bend', 'colours', `the ${w} tangent is not one colour`);
+  if (new Set([...cols.up, ...cols.down, ...cols.zero]).size !== 3) fail('bend', 'colours', 'up, down and f″ = 0 tangents must differ');
+  for (const g of B.GOALS) if (!found[g.id]) fail('bend', g.id, 'this goal cannot be found');
+  B.si = 0; B.k = B.START; B.touched = false; B.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The geometric series workshop: every series at every number of terms.
    The terms and running totals are worked here in exact fractions, the gap
    to a/(1 − r) must be a·rⁿ/(1 − r) and shrink by the factor r each term as
@@ -3415,6 +3524,7 @@ console.log(`  ladder positions         ${pad(ladderNotes.n.toLocaleString(), 10
 console.log(`  null space arrows        ${pad(kernelNotes.n.toLocaleString(), 10)}  (each Av worked row by row, the crushed arrows found by brute force and on one line, every rank-1 Av on its column space, both arrows drawn at their values, ${kernelNotes.goals} goals findable)`);
 console.log(`  gram–schmidt steps       ${pad(gramNotes.n.toLocaleString(), 10)}  (w and w · u₁ worked at every c, one perpendicular c per pair and it is the shadow and the shortest w, every arrow drawn at its value, ${gramNotes.goals} goals findable)`);
 console.log(`  geometric series sums   ${pad(geoNotes.n.toLocaleString(), 10)}  (every running total in exact fractions, the gap a·rⁿ/(1 − r) shrinking by r each term, the staircase bars from total to total, ${geoNotes.goals} goals findable)`);
+console.log(`  bend points             ${pad(bendNotes.n.toLocaleString(), 10)}  (f′ and f″ from each curve's own coefficients, the slope either side moving as f″ says, the curve on the side of its tangent the readout names, the drawing read back, ${bendNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

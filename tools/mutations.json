@@ -1,193 +1,186 @@
 {
- "change": "The Geometric Series Workshop: an endless sum",
+ "change": "The Bend Workshop: the slope of the slope",
  "mutations": [
   {
-   "name": "a term uses n instead of n − 1 powers",
+   "name": "f″ of the S-curve is 3x",
    "file": "index.html",
-   "find": "  term(k){ const S=this.set(); return S.a*S.p**k/S.q**k; },",
-   "replace": "  term(k){ const S=this.set(); return S.a*S.p**(k+1)/S.q**(k+1); },",
+   "find": "f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>6*x}",
+   "replace": "f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>3*x}",
    "run": "verify"
   },
   {
-   "name": "the running total skips the last term",
+   "name": "f′ of the shifted curve loses its 2",
    "file": "index.html",
-   "find": "S(m=this.n){ let t=0; for(let k=0;k<m;k++) t+=this.term(k); return t; },",
-   "replace": "S(m=this.n){ let t=0; for(let k=0;k<m-1;k++) t+=this.term(k); return t; },",
+   "find": "d1:x=>x*x-2*x, d2:x=>2*x-2}",
+   "replace": "d1:x=>x*x-x, d2:x=>2*x-2}",
    "run": "verify"
   },
   {
-   "name": "the endless sum is a(1 − r)",
+   "name": "the shown f″ is not the curve's",
    "file": "index.html",
-   "find": "  total(){ return this.set().a/(1-this.r()); },",
-   "replace": "  total(){ return this.set().a*(1-this.r()); },",
+   "find": "d1s:'x² − 2x', d2s:'2x − 2',",
+   "replace": "d1s:'x² − 2x', d2s:'2x',",
    "run": "verify"
   },
   {
-   "name": "the endless sum loses the sign of r",
+   "name": "the flip needs no sign change",
    "file": "index.html",
-   "find": "  total(){ return this.set().a/(1-this.r()); },",
-   "replace": "  total(){ return this.set().a/(1-Math.abs(this.r())); },",
+   "find": "return this.f2()===0 && this.f2(x-0.5)*this.f2(x+0.5)<0; },",
+   "replace": "return this.f2()===0; },",
    "run": "verify"
   },
   {
-   "name": "r = 1 counts as converging",
+   "name": "rising and falling swap",
    "file": "index.html",
-   "find": "  conv(){ return Math.abs(this.r())<1; },",
-   "replace": "  conv(){ return Math.abs(this.r())<=2; },",
+   "find": "(hi>lo ? `: it is rising.` : hi<lo ? `: it is falling.`",
+   "replace": "(hi<lo ? `: it is rising.` : hi>lo ? `: it is falling.`",
    "run": "verify"
   },
   {
-   "name": "the swinging series does not swing",
+   "name": "a cup sits below its tangent",
    "file": "index.html",
-   "find": "{id:'swing', btn:'Swinging', a:1, p:-1, q:2}",
-   "replace": "{id:'swing', btn:'Swinging', a:1, p:1, q:2}",
+   "find": "the curve bends up like a cup and sits above its tangent.`);",
+   "replace": "the curve bends up like a cup and sits below its tangent.`);",
    "run": "verify"
   },
   {
-   "name": "the fraction is not reduced",
+   "name": "the flip names the wrong way round",
    "file": "index.html",
-   "find": "const g=gcd(n,d); n/=g; d/=g; return d===1",
-   "replace": "const g=1; n/=g; d/=g; return d===1",
+   "find": "${a<0?'cap to cup':'cup to cap'}",
+   "replace": "${a>0?'cap to cup':'cup to cap'}",
    "run": "verify"
   },
   {
-   "name": "the alternating terms read + −",
+   "name": "hilltop and valley floor swap",
    "file": "index.html",
-   "find": "(t[0]==='−' ? ' − '+t.slice(1) : ' + '+t)",
-   "replace": "(' + '+t)",
+   "find": "${c<0?'hilltop, a local maximum':'valley floor, a local minimum'}",
+   "replace": "${c>0?'hilltop, a local maximum':'valley floor, a local minimum'}",
    "run": "verify"
   },
   {
-   "name": "a rounded total reads as exact",
+   "name": "a rounded height reads as exact",
    "file": "index.html",
-   "find": "return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },",
-   "replace": "return '= '+this.num(v,d); },",
+   "find": "return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },\n  /* the readout as plain sentences, so the checks read what the player reads */\n  working(){\n    const S=this.set(), x=this.x()",
+   "replace": "return '= '+this.num(v,d); },\n  /* the readout as plain sentences, so the checks read what the player reads */\n  working(){\n    const S=this.set(), x=this.x()",
    "run": "verify"
   },
   {
-   "name": "a tiny gap reads as 0",
+   "name": "the tangent has twice the slope",
    "file": "index.html",
-   "find": "by = G<0.00005 ? 'less than 0.0001' : ",
-   "replace": "by = false ? 'less than 0.0001' : ",
+   "find": "y2=\"${PY(y+s*(t1-x)).toFixed(2)}\"",
+   "replace": "y2=\"${PY(y+2*s*(t1-x)).toFixed(2)}\"",
    "run": "verify"
   },
   {
-   "name": "over and short swap",
+   "name": "the tangent misses the point",
    "file": "index.html",
-   "find": "`${by} ${g>0?'short of':'over'} it`",
-   "replace": "`${by} ${g<0?'short of':'over'} it`",
+   "find": "y1=\"${PY(y+s*(t0-x)).toFixed(2)}\"",
+   "replace": "y1=\"${PY(s*(t0-x)).toFixed(2)}\"",
    "run": "verify"
   },
   {
-   "name": "the 0.01 test is too loose",
+   "name": "the tangent is always green",
    "file": "index.html",
-   "find": "      out.push(Math.abs(g)<=0.01\n",
-   "replace": "      out.push(Math.abs(g)<=0.1\n",
+   "find": "const col = c>0 ? FIG_COL.c : c<0 ? FIG_COL.d : FIG_COL.b;",
+   "replace": "const col = FIG_COL.c;",
    "run": "verify"
   },
   {
-   "name": "the half goal takes any total",
+   "name": "the point sits on the axis",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.conv() && Math.abs(K.gap())<=0.01},",
-   "replace": "ok:K=>K.si===0},",
+   "find": "cy=\"${PY(y).toFixed(2)}\" r=\"5\"",
+   "replace": "cy=\"${PY(0).toFixed(2)}\" r=\"5\"",
    "run": "verify"
   },
   {
-   "name": "the run goal takes 100",
+   "name": "the curve is drawn to the wrong height",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.S()>1000}",
-   "replace": "ok:K=>K.si===3 && K.S()>100}",
+   "find": "const pad=(hi-lo)*0.08; return [lo-pad, hi+pad];",
+   "replace": "const pad=(hi-lo)*0.08; return [lo-pad, hi+2*pad];",
    "run": "verify"
   },
   {
-   "name": "a bar starts at 0",
+   "name": "the hilltop takes any cap",
    "file": "index.html",
-   "find": "w=Math.max(Math.abs(X(b)-X(a)),0.5), x=Math.min(X(a),X(b),340-w)",
-   "replace": "w=Math.max(Math.abs(X(b)-X(0)),0.5), x=Math.min(X(0),X(b),340-w)",
+   "find": "ok:K=>K.si===0 && K.f1()===0 && K.f2()<0},",
+   "replace": "ok:K=>K.si===0 && K.f2()<0},",
    "run": "verify"
   },
   {
-   "name": "a bar going back keeps the adding colour",
+   "name": "the fake goal takes any point",
    "file": "index.html",
-   "find": "fill=\"${b>=a?FIG_COL.a:FIG_COL.d}\"",
-   "replace": "fill=\"${FIG_COL.a}\"",
+   "find": "ok:K=>K.si===2 && K.f2()===0}",
+   "replace": "ok:K=>K.si===2}",
    "run": "verify"
   },
   {
-   "name": "the gold line stands at the last total",
+   "name": "the shifted goal is on the S-curve",
    "file": "index.html",
-   "find": "if(this.conv()){ const t=X(this.total()).toFixed(2);",
-   "replace": "if(this.conv()){ const t=X(this.S()).toFixed(2);",
+   "find": "ok:K=>K.si===1 && K.infl()},",
+   "replace": "ok:K=>K.si===0 && K.infl()},",
    "run": "verify"
   },
   {
-   "name": "the picture stops fitting the endless sum",
+   "name": "a new curve keeps the old point",
    "file": "index.html",
-   "find": "    if(this.conv()) hi=Math.max(hi,this.total());\n",
-   "replace": "",
-   "run": "verify"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveX",
+   "run": "play:bend"
   },
   {
-   "name": "a new series keeps the old count",
+   "name": "the caption forgets the colours",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },",
-   "run": "play:geo"
-  },
-  {
-   "name": "the caption forgets the gold line",
-   "file": "index.html",
-   "find": "${this.conv()?' The gold dashed line is the endless sum.':' Redrawn to fit as it grows.'}",
-   "replace": "${this.conv()?'':' Redrawn to fit as it grows.'}",
-   "run": "play:geo"
+   "find": "green where the curve bends up, red where it bends down, and gold where f″ = 0.</div>`;",
+   "replace": "</div>`;",
+   "run": "play:bend"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:geo"
+   "find": "'MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:bend"
   },
   {
    "name": "the stepper never stops",
    "file": "index.html",
-   "find": "    document.getElementById('gnNHi').disabled=this.n>=this.N;\n",
+   "find": "    document.getElementById('bdXHi').disabled=this.k>=this.X.length-1;\n",
    "replace": "",
-   "run": "play:geo"
+   "run": "play:bend"
   },
   {
-   "name": "one term reads as plural",
+   "name": "the stepper hides x",
    "file": "index.html",
-   "find": "document.getElementById('gnN').textContent=`${this.n} term${this.n>1?'s':''}`;",
-   "replace": "document.getElementById('gnN').textContent=`${this.n} terms`;",
-   "run": "play:geo"
+   "find": "document.getElementById('bdX').textContent=`x = ${this.num(this.x())}`;",
+   "replace": "document.getElementById('bdX').textContent=`${this.num(this.x())}`;",
+   "run": "play:bend"
   },
   {
-   "name": "the series buttons lose their names",
+   "name": "the curve buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Geo.pick(${i})\" aria-label=\"${s.btn}: start at ${s.a}, r = ${this.fr(s.p,s.q)}\">",
-   "replace": "onclick=\"Geo.pick(${i})\">",
-   "run": "play:geo"
+   "find": "onclick=\"Bend.pick(${i})\" aria-label=\"${s.btn}: f(x) = ${s.fs}\">",
+   "replace": "onclick=\"Bend.pick(${i})\">",
+   "run": "play:bend"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"${this.n} term",
-   "replace": "role=\"img\" data-x=\"${this.n} term",
-   "run": "play:geo"
+   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} in blue",
+   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} in blue",
+   "run": "play:bend"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeGeo\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeGeoX\"",
-   "run": "play:geo"
+   "find": "<button class=\"btn sm\" id=\"tomeBend\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeBendX\"",
+   "run": "play:bend"
   },
   {
-   "name": "geometric series points nowhere",
+   "name": "inflection points point nowhere",
    "file": "index.html",
-   "find": "    Geo:     [\"🧮 Geometric Series Workshop\", ['geoSeries']],",
-   "replace": "    Geo:     [\"🧮 Geometric Series Workshop\", ['geoSerie']],",
+   "find": "    Bend:    [\"〰️ Bend Workshop\", ['secondDeriv','inflection']],",
+   "replace": "    Bend:    [\"〰️ Bend Workshop\", ['secondDeriv','inflexion']],",
    "run": "verify"
   }
  ]
