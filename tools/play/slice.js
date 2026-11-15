@@ -41,7 +41,7 @@ module.exports = {
     t.ok('and the slice area for every x', /the slice area is S\(x\) = 4\.5x\./.test(r), r);
     t.ok('and what is swept so far', /Swept from x = 0 to 0\.5: ∫ S\(x\) dx from 0 to 0\.5 = 0\.5625\./.test(r), r);
     t.eq('the stepper reads the held variable', await shown(t), 'x = 0.5');
-    t.eq('the caption says what is drawn', await cap(t), 'Left, the rectangle from above, darker where f is taller, with the slice as a gold line and the part swept so far in gold. Right, each slice\'s area S against where it is cut, with the swept area under it.');
+    t.eq('the caption says what is drawn', await cap(t), 'Left, the rectangle from above, a deeper blue where f is taller, with the slice as a gold line and the part swept so far in gold. Right, each slice\'s area S against where it is cut, with the swept area under it.');
     t.eq('nothing is found before anything is turned', await found(t), []);
 
     // --- a slice of nothing ---
