@@ -3087,7 +3087,7 @@ const chainPickNotes = (() => {
   const supT = n => String(n).replace(/\d/g, d => SUPS[d]);
   const fu = c => ({ pow: 'u' + supT(c.n), sin: 'sin u', cos: 'cos u', exp: 'eᵘ' })[c.fam];
   const fpu = c => ({ pow: c.n === 2 ? '2u' : `${c.n}u${supT(c.n - 1)}`, sin: 'cos u', cos: '−sin u', exp: 'eᵘ' })[c.fam];
-  const read = () => txt(S.html().split('id="cpRead"')[1].replace(/^[^>]*>/, ''));
+  const read = () => txt(S.html().split('id="chpRead"')[1].replace(/^[^>]*>/, ''));
   const num = v => { const r = Math.round(v * 100) / 100; return ng(Object.is(r, -0) ? 0 : r); };
   if (S.RULE !== 'The chain rule: if y = f(u) with u = g(x), then dy/dx = f′(u) × g′(x). Take the outer slope at the inside, u = g(x), then multiply by the inner slope. Which formula is dy/dx?') fail('chainpick', 'rule', 'the rule is not stated');
   if (S.round !== null || S.matched !== 0) fail('chainpick', 'open', 'a round is dealt before the mode is opened');
@@ -3135,7 +3135,7 @@ const chainPickNotes = (() => {
       if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'ABCD'[i] || m[8] !== texts[i])) fail('chainpick', key, 'the four formulas are not offered as they are, A to D');
       // the picture, read back off its own ticks
       const pic = h => {
-        const svg = h.split('id="cpFig"')[1].split('</svg>')[0];
+        const svg = h.split('id="chpFig"')[1].split('</svg>')[0];
         const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10" fill="[^"]+" text-anchor="middle"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1], +m[2].replace('−', '-')]);
         const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1] - 3, +m[2].replace('−', '-')]);
         return { svg, xt, yt };
@@ -3599,6 +3599,30 @@ const quotPickNotes = (() => {
   if (slots.size !== 4) fail('quotpick', 'deal', `the right formula only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
   if (fives !== 30) fail('quotpick', 'banner', `five slopes were picked ${fives} times, not 30`);
   return { rounds, misses, lines };
+})();
+
+/* One id, one element. The page looks every panel up by its id, so two
+   elements that share one id mean the second is never found: whichever comes
+   first in the page gets written to, even when it sits on a screen that is
+   shut. Every id written in the file, in the page itself or in the HTML a
+   script builds, is counted here. The only ids allowed twice are the ones
+   whose copies are alternatives that fill the same slot, so only one of them
+   is ever on the page: the lesson's figure and its Continue button, the two
+   Try again buttons, the lock's answer box and the hero's main button. */
+const idNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const ALT = { afig: 2, contBtn: 2, tryAgain: 2, lockOut: 8, heroGo: 4 };
+  const seen = {};
+  for (const m of html.matchAll(/\bid="([A-Za-z][\w-]*)"/g)) seen[m[1]] = (seen[m[1]] || 0) + 1;
+  let ids = 0;
+  for (const [id, n] of Object.entries(seen)) {
+    ids++;
+    if (n > 1 && ALT[id] !== n) fail('ids', id, `the id ${id} is written ${n} times, so the page may write into the wrong one`);
+  }
+  for (const id of Object.keys(ALT)) if (!seen[id]) fail('ids', id, `the alternative id ${id} is gone, so the list of alternatives is stale`);
+  // the eigenvalue detective and the chain rule's which-dy/dx keep apart
+  for (const id of ['cpFig', 'cpRead']) if (seen[id] !== 1) fail('ids', id, `${id} is not the eigenvalue detective's alone`);
+  return { ids };
 })();
 
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
@@ -7339,6 +7363,7 @@ console.log(`  integrals picked  ${pad(intPickNotes.rounds.toLocaleString(), 15)
 console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${chainPickNotes.misses.toLocaleString()} wrong picks explained; ${chainPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
+console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);

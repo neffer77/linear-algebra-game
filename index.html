@@ -17378,8 +17378,8 @@ const ChainPick = {
     let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
     out+=`<div style="text-align:center;font-size:17px;margin-bottom:2px">y = ${this.yText(c)}</div>`;
     const outs=[...r.out].sort();
-    out+=`<svg id="cpFig" viewBox="0 0 300 180" style="width:100%;height:auto;display:block" role="img" aria-label="The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}">${this.panel(c,300,180)}</svg>`;
-    out+=`<div id="cpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+    out+=`<svg id="chpFig" viewBox="0 0 300 180" style="width:100%;height:auto;display:block" role="img" aria-label="The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}">${this.panel(c,300,180)}</svg>`;
+    out+=`<div id="chpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
       const gone=r.out.has(i), t=this.text(c,o.k);
       return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="ChainPick.choose(${i})" aria-label="${'ABCD'[i]}: dy/dx = ${t}${gone?'. Not the chain rule':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${t}</button>`;
     }).join('')+`</div>`;
@@ -17387,7 +17387,7 @@ const ChainPick = {
     if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
     else if(this.last) lines.push('That was it: '+this.work(this.last.c)+' Here is a new curve.');
     lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
-    out+=`<div id="cpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=`<div id="chpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
     return out;
   }
 };
