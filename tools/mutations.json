@@ -1,117 +1,117 @@
 {
- "change": "The Best Fit Workshop: the line that misses least",
+ "change": "The Newton's Method Workshop: a tangent's road to a root",
  "mutations": [
   {
-   "name": "a miss is the line minus the point",
+   "name": "the derivative forgets the power",
    "file": "index.html",
-   "find": "misses(mh=this.mh, ch=this.ch){ return this.P().map(([x,y])=>y-this.at(x,mh,ch)); },",
-   "replace": "misses(mh=this.mh, ch=this.ch){ return this.P().map(([x,y])=>this.at(x,mh,ch)-y); },",
+   "find": "fp(x){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*p*Math.pow(x,p-1):0),0); },",
+   "replace": "fp(x){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*Math.pow(x,p-1):0),0); },",
    "run": "verify"
   },
   {
-   "name": "the total adds sizes, not squares",
+   "name": "a step adds f/f′ instead of taking it away",
    "file": "index.html",
-   "find": "sse(mh=this.mh, ch=this.ch){ return this.misses(mh,ch).reduce((s,r)=>s+r*r,0); },",
-   "replace": "sse(mh=this.mh, ch=this.ch){ return this.misses(mh,ch).reduce((s,r)=>s+Math.abs(r),0); },",
+   "find": "xs.push(x-this.f(x)/d);",
+   "replace": "xs.push(x+this.f(x)/d);",
    "run": "verify"
   },
   {
-   "name": "the best line is sought at this c only",
+   "name": "a root counts from twice as far",
    "file": "index.html",
-   "find": "for(let ch=this.CLO; ch<=this.CHI; ch++) lo=Math.min(lo, this.sse(mh,ch));",
-   "replace": "for(let ch=this.ch; ch<=this.ch; ch++) lo=Math.min(lo, this.sse(mh,ch));",
+   "find": "rootAt(x){ return this.curve().roots.find(([r])=>Math.abs(x-r)<5e-5); },",
+   "replace": "rootAt(x){ return this.curve().roots.find(([r])=>Math.abs(x-r)<1e-4); },",
    "run": "verify"
   },
   {
-   "name": "the average point divides by one too few",
+   "name": "= is written for a rounded number",
    "file": "index.html",
-   "find": "yb=P.reduce((s,p)=>s+p[1],0)/n;",
-   "replace": "yb=P.reduce((s,p)=>s+p[1],0)/(n-1);",
+   "find": "eq(x, sure=true){ return sure && this.exact(x) ? '=' : '≈'; },",
+   "replace": "eq(x, sure=true){ return this.exact(x) ? '=' : '≈'; },",
    "run": "verify"
   },
   {
-   "name": "a negative height is not bracketed",
+   "name": "a negative f′ is not bracketed",
    "file": "index.html",
-   "find": "par(n){ return n<0 ? `(${this.num(n)})` : this.num(n); },",
-   "replace": "par(n){ return this.num(n); },",
+   "find": "par(x){ const t=this.num(x); return t.startsWith('−') ? '('+t+')' : t; },",
+   "replace": "par(x){ return this.num(x); },",
    "run": "verify"
   },
   {
-   "name": "the line reads + − for a negative c",
+   "name": "the loop names the last guess",
    "file": "index.html",
-   "find": "c<0 ? ' − '+this.num(-c) : '');",
-   "replace": "c<0 ? ' + '+this.num(c) : '');",
+   "find": "${s(lp[1])} ${this.eq(xs[lp[1]],ok[lp[1]])} ${this.num(xs[lp[1]])} is back where",
+   "replace": "${s(lp[1])} ${this.eq(X,ok[n])} ${this.num(X)} is back where",
    "run": "verify"
   },
   {
-   "name": "m down reports m up's total",
+   "name": "the jump is told on the cubic too",
    "file": "index.html",
-   "find": "nb.push(`m down gives ${this.num(this.sse(this.mh-1,this.ch))}`);",
-   "replace": "nb.push(`m down gives ${this.num(this.sse(this.mh+1,this.ch))}`);",
+   "find": "if(C.up && j){",
+   "replace": "if(j){",
    "run": "verify"
   },
   {
-   "name": "the far point's tilt is told on the scatter",
+   "name": "six steps is never the end",
    "file": "index.html",
-   "find": "(this.si===2 ? ` The far point at",
-   "replace": "(this.si===1 ? ` The far point at",
+   "find": "(n<this.NMAX ? ': take a step to go there.' : ', but six steps is as far as this goes.'));",
+   "replace": "': take a step to go there.');",
    "run": "verify"
   },
   {
-   "name": "a new set puts m and c back",
+   "name": "a new curve puts x₀ back",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.touched=true; this.render(); },",
-   "replace": "pick(i){ this.si=i; this.mh=1; this.ch=0; this.touched=true; this.render(); },",
-   "run": "play:fit"
+   "find": "  open(){ UI.go('s-newton'); },\n  pick(i){ this.ci=i; this.touched=true;",
+   "replace": "  open(){ UI.go('s-newton'); },\n  pick(i){ this.ci=i; this.xh=2; this.touched=true;",
+   "run": "play:newton"
   },
   {
-   "name": "m stops at 1.5",
+   "name": "x₀ stops at 2.5",
    "file": "index.html",
-   "find": "MLO:-4, MHI:4, CLO:-6, CHI:6,",
-   "replace": "MLO:-4, MHI:3, CLO:-6, CHI:6,",
-   "run": "play:fit"
+   "find": "XLO:-6, XHI:6, NMAX:6,",
+   "replace": "XLO:-6, XHI:5, NMAX:6,",
+   "run": "play:newton"
   },
   {
-   "name": "a miss of 0 gets an arrow",
+   "name": "a flat tangent leaves the step button on",
    "file": "index.html",
-   "find": "r[i] ? {v:[0,r[i]], from:[x,this.at(x)]",
-   "replace": "true ? {v:[0,r[i]], from:[x,this.at(x)]",
-   "run": "play:fit"
+   "find": "document.getElementById('nwNHi').disabled=n>=this.NMAX || D===0;",
+   "replace": "document.getElementById('nwNHi').disabled=n>=this.NMAX;",
+   "run": "play:newton"
   },
   {
-   "name": "the caption drops the arrows",
+   "name": "the step count says 1 steps",
    "file": "index.html",
-   "find": "the blue line is ${this.line()}; each red arrow is a miss, from the line to its point.`},",
-   "replace": "the blue line is ${this.line()}.`},",
-   "run": "play:fit"
+   "find": "`${n} step${n===1?'':'s'}`",
+   "replace": "`${n} steps`",
+   "run": "play:newton"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
-   "replace": "else { Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
-   "run": "play:fit"
+   "find": "'ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n",
+   "replace": "'ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }\n    }\n  }\n};\n",
+   "run": "play:newton"
   },
   {
-   "name": "m and c lose their names",
+   "name": "the function buttons lose their names",
    "file": "index.html",
-   "find": "<b aria-label=\"${w}, ${nm[w].slice(0,-2)}: ${this.num(val[w])}\">",
-   "replace": "<b>",
-   "run": "play:fit"
+   "find": "onclick=\"Newton.pick(${i})\" aria-label=\"f(x) = ${c.name}\">",
+   "replace": "onclick=\"Newton.pick(${i})\">",
+   "run": "play:newton"
   },
   {
-   "name": "misses that add to 0 count even on the best line",
+   "name": "a root reached from a root counts",
    "file": "index.html",
-   "find": "ok:F=>F.total()===0 && !F.best()}",
-   "replace": "ok:F=>F.total()===0}",
-   "run": "play:fit"
+   "find": "if(this.touched && n>0 && this.ci===2 && this.f(xs[0])!==0){",
+   "replace": "if(this.touched && n>0 && this.ci===2){",
+   "run": "play:newton"
   },
   {
-   "name": "raising m never stops",
+   "name": "the flat caption is lost",
    "file": "index.html",
-   "find": "hi={m:this.mh>=this.MHI,",
-   "replace": "hi={m:false,",
-   "run": "play:fit"
+   "find": ": D===0 ? 'The dashed tangent at the red point is flat: it runs alongside the axis and never meets it.'",
+   "replace": ": D===0 ? 'The dashed tangent at the red point is flat.'",
+   "run": "play:newton"
   }
  ]
 }

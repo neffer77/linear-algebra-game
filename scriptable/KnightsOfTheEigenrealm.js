@@ -1160,6 +1160,28 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ NEWTON'S METHOD ============ -->
+  <div class="screen" id="s-newton">
+    <div class="panel"><h2>🔎 Newton's Method Workshop</h2><div class="sub">Guess where a curve crosses the axis, then follow the tangent at your guess down to the axis: where it lands is a better guess. Step again and again, and watch a root run down in a few steps, or watch the method go astray.</div></div>
+    <div class="panel">
+      <div id="nwCurves" class="wsModes" role="group" aria-label="Function"></div>
+      <div id="nwFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+        <div class="wsCell"><button id="nwXLo" onclick="Newton.moveX(-1)" aria-label="Move the first guess x₀ left">−</button>
+          <b id="nwX" style="font-size:17px;min-width:0"></b>
+          <button id="nwXHi" onclick="Newton.moveX(1)" aria-label="Move the first guess x₀ right">+</button></div>
+        <div class="wsCell"><button id="nwNLo" onclick="Newton.moveN(-1)" aria-label="Take back a step">−</button>
+          <b id="nwN" style="font-size:17px;min-width:0"></b>
+          <button id="nwNHi" onclick="Newton.moveN(1)" aria-label="Take a step">+</button></div>
+      </div>
+      <div id="nwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="nwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -12421,6 +12443,7 @@ const UI = {
     if(id==='s-slope') Slope.render();
     if(id==='s-area') Area.render();
     if(id==='s-taylor') Taylor.render();
+    if(id==='s-newton') Newton.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13094,6 +13117,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔎 Newton's Method Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever.</div>
+         <button class="btn sm" id="tomeNewton" style="width:auto;margin-top:8px" onclick="Newton.open()">Open the Newton's method workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
@@ -15305,6 +15333,147 @@ const Taylor = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ NEWTON'S METHOD ============
+   A root run down by tangents. From a guess x, the tangent to the curve is
+   followed down to the axis, and where it lands is the next guess. The
+   readout works every step from f and f′ at the guess before it, so the
+   player watches the method close in on a root in a few steps, overshoot
+   one, stall on a flat tangent, or go round in a loop for ever. */
+const Newton = {
+  CURVES:[
+    {id:'sq',   name:'x² − 2',      d:'2x',      f:{poly:[[1,2],[-2,0]]},       up:true,  ylim:[-3,8],
+     roots:[[Math.SQRT2,'√2 ≈ 1.4142'], [-Math.SQRT2,'−√2 ≈ −1.4142']]},
+    {id:'cube', name:'x³ − 2x + 2', d:'3x² − 2', f:{poly:[[1,3],[-2,1],[2,0]]}, up:false, ylim:[-6,8],
+     roots:[[-1.7692923542386314,'≈ −1.7693']]},
+    {id:'two',  name:'x² − 4x + 3', d:'2x − 4',  f:{poly:[[1,2],[-4,1],[3,0]]}, up:true,  ylim:[-2,8],
+     roots:[[1,'1'], [3,'3']]}
+  ],
+  XLO:-6, XHI:6, NMAX:6,   // x₀ runs from −3 to 3 in halves
+  ci:0, xh:2, n:0, touched:false,   // n is the steps asked for; a flat tangent can stop the path sooner
+  done:new Set(), reached:new Set(),
+  GOALS:[
+    {id:'sqrt',  t:'On x² − 2, run √2 down to four places.', toast:'Ran √2 down to four places',
+     ok:N=>N.ci===0 && Math.abs(N.last()-Math.SQRT2)<5e-5},
+    {id:'jump',  t:'On x² − 2, take a step that jumps right past a root.', toast:'Jumped right past a root',
+     ok:N=>N.ci===0 && N.jump()>0},
+    {id:'flat',  t:'Start where the tangent is flat, so there is no next step.', toast:'Found a flat tangent with no next step',
+     ok:N=>N.flat()},
+    {id:'loop',  t:'On x³ − 2x + 2, find a start whose steps go round in a loop.', toast:'Found steps that loop for ever',
+     ok:N=>N.ci===1 && !!N.loop()},
+    {id:'far',   t:'On x³ − 2x + 2, run its one root, near −1.77, down to four places.', toast:'Ran down the root of x³ − 2x + 2',
+     ok:N=>N.ci===1 && !!N.rootAt(N.last())},
+    {id:'both',  t:'On x² − 4x + 3, run down both roots, each from a start that is not a root already.', toast:'Ran down both roots',
+     ok:N=>N.ci===2 && N.reached.size===2}
+  ],
+  curve(){ return this.CURVES[this.ci]; },
+  x0(){ return this.xh/2; },
+  f(x){ return figEval(this.curve().f, x); },
+  // the derivative of a polynomial, term by term: c·xᵖ gives p·c·xᵖ⁻¹
+  fp(x){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*p*Math.pow(x,p-1):0),0); },
+  // the guesses x₀, x₁, … up to n steps, stopping at a flat tangent
+  path(n=this.n){
+    const xs=[this.x0()];
+    while(xs.length-1<n){ const x=xs[xs.length-1], d=this.fp(x); if(d===0) break; xs.push(x-this.f(x)/d); }
+    return xs;
+  },
+  last(){ const xs=this.path(); return xs[xs.length-1]; },
+  flat(){ return this.fp(this.last())===0; },
+  rootAt(x){ return this.curve().roots.find(([r])=>Math.abs(x-r)<5e-5); },
+  // the first step that lands on the far side of a root, or 0
+  jump(){
+    const xs=this.path();
+    for(let k=1;k<xs.length;k++) for(const [r] of this.curve().roots)
+      if((xs[k-1]-r)*(xs[k]-r)<0 && Math.abs(xs[k-1]-r)>=5e-5 && Math.abs(xs[k]-r)>=5e-5) return k;
+    return 0;
+  },
+  // a guess that comes back to an earlier one, away from any root: [j, k]
+  loop(){
+    const xs=this.path();
+    for(let k=1;k<xs.length;k++) for(let j=0;j<k;j++)
+      if(Math.abs(xs[k]-xs[j])<1e-9 && !this.rootAt(xs[k])) return [j,k];
+    return null;
+  },
+  num(x){ const r=Math.round(x*1e4)/1e4; return neg(Object.is(r,-0)?0:r); },
+  exact(x){ return Math.abs(x-Math.round(x*1e4)/1e4)<1e-9; },
+  // = only for a value with nothing rounded away, worked from values that had none either
+  eq(x, sure=true){ return sure && this.exact(x) ? '=' : '≈'; },
+  // which guesses are exactly what they show: x₀ is, and each next one is
+  // when it and everything it was worked from show in full
+  sure(xs){
+    const ok=[true];
+    for(let k=1;k<xs.length;k++){ const a=xs[k-1]; ok.push(ok[k-1] && this.exact(this.f(a)) && this.exact(this.fp(a)) && this.exact(xs[k])); }
+    return ok;
+  },
+  par(x){ const t=this.num(x); return t.startsWith('−') ? '('+t+')' : t; },
+  sub(k){ return String(k).replace(/\\d/g, d=>'₀₁₂₃₄₅₆₇₈₉'[d]); },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const C=this.curve(), xs=this.path(), n=xs.length-1, X=xs[n], s=k=>'x'+this.sub(k), ok=this.sure(xs), out=[];
+    out.push(\`f(x) = \${C.name}, so f′(x) = \${C.d}. Each step slides down the tangent to the axis: the next x is x − f(x)/f′(x).\`);
+    for(let k=1;k<=n;k++){
+      const a=xs[k-1], F=this.f(a), D=this.fp(a);
+      out.push(\`f(\${s(k-1)}) \${this.eq(F,ok[k-1])} \${this.num(F)} and f′(\${s(k-1)}) \${this.eq(D,ok[k-1])} \${this.num(D)}, so \${s(k)} = \${this.num(a)} − \${this.par(F)}/\${this.par(D)} \${this.eq(xs[k],ok[k])} \${this.num(xs[k])}.\`);
+    }
+    const F=this.f(X), D=this.fp(X), at=\`\${n?'Now':'Start at'} \${s(n)} \${this.eq(X,ok[n])} \${this.num(X)}\`;
+    const j=this.jump(), lp=this.loop(), rt=this.rootAt(X);
+    if(C.up && j){
+      const r=C.roots.find(([r])=>(xs[j-1]-r)*(xs[j]-r)<0);
+      out.push(\`The step to \${s(j)} jumped right past \${r[1].split(' ')[0]}: this curve bends upward, so a tangent from a point below the axis lands beyond the root, and from there the steps close in from the far side.\`);
+    }
+    if(this.f(xs[0])===0) out.push(\`\${s(0)} = \${this.num(xs[0])} is a root already: f(\${s(0)}) = 0, so every step stays where it is.\`);
+    else if(rt) out.push(\`\${at}, where f(\${s(n)}) \${this.eq(F,ok[n])} \${this.num(F)}: that is the root \${rt[1]}, to four places.\`);
+    else if(D===0) out.push(\`\${at}, where f′(\${s(n)}) = 0: the tangent there is flat, so it never meets the axis and there is no next step. Start somewhere else.\`);
+    else if(lp) out.push(\`\${s(lp[1])} \${this.eq(xs[lp[1]],ok[lp[1]])} \${this.num(xs[lp[1]])} is back where \${s(lp[0])} was: from here the steps go round the same \${['','one','two','three','four','five','six'][lp[1]-lp[0]]} points for ever and never reach a root.\`);
+    else {
+      const nx=X-F/D, sure=ok[n] && this.exact(F) && this.exact(D);
+      out.push(\`\${at}, where f(\${s(n)}) \${this.eq(F,ok[n])} \${this.num(F)} and f′(\${s(n)}) \${this.eq(D,ok[n])} \${this.num(D)}. Its tangent meets the axis at \${this.eq(nx,sure)==='='?'':'about '}\${this.num(nx)}\`+
+        (n<this.NMAX ? ': take a step to go there.' : ', but six steps is as far as this goes.'));
+    }
+    return out;
+  },
+  open(){ UI.go('s-newton'); },
+  pick(i){ this.ci=i; this.touched=true; this.render(); },
+  moveX(by){ const v=this.xh+by; if(v<this.XLO || v>this.XHI) return; this.xh=v; this.touched=true; this.render(); },
+  moveN(by){
+    const v=this.path().length-1+by;
+    if(v<0 || v>this.NMAX || (by>0 && this.flat())) return;
+    this.n=v; this.touched=true; this.render();
+  },
+  render(){
+    const C=this.curve(), xs=this.path(), n=xs.length-1, X=xs[n], F=this.f(X), D=this.fp(X);
+    document.getElementById('nwCurves').innerHTML=this.CURVES.map((c,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.ci}" onclick="Newton.pick(\${i})" aria-label="f(x) = \${c.name}">\${c.name}</button>\`).join('');
+    document.getElementById('nwX').textContent=\`x₀ = \${neg(this.x0())}\`;
+    document.getElementById('nwN').textContent=\`\${n} step\${n===1?'':'s'}\`;
+    document.getElementById('nwXLo').disabled=this.xh<=this.XLO;
+    document.getElementById('nwXHi').disabled=this.xh>=this.XHI;
+    document.getElementById('nwNLo').disabled=n===0;
+    document.getElementById('nwNHi').disabled=n>=this.NMAX || D===0;
+    const rt=this.rootAt(X) || F===0;
+    const pts=xs.slice(0,-1).map(x=>[x,0,FIG_COL.b]);
+    pts.push([X,F,FIG_COL.d]);
+    if(D!==0 && !rt) pts.push([X-F/D,0,FIG_COL.a]);
+    Figure.render({kind:'curve', f:C.f, lo:-3, hi:3, ylim:C.ylim, tangent:rt?undefined:X, pts,
+      caption: rt ? 'The red point sits on the axis: f is 0 there, so it is a root.'
+        : D===0 ? 'The dashed tangent at the red point is flat: it runs alongside the axis and never meets it.'
+        : \`The dashed red tangent at x\${this.sub(n)} meets the axis at the blue point, where the next step lands\`+(n?'; the gold points are the earlier guesses.':'.')},
+      document.getElementById('nwFig'));
+    document.getElementById('nwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    if(this.touched && n>0 && this.ci===2 && this.f(xs[0])!==0){ const r=this.rootAt(X); if(r) this.reached.add(r[0]); }
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('nwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
 };
