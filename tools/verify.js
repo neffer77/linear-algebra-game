@@ -83,6 +83,7 @@ function loadGame() {
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoSets')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
+    ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -101,7 +102,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2696,6 +2697,144 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The transpose workshop: thousands of games played at random, and every
+   entry tried in every slot. Where each entry belongs is decided here from
+   the definition, (Aᵀ)ₚq = A_qp, never by the workshop's own lookup; every
+   slot that takes an entry must hold exactly that; every sentence's numbers
+   and places are parsed back and checked against the matrix; each goal is
+   decided independently; and both grids are read back cell by cell. */
+const transposeNotes = (() => {
+  const W = Transpose;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n)), num = t => +t.replace(/−/g, '-');
+  if (W.SETS.map(S => S.id).join() !== 'wide,square,sym') fail('transpose', 'sets', W.SETS.map(S => S.id).join());
+  const shape = S => [S.A.length, S.A[0].length];
+  if (shape(W.SETS[0]).join() !== '2,3') fail('transpose', 'wide', 'the wide matrix should be 2×3');
+  if (shape(W.SETS[1]).join() !== '2,2' || W.SETS[1].A[0][1] === W.SETS[1].A[1][0]) fail('transpose', 'square', 'the square matrix should be 2×2 and not symmetric');
+  const isSym = A => A.length === A[0].length && A.every((row, i) => row.every((x, j) => x === A[j][i]));
+  if (!isSym(W.SETS[2].A) || W.SETS[2].A.length !== 3) fail('transpose', 'sym', 'the symmetric matrix should be 3×3 and symmetric');
+  if (new Set(W.SETS[0].A.flat()).size !== 6) fail('transpose', 'wide', 'the wide matrix needs six different entries, or a slip could fit by luck');
+  let seed = 7; const rnd = n => { seed = (seed * 1103515245 + 12345) % 2147483648; return Math.floor(seed / 2147483648 * n); };
+  const reset = () => { W.touched = false; W.si = 0; W.start(); W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('transpose', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.pick(si); W.take(0, 0);
+    W.pick(si);
+    if (W.sel || W.last || W.fill.length !== S.A[0].length || W.fill[0].length !== S.A.length || W.fill.flat().some(x => x !== null) || W.used.flat().some(Boolean))
+      fail('transpose', S.id, 'picking a matrix does not start it afresh, with an empty Aᵀ of the flipped shape');
+    for (const g of W.GOALS) if (g.ok(W)) fail('transpose', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  /* everything the player can see, checked against the matrix and a record kept here */
+  const check = (S, si, rec, key) => {
+    n++;
+    const A = S.A, r = A.length, c = A[0].length, N = r * c, got = W.working(), L = rec.last;
+    const k = rec.fill.flat().filter(x => x !== null).length;
+    if (W.count() !== k) fail('transpose', key, `${k} slots are filled, not ${W.count()}`);
+    for (let p = 0; p < c; p++) for (let q = 0; q < r; q++) if (W.fill[p][q] !== rec.fill[p][q]) fail('transpose', key, `slot ${p},${q} holds ${W.fill[p][q]}, not ${rec.fill[p][q]}`);
+    for (let p = 0; p < c; p++) for (let q = 0; q < r; q++) if (rec.fill[p][q] !== null && rec.fill[p][q] !== A[q][p]) fail('transpose', key, `row ${p + 1}, column ${q + 1} of Aᵀ holds ${rec.fill[p][q]}, but belongs to A's row ${q + 1}, column ${p + 1}`);
+    const T = (p, q) => A[q][p];
+    let li = 0;
+    const op = r === c ? `A is ${r}×${c}, so Aᵀ is ${c}×${r} too.` : `A is ${r}×${c}, so Aᵀ is ${c}×${r}.`;
+    if (!got[0].startsWith(op) || !got[0].endsWith('an entry in row i, column j of A moves to row j, column i.')) fail('transpose', key, `the opening has the wrong shape: ${got[0]}`);
+    li = 1;
+    const at = t => { const m = t.match(/^row (\d), column (\d)$/); return m ? [m[1] - 1, m[2] - 1] : null; };
+    if (L) {
+      const l = got[li++] || '', x = A[L.i][L.j];
+      if (L.kind === 'good') {
+        let m;
+        if ((m = l.match(/^(−?\d+) sits on the main diagonal, in (row \d, column \d), where the row and column numbers match, so it stays put\.$/))) {
+          const a = at(m[2]); if (num(m[1]) !== x || L.i !== L.j || a[0] !== L.i || a[1] !== L.j || L.p !== L.i || L.q !== L.j) fail('transpose', key, `the diagonal sentence is wrong: ${l}`);
+        } else if ((m = l.match(/^Yes: (−?\d+) was in (row \d, column \d) of A, and now sits in (row \d, column \d) of Aᵀ\.$/))) {
+          const a = at(m[2]), b = at(m[3]);
+          if (num(m[1]) !== x || a[0] !== L.i || a[1] !== L.j || b[0] !== L.j || b[1] !== L.i || L.p !== L.j || L.q !== L.i || L.i === L.j) fail('transpose', key, `the flip sentence is wrong: ${l}`);
+          if (W.fill[b[0]][b[1]] !== num(m[1])) fail('transpose', key, `the flip sentence names a slot that does not hold ${m[1]}`);
+        } else if ((m = l.match(/^(−?\d+) fits: (row \d, column \d) of Aᵀ takes the entry from (row \d, column \d) of A, which is also (−?\d+)\.$/))) {
+          const a = at(m[2]), b = at(m[3]);
+          if (num(m[1]) !== x || num(m[4]) !== x || a[0] !== L.p || a[1] !== L.q || b[0] !== L.q || b[1] !== L.p || A[L.q][L.p] !== x || (L.p === L.j && L.q === L.i)) fail('transpose', key, `the lucky fit is wrong: ${l}`);
+        } else fail('transpose', key, `no sentence for the entry just placed: ${l}`);
+      } else {
+        const m = l.match(/^(−?\d+) is in (row \d, column \d) of A, so it belongs in (row \d, column \d) of Aᵀ\. The slot you tapped, (row \d, column \d), takes the entry from (row \d, column \d) of A, which is (−?\d+)\.( That is the slip everybody makes once: copying an entry to the same spot instead of flipping it across the diagonal\.)?$/);
+        if (!m) fail('transpose', key, `no sentence for the slot that turned an entry away: ${l}`);
+        else {
+          const a = at(m[2]), b = at(m[3]), t = at(m[4]), u = at(m[5]);
+          if (num(m[1]) !== x || a.join() !== [L.i, L.j].join() || b.join() !== [L.j, L.i].join() || t.join() !== [L.p, L.q].join() || u.join() !== [L.q, L.p].join() || num(m[6]) !== T(L.p, L.q) || num(m[6]) === x)
+            fail('transpose', key, `the turned-away sentence is wrong: ${l}`);
+          if (!!m[7] !== (L.p === L.i && L.q === L.j)) fail('transpose', key, `the copy slip is ${m[7] ? 'named where it was not made' : 'not named'}: ${l}`);
+        }
+      }
+    }
+    if (rec.sel) { const [i, j] = rec.sel;
+      if (got[li++] !== `You are holding ${neg(A[i][j])}, from row ${i + 1}, column ${j + 1} of A. Tap the slot in Aᵀ where it belongs.`) fail('transpose', key, `the held entry is not named: ${got[li - 1]}`);
+    } else if (k < N && got[li++] !== 'Tap an entry of A to pick it up.') fail('transpose', key, `no prompt to pick an entry up: ${got[li - 1]}`);
+    if (got[li++] !== `${k} of ${N} slots of Aᵀ filled.`) fail('transpose', key, `the count is wrong: ${got[li - 1]}`);
+    const cols = [];
+    if (k < N) for (let q = 0; q < r; q++) if (rec.fill.every(row => row[q] !== null)) cols.push(q);
+    for (const q of cols) { const l = got[li++] || '', m = l.match(/^Column (\d) of Aᵀ reads (.+) going down, just as row (\d) of A reads (.+) going across\.$/);
+      const down = rec.fill.map(row => row[q]), across = A[q];
+      if (!m || +m[1] !== q + 1 || +m[3] !== q + 1 || m[2].split(', ').map(num).join() !== down.join() || m[4].split(', ').map(num).join() !== across.join()) fail('transpose', key, `the column sentence is wrong: ${l}`); }
+    if (k === N) {
+      if (got[li++] !== 'Aᵀ is complete: every row of A now stands as a column.') fail('transpose', key, 'a full Aᵀ is not called complete');
+      const l = got[li++] || '';
+      if (isSym(A)) { if (!/^And Aᵀ = A: the matrix is symmetric/.test(l)) fail('transpose', key, `a symmetric A is not said to equal its transpose: ${l}`); }
+      else if (r === c) { const m = l.match(/^Aᵀ is not A: the diagonal entries (−?\d+) and (−?\d+) stayed put, while (−?\d+) and (−?\d+) swapped places\.$/);
+        if (!m || num(m[1]) !== A[0][0] || num(m[2]) !== A[1][1] || num(m[3]) !== A[0][1] || num(m[4]) !== A[1][0] || W.fill[0][1] !== A[1][0]) fail('transpose', key, `the square summary is wrong: ${l}`); }
+      else if (l !== `Aᵀ is not even the same shape as A: a ${r}×${c} matrix turns into a ${c}×${r}.`) fail('transpose', key, `the wide summary is wrong: ${l}`);
+    }
+    if (li !== got.length) fail('transpose', key, `an extra sentence: ${got.slice(li).join(' / ')}`);
+    // the two grids, read back
+    const h = W.grids();
+    const gm = [...h.matchAll(/data-grid="(A|Aᵀ)" style="display:grid;grid-template-columns:repeat\((\d),40px\)/g)].map(m => m[1] + m[2]);
+    if (gm.join() !== `A${c},Aᵀ${r}`) fail('transpose', key, `the grids have the wrong widths: ${gm.join()}`);
+    const cells = [...h.matchAll(/<button[^>]*data-(a|t)="(\d),(\d)"[^>]*aria-label="([^"]+)" aria-pressed="(true|false)"( disabled)? style="([^"]*)">([^<]*)<\/button>/g)];
+    const ac = cells.filter(m => m[1] === 'a'), tc = cells.filter(m => m[1] === 't');
+    if (ac.length !== N || tc.length !== N) fail('transpose', key, `the grids show ${ac.length} and ${tc.length} cells, not ${N} each`);
+    for (const m of ac) { const i = +m[2], j = +m[3], u = rec.used[i][j], on = !!rec.sel && rec.sel[0] === i && rec.sel[1] === j;
+      if (num(m[8]) !== A[i][j] || m[4] !== `Row ${i + 1}, column ${j + 1} of A: ${neg(A[i][j])}${u ? ', already placed' : ''}` || (m[5] === 'true') !== on || !!m[6] !== u || /gold-dk/.test(m[7]) !== (i === j))
+        fail('transpose', key, `A's cell ${i},${j} is drawn wrong`); }
+    for (const m of tc) { const p = +m[2], q = +m[3], x = rec.fill[p][q], miss = !!L && L.kind === 'miss' && L.p === p && L.q === q;
+      if (m[8] !== (x === null ? '·' : neg(x)) || m[4] !== `Row ${p + 1}, column ${q + 1} of Aᵀ: ${x === null ? 'empty' : neg(x)}` || !!m[6] !== (x !== null || !rec.sel) || /gold-dk/.test(m[7]) !== (p === q) || /border-color:#/.test(m[7]) !== miss)
+        fail('transpose', key, `Aᵀ's cell ${p},${q} is drawn wrong`); }
+    const full = rec.fill.flat().every(x => x !== null);
+    const meant = { col: si === 0 && [0, 1].some(q => rec.fill.every(row => row[q] !== null)), wide: si === 0 && full,
+      diag: !!L && L.kind === 'good' && L.i === L.j && L.p === L.i && L.q === L.j,
+      slip: !!L && L.kind === 'miss' && L.p === L.i && L.q === L.j, square: si === 1 && full, sym: si === 2 && full };
+    for (const g of W.GOALS) { if (!!g.ok(W) !== meant[g.id]) fail('transpose', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+  };
+  W.SETS.forEach((S, si) => {
+    const A = S.A, r = A.length, c = A[0].length;
+    const fresh = () => ({ sel: null, last: null, fill: Array.from({ length: c }, () => Array(r).fill(null)), used: Array.from({ length: r }, () => Array(c).fill(false)) });
+    // every entry tried in every slot of an empty Aᵀ
+    for (let i = 0; i < r; i++) for (let j = 0; j < c; j++) for (let p = 0; p < c; p++) for (let q = 0; q < r; q++) {
+      reset(); W.pick(si); const rec = fresh();
+      W.take(i, j); rec.sel = [i, j]; check(S, si, rec, `${S.id} holding ${i},${j}`);
+      W.drop(p, q);
+      if (A[i][j] === A[q][p]) { rec.fill[p][q] = A[i][j]; rec.used[i][j] = true; rec.sel = null; rec.last = { kind: 'good', i, j, p, q }; }
+      else rec.last = { kind: 'miss', i, j, p, q };
+      check(S, si, rec, `${S.id} ${i},${j} to ${p},${q}`);
+    }
+    // games played at random: picking up, putting back, dropping right and wrong, dropping on full slots
+    for (let game = 0; game < 300; game++) {
+      reset(); W.pick(si); const rec = fresh();
+      for (let step = 0; step < 50 && !rec.fill.flat().every(x => x !== null); step++) {
+        const key = `${S.id} game ${game} step ${step}`, roll = rnd(10);
+        if (!rec.sel || roll < 2) { const i = rnd(r), j = rnd(c); W.take(i, j);
+          if (!rec.used[i][j]) rec.sel = rec.sel && rec.sel[0] === i && rec.sel[1] === j ? null : [i, j]; }
+        else { let p, q;
+          if (roll < 6) { p = rec.sel[1]; q = rec.sel[0]; } else { p = rnd(c); q = rnd(r); }
+          W.drop(p, q);
+          if (rec.fill[p][q] === null) { const [i, j] = rec.sel;
+            if (A[i][j] === A[q][p]) { rec.fill[p][q] = A[i][j]; rec.used[i][j] = true; rec.sel = null; rec.last = { kind: 'good', i, j, p, q }; }
+            else rec.last = { kind: 'miss', i, j, p, q }; } }
+        check(S, si, rec, key);
+      }
+    }
+    // a drop with nothing held does nothing
+    reset(); W.pick(si); W.drop(0, 0); if (W.count() || W.last) fail('transpose', S.id, 'a slot takes something with nothing held');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('transpose', g.id, 'this goal cannot be found');
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The antiderivative workshop: every target, every guess.
    Whether a guess works is decided here by a nudge on F itself at three
    points, never by the power rule; every term the readout writes is parsed
@@ -5278,6 +5417,7 @@ console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
 console.log(`  quotients divided       ${pad(quotNotes.n.toLocaleString(), 10)}  (each slope found by a nudge on f/g, never by the rule; every product in every worked line evaluated with its values, both slips checked to give what they give, every sentence, the curve, gap, point and lines read back, ${quotNotes.goals} goals findable)`);
 console.log(`  antiderivatives guessed ${pad(antiNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the power rule; every term written parsed back and checked against F and its slope, every sentence, both curves read back, ${antiNotes.goals} goals findable)`);
+console.log(`  transpose moves played ${pad(transposeNotes.n.toLocaleString(), 10)}  (where each entry belongs decided from (Aᵀ)ₚq = A_qp, never by the workshop; every entry tried in every slot and 900 games at random, every sentence parsed back, both grids read cell by cell, ${transposeNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

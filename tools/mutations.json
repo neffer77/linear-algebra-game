@@ -1,257 +1,271 @@
 {
- "change": "The Antiderivative Workshop: the power rule run backwards",
+ "change": "The Transpose Workshop: rows into columns, by hand",
  "mutations": [
   {
-   "name": "the 6x² target is really 6x³",
+   "name": "the wide matrix repeats an entry",
    "file": "index.html",
-   "find": "{id:'sq', btn:'6x²', fs:'6x²', k:6, p:2,",
-   "replace": "{id:'sq', btn:'6x²', fs:'6x²', k:6, p:3,",
+   "find": "{id:'wide', btn:'Wide', A:[[1,2,3],[4,5,6]]}",
+   "replace": "{id:'wide', btn:'Wide', A:[[1,2,3],[4,2,6]]}",
    "run": "verify"
   },
   {
-   "name": "the root target loses its 3",
+   "name": "the symmetric matrix is not",
    "file": "index.html",
-   "find": "fs:'3x^(1/2), which is 3√x', k:3, p:0.5,",
-   "replace": "fs:'3x^(1/2), which is 3√x', k:1, p:0.5,",
+   "find": "A:[[1,7,-2],[7,4,0],[-2,0,9]]}",
+   "replace": "A:[[1,7,-2],[7,4,0],[-2,1,9]]}",
    "run": "verify"
   },
   {
-   "name": "the slope keeps the old power",
+   "name": "a slot takes the entry from the same spot",
    "file": "index.html",
-   "find": "  dp(){ return this.n-1; },",
-   "replace": "  dp(){ return this.n; },",
+   "find": "  T(p,q){ return this.A()[q][p]; },",
+   "replace": "  T(p,q){ return this.A()[p]?.[q] ?? this.A()[q][p]; },",
    "run": "verify"
   },
   {
-   "name": "the slope forgets to bring the power down",
+   "name": "Aᵀ keeps A's shape",
    "file": "index.html",
-   "find": "  dk(){ return this.c*this.n; },",
-   "replace": "  dk(){ return this.c; },",
+   "find": "this.fill=Array.from({length:c},()=>Array(r).fill(null));",
+   "replace": "this.fill=Array.from({length:r},()=>Array(c).fill(null));",
    "run": "verify"
   },
   {
-   "name": "a match ignores the power",
+   "name": "a slot takes any number",
    "file": "index.html",
-   "find": "match(){ const S=this.set(); return this.dk()===S.k && this.dp()===S.p; },",
-   "replace": "match(){ const S=this.set(); return this.dk()===S.k; },",
+   "find": "    if(x===this.T(p,q)){ this.fill[p][q]=x;",
+   "replace": "    if(true){ this.fill[p][q]=x;",
    "run": "verify"
   },
   {
-   "name": "the power steps by whole numbers",
+   "name": "a placed entry can be used again",
    "file": "index.html",
-   "find": "  N:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4],",
-   "replace": "  N:[-3,-2,-1,0,1,2,3,4],",
+   "find": "this.fill[p][q]=x; this.used[i][j]=true; this.sel=null;",
+   "replace": "this.fill[p][q]=x; this.sel=null;",
    "run": "verify"
   },
   {
-   "name": "c stops at 5",
+   "name": "a placed entry stays held",
    "file": "index.html",
-   "find": "  CLO:-3, CHI:6, SLO:-2, SHI:2,",
-   "replace": "  CLO:-3, CHI:5, SLO:-2, SHI:2,",
+   "find": "this.fill[p][q]=x; this.used[i][j]=true; this.sel=null;",
+   "replace": "this.fill[p][q]=x; this.used[i][j]=true;",
    "run": "verify"
   },
   {
-   "name": "picking a target keeps the guess",
+   "name": "a full slot takes another entry",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.n=1; this.c=1; this.C=0;",
-   "replace": "  pick(i){ this.si=i;",
+   "find": "  drop(p,q){ if(!this.sel || this.fill[p][q]!==null) return;",
+   "replace": "  drop(p,q){ if(!this.sel) return;",
    "run": "verify"
   },
   {
-   "name": "a half reads as a decimal",
+   "name": "a slot takes something with nothing held",
    "file": "index.html",
-   "find": "Number.isInteger(a) ? s+a : s+(a*2)+'/2'; },",
-   "replace": "Number.isInteger(a) ? s+a : s+a; },",
+   "find": "  drop(p,q){ if(!this.sel || this.fill[p][q]!==null) return;",
+   "replace": "  drop(p,q){ if(!this.sel){ this.sel=[0,0]; } if(this.fill[p][q]!==null) return;",
    "run": "verify"
   },
   {
-   "name": "a fractional coefficient loses its brackets",
+   "name": "a used entry can be picked up",
    "file": "index.html",
-   "find": "Number.isInteger(k)?this.fr(k):`(${this.fr(k)})`",
-   "replace": "this.fr(k)",
+   "find": "  take(i,j){ if(this.used[i][j]) return;",
+   "replace": "  take(i,j){",
    "run": "verify"
   },
   {
-   "name": "a negative factor loses its brackets",
+   "name": "a second tap does not put it back",
    "file": "index.html",
-   "find": "  par(v){ return v<0 ? `(${this.fr(v)})` : this.fr(v); },",
-   "replace": "  par(v){ return this.fr(v); },",
+   "find": "this.sel = this.sel && this.sel[0]===i && this.sel[1]===j ? null : [i,j];",
+   "replace": "this.sel = [i,j];",
    "run": "verify"
   },
   {
-   "name": "a negative power loses its minus",
+   "name": "picking a matrix keeps the old Aᵀ",
    "file": "index.html",
-   "find": "'9':'⁹','-':'⁻'},",
-   "replace": "'9':'⁹','-':''},",
+   "find": "  pick(i){ this.si=i; this.start(); this.touched=true;",
+   "replace": "  pick(i){ this.si=i; this.touched=true;",
    "run": "verify"
   },
   {
-   "name": "x¹ is written out",
+   "name": "the column goal takes any set",
    "file": "index.html",
-   "find": "  pw(p){ return p===1 ? 'x' :",
-   "replace": "  pw(p){ return false ? 'x' :",
-   "run": "play:anti"
-  },
-  {
-   "name": "the guess drops its C",
-   "file": "index.html",
-   "find": "  Fs(){ const t=this.term(this.c,this.n), C=this.C; return C===0 ? t :",
-   "replace": "  Fs(){ const t=this.term(this.c,this.n), C=this.C; return true ? t :",
+   "find": "ok:K=>K.si===0 && [0,1].some(q=>K.fill.every(row=>row[q]!==null))},",
+   "replace": "ok:K=>[0,1].some(q=>K.fill.every(row=>row[q]!==null))},",
    "run": "verify"
   },
   {
-   "name": "a C below 0 is added",
+   "name": "the diagonal goal takes any entry",
    "file": "index.html",
-   "find": "`${t} ${C>0?'+':'−'} ${Math.abs(C)}`; },",
-   "replace": "`${t} + ${Math.abs(C)}`; },",
+   "find": "ok:K=>!!K.last && K.last.kind==='good' && K.last.i===K.last.j && K.last.p===K.last.i",
+   "replace": "ok:K=>!!K.last && K.last.kind==='good' && K.last.p===K.last.i",
    "run": "verify"
   },
   {
-   "name": "power 0 still works the rule",
+   "name": "the slip goal takes any miss",
    "file": "index.html",
-   "find": "    else if(n===0) out.push(`With power 0,",
-   "replace": "    else if(false) out.push(`With power 0,",
+   "find": "ok:K=>!!K.last && K.last.kind==='miss' && K.last.p===K.last.i && K.last.q===K.last.j},",
+   "replace": "ok:K=>!!K.last && K.last.kind==='miss'},",
    "run": "verify"
   },
   {
-   "name": "the shift sentence is dropped",
+   "name": "the square goal is met half full",
    "file": "index.html",
-   "find": "    if(C!==0) out.push(`The ${C>0?",
-   "replace": "    if(false) out.push(`The ${C>0?",
+   "find": "ok:K=>K.si===1 && K.full()},",
+   "replace": "ok:K=>K.si===1 && K.count()>=2},",
    "run": "verify"
   },
   {
-   "name": "the + C is never explained",
+   "name": "the symmetric goal takes any set",
    "file": "index.html",
-   "find": "`Add any number to F and its slope is still f: that is why an antiderivative is always written with + C.`",
-   "replace": "`That will do.`",
+   "find": "ok:K=>K.si===2 && K.full()}",
+   "replace": "ok:K=>K.full()}",
    "run": "verify"
   },
   {
-   "name": "the gap shows on any target",
+   "name": "the opening keeps A's shape",
    "file": "index.html",
-   "find": "else if(S.id==='inv' && n===0 && c!==0)",
-   "replace": "else if(n===0 && c!==0)",
+   "find": "      : `A is ${r}×${c}, so Aᵀ is ${c}×${r}. Row 1",
+   "replace": "      : `A is ${r}×${c}, so Aᵀ is ${r}×${c}. Row 1",
    "run": "verify"
   },
   {
-   "name": "the ratio is upside down",
+   "name": "the flip sentence names the old spot",
    "file": "index.html",
-   "find": "      const r=k/S.k;",
-   "replace": "      const r=S.k/k;",
+   "find": "and now sits in ${this.at(L.j,L.i,'Aᵀ')}.`);",
+   "replace": "and now sits in ${this.at(L.i,L.j,'Aᵀ')}.`);",
    "run": "verify"
   },
   {
-   "name": "the forgotten-divide sentence shows for any c",
+   "name": "a lucky fit is called a flip",
    "file": "index.html",
-   "find": "if(S.id==='sq' && c===6 && n===3) out.push(`Raising the power",
-   "replace": "if(S.id==='sq' && n===3 && c!==2) out.push(`Raising the power",
+   "find": "        if(L.p===L.j && L.q===L.i) out.push(L.i===L.j",
+   "replace": "        if(true) out.push(L.i===L.j",
    "run": "verify"
   },
   {
-   "name": "the hint starts two higher",
+   "name": "the turned-away sentence names the wrong owner",
    "file": "index.html",
-   "find": "F has to start one higher, at ${this.pw(S.p+1)}.`",
-   "replace": "F has to start one higher, at ${this.pw(S.p+2)}.`",
+   "find": "takes the entry from ${this.at(L.q,L.p,'A')}, which is ${neg(this.T(L.p,L.q))}.`+",
+   "replace": "takes the entry from ${this.at(L.p,L.q,'A')}, which is ${neg(this.T(L.p,L.q))}.`+",
    "run": "verify"
   },
   {
-   "name": "the slope curve is drawn as F",
+   "name": "the slip is named on every miss",
    "file": "index.html",
-   "find": "for(const s of this.path(t=>k*t**p)) out+=`<polyline data-k=\"slope\"",
-   "replace": "for(const s of this.path(t=>this.c*t**this.n)) out+=`<polyline data-k=\"slope\"",
+   "find": "          (L.p===L.i && L.q===L.j ? ' That is the slip",
+   "replace": "          (true ? ' That is the slip",
    "run": "verify"
   },
   {
-   "name": "the target is drawn as its antiderivative",
+   "name": "the held entry is not named",
    "file": "index.html",
-   "find": "for(const s of this.path(t=>S.k*t**S.p)) out+=",
-   "replace": "for(const s of this.path(t=>S.k*t**(S.p+1))) out+=",
+   "find": "    if(this.sel){ const [i,j]=this.sel;\n      out.push(`You are holding",
+   "replace": "    if(false){ const [i,j]=this.sel;\n      out.push(`You are holding",
    "run": "verify"
   },
   {
-   "name": "the curves run off the chart",
+   "name": "the count is off by one",
    "file": "index.html",
-   "find": "if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1)",
-   "replace": "if(!isFinite(v)){ if(seg.length>1)",
+   "find": "    out.push(`${k} of ${N} slots of Aᵀ filled.`);",
+   "replace": "    out.push(`${k+1} of ${N} slots of Aᵀ filled.`);",
    "run": "verify"
   },
   {
-   "name": "the slip goal takes any c",
+   "name": "the column sentence reads a column of A",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.n===3 && K.c===6},",
-   "replace": "ok:K=>K.si===0 && K.n===3 && K.c!==2},",
+   "find": "      const v=A[q].map(neg).join(', ');",
+   "replace": "      const v=A.map(row=>row[q]).map(neg).join(', ');",
    "run": "verify"
   },
   {
-   "name": "the + C goal takes C = 0",
+   "name": "a symmetric A is not said to be its own transpose",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.match() && K.C!==0},",
-   "replace": "ok:K=>K.si===0 && K.match()},",
+   "find": "      if(this.sym()) out.push('And Aᵀ = A:",
+   "replace": "      if(false) out.push('And Aᵀ = A:",
    "run": "verify"
   },
   {
-   "name": "the gap goal takes c = 0",
+   "name": "the square summary swaps the diagonal",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.n===0 && K.c!==0}",
-   "replace": "ok:K=>K.si===3 && K.n===0}",
+   "find": "stayed put, while ${neg(A[0][1])} and ${neg(A[1][0])} swapped places.`);",
+   "replace": "stayed put, while ${neg(A[0][0])} and ${neg(A[1][1])} swapped places.`);",
    "run": "verify"
   },
   {
-   "name": "the c stepper is never switched off",
+   "name": "Aᵀ is drawn with A's width",
    "file": "index.html",
-   "find": "document.getElementById('adCHi').disabled=this.c>=this.CHI;",
-   "replace": "document.getElementById('adCHi').disabled=false;",
-   "run": "play:anti"
+   "find": "grid('A',r,c,a)+`<div aria-hidden=\"true\" style=\"font-size:20px;color:var(--dim)\">→</div>`+grid('Aᵀ',c,r,t)",
+   "replace": "grid('A',r,c,a)+`<div aria-hidden=\"true\" style=\"font-size:20px;color:var(--dim)\">→</div>`+grid('Aᵀ',r,c,t)",
+   "run": "verify"
   },
   {
-   "name": "the guess is not shown big",
+   "name": "the slots stay on with nothing held",
    "file": "index.html",
-   "find": "document.getElementById('adF').textContent=`F(x) = ${this.Fs()}`;",
-   "replace": "document.getElementById('adF').textContent=`F(x)`;",
-   "run": "play:anti"
+   "find": "{off:x!==null || !this.sel, diag:p===q, miss, empty:x===null}",
+   "replace": "{off:x!==null, diag:p===q, miss, empty:x===null}",
+   "run": "verify"
   },
   {
-   "name": "a stepper button loses its name",
+   "name": "the held entry is not marked",
    "file": "index.html",
-   "find": "<button id=\"adCHi\" onclick=\"Anti.moveC(1)\" aria-label=",
-   "replace": "<button id=\"adCHi\" onclick=\"Anti.moveC(1)\" data-x=",
-   "run": "play:anti"
+   "find": "      a+=cell(`data-a=\"${i},${j}\" onclick=\"Transpose.take(${i},${j})\"`, neg(A[i][j]),\n        `Row ${i+1}, column ${j+1} of A: ${neg(A[i][j])}${u?', already placed':''}`, {on,",
+   "replace": "      a+=cell(`data-a=\"${i},${j}\" onclick=\"Transpose.take(${i},${j})\"`, neg(A[i][j]),\n        `Row ${i+1}, column ${j+1} of A: ${neg(A[i][j])}${u?', already placed':''}`, {on:false,",
+   "run": "verify"
   },
   {
-   "name": "the target buttons run in one row",
+   "name": "the diagonal is not edged in Aᵀ",
    "file": "index.html",
-   "find": "<div id=\"adSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"adSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:anti"
+   "find": "{off:x!==null || !this.sel, diag:p===q,",
+   "replace": "{off:x!==null || !this.sel, diag:false,",
+   "run": "verify"
+  },
+  {
+   "name": "the slot that turned it away is not marked",
+   "file": "index.html",
+   "find": "miss=!!L && L.kind==='miss' && L.p===p && L.q===q;",
+   "replace": "miss=false;",
+   "run": "verify"
+  },
+  {
+   "name": "each set button loses its shape",
+   "file": "index.html",
+   "find": "aria-label=\"${s.btn}: a ${s.A.length}×${s.A[0].length} matrix\">",
+   "replace": "aria-label=\"${s.btn}\">",
+   "run": "play:transpose"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:anti"
+   "run": "play:transpose"
   },
   {
-   "name": "the Tome loses the antiderivative workshop",
+   "name": "the Tome loses the transpose workshop",
    "file": "index.html",
-   "find": "id=\"tomeAnti\"",
-   "replace": "id=\"tomeAntiX\"",
-   "run": "play:anti"
+   "find": "id=\"tomeTranspose\" style=\"width:auto;margin-top:8px\" onclick=\"Transpose.open()\"",
+   "replace": "id=\"tomeTransposeX\" style=\"width:auto;margin-top:8px\" onclick=\"Transpose.open()\"",
+   "run": "play:transpose"
   },
   {
-   "name": "the workshop saves its guess",
+   "name": "the workshop saves its moves",
    "file": "index.html",
-   "find": "  moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v;",
-   "replace": "  moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v; Game.s.antiC=v;",
-   "run": "play:anti"
+   "find": "    else this.last={kind:'miss',i,j,p,q};",
+   "replace": "    else { this.last={kind:'miss',i,j,p,q}; Game.s.tpMiss=1; }",
+   "run": "play:transpose"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">The dashed gold curve is the target f.",
-   "replace": "<div class=\"figcapX\">The dashed gold curve is the target f.",
-   "run": "play:anti"
+   "find": "<div class=\"figcap\">Tap an entry of A, then the slot",
+   "replace": "<div class=\"figcapX\">Tap an entry of A, then the slot",
+   "run": "play:transpose"
+  },
+  {
+   "name": "the grids run off a phone",
+   "file": "index.html",
+   "find": "style=\"display:grid;grid-template-columns:repeat(${m},40px);gap:5px\"",
+   "replace": "style=\"display:grid;grid-template-columns:repeat(${m},90px);gap:5px\"",
+   "run": "play:transpose"
   }
  ]
 }

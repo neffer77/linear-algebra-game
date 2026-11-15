@@ -1682,6 +1682,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TRANSPOSE WORKSHOP ============ -->
+  <div class="screen" id="s-transpose">
+    <div class="panel"><h2>🪞 Transpose Workshop</h2><div class="sub">The transpose Aᵀ flips a matrix across its main diagonal, so its rows become columns. Pick up each entry of A and put it down where it belongs in Aᵀ; a slot only takes the right number, and tells you why when it turns one away.</div></div>
+    <div class="panel">
+      <div id="tpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
+      <div id="tpFig"></div>
+      <div id="tpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tpGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3690,6 +3704,7 @@ const WORKSHOP_FOR = (() => {
     Cross:   ["✖️ Cross Product Workshop", ['cross']],
     Quot:    ["➗ Quotient Rule Workshop", ['quotient']],
     Anti:    ["🪃 Antiderivative Workshop", ['indefPower']],
+    Transpose:["🪞 Transpose Workshop", ['transpose']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13086,6 +13101,7 @@ const UI = {
     if(id==='s-cross') Cross.render();
     if(id==='s-quot') Quot.render();
     if(id==='s-anti') Anti.render();
+    if(id==='s-transpose') Transpose.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13864,6 +13880,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪃 Antiderivative Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach.</div>
          <button class="btn sm" id="tomeAnti" style="width:auto;margin-top:8px" onclick="Anti.open()">Open the antiderivative workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪞 Transpose Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose.</div>
+         <button class="btn sm" id="tomeTranspose" style="width:auto;margin-top:8px" onclick="Transpose.open()">Open the transpose workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19232,6 +19253,130 @@ const Anti = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE ANTIDERIVATIVE','every slope undone','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The transpose workshop: rows into columns ----------
+   Pick up an entry of A and put it down where it belongs in Aᵀ. A slot
+   takes an entry only if it is the right number, so a slip is caught and
+   explained on the spot: row i, column j of A goes to row j, column i of
+   Aᵀ. A wide matrix turns tall, the diagonal stays put, and a symmetric
+   matrix comes out as itself. Nothing is saved. */
+const Transpose = {
+  SETS:[
+    {id:'wide', btn:'Wide', A:[[1,2,3],[4,5,6]]},
+    {id:'square', btn:'Square', A:[[2,-1],[5,3]]},
+    {id:'sym', btn:'Symmetric', A:[[1,7,-2],[7,4,0],[-2,0,9]]}
+  ],
+  si:0, sel:null, fill:null, used:null, last:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'col', t:'On the wide matrix, fill one whole column of Aᵀ and see that it is a row of A.', toast:'A row became a column',
+     ok:K=>K.si===0 && [0,1].some(q=>K.fill.every(row=>row[q]!==null))},
+    {id:'wide', t:'Fill all of the wide matrix\\'s transpose, and see its shape turn.', toast:'2×3 became 3×2',
+     ok:K=>K.si===0 && K.full()},
+    {id:'diag', t:'Put down an entry from the main diagonal, and see where it lands.', toast:'The diagonal stays put',
+     ok:K=>!!K.last && K.last.kind==='good' && K.last.i===K.last.j && K.last.p===K.last.i && K.last.q===K.last.j},
+    {id:'slip', t:'Copy an entry to the same spot, without flipping it, and see why it does not fit.', toast:'Copied, not flipped',
+     ok:K=>!!K.last && K.last.kind==='miss' && K.last.p===K.last.i && K.last.q===K.last.j},
+    {id:'square', t:'Fill the square matrix\\'s transpose.', toast:'Two entries swapped',
+     ok:K=>K.si===1 && K.full()},
+    {id:'sym', t:'Fill the symmetric matrix\\'s transpose, and compare it with A.', toast:'Aᵀ = A',
+     ok:K=>K.si===2 && K.full()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  A(){ return this.set().A; },
+  rows(){ return this.A().length; },
+  cols(){ return this.A()[0].length; },
+  /* the entry that belongs in row p, column q of Aᵀ */
+  T(p,q){ return this.A()[q][p]; },
+  start(){ const r=this.rows(), c=this.cols();
+    this.sel=null; this.last=null;
+    this.fill=Array.from({length:c},()=>Array(r).fill(null));
+    this.used=Array.from({length:r},()=>Array(c).fill(false)); },
+  count(){ return this.fill.reduce((t,row)=>t+row.filter(x=>x!==null).length,0); },
+  full(){ return this.count()===this.rows()*this.cols(); },
+  sym(){ const A=this.A(); return A.length===A[0].length && A.every((row,i)=>row.every((x,j)=>x===A[j][i])); },
+  /* where an entry is, in words the player reads */
+  at(i,j,M){ return \`row \${i+1}, column \${j+1}\${M?' of '+M:''}\`; },
+  working(){
+    const A=this.A(), r=this.rows(), c=this.cols(), N=r*c, k=this.count(), out=[], L=this.last;
+    out.push(r===c ? \`A is \${r}×\${c}, so Aᵀ is \${c}×\${r} too. Row 1 of A becomes column 1 of Aᵀ, and so on: an entry in row i, column j of A moves to row j, column i.\`
+      : \`A is \${r}×\${c}, so Aᵀ is \${c}×\${r}. Row 1 of A becomes column 1 of Aᵀ, and so on: an entry in row i, column j of A moves to row j, column i.\`);
+    if(L){
+      const x=neg(A[L.i][L.j]);
+      if(L.kind==='good'){
+        if(L.p===L.j && L.q===L.i) out.push(L.i===L.j
+          ? \`\${x} sits on the main diagonal, in \${this.at(L.i,L.j)}, where the row and column numbers match, so it stays put.\`
+          : \`Yes: \${x} was in \${this.at(L.i,L.j,'A')}, and now sits in \${this.at(L.j,L.i,'Aᵀ')}.\`);
+        else out.push(\`\${x} fits: \${this.at(L.p,L.q,'Aᵀ')} takes the entry from \${this.at(L.q,L.p,'A')}, which is also \${x}.\`);
+      } else {
+        out.push(\`\${x} is in \${this.at(L.i,L.j,'A')}, so it belongs in \${this.at(L.j,L.i,'Aᵀ')}. The slot you tapped, \${this.at(L.p,L.q)}, takes the entry from \${this.at(L.q,L.p,'A')}, which is \${neg(this.T(L.p,L.q))}.\`+
+          (L.p===L.i && L.q===L.j ? ' That is the slip everybody makes once: copying an entry to the same spot instead of flipping it across the diagonal.' : ''));
+      }
+    }
+    if(this.sel){ const [i,j]=this.sel;
+      out.push(\`You are holding \${neg(A[i][j])}, from \${this.at(i,j,'A')}. Tap the slot in Aᵀ where it belongs.\`); }
+    else if(k<N) out.push('Tap an entry of A to pick it up.');
+    out.push(\`\${k} of \${N} slots of Aᵀ filled.\`);
+    if(k<N) for(let q=0;q<r;q++) if(this.fill.every(row=>row[q]!==null)){
+      const v=A[q].map(neg).join(', ');
+      out.push(\`Column \${q+1} of Aᵀ reads \${v} going down, just as row \${q+1} of A reads \${v} going across.\`);
+    }
+    if(k===N){
+      out.push('Aᵀ is complete: every row of A now stands as a column.');
+      if(this.sym()) out.push('And Aᵀ = A: the matrix is symmetric, the same on both sides of its diagonal, so transposing it changes nothing.');
+      else if(r===c) out.push(\`Aᵀ is not A: the diagonal entries \${neg(A[0][0])} and \${neg(A[1][1])} stayed put, while \${neg(A[0][1])} and \${neg(A[1][0])} swapped places.\`);
+      else out.push(\`Aᵀ is not even the same shape as A: a \${r}×\${c} matrix turns into a \${c}×\${r}.\`);
+    }
+    return out;
+  },
+  /* the two grids, each cell a button; the gold-edged cells are the main diagonal */
+  grids(){
+    const A=this.A(), r=this.rows(), c=this.cols(), L=this.last;
+    const cell=(attr,txt,lbl,{on=false,off=false,diag=false,miss=false,empty=false}={})=>
+      \`<button class="btn sm ghost" \${attr} aria-label="\${lbl}" aria-pressed="\${on}"\${off?' disabled':''} style="min-width:0;padding:8px 0;margin:0;font-size:16px;font-weight:700;\`+
+      \`color:\${empty?'var(--dim)':'var(--ink)'};\${diag?'border-color:var(--gold-dk);':''}\${miss?'border-color:'+FIG_COL.d+';':''}\${on?'border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset;color:var(--gold);':''}">\${txt}</button>\`;
+    const grid=(name,n,m,body)=>\`<div style="text-align:center"><div style="font-weight:700;margin-bottom:4px">\${name}</div>\`+
+      \`<div data-grid="\${name}" style="display:grid;grid-template-columns:repeat(\${m},40px);gap:5px">\${body}</div></div>\`;
+    let a='', t='';
+    for(let i=0;i<r;i++) for(let j=0;j<c;j++){ const u=this.used[i][j], on=!!this.sel && this.sel[0]===i && this.sel[1]===j;
+      a+=cell(\`data-a="\${i},\${j}" onclick="Transpose.take(\${i},\${j})"\`, neg(A[i][j]),
+        \`Row \${i+1}, column \${j+1} of A: \${neg(A[i][j])}\${u?', already placed':''}\`, {on, off:u, diag:i===j}); }
+    for(let p=0;p<c;p++) for(let q=0;q<r;q++){ const x=this.fill[p][q], miss=!!L && L.kind==='miss' && L.p===p && L.q===q;
+      t+=cell(\`data-t="\${p},\${q}" onclick="Transpose.drop(\${p},\${q})"\`, x===null?'·':neg(x),
+        \`Row \${p+1}, column \${q+1} of Aᵀ: \${x===null?'empty':neg(x)}\`, {off:x!==null || !this.sel, diag:p===q, miss, empty:x===null}); }
+    return \`<div style="display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;margin:8px 0">\`+
+      grid('A',r,c,a)+\`<div aria-hidden="true" style="font-size:20px;color:var(--dim)">→</div>\`+grid('Aᵀ',c,r,t)+\`</div>\`;
+  },
+  open(){ UI.go('s-transpose'); },
+  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
+  take(i,j){ if(this.used[i][j]) return;
+    this.sel = this.sel && this.sel[0]===i && this.sel[1]===j ? null : [i,j];
+    this.touched=true; this.render(); },
+  drop(p,q){ if(!this.sel || this.fill[p][q]!==null) return;
+    const [i,j]=this.sel, x=this.A()[i][j];
+    if(x===this.T(p,q)){ this.fill[p][q]=x; this.used[i][j]=true; this.sel=null; this.last={kind:'good',i,j,p,q}; }
+    else this.last={kind:'miss',i,j,p,q};
+    this.touched=true; this.render(); },
+  render(){
+    if(!this.fill) this.start();
+    document.getElementById('tpSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Transpose.pick(\${i})" aria-label="\${s.btn}: a \${s.A.length}×\${s.A[0].length} matrix">\${s.btn}</button>\`).join('');
+    document.getElementById('tpFig').innerHTML=this.grids()+
+      \`<div class="figcap">Tap an entry of A, then the slot in Aᵀ where it goes. Gold-edged cells are the main diagonal, where the row and column numbers match; a red edge marks a slot that turned an entry away.</div>\`;
+    document.getElementById('tpRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tpGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE TRANSPOSE','every row turned','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
