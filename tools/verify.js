@@ -73,6 +73,7 @@ function loadGame() {
     ';const Implicit={' + script.slice(script.indexOf("  SETS:[\n    {id:'circle', btn:'Circle'"), script.indexOf("  open(){ UI.go('s-implicit'); },")) + '};exports.Implicit=Implicit;' +
     ';const Parts={' + script.slice(script.indexOf("  SETS:[\n    {id:'xe', btn:'x eˣ'"), script.indexOf("  open(){ UI.go('s-parts'); },")) + '};exports.Parts=Parts;' +
     ';const Detect={' + script.slice(script.indexOf("  SETS:[\n    {id:'pair', btn:'Two roots'"), script.indexOf("  open(){ UI.go('s-detect'); },")) + '};exports.Detect=Detect;' +
+    ';const Hill={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Round bowl'"), script.indexOf("  open(){ UI.go('s-hill'); },")) + '};exports.Hill=Hill;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -91,7 +92,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2686,6 +2687,119 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The hillwalker workshop: every heading on every hill. The gradient is
+   checked against numerical partials, and the partials the readout writes are
+   evaluated at the point; every heading must have length 1 and the twelve
+   must go once round anticlockwise; the slope ∇f · û is checked against a
+   central difference along û; steepest, level and steepest down must be
+   exactly where û is along, across and against ∇f; on axis headings the slope
+   must be the partial. Every contour drawn must have f the same all along,
+   and the arrows must point along ∇f and û. Every sentence is rebuilt, and
+   every goal. */
+const hillNotes = (() => {
+  const W = Hill;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (u, w) => w ? gcd(w, u % w) : Math.abs(u);
+  const fr = (a, b) => { if (b < 0) { a = -a; b = -b; } const g = gcd(Math.abs(a), b) || 1; a /= g; b /= g; return b === 1 ? neg(a) : `${neg(a)}/${b}`; };
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; return neg(Object.is(q, -0) ? 0 : q); };
+  const is = v => (Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10 ? '= ' : '≈ ') + num(v);
+  const frd = (a, b) => { const f = fr(a, b); return f.includes('/') ? `${f} = ${num(a / b)}` : f; };
+  const famt = (a, b) => (a < 0 ? `(${fr(a, b)})` : fr(a, b)), amt = a => (a < 0 ? `(${neg(a)})` : neg(a));
+  /* a partial as the readout writes it, like 6y or −2y, evaluated at a point */
+  const evalPart = (str, x, y) => { const m = str.match(/^(−?)(\d*)([xy])$/); if (!m) return NaN; return (m[1] ? -1 : 1) * (m[2] ? +m[2] : 1) * (m[3] === 'x' ? x : y); };
+  if (W.SETS.map(S => S.id).join() !== 'bowl,oval,saddle') fail('hill', 'sets', W.SETS.map(S => S.id).join());
+  if (W.U.length !== 12) fail('hill', 'headings', `${W.U.length} headings, not 12`);
+  W.U.forEach(([p, q], k) => {
+    if (p * p + q * q !== 25) fail('hill', `heading ${k}`, `⟨${p}/5, ${q}/5⟩ does not have length 1`);
+    const a = Math.atan2(q, p), b = Math.atan2(W.U[(k + 1) % 12][1], W.U[(k + 1) % 12][0]);
+    const step = ((b - a) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+    if (!(step > 0 && step < Math.PI / 2)) fail('hill', `heading ${k}`, 'the headings do not go once round anticlockwise');
+  });
+  W.touched = false; W.si = 0; W.k = W.START;
+  for (const g of W.GOALS) if (g.ok(W)) fail('hill', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { W.si = si; W.k = W.START; for (const g of W.GOALS) if (g.ok(W)) fail('hill', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  W.si = 0; W.k = W.START;
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const [x, y] = S.P, h = 1e-5;
+    const a = (S.f(x + h, y) - S.f(x - h, y)) / (2 * h), b = (S.f(x, y + h) - S.f(x, y - h)) / (2 * h);
+    W.si = si; const g = W.grad();
+    if (Math.abs(g[0] - a) > 1e-6 || Math.abs(g[1] - b) > 1e-6) fail('hill', S.id, `∇f reads ⟨${g}⟩, but the partials are ${a}, ${b}`);
+    if (evalPart(S.fxs, x, y) !== g[0] || evalPart(S.fys, x, y) !== g[1]) fail('hill', S.id, `the partials written, ${S.fxs} and ${S.fys}, do not give ∇f at the point`);
+    const nn = Math.hypot(g[0], g[1]);
+    if (!Number.isInteger(nn)) fail('hill', S.id, '‖∇f‖ is not a whole number, so the readout cannot write it exactly');
+    W.U.forEach(([p, q], k) => {
+      W.si = si; W.k = k; n++;
+      const key = `${S.id} heading ${k}`, D5 = g[0] * p + g[1] * q;
+      if (W.D5() !== D5) fail('hill', key, `5 × the slope reads ${W.D5()}, not ${D5}`);
+      const cd = (S.f(x + h * p / 5, y + h * q / 5) - S.f(x - h * p / 5, y - h * q / 5)) / (2 * h);
+      if (Math.abs(cd - D5 / 5) > 1e-6) fail('hill', key, `the slope ${D5 / 5} does not match a central difference, ${cd}`);
+      const cross = g[0] * q - g[1] * p, along = cross === 0 && D5 > 0, against = cross === 0 && D5 < 0, level = D5 === 0;
+      if (along !== (D5 === 5 * nn) || against !== (D5 === -5 * nn)) fail('hill', key, 'steepest is not exactly along ∇f');
+      const want = [
+        `f(x, y) = ${S.fs}. Its partial derivatives are ∂f/∂x = ${S.fxs} and ∂f/∂y = ${S.fys}, so at (${neg(x)}, ${neg(y)}) the gradient is ∇f = ⟨${neg(g[0])}, ${neg(g[1])}⟩, of length ‖∇f‖ = √(${g[0] * g[0]} + ${g[1] * g[1]}) = ${neg(nn)}.`,
+        `Facing û = ⟨${fr(p, 5)}, ${fr(q, 5)}⟩, which has length 1, the slope that way is ∇f · û = ${neg(g[0])} × ${famt(p, 5)} + ${amt(g[1])} × ${famt(q, 5)} = ${frd(D5, 5)}.`];
+      if (q === 0) { if (D5 / 5 !== (p > 0 ? a : -a) && Math.abs(D5 / 5 - (p > 0 ? a : -a)) > 1e-6) fail('hill', key, 'east or west is not ±∂f/∂x');
+        want.push(`Due ${p > 0 ? 'east' : 'west'}, the slope is just ${p > 0 ? '' : '−'}∂f/∂x = ${neg(p > 0 ? g[0] : -g[0])}: a partial derivative is the slope facing along an axis.`); }
+      if (p === 0) { if (Math.abs(D5 / 5 - (q > 0 ? b : -b)) > 1e-6) fail('hill', key, 'north or south is not ±∂f/∂y');
+        want.push(`Due ${q > 0 ? 'north' : 'south'}, the slope is just ${q > 0 ? '' : '−'}∂f/∂y = ${neg(q > 0 ? g[1] : -g[1])}: a partial derivative is the slope facing along an axis.`); }
+      const fa = S.f(x - 0.01 * p / 5, y - 0.01 * q / 5), fb = S.f(x + 0.01 * p / 5, y + 0.01 * q / 5);
+      if (Math.abs((fb - fa) / 0.02 - D5 / 5) > 0.01) fail('hill', key, 'the nudge check does not land on the slope');
+      want.push(`Check with a nudge: a step of 0.01 back along û gives f ${is(fa)} and a step forward gives f ${is(fb)}, a rise of ${num(fb - fa)} over 0.02, which is ${num((fb - fa) / 0.02)}.`);
+      if (along) {
+        want.push(`That is all of ‖∇f‖ = ${neg(nn)}: û points the same way as ∇f, the angle between them is 0, and no heading climbs faster. ∇f points up the steepest slope.`);
+        if (S.id === 'oval') {
+          if (x * q - y * p === 0) fail('hill', key, 'on the oval the steepest way up should not be straight away from the bottom');
+          want.push(`Straight away from the bottom at (0, 0) would face along ⟨${neg(x)}, ${neg(y)}⟩, but the steepest way up is ⟨${fr(p, 5)}, ${fr(q, 5)}⟩. On an oval bowl the steepest climb crosses the contour at a right angle, and that is not straight away from the bottom.`);
+        }
+      } else if (against) want.push(`That is −‖∇f‖ = ${neg(-nn)}: û points straight against ∇f, the angle between them is 180°, and this is the steepest way down.`);
+      else if (level) want.push(`The slope is 0: û is at a right angle to ∇f, so this heading runs along the contour through the point, neither climbing nor falling.`);
+      else {
+        const cos = D5 / (5 * nn), ang = Math.acos(cos);
+        if (Math.abs(Math.cos(ang) * nn - D5 / 5) > 1e-9) fail('hill', key, '∇f · û is not ‖∇f‖ cos θ');
+        want.push(`∇f · û is also ‖∇f‖ cos θ, where θ is the angle between û and ∇f, so cos θ = ${frd(D5, 5 * nn)}: ${D5 > 0 ? 'uphill, but not the steepest climb' : 'downhill, but not the steepest descent'}.`);
+      }
+      const got = W.working();
+      if (got.length !== want.length) fail('hill', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((line, i) => { if (got[i] !== line) fail('hill', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${line}`); });
+      // the drawing: 40 px a unit, centred on the point, y up
+      const svg = W.svg(), X = px => x + (px - 180) / 40, Y = py => y - (py - 110) / 40;
+      for (const m of svg.matchAll(/data-k="contour" data-c="([^"]+)" points="([^"]+)"/g)) {
+        const c = +m[1];
+        for (const pt of m[2].split(' ')) { const [px, py] = pt.split(',').map(Number); if (Math.abs(S.f(X(px), Y(py)) - c) > 0.15 * (1 + Math.abs(c) / 10)) { fail('hill', key, `a contour drawn for f = ${c} strays off it`); break; } }
+      }
+      if (!svg.includes(`data-c="${S.f(x, y)}"`)) fail('hill', key, 'the contour through the point is not drawn');
+      const ln = k2 => { const m = svg.match(new RegExp(`data-k="${k2}" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)" stroke="([^"]+)"`)); return m && m.slice(1, 5).map(Number).concat([m[5]]); };
+      const G = ln('grad'), H = ln('head');
+      if (!G || !H) fail('hill', key, 'an arrow is not drawn');
+      else {
+        const par = (L, v) => { const dx = L[2] - L[0], dy = -(L[3] - L[1]); return Math.abs(dx * v[1] - dy * v[0]) < 1e-2 * Math.hypot(dx, dy) * Math.hypot(...v) && dx * v[0] + dy * v[1] > 0; };
+        if (L0(G) || !par(G, g)) fail('hill', key, 'the gold arrow does not point along ∇f');
+        if (!par(H, [p, q])) fail('hill', key, 'the heading arrow does not point along û');
+        if (G[0] !== 180 || G[1] !== 110 || H[0] !== 180 || H[1] !== 110) fail('hill', key, 'the arrows do not start at the point');
+        const cols = svg.match(/data-k="head"[^>]*stroke="([^"]+)"/)[1];
+        if (cols === G[4]) fail('hill', key, 'the heading arrow should not share the gradient\'s gold');
+        found.cols = found.cols || {}; const kind = D5 > 0 ? 'up' : D5 < 0 ? 'down' : 'flat'; found.cols[kind] = found.cols[kind] || new Set(); found.cols[kind].add(cols);
+      }
+      W.touched = true;
+      const meant = { up: si === 0 && along, level: si === 0 && level, down: si === 0 && against, oval: si === 1 && along, pass: si === 2 && level };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('hill', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  function L0(L) { return Math.hypot(L[2] - L[0], L[3] - L[1]) < 1; }
+  const cs = found.cols || {};
+  if (['up', 'down', 'flat'].some(k => !cs[k] || cs[k].size !== 1) || new Set(['up', 'down', 'flat'].map(k => [...(cs[k] || [])][0])).size !== 3)
+    fail('hill', 'colours', 'the heading should take one colour climbing, another falling and a third on the level');
+  delete found.cols;
+  for (const g of W.GOALS) if (!found[g.id]) fail('hill', g.id, 'this goal cannot be found');
+  W.si = 0; W.k = W.START; W.touched = false; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The eigenvalue detective: every λ on every matrix. det(A − λI) is worked
    from the entries, and must equal λ² − (trace)λ + det A as the readout writes
    it; the eigenvalues found by the quadratic formula must be exactly the λ
@@ -4184,6 +4298,7 @@ console.log(`  swaps tried             ${pad(swapNotes.n.toLocaleString(), 10)} 
 console.log(`  implicit points         ${pad(implicitNotes.n.toLocaleString(), 10)}  (each on its curve, y′ against −Fx/Fy, each nudge solved outright, the tangent and radius measured, ${implicitNotes.goals} goals findable)`);
 console.log(`  splits tried            ${pad(partsNotes.n.toLocaleString(), 10)}  (each u times dv giving back the integrand, du and v checked numerically, each answer and the integral it leaves checked by differentiating, the drawn answer rising by the area, ${partsNotes.goals} goals findable)`);
 console.log(`  λ stepped               ${pad(detectNotes.n.toLocaleString(), 10)}  (det(A − λI) against the characteristic polynomial, each eigenvalue against the quadratic formula, each crushed arrow multiplied out, the trace and determinant checked, the curve measured, ${detectNotes.goals} goals findable)`);
+console.log(`  headings faced          ${pad(hillNotes.n.toLocaleString(), 10)}  (∇f against numerical partials, each slope ∇f · û against a central difference, steepest, level and steepest down exactly along, across and against ∇f, every contour drawn on its level, ${hillNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

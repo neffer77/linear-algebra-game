@@ -1478,6 +1478,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ HILLWALKER WORKSHOP ============ -->
+  <div class="screen" id="s-hill">
+    <div class="panel"><h2>🗺️ Hillwalker Workshop</h2><div class="sub">Stand on a hill and turn to face a heading. The slope that way is the directional derivative, ∇f · û. Find the steepest climb, the steepest drop, and the headings that stay level along the contour.</div></div>
+    <div class="panel">
+      <div id="hwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill"></div>
+      <div id="hwFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="hwHLo" onclick="Hill.turn(-1)" aria-label="Turn the heading clockwise">↻</button>
+          <b id="hwH" style="font-size:17px;min-width:0"></b>
+          <button id="hwHHi" onclick="Hill.turn(1)" aria-label="Turn the heading anticlockwise">↺</button></div>
+      </div>
+      <div id="hwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="hwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3484,7 +3503,8 @@ const WORKSHOP_FOR = (() => {
     Avg:     ["🌊 Water Level Workshop", ['avgValue']],
     Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
-    Descent: ["⛰️ Downhill Workshop", ['gradient']]
+    Descent: ["⛰️ Downhill Workshop", ['gradient']],
+    Hill:    ["🗺️ Hillwalker Workshop", ['dirDeriv','partial']]
   };
   const out = {};
   for (const mod in W) for (const k of W[mod][1]) out[k] = {mod, name:W[mod][0]};
@@ -12862,6 +12882,7 @@ const UI = {
     if(id==='s-implicit') Implicit.render();
     if(id==='s-parts') Parts.render();
     if(id==='s-detect') Detect.render();
+    if(id==='s-hill') Hill.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13635,6 +13656,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be.</div>
          <button class="btn sm" id="tomeDescent" style="width:auto;margin-top:8px" onclick="Descent.open()">Open the downhill workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🗺️ Hillwalker Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom.</div>
+         <button class="btn sm" id="tomeHill" style="width:auto;margin-top:8px" onclick="Hill.open()">Open the hillwalker workshop</button>
        </div>\` +
       TOME.map(p=>\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">\${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">\${p.b}</div></div>\`).join('');
@@ -17705,6 +17731,133 @@ const Detect = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('EIGENVALUE DETECTIVE','every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The hillwalker workshop: the directional derivative ----------
+   Stand on a hill and turn to face a heading û of length 1. The slope that
+   way is ∇f · û, which is ‖∇f‖ cos θ: steepest along ∇f itself, nothing at
+   all at right angles to it (walking the contour), and steepest down against
+   it. Facing east or north it is just a partial derivative. On an oval hill
+   the steepest way up is not straight away from the bottom. Nothing is saved. */
+const Hill = {
+  SETS:[
+    {id:'bowl', btn:'Round bowl', fs:'x² + y²', fxs:'2x', fys:'2y', P:[3,4],
+     f:(x,y)=>x*x+y*y, g:(x,y)=>[2*x,2*y], step:11},
+    {id:'oval', btn:'Oval bowl', fs:'x² + 3y²', fxs:'2x', fys:'6y', P:[4,1],
+     f:(x,y)=>x*x+3*y*y, g:(x,y)=>[2*x,6*y], step:9},
+    {id:'saddle', btn:'Saddle', fs:'x² − y²', fxs:'2x', fys:'−2y', P:[4,3],
+     f:(x,y)=>x*x-y*y, g:(x,y)=>[2*x,-2*y], step:5}
+  ],
+  /* twelve headings round the compass, each with whole-number fifths so that
+     every slope comes out exact: east, then anticlockwise */
+  U:[[5,0],[4,3],[3,4],[0,5],[-3,4],[-4,3],[-5,0],[-4,-3],[-3,-4],[0,-5],[3,-4],[4,-3]],
+  START:0,
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'up', t:'On the round bowl, face the steepest way up.', toast:'The steepest climb',
+     ok:K=>K.si===0 && K.D5()===5*K.n()},
+    {id:'level', t:'Face a heading where the slope is 0, so you walk along the contour.', toast:'Walking the contour',
+     ok:K=>K.si===0 && K.D5()===0},
+    {id:'down', t:'Face the steepest way down.', toast:'The steepest descent',
+     ok:K=>K.si===0 && K.D5()===-5*K.n()},
+    {id:'oval', t:'On the oval bowl, face the steepest way up, and see that it is not straight away from the bottom.', toast:'Steepest is not straight out',
+     ok:K=>K.si===1 && K.D5()===5*K.n()},
+    {id:'pass', t:'On the saddle, find a heading that neither climbs nor falls.', toast:'Level through the pass',
+     ok:K=>K.si===2 && K.D5()===0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  u5(){ return this.U[this.k]; },
+  grad(){ const S=this.set(); return S.g(...S.P); },
+  n(){ const [a,b]=this.grad(); return Math.hypot(a,b); },
+  /* five times the slope, a whole number, so that every comparison is exact */
+  D5(){ const [a,b]=this.grad(), [p,q]=this.u5(); return a*p+b*q; },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(Math.abs(n),d)||1; n/=g; d/=g; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  /* a fraction with its decimal, when it has one */
+  frd(n,d){ const f=this.fr(n,d); return f.includes('/') ? \`\${f} = \${this.num(n/d)}\` : f; },
+  amt(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  famt(n,d){ const f=this.fr(n,d); return n<0 ? \`(\${f})\` : f; },
+  vec(w){ return \`⟨\${w.map(neg).join(', ')}⟩\`; },
+  uvec(){ const [p,q]=this.u5(); return \`⟨\${this.fr(p,5)}, \${this.fr(q,5)}⟩\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), [x,y]=S.P, g=this.grad(), n=this.n(), [p,q]=this.u5(), D5=this.D5(), out=[];
+    out.push(\`f(x, y) = \${S.fs}. Its partial derivatives are ∂f/∂x = \${S.fxs} and ∂f/∂y = \${S.fys}, so at (\${neg(x)}, \${neg(y)}) the gradient is ∇f = \${this.vec(g)}, of length ‖∇f‖ = √(\${g[0]*g[0]} + \${g[1]*g[1]}) = \${neg(n)}.\`);
+    out.push(\`Facing û = \${this.uvec()}, which has length 1, the slope that way is ∇f · û = \${neg(g[0])} × \${this.famt(p,5)} + \${this.amt(g[1])} × \${this.famt(q,5)} = \${this.frd(D5,5)}.\`);
+    if(q===0) out.push(\`Due \${p>0?'east':'west'}, the slope is just \${p>0?'':'−'}∂f/∂x = \${neg(p>0?g[0]:-g[0])}: a partial derivative is the slope facing along an axis.\`);
+    if(p===0) out.push(\`Due \${q>0?'north':'south'}, the slope is just \${q>0?'':'−'}∂f/∂y = \${neg(q>0?g[1]:-g[1])}: a partial derivative is the slope facing along an axis.\`);
+    const h=0.01, fa=S.f(x-h*p/5,y-h*q/5), fb=S.f(x+h*p/5,y+h*q/5);
+    out.push(\`Check with a nudge: a step of 0.01 back along û gives f \${this.is(fa)} and a step forward gives f \${this.is(fb)}, a rise of \${this.num(fb-fa)} over 0.02, which is \${this.num((fb-fa)/0.02)}.\`);
+    if(D5===5*n){
+      out.push(\`That is all of ‖∇f‖ = \${neg(n)}: û points the same way as ∇f, the angle between them is 0, and no heading climbs faster. ∇f points up the steepest slope.\`);
+      if(S.id==='oval') out.push(\`Straight away from the bottom at (0, 0) would face along ⟨\${neg(x)}, \${neg(y)}⟩, but the steepest way up is ⟨\${this.fr(p,5)}, \${this.fr(q,5)}⟩. On an oval bowl the steepest climb crosses the contour at a right angle, and that is not straight away from the bottom.\`);
+    } else if(D5===-5*n)
+      out.push(\`That is −‖∇f‖ = \${neg(-n)}: û points straight against ∇f, the angle between them is 180°, and this is the steepest way down.\`);
+    else if(D5===0)
+      out.push(\`The slope is 0: û is at a right angle to ∇f, so this heading runs along the contour through the point, neither climbing nor falling.\`);
+    else out.push(\`∇f · û is also ‖∇f‖ cos θ, where θ is the angle between û and ∇f, so cos θ = \${this.frd(D5,5*n)}: \${D5>0?'uphill, but not the steepest climb':'downhill, but not the steepest descent'}.\`);
+    return out;
+  },
+  /* the map: contours in blue around the point, ∇f as a dashed gold arrow and
+     the heading as a solid arrow, green uphill, red downhill, blue on the level */
+  W:4.5, H:2.75,
+  contours(c){
+    const S=this.set(), [x0,y0]=S.P, out=[], N=120;
+    if(S.id==='saddle'){
+      const span=t=>[y0-this.H-1+(2*this.H+2)*t, x0-this.W-1+(2*this.W+2)*t];
+      if(c>=0) for(const s of [1,-1]){ const l=[]; for(let i=0;i<=N;i++){ const y=span(i/N)[0]; l.push([s*Math.sqrt(c+y*y),y]); } out.push(l); }
+      else for(const s of [1,-1]){ const l=[]; for(let i=0;i<=N;i++){ const x=span(i/N)[1]; l.push([x,s*Math.sqrt(x*x-c)]); } out.push(l); }
+    } else if(c>0){
+      const a=S.id==='oval'?3:1, l=[];
+      for(let i=0;i<=N;i++){ const t=2*Math.PI*i/N; l.push([Math.sqrt(c)*Math.cos(t), Math.sqrt(c/a)*Math.sin(t)]); }
+      out.push(l);
+    }
+    return out;
+  },
+  levels(){ const S=this.set(), c=S.f(...S.P), L=[]; for(let j=-3;j<=3;j++) L.push(c+j*S.step); return L; },
+  svg(){
+    const S=this.set(), [x0,y0]=S.P, g=this.grad(), n=this.n(), [p,q]=this.u5(), D5=this.D5();
+    const PX=v=>180+(v-x0)*40, PY=v=>110-(v-y0)*40;
+    const arrow=(dx,dy,col,k,dash)=>{
+      const x1=PX(x0+dx), y1=PY(y0+dy), a=Math.atan2(y1-PY(y0),x1-PX(x0)), hd=[a+2.6,a-2.6].map(b=>\`\${(x1+9*Math.cos(b)).toFixed(2)},\${(y1+9*Math.sin(b)).toFixed(2)}\`);
+      return \`<line data-k="\${k}" x1="\${PX(x0)}" y1="\${PY(y0)}" x2="\${x1.toFixed(2)}" y2="\${y1.toFixed(2)}" stroke="\${col}" stroke-width="3"\${dash?' stroke-dasharray="6 4"':''} stroke-linecap="round"/>\`+
+        \`<polygon data-k="\${k}Tip" points="\${x1.toFixed(2)},\${y1.toFixed(2)} \${hd.join(' ')}" fill="\${col}"/>\`;
+    };
+    const col = D5>0 ? FIG_COL.c : D5<0 ? FIG_COL.d : FIG_COL.a;
+    let out=\`<svg viewBox="0 0 360 220" style="width:100%;height:auto;display:block;overflow:hidden" role="img" aria-label="Contours of f(x, y) = \${S.fs} around (\${neg(x0)}, \${neg(y0)}), with ∇f = \${this.vec(g)} dashed in gold and the heading \${this.uvec()} \${D5>0?'climbing':D5<0?'falling':'on the level'}">\`;
+    out+=\`<defs><clipPath id="hwClip"><rect x="0" y="0" width="360" height="220"/></clipPath></defs><g clip-path="url(#hwClip)">\`;
+    for(const c of this.levels()) for(const l of this.contours(c))
+      out+=\`<polyline data-k="contour" data-c="\${c}" points="\${l.map(([x,y])=>\`\${PX(x).toFixed(2)},\${PY(y).toFixed(2)}\`).join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="\${c===S.f(x0,y0)?2.5:1}" opacity="\${c===S.f(x0,y0)?1:0.55}"/>\`;
+    out+=\`</g>\`;
+    out+=arrow(2*g[0]/n, 2*g[1]/n, FIG_COL.b, 'grad', true);
+    out+=arrow(2*p/5, 2*q/5, col, 'head', false);
+    out+=\`<circle data-k="pt" cx="\${PX(x0)}" cy="\${PY(y0)}" r="5" fill="\${FIG_COL.b}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-hill'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  turn(by){ this.k=(this.k+by+this.U.length)%this.U.length; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('hwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Hill.pick(\${i})" aria-label="\${s.btn}: f(x, y) = \${s.fs}, standing at (\${s.P.map(neg).join(', ')})">\${s.btn}</button>\`).join('');
+    document.getElementById('hwH').textContent=\`û = \${this.uvec()}\`;
+    document.getElementById('hwFig').innerHTML=this.svg()+
+      \`<div class="figcap">Seen from above: the blue rings are contours, where f is the same all along. The dashed gold arrow is ∇f. The solid arrow is the way you face: green climbs, red falls, blue stays level.</div>\`;
+    document.getElementById('hwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('hwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('HILLWALKER','every heading read','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
