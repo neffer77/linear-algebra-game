@@ -1,215 +1,215 @@
 {
- "change": "The Slice Workshop: double integrals",
+ "change": "The Slope Tracer Workshop: the derivative as a curve",
  "mutations": [
   {
-   "name": "the slice area of xy is off",
+   "name": "the derivative of cos is written as sin",
    "file": "index.html",
-   "find": "S:t=>4.5*t, Ss:'4.5x', W:t=>2.25*t*t}",
-   "replace": "S:t=>4*t, Ss:'4.5x', W:t=>2.25*t*t}",
+   "find": "fs:'cos x', ds:'−sin x', dat:X=>`−sin(${X})`",
+   "replace": "fs:'cos x', ds:'sin x', dat:X=>`−sin(${X})`",
    "run": "verify"
   },
   {
-   "name": "the swept total of xy is off",
+   "name": "the true derivative of cos has the wrong sign",
    "file": "index.html",
-   "find": "S:t=>2*t, Ss:'2y', W:t=>t*t}",
-   "replace": "S:t=>2*t, Ss:'2y', W:t=>t*t+0.5}",
+   "find": "f:Math.cos, d:x=>-Math.sin(x)}",
+   "replace": "f:Math.cos, d:x=>Math.sin(x)}",
    "run": "verify"
   },
   {
-   "name": "the written S disagrees with the areas",
+   "name": "the derivative of ln is written as x",
    "file": "index.html",
-   "find": "S:t=>2*t*t, Ss:'2x²'",
-   "replace": "S:t=>2*t*t, Ss:'2x'",
+   "find": "fs:'ln x', ds:'1/x', dat:X=>`1/${X}`",
+   "replace": "fs:'ln x', ds:'x', dat:X=>`1/${X}`",
    "run": "verify"
   },
   {
-   "name": "the slice of x² is written as its square root",
+   "name": "the trig stops run in eighths of π",
    "file": "index.html",
-   "find": "slice:t=>Slice.num(t*t), S:t=>2*t*t",
-   "replace": "slice:t=>Slice.num(t), S:t=>2*t*t",
+   "find": "S.trig ? (i-4)*Math.PI/4",
+   "replace": "S.trig ? (i-4)*Math.PI/8",
    "run": "verify"
   },
   {
-   "name": "x + y swept across y is short a slice",
+   "name": "ln x starts at 0",
    "file": "index.html",
-   "find": "S:t=>2*t+2, Ss:'2y + 2', W:t=>t*t+2*t}",
-   "replace": "S:t=>2*t+2, Ss:'2y + 2', W:t=>t*t+t}",
+   "find": ": (i+1)/2); },",
+   "replace": ": i/2); },",
    "run": "verify"
   },
   {
-   "name": "the slice steps by whole units",
+   "name": "the nudge is lopsided",
    "file": "index.html",
-   "find": "  steps(){ return this.len()*2; },\n  t(){ return this.k/2; },",
-   "replace": "  steps(){ return this.len(); },\n  t(){ return this.k; },",
+   "find": "return (f(x+h)-f(x-h))/(2*h); },",
+   "replace": "return (f(x+h)-f(x))/h; },",
    "run": "verify"
   },
   {
-   "name": "the workshop opens on an empty slice",
+   "name": "the rise is worked over one side only",
    "file": "index.html",
-   "find": "  si:0, hold:'x', k:1, touched:false,\n  START:1,",
-   "replace": "  si:0, hold:'x', k:0, touched:false,\n  START:0,",
+   "find": "q=Math.round((f(x+0.001)-f(x-0.001))*1e7)/1e7;",
+   "replace": "q=Math.round((f(x+0.001)-f(x))*1e7)/1e7;",
    "run": "verify"
   },
   {
-   "name": "the slice is never bracketed",
+   "name": "3π/4 is labelled π/4",
    "file": "index.html",
-   "find": "${/ \\+ /.test(this.o().slice(t)) ? `(${this.o().slice(t)})` : this.o().slice(t)}",
-   "replace": "${this.o().slice(t)}",
+   "find": "({1:'π/4',2:'π/2',3:'3π/4',4:'π'})",
+   "replace": "({1:'π/4',2:'π/2',3:'π/4',4:'π'})",
    "run": "verify"
   },
   {
-   "name": "the no-area note shows everywhere",
+   "name": "negative x loses its sign",
    "file": "index.html",
-   "find": "    if(A===0) out.push(`This slice has no area",
-   "replace": "    if(true) out.push(`This slice has no area",
+   "find": "s=q<0?'−':'';",
+   "replace": "s='';",
    "run": "verify"
   },
   {
-   "name": "the average note shows on every slice",
+   "name": "the flat note shows everywhere",
    "file": "index.html",
-   "find": "    else if(A===tot/L) out.push(`This slice's area",
-   "replace": "    else out.push(`This slice's area",
+   "find": "    if(s===0) out.push(`The slope is 0",
+   "replace": "    if(true) out.push(`The slope is 0",
    "run": "verify"
   },
   {
-   "name": "the other-way note shows after one sweep",
+   "name": "hump and dip are swapped",
    "file": "index.html",
-   "find": "      if(this.swept[this.si].size===2) out.push(`Slicing the other way",
-   "replace": "      if(this.swept[this.si].size>=1) out.push(`Slicing the other way",
+   "find": "${f(x)>0?'top of a hump':'bottom of a dip'}",
+   "replace": "${f(x)>0?'bottom of a dip':'top of a hump'}",
    "run": "verify"
   },
   {
-   "name": "every-slice is claimed before the far edge",
+   "name": "the steepest note shows at any slope",
    "file": "index.html",
-   "find": "    if(this.k===this.steps()){\n      out.push(`That is every slice",
-   "replace": "    if(this.k>=this.steps()-1){\n      out.push(`That is every slice",
+   "find": "if(S.trig && Math.abs(s)===1) out.push(",
+   "replace": "if(S.trig) out.push(",
    "run": "verify"
   },
   {
-   "name": "the swept part is shaded from the start",
+   "name": "the slope-2 note shows anywhere on ln",
    "file": "index.html",
-   "find": "    if(t>0) out+= h==='x'\n      ? `<rect data-k=\"swept\"",
-   "replace": "    if(true) out+= h==='x'\n      ? `<rect data-k=\"swept\"",
+   "find": "if(S.id==='ln' && s===2) out.push(",
+   "replace": "if(S.id==='ln') out.push(",
    "run": "verify"
   },
   {
-   "name": "the slice line is drawn at the far edge",
+   "name": "the trace is claimed after eight stops",
    "file": "index.html",
-   "find": "? `<line data-k=\"slice\" x1=\"${X(t)}\" y1=\"${Y(0)}\" x2=\"${X(t)}\"",
-   "replace": "? `<line data-k=\"slice\" x1=\"${X(L)}\" y1=\"${Y(0)}\" x2=\"${X(L)}\"",
+   "find": "  traced(){ return this.seen[this.si].size===9; },",
+   "replace": "  traced(){ return this.seen[this.si].size>=8; },",
    "run": "verify"
   },
   {
-   "name": "the rectangle is drawn in whole-unit cells",
+   "name": "the dots are drawn at the curve's height",
    "file": "index.html",
-   "find": "for(let x=0;x<S.a;x+=0.5) for(let y=0;y<S.b;y+=0.5)\n",
-   "replace": "for(let x=0;x<S.a;x+=1) for(let y=0;y<S.b;y+=1)\n",
+   "find": "cy=\"${PY(this.nudge(xs[k])).toFixed(2)}\" r=\"4\"",
+   "replace": "cy=\"${PY(S.f(xs[k])).toFixed(2)}\" r=\"4\"",
    "run": "verify"
   },
   {
-   "name": "reaching the far edge is not recorded",
+   "name": "the traced curve is drawn as f again",
    "file": "index.html",
-   "find": "    if(v===this.steps()) this.swept[this.si].add(this.hold);",
-   "replace": "    if(v===this.steps()-1) this.swept[this.si].add(this.hold);",
+   "find": "if(this.traced()) out+=curve(S.d,'traced'",
+   "replace": "if(this.traced()) out+=curve(S.f,'traced'",
    "run": "verify"
   },
   {
-   "name": "the slice runs past the far edge",
+   "name": "the tangent is drawn flat",
    "file": "index.html",
-   "find": "  moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()) return;",
-   "replace": "  moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()+1) return;",
+   "find": "y2=\"${PY(y+s*(t1-x)).toFixed(2)}\" stroke=\"${FIG_COL.c}\"",
+   "replace": "y2=\"${PY(y).toFixed(2)}\" stroke=\"${FIG_COL.c}\"",
    "run": "verify"
   },
   {
-   "name": "the empty-slice goal takes any slice",
+   "name": "stepping does not mark the stop",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.area()===0},",
+   "find": "this.k=v; this.seen[this.si].add(v); this.touched=true;",
+   "replace": "this.k=v; this.touched=true;",
+   "run": "verify"
+  },
+  {
+   "name": "the stepper runs past the last stop",
+   "file": "index.html",
+   "find": "if(v<0 || v>8) return;",
+   "replace": "if(v<0 || v>9) return;",
+   "run": "verify"
+  },
+  {
+   "name": "the flat goal takes any slope",
+   "file": "index.html",
+   "find": "     ok:K=>K.si===0 && K.slope()===0},",
    "replace": "     ok:K=>K.si===0},",
    "run": "verify"
   },
   {
-   "name": "the swap goal takes one sweep",
+   "name": "the trace goal takes five stops",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.swept[0].size===2},",
-   "replace": "     ok:K=>K.si===0 && K.swept[0].size>=1},",
+   "find": "     ok:K=>K.si===0 && K.seen[0].size===9},",
+   "replace": "     ok:K=>K.si===0 && K.seen[0].size>=5},",
    "run": "verify"
   },
   {
-   "name": "the alike goal takes the growing slices",
+   "name": "the exp goal takes one stop",
    "file": "index.html",
-   "find": "     ok:K=>K.si===1 && K.hold==='y' && K.seen.size>=2},",
-   "replace": "     ok:K=>K.si===1 && K.seen.size>=2},",
+   "find": "     ok:K=>K.si===2 && K.seen[2].size>=3},",
+   "replace": "     ok:K=>K.si===2},",
    "run": "verify"
   },
   {
-   "name": "the average goal takes any slice",
+   "name": "the ln goal takes slope 1",
    "file": "index.html",
-   "find": "     ok:K=>K.si===2 && K.area()===K.total()/K.len()}",
-   "replace": "     ok:K=>K.si===2 && K.area()>0}",
+   "find": "     ok:K=>K.si===3 && K.slope()===2}",
+   "replace": "     ok:K=>K.si===3 && K.slope()===1}",
    "run": "verify"
   },
   {
-   "name": "turning keeps the old slice",
+   "name": "a new curve keeps the old stop",
    "file": "index.html",
-   "find": "  turn(h){ if(h===this.hold) return; this.hold=h; this.k=this.START;",
-   "replace": "  turn(h){ if(h===this.hold) return; this.hold=h;",
-   "run": "play:slice"
+   "find": "  pick(i){ this.si=i; this.k=this.START; this.seen[i].add(this.k);",
+   "replace": "  pick(i){ this.si=i; this.seen[i].add(this.k);",
+   "run": "play:tracer"
   },
   {
-   "name": "a new function keeps the old slice",
+   "name": "the back button stays on at the first stop",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.k=this.START; this.seen=new Set([this.k]);",
-   "replace": "  pick(i){ this.si=i; this.seen=new Set([this.k]);",
-   "run": "play:slice"
+   "find": "document.getElementById('tcXLo').disabled=this.k<=0;",
+   "replace": "document.getElementById('tcXLo').disabled=false;",
+   "run": "play:tracer"
   },
   {
-   "name": "the hold buttons do nothing",
+   "name": "the step buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Slice.turn('${h}')\"",
-   "replace": "onclick=\"\"",
-   "run": "play:slice"
+   "find": "aria-label=\"Step x on to the next stop\"",
+   "replace": "aria-label=\"\"",
+   "run": "play:tracer"
   },
   {
-   "name": "the step buttons keep saying x",
+   "name": "the curve buttons run in one row",
    "file": "index.html",
-   "find": "`Move the slice on to higher ${this.hold}`",
-   "replace": "`Move the slice on to higher x`",
-   "run": "play:slice"
-  },
-  {
-   "name": "the back button stays on at 0",
-   "file": "index.html",
-   "find": "document.getElementById('scTLo').disabled=this.k<=0;",
-   "replace": "document.getElementById('scTLo').disabled=false;",
-   "run": "play:slice"
-  },
-  {
-   "name": "the function buttons run in one row",
-   "file": "index.html",
-   "find": "<div id=\"scSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"scSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
-   "run": "play:slice"
+   "find": "<div id=\"tcSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"tcSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
+   "run": "play:tracer"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every slice summed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every slice summed','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:slice"
+   "find": "'every slope marked','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every slope marked','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:tracer"
   },
   {
-   "name": "the Tome loses the slice workshop",
+   "name": "the Tome loses the slope tracer workshop",
    "file": "index.html",
-   "find": "id=\"tomeSlice\"",
-   "replace": "id=\"tomeSliceX\"",
-   "run": "play:slice"
+   "find": "id=\"tomeTracer\"",
+   "replace": "id=\"tomeTracerX\"",
+   "run": "play:tracer"
   },
   {
-   "name": "the workshop saves where it slices",
+   "name": "the workshop saves where it traces",
    "file": "index.html",
-   "find": "  moveT(by){ const v=this.k+by;",
-   "replace": "  moveT(by){ Game.s.sliceAt=this.k; const v=this.k+by;",
-   "run": "play:slice"
+   "find": "  moveX(by){ const v=this.k+by; if(v<0 || v>8) return;",
+   "replace": "  moveX(by){ Game.s.traceAt=this.k; const v=this.k+by; if(v<0 || v>8) return;",
+   "run": "play:tracer"
   }
  ]
 }

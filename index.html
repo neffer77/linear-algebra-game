@@ -1533,6 +1533,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SLOPE TRACER WORKSHOP ============ -->
+  <div class="screen" id="s-tracer">
+    <div class="panel"><h2>✍️ Slope Tracer Workshop</h2><div class="sub">The derivative of a curve is another curve: at each x, how steep the first one is there. Step along a curve, mark its slope at each stop as a dot at that height, and watch the dots draw the derivative for you.</div></div>
+    <div class="panel">
+      <div id="tcSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="tcFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="tcXLo" onclick="Tracer.moveX(-1)" aria-label="Step x back to the last stop">−</button>
+          <b id="tcX" style="font-size:17px;min-width:0"></b>
+          <button id="tcXHi" onclick="Tracer.moveX(1)" aria-label="Step x on to the next stop">+</button></div>
+      </div>
+      <div id="tcRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tcGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3535,6 +3554,7 @@ const WORKSHOP_FOR = (() => {
     Parts:   ["✂️ Parts Workshop", ['byParts']],
     Cover:   ["🙈 Cover-up Workshop", ['partialFrac']],
     Slice:   ["🍞 Slice Workshop", ['doubleInt']],
+    Tracer:  ["✍️ Slope Tracer Workshop", ['trigDeriv','expLog']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12925,6 +12945,7 @@ const UI = {
     if(id==='s-cof') Cofactor.render();
     if(id==='s-cover') Cover.render();
     if(id==='s-slice') Slice.render();
+    if(id==='s-tracer') Tracer.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13673,6 +13694,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🍞 Slice Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer.</div>
          <button class="btn sm" id="tomeSlice" style="width:auto;margin-top:8px" onclick="Slice.open()">Open the slice workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">✍️ Slope Tracer Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x.</div>
+         <button class="btn sm" id="tomeTracer" style="width:auto;margin-top:8px" onclick="Tracer.open()">Open the slope tracer workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18290,6 +18316,116 @@ const Slice = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SLICED THROUGH','every slice summed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The slope tracer workshop: what the slopes of a curve draw ----------
+   Step along sin x, cos x, eˣ or ln x. At each stop the tangent's slope is
+   worked out with a nudge and marked as a gold dot at that height. The dots
+   of sin x trace out cos x, those of cos x trace −sin x, those of ln x trace
+   1/x, and those of eˣ land on eˣ itself. Nothing is saved. */
+const Tracer = {
+  SETS:[
+    {id:'sin', btn:'sin x', fs:'sin x', ds:'cos x', dat:X=>`cos(${X})`, trig:true, f:Math.sin, d:Math.cos},
+    {id:'cos', btn:'cos x', fs:'cos x', ds:'−sin x', dat:X=>`−sin(${X})`, trig:true, f:Math.cos, d:x=>-Math.sin(x)},
+    {id:'exp', btn:'eˣ', fs:'eˣ', ds:'eˣ', f:Math.exp, d:Math.exp},
+    {id:'ln', btn:'ln x', fs:'ln x', ds:'1/x', dat:X=>`1/${X}`, f:Math.log, d:x=>1/x}
+  ],
+  /* nine stops each: quarter turns from −π to π for sin and cos, halves from
+     −2 to 2 for eˣ, and halves from 0.5 to 4.5 for ln x */
+  xs(S=this.set()){ return [0,1,2,3,4,5,6,7,8].map(i=> S.trig ? (i-4)*Math.PI/4 : S.id==='exp' ? (i-4)/2 : (i+1)/2); },
+  START:4,
+  si:0, k:4, touched:false,
+  /* the stops looked at on each curve; each one leaves its dot */
+  seen:[new Set([4]),new Set([4]),new Set([4]),new Set([4])],
+  done:new Set(),
+  GOALS:[
+    {id:'flat', t:'On sin x, find a stop where the slope is 0: the tangent lies flat.', toast:'A flat tangent',
+     ok:K=>K.si===0 && K.slope()===0},
+    {id:'steep', t:'Find where sin x falls as steeply as it ever does.', toast:'The steepest fall',
+     ok:K=>K.si===0 && K.slope()===-1},
+    {id:'trace', t:'Mark the slope at every stop on sin x and see what curve the dots trace.', toast:'The slopes trace cos x',
+     ok:K=>K.si===0 && K.seen[0].size===9},
+    {id:'cos', t:'On cos x, find where it falls fastest.', toast:'cos falls fastest at π/2',
+     ok:K=>K.si===1 && K.slope()===-1},
+    {id:'exp', t:'On eˣ, mark three slopes and see where they land.', toast:'eˣ is its own slope',
+     ok:K=>K.si===2 && K.seen[2].size>=3},
+    {id:'ln', t:'On ln x, find where the slope is 2.', toast:'A slope of 2 at x = ½',
+     ok:K=>K.si===3 && K.slope()===2}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.xs()[this.k]; },
+  r(v){ const q=Math.round(v*1e4)/1e4; return Object.is(q,-0)?0:q; },
+  /* the slope the nudge gives, to four places */
+  nudge(x=this.x()){ const f=this.set().f, h=0.001; return (f(x+h)-f(x-h))/(2*h); },
+  slope(x=this.x()){ return this.r(this.nudge(x)); },
+  /* how much f changes across the nudge, to seven places */
+  rise(x=this.x()){ const f=this.set().f, q=Math.round((f(x+0.001)-f(x-0.001))*1e7)/1e7; return Object.is(q,-0)?0:q; },
+  num(v){ return neg(this.r(v)); },
+  is(v){ return (Math.abs(this.r(v)-v)<1e-10 ? '= ' : '≈ ')+this.num(v); },
+  /* x as the player reads it: quarters of π on the trig curves */
+  xl(k=this.k){ const S=this.set(), x=this.xs()[k];
+    if(!S.trig) return this.num(x);
+    const q=k-4, a=Math.abs(q), s=q<0?'−':'';
+    return q===0 ? '0' : s+({1:'π/4',2:'π/2',3:'3π/4',4:'π'})[a]; },
+  traced(){ return this.seen[this.si].size===9; },
+  working(){
+    const S=this.set(), x=this.x(), X=this.xl(), f=S.f, s=this.slope(), n=this.seen[this.si].size;
+    const out=[`f(x) = ${S.fs}. Step x along: at each stop the tangent's slope is worked out and marked as a gold dot at that height.`];
+    const rise=this.rise();
+    out.push(`At x = ${X}: f(${X}) ${this.is(f(x))}. Nudge 0.001 either side and f ${rise>0 ? `rises by about ${neg(rise)}` : rise<0 ? `falls by about ${neg(-rise)}` : 'does not change'} over 0.002, so the tangent's slope here is about ${neg(s)}.`);
+    if(s===0) out.push(`The slope is 0: the tangent lies flat, at the ${f(x)>0?'top of a hump':'bottom of a dip'}.`);
+    if(S.trig && Math.abs(s)===1) out.push(`A slope of ${neg(s)} is as steep as ${S.fs} ever gets: ${s<0?'it falls fastest here':'it climbs fastest here'}, as it crosses the middle line.`);
+    if(S.id==='exp') out.push(`The slope, about ${neg(s)}, is the height f(${X}) itself: the dot lands on the curve.`);
+    if(S.id==='ln' && s===2) out.push(`A slope of 2 at x = ${X}: ln x climbs fastest near 0 and flattens as x grows, because its slope is 1 ÷ x.`);
+    out.push(this.traced()
+      ? `Every stop is marked, and the dots trace out ${S.ds}: ${S.id==='exp' ? 'the derivative of eˣ is eˣ, the one curve that is its own slope.' : `the derivative of ${S.fs} is ${S.ds}. Here ${S.dat(X)} ${this.is(S.d(x))}, the same as the slope.`}`
+      : `Marked so far: ${n} of 9 stops. Mark them all to see what curve the slopes trace.`);
+    return out;
+  },
+  /* f in blue with its tangent in green at the gold point; every marked slope
+     is a gold dot at height f′(x); once every stop is marked, the curve the
+     dots trace is drawn dashed in gold */
+  box(){ const S=this.set(); return S.trig ? [-3.5,3.5,-1.4,1.4] : S.id==='exp' ? [-2.25,2.25,-0.5,7.8] : [0,4.75,-1,2.2]; },
+  svg(){
+    const S=this.set(), [x0,x1,y0,y1]=this.box(), x=this.x(), y=S.f(x), s=this.nudge(x), xs=this.xs();
+    const PX=v=>20+(v-x0)/(x1-x0)*320, PY=v=>188-(v-y0)/(y1-y0)*176;
+    const curve=(g,k,col,dash)=>{ const pts=[]; const a=S.id==='ln'?0.18:x0; for(let i=0;i<=90;i++){ const t=a+(x1-a)*i/90, v=g(t); if(v>=y0-0.5 && v<=y1+0.5) pts.push(`${PX(t).toFixed(2)},${PY(Math.max(y0-0.5,Math.min(y1+0.5,v))).toFixed(2)}`); }
+      return `<polyline data-k="${k}" points="${pts.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5"${dash?' stroke-dasharray="6 4"':''}/>`; };
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.fs} in blue, with its tangent at x = ${this.xl()}, slope about ${neg(this.slope())}, and ${this.seen[this.si].size} slopes marked as gold dots${this.traced()?`, tracing ${S.ds}`:''}">`;
+    out+=`<line x1="20" y1="${PY(0).toFixed(2)}" x2="340" y2="${PY(0).toFixed(2)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    if(x0<0) out+=`<line x1="${PX(0).toFixed(2)}" y1="8" x2="${PX(0).toFixed(2)}" y2="192" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=curve(S.f,'curve',FIG_COL.a,false);
+    if(this.traced()) out+=curve(S.d,'traced',FIG_COL.b,true);
+    const t0=x-0.8, t1=x+0.8;
+    out+=`<line data-k="tan" x1="${PX(t0).toFixed(2)}" y1="${PY(y+s*(t0-x)).toFixed(2)}" x2="${PX(t1).toFixed(2)}" y2="${PY(y+s*(t1-x)).toFixed(2)}" stroke="${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/>`;
+    for(const k of [...this.seen[this.si]].sort((a,b)=>a-b)) out+=`<circle data-k="dot" cx="${PX(xs[k]).toFixed(2)}" cy="${PY(this.nudge(xs[k])).toFixed(2)}" r="4" fill="${FIG_COL.b}"/>`;
+    out+=`<circle data-k="pt" cx="${PX(x).toFixed(2)}" cy="${PY(y).toFixed(2)}" r="5" fill="${FIG_COL.a}"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-tracer'); },
+  pick(i){ this.si=i; this.k=this.START; this.seen[i].add(this.k); this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>8) return; this.k=v; this.seen[this.si].add(v); this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tcSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Tracer.pick(${i})" aria-label="f(x) = ${s.fs}">${s.btn}</button>`).join('');
+    document.getElementById('tcX').textContent=`x = ${this.xl()}`;
+    document.getElementById('tcXLo').disabled=this.k<=0;
+    document.getElementById('tcXHi').disabled=this.k>=8;
+    document.getElementById('tcFig').innerHTML=this.svg()+
+      `<div class="figcap">The curve is f, in blue, with its tangent in green. Each gold dot is a slope you have marked, drawn at the height of that slope. Mark every stop and the curve they trace appears dashed in gold.</div>`;
+    document.getElementById('tcRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tcGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE TRACER','every slope marked','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
