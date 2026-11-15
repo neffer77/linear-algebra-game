@@ -1610,6 +1610,32 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ CROSS WORKSHOP ============ -->
+  <div class="screen" id="s-cross">
+    <div class="panel"><h2>✖️ Cross Product Workshop</h2><div class="sub">The cross product of two arrows in 3D is a third arrow, square to both. Turn v one part at a time and watch u × v worked out from the other two slots, check it is square to both, and see its length measure the area they span.</div></div>
+    <div class="panel">
+      <div id="crSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which u"></div>
+      <div id="crFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="crV0Lo" onclick="Cross.moveV(0,-1)" aria-label="Make v's first part 1 smaller">−</button>
+          <b id="crV0" style="font-size:17px;min-width:0"></b>
+          <button id="crV0Hi" onclick="Cross.moveV(0,1)" aria-label="Make v's first part 1 bigger">+</button></div>
+        <div class="wsCell"><button id="crV1Lo" onclick="Cross.moveV(1,-1)" aria-label="Make v's second part 1 smaller">−</button>
+          <b id="crV1" style="font-size:17px;min-width:0"></b>
+          <button id="crV1Hi" onclick="Cross.moveV(1,1)" aria-label="Make v's second part 1 bigger">+</button></div>
+        <div class="wsCell"><button id="crV2Lo" onclick="Cross.moveV(2,-1)" aria-label="Make v's third part 1 smaller">−</button>
+          <b id="crV2" style="font-size:17px;min-width:0"></b>
+          <button id="crV2Hi" onclick="Cross.moveV(2,1)" aria-label="Make v's third part 1 bigger">+</button></div>
+      </div>
+      <div class="wsModes" style="flex-wrap:wrap"><button id="crSwap" class="btn sm ghost" onclick="Cross.swap()" aria-pressed="false">Swap the order</button></div>
+      <div id="crRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="crGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3615,6 +3641,7 @@ const WORKSHOP_FOR = (() => {
     Tracer:  ["✍️ Slope Tracer Workshop", ['trigDeriv','expLog']],
     Arrow:   ["➡️ Arrow Workshop", ['vecAdd','vecScale','mag','unitVec']],
     Horizon: ["🌅 Horizon Workshop", ['limInf']],
+    Cross:   ["✖️ Cross Product Workshop", ['cross']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13008,6 +13035,7 @@ const UI = {
     if(id==='s-tracer') Tracer.render();
     if(id==='s-arrow') Arrow.render();
     if(id==='s-horizon') Horizon.render();
+    if(id==='s-cross') Cross.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13771,6 +13799,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🌅 Horizon Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first.</div>
          <button class="btn sm" id="tomeHorizon" style="width:auto;margin-top:8px" onclick="Horizon.open()">Open the horizon workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">✖️ Cross Product Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn v one part at a time and watch u × v come out square to both, worked from the other two slots. Point it straight up, set the area it measures, line v up with u, hit a target, and swap the order.</div>
+         <button class="btn sm" id="tomeCross" style="width:auto;margin-top:8px" onclick="Cross.open()">Open the cross product workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18737,6 +18770,145 @@ const Horizon = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE HORIZON','every limit reached','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The cross workshop: an arrow square to two others ----------
+   Turn v one part at a time and watch u × v, worked part by part from the
+   other two slots. It always comes out square to both u and v, its length is
+   the area of the parallelogram they span, and swapping the order turns it
+   round. Drawn in 3D with the floor tilted toward you. Nothing is saved. */
+const Cross = {
+  SETS:[
+    {id:'floor', btn:'On the floor', u:[2,0,0], v:[1,1,1]},
+    {id:'tilt', btn:'Tilted', u:[1,-1,2], v:[0,1,1]},
+    {id:'aim', btn:'Hit a target', u:[1,-1,0], v:[1,1,1], aim:[2,2,1],
+     form:'⟨−v₃, −v₃, v₁ + v₂⟩', formSw:'⟨v₃, v₃, −v₁ − v₂⟩'}
+  ],
+  LO:-3, HI:3,
+  si:0, v:[1,1,1], sw:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'up', t:'On the floor, turn v until u × v points straight up.', toast:'Straight up',
+     ok:K=>K.si===0 && K.w()[0]===0 && K.w()[1]===0 && K.w()[2]>0},
+    {id:'area', t:'Still on the floor, make the shaded parallelogram\\'s area exactly 6.', toast:'An area of 6',
+     ok:K=>K.si===0 && K.sq()===36},
+    {id:'zero', t:'On the tilted u, line v up with u so that u × v is the zero vector.', toast:'Nothing square to them',
+     ok:K=>K.si===1 && K.v.some(c=>c!==0) && K.sq()===0},
+    {id:'aim', t:'Hit the target: make the green arrow ⟨2, 2, 1⟩.', toast:'On target',
+     ok:K=>K.si===2 && K.w().join()==='2,2,1'},
+    {id:'flip', t:'Swap the order and watch the green arrow turn round.', toast:'v × u = −(u × v)',
+     ok:K=>K.sw && K.sq()>0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* the first and second arrows in the product, as it is written now */
+  pair(){ const u=this.set().u; return this.sw ? [this.v,u,'v','u'] : [u,this.v,'u','v']; },
+  w(){ const [a,b]=this.pair(), z=c=>Object.is(c,-0)?0:c;
+    return [z(a[1]*b[2]-a[2]*b[1]), z(a[2]*b[0]-a[0]*b[2]), z(a[0]*b[1]-a[1]*b[0])]; },
+  sq(p=this.w()){ return p[0]*p[0]+p[1]*p[1]+p[2]*p[2]; },
+  dot(p,q){ return p[0]*q[0]+p[1]*q[1]+p[2]*q[2]; },
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  vec(p){ return \`⟨\${p.map(c=>this.num(c)).join(', ')}⟩\`; },
+  par(c){ return \`(\${this.num(c)})\`; },
+  pw(c){ return c<0 ? \`(\${this.num(c)})²\` : \`\${this.num(c)}²\`; },
+  sub:['₁','₂','₃'],
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), [a,b,A,B]=this.pair(), w=this.w(), s=this.sq(), out=[];
+    const P=\`\${A} × \${B}\`, s1=this.sub;
+    out.push(this.sw ? \`u = \${this.vec(S.u)} and v = \${this.vec(this.v)}. The order is swapped, so the green arrow is v × u.\`
+      : \`u = \${this.vec(S.u)} and v = \${this.vec(this.v)}, and the green arrow is u × v.\`);
+    const part=(name,i,j,k)=>\`\${name} part, from the other two slots: \${A}\${s1[i]}\${B}\${s1[j]} − \${A}\${s1[j]}\${B}\${s1[i]} = \${this.par(a[i])}\${this.par(b[j])} − \${this.par(a[j])}\${this.par(b[i])} = \${this.num(w[k])}.\`;
+    out.push(part('First',1,2,0));
+    out.push(part('Second',2,0,1));
+    out.push(part('Third',0,1,2));
+    out.push(\`So \${P} = \${this.vec(w)}.\`);
+    if(S.form) out.push(\`With u = \${this.vec(S.u)}, every \${P} comes out as \${this.sw?S.formSw:S.form}. The target is \${this.vec(S.aim)}\${w.join()===S.aim.join()?', and this is it.':', and this is not it yet.'}\`);
+    if(this.v.every(c=>c===0)){
+      out.push(\`v is the zero vector, so there is nothing to cross with: \${P} is ⟨0, 0, 0⟩.\`);
+      return out;
+    }
+    if(s===0){
+      const i=S.u.findIndex(c=>c!==0), k=this.v[i]/S.u[i];
+      out.push(\`\${P} is the zero vector: v = \${this.num(k)}·u points along the same line as u, so the two span no area, and no one direction is square to both.\`);
+      return out;
+    }
+    const dl=p=>\`\${p.map((c,i)=>\`\${this.par(c)}\${this.par(w[i])}\`).join(' + ')} = \${this.num(this.dot(p,w))}\`;
+    out.push(\`It is square to both: u · (\${P}) = \${dl(S.u)}, and v · (\${P}) = \${dl(this.v)}.\`);
+    if(w[0]===0 && w[1]===0) out.push(\`It points straight \${w[2]>0?'up':'down'} the z-axis, so u and v both lie flat in the floor.\`);
+    const L=Math.sqrt(s), nice=Number.isInteger(L);
+    out.push(\`Its length, √(\${w.map(c=>this.pw(c)).join(' + ')}) = √\${s}\${nice?' = ':' ≈ '}\${this.num(L)}, is the area of the shaded parallelogram that u and v span.\`);
+    if(this.sw){ const r=w.map(c=>c===0?0:-c);
+      out.push(\`Swapping the order turns it round: v × u = −(u × v), and u × v = \${this.vec(r)}.\`); }
+    return out;
+  },
+  /* the 3D drawing: x comes toward you, down to the left, y runs to the right and z
+     straight up; no whole-number v up to 3 lands its tip on the origin */
+  iso(p){ return [-0.5*p[0]+0.95*p[1], 0.25*p[0]-0.1*p[1]-p[2]]; },
+  box(pts){
+    let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+    for(const p of pts){ const [x,y]=this.iso(p); x0=Math.min(x0,x); x1=Math.max(x1,x); y0=Math.min(y0,y); y1=Math.max(y1,y); }
+    const sc=Math.min(36, 300/(x1-x0), 168/(y1-y0)), cx=(x0+x1)/2, cy=(y0+y1)/2;
+    return {sc, P:p=>{ const [x,y]=this.iso(p); return [180+(x-cx)*sc, 102+(y-cy)*sc]; }};
+  },
+  arrow(p,q,col,key){
+    const [X0,Y0]=p, [X1,Y1]=q, d=Math.hypot(X1-X0,Y1-Y0);
+    if(d<0.5) return '';
+    const ux=(X1-X0)/d, uy=(Y1-Y0)/d, h=Math.min(9,d*0.45), bx=X1-ux*h, by=Y1-uy*h;
+    return \`<line data-k="\${key}" x1="\${X0.toFixed(2)}" y1="\${Y0.toFixed(2)}" x2="\${bx.toFixed(2)}" y2="\${by.toFixed(2)}" stroke="\${col}" stroke-width="2.5"/>\`+
+      \`<polygon data-k="\${key}-head" points="\${X1.toFixed(2)},\${Y1.toFixed(2)} \${(bx-uy*h*0.5).toFixed(2)},\${(by+ux*h*0.5).toFixed(2)} \${(bx+uy*h*0.5).toFixed(2)},\${(by-ux*h*0.5).toFixed(2)}" fill="\${col}"/>\`;
+  },
+  svg(){
+    const S=this.set(), u=S.u, v=this.v, w=this.w(), O=[0,0,0], uv=[u[0]+v[0],u[1]+v[1],u[2]+v[2]];
+    const R=Math.max(2, ...u.map(Math.abs), ...v.map(Math.abs), ...w.map(Math.abs));
+    const B=this.box([O,u,v,uv,w,[R,0,0],[0,R,0],[0,0,R],[-R,0,0],[0,-R,0],[0,0,-R]]), P=B.P, f=n=>n.toFixed(2);
+    const P0=P(O), L=this.sq()===0 ? '0' : Number.isInteger(Math.sqrt(this.sq())) ? \`\${Math.sqrt(this.sq())}\` : \`about \${this.num(Math.sqrt(this.sq()))}\`;
+    let out=\`<svg viewBox="0 0 360 204" style="width:100%;height:auto;display:block" role="img" aria-label="\${this.sw?'v × u':'u × v'} = \${this.vec(w)} in green, square to u = \${this.vec(u)} in blue and v = \${this.vec(v)} in gold, length \${L}">\`;
+    [['x',[R,0,0]],['y',[0,R,0]],['z',[0,0,R]]].forEach(([n,e])=>{
+      const a=P(e.map(c=>-c)), b=P(e);
+      out+=\`<line data-k="\${n}axis" x1="\${f(a[0])}" y1="\${f(a[1])}" x2="\${f(b[0])}" y2="\${f(b[1])}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`+
+        \`<text x="\${f(b[0]+(n==='y'?8:n==='x'?-6:0))}" y="\${f(b[1]+(n==='z'?-4:n==='x'?10:4))}" font-size="11" text-anchor="middle" fill="\${FIG_COL.dim}">\${n}</text>\`;
+    });
+    for(const [k,p] of [['u',u],['v',v],['w',w]]) if(p[2]!==0 && this.sq(p)>0){
+      const t=P(p), g=P([p[0],p[1],0]);
+      out+=\`<line data-k="drop-\${k}" x1="\${f(t[0])}" y1="\${f(t[1])}" x2="\${f(g[0])}" y2="\${f(g[1])}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="3 3"/>\`;
+    }
+    if(this.sq()>0) out+=\`<polygon data-k="area" points="\${[O,u,uv,v].map(p=>P(p).map(f).join(',')).join(' ')}" fill="\${FIG_COL.a}" fill-opacity="0.18" stroke="none"/>\`;
+    out+=this.arrow(P0,P(u),FIG_COL.a,'u');
+    out+=this.arrow(P0,P(v),FIG_COL.b,'v');
+    out+= this.sq()===0 ? \`<circle data-k="zero" cx="\${f(P0[0])}" cy="\${f(P0[1])}" r="5" fill="\${FIG_COL.c}"/>\` : this.arrow(P0,P(w),FIG_COL.c,'w');
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-cross'); },
+  pick(i){ this.si=i; this.v=this.SETS[i].v.slice(); this.sw=false; this.touched=true; this.render(); },
+  moveV(i,by){ const c=this.v[i]+by; if(c<this.LO || c>this.HI) return; this.v=this.v.slice(); this.v[i]=c; this.touched=true; this.render(); },
+  swap(){ this.sw=!this.sw; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('crSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Cross.pick(\${i})" aria-label="\${s.btn}: u = \${this.vec(s.u)}">\${s.btn}</button>\`).join('');
+    [0,1,2].forEach(i=>{
+      document.getElementById('crV'+i).textContent=\`v\${this.sub[i]} = \${this.num(this.v[i])}\`;
+      document.getElementById('crV'+i+'Lo').disabled=this.v[i]<=this.LO;
+      document.getElementById('crV'+i+'Hi').disabled=this.v[i]>=this.HI;
+    });
+    const b=document.getElementById('crSwap');
+    b.textContent=this.sw?'Put u first again':'Swap the order';
+    b.setAttribute('aria-pressed', String(this.sw));
+    b.setAttribute('aria-label', this.sw?'Put u first again, to show u × v':'Swap the order, to show v × u');
+    document.getElementById('crFig').innerHTML=this.svg()+
+      \`<div class="figcap">Drawn in 3D with the floor tilted toward you: x comes toward you, down to the left, y runs to the right and z goes straight up, and dashed lines drop each tip to the floor. u is blue, v is gold, the green arrow is their cross product, and the shaded parallelogram is the one u and v span.</div>\`;
+    document.getElementById('crRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('crGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE CROSS','every square arrow found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

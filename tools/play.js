@@ -84,6 +84,7 @@ const SUITES = [
   require('./play/tracer'),      // the derivative traced out as dots
   require('./play/arrow'),       // adding, stretching and measuring vectors
   require('./play/horizon'),     // where a fraction heads as x grows
+  require('./play/cross'),       // an arrow square to two others
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

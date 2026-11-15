@@ -1,271 +1,306 @@
 {
- "change": "The Horizon Workshop: limits at infinity",
+ "change": "The Cross Product Workshop: an arrow square to two others",
  "mutations": [
   {
-   "name": "the equal-powers top is wrong",
+   "name": "the floor u leaves the floor",
    "file": "index.html",
-   "find": "top:[[3,2],[5,1]], bot:[[1,2],[2,0]], L:3,",
-   "replace": "top:[[3,2],[5,1]], bot:[[1,2],[2,0]], L:5,",
+   "find": "{id:'floor', btn:'On the floor', u:[2,0,0], v:[1,1,1]}",
+   "replace": "{id:'floor', btn:'On the floor', u:[2,0,1], v:[1,1,1]}",
    "run": "verify"
   },
   {
-   "name": "the bigger-below limit is not 0",
+   "name": "the target set's v starts on the target",
    "file": "index.html",
-   "find": "bot:[[2,2],[1,0]], L:0, ratio:'2/x'",
-   "replace": "bot:[[2,2],[1,0]], L:2, ratio:'2/x'",
+   "find": "{id:'aim', btn:'Hit a target', u:[1,-1,0], v:[1,1,1], aim:[2,2,1],",
+   "replace": "{id:'aim', btn:'Hit a target', u:[1,-1,0], v:[0,1,-2], aim:[2,2,1],",
    "run": "verify"
   },
   {
-   "name": "the bigger-on-top fraction has a limit",
+   "name": "the target cannot be reached",
    "file": "index.html",
-   "find": "bot:[[2,1],[3,0]], L:null, ratio:'x/2'",
-   "replace": "bot:[[2,1],[3,0]], L:0.5, ratio:'x/2'",
+   "find": "aim:[2,2,1],\n     form",
+   "replace": "aim:[2,2,2],\n     form",
    "run": "verify"
   },
   {
-   "name": "the ratio is written upside down",
+   "name": "v's parts only run to 2",
    "file": "index.html",
-   "find": "ratio:'x/2', y:[0,60]",
-   "replace": "ratio:'2/x', y:[0,60]",
+   "find": "  LO:-3, HI:3,\n  si:0, v:[1,1,1],",
+   "replace": "  LO:-2, HI:2,\n  si:0, v:[1,1,1],",
    "run": "verify"
   },
   {
-   "name": "x steps by twos",
+   "name": "the first part uses the wrong slots",
    "file": "index.html",
-   "find": "X:[1,10,100,1000,10000,100000,1000000],",
-   "replace": "X:[1,2,4,8,16,32,64],",
+   "find": "return [z(a[1]*b[2]-a[2]*b[1]),",
+   "replace": "return [z(a[1]*b[1]-a[2]*b[2]),",
    "run": "verify"
   },
   {
-   "name": "the workshop opens at x = 1",
+   "name": "the second part has its sign flipped",
    "file": "index.html",
-   "find": "1000000],\n  START:2,\n  si:0, k:2,",
-   "replace": "1000000],\n  START:0,\n  si:0, k:0,",
+   "find": "z(a[2]*b[0]-a[0]*b[2]),",
+   "replace": "z(a[0]*b[2]-a[2]*b[0]),",
    "run": "verify"
   },
   {
-   "name": "a side drops its last term",
+   "name": "the third part adds where it should subtract",
    "file": "index.html",
-   "find": "side(T,x=this.x()){ return T.reduce((s,[c,p])=>s+c*x**p,0); },",
-   "replace": "side(T,x=this.x()){ return T.slice(0,1).reduce((s,[c,p])=>s+c*x**p,0); },",
+   "find": "z(a[0]*b[1]-a[1]*b[0])]; },",
+   "replace": "z(a[0]*b[1]+a[1]*b[0])]; },",
    "run": "verify"
   },
   {
-   "name": "f is the bottom over the top",
+   "name": "swapping changes nothing",
    "file": "index.html",
-   "find": "return this.side(S.top,x)/this.side(S.bot,x); },",
-   "replace": "return this.side(S.bot,x)/this.side(S.top,x); },",
-   "run": "verify"
-  },
-  {
-   "name": "the gap is signed",
-   "file": "index.html",
-   "find": "return L===null ? Infinity : Math.abs(this.f(x)-L); },",
-   "replace": "return L===null ? Infinity : this.f(x)-L; },",
+   "find": "return this.sw ? [this.v,u,'v','u'] : [u,this.v,'u','v']; },",
+   "replace": "return [u,this.v,'u','v']; },",
    "run": "verify"
   },
   {
    "name": "a negative number loses its sign",
    "file": "index.html",
-   "find": "return (q<0?'−':'')+w.toLocaleString('en-US')",
-   "replace": "return w.toLocaleString('en-US')",
+   "find": "  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },\n  vec(p)",
+   "replace": "  num(v){ const q=Math.round(v*1e4)/1e4; return String(Math.abs(q)); },\n  vec(p)",
    "run": "verify"
   },
   {
-   "name": "an inexact f is marked exact",
+   "name": "the worked line names the wrong slots",
    "file": "index.html",
-   "find": "  is(v){ return (Math.abs(Math.round(v*1e4)/1e4-v)<1e-10 ? '= ' : '≈ ')+this.num(v); },\n  sup(p)",
-   "replace": "  is(v){ return '= '+this.num(v); },\n  sup(p)",
+   "find": "${A}${s1[i]}${B}${s1[j]} − ${A}${s1[j]}${B}${s1[i]}",
+   "replace": "${A}${s1[i]}${B}${s1[i]} − ${A}${s1[j]}${B}${s1[j]}",
    "run": "verify"
   },
   {
-   "name": "x² is written x",
+   "name": "the worked line puts in the wrong numbers",
    "file": "index.html",
-   "find": "  sup(p){ return p===2?'²':p===3?'³':''; },",
-   "replace": "  sup(p){ return p===3?'³':''; },",
+   "find": "${this.par(a[i])}${this.par(b[j])} − ${this.par(a[j])}${this.par(b[i])}",
+   "replace": "${this.par(a[i])}${this.par(b[i])} − ${this.par(a[j])}${this.par(b[j])}",
    "run": "verify"
   },
   {
-   "name": "a coefficient of 1 is written as 1·",
+   "name": "the worked parts come in the wrong order",
    "file": "index.html",
-   "find": "`${a===1?'':a+'·'}${X}${this.sup(p)}`",
-   "replace": "`${a+'·'}${X}${this.sup(p)}`",
-   "run": "play:horizon"
-  },
-  {
-   "name": "a minus term is written as a plus",
-   "file": "index.html",
-   "find": "(c<0?' − ':' + '))+body; }).join(''); },",
-   "replace": "' + ')+body; }).join(''); },",
+   "find": "out.push(part('Second',2,0,1));",
+   "replace": "out.push(part('Second',0,1,1));",
    "run": "verify"
   },
   {
-   "name": "the rest is the whole side",
+   "name": "the general form forgets a minus",
    "file": "index.html",
-   "find": "rt=t-lt, rb=b-lb;",
-   "replace": "rt=t, rb=b;",
+   "find": "form:'⟨−v₃, −v₃, v₁ + v₂⟩'",
+   "replace": "form:'⟨−v₃, v₃, v₁ + v₂⟩'",
    "run": "verify"
   },
   {
-   "name": "the not-yet note compares the wrong way",
+   "name": "the swapped form is not turned round",
    "file": "index.html",
-   "find": "Math.abs(rt)>Math.abs(lt)?'on top':''",
-   "replace": "Math.abs(rt)<Math.abs(lt)?'on top':''",
+   "find": "formSw:'⟨v₃, v₃, −v₁ − v₂⟩'",
+   "replace": "formSw:'⟨−v₃, −v₃, v₁ + v₂⟩'",
    "run": "verify"
   },
   {
-   "name": "the below-0 clause shows whenever the rest wins",
+   "name": "the target is called hit when it is not",
    "file": "index.html",
-   "find": "${f<0 && S.L>0 ? `: that is why",
-   "replace": "${S.L>0 ? `: that is why",
+   "find": "${w.join()===S.aim.join()?', and this is it.'",
+   "replace": "${w[2]===S.aim[2]?', and this is it.'",
    "run": "verify"
   },
   {
-   "name": "the ratio here is taken upside down",
+   "name": "v along u is read as k the wrong way up",
    "file": "index.html",
-   "find": "    const r=lt/lb;",
-   "replace": "    const r=lb/lt;",
+   "find": "k=this.v[i]/S.u[i];",
+   "replace": "k=S.u[i]/this.v[i];",
    "run": "verify"
   },
   {
-   "name": "above and below are swapped",
+   "name": "the zero-v case is not caught",
    "file": "index.html",
-   "find": "${f>S.L?'above':'below'} ${S.L}",
-   "replace": "${f<S.L?'above':'below'} ${S.L}",
+   "find": "    if(this.v.every(c=>c===0)){",
+   "replace": "    if(false){",
    "run": "verify"
   },
   {
-   "name": "the within note uses 0.01",
+   "name": "the square-to-both check dots with v twice",
    "file": "index.html",
-   "find": "${g<0.001 ? `, within 0.001 of it` : ''}",
-   "replace": "${g<0.01 ? `, within 0.001 of it` : ''}",
+   "find": "and v · (${P}) = ${dl(this.v)}.`);",
+   "replace": "and v · (${P}) = ${dl(S.u)}.`);",
    "run": "verify"
   },
   {
-   "name": "x is spaced evenly, not by powers",
+   "name": "the straight-up sentence ignores the second part",
    "file": "index.html",
-   "find": "PX=v=>24+Math.log10(v)/6*312,",
-   "replace": "PX=v=>24+v/1e6*312,",
+   "find": "if(w[0]===0 && w[1]===0) out.push(`It points straight",
+   "replace": "if(w[0]===0) out.push(`It points straight",
    "run": "verify"
   },
   {
-   "name": "the limit line is drawn at 0",
+   "name": "the length is not square-rooted",
    "file": "index.html",
-   "find": "y1=\"${PY(S.L).toFixed(2)}\" x2=\"336\" y2=\"${PY(S.L).toFixed(2)}\"",
-   "replace": "y1=\"${PY(0).toFixed(2)}\" x2=\"336\" y2=\"${PY(0).toFixed(2)}\"",
+   "find": "const L=Math.sqrt(s), nice=Number.isInteger(L);",
+   "replace": "const L=s, nice=Number.isInteger(L);",
    "run": "verify"
   },
   {
-   "name": "a stop off the chart is drawn anyway",
+   "name": "a negative square loses its brackets",
    "file": "index.html",
-   "find": "if(y>=y0 && y<=y1) out+=`<circle data-k=\"${on?'here':'stop'}\"",
-   "replace": "if(true) out+=`<circle data-k=\"${on?'here':'stop'}\"",
+   "find": "  pw(c){ return c<0 ? `(${this.num(c)})²` : `${this.num(c)}²`; },\n  sub",
+   "replace": "  pw(c){ return `${this.num(c)}²`; },\n  sub",
    "run": "verify"
   },
   {
-   "name": "an off-chart triangle points the wrong way",
+   "name": "the swap sentence gives v × u back",
    "file": "index.html",
-   "find": "const up=y>y1, cy=PY(clip(y));",
-   "replace": "const up=y<y0, cy=PY(clip(y));",
+   "find": "const r=w.map(c=>c===0?0:-c);",
+   "replace": "const r=w;",
    "run": "verify"
   },
   {
-   "name": "the curve runs off the chart",
+   "name": "the 3D view looks straight down (1, 1, 1)",
    "file": "index.html",
-   "find": "if(y<y0 || y>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
-   "replace": "if(false){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
+   "find": "iso(p){ return [-0.5*p[0]+0.95*p[1], 0.25*p[0]-0.1*p[1]-p[2]]; },",
+   "replace": "iso(p){ return [(p[0]-p[1])*0.866, (p[0]+p[1])*0.5-p[2]]; },",
    "run": "verify"
   },
   {
-   "name": "the close goal takes 0.01",
+   "name": "the drawing runs off the chart",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.gap()<0.001},",
-   "replace": "ok:K=>K.si===0 && K.gap()<0.01},",
+   "find": "const sc=Math.min(36, 300/(x1-x0), 168/(y1-y0))",
+   "replace": "const sc=36",
    "run": "verify"
   },
   {
-   "name": "the away goal takes 100",
+   "name": "the parallelogram skips u + v",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.f()>1000},",
-   "replace": "ok:K=>K.si===2 && K.f()>100},",
+   "find": "${[O,u,uv,v].map(p=>",
+   "replace": "${[O,u,v,v].map(p=>",
    "run": "verify"
   },
   {
-   "name": "the fooled goal takes any f below 3",
+   "name": "the drop lines stop short of the floor",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.f()<0},",
-   "replace": "ok:K=>K.si===3 && K.f()<3},",
+   "find": "const t=P(p), g=P([p[0],p[1],0]);",
+   "replace": "const t=P(p), g=P([p[0],p[1],p[2]/2]);",
    "run": "verify"
   },
   {
-   "name": "a new fraction keeps x",
+   "name": "v's arrow is drawn to u",
    "file": "index.html",
-   "find": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },",
-   "replace": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.touched=true; this.render(); },",
+   "find": "out+=this.arrow(P0,P(v),FIG_COL.b,'v');",
+   "replace": "out+=this.arrow(P0,P(u),FIG_COL.b,'v');",
    "run": "verify"
   },
   {
-   "name": "x runs past a million",
+   "name": "the zero vector is drawn as an arrow",
    "file": "index.html",
-   "find": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return;",
-   "replace": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0) return;",
+   "find": "out+= this.sq()===0 ? `<circle data-k=\"zero\" cx=\"${f(P0[0])}\"",
+   "replace": "out+= false ? `<circle data-k=\"zero\" cx=\"${f(P0[0])}\"",
    "run": "verify"
   },
   {
-   "name": "the out button stays on at a million",
+   "name": "the up goal takes any upright arrow",
    "file": "index.html",
-   "find": "document.getElementById('hzXHi').disabled=this.k>=this.X.length-1;",
-   "replace": "document.getElementById('hzXHi').disabled=false;",
-   "run": "play:horizon"
+   "find": "ok:K=>K.si===0 && K.w()[0]===0 && K.w()[1]===0 && K.w()[2]>0},",
+   "replace": "ok:K=>K.si===0 && K.w()[0]===0 && K.w()[1]===0},",
+   "run": "verify"
   },
   {
-   "name": "the fraction buttons lose their names",
+   "name": "the area goal takes 8",
    "file": "index.html",
-   "find": "aria-label=\"${s.btn}: f(x) = (${this.poly(s.top)})/(${this.poly(s.bot)})\"",
+   "find": "ok:K=>K.si===0 && K.sq()===36},",
+   "replace": "ok:K=>K.si===0 && K.sq()===64},",
+   "run": "verify"
+  },
+  {
+   "name": "the zero goal takes v = 0",
+   "file": "index.html",
+   "find": "ok:K=>K.si===1 && K.v.some(c=>c!==0) && K.sq()===0},",
+   "replace": "ok:K=>K.si===1 && K.sq()===0},",
+   "run": "verify"
+  },
+  {
+   "name": "the flip goal needs no swap",
+   "file": "index.html",
+   "find": "ok:K=>K.sw && K.sq()>0}",
+   "replace": "ok:K=>K.sq()>0}",
+   "run": "verify"
+  },
+  {
+   "name": "picking keeps the swap",
+   "file": "index.html",
+   "find": "this.v=this.SETS[i].v.slice(); this.sw=false; this.touched=true;",
+   "replace": "this.v=this.SETS[i].v.slice(); this.touched=true;",
+   "run": "verify"
+  },
+  {
+   "name": "a stepper runs past 3",
+   "file": "index.html",
+   "find": "if(c<this.LO || c>this.HI) return;",
+   "replace": "if(c<this.LO) return;",
+   "run": "verify"
+  },
+  {
+   "name": "a stepper moves the wrong part",
+   "file": "index.html",
+   "find": "this.v=this.v.slice(); this.v[i]=c;",
+   "replace": "this.v=this.v.slice(); this.v[(i+1)%3]=c;",
+   "run": "verify"
+  },
+  {
+   "name": "the up button is never switched off",
+   "file": "index.html",
+   "find": "document.getElementById('crV'+i+'Hi').disabled=this.v[i]>=this.HI;",
+   "replace": "document.getElementById('crV'+i+'Hi').disabled=false;",
+   "run": "play:cross"
+  },
+  {
+   "name": "the swap button does not show it is pressed",
+   "file": "index.html",
+   "find": "b.setAttribute('aria-pressed', String(this.sw));",
+   "replace": "b.setAttribute('aria-pressed', 'false');",
+   "run": "play:cross"
+  },
+  {
+   "name": "a stepper button loses its name",
+   "file": "index.html",
+   "find": "aria-label=\"Make v's third part 1 bigger\"",
    "replace": "aria-label=\"\"",
-   "run": "play:horizon"
+   "run": "play:cross"
   },
   {
-   "name": "the chosen fraction is not marked pressed",
+   "name": "the u buttons run in one row",
    "file": "index.html",
-   "find": "aria-pressed=\"${i===this.si}\" onclick=\"Horizon.pick(${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Horizon.pick(${i})\"",
-   "run": "play:horizon"
-  },
-  {
-   "name": "the fraction buttons run in one row",
-   "file": "index.html",
-   "find": "<div id=\"hzSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"hzSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:520px\"",
-   "run": "play:horizon"
+   "find": "<div id=\"crSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"crSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:520px\"",
+   "run": "play:cross"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every limit reached','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every limit reached','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:horizon"
+   "find": "'every square arrow found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every square arrow found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:cross"
   },
   {
-   "name": "the Tome loses the horizon workshop",
+   "name": "the Tome loses the cross product workshop",
    "file": "index.html",
-   "find": "id=\"tomeHorizon\"",
-   "replace": "id=\"tomeHorizonX\"",
-   "run": "play:horizon"
+   "find": "id=\"tomeCross\"",
+   "replace": "id=\"tomeCrossX\"",
+   "run": "play:cross"
   },
   {
-   "name": "the workshop saves its x",
+   "name": "the workshop saves its v",
    "file": "index.html",
-   "find": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by;",
-   "replace": "  open(){ UI.go('s-horizon'); },\n  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX(by){ Game.s.horizonK=this.k; const v=this.k+by;",
-   "run": "play:horizon"
+   "find": "  swap(){ this.sw=!this.sw;",
+   "replace": "  swap(){ Game.s.crossV=this.v.join(); this.sw=!this.sw;",
+   "run": "play:cross"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">x runs from 1 to a million",
-   "replace": "<div class=\"figcapX\">x runs from 1 to a million",
-   "run": "play:horizon"
+   "find": "<div class=\"figcap\">Drawn in 3D with the floor",
+   "replace": "<div class=\"figcapX\">Drawn in 3D with the floor",
+   "run": "play:cross"
   }
  ]
 }
