@@ -737,6 +737,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
    coloured as it is drawn: u blue, v green. */
 .dtVecs{grid-template-columns:auto 1fr 1fr;align-items:center}
 .dtName{font-size:20px;font-style:italic} .dtName.c0{color:#5aa9e6} .dtName.c1{color:#57cc7a}
+/* The elimination workshop's rows are buttons, coloured like their lines:
+   row 1 blue, row 2 green; the row being changed is outlined in gold. */
+.elRows{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.elRow{text-align:left;font-size:18px;font-variant-numeric:tabular-nums;padding:8px 12px}
+.elRow b{display:inline-block;min-width:34px;font-size:13px;color:var(--dim)}
+.elRow.c0{color:#5aa9e6} .elRow.c1{color:#57cc7a}
+.elRow[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.elOps{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
+.elOps .btn{width:auto;flex:0 1 auto;min-width:76px}
 /* The hunt's matrices are buttons that show themselves, in brackets. */
 .egM{display:inline-block;border-left:2px solid currentColor;border-right:2px solid currentColor;border-radius:5px;
   padding:0 6px;line-height:1.3;font-variant-numeric:tabular-nums}
@@ -1022,6 +1031,23 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="spGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ ELIMINATION WORKSHOP ============ -->
+  <div class="screen" id="s-elim">
+    <div class="panel"><h2>⚖️ Elimination Workshop</h2><div class="sub">Two equations, two unknowns. Change one row at a time: add k times the other row to it, multiply or divide it by k, or swap the rows. Clear x out of one row, then y out of the other, and the answer is left standing. Each row is drawn as its line.</div></div>
+    <div class="panel">
+      <div id="elSys" class="wsModes" role="group" aria-label="Which system"></div>
+      <div id="elRows" class="elRows" role="group" aria-label="The row to change"></div>
+      <div id="elK" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:200px" role="group" aria-label="The number k"></div>
+      <div id="elOps" class="elOps" role="group" aria-label="Row operations"></div>
+      <div id="elFig"></div>
+      <div id="elRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="elGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -5888,6 +5914,13 @@ const Figure = {
       g.setLineDash([5,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.4;
       g.beginPath(); g.moveTo(X(-d[0]*r),Y(-d[1]*r)); g.lineTo(X(d[0]*r),Y(d[1]*r)); g.stroke();
       g.setLineDash([]);
+    });
+    // equations a·x + b·y = c, each drawn as its own solid line
+    (s.eqs||[]).forEach(e=>{
+      const n2=e.a*e.a+e.b*e.b; if(!n2) return;
+      const p0=[e.a*e.c/n2, e.b*e.c/n2], d=[-e.b/Math.sqrt(n2), e.a/Math.sqrt(n2)], r=3*span;
+      g.strokeStyle=e.col||FIG_COL.a; g.lineWidth=2.4;
+      g.beginPath(); g.moveTo(X(p0[0]-d[0]*r),Y(p0[1]-d[1]*r)); g.lineTo(X(p0[0]+d[0]*r),Y(p0[1]+d[1]*r)); g.stroke();
     });
     // the angle between the first two vectors, the short way round
     if(s.arc && s.vecs && s.vecs.length>=2){
@@ -12361,6 +12394,7 @@ const UI = {
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
     if(id==='s-span') Span.render();
+    if(id==='s-elim') Elim.render();
     if(id==='s-limit') Limit.render();
     if(id==='s-descent') Descent.render();
     Calc.syncButton();
@@ -12992,6 +13026,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🧭 Span Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Mix two arrows, a of one and b of the other, to land on a target, and find the pair that can only ever reach a line.</div>
          <button class="btn sm" id="tomeSpan" style="width:auto;margin-top:8px" onclick="Span.open()">Open the span workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⚖️ Elimination Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put.</div>
+         <button class="btn sm" id="tomeElim" style="width:auto;margin-top:8px" onclick="Elim.open()">Open the elimination workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
@@ -14377,6 +14416,190 @@ const Span = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SPAN SEEKER','every mix tried','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ ELIMINATION WORKSHOP ============
+   Two equations in x and y, solved by hand with row operations: add a
+   multiple of one row to the other, multiply or divide a row, swap them.
+   The readout works each operation entry by entry, and the figure draws
+   each row as its line, so the player sees that the lines change while the
+   point where they cross never does. Two of the systems have no single
+   answer, and the row that says so turns up on its own. */
+const Elim = {
+  SYSTEMS:[
+    [[1,2,5],  [3,4,11]],
+    [[2,1,7],  [1,-1,-1]],
+    [[1,1,2],  [2,2,6]],
+    [[1,-1,1], [3,-3,3]]
+  ],
+  KLO:-3, KHI:3, MAX:99,
+  si:0, rows:null, ri:1, k:1, hist:[], last:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'gone',   t:'Clear x or y out of a row by adding a multiple of the other row.', toast:'Cleared an unknown out of a row',
+     ok:E=>E.solo()>=0},
+    {id:'same',   t:'Multiply or divide a row, and watch its line stay where it is.', toast:'Scaled a row without moving its line',
+     ok:E=>!!E.last && (E.last.kind==='mul' || E.last.kind==='div')},
+    {id:'solve',  t:'Solve the first system all the way, to x = … and y = ….', toast:'Solved the first system',
+     ok:E=>E.si===0 && E.solved()},
+    {id:'solve2', t:'Solve the second system too.', toast:'Solved the second system',
+     ok:E=>E.si===1 && E.solved()},
+    {id:'never',  t:'Find the system with no solution, and the row that says so.', toast:'Found the system with no solution',
+     ok:E=>E.bad()>=0},
+    {id:'always', t:'Find the system where every point of a line is a solution.', toast:'Found the system with a whole line of solutions',
+     ok:E=>E.empty()>=0}
+  ],
+  R(){ if(!this.rows) this.rows=this.SYSTEMS[this.si].map(r=>r.slice()); return this.rows; },
+  other(){ return 1-this.ri; },
+  // the crossing of the starting system, if it has exactly one
+  point(){
+    const [[a,b,c],[d,e,f]]=this.SYSTEMS[this.si], D=a*e-b*d;
+    return D ? [(c*e-b*f)/D, (a*f-c*d)/D] : null;
+  },
+  amt(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  term(n, v, first){
+    if(!n) return '';
+    const m=Math.abs(n), body=(m===1?'':m)+v;
+    return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body;
+  },
+  eq(r){
+    const x=this.term(r[0],'x',true), y=this.term(r[1],'y',!x);
+    return \`\${(x+y)||'0'} = \${neg(r[2])}\`;
+  },
+  // index of a row with exactly one unknown left, or −1
+  solo(){ return this.R().findIndex(r=>(r[0]===0)!==(r[1]===0)); },
+  bad(){ return this.R().findIndex(r=>!r[0] && !r[1] && r[2]); },
+  empty(){ return this.R().findIndex(r=>!r[0] && !r[1] && !r[2]); },
+  solved(){
+    const [p,q]=this.R(), xr=r=>r[0]===1&&r[1]===0, yr=r=>r[0]===0&&r[1]===1;
+    return (xr(p)&&yr(q)) || (yr(p)&&xr(q));
+  },
+  name(i){ return 'R'+(i+1); },
+  // what each operation would make, or null where it is not allowed
+  addOf(){
+    const r=this.R()[this.ri], o=this.R()[this.other()], k=this.k;
+    const out=r.map((x,j)=>x+k*o[j]);
+    return out.every(x=>Math.abs(x)<=this.MAX) ? out : null;
+  },
+  mulOf(){
+    if(this.k===1) return null;
+    const out=this.R()[this.ri].map(x=>this.k*x);
+    return out.every(x=>Math.abs(x)<=this.MAX) ? out : null;
+  },
+  divOf(){
+    if(this.k===1) return null;
+    const r=this.R()[this.ri];
+    return r.every(x=>x%this.k===0) ? r.map(x=>x/this.k||0) : null;
+  },
+  addLabel(){
+    const k=this.k, m=Math.abs(k);
+    return \`\${this.name(this.ri)} \${k<0?'−':'+'} \${m===1?'':m+'·'}\${this.name(this.other())}\`;
+  },
+  mulLabel(){ return \`\${this.amt(this.k)}·\${this.name(this.ri)}\`; },
+  divLabel(){ return \`\${this.name(this.ri)} ÷ \${this.amt(this.k)}\`; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const rows=this.R(), out=[\`Row 1: \${this.eq(rows[0])}. Row 2: \${this.eq(rows[1])}.\`], L=this.last;
+    if(L){
+      const row=L.kind==='swap' ? '' : \`row \${L.ri+1} is now \${this.eq(rows[L.ri])}\`;
+      if(L.kind==='add'){
+        const m=Math.abs(L.k), s=L.k<0?'−':'+';
+        out.push(\`\${L.label}: \`+L.was.map((x,j)=>\`\${neg(x)} \${s} \${m===1?'':m+'·'}\${this.amt(L.by[j])} = \${neg(rows[L.ri][j])}\`).join(', ')+\`, so \${row}.\`);
+      } else if(L.kind==='mul'){
+        out.push(\`\${L.label}: \`+L.was.map((x,j)=>\`\${this.amt(L.k)}·\${this.amt(x)} = \${neg(rows[L.ri][j])}\`).join(', ')+\`, so \${row}.\`);
+      } else if(L.kind==='div'){
+        out.push(\`\${L.label}: \`+L.was.map((x,j)=>\`\${neg(x)} ÷ \${this.amt(L.k)} = \${neg(rows[L.ri][j])}\`).join(', ')+\`, so \${row}.\`);
+      } else {
+        out.push(\`Swapped the rows: row 1 is now \${this.eq(rows[0])} and row 2 is \${this.eq(rows[1])}.\`);
+      }
+    }
+    const b=this.bad(), z=this.empty(), s=this.solo(), P=this.point();
+    if(b>=0)
+      out.push(\`Row \${b+1} now reads 0 = \${neg(rows[b][2])}, which is never true: the two lines were parallel and never cross, so this system has no solution.\`);
+    else if(z>=0)
+      out.push(\`Row \${z+1} now reads 0 = 0, which is true for every x and y: both equations were the same line, so every point on it solves this system.\`);
+    else if(this.solved()){
+      const xr=rows.findIndex(r=>r[0]===1);
+      out.push(\`Row \${xr+1} says x = \${neg(rows[xr][2])} and row \${2-xr} says y = \${neg(rows[1-xr][2])}: the system is solved.\`);
+    } else if(s>=0){
+      const r=rows[s], gone=r[0]===0?'x':'y', left=r[0]===0?r[1]:r[0], v=r[0]===0?'y':'x';
+      out.push(\`\${gone} is gone from row \${s+1}, which now says \${this.eq(r)}. \`+(left===1
+        ? \`Add a multiple of it to row \${2-s} to clear the \${v} there too.\`
+        : \`Divide it by \${this.amt(left)} to leave \${v} on its own.\`));
+    } else
+      out.push(\`Both rows still hold x and y. Pick the multiple of one row that makes x or y cancel in the other, and add it.\`);
+    if(P && b<0)
+      out.push(\`Both lines still cross at (\${neg(P[0])}, \${neg(P[1])}): a row operation changes the equations, never the point that solves them.\`);
+    if(L && (L.kind==='mul' || L.kind==='div'))
+      out.push(\`Row \${L.ri+1}'s line has not moved: \${L.kind==='mul'?'multiplying':'dividing'} a whole equation by \${neg(L.k)} keeps every point that solved it.\`);
+    return out;
+  },
+  apply(kind){
+    const next = kind==='add'?this.addOf() : kind==='mul'?this.mulOf() : kind==='div'?this.divOf() : null;
+    if(kind!=='swap' && !next) return;
+    const rows=this.R();
+    this.hist.push({rows:rows.map(r=>r.slice()), last:this.last});
+    const label = kind==='add'?this.addLabel() : kind==='mul'?this.mulLabel() : kind==='div'?this.divLabel() : 'Swap';
+    if(kind==='swap'){ this.rows=[rows[1], rows[0]]; this.last={kind}; }
+    else {
+      this.last={kind, ri:this.ri, k:this.k, label, was:rows[this.ri].slice(), by:rows[this.other()].slice()};
+      rows[this.ri]=next;
+    }
+    this.touched=true;
+  },
+  undo(){ const h=this.hist.pop(); if(!h) return; this.rows=h.rows; this.last=h.last; },
+  open(){ UI.go('s-elim'); },
+  act(kind){ this.apply(kind); this.render(); },
+  back(){ this.undo(); this.touched=true; this.render(); },
+  pickSys(i){ this.si=i; this.rows=null; this.hist=[]; this.last=null; this.ri=1; this.touched=true; this.render(); },
+  again(){ this.pickSys(this.si); },
+  pickRow(i){ this.ri=i; this.render(); },
+  stepK(by){
+    let k=this.k+by; if(k===0) k+=by;
+    if(k<this.KLO || k>this.KHI) return;
+    this.k=k; this.render();
+  },
+  render(){
+    const rows=this.R(), P=this.point();
+    document.getElementById('elSys').innerHTML=this.SYSTEMS.map((S,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Elim.pickSys(\${i})"
+        aria-label="System \${i+1}: \${this.eq(S[0])} and \${this.eq(S[1])}">System \${i+1}</button>\`).join('');
+    document.getElementById('elRows').innerHTML=rows.map((r,i)=>
+      \`<button class="btn ghost elRow c\${i}" aria-pressed="\${i===this.ri}" onclick="Elim.pickRow(\${i})"
+        aria-label="Work on row \${i+1}: \${this.eq(r)}"><b>R\${i+1}</b> \${this.eq(r)}</button>\`).join('');
+    document.getElementById('elK').innerHTML=\`<b class="dtName">k</b><div class="wsCell">
+        <button onclick="Elim.stepK(-1)" aria-label="Lower k"\${this.k<=this.KLO?' disabled':''}>−</button>
+        <b aria-label="k: \${neg(this.k)}">\${neg(this.k)}</b>
+        <button onclick="Elim.stepK(1)" aria-label="Raise k"\${this.k>=this.KHI?' disabled':''}>+</button></div>\`;
+    const m=Math.abs(this.k), oth=this.other()+1, me=this.ri+1;
+    const ops=[
+      ['add', this.addLabel(), \`\${this.k<0?'Subtract':'Add'} \${m===1?'':m+' times '}row \${oth} \${this.k<0?'from':'to'} row \${me}\`, this.addOf()],
+      ['mul', this.mulLabel(), \`Multiply row \${me} by \${neg(this.k)}\`, this.mulOf()],
+      ['div', this.divLabel(), \`Divide row \${me} by \${neg(this.k)}\`, this.divOf()],
+      ['swap','Swap', 'Swap the rows', true]];
+    document.getElementById('elOps').innerHTML=ops.map(([kind,label,aria,ok])=>
+      \`<button class="btn sm" onclick="Elim.act('\${kind}')" aria-label="\${aria}"\${ok?'':' disabled'}>\${label}</button>\`).join('')+
+      \`<button class="btn sm ghost" onclick="Elim.back()" aria-label="Undo the last step"\${this.hist.length?'':' disabled'}>↶ Undo</button>\`+
+      \`<button class="btn sm ghost" onclick="Elim.again()" aria-label="Start this system again"\${this.hist.length?'':' disabled'}>Start again</button>\`;
+    const eqs=rows.map((r,i)=>({a:r[0], b:r[1], c:r[2], col:i?FIG_COL.c:FIG_COL.a})).filter(e=>e.a||e.b);
+    const nol=rows.findIndex(r=>!r[0]&&!r[1]);
+    Figure.render({kind:'plane', span:5, vecs:[], eqs, marks:P?[P]:[],
+      caption:\`Row 1's line in blue, row 2's in green\${P?'; the ring is where they cross':''}.\`+
+        (nol>=0?\` Row \${nol+1}, \${this.eq(rows[nol])}, is no line at all.\`:'')},
+      document.getElementById('elFig'));
+    document.getElementById('elRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('elGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ROW REDUCER','every system settled','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

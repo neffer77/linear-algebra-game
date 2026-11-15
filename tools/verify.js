@@ -52,6 +52,7 @@ function loadGame() {
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
     ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
     ';const Span={' + script.slice(script.indexOf('  PAIRS:[\n    {u:[2,1],'), script.indexOf('  open(){ UI.go(\'s-span\'); },')) + '};exports.Span=Span;' +
+    ';const Elim={' + script.slice(script.indexOf('  SYSTEMS:[\n    [[1,2,5],'), script.indexOf('  open(){ UI.go(\'s-elim\'); },')) + '};exports.Elim=Elim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -69,7 +70,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1981,6 +1982,129 @@ const spanNotes = (() => {
   return { n, goals: S.GOALS.length };
 })();
 
+/* The elimination workshop: every state reachable in three row operations
+   from each system. Each operation is redone here from the rows before it,
+   each equation is read back into numbers, the worked line is checked entry
+   by entry, the crossing point must still solve both rows, and only the
+   singular systems may ever say 0 = c or 0 = 0. */
+const elimNotes = (() => {
+  const E = Elim, num = x => +String(x).replace(/[()]/g, '').replace(/−/g, '-');
+  const found = {};
+  let n = 0;
+  if (E.si !== 0 || E.ri !== 1 || E.k !== 1 || E.touched || E.last || E.hist.length) fail('elim', 'start', 'the workshop does not open on the first system, row 2, k = 1, untouched');
+  for (const g of E.GOALS) if (g.ok(E)) fail('elim', 'start', `${g.id} is met before anything is pressed`);
+  // read "3x − 2y = 7" back into [3, −2, 7]
+  const parse = s => {
+    const m = /^(.*) = (−?\d+)$/.exec(s); if (!m) return null;
+    let a = 0, b = 0;
+    if (/(^|[ −])1[xy]/.test(m[1])) return null;  // a coefficient of 1 is never written
+    if (m[1] !== '0') {
+      const t = /^(−?\d*)x(?: ([+−]) (\d*)y)?$|^(−?\d*)y$/.exec(m[1]); if (!t) return null;
+      const co = (sg, d) => (sg === '−' ? -1 : 1) * (d === '' ? 1 : +d);
+      if (t[4] !== undefined) b = co(t[4][0] === '−' ? '−' : '+', t[4].replace('−', ''));
+      else { a = co(t[1][0] === '−' ? '−' : '+', t[1].replace('−', '')); if (t[2]) b = co(t[2], t[3]); }
+    }
+    return [a, b, num(m[2])];
+  };
+  const same = (p, q) => p && q && p.every((x, j) => x === q[j]);
+  const ops = [{ kind: 'swap' }];
+  for (const ri of [0, 1]) for (let k = E.KLO; k <= E.KHI; k++) if (k) for (const kind of ['add', 'mul', 'div']) ops.push({ kind, ri, k });
+  E.SYSTEMS.forEach((S, si) => {
+    const sing = !(S[0][0] * S[1][1] - S[0][1] * S[1][0]);
+    E.si = si; E.rows = null;
+    const P0 = E.point();
+    if (sing !== !P0) fail('elim', `system ${si + 1}`, 'the crossing point is wrong');
+    const seen = new Set([JSON.stringify(E.R())]);
+    let layer = [{ rows: E.R().map(r => r.slice()), path: '' }];
+    for (let depth = 1; depth <= 3; depth++) {
+      const next = [];
+      for (const st of layer) for (const o of ops) {
+        E.si = si; E.rows = st.rows.map(r => r.slice()); E.hist = []; E.last = null; E.touched = false;
+        if (o.kind !== 'swap') { E.ri = o.ri; E.k = o.k; }
+        const before = E.rows.map(r => r.slice());
+        const want = o.kind === 'swap' ? null : E[o.kind + 'Of']();
+        // redo the operation here, independently
+        let mine = null;
+        if (o.kind === 'add') { const r = before[o.ri].map((x, j) => x + o.k * before[1 - o.ri][j]); mine = r.every(x => Math.abs(x) <= 99) ? r : null; }
+        if (o.kind === 'mul') { const r = before[o.ri].map(x => o.k * x); mine = o.k !== 1 && r.every(x => Math.abs(x) <= 99) ? r : null; }
+        if (o.kind === 'div') mine = o.k !== 1 && before[o.ri].every(x => Number.isInteger(x / o.k)) ? before[o.ri].map(x => x / o.k + 0) : null;
+        if (o.kind !== 'swap' && !same(want, mine) && (want || mine)) { fail('elim', `${si + 1}${st.path}`, `${o.kind} ${o.k} on row ${o.ri + 1} gives ${want}, not ${mine}`); continue; }
+        if (o.kind !== 'swap' && !mine) continue;
+        E.apply(o.kind); E.touched = true; n++;
+        const rows = E.R(), key = `${si + 1}${st.path} ${o.kind}${o.ri === undefined ? '' : o.ri + 1}${o.k === undefined ? '' : '·' + o.k}`;
+        if (o.kind === 'swap' ? !(same(rows[0], before[1]) && same(rows[1], before[0])) : !same(rows[o.ri], mine) || !same(rows[1 - o.ri], before[1 - o.ri]))
+          fail('elim', key, 'the rows are not what the operation makes');
+        const L = E.working();
+        // line 1: both equations, read back into numbers
+        const m1 = /^Row 1: (.*)\. Row 2: (.*)\.$/.exec(L[0]);
+        if (!m1 || !same(parse(m1[1]), rows[0]) || !same(parse(m1[2]), rows[1])) fail('elim', key, `the equations read: ${L[0]}`);
+        // line 2: the operation, worked entry by entry
+        if (o.kind === 'swap') {
+          if (L[1] !== `Swapped the rows: row 1 is now ${E.eq(rows[0])} and row 2 is ${E.eq(rows[1])}.`) fail('elim', key, `the swap reads: ${L[1]}`);
+        } else {
+          const m = Math.abs(o.k), lab = { add: `R${o.ri + 1} ${o.k < 0 ? '−' : '+'} ${m === 1 ? '' : m + '·'}R${2 - o.ri}`,
+            mul: `${o.k < 0 ? '(' + '−' + m + ')' : m}·R${o.ri + 1}`, div: `R${o.ri + 1} ÷ ${o.k < 0 ? '(' + '−' + m + ')' : m}` }[o.kind];
+          const parts = L[1].startsWith(lab + ': ') && /, so row (\d) is now (.*)\.$/.exec(L[1]);
+          if (!parts || +parts[1] !== o.ri + 1 || !same(parse(parts[2]), rows[o.ri])) { fail('elim', key, `the operation reads: ${L[1]}`); continue; }
+          const ents = L[1].slice(lab.length + 2, parts.index).split(', ');
+          if (ents.length !== 3) fail('elim', key, `three entries are not worked: ${L[1]}`);
+          ents.forEach((e, j) => {
+            const x = before[o.ri][j], y = before[1 - o.ri][j], r = rows[o.ri][j];
+            const t = o.kind === 'add' ? /^(−?\d+) ([+−]) (?:(\d+)·)?(\(−\d+\)|\d+) = (−?\d+)$/.exec(e)
+              : o.kind === 'mul' ? /^(\(−\d+\)|\d+)·(\(−\d+\)|\d+) = (−?\d+)$/.exec(e) : /^(−?\d+) ÷ (\(−\d+\)|\d+) = (−?\d+)$/.exec(e);
+            if (!t) return fail('elim', key, `entry ${j + 1} reads: ${e}`);
+            const br = s => /\(/.test(s) === (num(s) < 0);
+            if (o.kind === 'add') {
+              const kk = (t[2] === '−' ? -1 : 1) * (t[3] ? +t[3] : 1);
+              if (num(t[1]) !== x || kk !== o.k || num(t[4]) !== y || num(t[5]) !== r || !br(t[4]) || x + kk * num(t[4]) !== num(t[5])) fail('elim', key, `entry ${j + 1} is wrong: ${e}`);
+            } else if (o.kind === 'mul') {
+              if (num(t[1]) !== o.k || num(t[2]) !== x || num(t[3]) !== r || !br(t[1]) || !br(t[2]) || num(t[1]) * num(t[2]) !== num(t[3])) fail('elim', key, `entry ${j + 1} is wrong: ${e}`);
+            } else if (num(t[1]) !== x || num(t[2]) !== o.k || num(t[3]) !== r || !br(t[2]) || num(t[1]) / num(t[2]) !== num(t[3])) fail('elim', key, `entry ${j + 1} is wrong: ${e}`);
+          });
+        }
+        // what the rows say, and only what is true of this system
+        const bad = rows.findIndex(r => !r[0] && !r[1] && r[2]), zero = rows.findIndex(r => !r[0] && !r[1] && !r[2]);
+        const said = { never: L.filter(l => /which is never true/.test(l)).length, always: L.filter(l => /which is true for every x and y/.test(l)).length,
+          solved: L.filter(l => /: the system is solved\.$/.test(l)).length, gone: L.filter(l => / is gone from row /.test(l)).length,
+          both: L.filter(l => /^Both rows still hold x and y/.test(l)).length };
+        if (Object.values(said).reduce((s, c) => s + c, 0) !== 1) fail('elim', key, `not exactly one verdict: ${L.join(' | ')}`);
+        if (bad >= 0 !== !!said.never || zero >= 0 !== !!said.always) fail('elim', key, 'the 0 = c verdicts do not match the rows');
+        if (said.never && (si !== 2 || !L.includes(`Row ${bad + 1} now reads 0 = ${E.amt(rows[bad][2]).replace(/[()]/g, '')}, which is never true: the two lines were parallel and never cross, so this system has no solution.`))) fail('elim', key, 'no solution is said wrongly');
+        if (said.always && si !== 3) fail('elim', key, 'a whole line of solutions is said for a system with one answer');
+        if (si === 3 && bad >= 0) fail('elim', key, 'the same line is said to have no solution');
+        if (P0) {
+          rows.forEach((r, i) => { if (r[0] * P0[0] + r[1] * P0[1] !== r[2]) fail('elim', key, `row ${i + 1} no longer passes through (${P0})`); });
+          if (!L.includes(`Both lines still cross at (${P0.map(x => x < 0 ? '−' + -x : x).join(', ')}): a row operation changes the equations, never the point that solves them.`)) fail('elim', key, 'the crossing point is not said');
+        } else if (L.some(l => /still cross/.test(l))) fail('elim', key, 'a crossing is claimed for lines that never cross once');
+        const unit = r => (r[0] === 1 && r[1] === 0) || (r[0] === 0 && r[1] === 1);
+        if ((unit(rows[0]) && unit(rows[1]) && rows[0][0] !== rows[1][0]) !== !!said.solved) fail('elim', key, 'solved is said wrongly');
+        if (said.solved) {
+          const xr = rows.findIndex(r => r[0] === 1 && r[1] === 0);
+          if (!P0 || rows[xr][2] !== P0[0] || rows[1 - xr][2] !== P0[1]) fail('elim', key, 'a solution is claimed that is not the crossing');
+        }
+        if (said.gone) {
+          const s = rows.findIndex(r => (r[0] === 0) !== (r[1] === 0)), r = rows[s], left = r[0] || r[1], v = r[0] ? 'x' : 'y';
+          const tail = left === 1 ? `Add a multiple of it to row ${2 - s} to clear the ${v} there too.` : `Divide it by ${E.amt(left)} to leave ${v} on its own.`;
+          if (!L.includes(`${r[0] ? 'y' : 'x'} is gone from row ${s + 1}, which now says ${E.eq(r)}. ${tail}`)) fail('elim', key, `the cleared row is not said: ${L.join(' | ')}`);
+        }
+        const scaled = L.filter(l => /line has not moved/.test(l));
+        if ((o.kind === 'mul' || o.kind === 'div') !== (scaled.length === 1)) fail('elim', key, 'the line staying put is said wrongly');
+        if (scaled.length && scaled[0] !== `Row ${o.ri + 1}'s line has not moved: ${o.kind === 'mul' ? 'multiplying' : 'dividing'} a whole equation by ${o.k < 0 ? '−' + -o.k : o.k} keeps every point that solved it.`) fail('elim', key, `the scaled line reads: ${scaled[0]}`);
+        for (const g of E.GOALS) if (g.ok(E)) found[g.id] = found[g.id] || key;
+        // undo puts it all back
+        E.undo();
+        if (!same(E.R()[0], before[0]) || !same(E.R()[1], before[1]) || E.last !== null) fail('elim', key, 'undo does not put the rows back');
+        const id = JSON.stringify(rows);
+        if (!seen.has(id)) { seen.add(id); next.push({ rows: rows.map(r => r.slice()), path: key.slice(String(si + 1).length) }); }
+      }
+      layer = next;
+    }
+  });
+  for (const g of E.GOALS) if (!found[g.id]) fail('elim', g.id, 'this goal cannot be found in three operations');
+  E.si = 0; E.rows = null; E.ri = 1; E.k = 1; E.hist = []; E.last = null; E.touched = false; E.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2211,6 +2335,7 @@ console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)
 console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
 console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
 console.log(`  span workshop states       ${pad(spanNotes.n.toLocaleString(), 10)}  (a·u + b·v, the target, what the pair spans, ${spanNotes.goals} goals findable)`);
+console.log(`  elimination states         ${pad(elimNotes.n.toLocaleString(), 10)}  (each row operation redone, worked, the crossing kept, ${elimNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

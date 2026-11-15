@@ -54,6 +54,7 @@ const SUITES = [
   require('./play/limit'),       // closing in on a point from the left and the right
   require('./play/descent'),     // a walk down a valley against its gradient
   require('./play/span'),        // a of one arrow and b of another
+  require('./play/elim'),        // two equations solved with row operations
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
