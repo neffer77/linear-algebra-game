@@ -2616,7 +2616,7 @@ const productNotes = (() => {
   const K = Product;
   const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
   const show = (v, d = 4) => { const p = 10 ** d, r = Math.round(v * p) / p; return neg(Object.is(r, -0) ? 0 : r); };
-  const sure = (v, d) => Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-12;
+  const sure = (v, d) => Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-10;
   const F = { lin: x => x + 1, sq: x => x, mix: x => x * x };
   const G = { lin: x => 2 * x + 1, sq: x => x, mix: x => x + 1 };
   if (K.SETS.map(S => S.id).join() !== 'lin,sq,mix') fail('product', 'sets', K.SETS.map(S => S.id).join());

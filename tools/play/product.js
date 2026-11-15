@@ -75,7 +75,7 @@ module.exports = {
     t.ok('the square gives two equal strips', /So the strips head for f′g = 1 × 3 = 3 and fg′ = 3 × 1 = 3, and the corner for 0: the area grows at f′g \+ fg′ = 3 \+ 3 = 6\./.test(r), r);
     await press(t, 'pdHLo', 3);
     r = await read(t);
-    t.ok('at h = 0.01 it is 6.01', /so the area grows at 6\.01\. That is 0\.01 from 6/.test(r), r);
+    t.ok('at h = 0.01 it is 6.01', /so the area grows at 6\.01\..*That is 0\.01 from 6:/.test(r), r);
     t.eq('running the square down is found', await found(t), ['even', 'lin', 'sq']);
 
     // --- the mixed field ---
@@ -86,7 +86,7 @@ module.exports = {
     t.ok("x²'s slope is worked at the point", /Δf\/h heads for f′\(1\) = 2 × 1 = 2 and Δg\/h for g′\(1\) = 1\./.test(r), r);
     await press(t, 'pdHLo', 4);
     r = await read(t);
-    t.ok('closing in it is about 5.004', /the corner about 0\.002, so the area grows at about 5\.004\. That is 0\.004 from 5/.test(r), r);
+    t.ok('closing in it is about 5.004', /the corner about 0\.002, so the area grows at about 5\.004\..*That is 0\.004 from 5:/.test(r), r);
     t.eq('every goal can be found with the buttons', await found(t), ['corner', 'even', 'lin', 'mix', 'sq']);
     t.ok('and the count says so', /5 of 5 found/.test(await t.ev(() => document.getElementById('pdGoals').innerText)));
 

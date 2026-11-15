@@ -16027,7 +16027,7 @@ const Product = {
   rule(){ const S=this.set(); return S.fp*this.ga()+this.fa()*S.gp; },
   gap(){ return Math.round(Math.abs(this.rate()-this.rule())*1e4)/1e4; },
   num(v,d=4){ const p=10**d, r=Math.round(v*p)/p; return neg(Object.is(r,-0)?0:r); },
-  exact(v,d){ const p=10**d; return Math.abs(Math.round(v*p)/p-v)<1e-12; },
+  exact(v,d){ const p=10**d; return Math.abs(Math.round(v*p)/p-v)<1e-10; },
   /* the readout as plain sentences, so the checks read what the player reads */
   working(){
     const S=this.set(), a=S.a, h=this.h(), fa=this.fa(), ga=this.ga(), A=fa*ga;
