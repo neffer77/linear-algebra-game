@@ -58,6 +58,7 @@ function loadGame() {
     ';const Newton={' + script.slice(script.indexOf("  CURVES:[\n    {id:'sq',   name:'x² − 2'"), script.indexOf("  open(){ UI.go('s-newton'); },")) + '};exports.Newton=Newton;' +
     ';const Chain={' + script.slice(script.indexOf("  PAIRS:[\n    {f:'u²',"), script.indexOf("  open(){ UI.go('s-chain'); },")) + '};exports.Chain=Chain;' +
     ';const Castles={' + script.slice(script.indexOf("  RULES:[\n    {btn:'Drift'"), script.indexOf("  open(){ UI.go('s-castles'); },")) + '};exports.Castles=Castles;' +
+    ';const Cistern={' + script.slice(script.indexOf("  SETS:[\n    {id:'fade', btn:'Fading spring'"), script.indexOf("  open(){ UI.go('s-cistern'); },")) + '};exports.Cistern=Cistern;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -76,7 +77,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2507,6 +2508,80 @@ const castlesNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of the cistern workshop: each spring and every half hour. The
+   total is worked here as the area under the flow, added up from strips a
+   thousandth of an hour wide, and must match the workshop's F to within the
+   strips' own error; F′ = f is checked by a nudge; the figure's two curves are
+   checked against both. Where the flow is 0, F must turn the way the readout
+   says. Every line of the readout is checked exactly, each goal holds exactly
+   where its sentence says, each can be found, and none is met where it opens. */
+const cisternNotes = (() => {
+  const K = Cistern;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const show = x => { const r = Math.round(x * 1000) / 1000; return neg(Object.is(r, -0) ? 0 : r); };
+  const FLOW = { fade: t => 6 - 2 * t, steady: () => 4, tide: t => 3 * t * t - 12 * t + 9 };
+  const area = (f, b) => { const n = 4000, h = b / n; let s = 0; for (let i = 0; i < n; i++) s += (f(i * h) + f((i + 1) * h)) / 2 * h; return s; };
+  const bb = n => `${show(n)} barrel${Math.abs(n) === 1 ? '' : 's'}`;
+  if (K.SETS.map(S => S.id).join() !== 'fade,steady,tide') fail('cistern', 'sets', K.SETS.map(S => S.id).join());
+  K.touched = false; K.si = 0; K.th = K.SETS[0].start;
+  for (const g of K.GOALS) if (g.ok(K)) fail('cistern', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.SETS.forEach((S, si) => {
+    const fl = FLOW[S.id];
+    if (S.start <= S.lo || S.start >= S.hi) fail('cistern', S.id, `starts at t = ${S.start / 2}`);
+    for (let th = S.lo; th <= S.hi; th++) {
+      K.si = si; K.th = th; n++;
+      const t = th / 2, key = `${S.id} t=${t}`, T = show(t), F = K.F(), f = K.f();
+      if (Math.abs(f - fl(t)) > 1e-9) fail('cistern', key, `the flow is ${f}, its formula gives ${fl(t)}`);
+      if (Math.abs(F - area(fl, t)) > 1e-5) fail('cistern', key, `the total is ${F}, the area under the flow is ${area(fl, t)}`);
+      if (Math.abs((K.F(t + 1e-4) - K.F(t - 1e-4)) / 2e-4 - f) > 1e-5) fail('cistern', key, 'F′ is not f');
+      if (Math.abs(figEval({ poly: S.Fp }, t) - F) > 1e-9 || Math.abs(figEval({ poly: S.fp }, t) - f) > 1e-9) fail('cistern', key, "the figure's curves disagree");
+      if (Math.round(F * 1000) / 1000 !== F && Math.abs(Math.round(F * 1000) / 1000 - F) > 1e-9) fail('cistern', key, `the total ${F} is not exact to three places`);
+      const want = [S.say, `The total in the cistern after t hours is the area under f from 0 to t. Here that is F(t) = ${S.Fform}, and F′(t) = ${S.fform} = f(t): the total climbs exactly as fast as the water flows in.`];
+      const sub = S.id === 'steady' ? `4 × ${T} = ${show(4 * t)}`
+        : S.id === 'fade' ? `6 × ${T} − ${T}² = ${show(6 * t)} − ${show(t * t)} = ${show(F)}`
+        : `${T}³ − 6 × ${T}² + 9 × ${T} = ${show(t ** 3)} − ${show(6 * t * t)} + ${show(9 * t)} = ${show(F)}`;
+      if (th === 0) want.push('At t = 0 h nothing has flowed yet, so F(0) = 0.');
+      else if (S.id === 'steady') want.push(`At t = ${T} h the area under f is a rectangle 4 tall and ${T} wide, so F(${T}) = ${sub} barrels.`);
+      else want.push(`At t = ${T} h: F(${T}) = ${sub} barrels.`);
+      const now = `The flow now is f(${T}) = ${bb(f)} an hour`;
+      if (f > 0) want.push(`${now}, above 0: water comes in, so the total still climbs.`);
+      else if (f < 0) want.push(`${now}, below 0: water runs out, so the total is falling.`);
+      else {
+        const up = K.F(t - 0.25) < F && K.F(t + 0.25) < F, down = K.F(t - 0.25) > F && K.F(t + 0.25) > F;
+        if (!up && !down) fail('cistern', key, 'the flow is 0 but the total does not turn');
+        if (up) want.push(`${now}: the tangent to F is flat. f is above 0 just before and below 0 just after, so F climbs to here and falls after: ${S.id === 'fade' ? `${bb(F)} is the most the cistern ever holds.` : `with ${bb(F)} the cistern is fuller here than just before or just after.`}`);
+        else want.push(`${now}: the tangent to F is flat. f is below 0 just before and above 0 just after, so F falls to here and climbs after: ${F === 0 ? 'the cistern runs dry here, then starts to fill again.' : `with ${bb(F)} the cistern is emptier here than just before or just after.`}`);
+        if (S.id === 'fade' && up) for (let k = S.lo; k <= S.hi; k++) if (K.F(k / 2) > F) fail('cistern', key, `the cistern holds more at t = ${k / 2}`);
+      }
+      const add = area(fl, t + 0.1) - area(fl, t), same = Math.abs(add - f * 0.1) < 1e-9;
+      if (Math.abs(add - (K.F(t + 0.1) - F)) > 1e-6) fail('cistern', key, 'the next tenth of an hour does not add its strip of area');
+      want.push(`In the next tenth of an hour the total changes by F(${show(t + 0.1)}) − F(${T}) = ${bb(K.F(t + 0.1) - F)}, ${same ? 'exactly' : 'close to'} f(${T}) × 0.1 = ${show(f * 0.1)}: a strip f tall and a tenth of an hour wide.${same ? '' : ' The thinner the strip, the closer it gets.'}`);
+      if (th > 0 && F === 0) {
+        let top = 0, pos = 0; for (let k = 0; k <= th; k++) top = Math.max(top, K.F(k / 2));
+        { const m = 4000, h = t / m; for (let i = 0; i < m; i++) pos += Math.max(0, (fl(i * h) + fl((i + 1) * h)) / 2) * h; }
+        if (Math.abs(pos - top) > 1e-3) fail('cistern', key, `the area above the axis is ${pos}, the readout says ${top}`);
+        want.push(`F(${T}) = 0: the cistern is empty again. The ${show(top)} barrels that came in, the area above the axis, are cancelled by the area below it: an integral counts area below the axis as negative.`);
+      }
+      const got = K.working();
+      if (got.length !== want.length) fail('cistern', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('cistern', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      const fullest = [...Array(S.hi - S.lo + 1).keys()].every(k => K.F((S.lo + k) / 2) <= F);
+      const meant = { full: si === 0 && fullest, drain: si === 0 && f < 0 && F > 0, empty: si === 0 && th > 0 && Math.abs(F) < 1e-9,
+        ten: si === 1 && Math.abs(F - 10) < 1e-9, high: si === 2 && f === 0 && K.F(t - 0.25) < F && th === Math.min(...[...Array(S.hi + 1).keys()].filter(k => k > 0 && K.f(k / 2) === 0)),
+        low: si === 2 && f === 0 && K.F(t - 0.25) > F };
+      for (const g of K.GOALS) {
+        if (!!g.ok(K) !== meant[g.id]) fail('cistern', key, `goal ${g.id} is ${g.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (g.ok(K)) found[g.id] = found[g.id] || key;
+      }
+    }
+  });
+  for (const g of K.GOALS) if (!found[g.id]) fail('cistern', g.id, 'this goal cannot be found');
+  K.si = 0; K.th = K.SETS[0].start; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the biggest build workshop: each build and every x. What
    each holds is worked here from its own lengths (two sides, or a base and a
    depth), its slope by a nudge either way, and the figure's polynomial is
@@ -2834,6 +2909,7 @@ console.log(`  newton's method states     ${pad(newtonNotes.n.toLocaleString(), 
 console.log(`  chain rule states          ${pad(chainNotes.n.toLocaleString(), 10)}  (y and dy/dx from y in full, the slip, the nudge, ${chainNotes.goals} goals findable)`);
 console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(), 10)}  (each night by the matrix, the steady split and the other eigenvalue, ${castlesNotes.goals} goals findable)`);
 console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 10)}  (what each holds from its lengths, the slope by a nudge, the best found by trying every x, ${optimNotes.goals} goals findable)`);
+console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 10)}  (each total against the area under the flow added up in strips, F′ = f by a nudge, every turn checked, ${cisternNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

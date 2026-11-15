@@ -1,131 +1,131 @@
 {
- "change": "The Biggest Build Workshop: where the slope is 0",
+ "change": "The Cistern Workshop: what an integral adds up",
  "mutations": [
   {
-   "name": "the wall paddock's slope is 40 − 2x",
+   "name": "the fading spring's total forgets the halving",
    "file": "index.html",
-   "find": "f:x=>x*(40-2*x), d:x=>40-4*x,",
-   "replace": "f:x=>x*(40-2*x), d:x=>40-2*x,",
+   "find": "fform:'6 − 2t', Fform:'6t − t²', fp:[[-2,1],[6,0]], Fp:[[-1,2],[6,1]],",
+   "replace": "fform:'6 − 2t', Fform:'6t − t²', fp:[[-2,1],[6,0]], Fp:[[-2,2],[6,1]],",
    "run": "verify"
   },
   {
-   "name": "the wall paddock's best is put at 9 m",
+   "name": "the sluice's total is the flow's derivative",
    "file": "index.html",
-   "find": "sq:'m²', what:'area', V:'A', best:20,\n     say:'40 m of fence makes three",
-   "replace": "sq:'m²', what:'area', V:'A', best:18,\n     say:'40 m of fence makes three",
+   "find": "Fp:[[1,3],[-6,2],[9,1]]",
+   "replace": "Fp:[[6,1],[-12,0]]",
    "run": "verify"
   },
   {
-   "name": "the box's curve leaves out its cubic",
+   "name": "the steady total starts at 4",
    "file": "index.html",
-   "find": "poly:[[4,3],[-48,2],[144,1]]",
-   "replace": "poly:[[-48,2],[144,1]]",
+   "find": "fform:'4', Fform:'4t', fp:[[4,0]], Fp:[[4,1]],",
+   "replace": "fform:'4', Fform:'4t', fp:[[4,0]], Fp:[[4,1],[4,0]],",
    "run": "verify"
   },
   {
-   "name": "the box's side is 12 − x",
+   "name": "the strip is taken at the next tenth",
    "file": "index.html",
-   "find": "f:x=>x*(12-2*x)**2,",
-   "replace": "f:x=>x*(12-x)**2,",
+   "find": "strip=f*0.1, same=",
+   "replace": "strip=this.f(t+0.1)*0.1, same=",
    "run": "verify"
   },
   {
-   "name": "half a metre either way reads one side twice",
+   "name": "a turn upward reads as the most",
    "file": "index.html",
-   "find": "${hold(x-0.5)} and ${hold(x+0.5)}.`",
-   "replace": "${hold(x-0.5)} and ${hold(x-0.5)}.`",
+   "find": "else if(this.f(t-0.25)>0) out.push(",
+   "replace": "else if(this.f(t-0.25)!==0) out.push(",
    "run": "verify"
   },
   {
-   "name": "the flat tangent at the most is not checked",
+   "name": "the cancelled area is the total now",
    "file": "index.html",
-   "find": "else if(this.xh===S.best) out.push(",
-   "replace": "else if(this.xh>0) out.push(",
+   "find": "for(let k=0;k<=this.th;k++) top=Math.max(top,this.F(k/2));",
+   "replace": "top=F;",
    "run": "verify"
   },
   {
-   "name": "loses counts where it adds",
+   "name": "fullest counts on any spring",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.d()<0},",
-   "replace": "ok:K=>K.si===0 && K.d()!==0},",
+   "find": "ok:K=>K.si===0 && K.th===6},",
+   "replace": "ok:K=>K.th===6},",
    "run": "verify"
   },
   {
-   "name": "both widths counts after one",
+   "name": "draining counts when empty",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.pair.size===2},",
-   "replace": "ok:K=>K.si===0 && K.pair.size>=1},",
+   "find": "ok:K=>K.si===0 && K.f()<0 && K.F()>0},",
+   "replace": "ok:K=>K.si===0 && K.f()<0},",
    "run": "verify"
   },
   {
-   "name": "the box's trap counts at any flat tangent",
+   "name": "empty counts at the start",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.xh===12}",
-   "replace": "ok:K=>K.si===2 && K.d()===0}",
+   "find": "ok:K=>K.si===0 && K.th>0 && K.F()===0},",
+   "replace": "ok:K=>K.si===0 && K.F()===0},",
    "run": "verify"
   },
   {
-   "name": "the square counts on the wall too",
+   "name": "the sluice's low counts at its high",
    "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.xh===20},",
-   "replace": "ok:K=>K.xh===20},",
+   "find": "ok:K=>K.si===2 && K.th===6}",
+   "replace": "ok:K=>K.si===2 && K.th===2}",
    "run": "verify"
   },
   {
-   "name": "150 m² is never noted",
+   "name": "the shading stops at the start",
    "file": "index.html",
-   "find": "if(this.touched && this.si===0 && this.v()===150) this.pair.add(this.xh);",
-   "replace": "",
-   "run": "play:optim"
+   "find": "shade:{f:{poly:S.fp}, a:0, b:t},",
+   "replace": "shade:{f:{poly:S.fp}, a:0, b:S.start/2},",
+   "run": "play:cistern"
   },
   {
-   "name": "a new build keeps the old x",
+   "name": "the flow's point is not drawn",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.xh=this.SETS[i].start; this.touched=true;",
-   "replace": "pick(i){ this.si=i; this.xh=Math.min(this.xh,this.SETS[i].hi); this.touched=true;",
-   "run": "play:optim"
+   "find": "ylim:S.ylim, tangent:t, pts:[[t,this.F(),FIG_COL.d],[t,f,FIG_COL.a]],",
+   "replace": "ylim:S.ylim, tangent:t, pts:[[t,this.F(),FIG_COL.d]],",
+   "run": "play:cistern"
   },
   {
-   "name": "the tangent is drawn at the start",
+   "name": "a new spring keeps the old hour",
    "file": "index.html",
-   "find": "ylim:S.ylim, tangent:x, pts:",
-   "replace": "ylim:S.ylim, tangent:S.start/2, pts:",
-   "run": "play:optim"
+   "find": "pick(i){ this.si=i; this.th=this.SETS[i].start; this.touched=true;",
+   "replace": "pick(i){ this.si=i; this.th=Math.min(this.th,this.SETS[i].hi); this.touched=true;",
+   "run": "play:cistern"
   },
   {
-   "name": "the caption never says flat",
+   "name": "the caption leaves out the slope",
    "file": "index.html",
-   "find": "+(d===0?', flat.':'.')},",
-   "replace": "+'.'},",
-   "run": "play:optim"
+   "find": "has slope ${this.num(f)}, the height of the blue curve there.`},",
+   "replace": "has the slope of the blue curve.`},",
+   "run": "play:cistern"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER BUILDER','every best shape found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER BUILDER','every best shape found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:optim"
+   "find": "'KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:cistern"
   },
   {
-   "name": "the stepper stops short of 19 m",
+   "name": "the sluice runs to hour 4.5",
    "file": "index.html",
-   "find": "{id:'wall', btn:'Wall paddock', lo:2, hi:38,",
-   "replace": "{id:'wall', btn:'Wall paddock', lo:2, hi:37,",
-   "run": "play:optim"
+   "find": "{id:'tide', btn:'Tidal sluice', lo:0, hi:8,",
+   "replace": "{id:'tide', btn:'Tidal sluice', lo:0, hi:9,",
+   "run": "play:cistern"
   },
   {
-   "name": "the build buttons lose their names",
+   "name": "the spring buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Optim.pick(${i})\" aria-label=\"${s.btn}: ${s.form}\">",
-   "replace": "onclick=\"Optim.pick(${i})\">",
-   "run": "play:optim"
+   "find": "onclick=\"Cistern.pick(${i})\" aria-label=\"${s.btn}: f(t) = ${s.fform}\">",
+   "replace": "onclick=\"Cistern.pick(${i})\">",
+   "run": "play:cistern"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeOptim\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeOptimX\"",
-   "run": "play:optim"
+   "find": "<button class=\"btn sm\" id=\"tomeCistern\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeCisternX\"",
+   "run": "play:cistern"
   }
  ]
 }
