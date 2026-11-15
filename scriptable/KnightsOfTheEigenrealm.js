@@ -1352,6 +1352,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ WATER LEVEL WORKSHOP ============ -->
+  <div class="screen" id="s-avg">
+    <div class="panel"><h2>🌊 Water Level Workshop</h2><div class="sub">Pour the area under a curve into a flat tank of the same width and it settles at one height: the curve's average value. Raise or lower the level until the part of the curve sticking up above it exactly fills the gaps beneath it.</div></div>
+    <div class="panel">
+      <div id="avSets" class="wsModes" role="group" aria-label="Which curve"></div>
+      <div id="avFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="avCLo" onclick="Avg.moveC(-1)" aria-label="Lower the level one step">−</button>
+          <b id="avC" style="font-size:17px;min-width:0"></b>
+          <button id="avCHi" onclick="Avg.moveC(1)" aria-label="Raise the level one step">+</button></div>
+      </div>
+      <div id="avRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="avGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3349,6 +3368,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Avg:     ["🌊 Water Level Workshop", ['avgValue']],
     Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
     Descent: ["⛰️ Downhill Workshop", ['gradient']]
@@ -12722,6 +12742,7 @@ const UI = {
     if(id==='s-gram') Gram.render();
     if(id==='s-geo') Geo.render();
     if(id==='s-bend') Bend.render();
+    if(id==='s-avg') Avg.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13445,6 +13466,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🌊 Water Level Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line.</div>
+         <button class="btn sm" id="tomeAvg" style="width:auto;margin-top:8px" onclick="Avg.open()">Open the water level workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">〰️ Bend Workshop</h2>
@@ -16746,6 +16772,121 @@ const Bend = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The average height workshop: level the water ----------
+   Pour the area under a curve into a flat tank of the same width and it
+   settles at one height: the average value. Raise or lower a flat level c and
+   compare the part of the curve sticking up above it with the gaps under it.
+   They match exactly when c × width equals the area, c = (1/(b − a))∫f.
+   Only for a straight line is that the average of the two ends. Nothing is saved. */
+const Avg = {
+  SETS:[
+    {id:'bowl', btn:'Bowl', fs:'x²', Fs:'x³/3', a:0, b:3, f:x=>x*x, F:x=>x**3/3, inv:c=>Math.sqrt(c), area:[9,1], sn:1, sd:2, top:18},
+    {id:'ramp', btn:'Ramp', fs:'2x + 1', fi:'(2x + 1)', Fs:'x² + x', a:0, b:4, f:x=>2*x+1, F:x=>x*x+x, inv:c=>(c-1)/2, area:[20,1], sn:1, sd:1, top:9},
+    {id:'steep', btn:'Steep', fs:'x³', Fs:'x⁴/4', a:0, b:2, f:x=>x**3, F:x=>x**4/4, inv:c=>Math.cbrt(c), area:[4,1], sn:1, sd:2, top:16},
+    {id:'narrow', btn:'Narrow', fs:'x²', Fs:'x³/3', a:0, b:2, f:x=>x*x, F:x=>x**3/3, inv:c=>Math.sqrt(c), area:[8,3], sn:1, sd:3, top:12}
+  ],
+  START:0,
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'bowl', t:'Level the bowl: find the flat height that holds exactly the area under x².', toast:'Levelled the bowl',
+     ok:K=>K.si===0 && K.diff()===0},
+    {id:'ramp', t:'Level the ramp, a straight line.', toast:'Levelled the ramp',
+     ok:K=>K.si===1 && K.diff()===0},
+    {id:'steep', t:'Level the steep curve, where the average of the two ends misses by double.', toast:'Levelled the steep curve',
+     ok:K=>K.si===2 && K.diff()===0},
+    {id:'narrow', t:'Level the narrow bowl, where the right height is not a whole number or a half.', toast:'Levelled it at a fraction',
+     ok:K=>K.si===3 && K.diff()===0},
+    {id:'over', t:'Set the level too high, so the gaps under it hold more than the curve sticks up above it.', toast:'Too high: the gaps win',
+     ok:K=>K.diff()<0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  w(){ const S=this.set(); return S.b-S.a; },
+  c(){ const S=this.set(); return this.k*S.sn/S.sd; },
+  /* area − c × width as an exact fraction [numerator, denominator]; its sign says which way to move */
+  dq(){ const S=this.set(), [p,q]=S.area; return [p*S.sd - q*this.k*S.sn*this.w(), q*S.sd]; },
+  diff(){ const [n,d]=this.dq(); return n===0 ? 0 : n/d; },
+  /* where the curve crosses the level, kept inside the interval */
+  cross(){ const S=this.set(); return Math.min(S.b, Math.max(S.a, S.inv(this.c()))); },
+  /* the curve above the level, and the gaps under it */
+  over(){ const S=this.set(), c=this.c(), x=this.cross(); return (S.F(S.b)-S.F(x)) - c*(S.b-x); },
+  gaps(){ const S=this.set(), c=this.c(), x=this.cross(); return c*(x-S.a) - (S.F(x)-S.F(S.a)); },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(n,d)||1; n/=g; d/=g; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  sub(n){ return String(n).replace(/\\d/g,c=>'₀₁₂₃₄₅₆₇₈₉'[c]); },
+  sup(n){ return String(n).replace(/\\d/g,c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]); },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  about(v){ const s=this.is(v); return (s[0]==='≈'?'about ':'')+s.slice(2); },
+  C(){ const S=this.set(); return this.fr(this.k*S.sn, S.sd); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), w=this.w(), C=this.C(), c=this.c(), [p,q]=S.area, A=this.fr(p,q);
+    const cw=this.fr(this.k*S.sn*w, S.sd), [dn,dd]=this.dq(), D=this.fr(dn,dd), Dm=this.fr(-dn,dd);
+    const ab=\`\${this.sub(S.a)}\${this.sup(S.b)}\`;
+    const out=[];
+    out.push(\`f(x) = \${S.fs} on [\${S.a}, \${S.b}]. The area under it is ∫\${ab} \${S.fi||S.fs} dx = [\${S.Fs}]\${ab} = \${A}.\`);
+    out.push(\`A flat level at height c = \${C} across the same width \${w} holds c × \${w} = \${cw}.\`);
+    const fa=S.f(S.a), fb=S.f(S.b);
+    if(c<=fa) out.push(\`The curve never dips below the level, standing above it by \${A} − \${cw} = \${D} in all, so the level is too low: raise it.\`);
+    else if(c>=fb) out.push(\`The curve never rises above the level, falling short of it by \${cw} − \${A} = \${Dm} in all, so the level is too high: lower it.\`);
+    else {
+      const head=\`Where the curve rises above the level, the area between them is \${this.about(this.over())}; where it dips below, the gaps under the level come to \${this.about(this.gaps())}.\`;
+      out.push(dn===0
+        ? \`\${head} They match: \${A} − \${cw} = 0. The water above fills the gaps below, so c = \${C} is the average value, (1/\${w}) × \${A} = \${C}.\`
+        : \`\${head} They differ by \${A} − \${cw} = \${D}, \${dn>0?'more':'less'} than 0, so the level is too \${dn>0?'low: raise':'high: lower'} it.\`);
+    }
+    if(dn===0){
+      const E=this.fr(fa+fb,2);
+      out.push(S.id==='ramp'
+        ? \`For a straight line that is also the average of its two ends, (\${neg(fa)} + \${neg(fb)})/2 = \${E}. Only a straight line lets you take that shortcut.\`
+        : \`The average of the two ends, (\${neg(fa)} + \${neg(fb)})/2 = \${E}, is not it: a curve that bends up spends most of its width low, so its average sits below the middle of its ends.\`);
+    }
+    return out;
+  },
+  /* the curve in blue over [a, b] from 0 to its top; the gold line is the
+     level; blue shading is the curve above the level, red is the gaps under it */
+  svg(){
+    const S=this.set(), c=this.c(), top=S.top*S.sn/S.sd*1.06;
+    const PX=v=>20+(v-S.a)/(S.b-S.a)*320, PY=v=>188-v/top*176;
+    const xs=[]; for(let i=0;i<=60;i++) xs.push(S.a+(S.b-S.a)*i/60);
+    const P=(x,y)=>\`\${PX(x).toFixed(2)},\${PY(y).toFixed(2)}\`;
+    const band=g=>xs.map(x=>P(x,g(S.f(x),c))).concat([P(S.b,c),P(S.a,c)]).join(' ');
+    const d=this.diff();
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${S.fs} on [\${S.a}, \${S.b}] in blue, with a flat level at c = \${this.C()} in gold\${d===0?', at the average height':d>0?', below the average height':', above the average height'}">\`;
+    out+=\`<line x1="20" y1="\${PY(0).toFixed(2)}" x2="340" y2="\${PY(0).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<polygon data-k="over" points="\${band(Math.max)}" fill="\${FIG_COL.a}" fill-opacity=".35"/>\`;
+    out+=\`<polygon data-k="gap" points="\${band(Math.min)}" fill="\${FIG_COL.d}" fill-opacity=".35"/>\`;
+    out+=\`<polyline data-k="curve" points="\${xs.map(x=>P(x,S.f(x))).join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    out+=\`<line data-k="level" x1="\${PX(S.a).toFixed(2)}" y1="\${PY(c).toFixed(2)}" x2="\${PX(S.b).toFixed(2)}" y2="\${PY(c).toFixed(2)}" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-avg'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveC(by){ const v=this.k+by; if(v<0 || v>this.set().top) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('avSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Avg.pick(\${i})" aria-label="\${s.btn}: f(x) = \${s.fs} on [\${s.a}, \${s.b}]">\${s.btn}</button>\`).join('');
+    document.getElementById('avC').textContent=\`c = \${this.C()}\`;
+    document.getElementById('avCLo').disabled=this.k<=0;
+    document.getElementById('avCHi').disabled=this.k>=S.top;
+    document.getElementById('avFig').innerHTML=this.svg()+
+      \`<div class="figcap">The curve is f, in blue, and the gold line is a flat level at height c. Blue shading is where the curve sticks up above the level, red is the gaps under it. At the average height the two hold the same.</div>\`;
+    document.getElementById('avRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('avGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE LEVEL','every tank evened out','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

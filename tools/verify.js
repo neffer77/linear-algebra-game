@@ -66,6 +66,7 @@ function loadGame() {
     ';const Gram={' + script.slice(script.indexOf("  SETS:[\n    {id:'tilt', btn:'Tilted'"), script.indexOf("  open(){ UI.go('s-gram'); },")) + '};exports.Gram=Gram;' +
     ';const Geo={' + script.slice(script.indexOf("  SETS:[\n    {id:'half', btn:'Halves'"), script.indexOf("  open(){ UI.go('s-geo'); },")) + '};exports.Geo=Geo;' +
     ';const Bend={' + script.slice(script.indexOf("  SETS:[\n    {id:'s', btn:'S-curve'"), script.indexOf("  open(){ UI.go('s-bend'); },")) + '};exports.Bend=Bend;' +
+    ';const Avg={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl'"), script.indexOf("  open(){ UI.go('s-avg'); },")) + '};exports.Avg=Avg;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -84,7 +85,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2679,6 +2680,118 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The water level workshop: every curve at every level. Each curve's area is
+   worked here from its own coefficients, the level against it in exact
+   fractions, the curve above the level and the gaps under it by Simpson's rule
+   split where the curve crosses the level (found here by halving), every
+   sentence is rebuilt from those, the shading in the drawing must follow the
+   curve and the level, and every goal is rebuilt here. */
+const avgNotes = (() => {
+  const A = Avg;
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; return ng(Object.is(q, -0) ? 0 : q); };
+  const ex = v => Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10;
+  const about = v => (ex(v) ? '' : 'about ') + num(v);
+  const gd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gd(n, d); n /= g; d /= g; return d === 1 ? ng(n) : `${ng(n)}/${d}`; };
+  const SUB = '₀₁₂₃₄₅₆₇₈₉', SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  // coefficients, interval, the step of the level as a fraction, and how many steps
+  const K = {
+    bowl:   { c: [0, 0, 1], a: 0, b: 3, step: [1, 2], top: 18, fs: 'x²', fi: 'x²', Fs: 'x³/3', avg: 6 },
+    ramp:   { c: [1, 2], a: 0, b: 4, step: [1, 1], top: 9, fs: '2x + 1', fi: '(2x + 1)', Fs: 'x² + x', avg: 5 },
+    steep:  { c: [0, 0, 0, 1], a: 0, b: 2, step: [1, 2], top: 16, fs: 'x³', fi: 'x³', Fs: 'x⁴/4', avg: 4 },
+    narrow: { c: [0, 0, 1], a: 0, b: 2, step: [1, 3], top: 12, fs: 'x²', fi: 'x²', Fs: 'x³/3', avg: 4 }
+  };
+  const ev = (c, x) => c.reduce((t, a, i) => t + a * x ** i, 0);
+  // the area as an exact fraction: ∫ x^i from a to b with a = 0 is b^(i+1)/(i+1)
+  const areaQ = k => { let n = 0, d = 1; k.c.forEach((a, i) => { const pn = a * k.b ** (i + 1), pd = i + 1; n = n * pd + pn * d; d *= pd; }); const g = gd(n, d); return [n / g, d / g]; };
+  const simpson = (g, lo, hi) => { if (hi - lo < 1e-12) return 0; const m = 400, h = (hi - lo) / m; let t = g(lo) + g(hi);
+    for (let i = 1; i < m; i++) t += (i % 2 ? 4 : 2) * g(lo + i * h); return t * h / 3; };
+  if (A.SETS.map(S => S.id).join() !== 'bowl,ramp,steep,narrow') fail('avg', 'sets', A.SETS.map(S => S.id).join());
+  A.touched = false; A.si = 0; A.k = A.START;
+  for (const g of A.GOALS) if (g.ok(A)) fail('avg', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  A.SETS.forEach((S, si) => {
+    const k = K[S.id], [p, q] = areaQ(k), w = k.b - k.a;
+    if (S.a !== k.a || S.b !== k.b || S.fs !== k.fs || (S.fi || S.fs) !== k.fi || S.Fs !== k.Fs) fail('avg', S.id, 'the interval or formulas it shows are not this curve\'s');
+    if (S.area[0] * q !== S.area[1] * p) fail('avg', S.id, `its area reads ${S.area.join('/')}, worked here ${p}/${q}`);
+    if (S.sn * k.step[1] !== S.sd * k.step[0] || S.top !== k.top) fail('avg', S.id, 'its level steps are not the ones checked here');
+    for (let t = k.a; t <= k.b; t += 0.125) if (Math.abs(S.f(t) - ev(k.c, t)) > 1e-9) fail('avg', S.id, `f is wrong at x = ${t}`);
+    // the curve rises across the interval, so it crosses each level at most once
+    for (let t = k.a; t < k.b; t += 0.125) if (!(ev(k.c, t + 0.125) > ev(k.c, t))) fail('avg', S.id, 'the curve does not rise the whole way');
+    A.si = si;
+    let levelled = 0;
+    for (let j = 0; j <= k.top; j++) {
+      A.k = j; n++;
+      const c = j * k.step[0] / k.step[1], key = `${S.id} c=${c}`;
+      const C = fr(j * k.step[0], k.step[1]), A_ = fr(p, q), cwN = j * k.step[0] * w, cw = fr(cwN, k.step[1]);
+      const dn = p * k.step[1] - q * cwN, dd = q * k.step[1];
+      if (Math.sign(A.diff()) !== Math.sign(dn)) fail('avg', key, `reads area − c × width ${A.diff()}, worked here ${dn}/${dd}`);
+      const fa = ev(k.c, k.a), fb = ev(k.c, k.b);
+      let lo = k.a, hi = k.b; // halve to the crossing
+      if (c <= fa) hi = k.a; else if (c >= fb) lo = k.b;
+      else for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (ev(k.c, m) < c) lo = m; else hi = m; }
+      const xs = (lo + hi) / 2;
+      const over = simpson(t => ev(k.c, t) - c, xs, k.b), gaps = simpson(t => c - ev(k.c, t), k.a, xs);
+      if (Math.abs(over - A.over()) > 1e-7 || Math.abs(gaps - A.gaps()) > 1e-7) fail('avg', key, `above and under read ${A.over()} and ${A.gaps()}, worked here ${over} and ${gaps}`);
+      if (Math.abs((over - gaps) - dn / dd) > 1e-7) fail('avg', key, 'above minus under is not area − c × width');
+      const ab = `${SUB[k.a]}${SUP[k.b]}`;
+      const want = [
+        `f(x) = ${k.fs} on [${k.a}, ${k.b}]. The area under it is ∫${ab} ${k.fi} dx = [${k.Fs}]${ab} = ${A_}.`,
+        `A flat level at height c = ${C} across the same width ${w} holds c × ${w} = ${cw}.`
+      ];
+      if (c <= fa) want.push(`The curve never dips below the level, standing above it by ${A_} − ${cw} = ${fr(dn, dd)} in all, so the level is too low: raise it.`);
+      else if (c >= fb) want.push(`The curve never rises above the level, falling short of it by ${cw} − ${A_} = ${fr(-dn, dd)} in all, so the level is too high: lower it.`);
+      else {
+        const head = `Where the curve rises above the level, the area between them is ${about(over)}; where it dips below, the gaps under the level come to ${about(gaps)}.`;
+        want.push(dn === 0
+          ? `${head} They match: ${A_} − ${cw} = 0. The water above fills the gaps below, so c = ${C} is the average value, (1/${w}) × ${A_} = ${C}.`
+          : `${head} They differ by ${A_} − ${cw} = ${fr(dn, dd)}, ${dn > 0 ? 'more' : 'less'} than 0, so the level is too ${dn > 0 ? 'low: raise' : 'high: lower'} it.`);
+      }
+      if (dn === 0) {
+        levelled++;
+        if (j !== k.avg) fail('avg', key, 'levels at the wrong step');
+        if (Math.abs(c * w - p / q) > 1e-12) fail('avg', key, 'c × width is not the area');
+        const E = fr(fa + fb, 2), straight = k.c.length === 2;
+        if (straight !== ((fa + fb) / 2 === c)) fail('avg', key, 'the ends average to the level for a curve, or not for a line');
+        if (!straight && !((fa + fb) / 2 > c)) fail('avg', key, 'the ends should average above the level for a curve that bends up');
+        want.push(straight
+          ? `For a straight line that is also the average of its two ends, (${ng(fa)} + ${ng(fb)})/2 = ${E}. Only a straight line lets you take that shortcut.`
+          : `The average of the two ends, (${ng(fa)} + ${ng(fb)})/2 = ${E}, is not it: a curve that bends up spends most of its width low, so its average sits below the middle of its ends.`);
+      }
+      const got = A.working();
+      if (got.length !== want.length) fail('avg', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('avg', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing, read back into the curve's own units
+      const svg = A.svg(), ytop = k.top * k.step[0] / k.step[1] * 1.06;
+      const UX = px => k.a + (px - 20) / 320 * w, UY = py => (188 - py) / 176 * ytop, tol = ytop / 176 * 0.02 + 1e-6;
+      const pts = key2 => { const m = svg.match(new RegExp(`data-k="${key2}" points="([^"]+)"`)); return m ? m[1].split(' ').map(t => t.split(',').map(Number)) : null; };
+      const cur = pts('curve'), ov = pts('over'), gp = pts('gap');
+      if (!cur || !ov || !gp) fail('avg', key, 'the curve or a shading is missing');
+      else {
+        for (const [px, py] of cur) if (Math.abs(UY(py) - ev(k.c, UX(px))) > tol * 3) { fail('avg', key, `the curve is off at x = ${UX(px)}`); break; }
+        for (const [px, py] of ov.slice(0, -2)) if (Math.abs(UY(py) - Math.max(ev(k.c, UX(px)), c)) > tol * 3) { fail('avg', key, `the blue shading is off at x = ${UX(px)}`); break; }
+        for (const [px, py] of gp.slice(0, -2)) if (Math.abs(UY(py) - Math.min(ev(k.c, UX(px)), c)) > tol * 3) { fail('avg', key, `the red shading is off at x = ${UX(px)}`); break; }
+        for (const sh of [ov, gp]) { const [b1, a1] = sh.slice(-2);
+          if (Math.abs(UX(b1[0]) - k.b) > 1e-3 || Math.abs(UX(a1[0]) - k.a) > 1e-3 || Math.abs(UY(b1[1]) - c) > tol * 3 || Math.abs(UY(a1[1]) - c) > tol * 3) fail('avg', key, 'a shading does not close along the level'); }
+      }
+      const lv = svg.match(/data-k="level" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+      if (!lv || Math.abs(UY(+lv[2]) - c) > tol * 3 || Math.abs(UY(+lv[4]) - c) > tol * 3 || Math.abs(UX(+lv[1]) - k.a) > 1e-3 || Math.abs(UX(+lv[3]) - k.b) > 1e-3) fail('avg', key, 'the gold level is not at height c across the interval');
+      A.touched = true;
+      const meant = { bowl: si === 0 && dn === 0, ramp: si === 1 && dn === 0, steep: si === 2 && dn === 0, narrow: si === 3 && dn === 0, over: dn < 0 };
+      for (const gl of A.GOALS) {
+        if (!!gl.ok(A) !== meant[gl.id]) fail('avg', key, `goal ${gl.id} is ${gl.ok(A) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(A)) found[gl.id] = found[gl.id] || key;
+      }
+    }
+    if (levelled !== 1) fail('avg', S.id, `levels at ${levelled} steps, not exactly one`);
+  });
+  for (const g of A.GOALS) if (!found[g.id]) fail('avg', g.id, 'this goal cannot be found');
+  A.si = 0; A.k = A.START; A.touched = false; A.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The bend workshop: every curve at every point. Each curve's f′ and f″ are
    worked here from its own coefficients, every sentence is rebuilt from them,
    the slope half a step either side must move the way f″ says, a point where
@@ -3525,6 +3638,7 @@ console.log(`  null space arrows        ${pad(kernelNotes.n.toLocaleString(), 10
 console.log(`  gram–schmidt steps       ${pad(gramNotes.n.toLocaleString(), 10)}  (w and w · u₁ worked at every c, one perpendicular c per pair and it is the shadow and the shortest w, every arrow drawn at its value, ${gramNotes.goals} goals findable)`);
 console.log(`  geometric series sums   ${pad(geoNotes.n.toLocaleString(), 10)}  (every running total in exact fractions, the gap a·rⁿ/(1 − r) shrinking by r each term, the staircase bars from total to total, ${geoNotes.goals} goals findable)`);
 console.log(`  bend points             ${pad(bendNotes.n.toLocaleString(), 10)}  (f′ and f″ from each curve's own coefficients, the slope either side moving as f″ says, the curve on the side of its tangent the readout names, the drawing read back, ${bendNotes.goals} goals findable)`);
+console.log(`  water levels            ${pad(avgNotes.n.toLocaleString(), 10)}  (each area from the curve's own coefficients, the level against it in exact fractions, above and under the level by Simpson's rule, the shading read back, ${avgNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
