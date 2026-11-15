@@ -2783,6 +2783,130 @@ const wsIndexNotes = (() => {
   return { chips: items.length, strands: gs.length, cases: cases.length };
 })();
 
+/* Which is f′? The graph-reading round in the slope tracer: f′ is checked as
+   the slope of f by nudging f itself, never from the coefficients it was built
+   from; each wrong graph is checked to be the slip it is named as, and to break
+   the rule at the x it is caught at; and every sentence, every graph told as
+   words, every tap and every drawing is read back, over many seeded rounds. */
+const slopeMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {axis:'#6b5f92', a:'#5aa9e6', b:'#f2c14e'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Tracer = {render(){ env.renders++; }};" +
+    cut('const SlopeMatch = {', '/* ---------- The slope tracer workshop') + 'return SlopeMatch;')(R, env);
+  const txt = h => h.replace(/<\/div>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const H = 1e-4, slope = (f, x) => (f(x + H) - f(x - H)) / (2 * H);
+  const label = (F, x) => {
+    if (!F.trig) return (x < 0 ? '−' : '') + Math.abs(x);
+    const q = Math.round(x / (Math.PI / 4));
+    return q === 0 ? '0' : (q < 0 ? '−' : '') + { 1: 'π/4', 2: 'π/2', 3: '3π/4', 4: 'π' }[Math.abs(q)];
+  };
+  const named = { self: (F, x) => F.f(x), neg: (F, x) => -slope(F.f, x), dd: (F, x) => slope(x2 => slope(F.f, x2), x) };
+  let n = 0, rounds = 0, misses = 0, kinds = new Set(), slips = new Set(), dealt = new Set(), fives = 0;
+  if (S.round !== null || S.matched !== 0) fail('slopematch', 'open', 'a round is dealt before the mode is opened');
+  for (let seed = 1; seed <= 400; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, F = r.F, key = `seed ${seed} round ${k}`;
+      rounds++; kinds.add(F.kind);
+      if (prev && F.fs === prev.fs && JSON.stringify(F.D) === JSON.stringify(prev.D)) fail('slopematch', key, 'the same f comes twice in a row');
+      if (r.deal.length !== 3 || r.deal.filter(d => d === 'd').length !== 1) fail('slopematch', key, `the deal is ${r.deal}`);
+      const wrong = r.deal.filter(d => d !== 'd');
+      if (wrong[0] === wrong[1] || !wrong.every(w => S.NAMES[w])) fail('slopematch', key, `the wrong graphs are ${wrong}`);
+      const xs = []; for (let i = 0; i <= 120; i++) xs.push(F.X[0] + (F.X[1] - F.X[0]) * i / 120);
+      for (const x of xs) {
+        n++;
+        if (Math.abs(slope(F.f, x) - F.G.d(x)) > 1e-5) { fail('slopematch', key, `f′ is not the slope of f at x = ${x}`); break; }
+        for (const w of Object.keys(named)) if (Math.abs(named[w](F, x) - F.G[w](x)) > 1e-3) { fail('slopematch', key, `${w} is not what it is named at x = ${x}`); break; }
+      }
+      // f′ slid sideways: a step of 2 either way, or a quarter turn on a wave
+      if (![2, -2, Math.PI / 2].some(s => (F.trig === (s === Math.PI / 2)) && xs.every(x => Math.abs(F.G.shift(x) - slope(F.f, x - s)) < 1e-5))) fail('slopematch', key, 'the slid graph is not f′ slid sideways');
+      for (const w of wrong) dealt.add(F.kind + ' ' + w);
+      const far = (g, h) => xs.some(x => Math.abs(g(x) - h(x)) > 0.1);
+      if (!far(F.G[wrong[0]], F.G.d) || !far(F.G[wrong[1]], F.G.d) || !far(F.G[wrong[0]], F.G[wrong[1]])) fail('slopematch', key, 'two of the graphs look the same');
+      // every flat tangent of f is named, and only those
+      const flats = S.flats(F), crosses = [];
+      for (let i = 1; i < xs.length; i++) if (Math.sign(slope(F.f, xs[i - 1])) * Math.sign(slope(F.f, xs[i])) < 0) crosses.push(xs[i]);
+      for (const c of crosses) if (!flats.some(L => S.grid(F).some(g => label(F, g) === L && Math.abs(g - c) <= (F.X[1] - F.X[0]) / 120 + 1e-9))) fail('slopematch', key, `f lies flat near x = ${c}, which is not named`);
+      for (const L of flats) { const g = S.grid(F).find(x => label(F, x) === L); if (g === undefined || Math.abs(slope(F.f, g)) > 1e-6) fail('slopematch', key, `x = ${L} is named flat but is not`); }
+      // f, and each graph, told as words
+      const told = (g, words, up, down) => {
+        const parts = words.split(', ');
+        parts.forEach((p, i) => {
+          const m = p.match(new RegExp(`^(?:then )?(${up}|${down})(?: from (about )?x = (\\S+))?$`));
+          if (!m || (i === 0) !== (m[3] === undefined)) { fail('slopematch', key, `cannot read "${words}"`); return; }
+          const at = m[3] === undefined ? F.X[0] : S.grid(F).concat(F.trig ? [] : [-3, 3]).find(x => label(F, x) === m[3]);
+          if (at === undefined) { fail('slopematch', key, `"${m[3]}" is not on the grid`); return; }
+          const nx = i + 1 < parts.length ? S.grid(F).concat(F.trig ? [] : [-3, 3]).find(x => label(F, x) === (parts[i + 1].match(/x = (\S+)$/) || [])[1]) : F.X[1];
+          const st = (nx - at) / 60, bad = [], u = F.trig ? Math.PI / 8 : 0.25;
+          const nxAbout = i + 1 < parts.length && / from about /.test(parts[i + 1]);
+          for (let q = 1; q < 60; q++) { const x = at + q * st, v = g(x);
+            if ((m[2] && x - at < u) || (nxAbout && nx - x < u)) continue; if (Math.abs(v) > 1e-9 && (m[1] === up) !== (v > 0)) bad.push(x); }
+          if (bad.length > 3) fail('slopematch', key, `"${p}" is wrong: the graph is on the other side of the axis at x = ${bad[0]} in "${words}" ${F.kind} ${F.fs} ${JSON.stringify(F.D)} ${Object.keys(F.G).find(k => F.G[k] === g)}`);
+          if (m[3] !== undefined && !m[2] && Math.abs(g(at)) > 1e-6) fail('slopematch', key, `"${p}" says exactly, but the graph is not 0 there`);
+          if (m[2] && Math.abs(g(at)) < 1e-6) fail('slopematch', key, `"${p}" says about, but it is exact`);
+        });
+      };
+      const h0 = S.html();
+      const fl = (h0.match(/role="img" aria-label="f(?: = [^:]+)?: it ([^"]+)"/) || [])[1];
+      if (!fl) fail('slopematch', key, 'f is not told as words'); else told(x => slope(F.f, x), fl, 'climbs', 'falls');
+      const opts = [...h0.matchAll(/data-opt="([ABC])" (disabled )?onclick="SlopeMatch\.choose\((\d)\)" aria-label="Graph ([ABC]): ([^"]+)"/g)];
+      if (opts.map(o => o[1] + o[3] + o[4]).join() !== 'A0A,B1B,C2C' || opts.some(o => o[2])) fail('slopematch', key, 'the three graphs are not offered A, B, C');
+      opts.forEach((o, i) => told(F.G[r.deal[i]], o[5], 'above the axis', 'below the axis'));
+      if (/data-k="tell"/.test(h0)) fail('slopematch', key, 'a tell is marked before any miss');
+      for (const p of h0.matchAll(/points="([^"]+)"/g)) for (const pt of p[1].split(' ')) { const [x, y] = pt.split(',').map(Number); if (x < 0 || x > 340 || y < 0 || y > 120) { fail('slopematch', key, `a point is drawn off its frame: ${pt}`); break; } }
+      if (!txt(h0).startsWith("f′ sits above the axis wherever f climbs, below wherever f falls, and crosses 0 where f's tangent lies flat. Which graph is f′?")) fail('slopematch', key, 'the rule is not stated');
+      // miss each wrong graph in turn, at random order, then pick f′
+      const order = [0, 1, 2].filter(i => r.deal[i] !== 'd'); if (seed % 2) order.reverse();
+      const missN = k % 3;
+      for (let t = 0; t < missN && t < 2; t++) {
+        const i = order[t], w = r.deal[i], before = S.matched;
+        S.choose(i); misses++; slips.add(w);
+        const X = S.tell(F, F.G[w]);
+        if (X === null || X <= F.X[0] + 0.1 || X >= F.X[1] - 0.1) fail('slopematch', key, `${w} is caught at no x, or at an end`);
+        const up = slope(F.f, X) > 0;
+        if (Math.sign(F.G[w](X)) !== (up ? -1 : 1)) fail('slopematch', key, `${w} does not break the rule at x = ${X}`);
+        const h = S.html(), rd = txt(h.split('id="smRead"')[1].replace(/^[^>]*>/, ''));
+        const want = `At x = ${label(F, X)}, f is ${up ? 'climbing' : 'falling'}: its tangent slopes ${up ? 'up' : 'down'}, so f′ must sit ${up ? 'above' : 'below'} the axis there. Graph ${'ABC'[i]} is ${up ? 'below' : 'above'} the axis at x = ${label(F, X)}, so it cannot be f′. It is ${S.NAMES[w]}.`;
+        if (!rd.startsWith(want)) fail('slopematch', key, `the miss is explained as: ${rd}`);
+        if (S.matched !== before || !S.round.out.has(i)) fail('slopematch', key, 'a miss is counted as read, or not crossed off');
+        if ((h.match(/data-k="tell"/g) || []).length !== 2) fail('slopematch', key, 'the tell is not marked on f and on the missed graph');
+        if (!new RegExp(`data-opt="${'ABC'[i]}" disabled onclick`).test(h) || !new RegExp(`aria-label="Graph ${'ABC'[i]}: [^"]+\\. Not f′"`).test(h)) fail('slopematch', key, 'a missed graph is not shut and told as not f′');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== t + 1 || env.renders !== r0) fail('slopematch', key, 'tapping a missed graph again does something');
+      }
+      const di = r.deal.indexOf('d'), m0 = S.matched, f0 = S.firstTry, nt = env.toasts.length, nb = env.banners.length;
+      S.choose(di);
+      if (S.matched !== m0 + 1 || S.firstTry !== f0 + (missN === 0 ? 1 : 0)) fail('slopematch', key, 'reading f′ is not counted');
+      if (S.round === r) fail('slopematch', key, 'no new f after reading f′');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || !/SLOPE SPOTTER \/ 5 slopes read/.test(env.banners[nb])) fail('slopematch', key, 'no banner at five'); }
+      else { const tries = missN + 1, want = `✓ Graph ${'ABC'[di]} is f′, read ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== want) fail('slopematch', key, `the toast is ${env.toasts[nt]}`); }
+      const after = txt(S.html().split('id="smRead"')[1].replace(/^[^>]*>/, ''));
+      if (!after.startsWith('That was f′: ') || (flats.length > 0) !== after.includes(`0 at x = ${flats.join(' and x = ')}, where f's tangent lay flat`)) fail('slopematch', key, `after a read: ${after}`);
+      if (!after.endsWith(`${S.matched} read this visit, ${S.firstTry} on the first try.`)) fail('slopematch', key, 'the tally is wrong');
+      prev = F;
+    }
+  }
+  for (const k of ['line', 'quad', 'wave']) if (!kinds.has(k)) fail('slopematch', k, 'never dealt');
+  for (const w of Object.keys(S.NAMES)) if (!slips.has(w)) fail('slopematch', w, 'never caught');
+  // a parabola slid by 2 breaks the rule only near the bottom of its bowl, too
+  // faintly to point at, so it is never dealt; every other slip is
+  for (const k of ['line', 'quad', 'wave']) for (const w of Object.keys(S.NAMES)) if (!(k === 'quad' && w === 'shift') && !dealt.has(k + ' ' + w)) fail('slopematch', k, `never offers ${w} as a wrong graph`);
+  if (dealt.has('quad shift')) fail('slopematch', 'quad', 'a faint slid parabola is dealt');
+  if (fives !== 40) fail('slopematch', 'banner', `five slopes were read ${fives} times, not 40`);
+  return { n, rounds, misses };
+})();
+
 /* The growth integral workshop: every curve, every number in front, every
    lift and both forms. Whether F fits is decided here by nudging F and
    comparing with Math's own e^(kx) at many x, never from c·k = 1; every
@@ -6282,6 +6406,7 @@ console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  
 console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}  (the cleared identity at every x, the pieces adding back to f, the antiderivative differentiated back, every choice of kept equations, the drawing read back, ${coverNotes.goals} goals findable)`);
 console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
+console.log(`  f′ picked out     ${pad(slopeMatchNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-f′, f′ checked as the slope of f by nudging f at ${slopeMatchNotes.n.toLocaleString()} points; every wrong graph checked to be its slip and caught where it breaks the rule, ${slopeMatchNotes.misses.toLocaleString()} misses explained; every graph told as words read back)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);

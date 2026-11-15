@@ -759,6 +759,8 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .btn.wiChip{width:auto;margin:0;padding:6px 10px}
 .btn.wiChip.solid{border-color:var(--green)}
 .btn.wiChip.weak{border-color:var(--gold)}
+.smOpt b{display:block;font-size:13px}
+.btn.smOpt.miss{border-color:#e5484d;opacity:.75}
 .wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 .wsModes.wrap{flex-wrap:wrap}
 .wsModes.wrap button{flex:1 1 28%;min-width:0}
@@ -1561,16 +1563,18 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-tracer">
     <div class="panel"><h2>✍️ Slope Tracer Workshop</h2><div class="sub">The derivative of a curve is another curve: at each x, how steep the first one is there. Step along a curve, mark its slope at each stop as a dot at that height, and watch the dots draw the derivative for you.</div></div>
     <div class="panel">
+      <div id="tcMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Trace slopes or read them"></div>
+      <div id="tcMatch"></div>
       <div id="tcSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="tcFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="tcStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="tcXLo" onclick="Tracer.moveX(-1)" aria-label="Step x back to the last stop">−</button>
           <b id="tcX" style="font-size:17px;min-width:0"></b>
           <button id="tcXHi" onclick="Tracer.moveX(1)" aria-label="Step x on to the next stop">+</button></div>
       </div>
       <div id="tcRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="tcGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="tcGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14072,7 +14076,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">✍️ Slope Tracer Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x. Then turn it round: see f, and pick which of three graphs is f′.</div>
          <button class="btn sm" id="tomeTracer" style="width:auto;margin-top:8px" onclick="Tracer.open()">Open the slope tracer workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -18761,6 +18765,175 @@ const Slice = {
   }
 };
 
+/* ---------- Which is f′? A graph-reading round in the slope tracer ----------
+   The trace mode shows a derivative being drawn one slope at a time. This
+   mode turns it round: f is drawn, three graphs sit under it, and one of them
+   is f′. The tell is always the same rule, read off the picture: f′ sits above
+   the axis wherever f climbs, below wherever f falls, and crosses 0 where f's
+   tangent lies flat. The two wrong graphs are the slips people make reading
+   a slope off a graph: drawing f again, drawing f′ upside down, putting its
+   zeros in the wrong places, or taking one derivative too many. A wrong pick
+   is answered at an x where the rule plainly fails for it, marked on both
+   drawings. Every graph is also told as words, so the round can be played
+   without seeing it. Nothing is saved. */
+const SlopeMatch = {
+  P:{
+    // polynomials as coefficients from x⁰ up
+    v:(c,x)=>c.reduce((s,a,i)=>s+a*x**i,0),
+    d:c=>c.slice(1).map((a,i)=>a*(i+1)),
+    mul:(a,b)=>{ const o=Array(a.length+b.length-1).fill(0); a.forEach((p,i)=>b.forEach((q,j)=>{ o[i+j]+=p*q; })); return o; },
+    int:(c,C)=>[C,...c.map((a,i)=>a/(i+1))]
+  },
+  /* f′ is built first, so its zeros, the flat tangents of f, land on whole
+     numbers (or quarter turns, for the waves) and can be read off the grid */
+  make(){
+    const P=this.P, kind=R.pick(['line','line','quad','quad','quad','wave']);
+    if(kind==='wave'){
+      const w=R.pick([
+        {f:Math.sin, fs:'sin x', d:Math.cos, dd:x=>-Math.sin(x)},
+        {f:Math.cos, fs:'cos x', d:x=>-Math.sin(x), dd:x=>-Math.cos(x)},
+        {f:x=>-Math.sin(x), fs:'−sin x', d:x=>-Math.cos(x), dd:Math.sin}]);
+      return {kind, fs:w.fs, trig:true, X:[-3.3,3.3], f:w.f,
+        G:{d:w.d, self:w.f, neg:x=>-w.d(x), shift:x=>w.d(x-Math.PI/2), dd:w.dd}};
+    }
+    let D;
+    if(kind==='line'){ const p=R.i(-2,2), k=R.pick([1,-1]); D=[-k*p,k]; }
+    else { let p=R.i(-2,0), q=p+R.i(2,3); if(q>2){ q=2; p=Math.min(p,0); } const k=R.pick([1,-1])*0.5; D=P.mul([-p,1],[-q,1]).map(a=>a*k); }
+    const F=P.int(D,R.i(-1,1)), DD=P.d(D), sh=R.pick([2,-2]);
+    return {kind, fs:'', trig:false, X:[-3,3], f:x=>P.v(F,x), F, D,
+      G:{d:x=>P.v(D,x), self:x=>P.v(F,x), neg:x=>-P.v(D,x), shift:x=>P.v(D,x-sh), dd:x=>P.v(DD,x)}};
+  },
+  // the spots a reading is taken at: halves, or eighths of a turn on a wave
+  grid(F){ return F.trig ? [-4,-3,-2,-1,0,1,2,3,4].map(i=>i*Math.PI/4) : [-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(i=>i/2); },
+  xl(F,x){
+    if(!F.trig) return neg(Math.round(x*2)/2);
+    const q=Math.round(x/(Math.PI/4)), a=Math.abs(q), s=q<0?'−':'';
+    return q===0 ? '0' : s+({1:'π/4',2:'π/2',3:'3π/4',4:'π'})[a];
+  },
+  big(F,g){ return Math.max(...this.grid(F).map(x=>Math.abs(g(x)))); },
+  /* where a wrong graph plainly breaks the rule: f′ and it have opposite
+     signs, each at least a quarter of its own height, the clearest first */
+  tell(F,g){
+    const d=F.G.d, md=this.big(F,d), mg=this.big(F,g);
+    let best=null;
+    // not at the very ends, where a mark would sit on the frame
+    for(const x of this.grid(F).slice(1,-1)){
+      const a=d(x), b=g(x);
+      if(Math.sign(a)*Math.sign(b)>=0) continue;
+      const m=Math.min(Math.abs(a)/md, Math.abs(b)/mg);
+      if(m>=0.25 && (!best || m>best.m+1e-9)) best={x,m};
+    }
+    return best && best.x;
+  },
+  // the stretches where a graph is above or below the axis, as words
+  runs(F,g){
+    const xs=[]; for(let i=0;i<=240;i++) xs.push(F.X[0]+(F.X[1]-F.X[0])*i/240);
+    const out=[]; let s=0;
+    for(const x of xs){ const v=g(x), t=Math.abs(v)<1e-9?0:Math.sign(v); if(t && t!==s){ out.push({s:t, from:out.length?x:null}); s=t; } }
+    return out.map(r=>{ if(r.from===null) return {s:r.s, from:null};
+      // the crossing is between two samples; name the grid point it lands on,
+      // or say about when it does not land on one
+      const lo=r.from-(F.X[1]-F.X[0])/240, z=this.snap(F,(lo+r.from)/2), on=Math.abs(g(z))<1e-6;
+      return {s:r.s, from:z, about:!on}; });
+  },
+  snap(F,x){ const u=F.trig?Math.PI/4:0.5; return Math.round(x/u)*u; },
+  same(F,g,h){ for(let i=0;i<=240;i++){ const x=F.X[0]+(F.X[1]-F.X[0])*i/240; if(Math.abs(g(x)-h(x))>1e-6) return false; } return true; },
+  words(F,g,up,down){
+    const r=this.runs(F,g);
+    if(!r.length) return 'on the axis';
+    return r.map((q,i)=>(i?'then ':'')+(q.s>0?up:down)+(q.from===null?'':\` from \${q.about?'about ':''}x = \${this.xl(F,q.from)}\`)).join(', ');
+  },
+  NAMES:{self:'f itself, drawn again: f′ draws how steep f is, not how high',
+         neg:'f′ upside down: it sits above the axis where f falls',
+         shift:'f′ slid sideways: it crosses 0 away from where f lies flat',
+         dd:'f″, the slope of the slope: one derivative too many'},
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    let F, deal;
+    for(let g=0;g<500;g++){
+      F=this.make();
+      if(this.round && F.fs===this.round.F.fs && JSON.stringify(F.D)===JSON.stringify(this.round.F.D)) continue;
+      const ok=Object.keys(this.NAMES).filter(k=>this.tell(F,F.G[k])!==null && !this.same(F,F.G[k],F.G.d));
+      const pick=[];
+      for(let t=0;t<40 && pick.length<2;t++){ const k=R.pick(ok); if(ok.length && !pick.includes(k) && !pick.some(j=>this.same(F,F.G[j],F.G[k]))) pick.push(k); }
+      if(pick.length<2) continue;
+      deal=['d',...pick];
+      for(let i=deal.length-1;i>0;i--){ const j=R.i(0,i); [deal[i],deal[j]]=[deal[j],deal[i]]; }
+      break;
+    }
+    this.round={F, deal, out:new Set()};
+    this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round, k=r.deal[i];
+    if(r.out.has(i)) return;
+    this.picked=i;
+    if(k==='d'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SLOPE SPOTTER', this.matched+' slopes read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ Graph \${'ABC'[i]} is f′, read \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={F:r.F, i};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++;
+      this.last=null;
+    }
+    Tracer.render();
+  },
+  // what the rule says at x, for the graph the player just turned down
+  why(i){
+    const r=this.round, F=r.F, k=r.deal[i], g=F.G[k], x=this.tell(F,g), X=this.xl(F,x), up=F.G.d(x)>0;
+    return [\`At x = \${X}, f is \${up?'climbing':'falling'}: its tangent slopes \${up?'up':'down'}, so f′ must sit \${up?'above':'below'} the axis there.\`,
+      \`Graph \${'ABC'[i]} is \${up?'below':'above'} the axis at x = \${X}, so it cannot be f′. It is \${this.NAMES[k]}.\`];
+  },
+  flats(F){
+    const xs=this.grid(F).filter(x=>Math.abs(F.G.d(x))<1e-9);
+    return xs.map(x=>this.xl(F,x));
+  },
+  // the drawings: f on top; under it, three graphs to choose from
+  PX(F,x,w){ return 6+(x-F.X[0])/(F.X[1]-F.X[0])*(w-12); },
+  path(F,g,w,h,ys){
+    const pts=[]; for(let i=0;i<=80;i++){ const x=F.X[0]+(F.X[1]-F.X[0])*i/80, v=Math.max(-ys,Math.min(ys,g(x)));
+      pts.push(\`\${this.PX(F,x,w).toFixed(2)},\${(h/2-v/ys*(h/2-6)).toFixed(2)}\`); }
+    return pts.join(' ');
+  },
+  fig(F,g,w,h,col,k,mark){
+    const ys=Math.max(this.big(F,g),0.5)*1.1;
+    let s=\`<line x1="4" y1="\${h/2}" x2="\${w-4}" y2="\${h/2}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(mark!==undefined && mark!==null){ const mx=this.PX(F,mark,w).toFixed(2); s+=\`<line data-k="tell" x1="\${mx}" y1="4" x2="\${mx}" y2="\${h-4}" stroke="#e5484d" stroke-width="1.5" stroke-dasharray="4 3"/>\`; }
+    return s+\`<polyline data-k="\${k}" points="\${this.path(F,g,w,h,ys)}" fill="none" stroke="\${col}" stroke-width="2.5"/>\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, F=r.F, miss=this.picked!==null && r.out.has(this.picked) ? this.picked : null;
+    const tellX=miss===null ? null : this.tell(F,F.G[r.deal[miss]]);
+    const fDesc=this.words(F,F.G.d,'climbs','falls');
+    let out=\`<div class="small" style="margin:2px 0 4px">f′ sits above the axis wherever f climbs, below wherever f falls, and crosses 0 where f's tangent lies flat. Which graph is f′?</div>\`;
+    out+=\`<svg viewBox="0 0 340 120" style="width:100%;height:auto;display:block" role="img" aria-label="f\${F.fs?' = '+F.fs:''}: it \${fDesc}">\${this.fig(F,F.f,340,120,FIG_COL.a,'f',tellX)}</svg>\`;
+    out+=\`<div id="smPick" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px">\`+r.deal.map((k,i)=>{
+      const g=F.G[k], gone=r.out.has(i), desc=this.words(F,g,'above the axis','below the axis');
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABC'[i]}" \${gone?'disabled ':''}onclick="SlopeMatch.choose(\${i})" aria-label="Graph \${'ABC'[i]}: \${desc}\${gone?'. Not f′':''}" style="margin:0;padding:4px">
+        <svg viewBox="0 0 120 80" style="width:100%;height:auto;display:block" aria-hidden="true">\${this.fig(F,g,120,80,gone?'#e5484d':FIG_COL.b,'g',i===miss?tellX:null)}</svg><b>\${'ABC'[i]}</b></button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(miss!==null) lines.push(...this.why(miss));
+    else if(this.last) { const fl=this.flats(this.last.F);
+      const sg=this.runs(this.last.F,this.last.F.G.d).map(q=>q.s), parts=[];
+      if(sg.includes(1)) parts.push('above the axis where f climbed');
+      if(sg.includes(-1)) parts.push('below where it fell');
+      if(fl.length) parts.push(\`0 at x = \${fl.join(' and x = ')}, where f's tangent lay flat\`);
+      lines.push(\`That was f′: \${parts.length>2 ? parts.slice(0,-1).join(', ')+', and '+parts[parts.length-1] : parts.join(', and ')}. Here is a new f.\`); }
+    lines.push(\`\${this.matched} read this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="smRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The slope tracer workshop: what the slopes of a curve draw ----------
    Step along sin x, cos x, eˣ or ln x. At each stop the tangent's slope is
    worked out with a nudge and marked as a gold dot at that height. The dots
@@ -18845,12 +19018,20 @@ const Tracer = {
     out+=\`<circle data-k="pt" cx="\${PX(x).toFixed(2)}" cy="\${PY(y).toFixed(2)}" r="5" fill="\${FIG_COL.a}"/>\`;
     return out+\`</svg>\`;
   },
+  mode:'trace',
+  setMode(m){ this.mode=m; this.render(); },
   open(){ UI.go('s-tracer'); },
   pick(i){ this.si=i; this.k=this.START; this.seen[i].add(this.k); this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>8) return; this.k=v; this.seen[this.si].add(v); this.touched=true; this.render(); },
   render(){
     document.getElementById('tcSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Tracer.pick(\${i})" aria-label="f(x) = \${s.fs}">\${s.btn}</button>\`).join('');
+    document.getElementById('tcMode').innerHTML=[['trace','✍️ Trace the slopes'],['match','🧩 Which is f′?']]
+      .map(([m,t])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Tracer.setMode('\${m}')" aria-label="\${m==='trace'?'Trace the slopes of f along the curve':'See f and pick which of three graphs is f′'}">\${t}</button>\`).join('');
+    const match=this.mode==='match';
+    for(const id of ['tcSets','tcFig','tcStep','tcRead','tcGoalPanel']) document.getElementById(id).style.display=match?'none':'';
+    document.getElementById('tcMatch').innerHTML=match ? SlopeMatch.html() : '';
+    if(match) return;
     document.getElementById('tcX').textContent=\`x = \${this.xl()}\`;
     document.getElementById('tcXLo').disabled=this.k<=0;
     document.getElementById('tcXHi').disabled=this.k>=8;
