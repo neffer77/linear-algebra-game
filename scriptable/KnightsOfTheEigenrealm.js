@@ -3213,6 +3213,35 @@ const STRANDS = [
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
+/* The hands-on workshop that shows a topic working, for the topics one
+   plainly fits. A fight that shows up a weakness offers it by name, so the
+   player can watch the idea move by hand before meeting it again, instead of
+   hunting through nineteen workshops for the right one. */
+const WORKSHOP_FOR = (() => {
+  const W = {
+    Workshop:["🛠 Matrix Workshop", ['matVec','transMatrix','det2']],
+    Dot:     ["🎯 Dot Product Workshop", ['dot','angleVec','orth','proj','vecProj']],
+    Eigen:   ["👑 Eigenvector Hunt", ['eigen2','eigenvec']],
+    Compose: ["🔁 Order Matters", ['matMul']],
+    Span:    ["🧭 Span Workshop", ['vecCombo']],
+    Elim:    ["⚖️ Elimination Workshop", ['solve2']],
+    Undo:    ["↩️ Undo Workshop", ['inv2']],
+    Castles: ["🏰 Two Castles Workshop", ['matPow']],
+    Limit:   ["🌫️ Limit Workshop", ['limRational']],
+    Hopital: ["🔬 L'Hôpital Workshop", ['lhopital']],
+    Slope:   ["📈 Slope Workshop", ['evalDeriv','powerRule','tangent']],
+    Area:    ["🏺 Area Workshop", ['area','riemannToInt']],
+    Cistern: ["💧 Cistern Workshop", ['defPoly']],
+    Taylor:  ["🌀 Taylor Workshop", ['taylor']],
+    Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
+    Descent: ["⛰️ Downhill Workshop", ['gradient']]
+  };
+  const out = {};
+  for (const mod in W) for (const k of W[mod][1]) out[k] = {mod, name:W[mod][0]};
+  return out;
+})();
+
 /* ------------------------------- mastery --------------------------------- */
 /* Per-topic mastery drives three things: which topic comes up next, how hard
    the problem is, and what the Chronicle reports. The model is a plain
@@ -7415,7 +7444,21 @@ const Battle = {
         return \`<div class="small" data-learned="\${k}" style="display:flex;justify-content:space-between;gap:8px;line-height:1.9">
           <span>\${TOPIC_LABEL[k]||k}\${st!=='free'?\` <span class="lsn">\${Lesson.ICON[st]} \${Lesson.LABEL[st]} next</span>\`:''}</span>
           <b style="color:\${up?'var(--green)':'var(--red)'};white-space:nowrap">\${Math.round(d.from*100)}% → \${Math.round(d.to*100)}%</b></div>\`;
-      }).join('')}</div>\`;
+      }).join('')}\${this.handsOnHtml(rows)}</div>\`;
+  },
+  /* For the topics that fell, the workshop that shows each one working: the
+     biggest fall first, one button per workshop, two at most. The workshop's
+     back button returns here. */
+  handsOnHtml(rows){
+    const seen=new Set(), pick=[];
+    rows.filter(x=>x.d.to<x.d.from && WORKSHOP_FOR[x.k])
+      .sort((a,b)=>(a.d.to-a.d.from)-(b.d.to-b.d.from))
+      .forEach(x=>{ const w=WORKSHOP_FOR[x.k]; if(!seen.has(w.mod) && pick.length<2){ seen.add(w.mod); pick.push({k:x.k, w}); } });
+    if(!pick.length) return '';
+    return \`<div id="handsOn" style="text-align:left;margin-top:10px">
+        <div class="small" style="font-weight:800;color:var(--gold)">See it work by hand</div>
+        \${pick.map(({k,w})=>\`<button class="btn sm" data-ws="\${w.mod}" data-topic="\${k}" style="width:auto;margin:6px 6px 0 0" onclick="\${w.mod}.open()">\${w.name}, for \${TOPIC_LABEL[k]}</button>\`).join('')}
+      </div>\`;
   },
 
   win(){

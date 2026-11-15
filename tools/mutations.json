@@ -1,124 +1,68 @@
 {
- "change": "The L'Hôpital Workshop: ratios that give 0/0",
+ "change": "A fight's summary offers the workshop that fits each fall",
  "mutations": [
   {
-   "name": "the cube's top slope forgets the power",
+   "name": "L'Hôpital's rule points to the limit workshop",
    "file": "index.html",
-   "find": "fpaw:'3 × 2² = 12', gpaw:'2 × 2 = 4', fpa:12, gpa:4,",
-   "replace": "fpaw:'3 × 2² = 12', gpaw:'2 × 2 = 4', fpa:6, gpa:4,",
+   "find": "    Limit:   [\"🌫️ Limit Workshop\", ['limRational']],\n    Hopital: [\"🔬 L'Hôpital Workshop\", ['lhopital']],",
+   "replace": "    Limit:   [\"🌫️ Limit Workshop\", ['limRational','lhopital']],\n    Hopital: [\"🔬 L'Hôpital Workshop\", []],",
+   "run": "play:handson"
+  },
+  {
+   "name": "a workshop's name drifts from the Tome's",
+   "file": "index.html",
+   "find": "    Chain:   [\"⛓️ Chain Rule Workshop\", ['chainRule']],",
+   "replace": "    Chain:   [\"⛓️ Chain Workshop\", ['chainRule']],",
    "run": "verify"
   },
   {
-   "name": "the square's bottom is x + 1",
+   "name": "a topic's key is misspelt",
    "file": "index.html",
-   "find": "f:{poly:[[1,2],[-1,0]]}, g:{poly:[[1,1],[-1,0]]}, ylim:[-2,5.5]",
-   "replace": "f:{poly:[[1,2],[-1,0]]}, g:{poly:[[1,1],[1,0]]}, ylim:[-2,5.5]",
+   "find": "    Optim:   [\"🏗️ Biggest Build Workshop\", ['optimisation','critical']],",
+   "replace": "    Optim:   [\"🏗️ Biggest Build Workshop\", ['optimization','critical']],",
    "run": "verify"
   },
   {
-   "name": "the plus two ratio takes the rule's answer",
+   "name": "a topic that rose is offered a workshop",
    "file": "index.html",
-   "find": "return this.zero() ? S.fpa/S.gpa : this.top(S.a)/this.bot(S.a);",
-   "replace": "return S.fpa/S.gpa;",
-   "run": "verify"
+   "find": "rows.filter(x=>x.d.to<x.d.from && WORKSHOP_FOR[x.k])",
+   "replace": "rows.filter(x=>x.d.to!==x.d.from && WORKSHOP_FOR[x.k])",
+   "run": "play:handson"
   },
   {
-   "name": "x steps away from the point",
+   "name": "any number of workshops is offered",
    "file": "index.html",
-   "find": "  x(){ return this.set().a+this.h(); },",
-   "replace": "  x(){ return this.set().a+Math.abs(this.h()); },",
-   "run": "verify"
+   "find": "if(!seen.has(w.mod) && pick.length<2){",
+   "replace": "if(!seen.has(w.mod) && pick.length<9){",
+   "run": "play:handson"
   },
   {
-   "name": "h can land on 0",
+   "name": "one workshop is offered twice",
    "file": "index.html",
-   "find": "H:[-1,-0.5,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.5,1],",
-   "replace": "H:[-1,-0.5,-0.1,-0.01,0,0.001,0.01,0.1,0.5,1],",
-   "run": "verify"
+   "find": "if(!seen.has(w.mod) && pick.length<2){",
+   "replace": "if(pick.length<2){",
+   "run": "play:handson"
   },
   {
-   "name": "the gap is not rounded",
+   "name": "the smallest fall comes first",
    "file": "index.html",
-   "find": "gap(){ return Math.round(Math.abs(this.ratio()-this.lim())*1e4)/1e4; },",
-   "replace": "gap(){ return Math.abs(this.ratio()-this.lim()); },",
-   "run": "verify"
+   "find": ".sort((a,b)=>(a.d.to-a.d.from)-(b.d.to-b.d.from))",
+   "replace": ".sort((a,b)=>(b.d.to-b.d.from)-(a.d.to-a.d.from))",
+   "run": "play:handson"
   },
   {
-   "name": "an exact top reads as about",
+   "name": "the heading shows with nothing under it",
    "file": "index.html",
-   "find": "const is=(v,d)=>(this.exact(v,d)?'= ':'≈ ')+this.num(v,d);",
-   "replace": "const is=(v,d)=>'≈ '+this.num(v,d);",
-   "run": "verify"
+   "find": "    if(!pick.length) return '';\n    return `<div id=\"handsOn\"",
+   "replace": "    return `<div id=\"handsOn\"",
+   "run": "play:handson"
   },
   {
-   "name": "from the right counts from either side",
+   "name": "the button forgets the topic",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.h()>0 && K.gap()<=0.01},",
-   "replace": "ok:K=>K.si===0 && K.gap()<=0.01},",
-   "run": "verify"
-  },
-  {
-   "name": "the trap counts at any h",
-   "file": "index.html",
-   "find": "ok:K=>K.si===3 && Math.abs(K.h())<=0.01}",
-   "replace": "ok:K=>K.si===3}",
-   "run": "verify"
-  },
-  {
-   "name": "far out reads as close",
-   "file": "index.html",
-   "find": "} else if(G<=0.01){",
-   "replace": "} else if(G<=0.5){",
-   "run": "verify"
-  },
-  {
-   "name": "the bottom's point is not drawn",
-   "file": "index.html",
-   "find": "pts:[[x,this.top(),FIG_COL.d],[x,this.bot(),FIG_COL.a]],",
-   "replace": "pts:[[x,this.top(),FIG_COL.d]],",
-   "run": "play:hopital"
-  },
-  {
-   "name": "a new ratio keeps the old h",
-   "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true;",
-   "replace": "pick(i){ this.si=i; this.touched=true;",
-   "run": "play:hopital"
-  },
-  {
-   "name": "the caption forgets where both cross 0",
-   "file": "index.html",
-   "find": "${this.zero() ? `Both cross 0 at x = ${S.a}.` : `Neither is 0 at x = ${S.a}.`}",
-   "replace": "",
-   "run": "play:hopital"
-  },
-  {
-   "name": "a found goal gives no toast",
-   "file": "index.html",
-   "find": "'MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:hopital"
-  },
-  {
-   "name": "the stepper runs past its end",
-   "file": "index.html",
-   "find": "document.getElementById('hpHHi').disabled=this.k>=this.H.length-1;",
-   "replace": "document.getElementById('hpHHi').disabled=false;",
-   "run": "play:hopital"
-  },
-  {
-   "name": "the ratio buttons lose their names",
-   "file": "index.html",
-   "find": "onclick=\"Hopital.pick(${i})\" aria-label=\"${s.btn}: ${s.q}\">",
-   "replace": "onclick=\"Hopital.pick(${i})\">",
-   "run": "play:hopital"
-  },
-  {
-   "name": "the Tome card is missing",
-   "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeHopital\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeHopitalX\"",
-   "run": "play:hopital"
+   "find": "${w.name}, for ${TOPIC_LABEL[k]}</button>",
+   "replace": "${w.name}</button>",
+   "run": "play:handson"
   }
  ]
 }
