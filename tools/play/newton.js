@@ -38,7 +38,7 @@ module.exports = {
     t.ok('it names f and f′ and the rule for a step', /f\(x\) = x² − 2, so f′\(x\) = 2x\. Each step slides down the tangent to the axis: the next x is x − f\(x\)\/f′\(x\)\./.test(r), r);
     t.ok('and says where the first tangent meets the axis', /Start at x₀ = 1, where f\(x₀\) = −1 and f′\(x₀\) = 2\. Its tangent meets the axis at 1\.5: take a step to go there\./.test(r), r);
     t.eq('the steppers read x₀ and the steps', await shown(t), 'x₀ = 1 · 0 steps');
-    t.ok('the caption names the colours', /dashed red tangent at xₙ meets the axis at the blue point/.test(await cap(t)), await cap(t));
+    t.ok('the caption names the colours', /The dashed red tangent at x₀ meets the axis at the blue point, where the next step lands\./.test(await cap(t)), await cap(t));
     t.ok('a figure of the curve is drawn', await t.ev(() => !!document.querySelector('#nwFig canvas.fig')));
     t.eq('nothing is found before anything is turned', await found(t), []);
     t.eq('x² − 2 is shown as picked', await t.ev(() =>
