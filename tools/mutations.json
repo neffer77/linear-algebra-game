@@ -1,18 +1,25 @@
 {
- "change": "The 10° rule on the chain and product picks measures angles as the picture draws them",
+ "change": "Give the chain rule's which-dy/dx its own ids, so the eigenvalue detective is never drawn into a hidden panel",
  "mutations": [
   {
-   "name": "the chain pick measures angles on the old width",
+   "name": "the chain pick's figure takes the detective's id",
    "file": "index.html",
-   "find": "  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-34)/(v.x1-v.x0)))*180/Math.PI; },\n  build(){",
-   "replace": "  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-22)/(v.x1-v.x0)))*180/Math.PI; },\n  build(){",
+   "find": "<svg id=\"chpFig\" viewBox",
+   "replace": "<svg id=\"cpFig\" viewBox",
    "run": "verify"
   },
   {
-   "name": "the product pick measures angles on the old width",
+   "name": "the chain pick's readout takes the detective's id",
    "file": "index.html",
-   "find": "  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-34)/(v.x1-v.x0)))*180/Math.PI; },\n  // the slips this curve can offer: each looks wrong at x₀, its line at least\n  // 10° off the curve's, and differs from every one kept before it\n",
-   "replace": "  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-22)/(v.x1-v.x0)))*180/Math.PI; },\n  // the slips this curve can offer: each looks wrong at x₀, its line at least\n  // 10° off the curve's, and differs from every one kept before it\n",
+   "find": "<div id=\"chpRead\" aria-live",
+   "replace": "<div id=\"cpRead\" aria-live",
+   "run": "verify"
+  },
+  {
+   "name": "the chain pick's formulas take the detective's figure id",
+   "file": "index.html",
+   "find": "<div id=\"chpPick\" style",
+   "replace": "<div id=\"cpFig\" style",
    "run": "verify"
   }
  ]
