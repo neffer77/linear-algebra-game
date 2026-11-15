@@ -228,8 +228,8 @@
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The quotient",
-   "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The quotient",
+   "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
+   "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "run": "play:anti"
   },
   {
