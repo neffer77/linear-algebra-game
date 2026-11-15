@@ -45,6 +45,7 @@ module.exports = {
     await press(t, 'arNHi', 1);
     t.ok('eight rectangles are summed without listing them', /the 8 heights added\) = 0\.375 × 23\.90625 = 8\.96484375/.test(await read(t)));
     t.eq('within 0.1 is found', await found(t), ['tenth', 'under']);
+    t.ok('and its toast keeps the 0.1', /✓ Bring the sum within 0\.1 of the exact area/.test(await t.ev(() => [...document.querySelectorAll('.toast')].map(d => d.innerText).join(' | '))));
     await press(t, 'arNHi', 1);
     r = await read(t);
     t.ok('at sixteen a rounded sum is shown with ≈', /≈ 8\.9912 .*short by about 0\.0088/.test(r), r);

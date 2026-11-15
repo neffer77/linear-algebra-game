@@ -1,16 +1,7 @@
 {
- "change": "Eigenvector Hunt: the directions a matrix only stretches",
+ "change": "Goal toasts keep their decimals",
  "mutations": [
-  {"name": "Av multiplies by the matrix turned over", "file": "index.html", "find": "  Av(){ const [[a,b],[c,d]]=this.M(), [x,y]=this.v;", "replace": "  Av(){ const [[a,c],[b,d]]=this.M(), [x,y]=this.v;", "run": "verify"},
-  {"name": "any arrow is called an eigenvector", "file": "index.html", "find": "    if(x*q-y*p) return null;\n    return x ? p/x : q/y;", "replace": "    return x ? p/x : q/y;", "run": "verify"},
-  {"name": "a flip is never named", "file": "index.html", "find": "${L<0?', flipped to the other side':''}", "replace": "", "run": "verify"},
-  {"name": "the miss is measured past 90°", "file": "index.html", "find": "    return Math.min(t, 180-t);", "replace": "    return t;", "run": "verify"},
-  {"name": "the zero arrow is given a λ", "file": "index.html", "find": "    if(this.zero()) return null;\n    const [x,y]=this.v, [p,q]=this.Av();\n    if(x*q-y*p)", "replace": "    const [x,y]=this.v, [p,q]=this.Av();\n    if(x*q-y*p)", "run": "verify"},
-  {"name": "any eigenvector counts as a longer one", "file": "index.html", "find": "ok:E=>E.lambda()!==null && E.gcd(...E.v)>1}", "replace": "ok:E=>E.lambda()!==null && E.gcd(...E.v)>0}", "run": "verify"},
-  {"name": "every miss is said to be about", "file": "index.html", "find": "Av is knocked ${Math.abs(o-r)<1e-9?'':'about '}${r}°", "replace": "Av is knocked about ${r}°", "run": "verify"},
-  {"name": "the hunt missing from the Tome", "file": "index.html", "find": "id=\"tomeEig\"", "replace": "id=\"tomeEigGone\"", "run": "play:eig"},
-  {"name": "toasts start in lower case", "file": "index.html", "find": "g.t.replace(/^On the \\w+ matrix, (\\w)/,(m,c)=>c.toUpperCase())", "replace": "g.t.replace(/^On the \\w+ matrix, /,'')", "run": "play:eig"},
-  {"name": "steppers run past 2", "file": "index.html", "find": "    if(x<this.VLO||x>this.VHI) return;\n    this.v[i]=x;", "replace": "    this.v[i]=x;", "run": "play:eig"},
-  {"name": "the hunt is not drawn when opened", "file": "index.html", "find": "    if(id==='s-eig') Eigen.render();\n", "replace": "", "run": "play:eig"}
+  {"name": "the area toast cuts 0.1 at its point", "file": "index.html", "find": "        Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')", "replace": "        Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')", "run": "play:area"},
+  {"name": "the slope toast cuts 0.01 at its point", "file": "index.html", "find": "        Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|:).*$/,'')", "replace": "        Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')", "run": "play:slope"}
  ]
 }

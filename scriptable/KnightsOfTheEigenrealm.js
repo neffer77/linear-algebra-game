@@ -13689,7 +13689,7 @@ const Workshop = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('WORKSHOP MASTERED','every shape made','var(--gold)',()=>Sfx.mastered());
-      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|:).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };
@@ -13773,7 +13773,7 @@ const Slope = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());
-      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|:).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };
@@ -13863,7 +13863,7 @@ const Area = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());
-      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };
@@ -13964,7 +13964,7 @@ const Dot = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ANGLE READER','every dot product found','var(--gold)',()=>Sfx.mastered());
-      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };
