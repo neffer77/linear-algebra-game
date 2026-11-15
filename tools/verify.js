@@ -58,6 +58,7 @@ function loadGame() {
     ';const Newton={' + script.slice(script.indexOf("  CURVES:[\n    {id:'sq',   name:'x² − 2'"), script.indexOf("  open(){ UI.go('s-newton'); },")) + '};exports.Newton=Newton;' +
     ';const Chain={' + script.slice(script.indexOf("  PAIRS:[\n    {f:'u²',"), script.indexOf("  open(){ UI.go('s-chain'); },")) + '};exports.Chain=Chain;' +
     ';const Castles={' + script.slice(script.indexOf("  RULES:[\n    {btn:'Drift'"), script.indexOf("  open(){ UI.go('s-castles'); },")) + '};exports.Castles=Castles;' +
+    ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -75,7 +76,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2506,6 +2507,96 @@ const castlesNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of the biggest build workshop: each build and every x. What
+   each holds is worked here from its own lengths (two sides, or a base and a
+   depth), its slope by a nudge either way, and the figure's polynomial is
+   checked against both. The best x is the largest on the whole range, found
+   here by trying every x; the box's other flat tangent is the least. Every
+   line of the readout is checked exactly, each goal holds exactly where its
+   sentence says, each can be found, and none is met where the workshop opens. */
+const optimNotes = (() => {
+  const K = Optim;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const show = x => { const r = Math.round(x * 100) / 100; return neg(Object.is(r, -0) ? 0 : r); };
+  const HAND = {
+    wall: { v: x => x * (40 - 2 * x), side: x => 40 - 2 * x },
+    free: { v: x => x * (20 - x), side: x => 20 - x },
+    box: { v: x => x * (12 - 2 * x) * (12 - 2 * x), side: x => 12 - 2 * x }
+  };
+  const slope = (f, x) => (f(x + 1e-4) - f(x - 1e-4)) / 2e-4;
+  if (K.SETS.map(S => S.id).join() !== 'wall,free,box') fail('optim', 'sets', K.SETS.map(S => S.id).join());
+  K.touched = false; K.si = 0; K.xh = K.SETS[0].start; K.pair = new Set();
+  for (const g of K.GOALS) if (g.ok(K)) fail('optim', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {}, at150 = [];
+  K.SETS.forEach((S, si) => {
+    const H = HAND[S.id], xs = [];
+    for (let xh = S.lo; xh <= S.hi; xh++) xs.push(xh / 2);
+    const top = Math.max(...xs.map(H.v)), bottom = Math.min(...xs.map(H.v));
+    const flat = xs.filter(x => Math.abs(slope(H.v, x)) < 1e-6);
+    if (S.best / 2 !== xs.find(x => H.v(x) === top)) fail('optim', S.id, `the best x is ${S.best / 2}, trying every x gives ${xs.find(x => H.v(x) === top)}`);
+    if (xs.filter(x => H.v(x) === top).length !== 1) fail('optim', S.id, 'more than one x holds the most');
+    if (S.start < S.lo || S.start > S.hi || S.start === S.best) fail('optim', S.id, `starts at x = ${S.start / 2}`);
+    for (const x of xs) {
+      K.si = si; K.xh = x * 2; K.pair = new Set(); n++;
+      const key = `${S.id} x=${x}`, v = H.v(x), d = slope(H.v, x), X = show(x), u = S.unit, sq = S.sq, V = S.V;
+      if (Math.abs(K.v() - v) > 1e-9) fail('optim', key, `holds ${K.v()}, its lengths give ${v}`);
+      if (Math.abs(K.d() - d) > 1e-4) fail('optim', key, `the slope is ${K.d()}, a nudge gives ${d}`);
+      if (Math.abs(figEval({ poly: S.poly }, x) - v) > 1e-9) fail('optim', key, `the figure's curve gives ${figEval({ poly: S.poly }, x)}`);
+      if (S.id === 'box' && Math.abs(12 * (x - 2) * (x - 6) - K.d()) > 1e-9) fail('optim', key, 'V′ is not 12(x − 2)(x − 6)');
+      const s2 = show(H.side(x));
+      const want = [S.say,
+        S.id === 'wall' ? `With width x, the side along the wall is 40 − 2x, so ${S.form}.`
+          : S.id === 'free' ? `With one side x, the other is 20 − x, so ${S.form}.`
+          : `With a cut x, the base is 12 − 2x across and the box is x deep, so ${S.form}.`,
+        S.id === 'wall' ? `At x = ${X} ${u}: the side along the wall is 40 − 2·${X} = ${s2} ${u}, so A = ${X} × ${s2} = ${show(v)} ${sq}.`
+          : S.id === 'free' ? `At x = ${X} ${u}: the other side is 20 − ${X} = ${s2} ${u}, so A = ${X} × ${s2} = ${show(v)} ${sq}.`
+          : `At x = ${X} ${u}: the base is 12 − 2·${X} = ${s2} ${u} across, so V = ${X} × ${s2} × ${s2} = ${show(v)} ${sq}.`];
+      const hold = t => `x = ${show(t)} holds ${show(H.v(t))} ${sq}`, L = x * 2 > S.lo, R = x * 2 < S.hi;
+      want.push(L && R ? `Half a ${S.uw} either way: ${hold(x - 0.5)} and ${hold(x + 0.5)}.` : L ? `Half a ${S.uw} less: ${hold(x - 0.5)}.` : `Half a ${S.uw} more: ${hold(x + 0.5)}.`);
+      const grow = S.id === 'box' ? 'a deeper cut' : 'widening it', D = `${V}′(${X})`, dd = Math.round(d * 1e6) / 1e6;
+      if (dd > 0) want.push(`${S.dform}, so ${D} = ${show(dd)}, above 0: ${grow} still adds ${S.what}, about ${show(dd)} ${sq} for each ${S.uw}.`);
+      else if (dd < 0) want.push(`${S.dform}, so ${D} = ${show(dd)}, below 0: ${grow} now loses ${S.what}, about ${show(-dd)} ${sq} for each ${S.uw}, so the best is ${S.id === 'box' ? 'a shallower cut' : 'narrower'}.`);
+      else if (v === top) {
+        if (!(slope(H.v, x - 0.25) > 0 && slope(H.v, x + 0.25) < 0)) fail('optim', key, 'the slope does not go from above 0 to below 0 here');
+        want.push(`${S.dform}, so ${D} = 0: the tangent is flat. ${V}′ is above 0 just left of ${X} and below 0 just right of it, so ${V} climbs to here and falls after: ${show(v)} ${sq} is the most it can hold.` +
+          (S.id === 'free' ? ` The best paddock is ${X} by ${s2}: a square.` : S.id === 'box' ? ` That is a box ${s2} by ${s2} and ${X} deep.` : ''));
+      } else {
+        if (v !== bottom || !(slope(H.v, x - 0.25) < 0)) fail('optim', key, 'this flat tangent is not the least');
+        want.push(`${S.dform}, so ${D} = 0: the tangent is flat here too, but ${V} = ${show(v)}: the cuts meet in the middle and there is no base left. ${V}′ is below 0 just left of ${X}, so ${V} falls to here: this flat tangent marks the least, not the most.`);
+      }
+      if (S.id === 'wall' && v === 150) {
+        at150.push(x);
+        want.push(`150 m² is three quarters of the best, 200 m². The curve is the same on both sides of its peak at 10, so one more width holds 150 m² too.`);
+      }
+      const got = K.working();
+      if (got.length !== want.length) fail('optim', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('optim', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      const meant = { best: si === 0 && v === top, falls: si === 0 && d < -1e-6, pair: false,
+        square: si === 1 && v === top && x === 20 - x, box: si === 2 && v === top,
+        trap: si === 2 && Math.abs(d) < 1e-6 && v !== top };
+      for (const g of K.GOALS) {
+        if (!!g.ok(K) !== meant[g.id]) fail('optim', key, `goal ${g.id} is ${g.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (g.ok(K)) found[g.id] = found[g.id] || key;
+      }
+    }
+    if (S.id === 'box' && flat.join() !== '2,6') fail('optim', S.id, `flat tangents at ${flat}`);
+    if (S.id !== 'box' && flat.join() !== String(S.best / 2)) fail('optim', S.id, `flat tangents at ${flat}`);
+  });
+  if (at150.join() !== '5,15') fail('optim', 'pair', `150 m² at ${at150}`);
+  const P = K.GOALS.find(g => g.id === 'pair');
+  K.si = 0; K.pair = new Set([10]);
+  if (P.ok(K)) fail('optim', 'pair', 'met after one width');
+  K.pair.add(30);
+  if (!P.ok(K)) fail('optim', 'pair', 'not met after both widths');
+  K.si = 1;
+  if (P.ok(K)) fail('optim', 'pair', 'met on the open paddock');
+  found.pair = 'wall, x = 5 and x = 15';
+  for (const g of K.GOALS) if (!found[g.id]) fail('optim', g.id, 'this goal cannot be found');
+  K.si = 0; K.xh = K.SETS[0].start; K.touched = false; K.pair = new Set(); K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2742,6 +2833,7 @@ console.log(`  best fit states            ${pad(fitNotes.n.toLocaleString(), 10)
 console.log(`  newton's method states     ${pad(newtonNotes.n.toLocaleString(), 10)}  (f, f′ and every guess worked, roots, flat tangents, loops, ${newtonNotes.goals} goals findable)`);
 console.log(`  chain rule states          ${pad(chainNotes.n.toLocaleString(), 10)}  (y and dy/dx from y in full, the slip, the nudge, ${chainNotes.goals} goals findable)`);
 console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(), 10)}  (each night by the matrix, the steady split and the other eigenvalue, ${castlesNotes.goals} goals findable)`);
+console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 10)}  (what each holds from its lengths, the slope by a nudge, the best found by trying every x, ${optimNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
