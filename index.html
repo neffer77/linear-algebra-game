@@ -1206,7 +1206,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 
   <!-- ============ L'HÔPITAL WORKSHOP ============ -->
   <div class="screen" id="s-hopital">
-    <div class="panel"><h2>🔬 L'Hôpital Workshop</h2><div class="sub">When a ratio gives 0/0 at a point, look closer: near that point the top and bottom are each almost a straight line, so their ratio heads for the ratio of their slopes. Move x in and watch, and find the ratio the rule gets wrong.</div></div>
+    <div class="panel"><h2>🔬 L'Hôpital Workshop</h2><div class="sub">When a ratio gives 0/0 at a point, look closer: near that point the top and bottom are each almost a straight line, so their ratio heads for the ratio of their slopes. Close h in toward 0 and watch, and find the ratio the rule gets wrong.</div></div>
     <div class="panel">
       <div id="hpSets" class="wsModes" role="group" aria-label="Which ratio"></div>
       <div id="hpFig"></div>
@@ -1219,6 +1219,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="hpGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ PRODUCT RULE WORKSHOP ============ -->
+  <div class="screen" id="s-product">
+    <div class="panel"><h2>🌾 Product Rule Workshop</h2><div class="sub">A field f(x) wide and g(x) deep has area f × g. Move x on by h and watch where the new area comes from: a strip down the side, a strip along the top and a corner. Close h in and the corner vanishes, leaving f′g + fg′.</div></div>
+    <div class="panel">
+      <div id="pdSets" class="wsModes" role="group" aria-label="Which field"></div>
+      <div id="pdFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="pdHLo" onclick="Product.moveH(1)" aria-label="Move h closer to 0">−</button>
+          <b id="pdH" style="font-size:17px;min-width:0"></b>
+          <button id="pdHHi" onclick="Product.moveH(-1)" aria-label="Move h further from 0">+</button></div>
+      </div>
+      <div id="pdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="pdGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -3210,6 +3229,7 @@ const WORKSHOP_FOR = (() => {
     Castles: ["🏰 Two Castles Workshop", ['matPow']],
     Limit:   ["🌫️ Limit Workshop", ['limRational']],
     Hopital: ["🔬 L'Hôpital Workshop", ['lhopital']],
+    Product: ["🌾 Product Rule Workshop", ['productRule']],
     Slope:   ["📈 Slope Workshop", ['evalDeriv','powerRule','tangent']],
     Area:    ["🏺 Area Workshop", ['area','riemannToInt']],
     Cistern: ["💧 Cistern Workshop", ['defPoly']],
@@ -12581,6 +12601,7 @@ const UI = {
     if(id==='s-optim') Optim.render();
     if(id==='s-cistern') Cistern.render();
     if(id==='s-hopital') Hopital.render();
+    if(id==='s-product') Product.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13249,6 +13270,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔬 L'Hôpital Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer.</div>
          <button class="btn sm" id="tomeHopital" style="width:auto;margin-top:8px" onclick="Hopital.open()">Open the L'Hôpital workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🌾 Product Rule Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Grow a field f wide and g deep, and see its new area arrive as two strips and a corner. The corner vanishes, and the strips are f′g + fg′.</div>
+         <button class="btn sm" id="tomeProduct" style="width:auto;margin-top:8px" onclick="Product.open()">Open the product rule workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -15951,6 +15977,107 @@ const Hopital = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============================ PRODUCT RULE WORKSHOP ============================
+ * A field f(x) wide and g(x) deep has area f × g. Step x on by h and the field
+ * gains a side strip Δf × g, a top strip f × Δg and a corner Δf × Δg. Per unit
+ * of h the strips head for f′g and fg′ and the corner for 0, which is the
+ * product rule; f′ × g′ only sizes the corner, which is why it is wrong.
+ */
+const Product = {
+  SETS:[
+    {id:'lin', btn:'Line', a:2, q:'(x + 1)(2x + 1)', fs:'x + 1', gs:'2x + 1', dfs:'1', dgs:'2', fpw:'1', gpw:'2', fp:1, gp:2,
+     f:x=>x+1, g:x=>2*x+1},
+    {id:'sq', btn:'Square', a:3, q:'x × x', fs:'x', gs:'x', dfs:'1', dgs:'1', fpw:'1', gpw:'1', fp:1, gp:1,
+     f:x=>x, g:x=>x},
+    {id:'mix', btn:'Mixed', a:1, q:'x²(x + 1)', fs:'x²', gs:'x + 1', dfs:'2x', dgs:'1', fpw:'2 × 1 = 2', gpw:'1', fp:2, gp:1,
+     f:x=>x*x, g:x=>x+1}
+  ],
+  H:[1, 0.5, 0.1, 0.01, 0.001],
+  START:0,
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'lin', t:'On the line field, close in until the area grows within 0.01 of f′g + fg′.', toast:'Ran the line field down',
+     ok:K=>K.si===0 && K.gap()<=0.01},
+    {id:'sq',  t:'On the square, close in the same way: its two equal strips are why (x²)′ = 2x.', toast:'Ran the square down',
+     ok:K=>K.si===1 && K.gap()<=0.01},
+    {id:'mix', t:'On the mixed field, close in the same way.', toast:'Ran the mixed field down',
+     ok:K=>K.si===2 && K.gap()<=0.01},
+    {id:'corner', t:'Find a step where the corner adds more to the area than one of the strips.', toast:'The corner counts far out',
+     ok:K=>K.corner()>Math.min(K.side(), K.top())},
+    {id:'even', t:'Find the field whose two strips always grow equally fast.', toast:'Two equal strips',
+     ok:K=>Math.abs(K.side()-K.top())<1e-9}
+  ],
+  set(){ return this.SETS[this.si]; },
+  h(){ return this.H[this.k]; },
+  a(){ return this.set().a; },
+  fa(){ return this.set().f(this.a()); },
+  ga(){ return this.set().g(this.a()); },
+  df(){ return this.set().f(this.a()+this.h())-this.fa(); },
+  dg(){ return this.set().g(this.a()+this.h())-this.ga(); },
+  side(){ return this.df()*this.ga(); },
+  top(){ return this.fa()*this.dg(); },
+  corner(){ return this.df()*this.dg(); },
+  rate(){ return (this.side()+this.top()+this.corner())/this.h(); },
+  rule(){ const S=this.set(); return S.fp*this.ga()+this.fa()*S.gp; },
+  gap(){ return Math.round(Math.abs(this.rate()-this.rule())*1e4)/1e4; },
+  num(v,d=4){ const p=10**d, r=Math.round(v*p)/p; return neg(Object.is(r,-0)?0:r); },
+  exact(v,d){ const p=10**d; return Math.abs(Math.round(v*p)/p-v)<1e-10; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), a=S.a, h=this.h(), fa=this.fa(), ga=this.ga(), A=fa*ga;
+    const is=(v,d=6)=>(this.exact(v,d)?'= ':'≈ ')+this.num(v,d);
+    const df=this.df(), dg=this.dg(), s1=this.side(), s2=this.top(), c=this.corner();
+    const P=S.fp*ga, Q=fa*S.gp, R=this.rule(), G=this.gap();
+    const out=[];
+    out.push(`The field is f(x) = ${S.fs} wide and g(x) = ${S.gs} deep, so its area is f × g. At x = ${a} it is ${this.num(fa)} × ${this.num(ga)} = ${this.num(A)}.`);
+    out.push(`With h = ${this.num(h)}, x = ${a} + ${this.num(h)} = ${this.num(a+h)}: the width grows by Δf ${is(df)} and the depth by Δg ${is(dg)}.`);
+    out.push(`So the area gains a side strip Δf × g ${is(s1)}, a top strip f × Δg ${is(s2)} and a corner Δf × Δg ${is(c)}, ${this.exact(s1+s2+c,6)?'':'about '}${this.num(s1+s2+c,6)} in all.`);
+    const ab=v=>(this.exact(v,4)?'':'about ')+this.num(v);
+    out.push(`Per unit of h, the side strip adds ${ab(s1/h)}, the top strip ${ab(s2/h)} and the corner ${ab(c/h)}, so the area grows at ${ab(this.rate())}.`);
+    out.push(`As h shrinks, Δf/h heads for f′(${a}) = ${S.fpw} and Δg/h for g′(${a}) = ${S.gpw}. So the strips head for f′g = ${S.fp} × ${this.num(ga)} = ${this.num(P)} and fg′ = ${this.num(fa)} × ${S.gp} = ${this.num(Q)}, and the corner for 0: the area grows at f′g + fg′ = ${this.num(P)} + ${this.num(Q)} = ${this.num(R)}. That is the product rule.`);
+    if(G<=0.01)
+      out.push(`${G===0 ? `To four places that is ${this.num(R)} itself` : `That is ${this.num(G)} from ${this.num(R)}`}: the corner has all but vanished. Multiplying the slopes, f′ × g′ = ${this.num(S.fp*S.gp)}, only sizes that vanishing corner, which is why it is not the derivative.`);
+    else
+      out.push(`That is ${this.num(G)} from ${this.num(R)}: at this step the corner still counts. Bring h closer to 0.`);
+    return out;
+  },
+  /* the field drawn to scale: gold the old field, blue the side strip, green the top strip, red the corner */
+  svg(){
+    const S=this.set(), a=S.a, Hmax=this.H[0];
+    const W=S.f(a+Hmax), D=S.g(a+Hmax), k=Math.min(320/W, 176/D);
+    const x0=20, y0=188, fa=this.fa(), ga=this.ga(), df=this.df(), dg=this.dg();
+    const r=(x,y,w,hh,col,op)=>`<rect x="${(x0+x*k).toFixed(2)}" y="${(y0-(y+hh)*k).toFixed(2)}" width="${(w*k).toFixed(2)}" height="${(hh*k).toFixed(2)}" fill="${col}" fill-opacity="${op}" stroke="${col}" stroke-width="1"/>`;
+    return `<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="A field ${this.num(fa)} wide and ${this.num(ga)} deep, with a side strip ${this.num(df,3)} wide, a top strip ${this.num(dg,3)} deep and a corner where they meet">`+
+      r(0,0,fa,ga,FIG_COL.b,.28)+r(fa,0,df,ga,FIG_COL.a,.6)+r(0,ga,fa,dg,FIG_COL.c,.6)+r(fa,ga,df,dg,FIG_COL.d,.85)+`</svg>`;
+  },
+  open(){ UI.go('s-product'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('pdSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Product.pick(${i})" aria-label="${s.btn}: ${s.q}">${s.btn}</button>`).join('');
+    document.getElementById('pdH').textContent=`h = ${this.num(this.h())}`;
+    document.getElementById('pdHHi').disabled=this.k<=0;
+    document.getElementById('pdHLo').disabled=this.k>=this.H.length-1;
+    document.getElementById('pdFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold field is f × g at x = ${S.a}. As x moves on by h, blue is the side strip, Δf × g, green the top strip, f × Δg, and red the corner, Δf × Δg.</div>`;
+    document.getElementById('pdRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('pdGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE FIELD','every strip and corner read','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
