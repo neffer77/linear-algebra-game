@@ -1,194 +1,201 @@
 {
- "change": "The Eigenvalue Detective: the characteristic polynomial",
+ "change": "The Hillwalker Workshop: the directional derivative",
  "mutations": [
   {
-   "name": "the first matrix changes",
+   "name": "the oval's ∂f/∂y loses its 3",
    "file": "index.html",
-   "find": "{id:'pair', btn:'Two roots', A:[[4,1],[2,3]]},",
-   "replace": "{id:'pair', btn:'Two roots', A:[[4,1],[2,2]]},",
+   "find": "f:(x,y)=>x*x+3*y*y, g:(x,y)=>[2*x,6*y], step:9},",
+   "replace": "f:(x,y)=>x*x+3*y*y, g:(x,y)=>[2*x,2*y], step:9},",
    "run": "verify"
   },
   {
-   "name": "the triangular matrix gets a corner below its diagonal",
+   "name": "the saddle's partial is written without its sign",
    "file": "index.html",
-   "find": "{id:'tri', btn:'Triangular', A:[[3,2],[0,-1]]},",
-   "replace": "{id:'tri', btn:'Triangular', A:[[3,2],[1,-1]]},",
+   "find": "{id:'saddle', btn:'Saddle', fs:'x² − y²', fxs:'2x', fys:'−2y', P:[4,3],",
+   "replace": "{id:'saddle', btn:'Saddle', fs:'x² − y²', fxs:'2x', fys:'2y', P:[4,3],",
    "run": "verify"
   },
   {
-   "name": "A − λI subtracts λ from one corner only",
+   "name": "the bowl stands somewhere else",
    "file": "index.html",
-   "find": "M(l=this.lam()){ const A=this.set().A; return [[A[0][0]-l,A[0][1]],[A[1][0],A[1][1]-l]]; },",
-   "replace": "M(l=this.lam()){ const A=this.set().A; return [[A[0][0]-l,A[0][1]],[A[1][0],A[1][1]]]; },",
+   "find": "{id:'bowl', btn:'Round bowl', fs:'x² + y²', fxs:'2x', fys:'2y', P:[3,4],",
+   "replace": "{id:'bowl', btn:'Round bowl', fs:'x² + y²', fxs:'2x', fys:'2y', P:[4,4],",
    "run": "verify"
   },
   {
-   "name": "the determinant adds the cross term",
+   "name": "a heading is not of length 1",
    "file": "index.html",
-   "find": "p(l=this.lam()){ const M=this.M(l); return M[0][0]*M[1][1]-M[0][1]*M[1][0]; },",
-   "replace": "p(l=this.lam()){ const M=this.M(l); return M[0][0]*M[1][1]+M[0][1]*M[1][0]; },",
+   "find": "  U:[[5,0],[4,3],[3,4],[0,5],[-3,4],",
+   "replace": "  U:[[5,0],[4,3],[3,4],[0,4],[-3,4],",
    "run": "verify"
   },
   {
-   "name": "the trace takes the off-diagonal",
+   "name": "the headings go round out of order",
    "file": "index.html",
-   "find": "tr(){ const A=this.set().A; return A[0][0]+A[1][1]; },",
-   "replace": "tr(){ const A=this.set().A; return A[0][0]+A[0][1]; },",
+   "find": "  U:[[5,0],[4,3],[3,4],[0,5],[-3,4],[-4,3],",
+   "replace": "  U:[[5,0],[3,4],[4,3],[0,5],[-3,4],[-4,3],",
    "run": "verify"
   },
   {
-   "name": "the polynomial's λ term gets the wrong sign",
+   "name": "the slope adds the components the wrong way round",
    "file": "index.html",
-   "find": "return 'λ²'+(t===0?'':` ${t>0?'−':'+'} ",
-   "replace": "return 'λ²'+(t===0?'':` ${t>0?'+':'−'} ",
+   "find": "D5(){ const [a,b]=this.grad(), [p,q]=this.u5(); return a*p+b*q; },",
+   "replace": "D5(){ const [a,b]=this.grad(), [p,q]=this.u5(); return a*q+b*p; },",
    "run": "verify"
   },
   {
-   "name": "the crushed arrow is the wrong one",
+   "name": "‖∇f‖ is taken as the sum of the parts",
    "file": "index.html",
-   "find": "let v = (M[0][0]||M[0][1]) ? [-M[0][1],M[0][0]] : [-M[1][1],M[1][0]];",
-   "replace": "let v = (M[0][0]||M[0][1]) ? [M[0][1],M[0][0]] : [-M[1][1],M[1][0]];",
+   "find": "n(){ const [a,b]=this.grad(); return Math.hypot(a,b); },\n  /* five times the slope",
+   "replace": "n(){ const [a,b]=this.grad(); return Math.abs(a)+Math.abs(b); },\n  /* five times the slope",
    "run": "verify"
   },
   {
-   "name": "the crushed arrow is not reduced",
+   "name": "due west reads +∂f/∂x",
    "file": "index.html",
-   "find": "const g=gcd(Math.abs(v[0]),Math.abs(v[1]))||1; v=v.map(x=>x/g);",
-   "replace": "const g=1; v=v.map(x=>x/g);",
+   "find": "the slope is just ${p>0?'':'−'}∂f/∂x = ${neg(p>0?g[0]:-g[0])}",
+   "replace": "the slope is just ${p>0?'':'−'}∂f/∂x = ${neg(g[0])}",
    "run": "verify"
   },
   {
-   "name": "the other eigenvalue is found by subtracting the wrong way",
+   "name": "the due north line is dropped",
    "file": "index.html",
-   "find": "      const o=t-l;\n",
-   "replace": "      const o=l-t;\n",
+   "find": "    if(p===0) out.push(`Due ${q>0?'north':'south'}",
+   "replace": "    if(false) out.push(`Due ${q>0?'north':'south'}",
    "run": "verify"
   },
   {
-   "name": "the flip clause is dropped",
+   "name": "the nudge steps along the wrong axis",
    "file": "index.html",
-   "find": "A only stretches it${l<0?', flipping it round since λ is negative':''}.`);",
-   "replace": "A only stretches it.`);",
+   "find": "const h=0.01, fa=S.f(x-h*p/5,y-h*q/5), fb=S.f(x+h*p/5,y+h*q/5);",
+   "replace": "const h=0.01, fa=S.f(x-h*q/5,y-h*p/5), fb=S.f(x+h*q/5,y+h*p/5);",
    "run": "verify"
   },
   {
-   "name": "the triangular line is dropped",
+   "name": "the oval line shows on every steepest climb",
    "file": "index.html",
-   "find": "    if(A[1][0]===0 && A[0][1]!==0 && o!==l) out.push(",
-   "replace": "    if(false) out.push(",
+   "find": "      if(S.id==='oval') out.push(`Straight away from the bottom",
+   "replace": "      if(true) out.push(`Straight away from the bottom",
    "run": "verify"
   },
   {
-   "name": "the bottom of the turning curve is missed",
+   "name": "cos θ forgets to divide by ‖∇f‖",
    "file": "index.html",
-   "find": "    if(t*t<4*d && l===t/2)\n",
-   "replace": "    if(t*t<4*d && l===t)\n",
+   "find": "so cos θ = ${this.frd(D5,5*n)}:",
+   "replace": "so cos θ = ${this.frd(D5,5)}:",
    "run": "verify"
   },
   {
-   "name": "the λ = 0 line is dropped",
+   "name": "downhill is called uphill",
    "file": "index.html",
-   "find": "    if(l===0) out.push(`At λ = 0, A − λI is A itself",
-   "replace": "    if(false) out.push(`At λ = 0, A − λI is A itself",
+   "find": "${D5>0?'uphill, but not the steepest climb':'downhill, but not the steepest descent'}",
+   "replace": "${D5>=-100?'uphill, but not the steepest climb':'downhill, but not the steepest descent'}",
    "run": "verify"
   },
   {
-   "name": "the point never turns green",
+   "name": "the gradient arrow points along û",
    "file": "index.html",
-   "find": "r=\"5\" fill=\"${p===0?FIG_COL.c:FIG_COL.b}\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-detect'); },",
-   "replace": "r=\"5\" fill=\"${FIG_COL.b}\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-detect'); },",
+   "find": "    out+=arrow(2*g[0]/n, 2*g[1]/n, FIG_COL.b, 'grad', true);",
+   "replace": "    out+=arrow(2*p/5, 2*q/5, FIG_COL.b, 'grad', true);",
    "run": "verify"
   },
   {
-   "name": "the curve is drawn as det A minus λ",
+   "name": "the heading arrow is drawn with y down",
    "file": "index.html",
-   "find": "pts.push(`${PX(x).toFixed(2)},${PY(this.p(x)).toFixed(2)}`); }\n    let out=`<svg viewBox=\"0 0 360 200\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI)",
-   "replace": "pts.push(`${PX(x).toFixed(2)},${PY(this.det()-x).toFixed(2)}`); }\n    let out=`<svg viewBox=\"0 0 360 200\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI)",
+   "find": "    out+=arrow(2*p/5, 2*q/5, col, 'head', false);",
+   "replace": "    out+=arrow(2*p/5, -2*q/5, col, 'head', false);",
    "run": "verify"
   },
   {
-   "name": "the none goal takes any λ on the turning matrix",
+   "name": "the oval's contours are drawn round",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.lam()===K.tr()/2},",
-   "replace": "ok:K=>K.si===3},",
+   "find": "      const a=S.id==='oval'?3:1, l=[];",
+   "replace": "      const a=1, l=[];",
    "run": "verify"
   },
   {
-   "name": "the det goal needs the first matrix",
+   "name": "the saddle's contours open the wrong way",
    "file": "index.html",
-   "find": "toast:'At λ = 0 it is det A',\n     ok:K=>K.lam()===0}",
-   "replace": "toast:'At λ = 0 it is det A',\n     ok:K=>K.si===1 && K.lam()===0}",
+   "find": "      if(c>=0) for(const s of [1,-1]){ const l=[]; for(let i=0;i<=N;i++){ const y=span(i/N)[0]; l.push([s*Math.sqrt(c+y*y),y]); } out.push(l); }",
+   "replace": "      if(c>=0) for(const s of [1,-1]){ const l=[]; for(let i=0;i<=N;i++){ const y=span(i/N)[0]; l.push([y,s*Math.sqrt(c+y*y)]); } out.push(l); }",
    "run": "verify"
   },
   {
-   "name": "each matrix starts on an eigenvalue",
+   "name": "the heading arrow is always green",
    "file": "index.html",
-   "find": "  L:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6],\n  START:0,",
-   "replace": "  L:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6],\n  START:2,",
+   "find": "    const col = D5>0 ? FIG_COL.c : D5<0 ? FIG_COL.d : FIG_COL.a;",
+   "replace": "    const col = FIG_COL.c;",
    "run": "verify"
   },
   {
-   "name": "a new matrix keeps the old λ",
+   "name": "the level goal takes any heading",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return;",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return;",
-   "run": "play:detect"
+   "find": "ok:K=>K.si===0 && K.D5()===0},",
+   "replace": "ok:K=>K.si===0},",
+   "run": "verify"
   },
   {
-   "name": "the stepper runs off its top end",
+   "name": "each hill starts facing the steepest climb",
    "file": "index.html",
-   "find": "    document.getElementById('cpLHi').disabled=this.k>=this.L.length-1;",
-   "replace": "    document.getElementById('cpLHi').disabled=false;",
-   "run": "play:detect"
+   "find": "  U:[[5,0],[4,3],[3,4],[0,5],[-3,4],[-4,3],[-5,0],[-4,-3],[-3,-4],[0,-5],[3,-4],[4,-3]],\n  START:0,",
+   "replace": "  U:[[5,0],[4,3],[3,4],[0,5],[-3,4],[-4,3],[-5,0],[-4,-3],[-3,-4],[0,-5],[3,-4],[4,-3]],\n  START:2,",
+   "run": "verify"
   },
   {
-   "name": "the caption never mentions green",
+   "name": "a new hill keeps the old heading",
    "file": "index.html",
-   "find": "It turns green where the curve meets the axis: an eigenvalue.</div>`;",
-   "replace": "</div>`;",
-   "run": "play:detect"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  turn(by)",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  turn(by)",
+   "run": "play:hill"
   },
   {
-   "name": "the matrix buttons lose their names",
+   "name": "the heading stops at east instead of wrapping",
    "file": "index.html",
-   "find": "onclick=\"Detect.pick(${i})\" aria-label=\"${s.btn}: A has ${this.rows(s.A)}\">",
-   "replace": "onclick=\"Detect.pick(${i})\">",
-   "run": "play:detect"
+   "find": "turn(by){ this.k=(this.k+by+this.U.length)%this.U.length;",
+   "replace": "turn(by){ this.k=Math.max(0,this.k+by)%this.U.length;",
+   "run": "play:hill"
   },
   {
-   "name": "the chosen matrix is not marked pressed",
+   "name": "the caption forgets the colours",
    "file": "index.html",
-   "find": "aria-pressed=\"${i===this.si}\" onclick=\"Detect.pick(${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Detect.pick(${i})\"",
-   "run": "play:detect"
+   "find": "The solid arrow is the way you face: green climbs, red falls, blue stays level.</div>`;",
+   "replace": "The solid arrow is the way you face.</div>`;",
+   "run": "play:hill"
   },
   {
-   "name": "the matrices are read out twice to a screen reader",
+   "name": "the hill buttons lose their names",
    "file": "index.html",
-   "find": "<div id=\"cpMat\" aria-hidden=\"true\"",
-   "replace": "<div id=\"cpMat\"",
-   "run": "play:detect"
+   "find": "onclick=\"Hill.pick(${i})\" aria-label=\"${s.btn}: f(x, y) = ${s.fs}, standing at (${s.P.map(neg).join(', ')})\">",
+   "replace": "onclick=\"Hill.pick(${i})\">",
+   "run": "play:hill"
+  },
+  {
+   "name": "the turn buttons swap their names",
+   "file": "index.html",
+   "find": "aria-label=\"Turn the heading clockwise\">↻</button>",
+   "replace": "aria-label=\"Turn the heading anticlockwise\">↻</button>",
+   "run": "play:hill"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:detect"
+   "find": "'every heading read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every heading read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:hill"
   },
   {
-   "name": "the Tome loses the eigenvalue detective",
+   "name": "the Tome loses the hillwalker workshop",
    "file": "index.html",
-   "find": "id=\"tomeDetect\"",
-   "replace": "id=\"tomeDetectX\"",
-   "run": "play:detect"
+   "find": "id=\"tomeHill\"",
+   "replace": "id=\"tomeHillX\"",
+   "run": "play:hill"
   },
   {
-   "name": "the workshop saves its λ",
+   "name": "the workshop saves its heading",
    "file": "index.html",
-   "find": "move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('cpSets')",
-   "replace": "move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; Game.s.lam=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('cpSets')",
-   "run": "play:detect"
+   "find": "turn(by){ this.k=(this.k+by+this.U.length)%this.U.length; this.touched=true;",
+   "replace": "turn(by){ this.k=(this.k+by+this.U.length)%this.U.length; Game.s.head=this.k; this.touched=true;",
+   "run": "play:hill"
   }
  ]
 }

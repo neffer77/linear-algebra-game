@@ -807,7 +807,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Forty-five topics link to thirty workshops,
+  back button returns to the summary. Forty-seven topics link to thirty-one workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -918,6 +918,15 @@ The game is built so that losing teaches you as much as winning.
   matrix has a single eigenvalue counted twice, and a turning matrix's curve
   bottoms out above the axis: no real eigenvalues. Five things to find, and
   a fight where the characteristic polynomial or the trace falls now offers it.
+- **🗺️ Hillwalker Workshop** — the directional derivative, by turning on a
+  hillside. Stand on a hill, turn to face a heading û of length 1, and the
+  readout works the slope that way as ∇f · û, checks it with a nudge, and
+  reads off cos θ. Facing east or north it is just a partial derivative;
+  along ∇f it is all of ‖∇f‖, the steepest climb; at a right angle it is 0,
+  walking the contour; against ∇f it is the steepest drop. On an oval bowl
+  the steepest way up is not straight away from the bottom, and a saddle has
+  level headings through its pass. Five things to find, and a fight where the
+  directional derivative or a partial derivative falls now offers it.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1082,7 +1091,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Sixty-seven suites, about 3,050 checks, about a minute:
+loop only exists once the page is running. Sixty-eight suites, about 3,100 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1144,6 +1153,7 @@ loop only exists once the page is running. Sixty-seven suites, about 3,050 check
 | `implicit` | the Tome opens the implicit slope workshop on the circle at (4, 3) with nothing found; the readout differentiates both sides, solves y′ = −x/y, works y′ = −4/3, checks it with a nudge and shows the tangent meeting the radius at a right angle; two steps on, (0, 5) has a flat tangent and no radius line; back at (5, 0) the formula divides by 0 and the tangent stands straight up; the point wraps round the curve; the ellipse is flat at its top; the tilted curve takes the product rule and climbs at (−2, 3), finishing the hunt; every button is named and the pressed one says so, it fits a phone and saves nothing |
 | `parts` | the Tome opens the parts workshop on ∫ x eˣ dx with no split picked, no answer drawn and nothing found; u = eˣ works du and v, writes uv − ∫ v du and says the power of x went up, finding the goal for a split that makes things worse; u = x leaves ∫ eˣ dx, puts it together as x eˣ − eˣ + C and checks it by the product rule, with the answer drawn in gold; a new integral clears the split; a dv that is the whole integrand never starts; ∫ x cos x dx, ∫ ln x dx with its hidden dv = dx, and ∫ x ln x dx each take their right split, the last finishing the hunt; every button is named and the pressed one says so, it fits a phone and saves nothing |
 | `detect` | the Tome opens the eigenvalue detective on the first matrix at λ = −2 with nothing found and the point gold; λ = 0 reads det A off the curve; λ = 2 is an eigenvalue, with the crushed arrow ⟨1, −2⟩ multiplied out, the other eigenvalue 5 found from the trace, and the point turned green; a new matrix starts back at λ = −2 and picking it finds nothing; the triangular matrix's −1 flips its arrow and sits on the diagonal; the repeated matrix's 3 counts twice; the turning matrix bottoms out 1 above the axis, finishing the hunt; the stepper stops at both ends, every button is named and the pressed one says so, it fits a phone and saves nothing |
+| `hill` | the Tome opens the hillwalker workshop on the round bowl facing east, where the slope is just ∂f/∂x = 6, with nothing found; a turn faces ⟨4/5, 3/5⟩, worked as 48/5 = 9.6, checked with a nudge and read as cos θ = 24/25; facing ⟨3/5, 4/5⟩ is all of ‖∇f‖, the steepest climb, with a toast; a right angle walks the contour and straight against ∇f is the steepest drop, the arrow taking a different colour for each; due south is −∂f/∂y; the oval bowl starts back at east with nothing new found, and its steepest climb is not straight away from the bottom; on the saddle a clockwise turn wraps round past east, and a level heading through the pass finishes all five; twelve turns come back round and neither turn button is ever off; every button is named, the map is described, it fits a phone, and nothing is saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
