@@ -2583,6 +2583,28 @@ const cisternNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The workshop a fight offers for a topic that fell must be one the Tome
+   holds, under the name the Tome gives it, and must open: a button that names
+   the wrong workshop, or one that has gone, sends the player nowhere. */
+const handsOnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const { LABEL, FOR } = new Function(cut('const TOPIC_LABEL = {', '/* Topics grouped into strands.') +
+    cut('const WORKSHOP_FOR = (() => {', '/* ------------------------------- mastery') + 'return { LABEL: TOPIC_LABEL, FOR: WORKSHOP_FOR };')();
+  const mods = new Set();
+  for (const k in FOR) {
+    const { mod, name } = FOR[k];
+    mods.add(mod);
+    if (!LABEL[k]) fail('hands-on', k, 'is not a topic');
+    const card = html.match(new RegExp(`<h2 style="font-size:16px;color:var\\(--gold\\)">([^<]*)</h2>[\\s\\S]{0,400}?onclick="${mod}\\.open\\(\\)"`));
+    if (!card) fail('hands-on', k, `the Tome has no card that opens ${mod}`);
+    else if (card[1] !== name) fail('hands-on', k, `the Tome calls ${mod} "${card[1]}", the fight calls it "${name}"`);
+    if (!new RegExp(`const ${mod} = \\{[\\s\\S]*?\\n  open\\(\\)\\{ UI\\.go\\('s-`).test(script)) fail('hands-on', k, `${mod} has no open()`);
+  }
+  return { topics: Object.keys(FOR).length, mods: mods.size };
+})();
+
 /* The L'Hôpital workshop: every ratio is checked against its own formula, the
    rule's answer against the slopes found by a nudge, the limit against the
    ratio very close to the point, and every sentence rebuilt here. On the 0/0
@@ -2983,6 +3005,7 @@ console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(),
 console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 10)}  (what each holds from its lengths, the slope by a nudge, the best found by trying every x, ${optimNotes.goals} goals findable)`);
 console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 10)}  (each total against the area under the flow added up in strips, F′ = f by a nudge, every turn checked, ${cisternNotes.goals} goals findable)`);
 console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 10)}  (each ratio against its formula, the slopes by a nudge, the limit read right at the point, every gap shrinking, the rule caught wrong off 0/0, ${hopitalNotes.goals} goals findable)`);
+console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
