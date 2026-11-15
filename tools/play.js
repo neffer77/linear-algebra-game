@@ -91,6 +91,7 @@ const SUITES = [
   require('./play/diag'),        // eigenvectors make P⁻¹AP diagonal
   require('./play/trigint'),     // divide by the k inside
   require('./play/tanplane'),    // a height and two slopes
+  require('./play/invslope'),   // mirror the curve, flip the slope
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

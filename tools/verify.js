@@ -87,6 +87,7 @@ function loadGame() {
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
+    ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -105,7 +106,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2698,6 +2699,129 @@ const ladderNotes = (() => {
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
   return { n, goals: Object.keys(found).length };
+})();
+
+/* The inverse slope workshop: every inverse, every u and every method.
+   The true slopes are found here by nudging Math's own arcsin, arccos and
+   arctan, and f′ by nudging sin, cos and tan at x, never from the identities
+   the readout uses; every number it works out is checked against those; every
+   sentence's condition is decided independently; and the drawing is read
+   back point by point. */
+const invSlopeNotes = (() => {
+  const W = InvSlope;
+  const num = t => +t.replace(/−/g, '-');
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  const r3 = v => Math.round(v * 1000) / 1000;
+  const near3 = (t, v) => Math.abs(num(t) - r3(v)) < 1e-9;
+  const TRUE = { asin: [Math.sin, Math.asin], acos: [Math.cos, Math.acos], atan: [Math.tan, Math.atan] };
+  if (W.SETS.map(S => S.id).join() !== 'asin,acos,atan') fail('invslope', 'sets', W.SETS.map(S => S.id).join());
+  if (W.MODES.join() !== 'Flip f′ at x,Forget to flip,Flip at u') fail('invslope', 'modes', W.MODES.join());
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.SETS[0].start; W.mode = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('invslope', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.mode = 2; W.k = 0; W.pick(si);
+    if (W.mode !== 0 || W.k !== S.start) fail('invslope', S.id, 'picking an inverse does not start u and the method again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('invslope', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  const found = {}; let n = 0, pts = 0;
+  W.SETS.forEach((S, si) => {
+    const [F, G] = TRUE[S.id], [a, b] = S.D;
+    if (S.U.some((u, i) => i && u <= S.U[i - 1]) || S.U[0] !== -S.U[S.U.length - 1] || !S.U.includes(0)) fail('invslope', S.id, `u should run evenly either side of 0: ${S.U.join()}`);
+    if (S.id !== 'atan' && (S.U[0] !== -1 || S.U.length !== 11)) fail('invslope', S.id, `u should step from −1 to 1 in fifths: ${S.U.join()}`);
+    S.U.forEach((u, k) => [0, 1, 2].forEach(mode => {
+      reset(); W.si = si; W.k = k; W.mode = mode; W.touched = true; n++;
+      const key = `${S.id} u=${u} mode ${mode}`, got = W.working(), txt = got.join(' ');
+      const x = G(u), wall = Math.abs(u) === 1 && S.id !== 'atan';
+      const fpx = wall ? 0 : sl(F, x), right = wall ? NaN : sl(G, u), fpu = sl(F, u);
+      const U = u < 0 ? '−' + -u : String(u);
+      if (got[0] !== `g(u) = ${S.g} u undoes f(x) = ${S.f} x, for x from ${S.range}. Its graph is f’s mirrored in the line y = x.`) fail('invslope', key, got[0]);
+      if (S.range !== (S.id === 'acos' ? '0 to π' : '−π/2 to π/2')) fail('invslope', key, `the range is wrong: ${S.range}`);
+      if (/(^|[^\w)])−[\d.]+²/.test(txt)) fail('invslope', key, `a negative number is squared without brackets, which reads as minus its square: ${txt}`);
+      const m1 = got[1].match(/^At u = (\S+): x = (\w+) (\S+) ([=≈]) (\S+), the angle whose (\w+) is (\S+)\. The point \((\S+), (\S+)\) on f mirrors to \((\S+), (\S+)\) on g\.$/);
+      if (!m1) fail('invslope', key, `the point is not worked: ${got[1]}`);
+      else {
+        if (m1[1] !== U || m1[7] !== U || m1[9] !== U || m1[10] !== U || m1[3].replace(/[()]/g, '') !== U || m1[2] !== S.g) fail('invslope', key, `u is named wrong: ${got[1]}`);
+        if (m1[6] !== { asin: 'sine', acos: 'cosine', atan: 'tangent' }[S.id]) fail('invslope', key, `the function is named wrong: ${got[1]}`);
+        if (!near3(m1[5], x) || !near3(m1[8], x) || !near3(m1[11], x)) fail('invslope', key, `x is not ${S.g} u: ${got[1]}`);
+        if ((m1[4] === '=') !== (r3(x) === x)) fail('invslope', key, `x is said to be exact when it is not, or the other way round: ${got[1]}`);
+        if (Math.abs(F(x) - u) > 1e-9) fail('invslope', key, 'x does not undo u');
+      }
+      const m2 = got[2].match(/ (\(?−?[\d.]+\)?)²\)? ([=≈]) (\S+?)\.$|1 \+ (\(?−?[\d.]+\)?)² = (\S+)\.$/);
+      if (!m2) fail('invslope', key, `f′ is not worked: ${got[2]}`);
+      else { const v = num(m2[3] || m2[5]), sq = (m2[1] || m2[4]).replace(/[()]/g, '');
+        if (sq !== U) fail('invslope', key, `f′ squares the wrong number: ${got[2]}`);
+        if (Math.abs(v - r3(fpx)) > 1e-6 && !(wall && v === 0)) fail('invslope', key, `f′(x) is wrong: ${got[2]} but f′ is ${fpx}`); }
+      if (!got[2].startsWith({ asin: 'f′(x) = cos x', acos: 'f′(x) = −sin x', atan: 'f′(x) = 1/cos²x' }[S.id])) fail('invslope', key, `f′ is the wrong derivative: ${got[2]}`);
+      if (wall) {
+        if (got.length !== 4 || got[3] !== `f′(x) = 0: f is flat here, so its mirror stands straight up, and g has no slope at u = ${U}: 1/0 is no number.`) fail('invslope', key, `the wall is not said plainly: ${got.slice(3).join(' ')}`);
+      } else {
+        const slip = mode === 1 ? fpx : mode === 2 ? 1 / fpu : right, caught = Math.abs(slip - right) > 1e-6;
+        if (mode === 0) { const m = got[3].match(/^Mirroring in y = x swaps rise and run, so the slope flips: g′\((\S+)\) = 1\/f′\(x\) = 1\/(\(?\S+?\)?) ([=≈]) (\S+)\.$/);
+          if (!m || m[1] !== U || Math.abs(num(m[2].replace(/[()]/g, '')) - r3(fpx)) > 1e-9 || !near3(m[4], right)) fail('invslope', key, `the flip is wrong: ${got[3]}`); }
+        if (mode === 1) { const m = got[3].match(/^The slip forgets to flip: it takes f′\(x\) [=≈] (\S+) as the slope of g\. But that is the slope of f, the curve before the mirror\.$/);
+          if (!m || !near3(m[1], fpx)) fail('invslope', key, `the unflipped slip is wrong: ${got[3]}`); }
+        if (mode === 2) { const m = got[3].match(/^The slip flips f′ at u: 1\/f′\((\S+)\) = (.+?)(?: ([=≈]) (\S+)\. But|, but sin 0 = 0, so that is 1\/0, no number at all\. And) f′ belongs at x [=≈] (\S+), the point on f that mirrors to u, not at u itself\.$/);
+          if (!m || m[1] !== U || !near3(m[5], x)) fail('invslope', key, `the wrong-point slip is wrong: ${got[3]}`);
+          else if (Math.abs(fpu) < 1e-9) { if (m[4]) fail('invslope', key, `1/0 is given a value: ${got[3]}`); }
+          else if (!m[4] || !near3(m[4], 1 / fpu)) fail('invslope', key, `1/f′(u) is wrong: ${got[3]}`);
+          else { const ex = m[2].replace(/−/g, '-').replace(/\(|\)/g, '').replace(/cos² (\S+)/, 'Math.cos($1)**2').replace(/(cos|sin) (\S+)/, 'Math.$1($2)');
+            if (Math.abs(Function('return ' + ex)() - 1 / fpu) > 1e-9) fail('invslope', key, `1/f′(u) is written wrong: ${m[2]}`); } }
+        const m4 = got[4].match(/^Check with a nudge: from u = (\S+) to (\S+), g goes from (?:about )?(\S+) to (?:about )?(\S+), so Δg\/Δu ≈ (\S+)\.$/);
+        if (!m4) fail('invslope', key, `the nudge is not worked: ${got[4]}`);
+        else { const u1 = num(m4[1]), u2 = num(m4[2]);
+          if (Math.abs(u1 - (u - 0.001)) > 1e-9 || Math.abs(u2 - (u + 0.001)) > 1e-9) fail('invslope', key, `the nudge is not either side of u: ${got[4]}`);
+          if (Math.abs(num(m4[3]) - G(u1)) > 6e-7 || Math.abs(num(m4[4]) - G(u2)) > 6e-7) fail('invslope', key, `the nudge reads g wrong: ${got[4]}`);
+          if (!near3(m4[5], (G(u2) - G(u1)) / (u2 - u1))) fail('invslope', key, `the nudge is wrong: ${got[4]}`); }
+        const v = got.slice(5);
+        if (mode === 0) {
+          const rule = { asin: '1/√(1 − u²)', acos: '−1/√(1 − u²)', atan: '1/(1 + u²)' }[S.id], m = (v[0] || '').match(/^That agrees: the slope of (\w+) u is (.+) everywhere, and here g′\((\S+)\) [=≈] (\S+)\.$/);
+          if (!m || m[1] !== S.g || m[2] !== rule || m[3] !== U || !near3(m[4], right)) fail('invslope', key, `the verdict is wrong: ${v[0]}`);
+          const extra = S.id === 'acos' ? 'Arccos falls everywhere: cos falls from 0 to π, and the mirror of a falling curve falls too.' : S.id === 'atan' ? 'Arctan never stands straight up: tan is never flat, so 1/f′ is always a number.' : null;
+          if (v.length !== (extra ? 2 : 1) || (extra && v[1] !== extra)) fail('invslope', key, `the closing sentence is wrong: ${v.slice(1).join(' ')}`);
+        } else if (v.length !== 1) fail('invslope', key, `the readout has ${got.length} sentences`);
+        else if (caught) {
+          const m = v[0].match(mode === 1 ? /^So forgetting to flip is wrong: the slope of g is 1 over the slope of f, here (\S+)\.$/ : /^So flipping at u is wrong: f′ has to be taken at x [=≈] (\S+), which gives (\S+)\.$/);
+          if (!m || !near3(m[m.length - 1], right) || (mode === 2 && !near3(m[1], x))) fail('invslope', key, `the slip is not caught: ${v[0]}`);
+        } else if (v[0] !== (mode === 1 ? `It gets it right here by luck: f′(x) = ${r3(fpx) < 0 ? '−1' : '1'}, and 1/${r3(fpx) < 0 ? '(−1)' : '1'} = ${r3(fpx) < 0 ? '−1' : '1'}, so flipping changes nothing. Anywhere else it would be wrong.` : `It gets it right here only because x = u = ${U}: the wrong point is the right one. Anywhere else it would be wrong.`)) fail('invslope', key, `luck is not explained: ${v[0]}`);
+        if (mode === 1 && caught !== (Math.abs(Math.abs(fpx) - 1) > 1e-9)) fail('invslope', key, 'forgetting to flip is caught when f′ is ±1, or not caught when it is not');
+        if (mode === 2 && caught !== (Math.abs(x - u) > 1e-9)) fail('invslope', key, 'flipping at u is caught when x = u, or not caught when it is not');
+      }
+      // the drawing
+      const svg = W.svg(), L = W.L, T = W.T, SZ = W.SZ, X = px => a + (px - L) / SZ * (b - a), Y = py => a + (T + SZ - py) / SZ * (b - a);
+      const inBox = (px, py) => px >= L - 0.01 && px <= L + SZ + 0.01 && py >= T - 0.01 && py <= T + SZ + 0.01;
+      for (const [kk, onIt] of [['f', (p, q) => Math.abs(F(p) - q) < 0.01 * (b - a)], ['g', (p, q) => Math.abs(F(q) - p) < 0.01 * (b - a)]]) {
+        let c = 0;
+        for (const pl of svg.matchAll(new RegExp(`data-k="${kk}" points="([^"]+)"`, 'g'))) for (const pt of pl[1].split(' ')) {
+          const [px, py] = pt.split(',').map(Number); c++;
+          if (!inBox(px, py) || !onIt(X(px), Y(py))) { fail('invslope', key, `${kk} leaves its curve at ${pt}`); break; } }
+        if (c < 60) fail('invslope', key, `${kk} is hardly drawn`); pts += c; }
+      const dot = k => { const m = svg.match(new RegExp(`data-k="${k}" cx="([\\d.-]+)" cy="([\\d.-]+)"`)); return m && [X(+m[1]), Y(+m[2])]; };
+      const fp = dot('fpt'), gp = dot('gpt'), tol = 0.006 * (b - a);
+      if (!fp || Math.abs(fp[0] - x) > tol || Math.abs(fp[1] - u) > tol) fail('invslope', key, 'the blue point is not (x, u) on f');
+      if (!gp || Math.abs(gp[0] - u) > tol || Math.abs(gp[1] - x) > tol) fail('invslope', key, 'the gold point is not its mirror (u, x) on g');
+      const line = k => { const m = svg.match(new RegExp(`data-k="${k}" x1="([\\d.-]+)" y1="([\\d.-]+)" x2="([\\d.-]+)" y2="([\\d.-]+)"`)); return m && m.slice(1).map(Number); };
+      const slope = l => { const dx = X(l[2]) - X(l[0]), dy = Y(l[3]) - Y(l[1]); return Math.abs(dx) < 1e-9 ? Infinity : dy / dx; };
+      const through = (l, p, q) => { const d = Math.abs((X(l[2]) - X(l[0])) * (Y(l[1]) - q) - (X(l[0]) - p) * (Y(l[3]) - Y(l[1]))) / Math.hypot(X(l[2]) - X(l[0]), Y(l[3]) - Y(l[1])); return d < tol; };
+      const mir = line('mirror'); if (!mir || mir[0] !== L || mir[1] !== T + SZ || mir[2] !== L + SZ || mir[3] !== T) fail('invslope', key, 'the mirror line is not y = x');
+      const lk = line('link'); if (!lk || Math.abs(X(lk[0]) - x) > tol || Math.abs(Y(lk[1]) - u) > tol || Math.abs(X(lk[2]) - u) > tol || Math.abs(Y(lk[3]) - x) > tol) fail('invslope', key, 'the dotted line does not join the point to its mirror');
+      const gt = line('gtan'), ft = line('ftan'), st = line('slip');
+      if (!gt || !through(gt, u, x) || (wall ? slope(gt) !== Infinity : Math.abs(slope(gt) - right) > 0.02 * Math.max(1, Math.abs(right)))) fail('invslope', key, `g’s tangent is drawn wrong`);
+      if (!ft || !through(ft, x, u) || Math.abs(slope(ft) - fpx) > 0.02 * Math.max(1, Math.abs(fpx))) fail('invslope', key, `f’s tangent is drawn wrong`);
+      const slipOn = !wall && mode > 0 && !(mode === 2 && Math.abs(fpu) < 1e-9), slipV = mode === 1 ? fpx : 1 / fpu;
+      if (!!st !== slipOn) fail('invslope', key, `the slip’s line is ${st ? 'drawn' : 'missing'}`);
+      if (st && (!through(st, u, x) || Math.abs(slope(st) - slipV) > 0.02 * Math.max(1, Math.abs(slipV)))) fail('invslope', key, 'the slip’s line is drawn with the wrong slope');
+      for (const l of [gt, ft, st, lk]) if (l && (!inBox(l[0], l[1]) || !inBox(l[2], l[3]))) fail('invslope', key, 'a line runs off the chart');
+      const meant = { one: si === 0 && mode === 0 && u === 0, wall: si === 0 && wall, gentle: si === 1 && mode === 0 && u === 0,
+        half: si === 2 && mode === 0 && Math.abs(u) === 1, flip: mode === 1 && !wall && Math.abs(Math.abs(fpx) - 1) > 1e-9,
+        point: mode === 2 && !wall && Math.abs(x - u) > 1e-9, luck: mode === 1 && !wall && Math.abs(Math.abs(fpx) - 1) < 1e-9 };
+      for (const gl of W.GOALS) { if (!!gl.ok(W) !== meant[gl.id]) fail('invslope', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`); if (gl.ok(W)) found[gl.id] = found[gl.id] || key; }
+    }));
+    reset(); W.si = si;
+    for (let t = 0; t < 20; t++) W.moveU(1); if (W.k !== S.U.length - 1) fail('invslope', S.id, 'u does not stop at its last step');
+    for (let t = 0; t < 20; t++) W.moveU(-1); if (W.k !== 0) fail('invslope', S.id, 'u does not stop at its first step');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('invslope', g.id, 'this goal cannot be found');
+  reset();
+  return { n, pts, goals: Object.keys(found).length };
 })();
 
 /* The tangent plane workshop: every surface, every height and both slopes.
@@ -5730,6 +5854,7 @@ console.log(`  transpose moves played ${pad(transposeNotes.n.toLocaleString(), 1
 console.log(`  diagonal workshop states ${pad(diagNotes.n.toLocaleString(), 10)}  (eigenvectors decided from A·p and p, P⁻¹AP from the inverse formula, never by the workshop; every pair of columns on every matrix and 40 games at random, every number parsed back, the figure read from its spec, ${diagNotes.goals} goals findable)`);
 console.log(`  trig integral guesses ${pad(trigIntNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the chain rule; every wave written parsed back and checked against F, f and F′, every sentence, both curves read back, ${trigIntNotes.goals} goals findable)`);
 console.log(`  tangent planes ${pad(tanPlaneNotes.n.toLocaleString(), 17)}  (the height and slopes found by nudging the surface, never from 2ax; every plane written parsed back and evaluated, every number worked checked, every sentence, both slices read back, ${tanPlaneNotes.goals} goals findable)`);
+console.log(`  inverse slopes ${pad(invSlopeNotes.n.toLocaleString(), 17)}  (true slopes found by nudging Math's own arcsin, arccos and arctan, never from the identities; every number worked checked, every sentence, ${invSlopeNotes.pts.toLocaleString()} curve points read back, ${invSlopeNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

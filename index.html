@@ -1739,6 +1739,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ INVERSE SLOPE WORKSHOP ============ -->
+  <div class="screen" id="s-invslope">
+    <div class="panel"><h2>🪩 Inverse Slope Workshop</h2><div class="sub">Arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x. A mirror swaps rise and run, so the slope flips. Step along, watch a point land on its mirror image, then try the two slips everyone makes and catch them out.</div></div>
+    <div class="panel">
+      <div id="ivSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which inverse"></div>
+      <div id="ivFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="ivULo" onclick="InvSlope.moveU(-1)" aria-label="Move u one step smaller">−</button>
+          <b id="ivU" style="font-size:17px;min-width:0"></b>
+          <button id="ivUHi" onclick="InvSlope.moveU(1)" aria-label="Move u one step bigger">+</button></div>
+      </div>
+      <div id="ivModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
+      <div id="ivRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="ivGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3751,6 +3771,7 @@ const WORKSHOP_FOR = (() => {
     Diag:    ["🔑 Diagonal Workshop", ['diagonalisable']],
     TrigInt: ["🎢 Trig Integral Workshop", ['intTrig']],
     TanPlane: ["🪁 Tangent Plane Workshop", ['tangentPlane']],
+    InvSlope: ["🪩 Inverse Slope Workshop", ['invTrigDeriv']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13151,6 +13172,7 @@ const UI = {
     if(id==='s-diag') Diag.render();
     if(id==='s-trigint') TrigInt.render();
     if(id==='s-tanplane') TanPlane.render();
+    if(id==='s-invslope') InvSlope.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13949,6 +13971,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪁 Tangent Plane Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once.</div>
          <button class="btn sm" id="tomeTanPlane" style="width:auto;margin-top:8px" onclick="TanPlane.open()">Open the tangent plane workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪩 Inverse Slope Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge.</div>
+         <button class="btn sm" id="tomeInvSlope" style="width:auto;margin-top:8px" onclick="InvSlope.open()">Open the inverse slope workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19809,6 +19836,172 @@ const TanPlane = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE PLANE','every surface touched','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The inverse slope workshop: mirror the curve, flip the slope ----------
+   arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x.
+   Step u along and see the point (x, u) on f land at (u, x) on g. Mirroring
+   swaps rise and run, so g′(u) = 1/f′(x), with f′ taken at x = g(u), not at u.
+   Two slips are offered on purpose: forgetting to flip, and flipping at the
+   wrong point. Each is caught with a nudge on g itself. Nothing is saved. */
+const InvSlope = {
+  SETS:[
+    {id:'asin', btn:'arcsin', g:'arcsin', f:'sin', what:'sine', range:'−π/2 to π/2',
+     U:[-1,-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8,1], start:8, D:[-1.75,1.75],
+     fn:Math.sin, inv:Math.asin, fpAt:x=>Math.cos(x), fpU:u=>Math.sqrt(1-u*u),
+     rule:'1/√(1 − u²)'},
+    {id:'acos', btn:'arccos', g:'arccos', f:'cos', what:'cosine', range:'0 to π',
+     U:[-1,-0.8,-0.6,-0.4,-0.2,0,0.2,0.4,0.6,0.8,1], start:8, D:[-1.25,3.35],
+     fn:Math.cos, inv:Math.acos, fpAt:x=>-Math.sin(x), fpU:u=>-Math.sqrt(1-u*u),
+     rule:'−1/√(1 − u²)'},
+    {id:'atan', btn:'arctan', g:'arctan', f:'tan', what:'tangent', range:'−π/2 to π/2',
+     U:[-3,-2,-1,-0.5,0,0.5,1,2,3], start:7, D:[-3.25,3.25],
+     fn:Math.tan, inv:Math.atan, fpAt:x=>1/Math.cos(x)**2, fpU:u=>1+u*u,
+     rule:'1/(1 + u²)'}
+  ],
+  MODES:['Flip f′ at x','Forget to flip','Flip at u'],
+  H:0.001,
+  si:0, k:8, mode:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'one', t:'On arcsin, find where its slope is exactly 1.', toast:'A slope of 1',
+     ok:K=>K.si===0 && K.mode===0 && K.u()===0},
+    {id:'wall', t:'Find where arcsin’s tangent stands straight up.', toast:'Straight up',
+     ok:K=>K.si===0 && K.fp()===0},
+    {id:'gentle', t:'On arccos, find where it falls most gently.', toast:'The gentlest fall',
+     ok:K=>K.si===1 && K.mode===0 && K.u()===0},
+    {id:'half', t:'On arctan, find a point where the slope is 1/2.', toast:'A slope of 1/2',
+     ok:K=>K.si===2 && K.mode===0 && Math.abs(K.u())===1},
+    {id:'flip', t:'Forget to flip, and catch the slip out with the nudge.', toast:'Flip the slope',
+     ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()!==K.right()},
+    {id:'point', t:'Flip f′ at u instead of at x, and catch that slip too.', toast:'f′ belongs at x',
+     ok:K=>K.mode===2 && K.fp()!==0 && K.wrong()!==K.right()},
+    {id:'luck', t:'Find a point where forgetting to flip gets the right slope anyway.', toast:'Right by luck',
+     ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()===K.right()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  u(){ return this.set().U[this.k]; },
+  /* rounding away float noise, so 0.8 and 1.25 compare as themselves */
+  r(v){ if(!isFinite(v)) return v; const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  x(u=this.u()){ return this.set().inv(u); },
+  /* the slope of f at x = g(u), from the identity that writes it in u */
+  fp(u=this.u()){ return this.r(this.set().fpU(u)); },
+  right(){ return this.r(1/this.fp()); },
+  /* the slope of f at u itself, which the second slip flips */
+  fpWrong(){ return this.r(this.set().fpAt(this.u())); },
+  wrong(){ return this.mode===1 ? this.fp() : this.mode===2 ? this.r(1/this.fpWrong()) : this.right(); },
+  nudge(){ const u=this.u(), S=this.set(); return (S.inv(u+this.H)-S.inv(u-this.H))/(2*this.H); },
+  num(v,d=3){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=3){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },
+  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },
+  sq(u){ return (u<0 ? `(${neg(u)})` : neg(u))+'²'; },
+  /* f′ worked out at x, through the identity that turns it into u */
+  fpLine(){
+    const S=this.set(), u=this.u(), U=this.num(u), fp=this.fp();
+    if(S.id==='asin') return `f′(x) = cos x, and on −π/2 to π/2, cos x = √(1 − sin²x) = √(1 − ${this.sq(u)}) ${this.is(fp)}.`;
+    if(S.id==='acos') return `f′(x) = −sin x, and on 0 to π, sin x = √(1 − cos²x), so f′(x) = −√(1 − ${this.sq(u)}) ${this.is(fp)}.`;
+    return `f′(x) = 1/cos²x = 1 + tan²x = 1 + ${this.sq(u)} = ${this.num(fp)}.`;
+  },
+  /* the slip's 1/f′(u), written as the slip writes it */
+  atU(){
+    const S=this.set(), U=this.num(this.u()), a=this.u()<0?`(${U})`:U;
+    return S.id==='asin' ? `1/cos ${a}` : S.id==='acos' ? `−1/sin ${a}` : `cos² ${a}`;
+  },
+  working(){
+    const S=this.set(), u=this.u(), U=this.num(u), x=this.x(), X=this.num(x), fp=this.fp(), out=[];
+    out.push(`g(u) = ${S.g} u undoes f(x) = ${S.f} x, for x from ${S.range}. Its graph is f’s mirrored in the line y = x.`);
+    out.push(`At u = ${U}: x = ${S.g} ${u<0?`(${U})`:U} ${this.is(x)}, the angle whose ${S.what} is ${U}. The point (${X}, ${U}) on f mirrors to (${U}, ${X}) on g.`);
+    out.push(this.fpLine());
+    if(fp===0){
+      out.push(`f′(x) = 0: f is flat here, so its mirror stands straight up, and g has no slope at u = ${U}: 1/0 is no number.`);
+      return out;
+    }
+    const R=this.right(), W=this.wrong();
+    if(this.mode===0) out.push(`Mirroring in y = x swaps rise and run, so the slope flips: g′(${U}) = 1/f′(x) = 1/${this.par(fp)} ${this.is(R)}.`);
+    else if(this.mode===1) out.push(`The slip forgets to flip: it takes f′(x) ${this.is(fp)} as the slope of g. But that is the slope of f, the curve before the mirror.`);
+    else out.push(this.fpWrong()===0
+        ? `The slip flips f′ at u: 1/f′(${U}) = ${this.atU()}, but sin 0 = 0, so that is 1/0, no number at all. And f′ belongs at x ${this.is(x)}, the point on f that mirrors to u, not at u itself.`
+        : `The slip flips f′ at u: 1/f′(${U}) = ${this.atU()} ${this.is(W)}. But f′ belongs at x ${this.is(x)}, the point on f that mirrors to u, not at u itself.`);
+    const u1=u-this.H, u2=u+this.H, ab=v=>(this.is(v,6)[0]==='≈'?'about ':'')+this.num(v,6);
+    out.push(`Check with a nudge: from u = ${this.num(u1)} to ${this.num(u2)}, g goes from ${ab(S.inv(u1))} to ${ab(S.inv(u2))}, so Δg/Δu ≈ ${this.num(this.nudge())}.`);
+    if(this.mode===0){
+      out.push(`That agrees: the slope of ${S.g} u is ${S.rule} everywhere, and here g′(${U}) ${this.is(R)}.`);
+      if(S.id==='acos') out.push(`Arccos falls everywhere: cos falls from 0 to π, and the mirror of a falling curve falls too.`);
+      if(S.id==='atan') out.push(`Arctan never stands straight up: tan is never flat, so 1/f′ is always a number.`);
+    }
+    else if(W!==R) out.push(this.mode===1
+      ? `So forgetting to flip is wrong: the slope of g is 1 over the slope of f, here ${this.num(R)}.`
+      : `So flipping at u is wrong: f′ has to be taken at x ${this.is(x)}, which gives ${this.num(R)}.`);
+    else if(this.mode===1) out.push(`It gets it right here by luck: f′(x) = ${this.num(fp)}, and 1/${this.par(fp)} = ${this.num(fp)}, so flipping changes nothing. Anywhere else it would be wrong.`);
+    else out.push(`It gets it right here only because x = u = ${U}: the wrong point is the right one. Anywhere else it would be wrong.`);
+    return out;
+  },
+  /* one square chart for f and its mirror g: f in blue, g in gold, y = x dashed */
+  L:70, T:12, SZ:216,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.SZ; },
+  PY(v){ const [a,b]=this.set().D; return this.T+this.SZ-(v-a)/(b-a)*this.SZ; },
+  /* a short line through (px, py) of slope m, a fixed length along itself, cut to the chart */
+  seg(px,py,m,key,col,extra=''){
+    const [a,b]=this.set().D, len=0.9*(b-a)/4, f=v=>v.toFixed(2);
+    const [dx,dy] = isFinite(m) ? [1/Math.hypot(1,m), m/Math.hypot(1,m)] : [0,1];
+    let t0=-len, t1=len;
+    for(const [p,d] of [[px,dx],[py,dy]]) if(d!==0){ const ta=(a-p)/d, tb=(b-p)/d; t0=Math.max(t0,Math.min(ta,tb)); t1=Math.min(t1,Math.max(ta,tb)); }
+    return `<line data-k="${key}" x1="${f(this.PX(px+dx*t0))}" y1="${f(this.PY(py+dy*t0))}" x2="${f(this.PX(px+dx*t1))}" y2="${f(this.PY(py+dy*t1))}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"${extra}/>`;
+  },
+  curve(key,col,pt){
+    const [a,b]=this.set().D, segs=[]; let seg=[]; const f=v=>v.toFixed(2);
+    for(let i=0;i<=240;i++){ const p=pt(i/240);
+      if(!p || !isFinite(p[0]) || !isFinite(p[1]) || p[0]<a || p[0]>b || p[1]<a || p[1]>b){ if(seg.length>1) segs.push(seg); seg=[]; continue; }
+      seg.push(`${f(this.PX(p[0]))},${f(this.PY(p[1]))}`); }
+    if(seg.length>1) segs.push(seg);
+    return segs.map(s=>`<polyline data-k="${key}" points="${s.join(' ')}" fill="none" stroke="${col}" stroke-width="2.5" stroke-linejoin="round"/>`).join('');
+  },
+  svg(){
+    const S=this.set(), [a,b]=S.D, u=this.u(), x=this.x(), fp=this.fp(), f=v=>v.toFixed(2);
+    const [x0,x1]= S.id==='acos' ? [0,Math.PI] : [-Math.PI/2,Math.PI/2];
+    let out=`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.f} x in blue and its mirror g(u) = ${S.g} u in gold, with the point (${this.num(x)}, ${this.num(u)}) on f mirrored to (${this.num(u)}, ${this.num(x)}) on g${fp===0?', where g stands straight up':`; g’s tangent there has slope ${this.num(this.right())}${this.mode?`, and the slip’s line has slope ${isFinite(this.wrong())?this.num(this.wrong()):'none'}`:''}`}">`;
+    out+=`<rect x="${this.L}" y="${this.T}" width="${this.SZ}" height="${this.SZ}" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(this.PY(0))}" x2="${this.L+this.SZ}" y2="${f(this.PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${f(this.PX(0))}" y1="${this.T}" x2="${f(this.PX(0))}" y2="${this.T+this.SZ}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="mirror" x1="${this.L}" y1="${this.T+this.SZ}" x2="${this.L+this.SZ}" y2="${this.T}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="5 5"/>`;
+    out+=this.curve('f',FIG_COL.a,t=>{ const v=x0+(x1-x0)*t; return [v,S.fn(v)]; });
+    out+=this.curve('g',FIG_COL.b,t=>{ const v=x0+(x1-x0)*t; return [S.fn(v),v]; });
+    out+=`<line data-k="link" x1="${f(this.PX(x))}" y1="${f(this.PY(u))}" x2="${f(this.PX(u))}" y2="${f(this.PY(x))}" stroke="${FIG_COL.dim}" stroke-width="1" stroke-dasharray="2 3"/>`;
+    out+=this.seg(x,u,fp,'ftan',FIG_COL.a,' stroke-opacity="0.55"');
+    if(fp!==0 && this.mode && isFinite(this.wrong())) out+=this.seg(u,x,this.wrong(),'slip',FIG_COL.d,' stroke-dasharray="5 4"');
+    out+=this.seg(u,x,fp===0?Infinity:this.right(),'gtan',FIG_COL.c);
+    out+=`<circle data-k="fpt" cx="${f(this.PX(x))}" cy="${f(this.PY(u))}" r="4.5" fill="${FIG_COL.a}"/>`;
+    out+=`<circle data-k="gpt" cx="${f(this.PX(u))}" cy="${f(this.PY(x))}" r="5" fill="${FIG_COL.b}" stroke="${FIG_COL.ink}" stroke-width="1"/>`;
+    out+=`<text x="${this.L+this.SZ+6}" y="${this.T+12}" font-size="11" fill="${FIG_COL.dim}">y = x</text>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-invslope'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
+  moveU(by){ const v=this.k+by; if(v<0 || v>=this.set().U.length) return; this.k=v; this.touched=true; this.render(); },
+  setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('ivSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="InvSlope.pick(${i})" aria-label="g(u) = ${s.g} u, the mirror of ${s.f} x">${s.btn}</button>`).join('');
+    document.getElementById('ivModes').innerHTML=this.MODES.map((m,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.mode}" onclick="InvSlope.setMode(${i})" aria-label="${i===0?'Flip the slope of f, taken at x':i===1?'Try the slip that forgets to flip':'Try the slip that takes f′ at u'}">${m}</button>`).join('');
+    document.getElementById('ivU').textContent=`u = ${this.num(this.u())}`;
+    document.getElementById('ivULo').disabled=this.k<=0;
+    document.getElementById('ivUHi').disabled=this.k>=this.set().U.length-1;
+    document.getElementById('ivFig').innerHTML=this.svg()+
+      `<div class="figcap">f is blue and its mirror g is gold, either side of the dashed line y = x. The dotted line joins a point to its mirror image. The green line is g’s tangent, the flipped slope, and a slip’s line is drawn dashed in red.</div>`;
+    document.getElementById('ivRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('ivGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE MIRROR','every inverse slope flipped','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
