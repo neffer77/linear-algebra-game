@@ -1512,6 +1512,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ COVER-UP WORKSHOP ============ -->
+  <div class="screen" id="s-cover">
+    <div class="panel"><h2>🙈 Cover-up Workshop</h2><div class="sub">Split a fraction into simpler pieces. Clear the fractions and the equation left holds for every x, so choose x to suit you: where one factor is 0, every term but one vanishes and its unknown drops straight out. Keep the equations you want to use.</div></div>
+    <div class="panel">
+      <div id="cvSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
+      <div id="cvFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="cvXLo" onclick="Cover.moveX(-1)" aria-label="Lower x by 1">−</button>
+          <b id="cvX" style="font-size:17px;min-width:0"></b>
+          <button id="cvXHi" onclick="Cover.moveX(1)" aria-label="Raise x by 1">+</button></div>
+      </div>
+      <button class="btn sm" id="cvKeep" style="margin:6px 0" onclick="Cover.keep()"></button>
+      <div id="cvRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="cvGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3512,6 +3532,7 @@ const WORKSHOP_FOR = (() => {
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
     Parts:   ["✂️ Parts Workshop", ['byParts']],
+    Cover:   ["🙈 Cover-up Workshop", ['partialFrac']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12900,6 +12921,7 @@ const UI = {
     if(id==='s-detect') Detect.render();
     if(id==='s-hill') Hill.render();
     if(id==='s-cof') Cofactor.render();
+    if(id==='s-cover') Cover.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13638,6 +13660,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">✂️ Parts Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started.</div>
          <button class="btn sm" id="tomeParts" style="width:auto;margin-top:8px" onclick="Parts.open()">Open the parts workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🙈 Cover-up Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor.</div>
+         <button class="btn sm" id="tomeCover" style="width:auto;margin-top:8px" onclick="Cover.open()">Open the cover-up workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -17985,6 +18012,148 @@ const Cofactor = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('COFACTOR MASTER','every line expanded','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The cover-up workshop: partial fractions ----------
+   Split a fraction into simpler pieces, A/(x − 1) + B/(x + 2) and so on.
+   Clear the fractions and the equation left holds for every x, so pick x to
+   suit: at the x where one factor is 0, every term but one vanishes and its
+   unknown drops straight out. Any other x works too, it just needs solving
+   together. A repeated factor can only be covered up once. Nothing is saved. */
+const Cover = {
+  SETS:[
+    {id:'two', btn:'Two factors', N:[5,1], den:[1,-2], P:[{L:'A', r:[1]},{L:'B', r:[-2]}]},
+    {id:'three', btn:'Three factors', N:[2,6,-2], den:[0,1,-2], P:[{L:'A', r:[0]},{L:'B', r:[1]},{L:'C', r:[-2]}]},
+    {id:'rep', btn:'Repeated', N:[3,5], den:[-1,-1], P:[{L:'A', r:[-1]},{L:'B', r:[-1,-1]}]}
+  ],
+  /* the value each unknown really has, which the workshop only shows once found */
+  VAL:[[2,3],[1,2,-1],[3,2]],
+  X:[-4,-3,-2,-1,0,1,2,3,4],
+  START:7,
+  si:0, k:7, touched:false,
+  used:[new Set(),new Set(),new Set()],
+  done:new Set(),
+  GOALS:[
+    {id:'a', t:'Pick the x that covers up everything but A.', toast:'A, covered up',
+     ok:K=>K.si===0 && K.used[0].has(1)},
+    {id:'b', t:'And the x that covers up everything but B.', toast:'B, covered up',
+     ok:K=>K.si===0 && K.used[0].has(-2)},
+    {id:'solve', t:'Find A and B without x = 1 or x = −2: keep the equations at two other x values and solve them together.', toast:'Any x will do',
+     ok:K=>K.si===0 && [...K.used[0]].filter(x=>x!==1 && x!==-2).length>=2},
+    {id:'three', t:'Find all three unknowns for three factors.', toast:'All three found',
+     ok:K=>K.si===1 && K.found().length===3},
+    {id:'rep', t:'Find both unknowns for the repeated factor, where cover-up only reaches one of them.', toast:'Past the repeated factor',
+     ok:K=>K.si===2 && K.found().length===2}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.X[this.k]; },
+  vals(){ return this.VAL[this.si]; },
+  /* a factor x − r as written, and a product of them */
+  fac(r){ return r===0 ? 'x' : r>0 ? \`x − \${r}\` : \`x + \${-r}\`; },
+  prod(rs){ const c={}; rs.forEach(r=>c[r]=(c[r]||0)+1);
+    return [...new Set(rs)].map(r=>(r===0 && rs.length>1 ? 'x' : rs.length>1 || r!==0 ? \`(\${this.fac(r)})\` : 'x')+(c[r]>1?'²':'')).join(''); },
+  /* the roots left in the cleared coefficient of piece j: the bottom without the piece's own */
+  rest(j){ const rs=[...this.set().den]; for(const r of this.set().P[j].r) rs.splice(rs.indexOf(r),1); return rs; },
+  coef(j,x=this.x()){ return this.rest(j).reduce((p,r)=>p*(x-r),1); },
+  N(x=this.x()){ return this.set().N.reduce((s,c)=>s*x+c,0); },
+  D(x=this.x()){ return this.set().den.reduce((p,r)=>p*(x-r),1); },
+  /* the bottom as written after f(x) = (…)/, in brackets when it is a product */
+  bot(S=this.set()){ const p=this.prod(S.den); return new Set(S.den).size>1 ? \`(\${p})\` : p; },
+  isRoot(x=this.x()){ return this.set().den.includes(x); },
+  poly(cs){ const d=cs.length-1; return cs.map((c,i)=>{ const p=d-i; if(!c) return ''; const a=Math.abs(c);
+      const t=(a===1 && p>0 ? '' : String(a))+(p===0?'':p===1?'x':'x²'); return (c<0?' − ':' + ')+t; }).join('').replace(/^ \\+ /,'').replace(/^ − /,'−'); },
+  /* which unknowns are known: covered up at a root seen, or all of them once the
+     equations seen pin every unknown down */
+  rank(){ const rows=[...this.used[this.si]].map(x=>this.set().P.map((_,j)=>this.coef(j,x))), n=this.set().P.length;
+    let r=0; const M=rows.map(R=>[...R]);
+    for(let c=0;c<n && r<M.length;c++){ let p=M.findIndex((R,i)=>i>=r && Math.abs(R[c])>1e-9); if(p<0) continue;
+      [M[r],M[p]]=[M[p],M[r]]; for(let i=0;i<M.length;i++) if(i!==r){ const f=M[i][c]/M[r][c]; M[i]=M[i].map((v,q)=>v-f*M[r][q]); } r++; }
+    return r; },
+  coverAt(j){ const S=this.set(); return [...this.used[this.si]].filter(x=>S.P.every((_,q)=>(this.coef(q,x)===0)!==(q===j))).sort((a,b)=>a-b); },
+  found(){ const n=this.set().P.length; if(this.rank()===n) return this.set().P.map((_,j)=>j); return this.set().P.map((_,j)=>j).filter(j=>this.coverAt(j).length); },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(Math.abs(n),d)||1; n/=g; d/=g; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  amt(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  and(xs){ return xs.length<2 ? xs.join('') : xs.slice(0,-1).join(', ')+' and '+xs[xs.length-1]; },
+  term(c,L){ return c===1 ? L : c===-1 ? \`−\${L}\` : \`\${neg(c)}\${L}\`; },
+  sum(ts){ return ts.join(' + ').replace(/\\+ −/g,'− '); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), x=this.x(), V=this.vals(), n=S.P.length, Ls=S.P.map(p=>p.L);
+    const form=this.sum(S.P.map(p=>\`\${p.L}/\${this.prod(p.r)}\`)), rhs=this.sum(S.P.map((p,j)=>p.L+(this.rest(j).length?this.prod(this.rest(j)):'')));
+    const out=[\`f(x) = (\${this.poly(S.N)})/\${this.bot()}. Split it as \${form}. Multiply both sides by \${this.prod(S.den)} to clear the fractions: \${this.poly(S.N)} = \${rhs}, which holds for every x.\`];
+    const cs=S.P.map((_,j)=>this.coef(j)), live=S.P.map((_,j)=>j).filter(j=>cs[j]!==0), dead=S.P.map((_,j)=>j).filter(j=>cs[j]===0);
+    let eq=\`At x = \${neg(x)}: \${neg(this.N())} = \${this.sum(live.map(j=>this.term(cs[j],Ls[j])))}.\`;
+    if(dead.length) eq+=\` The \${this.and(dead.map(j=>Ls[j]))} term\${dead.length>1?'s vanish':' vanishes'}, because \${this.fac(x)} = 0 here\`+
+      (live.length===1 ? (cs[live[0]]===1 ? \`, so \${Ls[live[0]]} = \${neg(V[live[0]])} at once.\` : \`, so \${Ls[live[0]]} = \${neg(this.N())} ÷ \${this.amt(cs[live[0]])} = \${neg(V[live[0]])}.\`) : '.');
+    else eq+=\` No term vanishes, so this one equation has \${n===2?'both':'all three'} unknowns in it.\`;
+    out.push(eq);
+    if(this.isRoot()) out.push(\`f itself is not defined at x = \${neg(x)}, since \${this.prod(S.den)} = 0 there, but the cleared equation still holds, and that is what makes this x so useful.\`);
+    const F=this.found(), xs=[...this.used[this.si]].sort((a,b)=>a-b);
+    out.push(xs.length ? \`Equations kept: x = \${this.and(xs.map(neg))}.\${this.used[this.si].has(x)?'':' Keep this one too to use it.'}\` : 'No equations kept yet: keep the one at an x to use it.');
+    if(F.length<n){
+      out.push(F.length ? \`Found so far: \${this.and(F.map(j=>\`\${Ls[j]} = \${neg(V[j])}\`))}. Still to find: \${this.and(S.P.map((_,j)=>j).filter(j=>!F.includes(j)).map(j=>Ls[j]))}.\`
+        : \`Nothing is found yet. Still to find: \${this.and(Ls)}.\`);
+      if(S.id==='rep' && F.includes(1)) out.push(\`Only B can be covered up: x + 1 appears twice in the bottom, so no x makes the A term vanish on its own. Any other x gives an equation with A in it.\`);
+    } else {
+      if(S.P.some((_,j)=>!this.coverAt(j).length)) out.push(\`Solving the equations kept at x = \${this.and(xs.map(neg))} together gives \${this.and(S.P.map((p,j)=>\`\${p.L} = \${neg(V[j])}\`))}.\`);
+      const dec=this.sum(S.P.map((p,j)=>\`\${neg(V[j])}/\${this.prod(p.r)}\`));
+      const integ=this.sum(S.P.map((p,j)=>p.r.length===1 ? \`\${Math.abs(V[j])===1?(V[j]<0?'−':''):neg(V[j])+' '}ln|\${this.fac(p.r[0])}|\` : \`\${neg(-V[j])}/\${this.prod([p.r[0]])}\`));
+      out.push(\`So f(x) = \${dec}, and each piece integrates on its own: ∫ f(x) dx = \${integ} + C.\`);
+      if(!this.isRoot()){ const parts=S.P.map((p,j)=>[V[j], p.r.reduce((q,r)=>q*(x-r),1)]);
+        const raw=this.D()===1 ? neg(this.N()) : \`\${neg(this.N())}/\${this.amt(this.D())}\`, v=this.fr(this.N(),this.D());
+        out.push(\`Check at x = \${neg(x)}: the pieces add to \${this.sum(parts.map(([a,b])=>this.fr(a,b)))} = \${v}, and f(\${neg(x)}) = \${raw}\${raw===v?'':\` = \${v}\`} too.\`); }
+    }
+    return out;
+  },
+  /* f in blue between −4.5 and 4.5, cut off at ±6; dashed lines where the bottom
+     is 0; the x you are trying in gold, or red where f blows up; once every
+     unknown is found, each piece drawn faint gold */
+  svg(){
+    const S=this.set(), x0=this.x(), PX=v=>20+(v+4.5)/9*320, PY=v=>100-v/6*88, n=S.P.length;
+    const curve=(g,attrs)=>{ let segs=[], cur=[];
+      for(let i=0;i<=360;i++){ const t=-4.5+9*i/360, y=g(t);
+        if(!isFinite(y) || Math.abs(y)>7){ if(cur.length>1) segs.push(cur); cur=[]; continue; }
+        cur.push(\`\${PX(t).toFixed(2)},\${PY(y).toFixed(2)}\`); }
+      if(cur.length>1) segs.push(cur);
+      return segs.map(p=>\`<polyline \${attrs} points="\${p.join(' ')}" fill="none"/>\`).join(''); };
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block;overflow:hidden" role="img" aria-label="f(x) in blue, with x = \${neg(x0)} marked\${this.isRoot()?', where f is not defined':''}">\`;
+    out+=\`<defs><clipPath id="cvClip"><rect x="20" y="12" width="320" height="176"/></clipPath></defs><g clip-path="url(#cvClip)">\`;
+    out+=\`<line x1="20" y1="\${PY(0)}" x2="340" y2="\${PY(0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const r of [...new Set(S.den)]) out+=\`<line data-k="asym" data-x="\${r}" x1="\${PX(r).toFixed(2)}" y1="12" x2="\${PX(r).toFixed(2)}" y2="188" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="4 4"/>\`;
+    if(this.found().length===n) S.P.forEach((p,j)=>{ out+=curve(t=>this.VAL[this.si][j]/p.r.reduce((q,r)=>q*(t-r),1), \`data-k="piece" stroke="\${FIG_COL.b}" stroke-width="1.5" opacity="0.6"\`); });
+    out+=curve(t=>this.N(t)/this.D(t), \`data-k="f" stroke="\${FIG_COL.a}" stroke-width="2.5"\`);
+    const root=this.isRoot();
+    out+=\`<line data-k="try" x1="\${PX(x0).toFixed(2)}" y1="12" x2="\${PX(x0).toFixed(2)}" y2="188" stroke="\${root?FIG_COL.d:FIG_COL.b}" stroke-width="2"/>\`;
+    if(!root){ const y=this.N()/this.D(); if(Math.abs(y)<=6) out+=\`<circle data-k="pt" cx="\${PX(x0).toFixed(2)}" cy="\${PY(y).toFixed(2)}" r="5" fill="\${FIG_COL.b}"/>\`; }
+    return out+\`</g></svg>\`;
+  },
+  open(){ UI.go('s-cover'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  keep(){ this.used[this.si].add(this.x()); this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('cvSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Cover.pick(\${i})" aria-label="\${s.btn}: f(x) = (\${this.poly(s.N)})/\${this.bot(s)}">\${s.btn}</button>\`).join('');
+    document.getElementById('cvX').textContent=\`x = \${neg(this.x())}\`;
+    document.getElementById('cvXLo').disabled=this.k<=0;
+    document.getElementById('cvXHi').disabled=this.k>=this.X.length-1;
+    const kb=document.getElementById('cvKeep'); kb.textContent=\`Keep the equation at x = \${neg(this.x())}\`; kb.disabled=this.used[this.si].has(this.x());
+    document.getElementById('cvFig').innerHTML=this.svg()+
+      \`<div class="figcap">The blue curve is f, and the dashed lines are where its bottom is 0. The upright line is the x you are trying: gold, or red where f is not defined. Once every unknown is found, the pieces are drawn in faint gold.</div>\`;
+    document.getElementById('cvRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('cvGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('UNDER COVER','every fraction split','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
