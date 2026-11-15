@@ -78,6 +78,7 @@ const SUITES = [
   require('./play/parts'),       // integration by parts as a split
   require('./play/detect'),      // eigenvalues where det(A − λI) = 0
   require('./play/hill'),        // the slope each way you face: ∇f · û
+  require('./play/cof'),         // a 3×3 determinant along any row or column
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
