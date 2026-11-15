@@ -81,6 +81,7 @@ function loadGame() {
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
+    ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoSets')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -99,7 +100,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2694,6 +2695,132 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The quotient workshop: every fraction, every x, every way of working it.
+   The true slope is found here by a nudge on f/g itself, never by the rule,
+   so a wrong rule cannot agree with itself; each set's f′ and g′ are checked
+   the same way; every product in a worked line is evaluated as written and
+   must use the values it names; each slip is checked to give what that slip
+   really gives; every sentence's condition is decided independently; and the
+   drawing is read back: the curve, the gap, the point and both lines. */
+const quotNotes = (() => {
+  const W = Quot;
+  const num = t => +t.replace(/−/g, '-'), neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const sl = (h, x, e = 1e-5) => (h(x + e) - h(x - e)) / (2 * e);
+  const near = (a, b, e = 1e-6) => Math.abs(a - b) <= e;
+  if (W.SETS.map(S => S.id).join() !== 'sq,recip,bump') fail('quotient', 'sets', W.SETS.map(S => S.id).join());
+  if (W.X.join() !== '-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3') fail('quotient', 'x', `x should step from −3 to 3 in halves: ${W.X.join()}`);
+  if (W.MODES.join() !== 'Quotient rule,Swap the top,Forget the square') fail('quotient', 'modes', W.MODES.join());
+  W.SETS.forEach(S => {
+    for (let x = -3.2; x <= 3.2; x += 0.1) {
+      if (!near(S.df(x), sl(S.f, x), 1e-5) || !near(S.dg(x), sl(S.g, x), 1e-5)) fail('quotient', S.id, `f′ or g′ is not the slope of f or g at x = ${x.toFixed(1)}`);
+    }
+  });
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.SETS[0].start; W.mode = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('quotient', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.k = 0; W.mode = 2; W.pick(si);
+    if (W.k !== S.start || W.mode !== 0 || W.X[W.k] !== (si === 2 ? 2 : 1)) fail('quotient', S.id, 'picking a fraction does not start x and the method again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('quotient', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  const found = {}; let n = 0;
+  const Y0 = 188, Y1 = 12, PXi = px => -3.25 + (px - 20) / 320 * 6.5;
+  W.SETS.forEach((S, si) => {
+    const PYi = py => S.y[0] + (188 - py) / 176 * (S.y[1] - S.y[0]);
+    for (let k = 0; k < W.X.length; k++) for (let mode = 0; mode < 3; mode++) {
+      reset(); W.si = si; W.k = k; W.mode = mode; n++;
+      const x = W.X[k], key = `${S.id} x=${x} mode ${mode}`, X = neg(x);
+      const a = S.f(x), b = S.g(x), c = S.df(x), d = S.dg(x);
+      const got = W.working(), txt = got.join(' ');
+      if (got[0] !== `y = f/g with f(x) = ${S.fs} and g(x) = ${S.gs}, so f′(x) = ${S.dfs} and g′(x) = ${S.dgs}.`) fail('quotient', key, got[0]);
+      const m2 = got[1].match(/^At x = (\S+): f\(\S+\) = (\S+), g\(\S+\) = (\S+), f′\(\S+\) = (\S+) and g′\(\S+\) = (\S+)\.$/);
+      if (!m2 || m2[1] !== X || [a, b, c, d].some((v, i) => !near(num(m2[i + 2]), v))) fail('quotient', key, `the values at x are wrong: ${got[1]}`);
+      if (b === 0) {
+        if (got.length !== 3 || got[2] !== `g(${X}) = 0, so y = f/g is not defined at x = ${X}: the curve has a gap here, and there is no slope to find.`) fail('quotient', key, `the gap is not said plainly: ${got.slice(2).join(' ')}`);
+      } else {
+        const y = a / b, D = sl(x2 => S.f(x2) / S.g(x2), x, 1e-6);
+        const m3 = got[2].match(/^So y = (\S+) ÷ (\S+) ([=≈]) (\S+)\.$/);
+        if (!m3 || !near(num(m3[1]), a) || !near(num(m3[2]), b) || Math.abs(num(m3[4]) - y) > 5.0001e-5 || (m3[3] === '=') !== near(Math.round(y * 1e4) / 1e4, y, 1e-10)) fail('quotient', key, `y is ${y}: ${got[2]}`);
+        // the worked slope, evaluated as written
+        const pr = t => t.match(/\((−?[\d.]+)\)\((−?[\d.]+)\)/).slice(1).map(num);
+        const lines = ['The quotient rule: dy/dx = (f′g − fg′)/g² = ', 'The slip swaps the top: (fg′ − f′g)/g² = ', 'The slip forgets to square g: (f′g − fg′)/g = '];
+        const wl = got[3];
+        if (!wl.startsWith(lines[mode])) fail('quotient', key, `the worked line is for the wrong method: ${wl}`);
+        else {
+          const m4 = wl.slice(lines[mode].length).match(/^\((\(\S+\)\(\S+\)) − (\(\S+\)\(\S+\))\)\/\((\S+)\)(²?) = (\S+)\/(\S+) ([=≈]) (\S+)\.$/);
+          if (!m4) fail('quotient', key, wl);
+          else {
+            const [p1, p2] = [pr(m4[1]), pr(m4[2])], want = mode === 1 ? [[a, d], [c, b]] : [[c, b], [a, d]];
+            if (![p1, p2].every((q, i) => near(q[0], want[i][0]) && near(q[1], want[i][1]))) fail('quotient', key, `the top uses the wrong values: ${wl}`);
+            if ((m4[4] === '²') !== (mode !== 2) || !near(num(m4[3]), b)) fail('quotient', key, `the bottom is wrong: ${wl}`);
+            const top = p1[0] * p1[1] - p2[0] * p2[1], bot = mode === 2 ? b : b * b, v = top / bot;
+            if (!near(num(m4[5]), top) || !near(num(m4[6]), bot) || Math.abs(num(m4[8]) - v) > 5.0001e-5) fail('quotient', key, `the worked slope does not follow from its own line: ${wl}`);
+            if (mode === 0 && Math.abs(v - D) > 1e-5) fail('quotient', key, `the quotient rule gives ${v} but the slope is ${D}`);
+            if (mode === 1 && Math.abs(v + D) > 1e-5) fail('quotient', key, `the swapped top should give minus the slope, ${-D}, not ${v}`);
+            if (mode === 2 && Math.abs(v - D * b) > 1e-5) fail('quotient', key, `dividing by g alone should give ${D * b}, not ${v}`);
+          }
+        }
+        const m5 = got[4] && got[4].match(/^Check with a nudge: from x = (\S+) to (\S+), y goes from (?:about )?(\S+) to (?:about )?(\S+), so Δy\/Δx ≈ (\S+)\.$/);
+        if (!m5 || !near(num(m5[1]), x - 0.001) || !near(num(m5[2]), x + 0.001) || Math.abs(num(m5[3]) - a / b - 0 + (a / b - S.f(x - 0.001) / S.g(x - 0.001))) > 5.0001e-7
+          || Math.abs(num(m5[4]) - S.f(x + 0.001) / S.g(x + 0.001)) > 5.0001e-7 || Math.abs(num(m5[5]) - D) > 0.0006) fail('quotient', key, `the nudge is wrong: ${got[4]}`);
+        const Dr = Math.round(D * 1e6) / 1e6, Wr = mode === 1 ? -Dr : mode === 2 ? Math.round(D * b * 1e6) / 1e6 : Dr, top0 = Math.abs(c * b - a * d) < 1e-9;
+        const v6 = got[5] || '';
+        if (mode === 0) {
+          const tail = Dr === 0 ? ': the top f′g − fg′ is 0 here, so the tangent is flat.' : Dr > 0 ? ': y rises as x rises here.' : ': y falls as x rises here.';
+          if (!v6.startsWith('That agrees with dy/dx ') || !v6.endsWith(tail)) fail('quotient', key, `the verdict on the rule is wrong: ${v6}`);
+          if (/the reciprocal rule/.test(txt) !== (S.id === 'recip')) fail('quotient', key, 'the reciprocal sentence shows at the wrong time');
+        } else if (Math.abs(Wr - Dr) > 1e-9) {
+          if (!(mode === 1 ? /^So the swapped top is wrong: it gives exactly minus the slope\./ : /^So forgetting the square is wrong: the rule divides by g² = /).test(v6) || !v6.endsWith(`The slope is ${neg(Math.round(D * 1e4) / 1e4)}.`)) fail('quotient', key, `the slip is not caught: ${v6}`);
+        } else if (top0) {
+          if (v6 !== 'The slip gets it right here, but only because the top is 0, so every version gives 0.') fail('quotient', key, `a zero top is not explained: ${v6}`);
+        } else if (!(b === 1 && v6 === `It gets it right here by luck: g(${X}) = 1, and 1² = 1, so squaring changes nothing. Anywhere else it would be wrong.`)) fail('quotient', key, `a lucky slip is not explained: ${v6}`);
+        if (/reciprocal/.test(txt) && mode !== 0) fail('quotient', key, 'the reciprocal sentence shows with a slip');
+      }
+      // the drawing
+      const svg = W.svg();
+      for (const m of svg.matchAll(/ (?:x1|x2|cx)="(-?[\d.]+)"| (?:y1|y2|cy)="(-?[\d.]+)"/g)) {
+        if (m[1] !== undefined && (+m[1] < 0 || +m[1] > 360)) fail('quotient', key, `something is drawn off the side at x = ${m[1]}`);
+        if (m[2] !== undefined && (+m[2] < 0 || +m[2] > 200)) fail('quotient', key, `something is drawn off the top or bottom at y = ${m[2]}`);
+      }
+      for (const pl of svg.matchAll(/data-k="curve" points="([^"]+)"/g)) for (const pt of pl[1].split(' ')) {
+        const [px, py] = pt.split(',').map(Number), t = PXi(px);
+        if (px < 20 || px > 340 || py < 12 || py > 188 || Math.abs(PYi(py) - S.f(t) / S.g(t)) > 0.002 * (S.y[1] - S.y[0])) fail('quotient', key, `the curve leaves y = f/g at ${pt}`);
+      }
+      if (!/data-k="curve"/.test(svg)) fail('quotient', key, 'no curve is drawn');
+      const hasGap = W.X.some(t => S.g(t) === 0);
+      if (/data-k="gap(-here)?"/.test(svg) !== hasGap || /data-k="gap-here"/.test(svg) !== (b === 0)) fail('quotient', key, 'the gap line is wrong');
+      const lineAt = kk => { const m = svg.match(new RegExp(`data-k="${kk}" x1="([\\d.-]+)" y1="([\\d.-]+)" x2="([\\d.-]+)" y2="([\\d.-]+)"`)); return m && m.slice(1).map(Number); };
+      const tan = lineAt('tan'), slip = lineAt('slip'), pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+      if (!!tan !== (b !== 0) || !!pt !== (b !== 0) || !!slip !== (b !== 0 && mode > 0)) fail('quotient', key, 'the point or its lines show at the wrong time');
+      if (b !== 0) {
+        const y = a / b, D = sl(x2 => S.f(x2) / S.g(x2), x, 1e-6);
+        if (!pt || Math.abs(PXi(+pt[1]) - x) > 0.01 || Math.abs(PYi(+pt[2]) - y) > 0.01 * (S.y[1] - S.y[0])) fail('quotient', key, 'the gold point is not on the curve at x');
+        const chk = (L, want, nm) => { if (!L) return; const [x1, y1, x2, y2] = L, s2 = (PYi(y2) - PYi(y1)) / (PXi(x2) - PXi(x1));
+          if (Math.abs(s2 - want) > 0.02 * Math.max(1, Math.abs(want))) fail('quotient', key, `the ${nm} is drawn with slope ${s2.toFixed(3)}, not ${want}`);
+          const mid = (PYi(y1) + (PYi(y2) - PYi(y1)) * (x - PXi(x1)) / (PXi(x2) - PXi(x1)));
+          if (Math.abs(mid - y) > 0.01 * (S.y[1] - S.y[0])) fail('quotient', key, `the ${nm} does not pass through the point`);
+          if (PXi(x2) - PXi(x1) < 0.2) fail('quotient', key, `the ${nm} is too short to see`); };
+        chk(tan, D, 'tangent');
+        chk(slip, mode === 1 ? -D : D * b, "slip's line");
+      }
+      const y = b !== 0 ? a / b : NaN, D = b !== 0 ? Math.round(sl(x2 => S.f(x2) / S.g(x2), x, 1e-6) * 1e6) / 1e6 : NaN;
+      const Wv = mode === 1 ? -D : mode === 2 ? Math.round(D * b * 1e6) / 1e6 : D, top = c * b - a * d;
+      const meant = { flat: si === 0 && mode === 0 && b !== 0 && D === 0, hole: si === 0 && b === 0, rise: si === 1 && mode === 0 && D > 0,
+        peak: si === 2 && mode === 0 && D === 0 && y > 0, swap: mode === 1 && b !== 0 && D !== 0, square: mode === 2 && b !== 0 && Wv !== D,
+        luck: mode === 2 && b !== 0 && Wv === D && Math.abs(top) > 1e-9 };
+      for (const g of W.GOALS) { W.touched = true; if (!!g.ok(W) !== meant[g.id]) fail('quotient', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+    }
+    reset(); W.si = si; W.k = 0;
+    for (let t = 0; t < 20; t++) W.moveX(1);
+    if (W.k !== W.X.length - 1) fail('quotient', S.id, 'x does not stop at 3');
+    for (let t = 0; t < 20; t++) W.moveX(-1);
+    if (W.k !== 0) fail('quotient', S.id, 'x does not stop at −3');
+    W.setMode(1); if (W.mode !== 1 || W.k !== 0) fail('quotient', S.id, 'choosing a slip moves x');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('quotient', g.id, 'this goal cannot be found');
+  if (found.luck !== 'bump x=0 mode 2') fail('quotient', 'luck', `the lucky slip should be found only on x over x² + 1 at x = 0: ${found.luck}`);
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The cross product workshop: every u, every v, both orders.
    Each product is worked out here by the sign rule on the slots, never from
    the workshop's own sum; every product written in a worked line is
@@ -5039,6 +5166,7 @@ console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
+console.log(`  quotients divided       ${pad(quotNotes.n.toLocaleString(), 10)}  (each slope found by a nudge on f/g, never by the rule; every product in every worked line evaluated with its values, both slips checked to give what they give, every sentence, the curve, gap, point and lines read back, ${quotNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

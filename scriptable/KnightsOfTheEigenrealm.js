@@ -1636,6 +1636,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ QUOTIENT WORKSHOP ============ -->
+  <div class="screen" id="s-quot">
+    <div class="panel"><h2>➗ Quotient Rule Workshop</h2><div class="sub">The slope of f/g is not f′ over g′. Step along a fraction of two curves and work its slope with the quotient rule, check it with a nudge, then try the two slips everyone makes and catch them out.</div></div>
+    <div class="panel">
+      <div id="qoSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
+      <div id="qoFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="qoXLo" onclick="Quot.moveX(-1)" aria-label="Move the point half a step left">−</button>
+          <b id="qoX" style="font-size:17px;min-width:0"></b>
+          <button id="qoXHi" onclick="Quot.moveX(1)" aria-label="Move the point half a step right">+</button></div>
+      </div>
+      <div id="qoModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
+      <div id="qoRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="qoGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3642,6 +3662,7 @@ const WORKSHOP_FOR = (() => {
     Arrow:   ["➡️ Arrow Workshop", ['vecAdd','vecScale','mag','unitVec']],
     Horizon: ["🌅 Horizon Workshop", ['limInf']],
     Cross:   ["✖️ Cross Product Workshop", ['cross']],
+    Quot:    ["➗ Quotient Rule Workshop", ['quotient']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13036,6 +13057,7 @@ const UI = {
     if(id==='s-arrow') Arrow.render();
     if(id==='s-horizon') Horizon.render();
     if(id==='s-cross') Cross.render();
+    if(id==='s-quot') Quot.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13804,6 +13826,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">✖️ Cross Product Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn v one part at a time and watch u × v come out square to both, worked from the other two slots. Point it straight up, set the area it measures, line v up with u, hit a target, and swap the order.</div>
          <button class="btn sm" id="tomeCross" style="width:auto;margin-top:8px" onclick="Cross.open()">Open the cross product workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">➗ Quotient Rule Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out.</div>
+         <button class="btn sm" id="tomeQuot" style="width:auto;margin-top:8px" onclick="Quot.open()">Open the quotient rule workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18909,6 +18936,146 @@ const Cross = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE CROSS','every square arrow found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The quotient workshop: the slope of f/g ----------
+   Step along y = f/g and work its slope with the quotient rule, then check it
+   with a nudge. Two slips are offered on purpose: swapping the top, which
+   gives exactly minus the slope, and forgetting to square g, which is right
+   only where g = 1. Where g = 0 there is no y at all. Nothing is saved. */
+const Quot = {
+  SETS:[
+    {id:'sq', btn:'x² over x + 1', fs:'x²', gs:'x + 1', dfs:'2x', dgs:'1',
+     f:x=>x*x, g:x=>x+1, df:x=>2*x, dg:x=>1, y:[-7,4], start:8},
+    {id:'recip', btn:'1 over x² + 1', fs:'1', gs:'x² + 1', dfs:'0', dgs:'2x',
+     f:x=>1, g:x=>x*x+1, df:x=>0, dg:x=>2*x, y:[-0.15,1.15], start:8},
+    {id:'bump', btn:'x over x² + 1', fs:'x', gs:'x² + 1', dfs:'1', dgs:'2x',
+     f:x=>x, g:x=>x*x+1, df:x=>1, dg:x=>2*x, y:[-0.65,0.65], start:10}
+  ],
+  X:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3],
+  MODES:['Quotient rule','Swap the top','Forget the square'],
+  H:0.001,
+  si:0, k:8, mode:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'flat', t:'On x² over x + 1, find a point where the tangent is flat.', toast:'A flat tangent',
+     ok:K=>K.si===0 && K.mode===0 && K.g()!==0 && K.dy()===0},
+    {id:'hole', t:'Find where x² over x + 1 has no y at all.', toast:'A gap in the curve',
+     ok:K=>K.si===0 && K.g()===0},
+    {id:'rise', t:'On 1 over x² + 1, find a point where y rises as x rises.', toast:'Rising',
+     ok:K=>K.si===1 && K.mode===0 && K.dy()>0},
+    {id:'peak', t:'On x over x² + 1, find the top of the bump.', toast:'The top of the bump',
+     ok:K=>K.si===2 && K.mode===0 && K.dy()===0 && K.y()>0},
+    {id:'swap', t:'Swap the top round, and catch the slip out with the nudge.', toast:'Order matters on top',
+     ok:K=>K.mode===1 && K.g()!==0 && K.wrong()!==K.dy()},
+    {id:'square', t:'Forget to square g, and catch that slip out too.', toast:'The square matters',
+     ok:K=>K.mode===2 && K.g()!==0 && K.wrong()!==K.dy()},
+    {id:'luck', t:'Find a point where forgetting the square gets the right slope anyway, though the top is not 0.', toast:'Right by luck',
+     ok:K=>K.mode===2 && K.g()!==0 && K.wrong()===K.dy() && K.top()!==0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.X[this.k]; },
+  /* rounding away float noise: every value here is a whole number or a quarter */
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  f(x=this.x()){ return this.r(this.set().f(x)); },
+  g(x=this.x()){ return this.r(this.set().g(x)); },
+  fp(x=this.x()){ return this.r(this.set().df(x)); },
+  gp(x=this.x()){ return this.r(this.set().dg(x)); },
+  y(x=this.x()){ return this.set().f(x)/this.set().g(x); },
+  top(){ return this.r(this.fp()*this.g()-this.f()*this.gp()); },
+  dy(){ return this.r(this.top()/(this.g()*this.g())); },
+  /* the slip's slope, as the chosen slip works it */
+  wrong(){ return this.mode===1 ? this.r(-this.top()/(this.g()*this.g())) : this.mode===2 ? this.r(this.top()/this.g()) : this.dy(); },
+  nudge(){ const x=this.x(); return (this.y(x+this.H)-this.y(x-this.H))/(2*this.H); },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  par(v){ return \`(\${this.num(v)})\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), x=this.x(), X=this.num(x), a=this.f(), b=this.g(), c=this.fp(), d=this.gp(), out=[];
+    out.push(\`y = f/g with f(x) = \${S.fs} and g(x) = \${S.gs}, so f′(x) = \${S.dfs} and g′(x) = \${S.dgs}.\`);
+    out.push(\`At x = \${X}: f(\${X}) = \${this.num(a)}, g(\${X}) = \${this.num(b)}, f′(\${X}) = \${this.num(c)} and g′(\${X}) = \${this.num(d)}.\`);
+    if(b===0){
+      out.push(\`g(\${X}) = 0, so y = f/g is not defined at x = \${X}: the curve has a gap here, and there is no slope to find.\`);
+      return out;
+    }
+    out.push(\`So y = \${this.num(a)} ÷ \${this.num(b)} \${this.is(a/b)}.\`);
+    const T=this.top(), D=this.dy(), W=this.wrong(), tl=\`\${this.par(c)}\${this.par(b)} − \${this.par(a)}\${this.par(d)}\`;
+    if(this.mode===0) out.push(\`The quotient rule: dy/dx = (f′g − fg′)/g² = (\${tl})/\${this.par(b)}² = \${this.num(T)}/\${this.num(b*b)} \${this.is(D)}.\`);
+    else if(this.mode===1) out.push(\`The slip swaps the top: (fg′ − f′g)/g² = (\${this.par(a)}\${this.par(d)} − \${this.par(c)}\${this.par(b)})/\${this.par(b)}² = \${this.num(-T)}/\${this.num(b*b)} \${this.is(W)}.\`);
+    else out.push(\`The slip forgets to square g: (f′g − fg′)/g = (\${tl})/\${this.par(b)} = \${this.num(T)}/\${this.num(b)} \${this.is(W)}.\`);
+    const x1=x-this.H, x2=x+this.H, ab=v=>(this.is(v,6)[0]==='≈'?'about ':'')+this.num(v,6);
+    out.push(\`Check with a nudge: from x = \${this.num(x1,3)} to \${this.num(x2,3)}, y goes from \${ab(this.y(x1))} to \${ab(this.y(x2))}, so Δy/Δx ≈ \${this.num(this.nudge(),3)}.\`);
+    if(this.mode===0){
+      out.push(\`That agrees with dy/dx \${this.is(D)}\`+(D===0 ? \`: the top f′g − fg′ is 0 here, so the tangent is flat.\` : D>0 ? \`: y rises as x rises here.\` : \`: y falls as x rises here.\`));
+      if(S.id==='recip') out.push(\`Here f′ = 0, so only −fg′ is left on top: that is the reciprocal rule, (1/g)′ = −g′/g².\`);
+    }
+    else if(W!==D) out.push(this.mode===1
+      ? \`So the swapped top is wrong: it gives exactly minus the slope. Subtraction cares about order, and f′g comes first. The slope is \${this.num(D)}.\`
+      : \`So forgetting the square is wrong: the rule divides by g² = \${this.num(b*b)}, not by g = \${this.num(b)}. The slope is \${this.num(D)}.\`);
+    else if(T===0) out.push(\`The slip gets it right here, but only because the top is 0, so every version gives 0.\`);
+    else out.push(\`It gets it right here by luck: g(\${X}) = 1, and 1² = 1, so squaring changes nothing. Anywhere else it would be wrong.\`);
+    return out;
+  },
+  /* the curve in blue across −3.25 to 3.25, broken where g = 0 or y leaves the
+     chart; the green tangent has the rule's slope, a slip's line is red */
+  D:[-3.25,3.25],
+  PX(v){ return 20+(v-this.D[0])/(this.D[1]-this.D[0])*320; },
+  PY(v){ const [y0,y1]=this.set().y; return 188-(v-y0)/(y1-y0)*176; },
+  line(m, key, col, extra=''){
+    const x=this.x(), y=this.y(), [y0,y1]=this.set().y;
+    let t0=Math.max(-0.8, this.D[0]-x), t1=Math.min(0.8, this.D[1]-x);
+    if(m!==0){ const ta=(y0-y)/m, tb=(y1-y)/m; t0=Math.max(t0,Math.min(ta,tb)); t1=Math.min(t1,Math.max(ta,tb)); }
+    const f=v=>v.toFixed(2);
+    return \`<line data-k="\${key}" x1="\${f(this.PX(x+t0))}" y1="\${f(this.PY(y+m*t0))}" x2="\${f(this.PX(x+t1))}" y2="\${f(this.PY(y+m*t1))}" stroke="\${col}" stroke-width="2.5" stroke-linecap="round"\${extra}/>\`;
+  },
+  svg(){
+    const S=this.set(), [y0,y1]=S.y, x=this.x(), b=this.g(), f=v=>v.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="y = \${S.fs} over \${S.gs} in blue\${b===0?\`, with a gap at x = \${this.num(x)}\`:\`, with its tangent at x = \${this.num(x)}, slope \${this.num(this.dy())}\${this.mode?\`, and the slip's line, slope \${this.num(this.wrong())}\`:''}\`}">\`;
+    if(y0<0 && y1>0) out+=\`<line data-k="xaxis" x1="20" y1="\${f(this.PY(0))}" x2="340" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="\${f(this.PX(0))}" y1="12" x2="\${f(this.PX(0))}" y2="188" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(let i=-6;i<=6;i++) if(i!==0) out+=\`<line x1="\${f(this.PX(i/2))}" y1="\${f(this.PY(0)-3)}" x2="\${f(this.PX(i/2))}" y2="\${f(this.PY(0)+3)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const p of [-1]) if(S.g(p)===0) out+=\`<line data-k="\${b===0?'gap-here':'gap'}" x1="\${f(this.PX(p))}" y1="12" x2="\${f(this.PX(p))}" y2="188" stroke="\${b===0?FIG_COL.b:FIG_COL.dim}" stroke-width="\${b===0?2:1}" stroke-dasharray="4 4"/>\`;
+    const segs=[]; let seg=[];
+    for(let i=0;i<=260;i++){ const t=this.D[0]+(this.D[1]-this.D[0])*i/260, g=S.g(t), v=S.f(t)/g;
+      if(Math.abs(g)<1e-9 || v<y0 || v>y1 || (seg.length && Math.sign(g)!==Math.sign(seg.g))){ if(seg.length>1) segs.push(seg); seg=[]; if(Math.abs(g)<1e-9 || v<y0 || v>y1) continue; }
+      seg.push(\`\${f(this.PX(t))},\${f(this.PY(v))}\`); seg.g=g; }
+    if(seg.length>1) segs.push(seg);
+    for(const s of segs) out+=\`<polyline data-k="curve" points="\${s.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    if(b!==0){
+      if(this.mode) out+=this.line(this.wrong(),'slip',FIG_COL.d,' stroke-dasharray="5 4"');
+      out+=this.line(this.dy(),'tan',FIG_COL.c);
+      out+=\`<circle data-k="pt" cx="\${f(this.PX(x))}" cy="\${f(this.PY(this.y()))}" r="5" fill="\${FIG_COL.b}"/>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-quot'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('qoSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Quot.pick(\${i})" aria-label="y = \${s.fs} over \${s.gs}">\${s.btn}</button>\`).join('');
+    document.getElementById('qoModes').innerHTML=this.MODES.map((m,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.mode}" onclick="Quot.setMode(\${i})" aria-label="\${i===0?'Work the slope with the quotient rule':i===1?'Try the slip that swaps the top round':'Try the slip that divides by g, not g²'}">\${m}</button>\`).join('');
+    document.getElementById('qoX').textContent=\`x = \${this.num(this.x())}\`;
+    document.getElementById('qoXLo').disabled=this.k<=0;
+    document.getElementById('qoXHi').disabled=this.k>=this.X.length-1;
+    document.getElementById('qoFig').innerHTML=this.svg()+
+      \`<div class="figcap">The curve is y = f/g, in blue, with a dashed gap where g = 0. The green line is the tangent the quotient rule gives at the gold point, and a slip's line is drawn dashed in red.</div>\`;
+    document.getElementById('qoRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('qoGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE QUOTIENT','every slope divided','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
