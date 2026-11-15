@@ -1,151 +1,151 @@
 {
- "change": "The Product Rule Workshop: two strips and a corner",
+ "change": "The Ladder Workshop: related rates",
  "mutations": [
   {
-   "name": "the mixed field's slope forgets the 2",
+   "name": "the top's speed loses the foot's speed",
    "file": "index.html",
-   "find": "fpw:'2 × 1 = 2', gpw:'1', fp:2, gp:1,",
-   "replace": "fpw:'2 × 1 = 2', gpw:'1', fp:1, gp:1,",
+   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
+   "replace": "  yp(){ return -this.x()/this.y(); },",
    "run": "verify"
   },
   {
-   "name": "the line field is 2x deep",
+   "name": "x and y swap in the rate",
    "file": "index.html",
-   "find": "f:x=>x+1, g:x=>2*x+1},",
-   "replace": "f:x=>x+1, g:x=>2*x},",
+   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
+   "replace": "  yp(){ return -this.y()*this.set().v/this.x(); },",
    "run": "verify"
   },
   {
-   "name": "the corner is left out of the rate",
+   "name": "the top's speed comes out positive",
    "file": "index.html",
-   "find": "rate(){ return (this.side()+this.top()+this.corner())/this.h(); },",
-   "replace": "rate(){ return (this.side()+this.top())/this.h(); },",
+   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
+   "replace": "  yp(){ return this.x()*this.set().v/this.y(); },",
    "run": "verify"
   },
   {
-   "name": "the rule multiplies the slopes",
+   "name": "the height forgets the square root",
    "file": "index.html",
-   "find": "rule(){ const S=this.set(); return S.fp*this.ga()+this.fa()*S.gp; },",
-   "replace": "rule(){ const S=this.set(); return S.fp*S.gp; },",
+   "find": "  y(x=this.x()){ const L=this.set().L; return Math.sqrt(L*L-x*x); },",
+   "replace": "  y(x=this.x()){ const L=this.set().L; return L-x; },",
    "run": "verify"
   },
   {
-   "name": "the top strip uses the new width",
+   "name": "the check uses the foot's old place",
    "file": "index.html",
-   "find": "top(){ return this.fa()*this.dg(); },",
-   "replace": "top(){ return (this.fa()+this.df())*this.dg(); },",
+   "find": "  x2(){ return this.x()+this.set().v*this.DT; },",
+   "replace": "  x2(){ return this.x()+this.DT; },",
    "run": "verify"
   },
   {
-   "name": "h can land on 0",
+   "name": "the 13 m ladder has no whole place",
    "file": "index.html",
-   "find": "H:[1, 0.5, 0.1, 0.01, 0.001],",
-   "replace": "H:[1, 0.5, 0.1, 0.01, 0],",
+   "find": "X:[2,5,8,10,12,12.5], s:3}",
+   "replace": "X:[2,5.5,8,10,11.5,12.5], s:3}",
    "run": "verify"
   },
   {
-   "name": "the gap is not rounded",
+   "name": "a foot can reach the ladder's length",
    "file": "index.html",
-   "find": "gap(){ return Math.round(Math.abs(this.rate()-this.rule())*1e4)/1e4; },",
-   "replace": "gap(){ return Math.abs(this.rate()-this.rule()); },",
+   "find": "X:[1,2,3,4,4.5,4.8], s:4}",
+   "replace": "X:[1,2,3,4,4.5,5], s:4}",
    "run": "verify"
   },
   {
-   "name": "far out reads as close",
+   "name": "an inexact height reads as exact",
    "file": "index.html",
-   "find": "    if(G<=0.01)\n      out.push(`${G===0",
-   "replace": "    if(G<=0.5)\n      out.push(`${G===0",
+   "find": "    const is=(n,d=4)=>(this.exact(n,d)?'= ':'≈ ')+this.num(n,d);\n    const ab=",
+   "replace": "    const is=(n,d=4)=>'= '+this.num(n,d);\n    const ab=",
    "run": "verify"
   },
   {
-   "name": "an inexact total reads as exact",
+   "name": "faster and slower swap",
    "file": "index.html",
-   "find": "${this.exact(s1+s2+c,6)?'':'about '}",
-   "replace": "",
+   "find": "r<1 ? 'slower than' : 'faster than';",
+   "replace": "r<1 ? 'faster than' : 'slower than';",
    "run": "verify"
   },
   {
-   "name": "the corner goal takes the bigger strip",
+   "name": "the slow goal counts any speed",
    "file": "index.html",
-   "find": "ok:K=>K.corner()>Math.min(K.side(), K.top())},",
-   "replace": "ok:K=>K.corner()>Math.max(K.side(), K.top())},",
+   "find": "ok:K=>Math.abs(K.yp())<K.set().v-1e-9},",
+   "replace": "ok:K=>Math.abs(K.yp())<3*K.set().v},",
    "run": "verify"
   },
   {
-   "name": "the even goal counts any field",
+   "name": "the bend goal counts any miss",
    "file": "index.html",
-   "find": "ok:K=>Math.abs(K.side()-K.top())<1e-9}",
-   "replace": "ok:K=>K.side()>0}",
+   "find": "ok:K=>K.miss()>0.1}",
+   "replace": "ok:K=>K.miss()>0}",
    "run": "verify"
   },
   {
-   "name": "the corner is drawn at the field's corner",
+   "name": "the speed bars are not to one scale",
    "file": "index.html",
-   "find": "r(fa,ga,df,dg,FIG_COL.d,.85)",
-   "replace": "r(0,0,df,dg,FIG_COL.d,.85)",
+   "find": "`<rect x=\"215\" y=\"110\" width=\"${tb.toFixed(2)}\"",
+   "replace": "`<rect x=\"215\" y=\"110\" width=\"${(tb/2).toFixed(2)}\"",
    "run": "verify"
   },
   {
-   "name": "the drawing is scaled to the old field",
+   "name": "the ladder is drawn too tall",
    "file": "index.html",
-   "find": "const W=S.f(a+Hmax), D=S.g(a+Hmax), k=Math.min(320/W, 176/D);",
-   "replace": "const W=S.f(a), D=S.g(a), k=Math.min(320/W, 176/D);",
+   "find": "const S=this.set(), L=S.L, x=this.x(), y=this.y(), k=170/L, gx=20, gy=190;",
+   "replace": "const S=this.set(), L=S.L, x=this.x(), y=this.y()*1.2, k=170/L, gx=20, gy=190;",
    "run": "verify"
   },
   {
-   "name": "a new field keeps the old h",
+   "name": "a new ladder keeps the old place",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    const S=this.set();",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    const S=this.set();",
-   "run": "play:product"
+   "find": "pick(i){ this.si=i; this.k=this.set().s; this.touched=true; this.render(); },",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },",
+   "run": "play:ladder"
   },
   {
-   "name": "the caption forgets the corner",
+   "name": "the caption forgets the bars",
    "file": "index.html",
-   "find": ", and red the corner, Δf × Δg.</div>`;",
-   "replace": ".</div>`;",
-   "run": "play:product"
+   "find": " On the right, the blue bar is the foot's speed, ${S.v} m/s, and the red bar the top's, to one scale.</div>`;",
+   "replace": "</div>`;",
+   "run": "play:ladder"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF THE FIELD','every strip and corner read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF THE FIELD','every strip and corner read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:product"
+   "find": "'MASTER OF THE LADDER','every speed read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE LADDER','every speed read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:ladder"
   },
   {
    "name": "the stepper runs past its end",
    "file": "index.html",
-   "find": "document.getElementById('pdHHi').disabled=this.k<=0;",
-   "replace": "document.getElementById('pdHHi').disabled=false;",
-   "run": "play:product"
+   "find": "document.getElementById('ldXLo').disabled=this.k<=0;",
+   "replace": "document.getElementById('ldXLo').disabled=false;",
+   "run": "play:ladder"
   },
   {
-   "name": "the field buttons lose their names",
+   "name": "the ladder buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Product.pick(${i})\" aria-label=\"${s.btn}: ${s.q}\">",
-   "replace": "onclick=\"Product.pick(${i})\">",
-   "run": "play:product"
+   "find": "onclick=\"Ladder.pick(${i})\" aria-label=\"${s.btn}, its foot sliding out at ${s.v} m/s\">",
+   "replace": "onclick=\"Ladder.pick(${i})\">",
+   "run": "play:ladder"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"A field ${this.num(fa)} wide",
-   "replace": "role=\"img\" data-x=\"A field ${this.num(fa)} wide",
-   "run": "play:product"
+   "find": "role=\"img\" aria-label=\"A ${L} m ladder",
+   "replace": "role=\"img\" data-x=\"A ${L} m ladder",
+   "run": "play:ladder"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeProduct\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeProductX\"",
-   "run": "play:product"
+   "find": "<button class=\"btn sm\" id=\"tomeLadder\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeLadderX\"",
+   "run": "play:ladder"
   },
   {
-   "name": "the product rule points to the slope workshop",
+   "name": "related rates points nowhere",
    "file": "index.html",
-   "find": "    Product: [\"🌾 Product Rule Workshop\", ['productRule']],",
-   "replace": "    Product: [\"🌾 Product Rule Workshop\", []],\n    Slope2:  [\"📈 Slope Workshop\", ['productRule']],",
+   "find": "    Ladder:  [\"🪜 Ladder Workshop\", ['relatedRates']],",
+   "replace": "    Ladder:  [\"🪜 Ladder Workshop\", ['relatedRate']],",
    "run": "verify"
   }
  ]
