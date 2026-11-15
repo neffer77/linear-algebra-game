@@ -1,18 +1,17 @@
 {
- "change": "Taylor Workshop: a function rebuilt from powers of x",
+ "change": "Order Matters: two moves of the plane, one after the other",
  "mutations": [
-  {"name": "sin's signs never turn", "file": "index.html", "find": "    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;", "replace": "    if(id==='sin') return k%2 ? 1/s : 0;", "run": "verify"},
-  {"name": "cos's signs start negative", "file": "index.html", "find": "    return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;", "replace": "    return k%2 ? 0 : (k/2%2 ? 1 : -1)/s;", "run": "verify"},
-  {"name": "the factorial stops one short", "file": "index.html", "find": "  fact(k){ let p=1; for(let i=2;i<=k;i++) p*=i; return p; },", "replace": "  fact(k){ let p=1; for(let i=2;i<k;i++) p*=i; return p; },", "run": "verify"},
-  {"name": "terms under 0.005 are hidden", "file": "index.html", "find": "Math.abs(v)>=0.00005);", "replace": "Math.abs(v)>=0.005);", "run": "verify"},
-  {"name": "a rounded total is given with =", "file": "index.html", "find": "      const tot=all ? `= ${this.num(P)}` : `≈ ${neg(+P.toFixed(4))}`;", "replace": "      const tot=`= ${this.num(P)}`;", "run": "verify"},
-  {"name": "a better guess is called worse", "file": "index.html", "find": "Math.abs(this.err())>Math.abs(this.err(this.n-1))+1e-12;", "replace": "Math.abs(this.err())<Math.abs(this.err(this.n-1))-1e-12;", "run": "verify"},
-  {"name": "over and short are swapped", "file": "index.html", "find": "(e>0?'over':'short')+' by '", "replace": "(e<0?'over':'short')+' by '", "run": "verify"},
-  {"name": "x = 0 is not explained", "file": "index.html", "find": "    if(x===0) out.push('At x = 0 every power of x is 0, so P matches the function exactly there, however many terms it has.');\n    else if(n>0", "replace": "    if(n>0", "run": "verify"},
-  {"name": "the workshop missing from the Tome", "file": "index.html", "find": "id=\"tomeTaylor\"", "replace": "id=\"tomeTaylorGone\"", "run": "play:taylor"},
-  {"name": "the workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-taylor') Taylor.render();\n", "replace": "", "run": "play:taylor"},
-  {"name": "the highest power runs past x⁹", "file": "index.html", "find": "  moveN(by){ const v=this.n+by; if(v<0||v>this.NMAX) return; this.n=v;", "replace": "  moveN(by){ const v=this.n+by; if(v<0) return; this.n=v;", "run": "play:taylor"},
-  {"name": "x runs past 3", "file": "index.html", "find": "  moveX(by){ const v=this.xi+by; if(v<0||v>=this.XS.length) return;", "replace": "  moveX(by){ const v=this.xi+by; if(v<0) return;", "run": "play:taylor"},
-  {"name": "the Taylor toast cuts 0.001 at its point", "file": "index.html", "find": "        Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')", "replace": "        Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')", "run": "play:taylor"}
+  {"name": "the pair is multiplied the other way round", "file": "index.html", "find": "  P(){ return this.mul(this.second().m, this.first().m); },", "replace": "  P(){ return this.mul(this.first().m, this.second().m); },", "run": "verify"},
+  {"name": "a product reads row by row", "file": "index.html", "find": "mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],", "replace": "mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*f, a*g+b*h],[c*e+d*f, c*g+d*h]],", "run": "verify"},
+  {"name": "the shear leans the other way", "file": "index.html", "find": "m:[[1,1],[0,1]],", "replace": "m:[[1,0],[1,1]],", "run": "verify"},
+  {"name": "ĵ is followed through the second move with î's column", "file": "index.html", "find": "      out.push(`${nm} goes to ${v(mid)} under the first move, then to ${v(this.app(S.m,mid))} under the second.`);", "replace": "      out.push(`${nm} goes to ${v(mid)} under the first move, then to ${v(this.app(S.m,this.col(F.m,0)))} under the second.`);", "run": "verify"},
+  {"name": "the determinants add", "file": "index.html", "find": "and its determinant is ${par(dF)} × ${par(dS)} = ${neg(D)}", "replace": "and its determinant is ${par(dF)} × ${par(dS)} = ${neg(dF+dS)}", "run": "verify"},
+  {"name": "negative factors go unbracketed", "file": "index.html", "find": "its determinant is ${par(dF)} × ${par(dS)}", "replace": "its determinant is ${neg(dF)} × ${neg(dS)}", "run": "verify"},
+  {"name": "the other order is said to match whenever det does", "file": "index.html", "find": "  same(){ return this.eq(this.P(), this.Q()); },", "replace": "  same(){ return this.det(this.P())===this.det(this.Q()); },", "run": "verify"},
+  {"name": "a half-turn is not named", "file": "index.html", "find": "    else if(this.eq(P,[[-1,0],[0,-1]])) out.push('Every arrow now points the opposite way: together they make a half-turn.');\n", "replace": "", "run": "verify"},
+  {"name": "Order Matters missing from the Tome", "file": "index.html", "find": "id=\"tomeCompose\"", "replace": "id=\"tomeComposeGone\"", "run": "play:compose"},
+  {"name": "Order Matters is not drawn when opened", "file": "index.html", "find": "    if(id==='s-compose') Compose.render();\n", "replace": "", "run": "play:compose"},
+  {"name": "goals are counted before anything is pressed", "file": "index.html", "find": "    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('cmGoals')", "replace": "    for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('cmGoals')", "run": "play:compose"},
+  {"name": "the other order is not drawn", "file": "index.html", "find": "ghost:same?null:this.Q(), ticks:true,", "replace": "ghost:null, ticks:true,", "run": "play:compose"}
  ]
 }

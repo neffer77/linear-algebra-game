@@ -746,6 +746,8 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .wsModes{display:flex;gap:8px;margin:0 0 4px}
 .wsModes button{flex:1;margin:0}
 .wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.wsModes.wrap{flex-wrap:wrap}
+.wsModes.wrap button{flex:1 1 28%;min-width:0}
 .wsGoal{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px;border-top:1px solid rgba(140,125,190,.15)}
 .wsGoal i{font-style:normal;width:20px;flex:none;text-align:center}
 .wsGoal.done{color:var(--gold)}
@@ -1005,6 +1007,23 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="egGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ ORDER MATTERS ============ -->
+  <div class="screen" id="s-compose">
+    <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
+    <div class="panel">
+      <div class="small" style="margin-bottom:4px">First</div>
+      <div id="cmFirst" class="wsModes wrap" role="group" aria-label="First move"></div>
+      <div class="small" style="margin:8px 0 4px">Then</div>
+      <div id="cmThen" class="wsModes wrap" role="group" aria-label="Second move"></div>
+      <div id="cmFig"></div>
+      <div id="cmRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="cmGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -12227,6 +12246,7 @@ const UI = {
     if(id==='s-taylor') Taylor.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
+    if(id==='s-compose') Compose.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12846,6 +12866,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">👑 Eigenvector Hunt</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line.</div>
          <button class="btn sm" id="tomeEig" style="width:auto;margin-top:8px" onclick="Eigen.open()">Open the eigenvector hunt</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands.</div>
+         <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -14113,6 +14138,97 @@ const Eigen = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('EIGEN HUNTER','every kept direction found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/^On the \\w+ matrix, (\\w)/,(m,c)=>c.toUpperCase()).replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ ORDER MATTERS ============
+   Two moves of the plane, one after the other. The readout follows î and ĵ
+   through the first move and then the second, so the matrix for both is
+   built column by column from where they land, never from a recipe to
+   remember; the other order is drawn dashed beside it, so the player sees
+   for themselves that it usually lands somewhere else. */
+const Compose = {
+  MOVES:[
+    {id:'turn',    btn:'↺ Turn',    m:[[0,-1],[1,0]], does:'turn a quarter-turn anticlockwise', is:'quarter-turn anticlockwise'},
+    {id:'flip',    btn:'⇅ Flip',    m:[[1,0],[0,-1]], does:'flip over the x-axis',              is:'flip over the x-axis'},
+    {id:'swap',    btn:'⤢ Swap',    m:[[0,1],[1,0]],  does:'flip over the line y = x',          is:'flip over the line y = x'},
+    {id:'shear',   btn:'▱ Shear',   m:[[1,1],[0,1]],  does:'shear to the right',                is:'shear to the right'},
+    {id:'stretch', btn:'↔ Stretch', m:[[2,0],[0,1]],  does:'stretch to twice as wide',          is:'stretch to twice as wide'}
+  ],
+  fi:3, si:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'order', t:'Find two moves whose order matters: the other way round lands somewhere else.',
+     ok:C=>!C.same()},
+    {id:'same',  t:'Find two different moves whose order makes no difference.',
+     ok:C=>C.fi!==C.si && C.same()},
+    {id:'undo',  t:'Find a move that undoes itself: done twice, every arrow is back.',
+     ok:C=>C.eq(C.P(),[[1,0],[0,1]])},
+    {id:'half',  t:'Turn the plane right round with two moves.',
+     ok:C=>C.eq(C.P(),[[-1,0],[0,-1]])},
+    {id:'turn',  t:'Make a quarter-turn out of two flips.',
+     ok:C=>C.flipper(C.fi) && C.flipper(C.si) && (C.eq(C.P(),[[0,-1],[1,0]]) || C.eq(C.P(),[[0,1],[-1,0]]))},
+    {id:'det',   t:'Make every area twice as big and flip the plane over: det = −2.',
+     ok:C=>C.det(C.P())===-2}
+  ],
+  first(){ return this.MOVES[this.fi]; },
+  second(){ return this.MOVES[this.si]; },
+  mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],
+  app:([[a,b],[c,d]],[x,y])=>[a*x+b*y, c*x+d*y],
+  det:([[a,b],[c,d]])=>a*d-b*c,
+  eq:(A,B)=>A[0][0]===B[0][0]&&A[0][1]===B[0][1]&&A[1][0]===B[1][0]&&A[1][1]===B[1][1],
+  col:(M,j)=>[M[0][j],M[1][j]],
+  // both moves together: the second written on the left, since it acts last
+  P(){ return this.mul(this.second().m, this.first().m); },
+  Q(){ return this.mul(this.first().m, this.second().m); },
+  same(){ return this.eq(this.P(), this.Q()); },
+  flipper(i){ return this.MOVES[i].id==='flip' || this.MOVES[i].id==='swap'; },
+  v:([x,y])=>\`⟨\${neg(x)}, \${neg(y)}⟩\`,
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const F=this.first(), S=this.second(), P=this.P(), Q=this.Q(), v=this.v;
+    const out=[\`First \${F.does}, then \${S.does}.\`];
+    for(const [j,nm] of [[0,'î'],[1,'ĵ']]){
+      const mid=this.col(F.m,j);
+      out.push(\`\${nm} goes to \${v(mid)} under the first move, then to \${v(this.app(S.m,mid))} under the second.\`);
+    }
+    const dF=this.det(F.m), dS=this.det(S.m), D=this.det(P);
+    out.push(\`So both moves together are the matrix with columns \${v(this.col(P,0))} and \${v(this.col(P,1))}, and its determinant is \${par(dF)} × \${par(dS)} = \${neg(D)}: the two determinants multiply. \${detMeans(D)}\`);
+    out.push(this.fi===this.si
+      ? 'Both moves are the same, so there is no other order to try.'
+      : this.same()
+      ? 'The other way round, î and ĵ land in the same places: for these two moves the order makes no difference.'
+      : \`The other way round, î lands on \${v(this.col(Q,0))} and ĵ on \${v(this.col(Q,1))}, drawn dashed: the order matters.\`);
+    if(this.eq(P,[[1,0],[0,1]])) out.push('Every arrow is back where it began: the second move undoes the first.');
+    else if(this.eq(P,[[-1,0],[0,-1]])) out.push('Every arrow now points the opposite way: together they make a half-turn.');
+    else { const m=this.MOVES.find(m=>this.eq(m.m,P)); if(m) out.push(\`Together they make a single move: \${m.is}.\`); }
+    return out;
+  },
+  open(){ UI.go('s-compose'); },
+  pick(which, i){ if(which==='first') this.fi=i; else this.si=i; this.touched=true; this.render(); },
+  render(){
+    const row=(which, sel)=>this.MOVES.map((m,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===sel}" aria-label="\${which==='first'?'First':'Then'}: \${m.is}" onclick="Compose.pick('\${which}',\${i})">\${m.btn}</button>\`).join('');
+    document.getElementById('cmFirst').innerHTML=row('first', this.fi);
+    document.getElementById('cmThen').innerHTML=row('then', this.si);
+    const F=this.first(), S=this.second(), same=this.same();
+    Figure.render({kind:'grid', m:this.P(), ghost:same?null:this.Q(), ticks:true,
+      caption:this.fi===this.si ? \`The same move twice: \${F.btn.slice(2).toLowerCase()}, then \${S.btn.slice(2).toLowerCase()} again.\`
+        : same ? \`First \${F.btn.slice(2).toLowerCase()}, then \${S.btn.slice(2).toLowerCase()}: the other order lands in the same place.\`
+        : \`Gold: first \${F.btn.slice(2).toLowerCase()}, then \${S.btn.slice(2).toLowerCase()}. Dashed: the other way round.\`},
+      document.getElementById('cmFig'));
+    document.getElementById('cmRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('cmGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ORDER KEEPER','every pair placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };

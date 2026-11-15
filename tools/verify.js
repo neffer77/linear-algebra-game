@@ -50,6 +50,7 @@ function loadGame() {
     // The area workshop, lifted the same way: after Slope's, so its CURVES is found from Area on.
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
+    ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
@@ -65,7 +66,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1809,6 +1810,78 @@ const taylorNotes = (() => {
   return { n, goals: T.GOALS.length };
 })();
 
+/* Every pair in Order Matters: each move is worked here as what it does to
+   a point (a quarter-turn sends (x, y) to (−y, x), and so on), never from
+   its matrix, and each line the player reads is read back: where î and ĵ go
+   after one move and then both, the columns of the pair, the determinant as
+   the product of the two and as the signed area of where the square lands,
+   whether the other order lands in the same place, and what the pair makes.
+   Each goal must be findable, and only flip with stretch may commute. */
+const composeNotes = (() => {
+  const C = Compose, found = {}, num = s => +String(s).replace(/−/g, '-');
+  const MAP = {
+    turn: ([x, y]) => [-y, x], flip: ([x, y]) => [x, -y], swap: ([x, y]) => [y, x],
+    shear: ([x, y]) => [x + y, y], stretch: ([x, y]) => [2 * x, y]
+  };
+  const vec = s => { const m = /^⟨(−?\d+), (−?\d+)⟩$/.exec(s); return m && [num(m[1]), num(m[2])]; };
+  const same = (u, v) => u && v && u[0] === v[0] && u[1] === v[1];
+  const area = (p, q) => p[0] * q[1] - p[1] * q[0];
+  let n = 0;
+  if (Object.keys(MAP).join() !== C.MOVES.map(m => m.id).join()) fail('compose', 'moves', 'the moves are not the five checked here');
+  for (const m of C.MOVES) {
+    if (!same([m.m[0][0], m.m[1][0]], MAP[m.id]([1, 0])) || !same([m.m[0][1], m.m[1][1]], MAP[m.id]([0, 1])))
+      fail('compose', m.id, 'the matrix is not where the move sends î and ĵ');
+  }
+  C.MOVES.forEach((F, fi) => C.MOVES.forEach((S, si) => {
+    C.fi = fi; C.si = si; n++;
+    const key = `${F.id}>${S.id}`, L = C.working();
+    const go = p => MAP[S.id](MAP[F.id](p)), back = p => MAP[F.id](MAP[S.id](p));
+    const I = go([1, 0]), J = go([0, 1]), I2 = back([1, 0]), J2 = back([0, 1]);
+    if (L[0] !== `First ${F.does}, then ${S.does}.`) fail('compose', key, `the first line reads: ${L[0]}`);
+    for (const [k, nm, p] of [[1, 'î', [1, 0]], [2, 'ĵ', [0, 1]]]) {
+      const m = new RegExp(`^${nm} goes to (⟨[^⟩]+⟩) under the first move, then to (⟨[^⟩]+⟩) under the second\\.$`).exec(L[k]);
+      if (!m) { fail('compose', key, `the ${nm} line does not read: ${L[k]}`); continue; }
+      if (!same(vec(m[1]), MAP[F.id](p))) fail('compose', key, `${nm} after the first move is ${m[1]}`);
+      if (!same(vec(m[2]), go(p))) fail('compose', key, `${nm} after both moves is ${m[2]}`);
+    }
+    const cm = /^So both moves together are the matrix with columns (⟨[^⟩]+⟩) and (⟨[^⟩]+⟩), and its determinant is (\(?−?\d+\)?) × (\(?−?\d+\)?) = (−?\d+): the two determinants multiply\. (.*)$/.exec(L[3]);
+    if (!cm) fail('compose', key, `the matrix line does not read: ${L[3]}`);
+    else {
+      if (!same(vec(cm[1]), I) || !same(vec(cm[2]), J)) fail('compose', key, 'the columns of the pair are wrong');
+      const d = x => num(x.replace(/[()]/g, ''));
+      const dF = area(MAP[F.id]([1, 0]), MAP[F.id]([0, 1])), dS = area(MAP[S.id]([1, 0]), MAP[S.id]([0, 1]));
+      if (d(cm[3]) !== dF || d(cm[4]) !== dS) fail('compose', key, 'the two determinants are wrong, or in the wrong order');
+      if (/^\(/.test(cm[3]) !== (dF < 0) || /^\(/.test(cm[4]) !== (dS < 0)) fail('compose', key, 'a negative factor is not bracketed');
+      if (num(cm[5]) !== area(I, J)) fail('compose', key, `det is printed as ${cm[5]}, the square's signed area is ${area(I, J)}`);
+      const D = area(I, J), dm = /^So the unit square becomes a shape of area (\d+), (flipped over|the same way round)/.exec(cm[6]);
+      if (!dm || +dm[1] !== Math.abs(D) || (dm[2] === 'flipped over') !== (D < 0)) fail('compose', key, `the determinant is not explained: ${cm[6]}`);
+    }
+    const commute = same(I, I2) && same(J, J2);
+    if (C.same() !== commute) fail('compose', key, 'whether the order matters is judged wrongly');
+    if (fi === si) { if (L[4] !== 'Both moves are the same, so there is no other order to try.') fail('compose', key, 'a move done twice is not said so'); }
+    else if (commute) { if (!/^The other way round, î and ĵ land in the same places/.test(L[4])) fail('compose', key, 'the order is said to matter when it does not'); }
+    else {
+      const om = /^The other way round, î lands on (⟨[^⟩]+⟩) and ĵ on (⟨[^⟩]+⟩), drawn dashed: the order matters\.$/.exec(L[4]);
+      if (!om || !same(vec(om[1]), I2) || !same(vec(om[2]), J2)) fail('compose', key, `the other order is wrong: ${L[4]}`);
+    }
+    const P = [[I[0], J[0]], [I[1], J[1]]];
+    const isM = M => same(I, [M[0][0], M[1][0]]) && same(J, [M[0][1], M[1][1]]);
+    const want = isM([[1, 0], [0, 1]]) ? 'Every arrow is back where it began: the second move undoes the first.'
+      : isM([[-1, 0], [0, -1]]) ? 'Every arrow now points the opposite way: together they make a half-turn.'
+      : (m => m ? `Together they make a single move: ${m.is}.` : undefined)(C.MOVES.find(m => isM(m.m)));
+    if (L[5] !== want) fail('compose', key, `the closing note should be ${want}, it is ${L[5]}`);
+    if (L.length > 6) fail('compose', key, 'more than one closing note');
+    if (!C.eq(C.P(), P)) fail('compose', key, 'the pair\'s matrix is not where î and ĵ land');
+    for (const g of C.GOALS) if (g.ok(C)) (found[g.id] = found[g.id] || []).push(key);
+  }));
+  for (const g of C.GOALS) if (!found[g.id]) fail('compose', g.id, 'this goal cannot be found');
+  if ((found.same || []).join() !== 'flip>stretch,stretch>flip') fail('compose', 'same', `only flip and stretch commute, not ${found.same}`);
+  if ((found.half || []).join() !== 'turn>turn') fail('compose', 'half', 'only two quarter-turns make a half-turn');
+  C.fi = 3; C.si = 0;
+  if (C.touched !== false) fail('compose', 'start', 'the workshop opens as if already turned');
+  return { n, goals: C.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1856,6 +1929,7 @@ console.log(`  dot product pairs          ${pad(dotNotes.n.toLocaleString(), 10)
 console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10)}  (Riemann sums, working, gap, ${areaNotes.goals} goals findable)`);
 console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
 console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
+console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 
