@@ -80,6 +80,7 @@ function loadGame() {
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
+    ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -98,7 +99,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2693,6 +2694,145 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The cross product workshop: every u, every v, both orders.
+   Each product is worked out here by the sign rule on the slots, never from
+   the workshop's own sum; every product written in a worked line is
+   evaluated as written and must use the slots it names; the square-to-both
+   checks, the length and the target's general form are recomputed; every
+   sentence's condition is decided independently; and the drawing is read
+   back: each arrow's tip, the parallelogram and the drop lines all at the
+   one 3D projection of the points they stand for. */
+const crossNotes = (() => {
+  const W = Cross;
+  const num = t => +t.replace(/−/g, '-'), neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const SUB = ['₁', '₂', '₃'];
+  /* the cross product by the sign rule: entry i is the sum over j, k of eps(i,j,k)·a_j·b_k */
+  const eps = (i, j, k) => (i === j || j === k || i === k) ? 0 : ((j - i + 3) % 3 === 1 ? 1 : -1);
+  const cr = (a, b) => [0, 1, 2].map(i => { let t = 0; for (let j = 0; j < 3; j++) for (let k = 0; k < 3; k++) t += eps(i, j, k) * a[j] * b[k]; return t === 0 ? 0 : t; });
+  const vec = t => t.replace(/[⟨⟩]/g, '').split(', ').map(num);
+  if (W.SETS.map(S => S.id).join() !== 'floor,tilt,aim') fail('cross', 'sets', W.SETS.map(S => S.id).join());
+  if (W.LO !== -3 || W.HI !== 3) fail('cross', 'range', `v's parts should run from −3 to 3, not ${W.LO} to ${W.HI}`);
+  if (W.SETS[0].u.join() !== '2,0,0' || W.SETS[0].u[2] !== 0) fail('cross', 'floor', 'the floor u should be ⟨2, 0, 0⟩');
+  const reset = () => { W.touched = false; W.si = 0; W.v = W.SETS[0].v.slice(); W.sw = false; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('cross', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.v = [3, 3, 3]; W.sw = true; W.pick(si);
+    if (W.v.join() !== S.v.join() || W.sw) fail('cross', S.id, 'picking a u does not start v and the order again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('cross', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  W.SETS.forEach((S, si) => {
+    const R3 = []; for (let x = W.LO; x <= W.HI; x++) for (let y = W.LO; y <= W.HI; y++) for (let z = W.LO; z <= W.HI; z++) R3.push([x, y, z]);
+    for (const v of R3) for (const sw of [false, true]) {
+      reset(); W.si = si; W.v = v.slice(); W.sw = sw; W.touched = true; n++;
+      const key = `${S.id}, v = ${v.join(',')}${sw ? ', swapped' : ''}`;
+      const u = S.u, [a, b, A, B] = sw ? [v, u, 'v', 'u'] : [u, v, 'u', 'v'], w = cr(a, b), P = `${A} × ${B}`;
+      const sq = w.reduce((t, c) => t + c * c, 0), vz = v.every(c => c === 0);
+      if (W.w().join() !== w.join()) fail('cross', key, `${P} is ${w.join()}, not ${W.w().join()}`);
+      const got = W.working(), txt = got.join('\n');
+      if (!got[0].includes(`u = ⟨${u.map(neg).join(', ')}⟩ and v = ⟨${v.map(neg).join(', ')}⟩`) || !got[0].includes(sw ? 'so the green arrow is v × u.' : 'and the green arrow is u × v.')) fail('cross', key, `the opening names the wrong arrows: ${got[0]}`);
+      ['First', 'Second', 'Third'].forEach((nm, k) => {
+        const m = got[1 + k].match(/^(\w+) part, from the other two slots: ([uv])([₁₂₃])([uv])([₁₂₃]) − ([uv])([₁₂₃])([uv])([₁₂₃]) = \((−?\d+)\)\((−?\d+)\) − \((−?\d+)\)\((−?\d+)\) = (−?\d+)\.$/);
+        if (!m || m[1] !== nm) { fail('cross', key, `no ${nm} part: ${got[1 + k]}`); return; }
+        const i = (k + 1) % 3, j = (k + 2) % 3;
+        if (m[2] !== A || m[4] !== B || m[6] !== A || m[8] !== B || m[3] !== SUB[i] || m[5] !== SUB[j] || m[7] !== SUB[j] || m[9] !== SUB[i]) fail('cross', key, `the ${nm} part uses the wrong slots: ${got[1 + k]}`);
+        if (num(m[10]) !== a[i] || num(m[11]) !== b[j] || num(m[12]) !== a[j] || num(m[13]) !== b[i]) fail('cross', key, `the ${nm} part puts in the wrong numbers: ${got[1 + k]}`);
+        if (num(m[10]) * num(m[11]) - num(m[12]) * num(m[13]) !== num(m[14]) || num(m[14]) !== w[k]) fail('cross', key, `the ${nm} part works out to ${w[k]}: ${got[1 + k]}`);
+      });
+      const so = got[4].match(/^So (. × .) = (⟨[^⟩]+⟩)\.$/);
+      if (!so || so[1] !== P || vec(so[2]).join() !== w.join()) fail('cross', key, `the sum line is wrong: ${got[4]}`);
+      const fl = got.find(l => l.startsWith('With u ='));
+      if (!!fl !== !!S.aim) fail('cross', key, 'the general form shows on the wrong set');
+      if (fl) {
+        const fm = fl.match(/comes out as (⟨[^⟩]+⟩)\. The target is (⟨[^⟩]+⟩), and this (is it|is not it yet)\.$/);
+        if (!fm) fail('cross', key, fl);
+        else {
+          const ev = fm[1].replace(/[⟨⟩]/g, '').split(', ').map(t => Function(`return (${t.replace(/−/g, '-').replace(/v₁/g, `(${v[0]})`).replace(/v₂/g, `(${v[1]})`).replace(/v₃/g, `(${v[2]})`)});`)());
+          if (ev.map(c => c === 0 ? 0 : c).join() !== w.join()) fail('cross', key, `the general form gives ${ev.join()}, not ${w.join()}: ${fl}`);
+          if (vec(fm[2]).join() !== S.aim.join() || cr(u, [0, 1, -2]).join() !== S.aim.join()) fail('cross', key, 'the target is not one u × v can reach');
+          if ((fm[3] === 'is it') !== (w.join() === S.aim.join())) fail('cross', key, 'the target is called hit wrongly');
+        }
+      }
+      if (got.some(l => l.startsWith('v is the zero vector')) !== vz) fail('cross', key, 'the zero-v sentence shows at the wrong time');
+      const zl = got.find(l => /is the zero vector: v = /.test(l));
+      if (!!zl !== (sq === 0 && !vz)) fail('cross', key, 'the along-u sentence shows at the wrong time');
+      if (zl) { const k = num(zl.match(/v = (−?[\d.]+)·u/)[1]); if (v.join() !== u.map(c => k * c === 0 ? 0 : k * c).join()) fail('cross', key, `v is not ${k}·u: ${zl}`); }
+      const dl = got.find(l => l.startsWith('It is square to both'));
+      if (!!dl !== (sq > 0)) fail('cross', key, 'the square-to-both sentence shows at the wrong time');
+      if (dl) {
+        const parts = [...dl.matchAll(/([uv]) · \((. × .)\) = \((−?\d+)\)\((−?\d+)\) \+ \((−?\d+)\)\((−?\d+)\) \+ \((−?\d+)\)\((−?\d+)\) = (−?\d+)/g)];
+        if (parts.length !== 2) fail('cross', key, dl);
+        parts.forEach(m => {
+          const p = m[1] === 'u' ? u : v, t = [3, 5, 7].map(o => num(m[o])), q = [4, 6, 8].map(o => num(m[o]));
+          if (m[2] !== P || t.join() !== p.join() || q.join() !== w.join()) fail('cross', key, `the ${m[1]} check uses the wrong numbers: ${dl}`);
+          if (t[0] * q[0] + t[1] * q[1] + t[2] * q[2] !== num(m[9]) || num(m[9]) !== 0) fail('cross', key, `the ${m[1]} check does not come to 0: ${dl}`);
+        });
+      }
+      if (/points straight (up|down) the z-axis/.test(txt) !== (sq > 0 && w[0] === 0 && w[1] === 0)) fail('cross', key, 'the straight-up sentence shows at the wrong time');
+      if (/points straight up/.test(txt) && !(w[2] > 0 && u[2] === 0 && v[2] === 0)) fail('cross', key, 'u and v are not both in the floor');
+      const ll = got.find(l => l.startsWith('Its length'));
+      if (!!ll !== (sq > 0)) fail('cross', key, 'the length sentence shows at the wrong time');
+      if (ll) {
+        const m = ll.match(/^Its length, √\((.+)\) = √(\d+) ([=≈]) ([\d.]+), is the area of the shaded parallelogram that u and v span\.$/);
+        if (!m) fail('cross', key, ll);
+        else {
+          const terms = m[1].split(' + ').map(t => num(t.replace(/[()²]/g, '')));
+          if (m[1].split(' + ').some(t => /^−/.test(t))) fail('cross', key, `a negative part is squared without brackets, which reads as minus a square: ${ll}`);
+          if (terms.join() !== w.join() || +m[2] !== sq) fail('cross', key, `the length sums the wrong squares: ${ll}`);
+          const L = Math.sqrt(sq), area = Math.hypot(...cr(u, v));
+          if (Math.abs(+m[4] - L) > 5.0001e-5 || (m[3] === '=') !== Number.isInteger(L) || Math.abs(area - L) > 1e-9) fail('cross', key, `the length is ${L}: ${ll}`);
+          const ang = Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1] + u[2] * v[2]) / (Math.hypot(...u) * Math.hypot(...v)))));
+          if (Math.abs(Math.hypot(...u) * Math.hypot(...v) * Math.sin(ang) - L) > 1e-6) fail('cross', key, 'the length is not ‖u‖‖v‖ sin θ');
+        }
+      }
+      const tl = got.find(l => l.startsWith('Swapping the order'));
+      if (!!tl !== (sw && sq > 0)) fail('cross', key, 'the swap sentence shows at the wrong time');
+      if (tl && vec(tl.match(/u × v = (⟨[^⟩]+⟩)\.$/)[1]).join() !== cr(u, v).join()) fail('cross', key, `u × v is ${cr(u, v).join()}: ${tl}`);
+      // the drawing
+      const svg = W.svg(), iso = p => [-0.5 * p[0] + 0.95 * p[1], 0.25 * p[0] - 0.1 * p[1] - p[2]];
+      const R = Math.max(2, ...u.map(Math.abs), ...v.map(Math.abs), ...w.map(Math.abs));
+      const xa = svg.match(/data-k="xaxis" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"/);
+      if (!xa) { fail('cross', key, 'no x-axis'); continue; }
+      const ya = svg.match(/data-k="yaxis" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"/);
+      const O = [(+xa[1] + +xa[3]) / 2, (+xa[2] + +xa[4]) / 2], sc = ya ? (+ya[3] - +ya[1]) / (2 * R * 0.95) : 0;
+      const at = p => [O[0] + iso(p)[0] * sc, O[1] + iso(p)[1] * sc], near = (q, p) => Math.abs(q[0] - p[0]) < 0.02 && Math.abs(q[1] - p[1]) < 0.02;
+      for (const [k, e] of [['x', [R, 0, 0]], ['y', [0, R, 0]], ['z', [0, 0, R]]]) { const m = svg.match(new RegExp(`data-k="${k}axis" x1="([\\d.]+)" y1="([\\d.]+)" x2="([\\d.]+)" y2="([\\d.]+)"`));
+        if (!m || !near([+m[3], +m[4]], at(e)) || !near([+m[1], +m[2]], at(e.map(c => -c)))) fail('cross', key, `the ${k}-axis is not drawn through the same origin at the same scale`); }
+      for (const p of [u, v, w]) if (p.some(c => c !== 0) && Math.hypot(...iso(p)) * sc < 8) fail('cross', key, `the arrow to ${p.join(',')} is drawn nearly end on, hidden at the origin`);
+      const head = k => { const m = svg.match(new RegExp(`data-k="${k}-head" points="([\\d.]+),([\\d.]+)`)); return m && [+m[1], +m[2]]; };
+      for (const [k, p] of [['u', u], ['v', v]]) { const h = head(k), s2 = p.some(c => c !== 0);
+        if (!!h !== s2 || (h && !near(h, at(p)))) fail('cross', key, `${k}'s tip is not at ${p.join(',')}`); }
+      const hw = head('w');
+      if (sq > 0 ? !(hw && near(hw, at(w))) : (hw || !/data-k="zero"/.test(svg))) fail('cross', key, `the green tip is not at ${w.join(',')}`);
+      const ar = svg.match(/data-k="area" points="([^"]+)"/);
+      if (!!ar !== (sq > 0)) fail('cross', key, 'the parallelogram is shaded at the wrong time');
+      if (ar) { const pts = ar[1].split(' ').map(t => t.split(',').map(Number)), want = [[0, 0, 0], u, u.map((c, i) => c + v[i]), v];
+        if (pts.length !== 4 || pts.some((q, i) => !near(q, at(want[i])))) fail('cross', key, 'the parallelogram is not the one u and v span'); }
+      for (const [k, p] of [['u', u], ['v', v], ['w', w]]) {
+        const m = svg.match(new RegExp(`data-k="drop-${k}" x1="([\\d.]+)" y1="([\\d.]+)" x2="([\\d.]+)" y2="([\\d.]+)"`));
+        const want = p[2] !== 0 && p.some(c => c !== 0);
+        if (!!m !== want || (m && (!near([+m[1], +m[2]], at(p)) || !near([+m[3], +m[4]], at([p[0], p[1], 0]))))) fail('cross', key, `${k}'s drop line is wrong`);
+      }
+      for (const m of svg.matchAll(/ (?:x1|x2|cx)="(-?[\d.]+)"| (?:y1|y2|cy)="(-?[\d.]+)"/g)) {
+        if (m[1] !== undefined && (+m[1] < 0 || +m[1] > 360)) fail('cross', key, `something is drawn off the side at x = ${m[1]}`);
+        if (m[2] !== undefined && (+m[2] < 0 || +m[2] > 204)) fail('cross', key, `something is drawn off the top or bottom at y = ${m[2]}`);
+      }
+      const meant = { up: si === 0 && sq > 0 && w[0] === 0 && w[1] === 0 && w[2] > 0, area: si === 0 && sq === 36,
+        zero: si === 1 && !vz && sq === 0, aim: si === 2 && w.join() === '2,2,1', flip: sw && sq > 0 };
+      for (const g of W.GOALS) { if (!!g.ok(W) !== meant[g.id]) fail('cross', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+    }
+    for (let i = 0; i < 3; i++) {
+      reset(); W.si = si; W.v = [0, 0, 0];
+      for (let t = 0; t < 9; t++) W.moveV(i, 1);
+      if (W.v[i] !== W.HI || W.v.some((c, j) => j !== i && c !== 0)) fail('cross', S.id, `part ${i + 1} of v does not stop at 3, or moves another part`);
+      for (let t = 0; t < 9; t++) W.moveV(i, -1);
+      if (W.v[i] !== W.LO) fail('cross', S.id, `part ${i + 1} of v does not stop at −3`);
+    }
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('cross', g.id, 'this goal cannot be found');
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The horizon workshop: every fraction, every stop.
    Where each fraction heads is worked out from the powers alone, never from
    the workshop's own sums; every worked line is evaluated as written and must
@@ -4898,6 +5038,7 @@ console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
+console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
