@@ -754,6 +754,19 @@ The game is built so that losing teaches you as much as winning.
   points, six goals. `npm test` sets every line on every set, 351 states, and checks each
   working against its own arithmetic, that each set has one best line through its average
   point, and that every goal can be found.
+- **🏰 Two Castles Workshop** — a hundred knights live in two castles and ride between
+  them every night by a fixed rule, so a night is a 2×2 matrix M times the split and n
+  nights are Mⁿ. Set how many start in Castle A (0 to 100 in fives) and run up to ten
+  nights; the readout works each night as what A keeps and what it gains, lists the split
+  night by night, and gives A's gap from the steady split as the starting gap times the
+  matrix's other eigenvalue to the nth. On Drift the gap shrinks to 0.6 of itself each
+  night and settles on 75 from above or below, while starting at 75 changes nothing,
+  which the readout names as the eigenvector with λ = 1; on Even one night is enough
+  (λ = 0); on Swap the split flips for ever (λ = −1) unless it starts at 50. Three rules,
+  six goals. `npm test` runs every rule, start and night, 693 states, works each split by
+  multiplying by the matrix, checks each steady split is left alone and each other
+  eigenvalue is the trace less 1, checks every line of the readout, and checks that every
+  goal can be found.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -918,7 +931,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Forty-nine suites, about 2,250 checks, about a minute:
+loop only exists once the page is running. Fifty suites, about 2,300 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -962,6 +975,7 @@ loop only exists once the page is running. Forty-nine suites, about 2,250 checks
 | `fit` | the Tome opens the best fit workshop on the line-up with y = 0.5x; the readout names the line, works each miss with bracketed negatives, adds the misses and their squares and gives the total one step either way; the figure draws a ring per point, the line and an arrow per miss; y = x misses every point by 1 and y = x + 1 runs through them all; on the scatter y = 0.5x + 2 is the least-squares line through (0, 2), and y = x + 2 has misses adding to 0 yet is beaten; with the far point y = −1 pays 25 against the best line's 10, and y = x is best and tilted by the far point, finishing all six; the steppers stop at their ends; every button is named; it fits a phone; nothing is saved |
 | `newton` | the Tome opens the Newton's method workshop on x² − 2 at x₀ = 1 with no steps; the readout names f, f′ and the step rule and says where the first tangent meets the axis; one step is worked from f and f′, reads 1 step and jumps past √2, which it says and explains; three steps reach √2 to four places, writing ≈ for rounded numbers; x₀ = 0 has a flat tangent, no next step and the step button off; on x³ − 2x + 2 the steps from 0 go round 0 and 1 for ever, and from −1.5 they reach its root; on x² − 4x + 3, x₀ = 3 is a root already and does not count, then the roots 1 and 3 are both run down, finishing all six; the steppers stop at their ends; every button is named; it fits a phone; nothing is saved |
 | `chainrule` | the Tome opens the chain rule workshop on (3x − 1)² at x = 1; the readout names both links, works u = 2 and y = 4, says u moves 3 times as fast as x and y 4 times as fast as u, multiplies them to 12 and checks it with a nudge from 0.999 to 1.001; at x = 0, y moves the other way, with negatives bracketed; the slip f′(x) × g′(x) is caught out by the nudge and its line cuts across the tangent, and at x = 0.5 it is right only by luck, which it says; on (x² − 1)³, g′(0) = 0 and f′ at x = 1 each stop y, and at x = 2 y moves 108 times as fast as x, finishing all six; the stepper stops at both ends; every button is named; it fits a phone; nothing is saved |
+| `castles` | the Tome opens the two castles workshop on Drift with all 100 knights in Castle A; the readout states the rule, writes it as a matrix and says the steady split has 75 in A; the figure draws the steady line and a point per night; one night is worked as what A keeps and gains, and the gap shrinks by 0.6; seven nights list the split and bring A within 1 of 75, writing about for rounded numbers; from 75 nothing changes and the readout names the eigenvector with λ = 1; from 55 it closes in from below; Even reaches 50 in one night with the nights kept from before; Swap flips 55 and 45, and from 50 changes nothing, finishing all six; the steppers stop at their ends; every button is named; it fits a phone; nothing is saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |

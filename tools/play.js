@@ -59,6 +59,7 @@ const SUITES = [
   require('./play/fit'),         // the line that misses least
   require('./play/newton'),      // a tangent's road to a root
   require('./play/chainrule'),   // why the slopes of two links multiply
+  require('./play/castles'),     // the split a matrix leaves alone
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

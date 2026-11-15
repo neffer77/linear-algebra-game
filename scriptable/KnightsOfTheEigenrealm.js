@@ -1201,6 +1201,28 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TWO CASTLES WORKSHOP ============ -->
+  <div class="screen" id="s-castles">
+    <div class="panel"><h2>🏰 Two Castles Workshop</h2><div class="sub">A hundred knights live in two castles, and each night some ride from one to the other by a fixed rule. A night is a matrix times the split, so many nights are a power of that matrix. Run the nights and watch the split settle on the one split the matrix leaves alone: its eigenvector with λ = 1.</div></div>
+    <div class="panel">
+      <div id="csRules" class="wsModes" role="group" aria-label="The rule for each night"></div>
+      <div id="csFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+        <div class="wsCell"><button id="csALo" onclick="Castles.moveA(-1)" aria-label="Start with 5 fewer knights in Castle A">−</button>
+          <b id="csA" style="font-size:15px;min-width:0"></b>
+          <button id="csAHi" onclick="Castles.moveA(1)" aria-label="Start with 5 more knights in Castle A">+</button></div>
+        <div class="wsCell"><button id="csNLo" onclick="Castles.moveN(-1)" aria-label="Take back a night">−</button>
+          <b id="csN" style="font-size:15px;min-width:0"></b>
+          <button id="csNHi" onclick="Castles.moveN(1)" aria-label="Run another night">+</button></div>
+      </div>
+      <div id="csRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="csGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -12464,6 +12486,7 @@ const UI = {
     if(id==='s-taylor') Taylor.render();
     if(id==='s-newton') Newton.render();
     if(id==='s-chain') Chain.render();
+    if(id==='s-castles') Castles.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13117,6 +13140,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats.</div>
          <button class="btn sm" id="tomeFit" style="width:auto;margin-top:8px" onclick="Fit.open()">Open the best fit workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🏰 Two Castles Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Knights ride between two castles every night. Run the nights, watch the split settle, and meet the eigenvector that never moves and the eigenvalue that sets the pace.</div>
+         <button class="btn sm" id="tomeCastles" style="width:auto;margin-top:8px" onclick="Castles.open()">Open the two castles workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
@@ -15125,6 +15153,109 @@ const Descent = {
    numbers on screen; at a itself the formula gives no number at all. Only
    once both sides have been watched up close does it say whether they agree,
    because a limit is exactly that agreement. */
+/* ============ TWO CASTLES WORKSHOP ============
+   A hundred knights live in two castles, and each night some ride from one
+   to the other. The split after each night is a matrix times the split
+   before it, so the player watches Aⁿv settle onto the eigenvector with
+   λ = 1, the steady split, at a speed set by the other eigenvalue. */
+const Castles = {
+  RULES:[
+    {btn:'Drift', p:0.1, q:0.3, star:75, lam:0.6, say:'Each night 10% of the knights in Castle A ride to Castle B, and 30% of those in B ride to A.'},
+    {btn:'Even',  p:0.5, q:0.5, star:50, lam:0, say:'Each night half the knights in each castle ride to the other.'},
+    {btn:'Swap',  p:1,   q:1,   star:50, lam:-1,   say:'Each night every knight rides to the other castle.'}
+  ],
+  ALO:0, AHI:20, NMAX:10,   // A starts with 0 to 100 knights, in fives
+  ri:0, ah:20, n:0, touched:false,
+  done:new Set(), sides:new Set(),
+  GOALS:[
+    {id:'close',  t:'On Drift, start at least 20 away from the steady split and bring A within 1 of it.', toast:'Brought A within 1 of the steady split',
+     ok:K=>K.ri===0 && K.far() && K.near()},
+    {id:'both',   t:'On Drift, close in on the steady split from above and from below.', toast:'Closed in from both sides',
+     ok:K=>K.ri===0 && K.sides.size===2},
+    {id:'steady', t:'On Drift, start at the steady split and watch nothing change.', toast:'Found the split that never changes',
+     ok:K=>K.ri===0 && K.a0()===K.star() && K.n>0},
+    {id:'one',    t:'On Even, reach the steady split in a single night.', toast:'Reached it in one night',
+     ok:K=>K.ri===1 && K.a0()!==K.star() && K.n===1},
+    {id:'flip',   t:'On Swap, watch the split flip back and forth.', toast:'Watched the split flip for ever',
+     ok:K=>K.ri===2 && K.a0()!==K.star() && K.n>=2},
+    {id:'still',  t:'On Swap, find the one start that does not flip.', toast:'Found the start that stays put',
+     ok:K=>K.ri===2 && K.a0()===K.star() && K.n>0}
+  ],
+  rule(){ return this.RULES[this.ri]; },
+  a0(){ return this.ah*5; },
+  // the steady split, A's share of the eigenvector with λ = 1
+  star(){ return this.rule().star; },
+  // the other eigenvalue: each night the gap from the steady split is multiplied by it
+  lam(){ return this.rule().lam; },
+  A(k=this.n){ return this.star()+(this.a0()-this.star())*Math.pow(this.lam(),k); },
+  far(){ return Math.abs(this.a0()-this.star())>=20; },
+  near(){ return this.n>0 && Math.abs(this.A()-this.star())<1; },
+  num(x){ const r=Math.round(x*100)/100; return neg(Object.is(r,-0)?0:r); },
+  exact(x){ return Math.abs(x-Math.round(x*100)/100)<1e-9; },
+  eq(x){ return this.exact(x) ? '=' : '≈'; },
+  ab(x){ return (this.exact(x) ? '' : 'about ')+this.num(x); },
+  pc(x){ return Math.round(x*100)+'%'; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const R=this.rule(), n=this.n, S=this.star(), L=this.lam(), out=[R.say];
+    out.push(\`So a night is the matrix M with rows \${this.num(1-R.p)}, \${this.num(R.q)} and \${this.num(R.p)}, \${this.num(1-R.q)}: the split ⟨A, B⟩ after a night is M times the split before it, and after n nights it is Mⁿ times the start.\`);
+    if(!n) out.push(\`Night 0: A has \${this.a0()} and B has \${100-this.a0()}.\`);
+    else {
+      const a=this.A(n-1), b=100-a, keep=(1-R.p)*a, gain=R.q*b, A=this.A();
+      out.push(\`Night \${n}: A keeps \${this.pc(1-R.p)} of \${this.ab(a)} \${this.eq(keep)} \${this.num(keep)} and gains \${this.pc(R.q)} of \${this.ab(b)} \${this.eq(gain)} \${this.num(gain)}, so A has \${this.ab(A)} and B has \${this.ab(100-A)}.\`);
+      const xs=[...Array(n+1)].map((_,k)=>this.A(k));
+      out.push(\`A, night by night: \${xs.map(x=>this.num(x)).join(', ')}\${xs.every(x=>this.exact(x))?'':' (to two places)'}.\`);
+    }
+    const a0=this.a0(), ride=a0*R.p;
+    if(a0===S)
+      out.push(\`A = \${this.num(S)} and B = \${this.num(100-S)} is the steady split: each night \${this.num(ride)} ride from A to B and \${this.num(ride)} ride back, so nothing changes. ⟨\${this.num(S)}, \${this.num(100-S)}⟩ is the eigenvector with λ = 1.\`);
+    else if(!n)
+      out.push(\`The steady split has \${this.num(S)} in A. Take a night to see what happens.\`);
+    else if(L===0)
+      out.push(\`One night is enough: both castles end with \${this.num(S)}, the steady split, and stay there. The other eigenvalue is 0, so the gap from it vanishes at once.\`);
+    else if(L===-1)
+      out.push(\`Everyone swaps, so the split flips back and forth for ever: the gap from \${this.num(S)} is multiplied by −1 each night and never shrinks. That −1 is the matrix's other eigenvalue.\`);
+    else {
+      const g=this.A()-S;
+      out.push(\`The steady split has \${this.num(S)} in A. A's gap from it is (\${a0} − \${this.num(S)}) × \${this.num(L)}\${n>1?'^'+n:''} \${this.eq(g)} \${this.num(g)}: each night the gap shrinks to \${this.num(L)} of itself, the matrix's other eigenvalue.\`+
+        (this.near() ? \` A is now within 1 of \${this.num(S)}.\` : ''));
+    }
+    return out;
+  },
+  open(){ UI.go('s-castles'); },
+  pick(i){ this.ri=i; this.touched=true; this.render(); },
+  moveA(by){ const v=this.ah+by; if(v<this.ALO || v>this.AHI) return; this.ah=v; this.touched=true; this.render(); },
+  moveN(by){ const v=this.n+by; if(v<0 || v>this.NMAX) return; this.n=v; this.touched=true; this.render(); },
+  render(){
+    const R=this.rule(), n=this.n, S=this.star();
+    document.getElementById('csRules').innerHTML=this.RULES.map((r,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.ri}" onclick="Castles.pick(\${i})" aria-label="\${r.btn}: \${r.say}">\${r.btn}</button>\`).join('');
+    document.getElementById('csA').textContent=\`A starts with \${this.a0()}\`;
+    document.getElementById('csN').textContent=\`\${n} night\${n===1?'':'s'}\`;
+    document.getElementById('csALo').disabled=this.ah<=this.ALO;
+    document.getElementById('csAHi').disabled=this.ah>=this.AHI;
+    document.getElementById('csNLo').disabled=n===0;
+    document.getElementById('csNHi').disabled=n>=this.NMAX;
+    const pts=[...Array(n+1)].map((_,k)=>[k,this.A(k),k===n?FIG_COL.d:FIG_COL.a]);
+    Figure.render({kind:'curve', f:{poly:[[S,0]]}, lo:0, hi:this.NMAX, ylim:[0,100], pts,
+      caption:\`Each point is how many knights are in Castle A after that many nights, the red one tonight's; the gold line is the steady split, \${this.num(S)}.\`},
+      document.getElementById('csFig'));
+    document.getElementById('csRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    if(this.touched && this.ri===0 && this.far() && this.near()) this.sides.add(this.a0()>S ? 'above' : 'below');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('csGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LORD OF TWO KEEPS','every split settled','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 const Limit = {
   FNS:[
     {id:'hole', at:'(x² − 1)/(x − 1)', a:1, f:{poly:[[1,1],[1,0]]}, lo:-1, hi:3, holes:[[1,2]],
