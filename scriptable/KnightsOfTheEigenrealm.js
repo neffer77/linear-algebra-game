@@ -1818,6 +1818,29 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ GROWTH INTEGRAL WORKSHOP ============ -->
+  <div class="screen" id="s-expint">
+    <div class="panel"><h2>🪴 Growth Integral Workshop</h2><div class="sub">The short dashes show the slope of f(x) = e^(kx) wherever you stand. An antiderivative F has to run along every one. Pick the number in front of F and a lift + C, and see whether F fits the field. Then multiply by k or raise the exponent, as the power rule would, and catch each slip.</div></div>
+    <div class="panel">
+      <div id="xiSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which exponential"></div>
+      <div id="xiFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+        <div class="wsCell"><button id="xiCLo" onclick="ExpInt.moveC(-1)" aria-label="Make the number in front of F one step smaller">−</button>
+          <b id="xiC" style="font-size:15px;min-width:0"></b>
+          <button id="xiCHi" onclick="ExpInt.moveC(1)" aria-label="Make the number in front of F one step bigger">+</button></div>
+        <div class="wsCell"><button id="xiLLo" onclick="ExpInt.moveL(-1)" aria-label="Lower F by a half">−</button>
+          <b id="xiL" style="font-size:15px;min-width:0"></b>
+          <button id="xiLHi" onclick="ExpInt.moveL(1)" aria-label="Lift F by a half">+</button></div>
+      </div>
+      <div id="xiForms" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="What to do with the exponent"></div>
+      <div id="xiRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="xiGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3833,6 +3856,7 @@ const WORKSHOP_FOR = (() => {
     InvSlope: ["🪩 Inverse Slope Workshop", ['invTrigDeriv']],
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
+    ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13236,6 +13260,7 @@ const UI = {
     if(id==='s-invslope') InvSlope.render();
     if(id==='s-logdiff') LogDiff.render();
     if(id==='s-pathchain') PathChain.render();
+    if(id==='s-expint') ExpInt.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14049,6 +14074,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🛤️ Path Chain Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Walk a point along a path over a hill and watch dz/dt come from two parts, one for x moving and one for y. Find where the parts cancel, the top of a path, and a tug of war, then drop a part or forget the speeds and catch each slip.</div>
          <button class="btn sm" id="tomePathChain" style="width:auto;margin-top:8px" onclick="PathChain.open()">Open the path chain workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪴 Growth Integral Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fit an antiderivative of e^(kx) to its slope field: pick the number in front and a lift + C, and watch F run along every dash. Then multiply by k or raise the exponent and catch each slip.</div>
+         <button class="btn sm" id="tomeExpInt" style="width:auto;margin-top:8px" onclick="ExpInt.open()">Open the growth integral workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -20389,6 +20419,145 @@ const PathChain = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE PATH','both reasons counted','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The growth integral workshop: undo e^(kx) on a slope field ----------
+   The short dashes show the slope f(x) = e^(kx) wherever you stand. An
+   antiderivative F has to run along every one of them. Pick the number in
+   front of F and a lift + C, keep the exponent or raise it as the power rule
+   would, and see whether F fits the field. Nothing is saved. */
+const ExpInt = {
+  SETS:[
+    {id:'two', btn:'e^(2x)', k:2, ks:'2', ex:'2x', up:'3x', name:'f(x) = e to the 2x',
+     C:['−1/2','1/3','1/2',1,2,3], start:3, D:[-1.5,1], R:[-3,5]},
+    {id:'neg', btn:'e^(−2x)', k:-2, ks:'−2', ex:'−2x', up:'−x', name:'f(x) = e to the minus 2x',
+     C:[-2,-1,'−1/2','1/2',1,2], start:4, D:[-1,1.5], R:[-4,3]},
+    {id:'half', btn:'e^(x/2)', k:0.5, ks:'1/2', ex:'x/2', up:'3x/2', name:'f(x) = e to the x over 2',
+     C:['1/2','2/3',1,'3/2',2,3], start:2, D:[-2,2], R:[-2,5]}
+  ],
+  LIFT:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],
+  FORMS:['Keep the exponent','Raise it, as the power rule does'],
+  H:0.001, X0:0.5,
+  si:0, ci:3, li:4, form:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'fit', t:'Make F fit the field for e^(2x).', toast:'Divide by the k inside',
+     ok:K=>K.si===0 && K.fits()},
+    {id:'neg', t:'Make F fit for e^(−2x), minus sign and all.', toast:'The minus comes along',
+     ok:K=>K.si===1 && K.fits()},
+    {id:'half', t:'Make F fit for e^(x/2).', toast:'Dividing by a half doubles',
+     ok:K=>K.si===2 && K.fits()},
+    {id:'times', t:'Multiply by k instead of dividing, and catch it.', toast:'That is differentiating',
+     ok:K=>K.form===0 && K.c()===K.set().k && !K.fits()},
+    {id:'raise', t:'Try the power rule’s answer, raising the exponent and dividing by it, and catch it.', toast:'Exponentials keep their exponent',
+     ok:K=>K.form===1 && K.r(K.c()*(K.set().k+1))===1},
+    {id:'lift', t:'Lift a curve that fits, and see that it still fits.', toast:'That is the + C',
+     ok:K=>K.fits() && K.lift()!==0},
+    {id:'through', t:'Find the antiderivative that passes through the gold point (0, 1).', toast:'One curve through one point',
+     ok:K=>K.fits() && K.r(K.c()+K.lift())===1}
+  ],
+  set(){ return this.SETS[this.si]; },
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  val(v){ if(typeof v!=='string') return v; const s=v.replace('−','-'), [a,b]=s.split('/'); return +a/+b; },
+  c(){ return this.val(this.set().C[this.ci]); },
+  cs(){ const v=this.set().C[this.ci]; return typeof v==='string' ? v : neg(v); },
+  lift(){ return this.LIFT[this.li]; },
+  m(){ return this.form ? this.set().k+1 : this.set().k; },
+  exS(){ return this.form ? this.set().up : this.set().ex; },
+  f(x){ return Math.exp(this.set().k*x); },
+  F(x){ return this.c()*Math.exp(this.m()*x)+this.lift(); },
+  /* F′ is c·m·e^(mx); it fits when m is k and c·k is 1 */
+  ratio(){ return this.r(this.c()*this.m()); },
+  fits(){ return this.form===0 && this.ratio()===1; },
+  nudge(x){ return (this.F(x+this.H)-this.F(x-this.H))/(2*this.H); },
+  /* how a number is written: a fraction stays a fraction */
+  fr(v){
+    const q=this.r(v); if(Number.isInteger(q)) return neg(q);
+    for(const d of [2,3,4,6,9]){ const n=Math.round(q*d); if(Math.abs(n/d-q)<1e-9) return (n<0?'−':'')+Math.abs(n)+'/'+d; }
+    return this.num(q);
+  },
+  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? \`(\${s})\` : s; },
+  num(v,d=3){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=3){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },
+  /* c·e^(…) written the way a person would */
+  term(c,ex){ const e=\`e^(\${ex})\`; if(c===1) return e; if(c===-1) return '−'+e;
+    const s=this.fr(c); return /\\//.test(s) ? (s[0]==='−' ? \`−(\${s.slice(1)})·\${e}\` : \`(\${s})·\${e}\`) : \`\${s}·\${e}\`; },
+  Fs(){ const L=this.lift(); return this.term(this.c(),this.exS())+(L===0 ? '' : L>0 ? \` + \${this.fr(L)}\` : \` − \${this.fr(-L)}\`); },
+  working(){
+    const S=this.set(), k=S.k, c=this.c(), m=this.m(), q=this.ratio(), out=[], X=this.X0;
+    out.push(\`f(x) = e^(\${S.ex}). An antiderivative F is any curve whose slope at every x is f(x). The short dashes show that slope, and F has to run along them.\`);
+    out.push(\`You have F(x) = \${this.Fs()}. Differentiating multiplies by the number in front of x, \${this.fr(m)}, so F′(x) = \${this.pf(c)} × \${this.pf(m)}·e^(\${this.exS()}) = \${this.term(q,this.exS())}.\`);
+    if(this.form===1) out.push(\`That is not f at all: raising the exponent is the power rule, but e^(\${S.ex}) is not a power of x. An exponential keeps its exponent, so F′ is a multiple of e^(\${S.up}), not of e^(\${S.ex}), and F cuts across the dashes.\`);
+    else if(q===1){
+      let s=\`That is exactly f(x), so F runs along every dash. Dividing by the k inside, \${S.ks}, undoes the \${S.ks} that differentiating brings out: ∫ e^(\${S.ex}) dx = \${this.term(c,S.ex)} + C.\`;
+      if(k<0) s+=\` The k is negative, so the minus comes along.\`;
+      if(k===0.5) s+=\` Dividing by a half doubles.\`;
+      out.push(s);
+    } else if(c===k) out.push(\`That is \${this.fr(q)} times f: multiplying by \${S.ks} is what differentiating does. Integrating has to divide by it instead, so the number in front should be 1/k = \${this.fr(1/k)}.\`);
+    else out.push(\`That is \${this.fr(q)} times f, \${q<0 ? 'sloping the wrong way' : q>1 ? 'too steep' : 'too shallow'}. For F′ to be exactly f, the number in front times \${S.ks} must be 1.\`);
+    out.push(\`Check with a nudge at x = \${X}: F goes from about \${this.num(this.F(X-this.H),6)} to about \${this.num(this.F(X+this.H),6)}, so ΔF/Δx ≈ \${this.num(this.nudge(X))}, against f(\${X}) ≈ \${this.num(this.f(X))}.\`);
+    if(this.fits()){
+      const L=this.lift(), F0=this.r(c+L);
+      if(L!==0) out.push(\`The \${L>0?'+':'−'} \${this.fr(Math.abs(L))} \${L>0?'lifts':'lowers'} the whole curve without changing a single slope, so it still fits: that is the + C.\`);
+      out.push(F0===1 ? \`And F(0) = \${this.fr(c)} \${L<0?'−':'+'} \${this.fr(Math.abs(L))} = 1, so this is the one antiderivative through the gold point (0, 1).\`
+        : \`It meets x = 0 at F(0) = \${this.fr(F0)}. Every lift fits the field, but only one passes through the gold point (0, 1).\`);
+    }
+    return out;
+  },
+  /* the slope field of f, the curve F, and the gold point (0, 1) */
+  L:30, T:12, W:310, Hh:230,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.T+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [a,b]=S.D, [c,d]=S.R, f=v=>v.toFixed(2), sx=this.W/(b-a), sy=this.Hh/(d-c), fit=this.fits();
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="The slope field of f(x) = e^(\${S.ex}), and F(x) = \${this.Fs()}, which \${fit?'runs along every dash':'cuts across the dashes'}\${this.r(this.F(0))===1?', through the gold point (0, 1)':''}">\`;
+    if(c<=0 && d>=0) out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(this.PY(0))}" x2="\${this.L+this.W}" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(a<=0 && b>=0) out+=\`<line data-k="yaxis" x1="\${f(this.PX(0))}" y1="\${this.T}" x2="\${f(this.PX(0))}" y2="\${this.T+this.Hh}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    /* each dash points along slope f(x), 12 pixels long whatever the slope */
+    for(let i=0;i<=10;i++) for(let j=0;j<=7;j++){
+      const x=a+(b-a)*(i+0.5)/11, y=c+(d-c)*(j+0.5)/8, dx=sx, dy=-this.f(x)*sy, n=Math.hypot(dx,dy), ux=6*dx/n, uy=6*dy/n, X=this.PX(x), Y=this.PY(y);
+      out+=\`<line data-k="dash" data-x="\${x.toFixed(4)}" x1="\${f(X-ux)}" y1="\${f(Y-uy)}" x2="\${f(X+ux)}" y2="\${f(Y+uy)}" stroke="\${FIG_COL.dim}" stroke-width="1.5" stroke-linecap="round"/>\`;
+    }
+    /* F, cut where it leaves the chart */
+    const segs=[]; let cur=[];
+    for(let i=0;i<=200;i++){ const x=a+(b-a)*i/200, y=this.F(x);
+      if(y>=c && y<=d) cur.push(\`\${f(this.PX(x))},\${f(this.PY(y))}\`); else if(cur.length){ segs.push(cur); cur=[]; } }
+    if(cur.length) segs.push(cur);
+    segs.forEach(s=>{ out+=\`<polyline data-k="F" points="\${s.join(' ')}" fill="none" stroke="\${fit?FIG_COL.c:FIG_COL.a}" stroke-width="3" stroke-linejoin="round"/>\`; });
+    out+=\`<circle data-k="pt" cx="\${f(this.PX(0))}" cy="\${f(this.PY(1))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-expint'); },
+  pick(i){ this.si=i; this.ci=this.SETS[i].start; this.li=4; this.form=0; this.touched=true; this.render(); },
+  moveC(by){ const v=this.ci+by; if(v<0 || v>=this.set().C.length) return; this.ci=v; this.touched=true; this.render(); },
+  moveL(by){ const v=this.li+by; if(v<0 || v>=this.LIFT.length) return; this.li=v; this.touched=true; this.render(); },
+  setForm(m){ this.form=m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('xiSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="ExpInt.pick(\${i})" aria-label="\${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('xiForms').innerHTML=this.FORMS.map((m,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.form}" onclick="ExpInt.setForm(\${i})" aria-label="\${['Keep the exponent of e as it is','Try the slip that raises the exponent by one, as the power rule does'][i]}">\${m}</button>\`).join('');
+    document.getElementById('xiC').textContent=\`in front: \${this.cs()}\`;
+    document.getElementById('xiL').textContent=\`+ C: \${this.fr(this.lift())}\`;
+    document.getElementById('xiCLo').disabled=this.ci<=0;
+    document.getElementById('xiCHi').disabled=this.ci>=this.set().C.length-1;
+    document.getElementById('xiLLo').disabled=this.li<=0;
+    document.getElementById('xiLHi').disabled=this.li>=this.LIFT.length-1;
+    document.getElementById('xiFig').innerHTML=this.svg()+
+      \`<div class="figcap">The short dashes show the slope f(x) wherever you stand. Your F is the curve: green when it runs along every dash, blue when it cuts across them. The gold dot is (0, 1).</div>\`;
+    document.getElementById('xiRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('xiGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF GROWTH','every exponential undone','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

@@ -51,7 +51,7 @@ module.exports = {
     // --- every screen a knight walks through ---
     let total = 0;
     const bad = [];
-    for (const id of ['s-map', 's-keep', 's-shop', 's-gear', 's-prefs', 's-train', 's-tome', 's-workshop', 's-slope', 's-area', 's-dot', 's-eig', 's-taylor', 's-compose', 's-limit', 's-descent', 's-span', 's-elim', 's-undo', 's-fit', 's-newton', 's-chain', 's-castles', 's-optim', 's-cistern', 's-hopital', 's-product', 's-ladder', 's-null', 's-gram', 's-geo', 's-bend', 's-avg', 's-tail', 's-lathe', 's-swap', 's-implicit', 's-parts', 's-detect', 's-hill', 's-cof', 's-cover', 's-slice', 's-tracer', 's-arrow', 's-horizon', 's-cross', 's-quot', 's-anti', 's-transpose', 's-diag', 's-trigint', 's-tanplane', 's-invslope', 's-logdiff', 's-pathchain']) {
+    for (const id of ['s-map', 's-keep', 's-shop', 's-gear', 's-prefs', 's-train', 's-tome', 's-workshop', 's-slope', 's-area', 's-dot', 's-eig', 's-taylor', 's-compose', 's-limit', 's-descent', 's-span', 's-elim', 's-undo', 's-fit', 's-newton', 's-chain', 's-castles', 's-optim', 's-cistern', 's-hopital', 's-product', 's-ladder', 's-null', 's-gram', 's-geo', 's-bend', 's-avg', 's-tail', 's-lathe', 's-swap', 's-implicit', 's-parts', 's-detect', 's-hill', 's-cof', 's-cover', 's-slice', 's-tracer', 's-arrow', 's-horizon', 's-cross', 's-quot', 's-anti', 's-transpose', 's-diag', 's-trigint', 's-tanplane', 's-invslope', 's-logdiff', 's-pathchain', 's-expint']) {
       await t.ev(id => UI.go(id), id);
       await sleep(80);
       s = await strays(t);
