@@ -3146,6 +3146,8 @@ const chainPickNotes = (() => {
       // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
       if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('chainpick', key, 'a y label runs off the left edge of the picture');
       const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      // the 10° rule measures angles as the picture draws them
+      if (r.opts.some(o => Math.abs(S.angle(c, want[o.k](c, c.x0)) - Math.atan(want[o.k](c, c.x0) * Math.abs(ky) / kx) * 180 / Math.PI) > 0.2)) fail('chainpick', key, 'the 10° rule measures angles another way from the picture');
       if (!(kx > 0 && ky < 0)) fail('chainpick', key, 'the picture is drawn back to front or upside down');
       const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
       const span = Math.abs((yt[yt.length - 1][1] - yt[0][1]) / (yt.length - 1)) * 8;
@@ -3311,7 +3313,7 @@ const productPickNotes = (() => {
       const ri0 = r.opts.findIndex(o => o.k === 'right');
       if (!/ [+−] /.test(texts[ri0])) fail('productpick', key, `the product rule ${texts[ri0]} is not two parts`);
       if (XS.some(x => Math.abs((y(c, x + 1e-5) - y(c, x - 1e-5)) / 2e-5 - want.right(c, x)) > 1e-4 * (1 + Math.abs(want.right(c, x))))) fail('productpick', key, 'the product rule does not match a nudge of y');
-      { const v = S.view(c), ag = s => Math.atan(s * (158 / (v.hi - v.lo)) / (278 / 2)) * 180 / Math.PI;
+      { const v = S.view(c), ag = s => Math.atan(s * (158 / (v.hi - v.lo)) / (266 / 2)) * 180 / Math.PI;
         r.opts.forEach((o, i) => { if (o.k !== 'right' && Math.abs(ag(want[o.k](c, c.x0)) - ag(want.right(c, c.x0))) < 10) fail('productpick', key, `${texts[i]} looks too like the curve's own slope at x₀`); }); }
       for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (fns[i] && fns[j] && XS.every(x => near(fns[i](x), fns[j](x)))) fail('productpick', key, `${texts[i]} and ${texts[j]} are the same slope`);
       const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
@@ -3334,6 +3336,8 @@ const productPickNotes = (() => {
       // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
       if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('productpick', key, 'a y label runs off the left edge of the picture');
       const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      // the 10° rule measures angles as the picture draws them
+      if (r.opts.some(o => Math.abs(S.angle(c, want[o.k](c, c.x0)) - Math.atan(want[o.k](c, c.x0) * Math.abs(ky) / kx) * 180 / Math.PI) > 0.2)) fail('productpick', key, 'the 10° rule measures angles another way from the picture');
       if (!(kx > 0 && ky < 0)) fail('productpick', key, 'the picture is drawn back to front or upside down');
       const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
       const span = Math.abs((yt[yt.length - 1][1] - yt[0][1]) / (yt.length - 1)) * 8;

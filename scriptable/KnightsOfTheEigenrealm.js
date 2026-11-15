@@ -17297,7 +17297,7 @@ const ChainPick = {
     return {x0,x1,lo:lo-pad,hi:hi+pad};
   },
   // how steep a slope looks on screen, in degrees
-  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-22)/(v.x1-v.x0)))*180/Math.PI; },
+  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-34)/(v.x1-v.x0)))*180/Math.PI; },
   build(){
     for(let t=0;t<400;t++){
       const fam=R.pick(this.FAMS), sq=R.i(0,2)===0;
@@ -17687,7 +17687,7 @@ const ProductPick = {
     return {x0,x1,lo:lo-pad,hi:hi+pad};
   },
   // how steep a slope looks on screen, in degrees
-  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-22)/(v.x1-v.x0)))*180/Math.PI; },
+  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-34)/(v.x1-v.x0)))*180/Math.PI; },
   // the slips this curve can offer: each looks wrong at x₀, its line at least
   // 10° off the curve's, and differs from every one kept before it
   // (with g = eˣ, f′g′ and f′g are the same formula)
