@@ -57,6 +57,7 @@ function loadGame() {
     ';const Fit={' + script.slice(script.indexOf("  SETS:[\n    {btn:'Line-up'"), script.indexOf("  open(){ UI.go('s-fit'); },")) + '};exports.Fit=Fit;' +
     ';const Newton={' + script.slice(script.indexOf("  CURVES:[\n    {id:'sq',   name:'x² − 2'"), script.indexOf("  open(){ UI.go('s-newton'); },")) + '};exports.Newton=Newton;' +
     ';const Chain={' + script.slice(script.indexOf("  PAIRS:[\n    {f:'u²',"), script.indexOf("  open(){ UI.go('s-chain'); },")) + '};exports.Chain=Chain;' +
+    ';const Castles={' + script.slice(script.indexOf("  RULES:[\n    {btn:'Drift'"), script.indexOf("  open(){ UI.go('s-castles'); },")) + '};exports.Castles=Castles;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -74,7 +75,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2418,6 +2419,93 @@ const chainNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of the two castles workshop: each rule, each start and every
+   night. The split is worked here by multiplying by the matrix night after
+   night, not from the steady split and the other eigenvalue as the workshop
+   does, and each rule's steady split is checked to be left alone by its
+   matrix, with its other eigenvalue the trace less 1. Every line of the
+   readout is checked exactly, each goal holds exactly where its sentence
+   says, each can be found, and none is met where the workshop opens. */
+const castlesNotes = (() => {
+  const K = Castles;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const r2 = x => { const r = Math.round(x * 100) / 100; return Object.is(r, -0) ? 0 : r; };
+  const show = x => neg(r2(x)), exact = x => Math.abs(x - r2(x)) < 1e-9;
+  const eq = x => (exact(x) ? '=' : '≈'), ab = x => (exact(x) ? '' : 'about ') + show(x), pc = x => Math.round(x * 100) + '%';
+  const SPLIT = [[0.1, 0.3], [0.5, 0.5], [1, 1]];
+  if (K.RULES.length !== SPLIT.length) fail('castles', 'rules', `${K.RULES.length} rules, ${SPLIT.length} written out here`);
+  K.RULES.forEach((R, ri) => {
+    const [p, q] = SPLIT[ri];
+    if (R.p !== p || R.q !== q) fail('castles', R.btn, `rides ${R.p} and ${R.q}, should be ${p} and ${q}`);
+    const M = [[1 - p, q], [p, 1 - q]], S = R.star;
+    const MS = [M[0][0] * S + M[0][1] * (100 - S), M[1][0] * S + M[1][1] * (100 - S)];
+    if (Math.abs(MS[0] - S) > 1e-9 || Math.abs(MS[1] - (100 - S)) > 1e-9) fail('castles', R.btn, `⟨${S}, ${100 - S}⟩ is moved to ⟨${MS}⟩, so it is not the steady split`);
+    if (Math.abs(M[0][0] + M[1][1] - 1 - R.lam) > 1e-9) fail('castles', R.btn, `the other eigenvalue is ${M[0][0] + M[1][1] - 1}, not ${R.lam}`);
+    const det = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+    if (Math.abs(det - R.lam) > 1e-9) fail('castles', R.btn, `det M = ${det} should be 1 × ${R.lam}`);
+  });
+  K.touched = false; K.ri = 0; K.ah = 20; K.n = 0; K.sides = new Set();
+  for (const g of K.GOALS) if (g.ok(K)) fail('castles', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.RULES.forEach((R, ri) => {
+    const [p, q] = SPLIT[ri], S = R.star, L = R.lam;
+    for (let ah = K.ALO; ah <= K.AHI; ah++) {
+      const a0 = ah * 5, xs = [a0];
+      for (let k = 0; k < K.NMAX; k++) { const a = xs[k]; xs.push((1 - p) * a + q * (100 - a)); }
+      for (let nn = 0; nn <= K.NMAX; nn++) {
+        K.ri = ri; K.ah = ah; K.n = nn; K.sides = new Set(); n++;
+        const key = `${R.btn} A=${a0} n=${nn}`;
+        for (let k = 0; k <= nn; k++) if (Math.abs(K.A(k) - xs[k]) > 1e-9) fail('castles', key, `night ${k} gives A = ${K.A(k)}, the matrix gives ${xs[k]}`);
+        const want = [R.say, `So a night is the matrix M with rows ${show(1 - p)}, ${show(q)} and ${show(p)}, ${show(1 - q)}: the split ⟨A, B⟩ after a night is M times the split before it, and after n nights it is Mⁿ times the start.`];
+        if (!nn) want.push(`Night 0: A has ${a0} and B has ${100 - a0}.`);
+        else {
+          const a = xs[nn - 1], keep = (1 - p) * a, gain = q * (100 - a), A = xs[nn];
+          want.push(`Night ${nn}: A keeps ${pc(1 - p)} of ${ab(a)} ${eq(keep)} ${show(keep)} and gains ${pc(q)} of ${ab(100 - a)} ${eq(gain)} ${show(gain)}, so A has ${ab(A)} and B has ${ab(100 - A)}.`);
+          const seen = xs.slice(0, nn + 1);
+          want.push(`A, night by night: ${seen.map(show).join(', ')}${seen.every(exact) ? '' : ' (to two places)'}.`);
+        }
+        const near = nn > 0 && Math.abs(xs[nn] - S) < 1;
+        if (a0 === S) want.push(`A = ${S} and B = ${100 - S} is the steady split: each night ${show(a0 * p)} ride from A to B and ${show(a0 * p)} ride back, so nothing changes. ⟨${S}, ${100 - S}⟩ is the eigenvector with λ = 1.`);
+        else if (!nn) want.push(`The steady split has ${S} in A. Take a night to see what happens.`);
+        else if (L === 0) want.push(`One night is enough: both castles end with ${S}, the steady split, and stay there. The other eigenvalue is 0, so the gap from it vanishes at once.`);
+        else if (L === -1) want.push(`Everyone swaps, so the split flips back and forth for ever: the gap from ${S} is multiplied by −1 each night and never shrinks. That −1 is the matrix's other eigenvalue.`);
+        else {
+          const g = xs[nn] - S;
+          want.push(`The steady split has ${S} in A. A's gap from it is (${a0} − ${S}) × ${show(L)}${nn > 1 ? '^' + nn : ''} ${eq(g)} ${show(g)}: each night the gap shrinks to ${show(L)} of itself, the matrix's other eigenvalue.` + (near ? ` A is now within 1 of ${S}.` : ''));
+        }
+        if (a0 === S && (100 - a0) * q !== a0 * p) fail('castles', key, 'the riders each way do not match, so this split is not steady');
+        const got = K.working();
+        if (got.length !== want.length) fail('castles', key, `${got.length} lines, expected ${want.length}`);
+        want.forEach((l, i) => { if (got[i] !== l) fail('castles', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+        // what each goal's sentence says, read off the nights worked here
+        const flips = nn >= 2 && xs[nn] !== xs[nn - 1] && Math.abs(xs[nn] - xs[nn - 2]) < 1e-9;
+        const still = nn > 0 && xs.slice(0, nn + 1).every(v => v === a0);
+        const meant = { close: ri === 0 && Math.abs(a0 - S) >= 20 && near, both: false,
+          steady: ri === 0 && still, one: ri === 1 && a0 !== S && nn === 1 && xs[1] === S,
+          flip: ri === 2 && flips, still: ri === 2 && still };
+        if (ri === 1 && a0 !== S && nn >= 1 && xs[nn] !== S) fail('castles', key, `Even should reach ${S} in a night, gives ${xs[nn]}`);
+        for (const g of K.GOALS) {
+          if (!!g.ok(K) !== meant[g.id]) fail('castles', key, `goal ${g.id} is ${g.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+          if (g.ok(K)) found[g.id] = found[g.id] || key;
+        }
+      }
+    }
+  });
+  // closing in from both sides is kept across starts: it needs one close from above and one from below
+  K.ri = 0; K.sides = new Set(['above']);
+  if (K.GOALS.find(g => g.id === 'both').ok(K)) fail('castles', 'both', 'met after closing in from one side only');
+  K.sides.add('below');
+  if (!K.GOALS.find(g => g.id === 'both').ok(K)) fail('castles', 'both', 'not met after closing in from both sides');
+  K.ri = 1;
+  if (K.GOALS.find(g => g.id === 'both').ok(K)) fail('castles', 'both', 'met on a rule other than Drift');
+  found.both = 'Drift, from 100 and from 55';
+  for (const g of K.GOALS) if (!found[g.id]) fail('castles', g.id, 'this goal cannot be found');
+  if (figEval({ poly: [[75, 0]] }, 3) !== 75) fail('castles', 'figure', 'the steady line is not flat at 75');
+  K.ri = 0; K.ah = 20; K.n = 0; K.touched = false; K.sides = new Set(); K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2653,6 +2741,7 @@ console.log(`  undo workshop states       ${pad(undoNotes.n.toLocaleString(), 10
 console.log(`  best fit states            ${pad(fitNotes.n.toLocaleString(), 10)}  (every miss and both totals worked, the one best line, ${fitNotes.goals} goals findable)`);
 console.log(`  newton's method states     ${pad(newtonNotes.n.toLocaleString(), 10)}  (f, f′ and every guess worked, roots, flat tangents, loops, ${newtonNotes.goals} goals findable)`);
 console.log(`  chain rule states          ${pad(chainNotes.n.toLocaleString(), 10)}  (y and dy/dx from y in full, the slip, the nudge, ${chainNotes.goals} goals findable)`);
+console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(), 10)}  (each night by the matrix, the steady split and the other eigenvalue, ${castlesNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
