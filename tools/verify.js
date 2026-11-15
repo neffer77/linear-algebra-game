@@ -62,6 +62,7 @@ function loadGame() {
     ';const Hopital={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'Square'"), script.indexOf("  open(){ UI.go('s-hopital'); },")) + '};exports.Hopital=Hopital;' +
     ';const Product={' + script.slice(script.indexOf("  SETS:[\n    {id:'lin', btn:'Line'"), script.indexOf("  open(){ UI.go('s-product'); },")) + '};exports.Product=Product;' +
     ';const Ladder={' + script.slice(script.indexOf("  SETS:[\n    {id:'five', btn:'5 m ladder'"), script.indexOf("  open(){ UI.go('s-ladder'); },")) + '};exports.Ladder=Ladder;' +
+    ';const Kernel={' + script.slice(script.indexOf("  SETS:[\n    {id:'flat', btn:'Flat'"), script.indexOf("  open(){ UI.go('s-null'); },")) + '};exports.Kernel=Kernel;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -80,7 +81,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2675,6 +2676,86 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The null space workshop: every matrix at every arrow the steppers allow.
+   Av is worked here row by row, the crushed arrows are found by brute force
+   and must be exactly the multiples of one arrow on a flat or steep matrix and
+   only ⟨0, 0⟩ on the full-rank one, every Av of a rank-1 matrix must lie on
+   the line the readout names, the drawing puts both arrows at their own
+   values, and every sentence and goal is rebuilt here. */
+const kernelNotes = (() => {
+  const K = Kernel;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const V = p => `⟨${neg(p[0])}, ${neg(p[1])}⟩`;
+  const par = n => (n < 0 ? `(${neg(n)})` : String(n));
+  if (K.SETS.map(S => S.id).join() !== 'flat,steep,full') fail('null space', 'sets', K.SETS.map(S => S.id).join());
+  K.touched = false; K.si = 0; K.x = 1; K.y = 1; K.seen.forEach(z => z.clear());
+  for (const g of K.GOALS) if (g.ok(K)) fail('null space', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.SETS.forEach((S, si) => {
+    const A = S.A, D = A[0][0] * A[1][1] - A[0][1] * A[1][0];
+    const Av = (x, y) => [A[0][0] * x + A[0][1] * y, A[1][0] * x + A[1][1] * y];
+    const crushed = [];
+    let big = 0;
+    for (let x = K.LO; x <= K.HI; x++) for (let y = K.LO; y <= K.HI; y++) big = Math.max(big, ...Av(x, y).map(Math.abs));
+    for (let x = K.LO; x <= K.HI; x++) for (let y = K.LO; y <= K.HI; y++) { const p = Av(x, y); if (!p[0] && !p[1] && (x || y)) crushed.push([x, y]); }
+    if (S.id === 'full') { if (D === 0 || crushed.length) fail('null space', S.id, 'the full-rank matrix must crush only ⟨0, 0⟩'); }
+    else {
+      if (D !== 0) fail('null space', S.id, `det ${D}: a flat or steep matrix must be singular`);
+      if (crushed.length < 2) fail('null space', S.id, `only ${crushed.length} crushed arrows within reach; the line goal needs two`);
+      else if (crushed.some(([x, y]) => x * crushed[0][1] - y * crushed[0][0] !== 0)) fail('null space', S.id, 'the crushed arrows do not lie on one line');
+      const k = A[1][0] / A[0][0];
+      if (A[1][1] !== k * A[0][1]) fail('null space', S.id, 'the second row is not a multiple of the first');
+    }
+    K.si = si; K.seen[si].clear();
+    let seen = new Set();
+    for (let x = K.LO; x <= K.HI; x++) for (let y = K.LO; y <= K.HI; y++) {
+      K.x = x; K.y = y; K.look(); n++;
+      const key = `${S.id} v=⟨${x}, ${y}⟩`, p = Av(x, y), zero = !p[0] && !p[1];
+      if (K.av()[0] !== p[0] || K.av()[1] !== p[1]) fail('null space', key, `Av reads ${K.av()}, worked here ${p}`);
+      if (zero && (x || y)) seen.add(x + ',' + y);
+      const want = [
+        `A has rows ${V(A[0])} and ${V(A[1])}, and v = ${V([x, y])}.`,
+        `Av dots each row with v: ${V(A[0])} · v = ${neg(A[0][0])} × ${par(x)} + ${par(A[0][1])} × ${par(y)} = ${neg(p[0])}, and ${V(A[1])} · v = ${neg(A[1][0])} × ${par(x)} + ${par(A[1][1])} × ${par(y)} = ${neg(p[1])}. So Av = ${V(p)}.`,
+        !x && !y ? 'v = ⟨0, 0⟩ lands on ⟨0, 0⟩ for every matrix, so it says nothing about this one: every null space holds it.'
+          : zero ? `Av = ⟨0, 0⟩ and v is not ⟨0, 0⟩, so v is in the null space. Every multiple of v is crushed too, so the null space is the whole line through ${V([x, y])}.`
+          : 'Av is not ⟨0, 0⟩, so v is not in the null space: to be crushed, v must dot to 0 with both rows.'
+      ];
+      if (D === 0) {
+        const k = A[1][0] / A[0][0];
+        if (p[1] !== k * p[0]) fail('null space', key, `Av = ${V(p)} is off the line through ⟨1, ${k}⟩`);
+        want.push(`The second row is ${neg(k)} times the first, so Av's second entry is always ${neg(k)} times its first: every Av lands on the gold line through ⟨1, ${neg(k)}⟩. That line is the column space, so the rank is 1.`,
+          'Rank 1 + nullity 1 = 2 columns: one direction survives onto the gold line, and the other, the null space, is crushed to ⟨0, 0⟩.');
+      } else {
+        want.push(`det A = ${neg(A[0][0])} × ${par(A[1][1])} − ${par(A[0][1])} × ${par(A[1][0])} = ${neg(D)}, not 0, so the rows point different ways and Av can land anywhere in the plane: the rank is 2.`,
+          'Only ⟨0, 0⟩ is crushed, so the nullity is 0: rank 2 + nullity 0 = 2 columns, and A has an inverse.');
+      }
+      const got = K.working();
+      if (got.length !== want.length) fail('null space', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('null space', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: each arrow's tip at its own value, the lines only where they belong
+      const svg = K.svg();
+      const tip = role => { const m = svg.match(new RegExp(`data-k="${role}" x1="([\\d.]+)" y1="([\\d.]+)" x2="([\\d.]+)" y2="([\\d.]+)"`)); return m && m.slice(1).map(Number); };
+      const tv = tip('v'), ta = tip('av');
+      if (!tv || Math.abs((tv[2] - tv[0]) * y - (tv[1] - tv[3]) * x) > 0.05 || Math.abs(Math.hypot(tv[2] - tv[0], tv[3] - tv[1]) - Math.hypot(x, y) * 80 / (K.HI + 0.5)) > 0.05) fail('null space', key, 'v is not drawn at its value');
+      if (!ta || Math.abs((ta[2] - ta[0]) * p[1] - (ta[1] - ta[3]) * p[0]) > 0.02 * Math.hypot(p[0], p[1]) || Math.max(Math.abs(ta[2] - ta[0]), Math.abs(ta[3] - ta[1])) > 85) fail('null space', key, 'Av is not drawn at its value, or runs out of its panel');
+      if (ta && Math.abs(Math.hypot(ta[2] - ta[0], ta[3] - ta[1]) - Math.hypot(p[0], p[1]) * 80 / big) > 0.05) fail('null space', key, 'Av is not drawn to the matrix\'s own scale');
+      if (!!tip('col') !== (D === 0)) fail('null space', key, 'the gold column-space line belongs on a rank-1 matrix only');
+      if (!!tip('null') !== (D === 0 && seen.size > 0)) fail('null space', key, 'the red null-space line belongs only once a crushed arrow is found');
+      const cl = tip('null');
+      if (cl && crushed.length && Math.abs((cl[2] - cl[0]) * crushed[0][1] - (cl[1] - cl[3]) * crushed[0][0]) > 0.05) fail('null space', key, 'the red line is not the null space');
+      const meant = { zero: !x && !y, flat: si === 0 && zero && !!(x || y), steep: si === 1 && zero && !!(x || y), line: seen.size >= 2, reach: si === 2 && p[0] === 1 && p[1] === 0 };
+      for (const gl of K.GOALS) {
+        if (!!gl.ok(K) !== meant[gl.id]) fail('null space', key, `goal ${gl.id} is ${gl.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(K)) found[gl.id] = found[gl.id] || key;
+      }
+    }
+  });
+  for (const g of K.GOALS) if (!found[g.id]) fail('null space', g.id, 'this goal cannot be found');
+  K.si = 0; K.x = 1; K.y = 1; K.touched = false; K.done.clear(); K.seen.forEach(z => z.clear());
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The product rule workshop: every field and every step. Each width and depth
    is worked here from its own formula, the strips and the corner from those,
    and they must add up to the new area exactly. The rule's rate is checked
@@ -3159,6 +3240,7 @@ console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 1
 console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 10)}  (each ratio against its formula, the slopes by a nudge, the limit read right at the point, every gap shrinking, the rule caught wrong off 0/0, ${hopitalNotes.goals} goals findable)`);
 console.log(`  product rule states      ${pad(productNotes.n.toLocaleString(), 10)}  (each field worked from its formulas, strips and corner adding to the new area, the rule against a nudge, every gap shrinking, f′ × g′ kept wrong, drawn to scale, ${productNotes.goals} goals findable)`);
 console.log(`  ladder positions         ${pad(ladderNotes.n.toLocaleString(), 10)}  (each height by Pythagoras, the top's speed by a nudge in time, the length kept, the 0.01 s check rebuilt, the bars in the speeds' ratio, ${ladderNotes.goals} goals findable)`);
+console.log(`  null space arrows        ${pad(kernelNotes.n.toLocaleString(), 10)}  (each Av worked row by row, the crushed arrows found by brute force and on one line, every rank-1 Av on its column space, both arrows drawn at their values, ${kernelNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

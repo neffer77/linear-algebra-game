@@ -1261,6 +1261,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ NULL SPACE WORKSHOP ============ -->
+  <div class="screen" id="s-null">
+    <div class="panel"><h2>🕳️ Null Space Workshop</h2><div class="sub">A matrix sends each arrow v to a new arrow Av. Some matrices crush a whole line of arrows down to ⟨0, 0⟩, and those are the matrices that lose a direction. Set v by hand, watch where it lands, and hunt for the arrows that vanish.</div></div>
+    <div class="panel">
+      <div id="nsSets" class="wsModes" role="group" aria-label="Which matrix"></div>
+      <div id="nsVec" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The arrow v"></div>
+      <div id="nsFig"></div>
+      <div id="nsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="nsGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3245,6 +3260,7 @@ const WORKSHOP_FOR = (() => {
     Span:    ["🧭 Span Workshop", ['vecCombo']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2']],
     Undo:    ["↩️ Undo Workshop", ['inv2']],
+    Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
     Castles: ["🏰 Two Castles Workshop", ['matPow']],
     Limit:   ["🌫️ Limit Workshop", ['limRational']],
     Hopital: ["🔬 L'Hôpital Workshop", ['lhopital']],
@@ -12623,6 +12639,7 @@ const UI = {
     if(id==='s-hopital') Hopital.render();
     if(id==='s-product') Product.render();
     if(id==='s-ladder') Ladder.render();
+    if(id==='s-null') Kernel.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13271,6 +13288,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">↩️ Undo Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo.</div>
          <button class="btn sm" id="tomeUndo" style="width:auto;margin-top:8px" onclick="Undo.open()">Open the undo workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🕳️ Null Space Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns.</div>
+         <button class="btn sm" id="tomeNull" style="width:auto;margin-top:8px" onclick="Kernel.open()">Open the null space workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
@@ -16196,6 +16218,115 @@ const Ladder = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE LADDER','every speed read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The null space workshop: what a matrix crushes ----------
+   Set v by hand and watch Av, worked row by row. A flat or steep matrix has
+   rows that are multiples of each other, so every Av lands on one line, the
+   column space, and a whole line of vs is crushed to ⟨0, 0⟩: rank 1 plus
+   nullity 1 makes 2 columns. A full-rank matrix crushes only ⟨0, 0⟩ and can
+   reach any point. Nothing is saved. */
+const Kernel = {
+  SETS:[
+    {id:'flat', btn:'Flat', A:[[1,2],[2,4]]},
+    {id:'steep', btn:'Steep', A:[[2,-1],[-6,3]]},
+    {id:'full', btn:'Full rank', A:[[2,1],[1,1]]}
+  ],
+  LO:-3, HI:3,
+  si:0, x:1, y:1, touched:false,
+  done:new Set(),
+  seen:[new Set(), new Set(), new Set()],
+  GOALS:[
+    {id:'zero', t:'Find the one vector that every matrix sends to ⟨0, 0⟩.', toast:'The one every matrix crushes',
+     ok:K=>K.x===0 && K.y===0},
+    {id:'flat', t:'On the flat matrix, find a vector other than ⟨0, 0⟩ that it crushes to ⟨0, 0⟩.', toast:'Crushed one on the flat matrix',
+     ok:K=>K.si===0 && K.crushed()},
+    {id:'steep', t:'On the steep matrix, find one too.', toast:'Crushed one on the steep matrix',
+     ok:K=>K.si===1 && K.crushed()},
+    {id:'line', t:'Find a second crushed vector on the same matrix: the null space is a whole line.', toast:'A whole line of them',
+     ok:K=>K.seen[K.si].size>=2},
+    {id:'reach', t:'On the full-rank matrix, steer Av onto ⟨1, 0⟩, a point the flat and steep matrices can never reach.', toast:'Reached a point off every line',
+     ok:K=>K.si===2 && K.av()[0]===1 && K.av()[1]===0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  av(){ const A=this.set().A; return [A[0][0]*this.x+A[0][1]*this.y, A[1][0]*this.x+A[1][1]*this.y]; },
+  det(){ const A=this.set().A; return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },
+  /* the second row as a multiple of the first, for a matrix of rank 1 */
+  k(){ const A=this.set().A; return A[1][0]/A[0][0]; },
+  crushed(){ const p=this.av(); return p[0]===0 && p[1]===0 && (this.x!==0 || this.y!==0); },
+  /* remember each crushed vector found on this matrix, so a second one can be told apart */
+  look(){ if(this.crushed()) this.seen[this.si].add(this.x+','+this.y); },
+  /* the largest |Av| entry over every v the steppers allow, for the right panel's scale */
+  reach(){ const A=this.set().A, m=Math.max(Math.abs(A[0][0])+Math.abs(A[0][1]), Math.abs(A[1][0])+Math.abs(A[1][1])); return m*this.HI; },
+  v(p){ return `⟨${neg(p[0])}, ${neg(p[1])}⟩`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const A=this.set().A, x=this.x, y=this.y, p=this.av(), D=this.det();
+    const par=n=>n<0?`(${neg(n)})`:String(n);
+    const row=i=>`${this.v(A[i])} · v = ${neg(A[i][0])} × ${par(x)} + ${par(A[i][1])} × ${par(y)} = ${neg(p[i])}`;
+    const out=[];
+    out.push(`A has rows ${this.v(A[0])} and ${this.v(A[1])}, and v = ${this.v([x,y])}.`);
+    out.push(`Av dots each row with v: ${row(0)}, and ${row(1)}. So Av = ${this.v(p)}.`);
+    if(x===0 && y===0)
+      out.push(`v = ⟨0, 0⟩ lands on ⟨0, 0⟩ for every matrix, so it says nothing about this one: every null space holds it.`);
+    else if(this.crushed())
+      out.push(`Av = ⟨0, 0⟩ and v is not ⟨0, 0⟩, so v is in the null space. Every multiple of v is crushed too, so the null space is the whole line through ${this.v([x,y])}.`);
+    else
+      out.push(`Av is not ⟨0, 0⟩, so v is not in the null space: to be crushed, v must dot to 0 with both rows.`);
+    if(D===0){
+      const k=this.k();
+      out.push(`The second row is ${neg(k)} times the first, so Av's second entry is always ${neg(k)} times its first: every Av lands on the gold line through ⟨1, ${neg(k)}⟩. That line is the column space, so the rank is 1.`);
+      out.push(`Rank 1 + nullity 1 = 2 columns: one direction survives onto the gold line, and the other, the null space, is crushed to ⟨0, 0⟩.`);
+    } else {
+      out.push(`det A = ${neg(A[0][0])} × ${par(A[1][1])} − ${par(A[0][1])} × ${par(A[1][0])} = ${neg(D)}, not 0, so the rows point different ways and Av can land anywhere in the plane: the rank is 2.`);
+      out.push(`Only ⟨0, 0⟩ is crushed, so the nullity is 0: rank 2 + nullity 0 = 2 columns, and A has an inverse.`);
+    }
+    return out;
+  },
+  /* v on the left to its own scale, Av on the right to the matrix's scale; the
+     gold column-space line on the right, and once a crushed vector is found the
+     red null-space line on the left */
+  svg(){
+    const A=this.set().A, p=this.av(), L=[90,100], R=[270,100], kv=80/(this.HI+0.5), ka=80/this.reach();
+    const ax=c=>`<line x1="${c[0]-85}" y1="${c[1]}" x2="${c[0]+85}" y2="${c[1]}" stroke="${FIG_COL.axis}" stroke-width="1"/>`+
+                `<line x1="${c[0]}" y1="${c[1]-85}" x2="${c[0]}" y2="${c[1]+85}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    const thru=(c,d,col,role)=>{ const s=85/Math.max(Math.abs(d[0]),Math.abs(d[1]));
+      return `<line data-k="${role}" x1="${(c[0]-s*d[0]).toFixed(2)}" y1="${(c[1]+s*d[1]).toFixed(2)}" x2="${(c[0]+s*d[0]).toFixed(2)}" y2="${(c[1]-s*d[1]).toFixed(2)}" stroke="${col}" stroke-width="2" stroke-dasharray="5 4"/>`; };
+    const arrow=(c,q,k,col,role)=>{ const tx=(c[0]+q[0]*k).toFixed(2), ty=(c[1]-q[1]*k).toFixed(2);
+      return `<line data-k="${role}" x1="${c[0]}" y1="${c[1]}" x2="${tx}" y2="${ty}" stroke="${col}" stroke-width="3" stroke-linecap="round"/><circle cx="${tx}" cy="${ty}" r="4" fill="${col}"/>`; };
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="Left, v = ${this.v([this.x,this.y])}; right, Av = ${this.v(p)}${this.det()===0?', on the gold line through ⟨1, '+neg(this.k())+'⟩':''}">`;
+    out+=ax(L)+ax(R);
+    if(this.det()===0) out+=thru(R,[1,this.k()],FIG_COL.b,'col');
+    if(this.det()===0 && this.seen[this.si].size) out+=thru(L,[-A[0][1],A[0][0]],FIG_COL.d,'null');
+    out+=arrow(L,[this.x,this.y],kv,FIG_COL.a,'v')+arrow(R,p,ka,FIG_COL.d,'av');
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-null'); },
+  pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.look(); this.render(); },
+  step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.look(); this.render(); },
+  render(){
+    document.getElementById('nsSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Kernel.pick(${i})" aria-label="${s.btn}: rows ${this.v(s.A[0])} and ${this.v(s.A[1])}">${s.btn}</button>`).join('');
+    const names={x:"v's first entry", y:"v's second entry"};
+    document.getElementById('nsVec').innerHTML=['x','y'].map(w=>`<b class="dtName ${w==='x'?'c0':'c1'}">${w}</b><div class="wsCell ${w==='x'?'c0':'c1'}">
+        <button onclick="Kernel.step('${w}',-1)" aria-label="Lower ${names[w]}"${this[w]<=this.LO?' disabled':''}>−</button>
+        <b aria-label="${names[w]}: ${neg(this[w])}">${neg(this[w])}</b>
+        <button onclick="Kernel.step('${w}',1)" aria-label="Raise ${names[w]}"${this[w]>=this.HI?' disabled':''}>+</button></div>`).join('');
+    document.getElementById('nsFig').innerHTML=this.svg()+
+      `<div class="figcap">On the left, v in blue. On the right, Av in red, drawn to the matrix's own scale.${this.det()===0?' The gold dashed line is everywhere Av can land.':''}${this.det()===0 && this.seen[this.si].size?' The red dashed line on the left is the null space.':''}</div>`;
+    document.getElementById('nsRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('nsGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

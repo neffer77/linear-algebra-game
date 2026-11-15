@@ -1,151 +1,179 @@
 {
- "change": "The Ladder Workshop: related rates",
+ "change": "The Null Space Workshop: what a matrix crushes",
  "mutations": [
   {
-   "name": "the top's speed loses the foot's speed",
+   "name": "Av uses a column for a row",
    "file": "index.html",
-   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
-   "replace": "  yp(){ return -this.x()/this.y(); },",
+   "find": "  av(){ const A=this.set().A; return [A[0][0]*this.x+A[0][1]*this.y, A[1][0]*this.x+A[1][1]*this.y]; },",
+   "replace": "  av(){ const A=this.set().A; return [A[0][0]*this.x+A[1][0]*this.y, A[0][1]*this.x+A[1][1]*this.y]; },",
    "run": "verify"
   },
   {
-   "name": "x and y swap in the rate",
+   "name": "the determinant adds",
    "file": "index.html",
-   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
-   "replace": "  yp(){ return -this.y()*this.set().v/this.x(); },",
+   "find": "return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },",
+   "replace": "return A[0][0]*A[1][1]+A[0][1]*A[1][0]; },",
    "run": "verify"
   },
   {
-   "name": "the top's speed comes out positive",
+   "name": "the row multiple reads off the wrong entries",
    "file": "index.html",
-   "find": "  yp(){ return -this.x()*this.set().v/this.y(); },",
-   "replace": "  yp(){ return this.x()*this.set().v/this.y(); },",
+   "find": "  k(){ const A=this.set().A; return A[1][0]/A[0][0]; },",
+   "replace": "  k(){ const A=this.set().A; return A[0][1]/A[0][0]; },",
    "run": "verify"
   },
   {
-   "name": "the height forgets the square root",
+   "name": "zero counts as crushed",
    "file": "index.html",
-   "find": "  y(x=this.x()){ const L=this.set().L; return Math.sqrt(L*L-x*x); },",
-   "replace": "  y(x=this.x()){ const L=this.set().L; return L-x; },",
+   "find": "return p[0]===0 && p[1]===0 && (this.x!==0 || this.y!==0); },",
+   "replace": "return p[0]===0 && p[1]===0; },",
    "run": "verify"
   },
   {
-   "name": "the check uses the foot's old place",
+   "name": "the steep matrix is not singular",
    "file": "index.html",
-   "find": "  x2(){ return this.x()+this.set().v*this.DT; },",
-   "replace": "  x2(){ return this.x()+this.DT; },",
+   "find": "{id:'steep', btn:'Steep', A:[[2,-1],[-6,3]]}",
+   "replace": "{id:'steep', btn:'Steep', A:[[2,-1],[-6,4]]}",
    "run": "verify"
   },
   {
-   "name": "the 13 m ladder has no whole place",
+   "name": "the full-rank matrix is singular",
    "file": "index.html",
-   "find": "X:[2,5,8,10,12,12.5], s:3}",
-   "replace": "X:[2,5.5,8,10,11.5,12.5], s:3}",
+   "find": "{id:'full', btn:'Full rank', A:[[2,1],[1,1]]}",
+   "replace": "{id:'full', btn:'Full rank', A:[[2,1],[4,2]]}",
    "run": "verify"
   },
   {
-   "name": "a foot can reach the ladder's length",
+   "name": "the flat matrix crushes nothing in reach",
    "file": "index.html",
-   "find": "X:[1,2,3,4,4.5,4.8], s:4}",
-   "replace": "X:[1,2,3,4,4.5,5], s:4}",
+   "find": "{id:'flat', btn:'Flat', A:[[1,2],[2,4]]}",
+   "replace": "{id:'flat', btn:'Flat', A:[[1,4],[2,8]]}",
    "run": "verify"
   },
   {
-   "name": "an inexact height reads as exact",
+   "name": "a negative entry loses its brackets",
    "file": "index.html",
-   "find": "    const is=(n,d=4)=>(this.exact(n,d)?'= ':'≈ ')+this.num(n,d);\n    const ab=",
-   "replace": "    const is=(n,d=4)=>'= '+this.num(n,d);\n    const ab=",
+   "find": "    const par=n=>n<0?`(${neg(n)})`:String(n);\n    const row=",
+   "replace": "    const par=n=>neg(n);\n    const row=",
    "run": "verify"
   },
   {
-   "name": "faster and slower swap",
+   "name": "a crushed arrow reads as not crushed",
    "file": "index.html",
-   "find": "r<1 ? 'slower than' : 'faster than';",
-   "replace": "r<1 ? 'faster than' : 'slower than';",
+   "find": "    else if(this.crushed())\n      out.push(",
+   "replace": "    else if(false)\n      out.push(",
    "run": "verify"
   },
   {
-   "name": "the slow goal counts any speed",
+   "name": "rank and nullity miscount",
    "file": "index.html",
-   "find": "ok:K=>Math.abs(K.yp())<K.set().v-1e-9},",
-   "replace": "ok:K=>Math.abs(K.yp())<3*K.set().v},",
+   "find": "so the nullity is 0: rank 2 + nullity 0 = 2 columns",
+   "replace": "so the nullity is 1: rank 2 + nullity 1 = 2 columns",
    "run": "verify"
   },
   {
-   "name": "the bend goal counts any miss",
+   "name": "the line goal takes one arrow",
    "file": "index.html",
-   "find": "ok:K=>K.miss()>0.1}",
-   "replace": "ok:K=>K.miss()>0}",
+   "find": "ok:K=>K.seen[K.si].size>=2},",
+   "replace": "ok:K=>K.seen[K.si].size>=1},",
    "run": "verify"
   },
   {
-   "name": "the speed bars are not to one scale",
+   "name": "the reach goal takes any point",
    "file": "index.html",
-   "find": "`<rect x=\"215\" y=\"110\" width=\"${tb.toFixed(2)}\"",
-   "replace": "`<rect x=\"215\" y=\"110\" width=\"${(tb/2).toFixed(2)}\"",
+   "find": "ok:K=>K.si===2 && K.av()[0]===1 && K.av()[1]===0}",
+   "replace": "ok:K=>K.si===2 && K.av()[0]===1}",
    "run": "verify"
   },
   {
-   "name": "the ladder is drawn too tall",
+   "name": "Av is drawn to v's scale",
    "file": "index.html",
-   "find": "const S=this.set(), L=S.L, x=this.x(), y=this.y(), k=170/L, gx=20, gy=190;",
-   "replace": "const S=this.set(), L=S.L, x=this.x(), y=this.y()*1.2, k=170/L, gx=20, gy=190;",
+   "find": "kv=80/(this.HI+0.5), ka=80/this.reach();",
+   "replace": "kv=80/(this.HI+0.5), ka=kv;",
    "run": "verify"
   },
   {
-   "name": "a new ladder keeps the old place",
+   "name": "the gold line is drawn on every matrix",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.set().s; this.touched=true; this.render(); },",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },",
-   "run": "play:ladder"
+   "find": "    if(this.det()===0) out+=thru(R,",
+   "replace": "    if(true) out+=thru(R,",
+   "run": "verify"
   },
   {
-   "name": "the caption forgets the bars",
+   "name": "the null-space line is drawn along a row",
    "file": "index.html",
-   "find": " On the right, the blue bar is the foot's speed, ${S.v} m/s, and the red bar the top's, to one scale.</div>`;",
-   "replace": "</div>`;",
-   "run": "play:ladder"
+   "find": "out+=thru(L,[-A[0][1],A[0][0]],FIG_COL.d,'null');",
+   "replace": "out+=thru(L,[A[0][0],A[0][1]],FIG_COL.d,'null');",
+   "run": "verify"
+  },
+  {
+   "name": "Av is drawn upside down",
+   "file": "index.html",
+   "find": "const tx=(c[0]+q[0]*k).toFixed(2), ty=(c[1]-q[1]*k).toFixed(2);",
+   "replace": "const tx=(c[0]+q[0]*k).toFixed(2), ty=(c[1]+q[1]*k).toFixed(2);",
+   "run": "verify"
+  },
+  {
+   "name": "a new matrix keeps the old arrow",
+   "file": "index.html",
+   "find": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true;",
+   "replace": "pick(i){ this.si=i; this.touched=true;",
+   "run": "play:null"
+  },
+  {
+   "name": "crushed arrows are never remembered",
+   "file": "index.html",
+   "find": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.look(); this.render(); },\n  step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.look(); this.render(); },",
+   "replace": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.render(); },\n  step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.render(); },",
+   "run": "play:null"
+  },
+  {
+   "name": "the caption forgets the gold line",
+   "file": "index.html",
+   "find": "${this.det()===0?' The gold dashed line is everywhere Av can land.':''}",
+   "replace": "",
+   "run": "play:null"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF THE LADDER','every speed read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF THE LADDER','every speed read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:ladder"
+   "find": "'MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:null"
   },
   {
    "name": "the stepper runs past its end",
    "file": "index.html",
-   "find": "document.getElementById('ldXLo').disabled=this.k<=0;",
-   "replace": "document.getElementById('ldXLo').disabled=false;",
-   "run": "play:ladder"
+   "find": "aria-label=\"Lower ${names[w]}\"${this[w]<=this.LO?' disabled':''}>",
+   "replace": "aria-label=\"Lower ${names[w]}\">",
+   "run": "play:null"
   },
   {
-   "name": "the ladder buttons lose their names",
+   "name": "the matrix buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Ladder.pick(${i})\" aria-label=\"${s.btn}, its foot sliding out at ${s.v} m/s\">",
-   "replace": "onclick=\"Ladder.pick(${i})\">",
-   "run": "play:ladder"
+   "find": "onclick=\"Kernel.pick(${i})\" aria-label=\"${s.btn}: rows ${this.v(s.A[0])} and ${this.v(s.A[1])}\">",
+   "replace": "onclick=\"Kernel.pick(${i})\">",
+   "run": "play:null"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"A ${L} m ladder",
-   "replace": "role=\"img\" data-x=\"A ${L} m ladder",
-   "run": "play:ladder"
+   "find": "role=\"img\" aria-label=\"Left, v = ",
+   "replace": "role=\"img\" data-x=\"Left, v = ",
+   "run": "play:null"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeLadder\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeLadderX\"",
-   "run": "play:ladder"
+   "find": "<button class=\"btn sm\" id=\"tomeNull\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeNullX\"",
+   "run": "play:null"
   },
   {
-   "name": "related rates points nowhere",
+   "name": "rank-nullity points nowhere",
    "file": "index.html",
-   "find": "    Ladder:  [\"🪜 Ladder Workshop\", ['relatedRates']],",
-   "replace": "    Ladder:  [\"🪜 Ladder Workshop\", ['relatedRate']],",
+   "find": "['nullSpace','colSpace','rankNullity']],",
+   "replace": "['nullSpace','colSpace','rankNulity']],",
    "run": "verify"
   }
  ]
