@@ -29,7 +29,7 @@ module.exports = {
     // --- falls on two topics with workshops, one without, and a rise ---
     let s = await summary(t, {
       lhopital: { from: 0.6, to: 0.3 }, chainRule: { from: 0.5, to: 0.4 },
-      transpose: { from: 0.7, to: 0.2 }, vecAdd: { from: 0.1, to: 0.4 }
+      logDiff: { from: 0.7, to: 0.2 }, vecAdd: { from: 0.1, to: 0.4 }
     });
     t.ok('the summary offers a workshop for what fell', /See it work by hand/.test(s.head), s.head);
     t.eq('the biggest fall with a workshop comes first', s.topics, ['lhopital', 'chainRule']);
@@ -48,7 +48,7 @@ module.exports = {
     // --- nothing fell, or nothing that fell has a workshop ---
     s = await summary(t, { lhopital: { from: 0.2, to: 0.5 } });
     t.eq('a topic that rose is offered nothing', s.ws, []);
-    s = await summary(t, { transpose: { from: 0.6, to: 0.3 } });
+    s = await summary(t, { logDiff: { from: 0.6, to: 0.3 } });
     t.eq('nor is a fall no workshop fits', s.ws, []);
     t.eq('so the heading is not shown either', s.head, '');
 
