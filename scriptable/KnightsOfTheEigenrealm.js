@@ -1532,6 +1532,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SLICE WORKSHOP ============ -->
+  <div class="screen" id="s-slice">
+    <div class="panel"><h2>🍞 Slice Workshop</h2><div class="sub">A double integral over a rectangle is done one variable at a time. Hold one still and the solid under f is cut into slices, each an ordinary integral in the other. Sweep the slices from edge to edge and their areas add up to the whole.</div></div>
+    <div class="panel">
+      <div id="scSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which function"></div>
+      <div id="scHold" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which variable to hold still"></div>
+      <div id="scFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="scTLo" onclick="Slice.moveT(-1)" aria-label="Move the slice back">−</button>
+          <b id="scT" style="font-size:17px;min-width:0"></b>
+          <button id="scTHi" onclick="Slice.moveT(1)" aria-label="Move the slice on">+</button></div>
+      </div>
+      <div id="scRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="scGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3533,6 +3553,7 @@ const WORKSHOP_FOR = (() => {
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
     Parts:   ["✂️ Parts Workshop", ['byParts']],
     Cover:   ["🙈 Cover-up Workshop", ['partialFrac']],
+    Slice:   ["🍞 Slice Workshop", ['doubleInt']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12922,6 +12943,7 @@ const UI = {
     if(id==='s-hill') Hill.render();
     if(id==='s-cof') Cofactor.render();
     if(id==='s-cover') Cover.render();
+    if(id==='s-slice') Slice.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13665,6 +13687,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🙈 Cover-up Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor.</div>
          <button class="btn sm" id="tomeCover" style="width:auto;margin-top:8px" onclick="Cover.open()">Open the cover-up workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🍞 Slice Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer.</div>
+         <button class="btn sm" id="tomeSlice" style="width:auto;margin-top:8px" onclick="Slice.open()">Open the slice workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18154,6 +18181,134 @@ const Cover = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('UNDER COVER','every fraction split','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The slice workshop: a double integral, one variable at a time ----------
+   Over a rectangle, hold one variable still and the solid under f is cut
+   into slices, each an ordinary integral in the other variable. Sweep the
+   slices from one edge to the other and their areas add up to the double
+   integral. Slice the other way and the total is the same. Nothing is
+   saved. */
+const Slice = {
+  SETS:[
+    {id:'xy', btn:'xy', fs:'xy', a:2, b:3, f:(x,y)=>x*y,
+     O:{x:{slice:t=>Slice.mono(t,'y'), S:t=>4.5*t, Ss:'4.5x', W:t=>2.25*t*t},
+        y:{slice:t=>Slice.mono(t,'x'), S:t=>2*t, Ss:'2y', W:t=>t*t}}},
+    {id:'sq', btn:'x²', fs:'x²', a:3, b:2, f:(x,y)=>x*x,
+     O:{x:{slice:t=>Slice.num(t*t), S:t=>2*t*t, Ss:'2x²', W:t=>2*t**3/3},
+        y:{slice:()=>'x²', S:()=>9, Ss:'9', W:t=>9*t}}},
+    {id:'sum', btn:'x + y', fs:'x + y', a:2, b:2, f:(x,y)=>x+y,
+     O:{x:{slice:t=>t ? \`\${Slice.num(t)} + y\` : 'y', S:t=>2*t+2, Ss:'2x + 2', W:t=>t*t+2*t},
+        y:{slice:t=>t ? \`x + \${Slice.num(t)}\` : 'x', S:t=>2*t+2, Ss:'2y + 2', W:t=>t*t+2*t}}}
+  ],
+  si:0, hold:'x', k:1, touched:false,
+  START:1,
+  /* which ways each function has been swept to its far edge, and the slice
+     positions looked at since the last pick or turn */
+  swept:[new Set(),new Set(),new Set()],
+  seen:new Set(),
+  done:new Set(),
+  GOALS:[
+    {id:'zero', t:'On xy, find a slice with no area at all.', toast:'A slice of nothing',
+     ok:K=>K.si===0 && K.area()===0},
+    {id:'all', t:'Sweep the slices of xy all the way to the far edge, so they add up to the whole double integral.', toast:'Every slice added',
+     ok:K=>K.si===0 && K.swept[0].size>=1},
+    {id:'swap', t:'Sweep xy the other way too, holding the other variable still, and compare the totals.', toast:'Either order',
+     ok:K=>K.si===0 && K.swept[0].size===2},
+    {id:'flat', t:'On x², find the way of slicing where every slice has the same area.', toast:'All slices alike',
+     ok:K=>K.si===1 && K.hold==='y' && K.seen.size>=2},
+    {id:'mid', t:'On x + y, find the slice whose area is the average of all of them.', toast:'The average slice',
+     ok:K=>K.si===2 && K.area()===K.total()/K.len()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  o(){ return this.set().O[this.hold]; },
+  other(){ return this.hold==='x' ? 'y' : 'x'; },
+  /* how far the held variable runs, and how far the other one does */
+  len(){ return this.hold==='x' ? this.set().a : this.set().b; },
+  span(){ return this.hold==='x' ? this.set().b : this.set().a; },
+  steps(){ return this.len()*2; },
+  t(){ return this.k/2; },
+  r(v){ const q=Math.round(v*1e6)/1e6; return Object.is(q,-0)?0:q; },
+  area(t=this.t()){ return this.r(this.o().S(t)); },
+  total(){ return this.r(this.o().W(this.len())); },
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  /* c times a variable, written the way you would: 0, y, 1.5y */
+  mono(c,v){ return c===0 ? '0' : c===1 ? v : \`\${this.num(c)}\${v}\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), h=this.hold, v=this.other(), t=this.t(), T=this.num(t), A=this.area(), L=this.len(), tot=this.total();
+    const at = h==='x' ? \`f(\${T}, y)\` : \`f(x, \${T})\`;
+    const out=[\`f(x, y) = \${S.fs} over the rectangle 0 ≤ x ≤ \${S.a}, 0 ≤ y ≤ \${S.b}. Hold \${h} still and the solid under f is cut into slices, each an ordinary integral in \${v}.\`];
+    out.push(\`Hold \${h} = \${T}: the slice is \${at} = \${this.o().slice(t)} for \${v} from 0 to \${this.span()}, and its area is ∫ \${/ \\+ /.test(this.o().slice(t)) ? \`(\${this.o().slice(t)})\` : this.o().slice(t)} d\${v} from \${v} = 0 to \${this.span()}, which is \${this.num(A)}.\`);
+    out.push(\`Worked out for every \${h}, the slice area is S(\${h}) = \${this.o().Ss}.\`);
+    if(A===0) out.push(\`This slice has no area: f is 0 all along it.\`);
+    if(this.o().S(0)===this.o().S(L)) out.push(\`Every slice has the same area, \${this.num(A)}, because f does not change with \${h}. The total is just \${this.num(A)} × \${L} = \${this.num(tot)}.\`);
+    else if(A===tot/L) out.push(\`This slice's area, \${this.num(A)}, is the average slice: the total \${this.num(tot)} ÷ the width \${L} = \${this.num(A)}.\`);
+    out.push(t===0 ? \`Nothing is swept yet: step \${h} along to add up the slices.\`
+      : \`Swept from \${h} = 0 to \${T}: ∫ S(\${h}) d\${h} from 0 to \${T} = \${this.num(this.o().W(t))}.\`);
+    if(this.k===this.steps()){
+      out.push(\`That is every slice, so the double integral of \${S.fs} over the rectangle is \${this.num(tot)}.\`);
+      if(this.swept[this.si].size===2) out.push(\`Slicing the other way gave the same \${this.num(tot)}: over a rectangle the order you integrate in does not matter.\`);
+    }
+    return out;
+  },
+  /* left, the rectangle seen from above, shaded by how tall f is, with the
+     swept part in gold and the slice as a line; right, the slice area S
+     against the held variable, with the swept area under it */
+  svg(){
+    const S=this.set(), h=this.hold, t=this.t(), L=this.len(), u=45;
+    let fmax=0; for(let x=0.25;x<S.a;x+=0.5) for(let y=0.25;y<S.b;y+=0.5) fmax=Math.max(fmax,S.f(x,y));
+    const X=v=>20+v*u, Y=v=>185-v*u;
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="The rectangle 0 to \${S.a} by 0 to \${S.b} from above, sliced at \${h} = \${this.num(t)}, beside the slice area S(\${h}) = \${this.o().Ss}">\`;
+    for(let x=0;x<S.a;x+=0.5) for(let y=0;y<S.b;y+=0.5)
+      out+=\`<rect data-k="cell" x="\${X(x)}" y="\${Y(y+0.5)}" width="\${u/2}" height="\${u/2}" fill="\${FIG_COL.a}" opacity="\${(0.08+0.6*S.f(x+0.25,y+0.25)/fmax).toFixed(3)}"/>\`;
+    if(t>0) out+= h==='x'
+      ? \`<rect data-k="swept" x="\${X(0)}" y="\${Y(S.b)}" width="\${t*u}" height="\${S.b*u}" fill="\${FIG_COL.b}" opacity="0.25"/>\`
+      : \`<rect data-k="swept" x="\${X(0)}" y="\${Y(t)}" width="\${S.a*u}" height="\${t*u}" fill="\${FIG_COL.b}" opacity="0.25"/>\`;
+    out+=\`<rect x="\${X(0)}" y="\${Y(S.b)}" width="\${S.a*u}" height="\${S.b*u}" fill="none" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+= h==='x'
+      ? \`<line data-k="slice" x1="\${X(t)}" y1="\${Y(0)}" x2="\${X(t)}" y2="\${Y(S.b)}" stroke="\${FIG_COL.b}" stroke-width="3"/>\`
+      : \`<line data-k="slice" x1="\${X(0)}" y1="\${Y(t)}" x2="\${X(S.a)}" y2="\${Y(t)}" stroke="\${FIG_COL.b}" stroke-width="3"/>\`;
+    let smax=0; for(let i=0;i<=40;i++) smax=Math.max(smax,this.o().S(L*i/40)); smax=smax||1;
+    const PX=v=>200+v/L*140, PY=v=>185-v/smax*150;
+    const pts=[]; for(let i=0;i<=40;i++){ const s=L*i/40; pts.push(\`\${PX(s).toFixed(2)},\${PY(this.o().S(s)).toFixed(2)}\`); }
+    if(t>0){ const sw=[\`\${PX(0)},\${PY(0)}\`]; for(let i=0;i<=40;i++){ const s=t*i/40; sw.push(\`\${PX(s).toFixed(2)},\${PY(this.o().S(s)).toFixed(2)}\`); } sw.push(\`\${PX(t).toFixed(2)},\${PY(0)}\`);
+      out+=\`<polygon data-k="under" points="\${sw.join(' ')}" fill="\${FIG_COL.b}" opacity="0.25"/>\`; }
+    out+=\`<line x1="200" y1="\${PY(0)}" x2="340" y2="\${PY(0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="200" y1="\${PY(0)}" x2="200" y2="30" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<polyline data-k="S" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5"/>\`;
+    out+=\`<circle data-k="pt" cx="\${PX(t).toFixed(2)}" cy="\${PY(this.area()).toFixed(2)}" r="5" fill="\${FIG_COL.b}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-slice'); },
+  pick(i){ this.si=i; this.k=this.START; this.seen=new Set([this.k]); this.touched=true; this.render(); },
+  turn(h){ if(h===this.hold) return; this.hold=h; this.k=this.START; this.seen=new Set([this.k]); this.touched=true; this.render(); },
+  moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()) return; this.k=v; this.seen.add(this.k);
+    if(v===this.steps()) this.swept[this.si].add(this.hold); this.touched=true; this.render(); },
+  render(){
+    document.getElementById('scSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Slice.pick(\${i})" aria-label="f(x, y) = \${s.fs} over 0 to \${s.a} by 0 to \${s.b}">\${s.btn}</button>\`).join('');
+    document.getElementById('scHold').innerHTML=['x','y'].map(h=>
+      \`<button class="btn sm ghost" aria-pressed="\${h===this.hold}" onclick="Slice.turn('\${h}')" aria-label="Hold \${h} still and slice">Hold \${h} still</button>\`).join('');
+    document.getElementById('scT').textContent=\`\${this.hold} = \${this.num(this.t())}\`;
+    document.getElementById('scTLo').setAttribute('aria-label',\`Move the slice back to lower \${this.hold}\`);
+    document.getElementById('scTHi').setAttribute('aria-label',\`Move the slice on to higher \${this.hold}\`);
+    document.getElementById('scTLo').disabled=this.k<=0;
+    document.getElementById('scTHi').disabled=this.k>=this.steps();
+    document.getElementById('scFig').innerHTML=this.svg()+
+      \`<div class="figcap">Left, the rectangle from above, darker where f is taller, with the slice as a gold line and the part swept so far in gold. Right, each slice's area S against where it is cut, with the swept area under it.</div>\`;
+    document.getElementById('scRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('scGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLICED THROUGH','every slice summed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

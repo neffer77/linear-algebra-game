@@ -1,215 +1,215 @@
 {
- "change": "The Cover-up Workshop: partial fractions",
+ "change": "The Slice Workshop: double integrals",
  "mutations": [
   {
-   "name": "the first fraction's value of B is wrong",
+   "name": "the slice area of xy is off",
    "file": "index.html",
-   "find": "VAL:[[2,3],[1,2,-1],[3,2]],",
-   "replace": "VAL:[[2,4],[1,2,-1],[3,2]],",
+   "find": "S:t=>4.5*t, Ss:'4.5x', W:t=>2.25*t*t}",
+   "replace": "S:t=>4*t, Ss:'4.5x', W:t=>2.25*t*t}",
    "run": "verify"
   },
   {
-   "name": "the three-factor top is changed",
+   "name": "the swept total of xy is off",
    "file": "index.html",
-   "find": "N:[2,6,-2], den:[0,1,-2]",
-   "replace": "N:[2,6,-1], den:[0,1,-2]",
+   "find": "S:t=>2*t, Ss:'2y', W:t=>t*t}",
+   "replace": "S:t=>2*t, Ss:'2y', W:t=>t*t+0.5}",
    "run": "verify"
   },
   {
-   "name": "the repeated value of A is wrong",
+   "name": "the written S disagrees with the areas",
    "file": "index.html",
-   "find": "VAL:[[2,3],[1,2,-1],[3,2]],",
-   "replace": "VAL:[[2,3],[1,2,-1],[2,2]],",
+   "find": "S:t=>2*t*t, Ss:'2x²'",
+   "replace": "S:t=>2*t*t, Ss:'2x'",
    "run": "verify"
   },
   {
-   "name": "the workshop opens on a root",
+   "name": "the slice of x² is written as its square root",
    "file": "index.html",
-   "find": "  START:7,\n  si:0, k:7,",
-   "replace": "  START:5,\n  si:0, k:5,",
+   "find": "slice:t=>Slice.num(t*t), S:t=>2*t*t",
+   "replace": "slice:t=>Slice.num(t), S:t=>2*t*t",
    "run": "verify"
   },
   {
-   "name": "the cleared coefficient keeps the piece's own factor",
+   "name": "x + y swept across y is short a slice",
    "file": "index.html",
-   "find": "rest(j){ const rs=[...this.set().den]; for(const r of this.set().P[j].r) rs.splice(rs.indexOf(r),1); return rs; },",
-   "replace": "rest(j){ return [...this.set().den]; },",
+   "find": "S:t=>2*t+2, Ss:'2y + 2', W:t=>t*t+2*t}",
+   "replace": "S:t=>2*t+2, Ss:'2y + 2', W:t=>t*t+t}",
    "run": "verify"
   },
   {
-   "name": "the top is evaluated backwards",
+   "name": "the slice steps by whole units",
    "file": "index.html",
-   "find": "N(x=this.x()){ return this.set().N.reduce((s,c)=>s*x+c,0); },",
-   "replace": "N(x=this.x()){ return [...this.set().N].reverse().reduce((s,c)=>s*x+c,0); },",
+   "find": "  steps(){ return this.len()*2; },\n  t(){ return this.k/2; },",
+   "replace": "  steps(){ return this.len(); },\n  t(){ return this.k; },",
    "run": "verify"
   },
   {
-   "name": "the rank never reaches full",
+   "name": "the workshop opens on an empty slice",
    "file": "index.html",
-   "find": "    return r; },\n  coverAt(j)",
-   "replace": "    return Math.min(r,1); },\n  coverAt(j)",
+   "find": "  si:0, hold:'x', k:1, touched:false,\n  START:1,",
+   "replace": "  si:0, hold:'x', k:0, touched:false,\n  START:0,",
    "run": "verify"
   },
   {
-   "name": "cover-up counts any x where the term survives",
+   "name": "the slice is never bracketed",
    "file": "index.html",
-   "find": "filter(x=>S.P.every((_,q)=>(this.coef(q,x)===0)!==(q===j)))",
-   "replace": "filter(x=>this.coef(j,x)!==0)",
+   "find": "${/ \\+ /.test(this.o().slice(t)) ? `(${this.o().slice(t)})` : this.o().slice(t)}",
+   "replace": "${this.o().slice(t)}",
    "run": "verify"
   },
   {
-   "name": "a found unknown is taken from what was seen, not kept",
+   "name": "the no-area note shows everywhere",
    "file": "index.html",
-   "find": "  rank(){ const rows=[...this.used[this.si]]",
-   "replace": "  rank(){ const rows=[...this.used[this.si], this.x()]",
+   "find": "    if(A===0) out.push(`This slice has no area",
+   "replace": "    if(true) out.push(`This slice has no area",
    "run": "verify"
   },
   {
-   "name": "the solving sentence always shows",
+   "name": "the average note shows on every slice",
    "file": "index.html",
-   "find": "      if(S.P.some((_,j)=>!this.coverAt(j).length)) out.push(`Solving",
-   "replace": "      if(true) out.push(`Solving",
+   "find": "    else if(A===tot/L) out.push(`This slice's area",
+   "replace": "    else out.push(`This slice's area",
    "run": "verify"
   },
   {
-   "name": "the squared piece integrates as a log",
+   "name": "the other-way note shows after one sweep",
    "file": "index.html",
-   "find": "p.r.length===1 ? `${Math.abs(V[j])===1",
-   "replace": "p.r.length>=1 ? `${Math.abs(V[j])===1",
+   "find": "      if(this.swept[this.si].size===2) out.push(`Slicing the other way",
+   "replace": "      if(this.swept[this.si].size>=1) out.push(`Slicing the other way",
    "run": "verify"
   },
   {
-   "name": "the not-defined note shows everywhere",
+   "name": "every-slice is claimed before the far edge",
    "file": "index.html",
-   "find": "    if(this.isRoot()) out.push(`f itself is not defined",
-   "replace": "    if(true) out.push(`f itself is not defined",
+   "find": "    if(this.k===this.steps()){\n      out.push(`That is every slice",
+   "replace": "    if(this.k>=this.steps()-1){\n      out.push(`That is every slice",
    "run": "verify"
   },
   {
-   "name": "the pieces are drawn from the start",
+   "name": "the swept part is shaded from the start",
    "file": "index.html",
-   "find": "    if(this.found().length===n) S.P.forEach((p,j)=>{ out+=curve(",
-   "replace": "    if(true) S.P.forEach((p,j)=>{ out+=curve(",
+   "find": "    if(t>0) out+= h==='x'\n      ? `<rect data-k=\"swept\"",
+   "replace": "    if(true) out+= h==='x'\n      ? `<rect data-k=\"swept\"",
    "run": "verify"
   },
   {
-   "name": "the dashed line doubles on a repeated root",
+   "name": "the slice line is drawn at the far edge",
    "file": "index.html",
-   "find": "for(const r of [...new Set(S.den)]) out+=`<line data-k=\"asym\"",
-   "replace": "for(const r of S.den) out+=`<line data-k=\"asym\"",
+   "find": "? `<line data-k=\"slice\" x1=\"${X(t)}\" y1=\"${Y(0)}\" x2=\"${X(t)}\"",
+   "replace": "? `<line data-k=\"slice\" x1=\"${X(L)}\" y1=\"${Y(0)}\" x2=\"${X(L)}\"",
    "run": "verify"
   },
   {
-   "name": "the upright line stays gold at a root",
+   "name": "the rectangle is drawn in whole-unit cells",
    "file": "index.html",
-   "find": "stroke=\"${root?FIG_COL.d:FIG_COL.b}\" stroke-width=\"2\"/>`;",
-   "replace": "stroke=\"${FIG_COL.b}\" stroke-width=\"2\"/>`;",
+   "find": "for(let x=0;x<S.a;x+=0.5) for(let y=0;y<S.b;y+=0.5)\n",
+   "replace": "for(let x=0;x<S.a;x+=1) for(let y=0;y<S.b;y+=1)\n",
    "run": "verify"
   },
   {
-   "name": "goal a takes any x on the first fraction",
+   "name": "reaching the far edge is not recorded",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.used[0].has(1)},",
-   "replace": "     ok:K=>K.si===0 && K.used[0].size>0},",
+   "find": "    if(v===this.steps()) this.swept[this.si].add(this.hold);",
+   "replace": "    if(v===this.steps()-1) this.swept[this.si].add(this.hold);",
    "run": "verify"
   },
   {
-   "name": "goal b takes x = 1",
+   "name": "the slice runs past the far edge",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.used[0].has(-2)},",
-   "replace": "     ok:K=>K.si===0 && K.used[0].has(1)},",
+   "find": "  moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()) return;",
+   "replace": "  moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()+1) return;",
    "run": "verify"
   },
   {
-   "name": "solving takes one ordinary equation",
+   "name": "the empty-slice goal takes any slice",
    "file": "index.html",
-   "find": "filter(x=>x!==1 && x!==-2).length>=2},",
-   "replace": "filter(x=>x!==1 && x!==-2).length>=1},",
+   "find": "     ok:K=>K.si===0 && K.area()===0},",
+   "replace": "     ok:K=>K.si===0},",
    "run": "verify"
   },
   {
-   "name": "the three goal takes two of three",
+   "name": "the swap goal takes one sweep",
    "file": "index.html",
-   "find": "     ok:K=>K.si===1 && K.found().length===3},",
-   "replace": "     ok:K=>K.si===1 && K.found().length>=2},",
+   "find": "     ok:K=>K.si===0 && K.swept[0].size===2},",
+   "replace": "     ok:K=>K.si===0 && K.swept[0].size>=1},",
    "run": "verify"
   },
   {
-   "name": "the repeated goal takes B alone",
+   "name": "the alike goal takes the growing slices",
    "file": "index.html",
-   "find": "     ok:K=>K.si===2 && K.found().length===2}",
-   "replace": "     ok:K=>K.si===2 && K.found().length>=1}",
+   "find": "     ok:K=>K.si===1 && K.hold==='y' && K.seen.size>=2},",
+   "replace": "     ok:K=>K.si===1 && K.seen.size>=2},",
    "run": "verify"
   },
   {
-   "name": "keeping does nothing",
+   "name": "the average goal takes any slice",
    "file": "index.html",
-   "find": "  keep(){ this.used[this.si].add(this.x()); this.touched=true; this.render(); },",
-   "replace": "  keep(){ this.touched=true; this.render(); },",
-   "run": "play:cover"
+   "find": "     ok:K=>K.si===2 && K.area()===K.total()/K.len()}",
+   "replace": "     ok:K=>K.si===2 && K.area()>0}",
+   "run": "verify"
   },
   {
-   "name": "the keep button stays on once kept",
+   "name": "turning keeps the old slice",
    "file": "index.html",
-   "find": "kb.disabled=this.used[this.si].has(this.x());",
-   "replace": "kb.disabled=false;",
-   "run": "play:cover"
+   "find": "  turn(h){ if(h===this.hold) return; this.hold=h; this.k=this.START;",
+   "replace": "  turn(h){ if(h===this.hold) return; this.hold=h;",
+   "run": "play:slice"
   },
   {
-   "name": "the bottom loses its brackets",
+   "name": "a new function keeps the old slice",
    "file": "index.html",
-   "find": "  bot(S=this.set()){ const p=this.prod(S.den); return new Set(S.den).size>1 ? `(${p})` : p; },",
-   "replace": "  bot(S=this.set()){ return this.prod(S.den); },",
-   "run": "play:cover"
+   "find": "  pick(i){ this.si=i; this.k=this.START; this.seen=new Set([this.k]);",
+   "replace": "  pick(i){ this.si=i; this.seen=new Set([this.k]);",
+   "run": "play:slice"
   },
   {
-   "name": "f(0) is written over 1",
+   "name": "the hold buttons do nothing",
    "file": "index.html",
-   "find": "const raw=this.D()===1 ? neg(this.N()) : ",
-   "replace": "const raw=false ? neg(this.N()) : ",
-   "run": "play:cover"
+   "find": "onclick=\"Slice.turn('${h}')\"",
+   "replace": "onclick=\"\"",
+   "run": "play:slice"
   },
   {
-   "name": "the down button forgets its name",
+   "name": "the step buttons keep saying x",
    "file": "index.html",
-   "find": "onclick=\"Cover.moveX(-1)\" aria-label=\"Lower x by 1\"",
-   "replace": "onclick=\"Cover.moveX(-1)\"",
-   "run": "play:cover"
+   "find": "`Move the slice on to higher ${this.hold}`",
+   "replace": "`Move the slice on to higher x`",
+   "run": "play:slice"
   },
   {
-   "name": "a new fraction keeps the old x",
+   "name": "the back button stays on at 0",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },\n  keep()",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },\n  keep()",
-   "run": "play:cover"
+   "find": "document.getElementById('scTLo').disabled=this.k<=0;",
+   "replace": "document.getElementById('scTLo').disabled=false;",
+   "run": "play:slice"
   },
   {
-   "name": "the set buttons run in one row",
+   "name": "the function buttons run in one row",
    "file": "index.html",
-   "find": "<div id=\"cvSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"cvSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
-   "run": "play:cover"
+   "find": "<div id=\"scSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"scSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
+   "run": "play:slice"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every fraction split','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every fraction split','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:cover"
+   "find": "'every slice summed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every slice summed','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:slice"
   },
   {
-   "name": "the Tome loses the cover-up workshop",
+   "name": "the Tome loses the slice workshop",
    "file": "index.html",
-   "find": "id=\"tomeCover\"",
-   "replace": "id=\"tomeCoverX\"",
-   "run": "play:cover"
+   "find": "id=\"tomeSlice\"",
+   "replace": "id=\"tomeSliceX\"",
+   "run": "play:slice"
   },
   {
-   "name": "the workshop saves what it keeps",
+   "name": "the workshop saves where it slices",
    "file": "index.html",
-   "find": "  keep(){ this.used[this.si].add(this.x());",
-   "replace": "  keep(){ Game.s.coverKept=this.x(); this.used[this.si].add(this.x());",
-   "run": "play:cover"
+   "find": "  moveT(by){ const v=this.k+by;",
+   "replace": "  moveT(by){ Game.s.sliceAt=this.k; const v=this.k+by;",
+   "run": "play:slice"
   }
  ]
 }
