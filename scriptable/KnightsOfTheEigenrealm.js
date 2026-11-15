@@ -733,6 +733,10 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .wsCell{display:flex;align-items:center;justify-content:space-between;gap:4px}
 .wsCell b{font-size:24px;min-width:34px;text-align:center}
 .wsCell.c0 b{color:#5aa9e6} .wsCell.c1 b{color:#57cc7a}
+/* The dot product workshop sets its two arrows as rows, each named and
+   coloured as it is drawn: u blue, v green. */
+.dtVecs{grid-template-columns:auto 1fr 1fr;align-items:center}
+.dtName{font-size:20px;font-style:italic} .dtName.c0{color:#5aa9e6} .dtName.c1{color:#57cc7a}
 .wsCell button{width:40px;height:40px;border-radius:10px;border:1px solid var(--edge);
   background:var(--panel2);color:var(--ink);font-size:20px;font-weight:800;cursor:pointer}
 .wsCell button:disabled{opacity:.35}
@@ -968,6 +972,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="arGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ DOT PRODUCT WORKSHOP ============ -->
+  <div class="screen" id="s-dot">
+    <div class="panel"><h2>🎯 Dot Product Workshop</h2><div class="sub">The dot product of two arrows is one number that says how far they agree. Set u and v, and watch it, the angle between them, and the shadow u casts on v.</div></div>
+    <div class="panel">
+      <div id="dtVecs" class="wsMat dtVecs" role="group" aria-label="The two arrows"></div>
+      <div id="dtFig"></div>
+      <div id="dtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+      <button class="btn sm ghost" onclick="Dot.reset()">Start again</button>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="dtGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -5747,6 +5766,19 @@ const Figure = {
       g.lineTo(X(p1[0]+p2[0]),Y(p1[1]+p2[1]));
       g.lineTo(X(p2[0]),Y(p2[1]));
       g.stroke();
+    }
+    // the angle between the first two vectors, the short way round
+    if(s.arc && s.vecs && s.vecs.length>=2){
+      const [u,v]=[s.vecs[0].v, s.vecs[1].v];
+      const a0=Math.atan2(u[1],u[0]);
+      let d=Math.atan2(v[1],v[0])-a0;
+      while(d>Math.PI) d-=2*Math.PI;
+      while(d<-Math.PI) d+=2*Math.PI;
+      g.strokeStyle=FIG_COL.c; g.lineWidth=2;
+      g.beginPath(); g.arc(X(0),Y(0),18,-a0,-(a0+d),d>0); g.stroke();
+      const m=a0+d/2;
+      g.fillStyle=FIG_COL.c; g.font='bold 12px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+      g.fillText('θ', X(0)+30*Math.cos(m), Y(0)-30*Math.sin(m));
     }
     // projection drop-line
     if(s.proj && s.vecs && s.vecs.length>=2){
@@ -12132,6 +12164,7 @@ const UI = {
     if(id==='s-workshop') Workshop.render();
     if(id==='s-slope') Slope.render();
     if(id==='s-area') Area.render();
+    if(id==='s-dot') Dot.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12741,6 +12774,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🎯 Dot Product Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other.</div>
+         <button class="btn sm" id="tomeDot" style="width:auto;margin-top:8px" onclick="Dot.open()">Open the dot product workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -13794,6 +13832,107 @@ const Area = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ DOT PRODUCT WORKSHOP ============
+   Two arrows set by hand, and what their dot product says about them: the
+   sum of matching products, the angle it gives through cos θ, and the shadow
+   one casts on the other, which is where its sign comes from. */
+const Dot = {
+  LO:-4, HI:4,
+  START:{u:[3,1], v:[1,2]},
+  u:[3,1], v:[1,2], touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'perp', t:'Make u and v perpendicular, neither of them ⟨0, 0⟩.',
+     ok:D=>D.dot()===0 && !D.zero()},
+    {id:'tilt', t:'Perpendicular again, with no number 0 anywhere.',
+     ok:D=>D.dot()===0 && [...D.u, ...D.v].every(x=>x!==0)},
+    {id:'neg',  t:'Make the dot product negative.',
+     ok:D=>D.dot()<0},
+    {id:'opp',  t:'Point v exactly the opposite way to u.',
+     ok:D=>!D.zero() && D.cross()===0 && D.dot()<0},
+    {id:'same', t:'Point v the same way as u, at a different length.',
+     ok:D=>!D.zero() && D.cross()===0 && D.dot()>0 && D.n2(D.u)!==D.n2(D.v)},
+    {id:'ten',  t:'Make u·v exactly 10.',
+     ok:D=>D.dot()===10}
+  ],
+  dot(){ return this.u[0]*this.v[0]+this.u[1]*this.v[1]; },
+  cross(){ return this.u[0]*this.v[1]-this.u[1]*this.v[0]; },
+  n2(w){ return w[0]*w[0]+w[1]*w[1]; },
+  zero(){ return !this.n2(this.u) || !this.n2(this.v); },
+  // A length as the root of its square, whole where it is a perfect square.
+  len(w){ const s=this.n2(w), r=Math.round(Math.sqrt(s)); return r*r===s ? String(r) : '√'+s; },
+  lenWork(w){
+    const sq=x=>(x<0?'('+neg(x)+')':x)+'²', s=this.n2(w), L=this.len(w);
+    return \`√(\${sq(w[0])} + \${sq(w[1])}) = √\${s}\${L.startsWith('√')?'':' = '+L}\`;
+  },
+  cos(){ return this.dot()/Math.sqrt(this.n2(this.u)*this.n2(this.v)); },
+  deg(){ return Math.acos(Math.max(-1, Math.min(1, this.cos())))*180/Math.PI; },
+  // = where three places hold it exactly, ≈ where they round it
+  approx(x, places){
+    const r=+x.toFixed(places), t=neg(Object.is(r,-0)?0:r);
+    return (Math.abs(r-x)<1e-9 ? '= ' : '≈ ')+t;
+  },
+  vec(w){ return \`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`; },
+  /* The readout as plain sentences, so the checks can read exactly what the
+     player reads. */
+  working(){
+    const [a,b]=this.u, [c,d]=this.v, p=a*c, q=b*d, D=this.dot();
+    const pn=x=>x<0?'('+neg(x)+')':String(x);
+    const out=[\`u·v = u₁v₁ + u₂v₂ = \${pn(a)}·\${pn(c)} + \${pn(b)}·\${pn(d)} = \${neg(p)} \${q<0?'−':'+'} \${Math.abs(q)} = \${neg(D)}.\`];
+    if(this.zero()){
+      const z=!this.n2(this.u)?'u':'v';
+      out.push(\`\${z} is ⟨0, 0⟩, which points nowhere, so there is no angle to measure: its dot product with anything is 0.\`);
+      return out;
+    }
+    out.push(\`‖u‖ = \${this.lenWork(this.u)} and ‖v‖ = \${this.lenWork(this.v)}.\`);
+    const lu=this.len(this.u), lv=this.len(this.v);
+    out.push(\`cos θ = u·v / (‖u‖ × ‖v‖) = \${neg(D)} / (\${lu} × \${lv}) \${this.approx(this.cos(),3)}, so θ \${this.approx(this.deg(),0)}°.\`);
+    out.push(D>0 ? (this.cross()===0 ? 'Positive, and as large as these two lengths allow: v lies exactly along u.' : 'Positive: the arrows lean the same way, less than 90° apart.')
+      : D<0 ? (this.cross()===0 ? 'Negative, and as low as these two lengths allow: v points exactly against u.' : 'Negative: the arrows lean apart, more than 90°.')
+      : 'Zero: the arrows are perpendicular, exactly 90° apart.');
+    const sh=D/Math.sqrt(this.n2(this.v));
+    out.push(D===0
+      ? 'u casts no shadow on v\\'s line at all, which is what a dot product of 0 means.'
+      : \`The gold arrow is u's shadow on v's line, |u·v| / ‖v‖ = \${Math.abs(D)} / \${lv} \${this.approx(Math.abs(sh),2)} long, \${
+          D<0 ? 'and it points back against v: that is where the minus sign comes from.' : 'pointing along v.'}\`);
+    return out;
+  },
+  open(){ UI.go('s-dot'); },
+  step(w, i, by){
+    const arr=this[w], x=arr[i]+by;
+    if(x<this.LO||x>this.HI) return;
+    arr[i]=x; this.touched=true; this.render();
+  },
+  reset(){ this.u=[...this.START.u]; this.v=[...this.START.v]; this.render(); },
+  render(){
+    const names=['first','second'];
+    document.getElementById('dtVecs').innerHTML=['u','v'].map((w,r)=>
+      \`<b class="dtName c\${r}">\${w}</b>\`+[0,1].map(i=>\`<div class="wsCell c\${r}">
+        <button onclick="Dot.step('\${w}',\${i},-1)" aria-label="Lower \${w}'s \${names[i]} number"\${this[w][i]<=this.LO?' disabled':''}>−</button>
+        <b aria-label="\${w}'s \${names[i]} number: \${neg(this[w][i])}">\${neg(this[w][i])}</b>
+        <button onclick="Dot.step('\${w}',\${i},1)" aria-label="Raise \${w}'s \${names[i]} number"\${this[w][i]>=this.HI?' disabled':''}>+</button></div>\`).join('')).join('');
+    const D=this.dot(), z=this.zero();
+    Figure.render({kind:'plane', span:5,
+      vecs:[{v:this.u, col:'#5aa9e6', label:'u'}, {v:this.v, col:'#57cc7a', label:'v'}],
+      proj:!z && D!==0, right:!z && D===0, arc:!z && D!==0,
+      caption: z ? 'An arrow of length 0 has no direction.'
+        : \`u in blue, v in green\${D!==0?', u\\'s shadow on v in gold':''}.\`},
+      document.getElementById('dtFig'));
+    document.getElementById('dtRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('dtGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ANGLE READER','every dot product found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
     }
   }

@@ -589,6 +589,18 @@ The game is built so that losing teaches you as much as winning.
   match sets the next shape at once. Targets keep to −2 to 2 so every corner sits on a
   grid line, are never flat (a flat shape hides where ĵ went), never the identity, and
   never the one just matched.
+- **🎯 Dot Product Workshop** — the Tome's second linear algebra workshop. Set two
+  arrows, u and v, with four steppers from −4 to 4, and the readout works everything a
+  dot product says about them for the numbers on screen: u·v = 3·1 + 1·2 = 3 + 2 = 5,
+  both lengths from their squares (√10 and √5), cos θ = 5 / (√10 × √5) ≈ 0.707, so
+  θ = 45°. The figure marks the angle and draws u's shadow on v's line in gold, and the
+  shadow is where the sign comes from: when it points back against v, the dot product
+  is negative; when there is no shadow at all, the arrows are perpendicular. An arrow of
+  length 0 is given no angle. Six things to find (perpendicular, perpendicular with no
+  zero anywhere, negative, exactly opposite, exactly along at another length, and a dot
+  product of exactly 10). `npm test` checks all 6,561 pairs, reading back every line the
+  player reads: the products, the lengths, cos θ and the angle against atan2, an exact =
+  only where nothing was rounded, and the shadow's length and direction.
 - **📈 Slope Workshop** — also opened from the Tome, and the calculus side of the same
   idea. Pick a curve (x², x³ − 3x or 4 − x²), step the point a from −2 to 2, and bring
   h towards 0 through 1, 0.5, 0.1, 0.01 and 0.001. A blue secant runs through (a, f(a))
@@ -778,7 +790,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-seven suites, 1,755 checks, about a minute:
+loop only exists once the page is running. Thirty-eight suites, 1,786 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -811,6 +823,7 @@ loop only exists once the page is running. Thirty-seven suites, 1,755 checks, ab
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
 | `workshop` | the Tome opens the matrix workshop on the identity; each tap of a real button redraws the plane and the readout, where î and ĵ land, the determinant worked with negatives bracketed and the sign folded in, and the directions kept with their eigenvalues; a goal is ticked when, and only when, the matrix on screen makes it, and stays ticked through Start again; the numbers stop at −4 and 4; every button says which number it moves; Surprise me stays in range; it fits a phone; all nine goals can be made; Match the shape says how to read the dashed picture and never gives the target as numbers, numbers the axes and names the dashed arrows, sizes the view to the shapes, judges each column on its own, counts a match and sets a different, never-flat shape at once, and steps the goals aside until free play is back; nothing is saved |
+| `dot` | the Tome opens the dot product workshop on u = ⟨3, 1⟩ and v = ⟨1, 2⟩; the readout works u·v = 5, both lengths, cos θ ≈ 0.707 and θ = 45°, and the gold shadow; nothing is found before anything is turned; v = u gives 10 and is not counted as a different length; a negative turns the shadow back against v; ⟨−1, 3⟩ is perpendicular with no shadow and the caption drops it; exactly opposite reads 180° and exactly along reads 0°, and all six goals are found; the steppers stop at 4; Start again keeps the finds; an arrow of length 0 is given no angle; every stepper is named; it fits a phone; nothing is saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |

@@ -1,68 +1,30 @@
 {
- "change": "Area Workshop: rectangles under a curve close in on the integral",
+ "change": "Dot Product Workshop: two arrows, their dot product, angle and shadow",
  "mutations": [
-  {
-   "name": "sum takes heights at the wrong place",
-   "file": "index.html",
-   "find": "    return Array.from({length:this.n()}, (_,i)=>C.a+(i+off)*w);",
-   "replace": "    return Array.from({length:this.n()}, (_,i)=>C.a+(i+off*0.9)*w);",
-   "run": "verify"
-  },
-  {
-   "name": "exact area of 4 − x² wrong",
-   "file": "index.html",
-   "find": "a:0,  b:2, exact:16/3,",
-   "replace": "a:0,  b:2, exact:5.3,",
-   "run": "verify"
-  },
-  {
-   "name": "rounded sums printed whole",
-   "file": "index.html",
-   "find": "  eq(x){ return (this.exact(x)?'= ':'≈ ')+this.num(x); },",
-   "replace": "  eq(x){ return '= '+this.num(x); },",
-   "run": "verify"
-  },
-  {
-   "name": "below-axis goal unreachable",
-   "file": "index.html",
-   "find": "     ok:A=>A.heights().some(h=>h<0)}",
-   "replace": "     ok:A=>A.heights().some(h=>h<-9)}",
-   "run": "verify"
-  },
-  {
-   "name": "workshop opens already turned",
-   "file": "index.html",
-   "find": "  ci:0, ni:2, ri:0, touched:false,",
-   "replace": "  ci:0, ni:2, ri:0, touched:true,",
-   "run": "verify"
-  },
-  {
-   "name": "goals ticked before anything is turned",
-   "file": "index.html",
-   "find": "    if(this.touched) for(const g of this.GOALS)",
-   "replace": "    if(true) for(const g of this.GOALS)",
-   "run": "play:area"
-  },
-  {
-   "name": "one rectangle worked as a list",
-   "file": "index.html",
-   "find": "    lines.push(n===1\n",
-   "replace": "    lines.push(false\n",
-   "run": "play:area"
-  },
-  {
-   "name": "rounded gap without about",
-   "file": "index.html",
-   "find": "by ${this.exact(e)?'':'about '}",
-   "replace": "by ${''}",
-   "run": "play:area"
-  },
-  {
-   "name": "area missing from the Tome",
-   "file": "index.html",
-   "find": "id=\"tomeArea\"",
-   "replace": "id=\"tomeAreaX\"",
-   "run": "play:area"
-  }
+  {"name": "dot product adds the wrong products", "file": "index.html",
+   "find": "  dot(){ return this.u[0]*this.v[0]+this.u[1]*this.v[1]; },",
+   "replace": "  dot(){ return this.u[0]*this.v[1]+this.u[1]*this.v[0]; },", "run": "verify"},
+  {"name": "lengths left as roots when whole", "file": "index.html",
+   "find": "return r*r===s ? String(r) : '√'+s; },", "replace": "return '√'+s; },", "run": "verify"},
+  {"name": "rounded angles printed with =", "file": "index.html",
+   "find": "    return (Math.abs(r-x)<1e-9 ? '= ' : '≈ ')+t;", "replace": "    return '= '+t;", "run": "verify"},
+  {"name": "shadow always said to point along v", "file": "index.html",
+   "find": "          D<0 ? 'and it points back against v:", "replace": "          false ? 'and it points back against v:", "run": "verify"},
+  {"name": "a zero arrow given an angle", "file": "index.html",
+   "find": "    if(this.zero()){\n      const z=", "replace": "    if(false){\n      const z=", "run": "verify"},
+  {"name": "opposite counts any negative", "file": "index.html",
+   "find": "     ok:D=>!D.zero() && D.cross()===0 && D.dot()<0},", "replace": "     ok:D=>D.dot()<0},", "run": "verify"},
+  {"name": "perpendicular goal allows a zero number", "file": "index.html",
+   "find": "     ok:D=>D.dot()===0 && [...D.u, ...D.v].every(x=>x!==0)},", "replace": "     ok:D=>D.dot()===0 && !D.zero()},", "run": "verify"},
+  {"name": "goals ticked before anything is turned", "file": "index.html",
+   "find": "    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('dtGoals')",
+   "replace": "    for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('dtGoals')", "run": "play:dot"},
+  {"name": "steppers run past 4", "file": "index.html",
+   "find": "    if(x<this.LO||x>this.HI) return;\n    arr[i]=x;", "replace": "    arr[i]=x;", "run": "play:dot"},
+  {"name": "Start again drops the finds", "file": "index.html",
+   "find": "  reset(){ this.u=[...this.START.u]; this.v=[...this.START.v]; this.render(); },",
+   "replace": "  reset(){ this.u=[...this.START.u]; this.v=[...this.START.v]; this.done=new Set(); this.render(); },", "run": "play:dot"},
+  {"name": "dot workshop missing from the Tome", "file": "index.html",
+   "find": "id=\"tomeDot\"", "replace": "id=\"tomeDotX\"", "run": "play:dot"}
  ]
 }

@@ -48,6 +48,7 @@ function loadGame() {
     // whether each goal can be made inside its range at all.
     ';const Slope={' + script.slice(script.indexOf('  CURVES:['), script.indexOf('  open(){ UI.go(\'s-slope\'); },')) + '};exports.Slope=Slope;' +
     // The area workshop, lifted the same way: after Slope's, so its CURVES is found from Area on.
+    ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
@@ -62,7 +63,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -71,7 +72,7 @@ const FIG_REQUIRED = {
   plane: ['vecs'], grid: ['m'], curve: ['f', 'lo', 'hi'],
   region: ['f', 'lo', 'hi'], bars: ['f', 'lo', 'hi'], numberline: ['at']
 };
-const FIG_REVEALS = ['para', 'proj', 'tangent', 'legs', 'right', 'sum'];
+const FIG_REVEALS = ['para', 'proj', 'tangent', 'legs', 'right', 'sum', 'arc'];
 const finite = n => typeof n === 'number' && isFinite(n);
 
 function checkFigure(spec, key, where) {
@@ -1615,6 +1616,66 @@ const areaNotes = (() => {
   return { n, goals: A.GOALS.length };
 })();
 
+/* Every pair of arrows the dot product workshop can show: all four numbers
+   from −4 to 4. Each line the player reads is read back here and checked
+   against mathematics worked independently: the products and sum, both
+   lengths from their squares, cos θ and the angle (from atan2, not acos),
+   an exact = only where nothing was rounded, the verdict for the sign, and
+   the shadow's length and direction. Each goal must be findable, and none
+   met where the workshop opens. */
+const dotNotes = (() => {
+  const D = Dot, found = {}, num = s => +String(s).trim().replace(/−/g, '-');
+  const evalExpr = e => Function(`return (${e.replace(/−/g, '-').replace(/·/g, '*')})`)();
+  let n = 0;
+  for (let a = D.LO; a <= D.HI; a++) for (let b = D.LO; b <= D.HI; b++)
+  for (let c = D.LO; c <= D.HI; c++) for (let d = D.LO; d <= D.HI; d++) {
+    D.u = [a, b]; D.v = [c, d]; n++;
+    const key = `u=⟨${a},${b}⟩ v=⟨${c},${d}⟩`, dot = a * c + b * d, L = D.working();
+    if (D.dot() !== dot) fail('dot', key, `u·v is ${D.dot()}, not ${dot}`);
+    if (L.some(l => /[+−] −/.test(l))) fail('dot', key, 'a sum is written with a sign after a sign');
+    const parts = L[0].replace(/\.$/, '').split(' = ').slice(2);
+    if (parts.length !== 3 || parts.some(p => evalExpr(p) !== dot)) fail('dot', key, `the working ${L[0]} does not give ${dot}`);
+    const nu = Math.hypot(a, b), nv = Math.hypot(c, d);
+    if (!nu || !nv) {
+      if (L.length !== 2 || !/no angle/.test(L[1])) fail('dot', key, 'a zero arrow is given an angle');
+      continue;
+    }
+    const lens = [...L[1].matchAll(/√\((.*?)\) = √(\d+)(?: = (\d+))?/g)];
+    [[a, b], [c, d]].forEach(([x, y], i) => {
+      const m = lens[i], s = x * x + y * y;
+      if (!m || evalExpr(m[1].replace(/²/g, '**2')) !== s || +m[2] !== s) fail('dot', key, `a length is worked wrongly: ${L[1]}`);
+      else if (m[3] !== undefined && m[3] * m[3] !== s) fail('dot', key, `√${s} is printed as ${m[3]}`);
+      else if (m[3] === undefined && Number.isInteger(Math.sqrt(s))) fail('dot', key, `√${s} is left unworked`);
+    });
+    const cm = L[2].match(/ ([=≈]) (−?[\d.]+), so θ ([=≈]) (\d+)°\.$/);
+    const cos = dot / (nu * nv);
+    const ang = Math.abs(Math.atan2(a * d - b * c, dot)) * 180 / Math.PI;
+    if (!cm) { fail('dot', key, `the angle line does not read: ${L[2]}`); continue; }
+    if (Math.abs(num(cm[2]) - cos) > (cm[1] === '=' ? 1e-9 : 6e-4)) fail('dot', key, `cos θ is printed as ${cm[2]}, it is ${cos}`);
+    if (Math.abs(num(cm[4]) - ang) > (cm[3] === '=' ? 1e-9 : 0.5)) fail('dot', key, `θ is printed as ${cm[4]}°, it is ${ang}°`);
+    if (cm[3] === '=' && num(cm[4]) % 45) fail('dot', key, 'an angle is printed as exact that is not');
+    const sign = Math.sign(dot);
+    if (!(sign > 0 ? /^Positive/ : sign < 0 ? /^Negative/ : /^Zero/).test(L[3])) fail('dot', key, `the verdict "${L[3]}" is for the wrong sign`);
+    if (/exactly (along|against)/.test(L[3]) !== (a * d - b * c === 0 && dot !== 0)) fail('dot', key, 'parallel arrows are not named, or others are');
+    if (dot) {
+      const sm = L[4].match(/\|u·v\| \/ ‖v‖ = (\d+) \/ (√?\d+) ([=≈]) ([\d.]+) long/);
+      if (!sm || +sm[1] !== Math.abs(dot) || Math.abs(num(sm[4]) - Math.abs(dot) / nv) > (sm[3] === '=' ? 1e-9 : 6e-3))
+        fail('dot', key, `the shadow is measured wrongly: ${L[4]}`);
+      if (/back against v/.test(L[4]) !== dot < 0) fail('dot', key, 'the shadow points the wrong way');
+    }
+    for (const g of D.GOALS) if (g.ok(D)) found[g.id] = (found[g.id] || 0) + 1;
+    // the goals that name a direction are checked against the angle itself
+    if (D.GOALS.find(g => g.id === 'opp').ok(D) !== (Math.abs(ang - 180) < 1e-9)) fail('dot', key, 'exactly opposite is judged wrongly');
+    if (D.GOALS.find(g => g.id === 'perp').ok(D) !== (Math.abs(ang - 90) < 1e-9)) fail('dot', key, 'perpendicular is judged wrongly');
+    if (D.GOALS.find(g => g.id === 'tilt').ok(D) !== (dot === 0 && !!(a && b && c && d))) fail('dot', key, 'a right angle with a 0 in it is counted as tilted');
+  }
+  for (const g of D.GOALS) if (!found[g.id]) fail('dot', g.id, 'this goal cannot be found');
+  D.u = [...D.START.u]; D.v = [...D.START.v];
+  if (D.GOALS.some(g => g.ok(D))) fail('dot', 'start', 'a goal is already met where the workshop opens');
+  if (D.touched !== false) fail('dot', 'start', 'the workshop opens as if already turned');
+  return { n, goals: D.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1658,6 +1719,7 @@ if (codeNotes) {
 console.log(`  workshop matrices checked  ${pad(workshopNotes.n.toLocaleString(), 10)}  (kept directions, eigenvalues, ${workshopNotes.goals} goals makeable)`);
 console.log(`    shapes to match drawn    ${pad(workshopNotes.targets.toLocaleString(), 12)}  (on the grid, never flat, never twice running)`);
 console.log(`  slope workshop states      ${pad(slopeNotes.n.toLocaleString(), 10)}  (derivative, secant, working, ${slopeNotes.goals} goals findable)`);
+console.log(`  dot product pairs          ${pad(dotNotes.n.toLocaleString(), 10)}  (products, lengths, angle, shadow, ${dotNotes.goals} goals findable)`);
 console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10)}  (Riemann sums, working, gap, ${areaNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
