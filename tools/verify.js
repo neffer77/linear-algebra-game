@@ -55,6 +55,7 @@ function loadGame() {
     ';const Elim={' + script.slice(script.indexOf('  SYSTEMS:[\n    [[1,2,5],'), script.indexOf('  open(){ UI.go(\'s-elim\'); },')) + '};exports.Elim=Elim;' +
     ';const Undo={' + script.slice(script.indexOf('  MATS:[\n    {m:[[1,1],[0,1]],  btn:\'Shear\''), script.indexOf('  open(){ UI.go(\'s-undo\'); },')) + '};exports.Undo=Undo;' +
     ';const Fit={' + script.slice(script.indexOf("  SETS:[\n    {btn:'Line-up'"), script.indexOf("  open(){ UI.go('s-fit'); },")) + '};exports.Fit=Fit;' +
+    ';const Newton={' + script.slice(script.indexOf("  CURVES:[\n    {id:'sq',   name:'x² − 2'"), script.indexOf("  open(){ UI.go('s-newton'); },")) + '};exports.Newton=Newton;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -72,7 +73,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2252,6 +2253,100 @@ const fitNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of Newton's method: each curve, every first guess and every
+   number of steps. f, f′ and each guess are worked here from the curves
+   written out by hand, the cubic's root is found by halving, and every
+   number in the working must be that value to four places, with = only
+   where nothing was rounded away. The verdict is read for each state: a
+   root already, a root reached, a flat tangent with no next step, a loop,
+   or where the tangent lands next; a jump past a root is named on the two
+   curves that bend upward. Each goal must be findable, and none met where
+   the workshop opens. */
+const newtonNotes = (() => {
+  const W = Newton;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const r4 = x => { const r = Math.round(x * 1e4) / 1e4; return Object.is(r, -0) ? 0 : r; };
+  const exact = x => Math.abs(x - Math.round(x * 1e4) / 1e4) < 1e-9;
+  const show = x => neg(r4(x)), eq = (x, sure) => (sure && exact(x) ? '=' : '≈');
+  const par = x => (r4(x) < 0 ? '(' + show(x) + ')' : show(x));
+  const sub = k => String(k).replace(/\d/g, d => '₀₁₂₃₄₅₆₇₈₉'[d]);
+  let lo = -2, hi = -1.5;
+  for (let i = 0; i < 80; i++) { const m = (lo + hi) / 2; if (m ** 3 - 2 * m + 2 < 0) lo = m; else hi = m; }
+  const HAND = {
+    sq:   { f: x => x * x - 2, d: x => 2 * x, roots: [[Math.SQRT2, '√2 ≈ 1.4142', '√2'], [-Math.SQRT2, '−√2 ≈ −1.4142', '−√2']], up: true },
+    cube: { f: x => x ** 3 - 2 * x + 2, d: x => 3 * x * x - 2, roots: [[lo, '≈ −1.7693']], up: false },
+    two:  { f: x => x * x - 4 * x + 3, d: x => 2 * x - 4, roots: [[1, '1', '1'], [3, '3', '3']], up: true }
+  };
+  const found = {};
+  let n = 0;
+  if (W.ci !== 0 || W.xh !== 2 || W.n !== 0 || W.touched) fail('newton', 'start', 'the workshop does not open on x² − 2 at x₀ = 1, untouched');
+  for (const g of W.GOALS) if (g.ok(W)) fail('newton', 'start', `${g.id} is met before anything is pressed`);
+  if (Math.abs(W.CURVES[1].roots[0][0] - lo) > 1e-12) fail('newton', 'cube', 'the root of x³ − 2x + 2 is not where halving finds it');
+  const reach = { 1: new Set(), 3: new Set() };
+  W.CURVES.forEach((C, ci) => {
+    const H = HAND[C.id];
+    for (let xh = -6; xh <= 6; xh++) for (let want = 0; want <= 6; want++) {
+      W.ci = ci; W.xh = xh; W.n = want; W.touched = true; n++;
+      const key = `${C.id} x0=${xh / 2} n=${want}`, L = W.working();
+      const xs = [xh / 2];
+      while (xs.length - 1 < want && H.d(xs[xs.length - 1]) !== 0) { const x = xs[xs.length - 1]; xs.push(x - H.f(x) / H.d(x)); }
+      const m = xs.length - 1, X = xs[m], F = H.f(X), D = H.d(X);
+      // a guess shows in full only if every number it was worked from did
+      const ok = [true];
+      for (let k = 1; k <= m; k++) ok.push(ok[k - 1] && exact(H.f(xs[k - 1])) && exact(H.d(xs[k - 1])) && exact(xs[k]));
+      if (W.path().length !== xs.length || W.path().some((x, i) => Math.abs(x - xs[i]) > 1e-9)) { fail('newton', key, 'the guesses are not the ones worked here'); continue; }
+      if (L[0] !== `f(x) = ${C.name}, so f′(x) = ${C.d}. Each step slides down the tangent to the axis: the next x is x − f(x)/f′(x).`) fail('newton', key, `the first line reads: ${L[0]}`);
+      for (let k = 1; k <= m; k++) {
+        const a = xs[k - 1], Fa = H.f(a), Da = H.d(a);
+        const line = `f(x${sub(k - 1)}) ${eq(Fa, ok[k - 1])} ${show(Fa)} and f′(x${sub(k - 1)}) ${eq(Da, ok[k - 1])} ${show(Da)}, so x${sub(k)} = ${show(a)} − ${par(Fa)}/${par(Da)} ${eq(xs[k], ok[k])} ${show(xs[k])}.`;
+        if (L[k] !== line) fail('newton', key, `step ${k} reads: ${L[k]}, not ${line}`);
+      }
+      const rest = L.slice(m + 1);
+      // a jump past a root, on the curves that bend upward
+      let jk = 0, jr = null;
+      for (let k = 1; k <= m && !jk; k++) for (const r of H.roots)
+        if ((xs[k - 1] - r[0]) * (xs[k] - r[0]) < 0 && Math.abs(xs[k - 1] - r[0]) >= 5e-5 && Math.abs(xs[k] - r[0]) >= 5e-5) { jk = k; jr = r; break; }
+      const jl = rest.find(t => /jumped right past/.test(t));
+      if (H.up && jk) {
+        if (jl !== `The step to x${sub(jk)} jumped right past ${jr[2]}: this curve bends upward, so a tangent from a point below the axis lands beyond the root, and from there the steps close in from the far side.`) fail('newton', key, `the jump is told wrongly: ${jl}`);
+        if (H.f(xs[jk - 1]) >= 0) fail('newton', key, 'a jump started from above the axis');
+      } else if (jl) fail('newton', key, `a jump is told where there is none: ${jl}`);
+      const last = rest[rest.length - 1], at = `${m ? 'Now' : 'Start at'} x${sub(m)} ${eq(X, ok[m])} ${show(X)}`;
+      const rt = H.roots.find(([r]) => Math.abs(X - r) < 5e-5);
+      let lp = null;
+      for (let k = 1; k <= m && !lp; k++) for (let j = 0; j < k; j++) if (Math.abs(xs[k] - xs[j]) < 1e-9 && !H.roots.some(([r]) => Math.abs(xs[k] - r) < 5e-5)) { lp = [j, k]; break; }
+      let wantLast;
+      if (H.f(xs[0]) === 0) wantLast = `x₀ = ${show(xs[0])} is a root already: f(x₀) = 0, so every step stays where it is.`;
+      else if (rt) wantLast = `${at}, where f(x${sub(m)}) ${eq(F, ok[m])} ${show(F)}: that is the root ${rt[1]}, to four places.`;
+      else if (D === 0) wantLast = `${at}, where f′(x${sub(m)}) = 0: the tangent there is flat, so it never meets the axis and there is no next step. Start somewhere else.`;
+      else if (lp) wantLast = `x${sub(lp[1])} ${eq(xs[lp[1]], ok[lp[1]])} ${show(xs[lp[1]])} is back where x${sub(lp[0])} was: from here the steps go round the same ${['', 'one', 'two', 'three'][lp[1] - lp[0]]} points for ever and never reach a root.`;
+      else {
+        const nx = X - F / D, sure = ok[m] && exact(F) && exact(D);
+        wantLast = `${at}, where f(x${sub(m)}) ${eq(F, ok[m])} ${show(F)} and f′(x${sub(m)}) ${eq(D, ok[m])} ${show(D)}. Its tangent meets the axis at ${eq(nx, sure) === '=' ? '' : 'about '}${show(nx)}` +
+          (m < 6 ? ': take a step to go there.' : ', but six steps is as far as this goes.');
+      }
+      if (last !== wantLast) fail('newton', key, `the verdict reads: ${last}, not ${wantLast}`);
+      if (rest.length !== (H.up && jk ? 2 : 1)) fail('newton', key, `the readout has ${rest.length} closing lines`);
+      if (D === 0 && W.path(m + 1).length !== xs.length) fail('newton', key, 'a step is taken from a flat tangent');
+      if (C.id === 'two' && m > 0 && H.f(xs[0]) !== 0 && rt) reach[rt[0]].add(key);
+      for (const g of W.GOALS) if (g.id !== 'both' && g.ok(W)) found[g.id] = found[g.id] || key;
+    }
+  });
+  // reaching both roots of x² − 4x + 3 is kept across starts
+  if (reach[1].size && reach[3].size) {
+    W.ci = 2; W.reached = new Set([1]);
+    const both = W.GOALS.find(g => g.id === 'both');
+    if (both.ok(W)) fail('newton', 'both', 'one root reached is counted as both');
+    W.reached.add(3);
+    if (both.ok(W)) found.both = 'both roots';
+    W.ci = 0;
+    if (both.ok(W)) fail('newton', 'both', 'both roots count on another curve');
+  }
+  for (const g of W.GOALS) if (!found[g.id]) fail('newton', g.id, 'this goal cannot be found');
+  W.ci = 0; W.xh = 2; W.n = 0; W.touched = false; W.done.clear(); W.reached = new Set();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2485,6 +2580,7 @@ console.log(`  span workshop states       ${pad(spanNotes.n.toLocaleString(), 10
 console.log(`  elimination states         ${pad(elimNotes.n.toLocaleString(), 10)}  (each row operation redone, worked, the crossing kept, ${elimNotes.goals} goals findable)`);
 console.log(`  undo workshop states       ${pad(undoNotes.n.toLocaleString(), 10)}  (î and ĵ followed through A and B, the one inverse, ${undoNotes.goals} goals findable)`);
 console.log(`  best fit states            ${pad(fitNotes.n.toLocaleString(), 10)}  (every miss and both totals worked, the one best line, ${fitNotes.goals} goals findable)`);
+console.log(`  newton's method states     ${pad(newtonNotes.n.toLocaleString(), 10)}  (f, f′ and every guess worked, roots, flat tangents, loops, ${newtonNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

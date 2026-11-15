@@ -57,6 +57,7 @@ const SUITES = [
   require('./play/elim'),        // two equations solved with row operations
   require('./play/undo'),        // the matrix that puts a move back
   require('./play/fit'),         // the line that misses least
+  require('./play/newton'),      // a tangent's road to a root
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
