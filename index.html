@@ -1205,6 +1205,24 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   </div>
 
   <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
+  <div class="screen" id="s-cistern">
+    <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
+    <div class="panel">
+      <div id="ciSets" class="wsModes" role="group" aria-label="Which spring"></div>
+      <div id="ciFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="ciTLo" onclick="Cistern.moveT(-1)" aria-label="Go back half an hour">−</button>
+          <b id="ciT" style="font-size:17px;min-width:0"></b>
+          <button id="ciTHi" onclick="Cistern.moveT(1)" aria-label="Go on half an hour">+</button></div>
+      </div>
+      <div id="ciRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="ciGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <div class="screen" id="s-optim">
     <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
     <div class="panel">
@@ -6162,6 +6180,16 @@ const Figure = {
     if(ymin<0 && ymax>0){ g.beginPath(); g.moveTo(10,Y(0)); g.lineTo(FIG_W-6,Y(0)); g.stroke(); }
     if(x0<0 && x1>0){ g.beginPath(); g.moveTo(X(0),4); g.lineTo(X(0),FIG_H-8); g.stroke(); }
 
+    // the signed area between a curve and the axis from a to b: gold where the
+    // curve is above the axis, red where it is below
+    if(s.shade && s.shade.b!==s.shade.a){
+      const {f, a:sa, b:sb}=s.shade, M=160;
+      for(let i=0;i<M;i++){
+        const p=sa+(sb-sa)*i/M, q=sa+(sb-sa)*(i+1)/M, yp=figEval(f,p), yq=figEval(f,q);
+        g.fillStyle=(yp+yq)>=0 ? FIG_COL.fill : 'rgba(229,72,77,.25)';
+        g.beginPath(); g.moveTo(X(p),Y(0)); g.lineTo(X(p),Y(yp)); g.lineTo(X(q),Y(yq)); g.lineTo(X(q),Y(0)); g.closePath(); g.fill();
+      }
+    }
     // shaded region between lo and hi
     if(mode==='region'){
       g.fillStyle=FIG_COL.fill;
@@ -12488,6 +12516,7 @@ const UI = {
     if(id==='s-chain') Chain.render();
     if(id==='s-castles') Castles.render();
     if(id==='s-optim') Optim.render();
+    if(id==='s-cistern') Cistern.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13161,6 +13190,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral.</div>
          <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">💧 Cistern Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away.</div>
+         <button class="btn sm" id="tomeCistern" style="width:auto;margin-top:8px" onclick="Cistern.open()">Open the cistern workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
@@ -15759,6 +15793,105 @@ const Chain = {
    of that, and find where the slope is 0. The steps are half a unit so every
    number is exact; one setting shows a flat tangent that marks the least, so
    the player learns to check which way the curve goes on either side. */
+/* ---------- The cistern workshop: what an integral adds up ----------
+   A spring fills a cistern at a rate f(t) that the player cannot change;
+   the total F(t) is the area under f from 0 to t. Step t in half hours and
+   read the total, the flow now, and what the next tenth of an hour adds: a
+   strip f tall and a tenth of an hour wide, nearly. So F′ = f, which the figure shows as
+   the tangent to the gold total sloping exactly as high as the blue flow.
+   Where f crosses 0 the total turns, and area below the axis counts against
+   area above it. Nothing here is saved. */
+const Cistern = {
+  SETS:[
+    {id:'fade', btn:'Fading spring', lo:0, hi:12, start:2,
+     say:'A spring fills the castle cistern at f(t) = 6 − 2t barrels an hour. It weakens, and after hour 3 it runs backwards and the cistern drains.',
+     fform:'6 − 2t', Fform:'6t − t²', fp:[[-2,1],[6,0]], Fp:[[-1,2],[6,1]], ylim:[-7,10]},
+    {id:'steady', btn:'Steady spring', lo:0, hi:12, start:2,
+     say:'A steady spring fills the cistern at f(t) = 4 barrels an hour, hour after hour.',
+     fform:'4', Fform:'4t', fp:[[4,0]], Fp:[[4,1]], ylim:[-1,25]},
+    {id:'tide', btn:'Tidal sluice', lo:0, hi:8, start:4,
+     say:'A tidal sluice fills the cistern at f(t) = 3t² − 12t + 9 barrels an hour: in, then out, then in again.',
+     fform:'3t² − 12t + 9', Fform:'t³ − 6t² + 9t', fp:[[3,2],[-12,1],[9,0]], Fp:[[1,3],[-6,2],[9,1]], ylim:[-4,10]}
+  ],
+  si:0, th:2, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'full',  t:'On the fading spring, find when the cistern is fullest.', toast:'Found the fullest the cistern gets',
+     ok:K=>K.si===0 && K.th===6},
+    {id:'drain', t:'On the fading spring, find a time when the cistern still holds water but is draining.', toast:'Found a cistern that is draining but not empty',
+     ok:K=>K.si===0 && K.f()<0 && K.F()>0},
+    {id:'empty', t:'On the fading spring, find when the cistern is empty again.', toast:'Found the cistern empty again',
+     ok:K=>K.si===0 && K.th>0 && K.F()===0},
+    {id:'ten',   t:'On the steady spring, find when the cistern holds 10 barrels.', toast:'Found 10 barrels from a steady spring',
+     ok:K=>K.si===1 && K.F()===10},
+    {id:'high',  t:'On the tidal sluice, find the first time the cistern stops filling.', toast:'Found where the tide turns',
+     ok:K=>K.si===2 && K.th===2},
+    {id:'low',   t:'On the tidal sluice, find where it stops draining.', toast:'Found where the draining stops',
+     ok:K=>K.si===2 && K.th===6}
+  ],
+  set(){ return this.SETS[this.si]; },
+  t(){ return this.th/2; },
+  val(p,t){ return p.reduce((s,[c,k])=>s+c*Math.pow(t,k),0); },
+  f(t=this.t()){ return this.val(this.set().fp,t); },
+  F(t=this.t()){ return this.val(this.set().Fp,t); },
+  num(x){ const r=Math.round(x*1000)/1000; return neg(Object.is(r,-0)?0:r); },
+  /* F(T) with T put in for t, term by term */
+  subst(T){
+    const S=this.set(), X=this.num(T), sq=T<0?`(${X})`:X;
+    if(S.id==='steady') return `4 × ${X} = ${this.num(4*T)}`;
+    if(S.id==='fade') return `6 × ${X} − ${sq}² = ${this.num(6*T)} − ${this.num(T*T)} = ${this.num(this.F(T))}`;
+    return `${sq}³ − 6 × ${sq}² + 9 × ${X} = ${this.num(T**3)} − ${this.num(6*T*T)} + ${this.num(9*T)} = ${this.num(this.F(T))}`;
+  },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), t=this.t(), T=this.num(t), F=this.F(), f=this.f(), b=n=>`${this.num(n)} barrel${Math.abs(n)===1?'':'s'}`;
+    const out=[S.say,
+      `The total in the cistern after t hours is the area under f from 0 to t. Here that is F(t) = ${S.Fform}, and F′(t) = ${S.fform} = f(t): the total climbs exactly as fast as the water flows in.`];
+    if(this.th===0) out.push('At t = 0 h nothing has flowed yet, so F(0) = 0.');
+    else if(S.id==='steady') out.push(`At t = ${T} h the area under f is a rectangle 4 tall and ${T} wide, so F(${T}) = ${this.subst(t)} barrels.`);
+    else out.push(`At t = ${T} h: F(${T}) = ${this.subst(t)} barrels.`);
+    const now=`The flow now is f(${T}) = ${b(f)} an hour`;
+    if(f>0) out.push(`${now}, above 0: water comes in, so the total still climbs.`);
+    else if(f<0) out.push(`${now}, below 0: water runs out, so the total is falling.`);
+    else if(this.f(t-0.25)>0) out.push(`${now}: the tangent to F is flat. f is above 0 just before and below 0 just after, so F climbs to here and falls after: ${S.id==='fade' ? `${b(F)} is the most the cistern ever holds.` : `with ${b(F)} the cistern is fuller here than just before or just after.`}`);
+    else out.push(`${now}: the tangent to F is flat. f is below 0 just before and above 0 just after, so F falls to here and climbs after: ${F===0 ? 'the cistern runs dry here, then starts to fill again.' : `with ${b(F)} the cistern is emptier here than just before or just after.`}`);
+    const T1=this.num(t+0.1), add=this.F(t+0.1)-F, strip=f*0.1, same=Math.abs(add-strip)<1e-9;
+    out.push(`In the next tenth of an hour the total changes by F(${T1}) − F(${T}) = ${b(add)}, ${same ? 'exactly' : 'close to'} f(${T}) × 0.1 = ${this.num(strip)}: a strip f tall and a tenth of an hour wide.${same ? '' : ' The thinner the strip, the closer it gets.'}`);
+    if(this.th>0 && F===0){
+      let top=0; for(let k=0;k<=this.th;k++) top=Math.max(top,this.F(k/2));
+      out.push(`F(${T}) = 0: the cistern is empty again. The ${this.num(top)} barrels that came in, the area above the axis, are cancelled by the area below it: an integral counts area below the axis as negative.`);
+    }
+    return out;
+  },
+  open(){ UI.go('s-cistern'); },
+  pick(i){ this.si=i; this.th=this.SETS[i].start; this.touched=true; this.render(); },
+  moveT(by){ const S=this.set(), v=this.th+by; if(v<S.lo || v>S.hi) return; this.th=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set(), t=this.t(), f=this.f();
+    document.getElementById('ciSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Cistern.pick(${i})" aria-label="${s.btn}: f(t) = ${s.fform}">${s.btn}</button>`).join('');
+    document.getElementById('ciT').textContent=`t = ${this.num(t)} h`;
+    document.getElementById('ciTLo').disabled=this.th<=S.lo;
+    document.getElementById('ciTHi').disabled=this.th>=S.hi;
+    Figure.render({kind:'curve', f:{poly:S.Fp}, also:{f:{poly:S.fp}, col:FIG_COL.a}, shade:{f:{poly:S.fp}, a:0, b:t},
+      lo:0, hi:S.hi/2, ylim:S.ylim, tangent:t, pts:[[t,this.F(),FIG_COL.d],[t,f,FIG_COL.a]],
+      caption:`The blue curve is the flow f and the gold curve is the total F, the shaded area so far: gold above the axis adds, red below it takes away. The dashed red tangent to F at t = ${this.num(t)} has slope ${this.num(f)}, the height of the blue curve there.`},
+      document.getElementById('ciFig'));
+    document.getElementById('ciRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('ciGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 const Optim = {
   SETS:[
     {id:'wall', btn:'Wall paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
