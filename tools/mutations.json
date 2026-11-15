@@ -1,271 +1,257 @@
 {
- "change": "The Quotient Rule Workshop: the slope of f/g",
+ "change": "The Antiderivative Workshop: the power rule run backwards",
  "mutations": [
   {
-   "name": "f′ is wrong for x²",
+   "name": "the 6x² target is really 6x³",
    "file": "index.html",
-   "find": "dfs:'2x', dgs:'1',\n     f:x=>x*x, g:x=>x+1, df:x=>2*x,",
-   "replace": "dfs:'2x', dgs:'1',\n     f:x=>x*x, g:x=>x+1, df:x=>x,",
+   "find": "{id:'sq', btn:'6x²', fs:'6x²', k:6, p:2,",
+   "replace": "{id:'sq', btn:'6x²', fs:'6x²', k:6, p:3,",
    "run": "verify"
   },
   {
-   "name": "g′ is wrong for x² + 1",
+   "name": "the root target loses its 3",
    "file": "index.html",
-   "find": "f:x=>1, g:x=>x*x+1, df:x=>0, dg:x=>2*x,",
-   "replace": "f:x=>1, g:x=>x*x+1, df:x=>0, dg:x=>x,",
+   "find": "fs:'3x^(1/2), which is 3√x', k:3, p:0.5,",
+   "replace": "fs:'3x^(1/2), which is 3√x', k:1, p:0.5,",
    "run": "verify"
   },
   {
-   "name": "the rule's top is swapped",
+   "name": "the slope keeps the old power",
    "file": "index.html",
-   "find": "  top(){ return this.r(this.fp()*this.g()-this.f()*this.gp()); },",
-   "replace": "  top(){ return this.r(this.f()*this.gp()-this.fp()*this.g()); },",
+   "find": "  dp(){ return this.n-1; },",
+   "replace": "  dp(){ return this.n; },",
    "run": "verify"
   },
   {
-   "name": "the rule forgets the square",
+   "name": "the slope forgets to bring the power down",
    "file": "index.html",
-   "find": "  dy(){ return this.r(this.top()/(this.g()*this.g())); },",
-   "replace": "  dy(){ return this.r(this.top()/this.g()); },",
+   "find": "  dk(){ return this.c*this.n; },",
+   "replace": "  dk(){ return this.c; },",
    "run": "verify"
   },
   {
-   "name": "the swap slip gives the right slope",
+   "name": "a match ignores the power",
    "file": "index.html",
-   "find": "this.mode===1 ? this.r(-this.top()/(this.g()*this.g()))",
-   "replace": "this.mode===1 ? this.r(this.top()/(this.g()*this.g()))",
+   "find": "match(){ const S=this.set(); return this.dk()===S.k && this.dp()===S.p; },",
+   "replace": "match(){ const S=this.set(); return this.dk()===S.k; },",
    "run": "verify"
   },
   {
-   "name": "the square slip squares after all",
+   "name": "the power steps by whole numbers",
    "file": "index.html",
-   "find": "this.mode===2 ? this.r(this.top()/this.g()) : this.dy(); },",
-   "replace": "this.mode===2 ? this.r(this.top()/(this.g()*this.g())) : this.dy(); },",
+   "find": "  N:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4],",
+   "replace": "  N:[-3,-2,-1,0,1,2,3,4],",
    "run": "verify"
   },
   {
-   "name": "the nudge is one-sided",
+   "name": "c stops at 5",
    "file": "index.html",
-   "find": "return (this.y(x+this.H)-this.y(x-this.H))/(2*this.H); },",
-   "replace": "return (this.y(x+this.H)-this.y(x))/this.H; },",
+   "find": "  CLO:-3, CHI:6, SLO:-2, SHI:2,",
+   "replace": "  CLO:-3, CHI:5, SLO:-2, SHI:2,",
    "run": "verify"
   },
   {
-   "name": "x stops at 2.5",
+   "name": "picking a target keeps the guess",
    "file": "index.html",
-   "find": "X:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3],",
-   "replace": "X:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5],",
+   "find": "  pick(i){ this.si=i; this.n=1; this.c=1; this.C=0;",
+   "replace": "  pick(i){ this.si=i;",
    "run": "verify"
   },
   {
-   "name": "x² over x + 1 starts on the flat tangent",
+   "name": "a half reads as a decimal",
    "file": "index.html",
-   "find": "f:x=>x*x, g:x=>x+1, df:x=>2*x, dg:x=>1, y:[-7,4], start:8},",
-   "replace": "f:x=>x*x, g:x=>x+1, df:x=>2*x, dg:x=>1, y:[-7,4], start:6},",
+   "find": "Number.isInteger(a) ? s+a : s+(a*2)+'/2'; },",
+   "replace": "Number.isInteger(a) ? s+a : s+a; },",
    "run": "verify"
   },
   {
-   "name": "the bump starts at its top",
+   "name": "a fractional coefficient loses its brackets",
    "file": "index.html",
-   "find": "y:[-0.65,0.65], start:10}",
-   "replace": "y:[-0.65,0.65], start:8}",
+   "find": "Number.isInteger(k)?this.fr(k):`(${this.fr(k)})`",
+   "replace": "this.fr(k)",
    "run": "verify"
   },
   {
-   "name": "picking a fraction keeps the slip",
+   "name": "a negative factor loses its brackets",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0;",
-   "replace": "  pick(i){ this.si=i; this.k=this.SETS[i].start;",
+   "find": "  par(v){ return v<0 ? `(${this.fr(v)})` : this.fr(v); },",
+   "replace": "  par(v){ return this.fr(v); },",
    "run": "verify"
   },
   {
-   "name": "the flat goal takes a slip",
+   "name": "a negative power loses its minus",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.mode===0 && K.g()!==0 && K.dy()===0},",
-   "replace": "ok:K=>K.si===0 && K.g()!==0 && K.dy()===0},",
+   "find": "'9':'⁹','-':'⁻'},",
+   "replace": "'9':'⁹','-':''},",
    "run": "verify"
   },
   {
-   "name": "the gap goal takes any x",
+   "name": "x¹ is written out",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.g()===0},",
-   "replace": "ok:K=>K.si===0},",
+   "find": "  pw(p){ return p===1 ? 'x' :",
+   "replace": "  pw(p){ return false ? 'x' :",
+   "run": "play:anti"
+  },
+  {
+   "name": "the guess drops its C",
+   "file": "index.html",
+   "find": "  Fs(){ const t=this.term(this.c,this.n), C=this.C; return C===0 ? t :",
+   "replace": "  Fs(){ const t=this.term(this.c,this.n), C=this.C; return true ? t :",
    "run": "verify"
   },
   {
-   "name": "the rise goal takes a fall",
+   "name": "a C below 0 is added",
    "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.mode===0 && K.dy()>0},",
-   "replace": "ok:K=>K.si===1 && K.mode===0 && K.dy()<0},",
+   "find": "`${t} ${C>0?'+':'−'} ${Math.abs(C)}`; },",
+   "replace": "`${t} + ${Math.abs(C)}`; },",
    "run": "verify"
   },
   {
-   "name": "the peak goal takes the valley",
+   "name": "power 0 still works the rule",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.mode===0 && K.dy()===0 && K.y()>0},",
-   "replace": "ok:K=>K.si===2 && K.mode===0 && K.dy()===0},",
+   "find": "    else if(n===0) out.push(`With power 0,",
+   "replace": "    else if(false) out.push(`With power 0,",
    "run": "verify"
   },
   {
-   "name": "the swap is found without being caught",
+   "name": "the shift sentence is dropped",
    "file": "index.html",
-   "find": "ok:K=>K.mode===1 && K.g()!==0 && K.wrong()!==K.dy()},",
-   "replace": "ok:K=>K.mode===1 && K.g()!==0},",
+   "find": "    if(C!==0) out.push(`The ${C>0?",
+   "replace": "    if(false) out.push(`The ${C>0?",
    "run": "verify"
   },
   {
-   "name": "luck takes a zero top",
+   "name": "the + C is never explained",
    "file": "index.html",
-   "find": "K.wrong()===K.dy() && K.top()!==0}",
-   "replace": "K.wrong()===K.dy()}",
+   "find": "`Add any number to F and its slope is still f: that is why an antiderivative is always written with + C.`",
+   "replace": "`That will do.`",
    "run": "verify"
   },
   {
-   "name": "the gap sentence is dropped",
+   "name": "the gap shows on any target",
    "file": "index.html",
-   "find": "out.push(`g(${X}) = 0, so y = f/g is not defined",
-   "replace": "if(0) out.push(`g(${X}) = 0, so y = f/g is not defined",
+   "find": "else if(S.id==='inv' && n===0 && c!==0)",
+   "replace": "else if(n===0 && c!==0)",
    "run": "verify"
   },
   {
-   "name": "a slope is worked at the gap",
+   "name": "the ratio is upside down",
    "file": "index.html",
-   "find": "there is no slope to find.`);\n      return out;",
-   "replace": "there is no slope to find.`);",
+   "find": "      const r=k/S.k;",
+   "replace": "      const r=S.k/k;",
    "run": "verify"
   },
   {
-   "name": "the worked line drops g's square",
+   "name": "the forgotten-divide sentence shows for any c",
    "file": "index.html",
-   "find": "= (${tl})/${this.par(b)}² = ${this.num(T)}/${this.num(b*b)} ${this.is(D)}.`);",
-   "replace": "= (${tl})/${this.par(b)} = ${this.num(T)}/${this.num(b*b)} ${this.is(D)}.`);",
+   "find": "if(S.id==='sq' && c===6 && n===3) out.push(`Raising the power",
+   "replace": "if(S.id==='sq' && n===3 && c!==2) out.push(`Raising the power",
    "run": "verify"
   },
   {
-   "name": "the swapped line keeps the right order",
+   "name": "the hint starts two higher",
    "file": "index.html",
-   "find": "(${this.par(a)}${this.par(d)} − ${this.par(c)}${this.par(b)})/${this.par(b)}²",
-   "replace": "(${this.par(c)}${this.par(b)} − ${this.par(a)}${this.par(d)})/${this.par(b)}²",
+   "find": "F has to start one higher, at ${this.pw(S.p+1)}.`",
+   "replace": "F has to start one higher, at ${this.pw(S.p+2)}.`",
    "run": "verify"
   },
   {
-   "name": "rising and falling are swapped",
+   "name": "the slope curve is drawn as F",
    "file": "index.html",
-   "find": ": the top f′g − fg′ is 0 here, so the tangent is flat.` : D>0",
-   "replace": ": the top f′g − fg′ is 0 here, so the tangent is flat.` : D<0",
+   "find": "for(const s of this.path(t=>k*t**p)) out+=`<polyline data-k=\"slope\"",
+   "replace": "for(const s of this.path(t=>this.c*t**this.n)) out+=`<polyline data-k=\"slope\"",
    "run": "verify"
   },
   {
-   "name": "the reciprocal sentence shows everywhere",
+   "name": "the target is drawn as its antiderivative",
    "file": "index.html",
-   "find": "if(S.id==='recip') out.push(`Here f′ = 0",
-   "replace": "if(S.id!=='bump') out.push(`Here f′ = 0",
+   "find": "for(const s of this.path(t=>S.k*t**S.p)) out+=",
+   "replace": "for(const s of this.path(t=>S.k*t**(S.p+1))) out+=",
    "run": "verify"
   },
   {
-   "name": "the swap is not caught",
+   "name": "the curves run off the chart",
    "file": "index.html",
-   "find": "`So the swapped top is wrong: it gives exactly minus the slope.",
-   "replace": "`So the swapped top is fine: it gives exactly minus the slope.",
+   "find": "if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1)",
+   "replace": "if(!isFinite(v)){ if(seg.length>1)",
    "run": "verify"
   },
   {
-   "name": "luck is called a zero top",
+   "name": "the slip goal takes any c",
    "file": "index.html",
-   "find": "else if(T===0) out.push(`The slip gets it right here",
-   "replace": "else if(T!==0) out.push(`The slip gets it right here",
+   "find": "ok:K=>K.si===0 && K.n===3 && K.c===6},",
+   "replace": "ok:K=>K.si===0 && K.n===3 && K.c!==2},",
    "run": "verify"
   },
   {
-   "name": "the tangent is drawn with the slip's slope",
+   "name": "the + C goal takes C = 0",
    "file": "index.html",
-   "find": "out+=this.line(this.dy(),'tan',FIG_COL.c);",
-   "replace": "out+=this.line(this.wrong(),'tan',FIG_COL.c);",
+   "find": "ok:K=>K.si===0 && K.match() && K.C!==0},",
+   "replace": "ok:K=>K.si===0 && K.match()},",
    "run": "verify"
   },
   {
-   "name": "the slip's line is drawn with the right slope",
+   "name": "the gap goal takes c = 0",
    "file": "index.html",
-   "find": "if(this.mode) out+=this.line(this.wrong(),'slip'",
-   "replace": "if(this.mode) out+=this.line(this.dy(),'slip'",
+   "find": "ok:K=>K.si===3 && K.n===0 && K.c!==0}",
+   "replace": "ok:K=>K.si===3 && K.n===0}",
    "run": "verify"
   },
   {
-   "name": "the lines run off the side",
+   "name": "the c stepper is never switched off",
    "file": "index.html",
-   "find": "let t0=Math.max(-0.8, this.D[0]-x), t1=Math.min(0.8, this.D[1]-x);",
-   "replace": "let t0=-0.8, t1=0.8;",
-   "run": "verify"
+   "find": "document.getElementById('adCHi').disabled=this.c>=this.CHI;",
+   "replace": "document.getElementById('adCHi').disabled=false;",
+   "run": "play:anti"
   },
   {
-   "name": "the point sits at y = 0",
+   "name": "the guess is not shown big",
    "file": "index.html",
-   "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(this.y()))}\"",
-   "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(0))}\"",
-   "run": "verify"
+   "find": "document.getElementById('adF').textContent=`F(x) = ${this.Fs()}`;",
+   "replace": "document.getElementById('adF').textContent=`F(x)`;",
+   "run": "play:anti"
   },
   {
-   "name": "the gap line is never drawn",
+   "name": "a stepper button loses its name",
    "file": "index.html",
-   "find": "for(const p of [-1]) if(S.g(p)===0)",
-   "replace": "for(const p of [-1]) if(false)",
-   "run": "verify"
+   "find": "<button id=\"adCHi\" onclick=\"Anti.moveC(1)\" aria-label=",
+   "replace": "<button id=\"adCHi\" onclick=\"Anti.moveC(1)\" data-x=",
+   "run": "play:anti"
   },
   {
-   "name": "the x stepper is never switched off",
+   "name": "the target buttons run in one row",
    "file": "index.html",
-   "find": "document.getElementById('qoXHi').disabled=this.k>=this.X.length-1;",
-   "replace": "document.getElementById('qoXHi').disabled=false;",
-   "run": "play:quot"
-  },
-  {
-   "name": "the method buttons do not show which is pressed",
-   "file": "index.html",
-   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"Quot.setMode",
-   "replace": "aria-pressed=\"false\" onclick=\"Quot.setMode",
-   "run": "play:quot"
-  },
-  {
-   "name": "a method button loses its name",
-   "file": "index.html",
-   "find": "aria-label=\"${i===0?'Work the slope with the quotient rule'",
-   "replace": "data-x=\"${i===0?'Work the slope with the quotient rule'",
-   "run": "play:quot"
-  },
-  {
-   "name": "the fraction buttons run in one row",
-   "file": "index.html",
-   "find": "<div id=\"qoSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"qoSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:600px\"",
-   "run": "play:quot"
+   "find": "<div id=\"adSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"adSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:anti"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:quot"
+   "run": "play:anti"
   },
   {
-   "name": "the Tome loses the quotient rule workshop",
+   "name": "the Tome loses the antiderivative workshop",
    "file": "index.html",
-   "find": "id=\"tomeQuot\"",
-   "replace": "id=\"tomeQuotX\"",
-   "run": "play:quot"
+   "find": "id=\"tomeAnti\"",
+   "replace": "id=\"tomeAntiX\"",
+   "run": "play:anti"
   },
   {
-   "name": "the workshop saves its x",
+   "name": "the workshop saves its guess",
    "file": "index.html",
-   "find": "  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode",
-   "replace": "  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; Game.s.quotX=v; this.touched=true; this.render(); },\n  setMode",
-   "run": "play:quot"
+   "find": "  moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v;",
+   "replace": "  moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v; Game.s.antiC=v;",
+   "run": "play:anti"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">The curve is y = f/g",
-   "replace": "<div class=\"figcapX\">The curve is y = f/g",
-   "run": "play:quot"
+   "find": "<div class=\"figcap\">The dashed gold curve is the target f.",
+   "replace": "<div class=\"figcapX\">The dashed gold curve is the target f.",
+   "run": "play:anti"
   }
  ]
 }

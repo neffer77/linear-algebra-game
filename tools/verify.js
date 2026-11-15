@@ -82,6 +82,7 @@ function loadGame() {
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoSets')")) + 'render(){}};exports.Quot=Quot;' +
+    ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -100,7 +101,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2695,6 +2696,115 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The antiderivative workshop: every target, every guess.
+   Whether a guess works is decided here by a nudge on F itself at three
+   points, never by the power rule; every term the readout writes is parsed
+   back into a number and a power and checked against F and its nudged slope;
+   every sentence's condition is decided independently; and the drawing is
+   read back: the target and the slope each on its own curve. */
+const antiNotes = (() => {
+  const W = Anti;
+  const SUP = { '⁰': '0', '¹': '1', '²': '2', '³': '3', '⁴': '4', '⁵': '5', '⁶': '6', '⁷': '7', '⁸': '8', '⁹': '9', '⁻': '-' };
+  const frac = t => { const q = t.replace(/−/g, '-').split('/'); return q.length === 2 ? +q[0] / +q[1] : +q[0]; };
+  const parseT = t => {
+    if (!/x/.test(t)) return [frac(t), 0];
+    const m = t.match(/^(?:\((−?[\d/]+)\)|(−?[\d/]+)|(−))?x(.*)$/);
+    if (!m) return null;
+    const k = m[1] !== undefined ? frac(m[1]) : m[2] !== undefined ? frac(m[2]) : m[3] ? -1 : 1;
+    const p = m[4] === '' ? 1 : m[4].startsWith('^(') && m[4].endsWith(')') ? frac(m[4].slice(2, -1)) : +[...m[4]].map(ch => SUP[ch]).join('');
+    return [k, p];
+  };
+  const XS = [0.5, 1.3, 2.2];
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  if (W.SETS.map(S => `${S.id}:${S.k}:${S.p}`).join() !== 'sq:6:2,root:3:0.5,inv2:1:-2,inv:1:-1') fail('anti', 'sets', W.SETS.map(S => S.id).join());
+  if (W.N.join() !== '-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4' || W.CLO !== -3 || W.CHI !== 6 || W.SLO !== -2 || W.SHI !== 2) fail('anti', 'range', 'the steppers should run power −3 to 4 in halves, c −3 to 6 and C −2 to 2');
+  const reset = () => { W.touched = false; W.si = 0; W.n = 1; W.c = 1; W.C = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('anti', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.n = 3; W.c = 6; W.C = 2; W.pick(si);
+    if (W.n !== 1 || W.c !== 1 || W.C !== 0) fail('anti', S.id, 'picking a target does not start the guess again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('anti', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  const found = {}; let n = 0;
+  W.SETS.forEach((S, si) => {
+    const tf = x => S.k * x ** S.p, PYi = py => S.y[0] + (188 - py) / 176 * (S.y[1] - S.y[0]), PXi = px => 0.25 + (px - 30) / 310 * 2.25;
+    for (const pw of W.N) for (let c = W.CLO; c <= W.CHI; c++) for (let C = W.SLO; C <= W.SHI; C++) {
+      reset(); W.si = si; W.n = pw; W.c = c; W.C = C; n++;
+      const key = `${S.id} n=${pw} c=${c} C=${C}`, F = x => c * x ** pw + C, dF = x => sl(F, x);
+      const works = XS.every(x => Math.abs(dF(x) - tf(x)) < 1e-4 * Math.max(1, Math.abs(tf(x)))), flat = XS.every(x => Math.abs(dF(x)) < 1e-6);
+      const got = W.working(), txt = got.join(' ');
+      if (got[0] !== `The target is f(x) = ${S.fs}. Find an F whose slope is f: an antiderivative of f.`) fail('anti', key, got[0]);
+      const fm = got[1].match(/^Your guess is F\(x\) = (.+?)(?: ([+−]) (\d))?\.$/);
+      if (!fm) fail('anti', key, got[1]);
+      else { const t = parseT(fm[1]), add = fm[2] ? (fm[2] === '+' ? 1 : -1) * +fm[3] : 0;
+        if (!t || XS.some(x => Math.abs(t[0] * x ** t[1] + add - F(x)) > 1e-9)) fail('anti', key, `the guess is written wrong: ${got[1]}`); }
+      const pl = got.find(l => l.startsWith('Its slope by the power rule'));
+      if (!!pl === flat) fail('anti', key, 'the power rule is worked on a flat F, or skipped on one that is not');
+      if (pl) {
+        const m = pl.match(/^Its slope by the power rule: bring the power down and drop it by one, F′\(x\) = (\(?−?[\d/]+\)?) · (\(?−?[\d/]+\)?) · (\S+) = (\S+)\.$/);
+        const un = t => frac(t.replace(/[()]/g, ''));
+        if (!m || un(m[1]) !== c || un(m[2]) !== pw || /^−/.test(m[1]) || /^−/.test(m[2])) fail('anti', key, `the power rule line names the wrong numbers, or a negative one without brackets: ${pl}`);
+        else {
+          const lp = parseT(m[3]), r = parseT(m[4]);
+          if (!lp || lp[0] !== 1 || lp[1] !== pw - 1) fail('anti', key, `the power is not dropped by one: ${pl}`);
+          if (!r || XS.some(x => Math.abs(r[0] * x ** r[1] - dF(x)) > 1e-4 * Math.max(1, Math.abs(dF(x))))) fail('anti', key, `F′ is not the slope of F: ${pl}`);
+        }
+      }
+      if (/F is flat and F′\(x\) = 0/.test(txt) !== flat) fail('anti', key, 'the flat sentence shows at the wrong time');
+      if (/a shift adds nothing to its slope/.test(txt) !== (C !== 0)) fail('anti', key, 'the shift sentence shows at the wrong time');
+      if (/\d\/\d+x/.test(txt)) fail('anti', key, `a fraction runs into its x, which reads as dividing by x: ${txt}`);
+      const il = txt.match(/In the notation of integrals, ∫ (\S+) dx = (\S+) \+ C\./);
+      if (!!il !== works || (il && (il[1] !== S.fs.split(',')[0] || XS.some(x => Math.abs(parseT(il[2])[0] * x ** parseT(il[2])[1] - c * x ** pw) > 1e-9)))) fail('anti', key, `the integral line is wrong or shows at the wrong time: ${il && il[0]}`);
+      if (/That is f exactly/.test(txt) !== works) fail('anti', key, `the guess ${works ? 'works' : 'does not work'}, but the readout says otherwise`);
+      if (works && !(C !== 0 ? /every antiderivative of f is .+ \+ C/ : /always written with \+ C/).test(txt)) fail('anti', key, 'the + C is not explained');
+      const gap = S.id === 'inv' && pw === 0 && c !== 0;
+      if (/the one gap in the power rule/.test(txt) !== gap) fail('anti', key, 'the gap sentence shows at the wrong time');
+      const k1 = c * pw, p1 = pw - 1, samePow = !flat && p1 === S.p && !works;
+      if (/^The power is right/.test(got[got.length - 1] || '') !== samePow && !/Raising the power is only half/.test(txt)) fail('anti', key, 'the right-power sentence shows at the wrong time');
+      if (samePow) {
+        const l = got.find(x => x.startsWith('The power is right'));
+        const m = l && l.match(/the number in front is (\S+) where f has (\S+): F′ is (.+)\.$/);
+        const ratio = k1 / S.k;
+        const say = ratio === -1 ? 'minus f' : (Math.abs(ratio) === 0.5 ? 'half of f' : `${Math.abs(ratio) % 1 ? Math.abs(ratio) * 2 + '/2' : Math.abs(ratio)} times f`) + (ratio < 0 ? ' with its sign flipped' : '');
+        if (!m || frac(m[1]) !== k1 || frac(m[2]) !== S.k || m[3] !== say) fail('anti', key, `F′ is ${ratio} times f: ${l}`);
+      }
+      if (/Raising the power is only half/.test(txt) !== (S.id === 'sq' && pw === 3 && c === 6)) fail('anti', key, 'the forgot-to-divide sentence shows at the wrong time');
+      const off = !flat && !works && p1 !== S.p && !gap;
+      const ol = got.find(x => x.startsWith('The power is off'));
+      if (!!ol !== off) fail('anti', key, 'the wrong-power sentence shows at the wrong time');
+      if (ol) { const m = ol.match(/F′ has (\S+) where f has (\S+)\. Since the rule drops the power by one, F has to start one higher, at (\S+)\.$/);
+        if (!m || parseT(m[1])[1] !== p1 || parseT(m[2])[1] !== S.p || parseT(m[3])[1] !== S.p + 1) fail('anti', key, ol); }
+      if (flat && !gap && !works && !/A flat F has slope 0 everywhere/.test(txt)) fail('anti', key, 'a flat guess is not explained');
+      // the drawing
+      const svg = W.svg();
+      for (const m of svg.matchAll(/ (?:x1|x2|x)="(-?[\d.]+)"| (?:y1|y2|y)="(-?[\d.]+)"/g)) {
+        if (m[1] !== undefined && (+m[1] < 0 || +m[1] > 360)) fail('anti', key, `something is drawn off the side at x = ${m[1]}`);
+        if (m[2] !== undefined && (+m[2] < 0 || +m[2] > 200)) fail('anti', key, `something is drawn off the top or bottom at y = ${m[2]}`);
+      }
+      const curve = (kk, h) => { let pts = 0;
+        for (const pl2 of svg.matchAll(new RegExp(`data-k="${kk}" points="([^"]+)"`, 'g'))) for (const pt of pl2[1].split(' ')) {
+          const [px, py] = pt.split(',').map(Number); pts++;
+          if (px < 30 || px > 340 || py < 12 || py > 188 || Math.abs(PYi(py) - h(PXi(px))) > 0.002 * (S.y[1] - S.y[0])) { fail('anti', key, `the ${kk} curve leaves its function at ${pt}`); break; }
+        } return pts; };
+      if (!curve('target', tf)) fail('anti', key, 'the target is not drawn');
+      const sp = curve('slope', dF), inView = [0.3, 1, 2].some(x => dF(x) > S.y[0] && dF(x) < S.y[1]);
+      if (inView && !sp) fail('anti', key, 'the slope is not drawn though it is on the chart');
+      const meant = { sq: si === 0 && works, slip: si === 0 && pw === 3 && c === 6, plusC: si === 0 && works && C !== 0,
+        root: si === 1 && works, inv2: si === 2 && works, gap };
+      for (const g of W.GOALS) { if (!!g.ok(W) !== meant[g.id]) fail('anti', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+    }
+    reset(); W.si = si;
+    for (let t = 0; t < 20; t++) W.moveN(1); if (W.n !== 4) fail('anti', S.id, 'the power does not stop at 4');
+    for (let t = 0; t < 20; t++) W.moveN(-1); if (W.n !== -3) fail('anti', S.id, 'the power does not stop at −3');
+    for (let t = 0; t < 20; t++) W.moveC(1); if (W.c !== 6) fail('anti', S.id, 'c does not stop at 6');
+    for (let t = 0; t < 20; t++) W.moveC(-1); if (W.c !== -3) fail('anti', S.id, 'c does not stop at −3');
+    for (let t = 0; t < 20; t++) W.moveS(1); if (W.C !== 2) fail('anti', S.id, 'C does not stop at 2');
+    for (let t = 0; t < 20; t++) W.moveS(-1); if (W.C !== -2) fail('anti', S.id, 'C does not stop at −2');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('anti', g.id, 'this goal cannot be found');
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The quotient workshop: every fraction, every x, every way of working it.
    The true slope is found here by a nudge on f/g itself, never by the rule,
    so a wrong rule cannot agree with itself; each set's f′ and g′ are checked
@@ -5167,6 +5277,7 @@ console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
 console.log(`  quotients divided       ${pad(quotNotes.n.toLocaleString(), 10)}  (each slope found by a nudge on f/g, never by the rule; every product in every worked line evaluated with its values, both slips checked to give what they give, every sentence, the curve, gap, point and lines read back, ${quotNotes.goals} goals findable)`);
+console.log(`  antiderivatives guessed ${pad(antiNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the power rule; every term written parsed back and checked against F and its slope, every sentence, both curves read back, ${antiNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

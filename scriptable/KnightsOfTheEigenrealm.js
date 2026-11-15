@@ -1656,6 +1656,32 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ ANTIDERIVATIVE WORKSHOP ============ -->
+  <div class="screen" id="s-anti">
+    <div class="panel"><h2>🪃 Antiderivative Workshop</h2><div class="sub">An antiderivative runs the power rule backwards: find an F whose slope is f. Guess F = c·xⁿ + C by hand, take its slope, and see whether the green lands on the gold.</div></div>
+    <div class="panel">
+      <div id="adSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
+      <div id="adFig"></div>
+      <div id="adF" style="text-align:center;font-size:18px;font-weight:700;margin:6px 0"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="adNLo" onclick="Anti.moveN(-1)" aria-label="Make the power a half smaller">−</button>
+          <b id="adN" style="font-size:17px;min-width:0"></b>
+          <button id="adNHi" onclick="Anti.moveN(1)" aria-label="Make the power a half bigger">+</button></div>
+        <div class="wsCell"><button id="adCLo" onclick="Anti.moveC(-1)" aria-label="Make the number in front, c, 1 smaller">−</button>
+          <b id="adC" style="font-size:17px;min-width:0"></b>
+          <button id="adCHi" onclick="Anti.moveC(1)" aria-label="Make the number in front, c, 1 bigger">+</button></div>
+        <div class="wsCell"><button id="adSLo" onclick="Anti.moveS(-1)" aria-label="Make the added number, C, 1 smaller">−</button>
+          <b id="adS" style="font-size:17px;min-width:0"></b>
+          <button id="adSHi" onclick="Anti.moveS(1)" aria-label="Make the added number, C, 1 bigger">+</button></div>
+      </div>
+      <div id="adRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="adGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3639,7 +3665,7 @@ const WORKSHOP_FOR = (() => {
     Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
     Cofactor:["♟️ Cofactor Workshop", ['det3']],
     Compose: ["🔁 Order Matters", ['matMul']],
-    Span:    ["🧭 Span Workshop", ['vecCombo']],
+    Span:    ["🧭 Span Workshop", ['vecCombo','rank']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2']],
     Undo:    ["↩️ Undo Workshop", ['inv2']],
     Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
@@ -3663,6 +3689,7 @@ const WORKSHOP_FOR = (() => {
     Horizon: ["🌅 Horizon Workshop", ['limInf']],
     Cross:   ["✖️ Cross Product Workshop", ['cross']],
     Quot:    ["➗ Quotient Rule Workshop", ['quotient']],
+    Anti:    ["🪃 Antiderivative Workshop", ['indefPower']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13058,6 +13085,7 @@ const UI = {
     if(id==='s-horizon') Horizon.render();
     if(id==='s-cross') Cross.render();
     if(id==='s-quot') Quot.render();
+    if(id==='s-anti') Anti.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13831,6 +13859,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">➗ Quotient Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out.</div>
          <button class="btn sm" id="tomeQuot" style="width:auto;margin-top:8px" onclick="Quot.open()">Open the quotient rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪃 Antiderivative Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach.</div>
+         <button class="btn sm" id="tomeAnti" style="width:auto;margin-top:8px" onclick="Anti.open()">Open the antiderivative workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19076,6 +19109,129 @@ const Quot = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE QUOTIENT','every slope divided','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The antiderivative workshop: the power rule run backwards ----------
+   Guess F(x) = c·xⁿ + C by hand, take its slope by the power rule, and see
+   whether it lands on the target f. Raising the power without dividing is the
+   classic slip, the + C never changes the slope, and 1/x is the one power the
+   rule cannot reach. Nothing is saved. */
+const Anti = {
+  SETS:[
+    {id:'sq', btn:'6x²', fs:'6x²', k:6, p:2, y:[-4,28]},
+    {id:'root', btn:'3√x', fs:'3x^(1/2), which is 3√x', k:3, p:0.5, y:[-1,6]},
+    {id:'inv2', btn:'1/x²', fs:'x⁻², which is 1/x²', k:1, p:-2, y:[-1,6]},
+    {id:'inv', btn:'1/x', fs:'x⁻¹, which is 1/x', k:1, p:-1, y:[-1,6]}
+  ],
+  N:[-3,-2.5,-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4],
+  CLO:-3, CHI:6, SLO:-2, SHI:2,
+  si:0, n:1, c:1, C:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'sq', t:'Find an F whose slope is 6x².', toast:'6x² undone',
+     ok:K=>K.si===0 && K.match()},
+    {id:'slip', t:'On 6x², raise the power but forget to divide by it, and see how far off the slope comes out.', toast:'Divide by the new power',
+     ok:K=>K.si===0 && K.n===3 && K.c===6},
+    {id:'plusC', t:'Find an antiderivative of 6x² that is shifted up or down.', toast:'Plus C',
+     ok:K=>K.si===0 && K.match() && K.C!==0},
+    {id:'root', t:'Find an F whose slope is 3√x.', toast:'A half power undone',
+     ok:K=>K.si===1 && K.match()},
+    {id:'inv2', t:'Find an F whose slope is 1/x².', toast:'A negative power undone',
+     ok:K=>K.si===2 && K.match()},
+    {id:'gap', t:'On 1/x, find the power the rule would need, and see why it fails.', toast:'The gap in the power rule',
+     ok:K=>K.si===3 && K.n===0 && K.c!==0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* the slope of c·xⁿ: (c·n)·xⁿ⁻¹ */
+  dk(){ return this.c*this.n; },
+  dp(){ return this.n-1; },
+  match(){ const S=this.set(); return this.dk()===S.k && this.dp()===S.p; },
+  /* halves as fractions, so 3/2 reads as it would on paper */
+  fr(v){ const a=Math.abs(v), s=v<0?'−':''; return Number.isInteger(a) ? s+a : s+(a*2)+'/2'; },
+  SUP:{'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'},
+  pw(p){ return p===1 ? 'x' : Number.isInteger(p) ? 'x'+String(p).split('').map(ch=>this.SUP[ch]).join('') : \`x^(\${this.fr(p)})\`; },
+  term(k,p){ if(k===0) return '0'; if(p===0) return this.fr(k); return (k===1?'':k===-1?'−':Number.isInteger(k)?this.fr(k):\`(\${this.fr(k)})\`)+this.pw(p); },
+  par(v){ return v<0 ? \`(\${this.fr(v)})\` : this.fr(v); },
+  Fs(){ const t=this.term(this.c,this.n), C=this.C; return C===0 ? t : t==='0' ? this.fr(C) : \`\${t} \${C>0?'+':'−'} \${Math.abs(C)}\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), c=this.c, n=this.n, C=this.C, out=[];
+    out.push(\`The target is f(x) = \${S.fs}. Find an F whose slope is f: an antiderivative of f.\`);
+    out.push(\`Your guess is F(x) = \${this.Fs()}.\`);
+    if(c===0) out.push(\`With c = 0 the x part of F is 0, so F is flat and F′(x) = 0.\`);
+    else if(n===0) out.push(\`With power 0, \${c===1?'':c===-1?'−':this.par(c)}x⁰ is just the number \${this.fr(c)}, so F is flat and F′(x) = 0: the power rule brings the 0 down and the slope vanishes.\`);
+    else out.push(\`Its slope by the power rule: bring the power down and drop it by one, F′(x) = \${this.par(c)} · \${this.par(n)} · \${this.pw(n-1)} = \${this.term(this.dk(),this.dp())}.\`);
+    if(C!==0) out.push(\`The \${C>0?'+ '+C:'− '+Math.abs(C)} shifts the graph of F \${C>0?'up':'down'}, but a shift adds nothing to its slope.\`);
+    const k=this.dk(), p=this.dp();
+    if(this.match()){
+      out.push(\`That is f exactly, so F is an antiderivative of f. In the notation of integrals, ∫ \${S.fs.split(',')[0]} dx = \${this.term(c,n)} + C.\`);
+      out.push(C!==0
+        ? \`So is F with any other number added: every antiderivative of f is \${this.term(c,n)} + C, and the + C stands for the number you cannot see from the slope.\`
+        : \`Add any number to F and its slope is still f: that is why an antiderivative is always written with + C.\`);
+    }
+    else if(S.id==='inv' && n===0 && c!==0)
+      out.push(\`To land on x⁻¹, the power would have to drop from 0 to −1, but at power 0 the rule brings down a 0 and the slope vanishes. No power of x has 1/x as its slope. The antiderivative of 1/x is ln x, the one gap in the power rule.\`);
+    else if(k===0) out.push(\`A flat F has slope 0 everywhere, so it cannot have the slope f.\`);
+    else if(p===S.p){
+      const r=k/S.k;
+      out.push(\`The power is right, \${this.pw(p)}, but the number in front is \${this.fr(k)} where f has \${this.fr(S.k)}: F′ is \${r===-1 ? 'minus f' : (Math.abs(r)===0.5 ? 'half of f' : \`\${this.fr(Math.abs(r))} times f\`)+(r<0 ? ' with its sign flipped' : '')}.\`);
+      if(S.id==='sq' && c===6 && n===3) out.push(\`Raising the power is only half the rule run backwards: the slope brings the new power, 3, down in front, so you have to divide by it first. 6 ÷ 3 = 2.\`);
+    }
+    else out.push(\`The power is off: F′ has \${this.pw(p)} where f has \${this.pw(S.p)}. Since the rule drops the power by one, F has to start one higher, at \${this.pw(S.p+1)}.\`);
+    return out;
+  },
+  /* the target f dashed in gold and the slope F′ in green, for x from 0.25 to 2.5 */
+  D:[0.25,2.5],
+  PX(v){ return 30+(v-0.25)/2.25*310; },
+  PY(v){ const [y0,y1]=this.set().y; return 188-(v-y0)/(y1-y0)*176; },
+  path(fn){ const [y0,y1]=this.set().y, segs=[]; let seg=[];
+    for(let i=0;i<=180;i++){ const t=0.25+2.25*i/180, v=fn(t);
+      if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }
+      seg.push(\`\${this.PX(t).toFixed(2)},\${this.PY(v).toFixed(2)}\`); }
+    if(seg.length>1) segs.push(seg); return segs; },
+  svg(){
+    const S=this.set(), [y0,y1]=S.y, f=v=>v.toFixed(2), k=this.dk(), p=this.dp();
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${S.fs.split(',')[0]} dashed in gold and F′(x) = \${this.term(k,p)} in green, for x from 0.25 to 2.5\${this.match()?': they lie on top of each other':''}">\`;
+    out+=\`<line data-k="xaxis" x1="30" y1="\${f(this.PY(0))}" x2="340" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="30" y1="12" x2="30" y2="188" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of [1,2]) out+=\`<line x1="\${f(this.PX(t))}" y1="\${f(this.PY(0)-3)}" x2="\${f(this.PX(t))}" y2="\${f(this.PY(0)+3)}" stroke="\${FIG_COL.axis}" stroke-width="1"/><text x="\${f(this.PX(t))}" y="\${f(Math.min(198,this.PY(0)+14))}" text-anchor="middle" font-size="10" fill="\${FIG_COL.dim}">\${t}</text>\`;
+    for(const s of this.path(t=>k*t**p)) out+=\`<polyline data-k="slope" points="\${s.join(' ')}" fill="none" stroke="\${FIG_COL.c}" stroke-width="3" stroke-linejoin="round"/>\`;
+    for(const s of this.path(t=>S.k*t**S.p)) out+=\`<polyline data-k="target" points="\${s.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5" stroke-dasharray="6 5" stroke-linejoin="round"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-anti'); },
+  pick(i){ this.si=i; this.n=1; this.c=1; this.C=0; this.touched=true; this.render(); },
+  moveN(by){ const i=this.N.indexOf(this.n)+by; if(i<0 || i>=this.N.length) return; this.n=this.N[i]; this.touched=true; this.render(); },
+  moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v; this.touched=true; this.render(); },
+  moveS(by){ const v=this.C+by; if(v<this.SLO || v>this.SHI) return; this.C=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('adSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Anti.pick(\${i})" aria-label="Target f(x) = \${s.fs.split(',')[0]}">\${s.btn}</button>\`).join('');
+    document.getElementById('adN').textContent=\`power \${this.fr(this.n)}\`;
+    document.getElementById('adC').textContent=\`c = \${this.fr(this.c)}\`;
+    document.getElementById('adS').textContent=\`+ C = \${this.fr(this.C)}\`;
+    document.getElementById('adNLo').disabled=this.n<=this.N[0];
+    document.getElementById('adNHi').disabled=this.n>=this.N[this.N.length-1];
+    document.getElementById('adCLo').disabled=this.c<=this.CLO;
+    document.getElementById('adCHi').disabled=this.c>=this.CHI;
+    document.getElementById('adSLo').disabled=this.C<=this.SLO;
+    document.getElementById('adSHi').disabled=this.C>=this.SHI;
+    document.getElementById('adF').textContent=\`F(x) = \${this.Fs()}\`;
+    document.getElementById('adFig').innerHTML=this.svg()+
+      \`<div class="figcap">The dashed gold curve is the target f. The green curve is the slope of your guess, F′. When F is right, the green lands exactly on the gold.</div>\`;
+    document.getElementById('adRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('adGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE ANTIDERIVATIVE','every slope undone','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
