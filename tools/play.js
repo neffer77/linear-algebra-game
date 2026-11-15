@@ -81,6 +81,7 @@ const SUITES = [
   require('./play/cof'),         // a 3×3 determinant along any row or column
   require('./play/cover'),       // partial fractions by covering up roots
   require('./play/slice'),       // double integrals one slice at a time
+  require('./play/tracer'),      // the derivative traced out as dots
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

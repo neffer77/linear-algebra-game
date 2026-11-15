@@ -77,6 +77,7 @@ function loadGame() {
     ';const Cofactor={' + script.slice(script.indexOf("  SETS:[\n    {id:'gap', btn:'Two zeros'"), script.indexOf("  open(){ UI.go('s-cof'); },")) + '};exports.Cofactor=Cofactor;' +
     ';const Cover={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'Two factors'"), script.indexOf("  open(){ UI.go('s-cover'); },")) + '};exports.Cover=Cover;' +
     ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
+    ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -95,7 +96,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2690,6 +2691,90 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The slope tracer workshop: every curve, every stop, every set of marks.
+   Each slope is checked against the derivative worked out by hand, never
+   against the nudge the workshop uses; the nudge's rise must give the slope
+   it claims; each x label is read back as a number; every sentence's
+   condition is worked out independently; every dot must sit at the height of
+   the true derivative, and the traced curve must be the derivative itself. */
+const tracerNotes = (() => {
+  const W = Tracer;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const D = { sin: Math.cos, cos: x => -Math.sin(x), exp: Math.exp, ln: x => 1 / x };
+  const X = { sin: i => (i - 4) * Math.PI / 4, cos: i => (i - 4) * Math.PI / 4, exp: i => (i - 4) / 2, ln: i => (i + 1) / 2 };
+  const name = { sin: 'cos x', cos: '−sin x', exp: 'eˣ', ln: '1/x' };
+  const box = { sin: [-3.5, 3.5, -1.4, 1.4], cos: [-3.5, 3.5, -1.4, 1.4], exp: [-2.25, 2.25, -0.5, 7.8], ln: [0, 4.75, -1, 2.2] };
+  const label = l => Function('π', 'return ' + l.replace(/−/g, '-').replace(/(\d)π/g, '$1*π'))(Math.PI);
+  if (W.SETS.map(S => S.id).join() !== 'sin,cos,exp,ln') fail('tracer', 'sets', W.SETS.map(S => S.id).join());
+  const reset = () => { W.touched = false; W.k = W.START; W.seen.forEach((z, i) => { z.clear(); z.add(W.START); }); };
+  reset(); W.si = 0;
+  for (const g of W.GOALS) if (g.ok(W)) fail('tracer', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.pick(si); for (const g of W.GOALS) if (g.ok(W)) fail('tracer', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  W.SETS.forEach((S, si) => {
+    const d = D[S.id];
+    for (let k = 0; k < 9; k++) {
+      const x = X[S.id](k), dx = d(x);
+      for (const seen of [[W.START], [W.START, k], [k, (k + 3) % 9, (k + 5) % 9], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 2, 3, 4, 5, 6, 7, 8]]) {
+        reset(); W.si = si; W.k = k; W.touched = true; W.seen[si] = new Set(seen); n++;
+        const key = `${S.id} at stop ${k} with ${W.seen[si].size} marked`;
+        if (Math.abs(W.x() - x) > 1e-12) fail('tracer', key, `the stop is at ${W.x()}, not ${x}`);
+        if (Math.abs(label(W.xl()) - x) > 1e-9) fail('tracer', key, `the label ${W.xl()} does not read as ${x}`);
+        if (Math.abs(W.slope() - dx) > 6e-5) fail('tracer', key, `the slope reads ${W.slope()}, but the derivative is ${dx}`);
+        if (Math.abs(W.rise() / 0.002 - W.slope()) > 1e-4) fail('tracer', key, `a rise of ${W.rise()} over 0.002 is not a slope of ${W.slope()}`);
+        const got = W.working(), txt = got.join('\n'), L = W.xl(), s = Math.round(dx * 1e4) / 1e4, sl = neg(Object.is(s, -0) ? 0 : s);
+        if (!got[1].startsWith(`At x = ${L}: f(${L}) `)) fail('tracer', key, got[1]);
+        if (!got[1].endsWith(`so the tangent's slope here is about ${sl}.`)) fail('tracer', key, `the slope sentence should end at ${sl}: ${got[1]}`);
+        const word = /rises by/.test(got[1]) ? 1 : /falls by/.test(got[1]) ? -1 : /does not change/.test(got[1]) ? 0 : NaN;
+        if (word !== Math.sign(s)) fail('tracer', key, 'the nudge says f moves the wrong way');
+        const v = Math.round(S.f(x) * 1e4) / 1e4;
+        if (!new RegExp(`^At x = [^:]+: f\\([^)]+\\) [=≈] ${neg(Object.is(v, -0) ? 0 : v).replace('.', '\\.')}\\.`).test(got[1])) fail('tracer', key, `f(${L}) should read ${v}`);
+        if (/The slope is 0/.test(txt) !== (Math.abs(dx) < 1e-9)) fail('tracer', key, 'the flat sentence is wrong');
+        if (/top of a hump/.test(txt) !== (Math.abs(dx) < 1e-9 && S.f(x) > 0)) fail('tracer', key, 'hump and dip are mixed up');
+        if (/as steep as/.test(txt) !== (!!S.trig && Math.abs(Math.abs(dx) - 1) < 1e-9)) fail('tracer', key, 'the steepest sentence is wrong');
+        if (/falls fastest/.test(txt) !== (!!S.trig && Math.abs(dx + 1) < 1e-9)) fail('tracer', key, 'falling fastest is claimed wrongly');
+        if (/the dot lands on the curve/.test(txt) !== (S.id === 'exp')) fail('tracer', key, 'the lands-on-the-curve sentence is wrong');
+        if (/A slope of 2 at/.test(txt) !== (S.id === 'ln' && Math.abs(dx - 2) < 1e-9)) fail('tracer', key, 'the slope-of-2 sentence is wrong');
+        const all = seen.length === 9;
+        if (txt.includes(`the dots trace out ${name[S.id]}`) !== all) fail('tracer', key, 'the traced sentence is wrong');
+        if (!all && !txt.includes(`Marked so far: ${W.seen[si].size} of 9 stops.`)) fail('tracer', key, 'the count of marks is wrong');
+        if (all && S.id !== 'exp') { const m = txt.match(/Here (.+?) [=≈] (−?[\d.]+), the same as the slope\./);
+          if (!m || Math.abs(+m[2].replace('−', '-') - dx) > 6e-5) fail('tracer', key, 'the derivative is not worked at x');
+          else if (m[1] !== { sin: `cos(${L})`, cos: `−sin(${L})`, ln: `1/${L}` }[S.id]) fail('tracer', key, `the derivative is written ${m[1]}`); }
+        const svg = W.svg(), [x0, x1, y0, y1] = box[S.id];
+        const PX = v => 20 + (v - x0) / (x1 - x0) * 320, PY = v => 188 - (v - y0) / (y1 - y0) * 176;
+        const dots = [...svg.matchAll(/data-k="dot" cx="([\d.-]+)" cy="([\d.-]+)"/g)];
+        if (dots.length !== W.seen[si].size) fail('tracer', key, `${dots.length} dots for ${W.seen[si].size} marks`);
+        for (const [, cx, cy] of dots) { const at = [...W.seen[si]].map(j => X[S.id](j)).find(t => Math.abs(PX(t) - +cx) < 0.01);
+          if (at === undefined || Math.abs(PY(d(at)) - +cy) > 0.05) fail('tracer', key, 'a dot is not at the height of the slope'); }
+        if (/data-k="traced"/.test(svg) !== all) fail('tracer', key, 'the traced curve shows at the wrong time');
+        if (all) { const pts = svg.match(/data-k="traced" points="([^"]+)"/)[1].split(' ').map(p => p.split(',').map(Number));
+          for (const [px, py] of pts) { const t = x0 + (px - 20) / 320 * (x1 - x0), want = d(t);
+            if (want > y0 - 0.4 && want < y1 + 0.4 && Math.abs(PY(want) - py) > 0.05) { fail('tracer', key, `the traced curve is not ${name[S.id]}`); break; } } }
+        const tan = svg.match(/data-k="tan" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        const ts = -((+tan[4]) - (+tan[2])) / ((+tan[3]) - (+tan[1])) * 320 / (x1 - x0) * (y1 - y0) / 176;
+        if (Math.abs(ts - dx) > 0.01) fail('tracer', key, `the tangent is drawn with slope ${ts}, not ${dx}`);
+        const meant = { flat: si === 0 && Math.abs(dx) < 1e-9, steep: si === 0 && Math.abs(dx + 1) < 1e-9, trace: si === 0 && all,
+          cos: si === 1 && Math.abs(dx + 1) < 1e-9, exp: si === 2 && W.seen[2].size >= 3, ln: si === 3 && Math.abs(dx - 2) < 1e-9 };
+        for (const gl of W.GOALS) {
+          if (!!gl.ok(W) !== meant[gl.id]) fail('tracer', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`);
+          if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+        }
+      }
+    }
+    // stepping marks each stop, and stops at both ends
+    reset(); W.si = si;
+    for (let i = 0; i < 6; i++) W.moveX(1);
+    if (W.k !== 8) fail('tracer', S.id, 'stepping on does not stop at the last stop');
+    for (let i = 0; i < 10; i++) W.moveX(-1);
+    if (W.k !== 0) fail('tracer', S.id, 'stepping back does not stop at the first stop');
+    if (W.seen[si].size !== 9) fail('tracer', S.id, 'walking every stop does not mark every stop');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('tracer', g.id, 'this goal cannot be found');
+  reset(); W.si = 0; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The slice workshop: every function, both ways of slicing, every slice.
    Each slice's area is integrated afresh by Simpson's rule straight from
    f(x, y), never from the workshop's own formula; the swept total is
@@ -4586,6 +4671,7 @@ console.log(`  headings faced          ${pad(hillNotes.n.toLocaleString(), 10)} 
 console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  (det A by the rule of Sarrus against every row and column, each minor struck out afresh, each sign from the checkerboard, the grid read back, two lines tried agreeing, ${cofNotes.goals} goals findable)`);
 console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}  (the cleared identity at every x, the pieces adding back to f, the antiderivative differentiated back, every choice of kept equations, the drawing read back, ${coverNotes.goals} goals findable)`);
 console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
+console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
