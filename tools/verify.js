@@ -71,6 +71,7 @@ function loadGame() {
     ';const Lathe={' + script.slice(script.indexOf("  SETS:[\n    {id:'cone', btn:'Cone'"), script.indexOf("  open(){ UI.go('s-lathe'); },")) + '};exports.Lathe=Lathe;' +
     ';const Swap={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos', btn:'cos(x²)'"), script.indexOf("  open(){ UI.go('s-swap'); },")) + '};exports.Swap=Swap;' +
     ';const Implicit={' + script.slice(script.indexOf("  SETS:[\n    {id:'circle', btn:'Circle'"), script.indexOf("  open(){ UI.go('s-implicit'); },")) + '};exports.Implicit=Implicit;' +
+    ';const Parts={' + script.slice(script.indexOf("  SETS:[\n    {id:'xe', btn:'x eˣ'"), script.indexOf("  open(){ UI.go('s-parts'); },")) + '};exports.Parts=Parts;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -89,7 +90,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2684,6 +2685,98 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The parts workshop: every split tried on every integral. Each split must
+   multiply back to the integrand (u times dv/dx); du is checked against a
+   numerical derivative of u and v against a numerical integral of dv; the one
+   split marked right must have an answer whose derivative is the integrand,
+   and the integral it leaves must really be uv − answer, checked by its own
+   derivative v du; the gold answer must climb across the drawing by the area
+   under the integrand. Every sentence is rebuilt, and every goal. */
+const partsNotes = (() => {
+  const W = Parts;
+  const K = {
+    xe: { I: '∫ x eˣ dx', right: 'x', f: x => x * Math.exp(x) },
+    xcos: { I: '∫ x cos x dx', right: 'x', f: x => x * Math.cos(x) },
+    ln: { I: '∫ ln x dx', right: 'ln x', f: x => Math.log(x) },
+    xln: { I: '∫ x ln x dx', right: 'ln x', f: x => x * Math.log(x) }
+  };
+  if (W.SETS.map(S => S.id).join() !== 'xe,xcos,ln,xln') fail('parts', 'sets', W.SETS.map(S => S.id).join());
+  W.touched = false; W.si = 0; W.oi = null;
+  for (const g of W.GOALS) if (g.ok(W)) fail('parts', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  const close = (a, b, tol) => Math.abs(a - b) <= tol * Math.max(1, Math.abs(a), Math.abs(b));
+  W.SETS.forEach((S, si) => {
+    const k = K[S.id], [a, b] = S.D;
+    if (S.I !== k.I) fail('parts', S.id, `reads ${S.I}`);
+    for (let x = a; x <= b; x += 0.05) if (!close(S.f(x), k.f(x), 1e-9)) fail('parts', S.id, `the integrand is wrong at x = ${x}`);
+    const right = S.opts.filter(o => o.F).map(o => o.u);
+    if (right.join() !== k.right) fail('parts', S.id, `the u marked right is ${right.join()}, not ${k.right}`);
+    W.si = si;
+    [null, ...S.opts.keys()].forEach(oi => {
+      W.oi = oi; n++;
+      const o = oi === null ? null : S.opts[oi], key = `${S.id} u=${o ? o.u : 'none'}`;
+      const want = [`${k.I}: split the integrand into u, to differentiate, and dv, to integrate. Then ∫ u dv = uv − ∫ v du, and the aim is an integral left that is simpler than the one you started with.`];
+      if (!o) want.push('Pick a split below.');
+      else {
+        const h = 1e-5;
+        for (let x = a + 0.03; x < b; x += 0.07) {
+          if (!close(o.uf(x) * o.dvf(x), k.f(x), 1e-9)) { fail('parts', key, `u times dv is not the integrand at x = ${x}`); break; }
+          if (!o.vf) continue;
+          const du = (o.uf(x + h) - o.uf(x - h)) / (2 * h), dv = (o.vf(x + h) - o.vf(x - h)) / (2 * h);
+          if (!close(du, o.duf(x), 1e-4)) { fail('parts', key, `du/dx is wrong at x = ${x}`); break; }
+          if (!close(dv, o.dvf(x), 1e-4)) { fail('parts', key, `v is not an integral of dv at x = ${x}`); break; }
+          if (o.F) {
+            const dF = (o.F(x + h) - o.F(x - h)) / (2 * h);
+            if (!close(dF, k.f(x), 1e-4)) { fail('parts', key, `the answer does not differentiate to the integrand at x = ${x}`); break; }
+            // the integral left, G = uv − F, must have derivative v du
+            const G = t => o.uf(t) * o.vf(t) - o.F(t), dG = (G(x + h) - G(x - h)) / (2 * h);
+            if (!close(dG, o.vf(x) * o.duf(x), 1e-4)) { fail('parts', key, `the integral left is not ∫ v du at x = ${x}`); break; }
+          }
+        }
+        if (!o.vf) {
+          if (o.F || o.v || o.du) fail('parts', key, 'a split with no v has nothing more to work');
+          if (!/^Then v would be ∫ .+ dx, the very integral you are trying to find\./.test(o.left)) fail('parts', key, 'a dv you cannot integrate must say so');
+          want.push(`Try u = ${o.u} and dv = ${o.dv}.`, o.left, 'This split never gets started. Try another.');
+        } else {
+          want.push(`Try u = ${o.u} and dv = ${o.dv}. Then du = ${o.du} and v = ${o.v}.`, `So ${k.I} = ${o.parts}.`);
+          if (o.F) want.push(o.rest, `Put it together: ${o.back}`, `Check by differentiating: ${o.check}`);
+          else want.push(o.left, 'This split makes it no simpler. Try another.');
+        }
+      }
+      const got = W.working();
+      if (got.length !== want.length) fail('parts', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('parts', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      const svg = W.svg();
+      const pts = kk => { const m = svg.match(new RegExp(`data-k="${kk}" points="([^"]+)"`)); return m ? m[1].split(' ').map(t => t.split(',').map(Number)) : null; };
+      const fp = pts('f'), Fp = pts('F');
+      if (!fp) fail('parts', key, 'the integrand is not drawn');
+      if (!!Fp !== !!(o && o.F)) fail('parts', key, 'the answer should be drawn exactly when the split is right');
+      if (fp && Fp) {
+        const ys = fp.map(([px]) => k.f(a + (px - 20) / 320 * (b - a)));
+        const i0 = ys.indexOf(Math.min(...ys)), i1 = ys.indexOf(Math.max(...ys));
+        const sc = (fp[i0][1] - fp[i1][1]) / (ys[i1] - ys[i0]);
+        let worst = 0;
+        for (let i = 1; i < Fp.length; i++) {
+          const x0 = a + (Fp[i - 1][0] - 20) / 320 * (b - a), x1 = a + (Fp[i][0] - 20) / 320 * (b - a), m = 20;
+          let area = 0; for (let j = 0; j < m; j++) { const u = x0 + (x1 - x0) * j / m, v = x0 + (x1 - x0) * (j + 1) / m; area += (k.f(u) + k.f(v)) / 2 * (v - u); }
+          worst = Math.max(worst, Math.abs((Fp[i - 1][1] - Fp[i][1]) / sc - area));
+        }
+        if (worst > 0.02 * (Math.max(...ys) - Math.min(...ys)) / 50 + 0.02) fail('parts', key, `the gold answer does not rise by the area under the integrand (off by ${worst})`);
+      }
+      W.touched = true;
+      const works = !!(o && o.F), meant = { xe: si === 0 && works, xcos: si === 1 && works, ln: si === 2 && works, xln: si === 3 && works, worse: !!o && !!o.vf && !works, stuck: !!o && !o.vf };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('parts', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('parts', g.id, 'this goal cannot be found');
+  W.si = 0; W.oi = null; W.touched = false; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The implicit slope workshop: every point on every curve. Each point must
    lie on its curve exactly, and the points must run anticlockwise as the +
    button says. The y′ formula is checked against the curve's own partial
@@ -3996,6 +4089,7 @@ console.log(`  endless areas           ${pad(tailNotes.n.toLocaleString(), 10)} 
 console.log(`  lathe cuts              ${pad(latheNotes.n.toLocaleString(), 10)}  (each solid's disks summed from its own f², the exact volume by antiderivative and by Simpson's rule, the disks read back, ${latheNotes.goals} goals findable)`);
 console.log(`  swaps tried             ${pad(swapNotes.n.toLocaleString(), 10)}  (each du against a numerical derivative, each right u turning the integrand into g(u) du, the drawn answer rising by the area under the integrand, ${swapNotes.goals} goals findable)`);
 console.log(`  implicit points         ${pad(implicitNotes.n.toLocaleString(), 10)}  (each on its curve, y′ against −Fx/Fy, each nudge solved outright, the tangent and radius measured, ${implicitNotes.goals} goals findable)`);
+console.log(`  splits tried            ${pad(partsNotes.n.toLocaleString(), 10)}  (each u times dv giving back the integrand, du and v checked numerically, each answer and the integral it leaves checked by differentiating, the drawn answer rising by the area, ${partsNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

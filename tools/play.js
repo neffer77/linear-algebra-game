@@ -75,6 +75,7 @@ const SUITES = [
   require('./play/lathe'),       // volumes of revolution as a stack of disks
   require('./play/swap'),        // u-substitution as a swap
   require('./play/implicit'),    // implicit differentiation round a curve
+  require('./play/parts'),       // integration by parts as a split
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

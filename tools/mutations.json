@@ -1,166 +1,159 @@
 {
- "change": "The Implicit Slope Workshop: implicit differentiation",
+ "change": "The Parts Workshop: integration by parts",
  "mutations": [
   {
-   "name": "the circle's y′ loses its minus sign",
+   "name": "x eˣ's answer drops the − eˣ",
    "file": "index.html",
-   "find": "nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y,",
-   "replace": "nS:'x', dS:'y', N:(x,y)=>-x, D:(x,y)=>y,",
+   "find": "back:'x eˣ − eˣ + C', F:x=>(x-1)*Math.exp(x),",
+   "replace": "back:'x eˣ − eˣ + C', F:x=>x*Math.exp(x),",
    "run": "verify"
   },
   {
-   "name": "the ellipse forgets the 4",
+   "name": "x cos x's answer gets the sign of cos x wrong",
    "file": "index.html",
-   "find": "nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>4*y,",
-   "replace": "nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>y,",
+   "find": "F:x=>x*Math.sin(x)+Math.cos(x),",
+   "replace": "F:x=>x*Math.sin(x)-Math.cos(x),",
    "run": "verify"
   },
   {
-   "name": "the tilted curve skips the product rule",
+   "name": "ln x's du is wrong",
    "file": "index.html",
-   "find": "nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x+y, D:(x,y)=>x+2*y,",
-   "replace": "nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x, D:(x,y)=>2*y,",
+   "find": "{u:'ln x', dv:'dx', du:'(1/x) dx', v:'x', uf:x=>Math.log(x), duf:x=>1/x,",
+   "replace": "{u:'ln x', dv:'dx', du:'(1/x) dx', v:'x', uf:x=>Math.log(x), duf:x=>1/(x*x),",
    "run": "verify"
   },
   {
-   "name": "a point falls off the ellipse",
+   "name": "x ln x's v forgets the half",
    "file": "index.html",
-   "find": "P:[[5,0],[4,1.5],[3,2],[0,2.5]",
-   "replace": "P:[[5,0],[4,1.5],[3,2.1],[0,2.5]",
+   "find": "duf:x=>1/x, dvf:x=>x, vf:x=>x*x/2,\n       parts:'(x²/2) ln x",
+   "replace": "duf:x=>1/x, dvf:x=>x, vf:x=>x*x,\n       parts:'(x²/2) ln x",
    "run": "verify"
   },
   {
-   "name": "two tilted points swap order",
+   "name": "x ln x's answer forgets the x²/4",
    "file": "index.html",
-   "find": "[[2,1],[1,2],[-1,3],[-2,3],",
-   "replace": "[[2,1],[-1,3],[1,2],[-2,3],",
+   "find": "F:x=>x*x/2*Math.log(x)-x*x/4,",
+   "replace": "F:x=>x*x/2*Math.log(x),",
    "run": "verify"
   },
   {
-   "name": "the nudge steps only one side",
+   "name": "a split no longer multiplies back to the integrand",
    "file": "index.html",
-   "find": "l=this.yAt(x-h,y), r=this.yAt(x+h,y); return {h, l, r, s:(r-l)/(2*h)};",
-   "replace": "l=this.yAt(x,y), r=this.yAt(x+h,y); return {h, l, r, s:(r-l)/(2*h)};",
+   "find": "{u:'x eˣ', dv:'dx', du:'(eˣ + x eˣ) dx', v:'x', uf:x=>x*Math.exp(x), duf:x=>(1+x)*Math.exp(x), dvf:()=>1,",
+   "replace": "{u:'x eˣ', dv:'dx', du:'(eˣ + x eˣ) dx', v:'x', uf:x=>x*Math.exp(x), duf:x=>(1+x)*Math.exp(x), dvf:()=>2,",
    "run": "verify"
   },
   {
-   "name": "the flat tangent is called the top everywhere",
+   "name": "u = eˣ is marked right",
    "file": "index.html",
-   "find": "at the very ${y>0?'top':'bottom'} of the curve.",
-   "replace": "at the very top of the curve.",
+   "find": "dvf:x=>x, vf:x=>x*x/2,\n       parts:'(x²/2) eˣ − ∫ (x²/2) eˣ dx',",
+   "replace": "dvf:x=>x, vf:x=>x*x/2, F:x=>(x-1)*Math.exp(x),\n       parts:'(x²/2) eˣ − ∫ (x²/2) eˣ dx',",
    "run": "verify"
   },
   {
-   "name": "the radius sentence is dropped",
+   "name": "the integral is wrong",
    "file": "index.html",
-   "find": "    if(S.id==='circle' && x!==0)\n      out.push(",
-   "replace": "    if(false)\n      out.push(",
+   "find": "{id:'xcos', btn:'x cos x', I:'∫ x cos x dx', f:x=>x*Math.cos(x),",
+   "replace": "{id:'xcos', btn:'x cos x', I:'∫ x cos x dx', f:x=>x*Math.sin(x),",
    "run": "verify"
   },
   {
-   "name": "the tangent is drawn along the radius",
+   "name": "the answer is never drawn",
    "file": "index.html",
-   "find": "const L=Math.hypot(n,d), tx=d/L*2, ty=-n/L*2;",
-   "replace": "const L=Math.hypot(n,d), tx=n/L*2, ty=d/L*2;",
+   "find": "    if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-parts'); },",
+   "replace": "    return out+`</svg>`;\n  },\n  open(){ UI.go('s-parts'); },",
    "run": "verify"
   },
   {
-   "name": "the curve is drawn too big",
+   "name": "the check line is dropped",
    "file": "index.html",
-   "find": "r=Math.sqrt(S.c/S.F(cx,cy));",
-   "replace": "r=1.1*Math.sqrt(S.c/S.F(cx,cy));",
+   "find": "      out.push(`Put it together: ${o.back}`);\n      out.push(`Check by differentiating: ${o.check}`);\n",
+   "replace": "      out.push(`Put it together: ${o.back}`);\n",
    "run": "verify"
   },
   {
-   "name": "the radius is drawn on every curve",
+   "name": "the parts line is dropped",
    "file": "index.html",
-   "find": "    if(S.id==='circle') out+=`<line data-k=\"radius\"",
-   "replace": "    out+=`<line data-k=\"radius\"",
+   "find": "    out.push(`So ${S.I} = ${o.parts}.`);\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "the climb goal takes a falling tangent",
+   "name": "a stuck split runs on as if it had a v",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.slope()>0}",
-   "replace": "ok:K=>K.si===2 && K.slope()!==0}",
+   "find": "    if(!o.vf){\n      out.push(`Try u = ${o.u} and dv = ${o.dv}.`);",
+   "replace": "    if(false){\n      out.push(`Try u = ${o.u} and dv = ${o.dv}.`);",
    "run": "verify"
   },
   {
-   "name": "a goal is met where it opens",
+   "name": "the worse goal takes a stuck split",
    "file": "index.html",
-   "find": "{id:'egg', t:'On the ellipse, find its top or bottom.', toast:'Found the top of the ellipse',\n     ok:K=>K.si===1 && K.nd()[0]===0},",
-   "replace": "{id:'egg', t:'On the ellipse, find its top or bottom.', toast:'Found the top of the ellipse',\n     ok:K=>K.nd()[0]===0 || K.si===0},",
+   "find": "toast:'That split makes it worse', ok:K=>{ const o=K.opt(); return !!(o && o.vf && !o.F); }}",
+   "replace": "toast:'That split makes it worse', ok:K=>{ const o=K.opt(); return !!(o && !o.F); }}",
    "run": "verify"
   },
   {
-   "name": "the point stops instead of wrapping",
+   "name": "the ln goal fires on x ln x",
    "file": "index.html",
-   "find": "move(by){ const m=this.set().P.length; this.k=(this.k+by+m)%m;",
-   "replace": "move(by){ const m=this.set().P.length; this.k=Math.max(0,Math.min(m-1,this.k+by));",
-   "run": "play:implicit"
+   "find": "toast:'Solved: x ln x − x + C', ok:K=>K.si===2 && K.works()},",
+   "replace": "toast:'Solved: x ln x − x + C', ok:K=>K.si>=2 && K.works()},",
+   "run": "verify"
   },
   {
-   "name": "a new curve keeps the old point",
+   "name": "a new integral keeps the old split",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  move(by)",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(by)",
-   "run": "play:implicit"
+   "find": "pick(i){ this.si=i; this.oi=null; this.render(); },\n  trySplit",
+   "replace": "pick(i){ this.si=i; this.render(); },\n  trySplit",
+   "run": "play:parts"
   },
   {
-   "name": "the caption forgets the radius",
+   "name": "the caption never mentions gold",
    "file": "index.html",
-   "find": "The green line is the tangent there${this.si===0?', and the dashed line is the radius out to the point':''}.",
-   "replace": "The green line is the tangent there.",
-   "run": "play:implicit"
+   "find": "' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':' Find the right split",
+   "replace": "' Look for the answer in gold.':' Find the right split",
+   "run": "play:parts"
   },
   {
-   "name": "the stepper buttons lose their names",
+   "name": "the split buttons lose their names",
    "file": "index.html",
-   "find": "<button id=\"imKLo\" onclick=\"Implicit.move(-1)\" aria-label=\"Step the point clockwise around the curve\">",
-   "replace": "<button id=\"imKLo\" onclick=\"Implicit.move(-1)\">",
-   "run": "play:implicit"
+   "find": "aria-label=\"Try u = ${o.u} and dv = ${o.dv}\">",
+   "replace": ">",
+   "run": "play:parts"
   },
   {
-   "name": "the curve buttons lose their equations",
+   "name": "the integral buttons lose their names",
    "file": "index.html",
-   "find": "aria-label=\"${s.btn}: ${s.eq}\">${s.btn}</button>",
-   "replace": "aria-label=\"${s.btn}\">${s.btn}</button>",
-   "run": "play:implicit"
+   "find": "onclick=\"Parts.pick(${i})\" aria-label=\"${s.I}\">",
+   "replace": "onclick=\"Parts.pick(${i})\">",
+   "run": "play:parts"
   },
   {
-   "name": "the chosen curve is not marked pressed",
+   "name": "the chosen split is not marked pressed",
    "file": "index.html",
-   "find": "aria-pressed=\"${i===this.si}\" onclick=\"Implicit.pick(${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Implicit.pick(${i})\"",
-   "run": "play:implicit"
-  },
-  {
-   "name": "the drawing loses its name",
-   "file": "index.html",
-   "find": "role=\"img\" aria-label=\"${S.eq} in blue, with its tangent at",
-   "replace": "role=\"img\" data-x=\"${S.eq} in blue, with its tangent at",
-   "run": "play:implicit"
+   "find": "aria-pressed=\"${j===this.oi}\" onclick=\"Parts.trySplit(${j})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"Parts.trySplit(${j})\"",
+   "run": "play:parts"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every tangent found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every tangent found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:implicit"
+   "find": "'every integral split','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every integral split','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:parts"
   },
   {
-   "name": "the Tome loses the implicit workshop",
+   "name": "the Tome loses the parts workshop",
    "file": "index.html",
-   "find": "id=\"tomeImplicit\"",
-   "replace": "id=\"tomeImplicitX\"",
-   "run": "play:implicit"
+   "find": "id=\"tomeParts\"",
+   "replace": "id=\"tomePartsX\"",
+   "run": "play:parts"
   },
   {
-   "name": "the workshop saves its point",
+   "name": "the workshop saves its split",
    "file": "index.html",
-   "find": "this.k=(this.k+by+m)%m; this.touched=true;",
-   "replace": "this.k=(this.k+by+m)%m; Game.s.implicitK=this.k; this.touched=true;",
-   "run": "play:implicit"
+   "find": "trySplit(j){ this.oi=j; this.touched=true; this.render(); },",
+   "replace": "trySplit(j){ this.oi=j; Game.s.parts=j; this.touched=true; this.render(); },",
+   "run": "play:parts"
   }
  ]
 }
