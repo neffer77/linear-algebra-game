@@ -56,6 +56,7 @@ function loadGame() {
     ';const Undo={' + script.slice(script.indexOf('  MATS:[\n    {m:[[1,1],[0,1]],  btn:\'Shear\''), script.indexOf('  open(){ UI.go(\'s-undo\'); },')) + '};exports.Undo=Undo;' +
     ';const Fit={' + script.slice(script.indexOf("  SETS:[\n    {btn:'Line-up'"), script.indexOf("  open(){ UI.go('s-fit'); },")) + '};exports.Fit=Fit;' +
     ';const Newton={' + script.slice(script.indexOf("  CURVES:[\n    {id:'sq',   name:'x² − 2'"), script.indexOf("  open(){ UI.go('s-newton'); },")) + '};exports.Newton=Newton;' +
+    ';const Chain={' + script.slice(script.indexOf("  PAIRS:[\n    {f:'u²',"), script.indexOf("  open(){ UI.go('s-chain'); },")) + '};exports.Chain=Chain;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -73,7 +74,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2347,6 +2348,76 @@ const newtonNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of the chain rule workshop: each pair of links, every x and
+   both rules. y and dy/dx are worked here from y written out in full (so
+   (3x − 1)² is 9x² − 6x + 1, and its slope 18x − 6), not from the product
+   of the two slopes the workshop shows, and the slip from f′ written out by
+   hand. Every line of the working must carry those numbers to four places,
+   with = only where nothing was rounded; the nudge must be worked from y,
+   and land within 0.005 of dy/dx; the verdict must say which rule is right
+   and why. The figure's curve must be y. Each goal must hold exactly where
+   its sentence says, be findable, and not be met where the workshop opens. */
+const chainNotes = (() => {
+  const C = Chain;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const rN = (x, dp) => { const k = 10 ** dp, r = Math.round(x * k) / k; return Object.is(r, -0) ? 0 : r; };
+  const show = (x, dp = 4) => neg(rN(x, dp)), eq = (x, dp = 4) => (Math.abs(x - rN(x, dp)) < 1e-9 ? '=' : '≈');
+  const par = x => (rN(x, 4) < 0 ? '(' + show(x) + ')' : show(x));
+  const HAND = [
+    { u: x => 3 * x - 1, y: x => 9 * x * x - 6 * x + 1, dy: x => 18 * x - 6, g1: x => 3, f1: u => 2 * u },
+    { u: x => x * x - 1, y: x => x ** 6 - 3 * x ** 4 + 3 * x * x - 1, dy: x => 6 * x ** 5 - 12 * x ** 3 + 6 * x, g1: x => 2 * x, f1: u => 3 * u * u },
+    { u: x => x * x, y: x => x ** 4 - 2 * x * x, dy: x => 4 * x ** 3 - 4 * x, g1: x => 2 * x, f1: u => 2 * u - 2 }
+  ];
+  const rate = (k, a, b) => k === 0 ? `${a} stands still for a moment as ${b} moves`
+    : `${a} moves ${Math.abs(k) === 1 ? 'as fast as' : show(Math.abs(k)) + ' times as fast as'} ${b}${k < 0 ? ', the other way' : ''}`;
+  if (C.PAIRS.length !== HAND.length) fail('chain', 'pairs', `${C.PAIRS.length} pairs, ${HAND.length} written out here`);
+  C.touched = false;
+  C.pi = 0; C.xh = 2; C.slip = false;
+  for (const g of C.GOALS) if (g.ok(C)) fail('chain', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  C.PAIRS.forEach((P, pi) => {
+    const H = HAND[pi];
+    for (let xh = C.XLO; xh <= C.XHI; xh++) for (const slip of [false, true]) {
+      C.pi = pi; C.xh = xh; C.slip = slip; n++;
+      const x = xh / 2, u = H.u(x), y = H.y(x), dy = H.dy(x), gp = H.g1(x), fp = H.f1(u), w = H.f1(x) * gp;
+      const key = `${pi} x=${x}${slip ? ' slip' : ''}`;
+      if (Math.abs(figEval(P.y, x) - y) > 1e-9) fail('chain', key, `the figure's curve gives ${figEval(P.y, x)}, y is ${y}`);
+      if (Math.abs(fp * gp - dy) > 1e-9) fail('chain', key, `f′(u) × g′(x) = ${fp * gp} is not the slope of y, ${dy}`);
+      if (Math.abs(C.dy() - dy) > 1e-9) fail('chain', key, `dy/dx is ${C.dy()}, should be ${dy}`);
+      const X = show(x), h = 0.001, y1 = H.y(x - h), y2 = H.y(x + h), r = (y2 - y1) / (2 * h);
+      if (Math.abs(r - dy) > 0.005) fail('chain', key, `the nudge gives ${r}, far from dy/dx = ${dy}`);
+      const ab = v => (eq(v, 6) === '≈' ? 'about ' : '') + show(v, 6);
+      const want = [
+        `y = f(u) with f(u) = ${P.f}, and u = g(x) = ${P.g}.`,
+        `At x = ${X}: u = g(${X}) ${eq(u)} ${show(u)}, so y = f(${show(u)}) ${eq(y)} ${show(y)}.`,
+        `g′(x) = ${P.gd}, so g′(${X}) ${eq(gp)} ${show(gp)}: ${rate(gp, 'u', 'x')}.`,
+        `f′(u) = ${P.fd}, so f′(${show(u)}) ${eq(fp)} ${show(fp)}: ${rate(fp, 'y', 'u')}.`,
+        slip ? `The slip takes f′ at x: f′(x) × g′(x) = f′(${X}) × ${par(gp)} = ${par(H.f1(x))} × ${par(gp)} ${eq(w)} ${show(w)}.`
+          : `So dy/dx = f′(u) × g′(x) = ${par(fp)} × ${par(gp)} ${eq(dy)} ${show(dy)}: ${rate(dy, 'y', 'x')}.`,
+        `Check with a nudge: from x = ${show(x - h)} to ${show(x + h)}, y goes from ${ab(y1)} to ${ab(y2)}, so Δy/Δx ≈ ${show(r, 2)}.`,
+        !slip ? `That agrees with dy/dx = ${show(dy)}.`
+          : Math.abs(w - dy) > 1e-9 ? `So the slip's ${show(w)} is wrong: f′ has to be taken at u = ${show(u)}, where y sits, not at x = ${X}. The chain rule's answer is ${show(dy)}.`
+          : gp === 0 ? `The slip gets it right here, but only because g′(${X}) = 0 makes both answers 0.`
+          : `The slip gets it right here, but only by luck: g(${X}) = ${show(u)}, the same as x, so f′ is taken at the same number either way.`
+      ];
+      const got = C.working();
+      if (got.length !== want.length) fail('chain', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('chain', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      if (slip && Math.abs(w - dy) < 1e-9 && gp !== 0 && Math.abs(u - x) > 1e-9) fail('chain', key, 'the slip is right by luck, but not because g(x) = x');
+      const meant = { inner: gp === 0 && fp !== 0, outer: fp === 0 && gp !== 0, neg: dy < 0, big: dy > 50,
+        miss: slip && Math.abs(w - dy) > 1e-9, luck: slip && Math.abs(w - dy) < 1e-9 && gp !== 0 };
+      for (const g of C.GOALS) {
+        if (!!g.ok(C) !== meant[g.id]) fail('chain', key, `goal ${g.id} is ${g.ok(C) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (g.ok(C)) found[g.id] = found[g.id] || key;
+      }
+    }
+  });
+  for (const g of C.GOALS) if (!found[g.id]) fail('chain', g.id, 'this goal cannot be found');
+  C.pi = 0; C.xh = 2; C.slip = false; C.touched = false; C.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2581,6 +2652,7 @@ console.log(`  elimination states         ${pad(elimNotes.n.toLocaleString(), 10
 console.log(`  undo workshop states       ${pad(undoNotes.n.toLocaleString(), 10)}  (î and ĵ followed through A and B, the one inverse, ${undoNotes.goals} goals findable)`);
 console.log(`  best fit states            ${pad(fitNotes.n.toLocaleString(), 10)}  (every miss and both totals worked, the one best line, ${fitNotes.goals} goals findable)`);
 console.log(`  newton's method states     ${pad(newtonNotes.n.toLocaleString(), 10)}  (f, f′ and every guess worked, roots, flat tangents, loops, ${newtonNotes.goals} goals findable)`);
+console.log(`  chain rule states          ${pad(chainNotes.n.toLocaleString(), 10)}  (y and dy/dx from y in full, the slip, the nudge, ${chainNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

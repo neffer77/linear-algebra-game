@@ -1182,6 +1182,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <div class="screen" id="s-chain">
+    <div class="panel"><h2>⛓️ Chain Rule Workshop</h2><div class="sub">y is built in two links: u = g(x), then y = f(u). Move x and watch how fast each link moves: u moves g′(x) times as fast as x, y moves f′(u) times as fast as u, so y moves f′(u) × g′(x) times as fast as x.</div></div>
+    <div class="panel">
+      <div id="chPairs" class="wsModes" role="group" aria-label="The two links"></div>
+      <div id="chFig"></div>
+      <div id="chRules" class="wsModes" role="group" aria-label="The rule"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="chXLo" onclick="Chain.moveX(-1)" aria-label="Move x left">−</button>
+          <b id="chX" style="font-size:17px;min-width:0"></b>
+          <button id="chXHi" onclick="Chain.moveX(1)" aria-label="Move x right">+</button></div>
+      </div>
+      <div id="chRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="chGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -12444,6 +12463,7 @@ const UI = {
     if(id==='s-area') Area.render();
     if(id==='s-taylor') Taylor.render();
     if(id==='s-newton') Newton.render();
+    if(id==='s-chain') Chain.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13122,6 +13142,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔎 Newton's Method Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever.</div>
          <button class="btn sm" id="tomeNewton" style="width:auto;margin-top:8px" onclick="Newton.open()">Open the Newton's method workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
+         <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
@@ -15473,6 +15498,120 @@ const Newton = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ CHAIN RULE WORKSHOP ============
+   y = f(u) with u = g(x). The player moves x and reads off how fast u moves
+   for x, how fast y moves for u, and how the two rates multiply. A nudge of
+   x by 0.001 checks the product, and a second rule, the common slip of taking
+   f′ at x instead of at u, is there to be caught out by the same nudge. */
+const Chain = {
+  PAIRS:[
+    {f:'u²',       fd:'2u',      F:u=>u*u,       Fd:u=>2*u,
+     g:'3x − 1',   gd:'3',       G:x=>3*x-1,     Gd:x=>3,
+     y:{poly:[[9,2],[-6,1],[1,0]]}, ylim:[-6,50], label:'(3x − 1)²'},
+    {f:'u³',       fd:'3u²',     F:u=>u*u*u,     Fd:u=>3*u*u,
+     g:'x² − 1',   gd:'2x',      G:x=>x*x-1,     Gd:x=>2*x,
+     y:{poly:[[1,6],[-3,4],[3,2],[-1,0]]}, ylim:[-4,28], label:'(x² − 1)³'},
+    {f:'u² − 2u',  fd:'2u − 2',  F:u=>u*u-2*u,   Fd:u=>2*u-2,
+     g:'x²',       gd:'2x',      G:x=>x*x,       Gd:x=>2*x,
+     y:{poly:[[1,4],[-2,2]]}, ylim:[-2,9], label:'(x²)² − 2x²'}
+  ],
+  XLO:-4, XHI:4, H:0.001,   // x runs from −2 to 2 in halves
+  pi:0, xh:2, slip:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'inner', t:'Find a point where g′(x) is 0, so y stands still though f′(u) is not 0.', toast:'Stopped y with the inner slope',
+     ok:C=>C.gp()===0 && C.fp()!==0},
+    {id:'outer', t:'Find a point where f′(u) is 0, so y stands still though g′(x) is not 0.', toast:'Stopped y with the outer slope',
+     ok:C=>C.fp()===0 && C.gp()!==0},
+    {id:'neg',   t:'Find a point where y falls as x rises: dy/dx below 0.', toast:'Found y falling as x rises',
+     ok:C=>C.dy()<0},
+    {id:'big',   t:'Find a point where y moves more than 50 times as fast as x.', toast:'Found y racing x',
+     ok:C=>C.dy()>50},
+    {id:'miss',  t:'Try the slip f′(x) × g′(x), and catch it out with the nudge.', toast:'Caught the slip out',
+     ok:C=>C.slip && C.wrong() !== C.dy()},
+    {id:'luck',  t:'Find a point where the slip gets the right answer anyway, with g′(x) not 0.', toast:'Found the slip right by luck',
+     ok:C=>C.slip && C.wrong() === C.dy() && C.gp()!==0}
+  ],
+  pair(){ return this.PAIRS[this.pi]; },
+  x(){ return this.xh/2; },
+  u(){ return this.pair().G(this.x()); },
+  y(){ return this.pair().F(this.u()); },
+  gp(){ return this.pair().Gd(this.x()); },
+  fp(){ return this.pair().Fd(this.u()); },
+  dy(){ return this.fp()*this.gp(); },
+  // the slip: f′ taken at x itself instead of at u = g(x)
+  wrong(){ return this.pair().Fd(this.x())*this.gp(); },
+  yAt(x){ const P=this.pair(); return P.F(P.G(x)); },
+  // a nudge either side of x, so the bend of the curve cancels out
+  nudge(){ return (this.yAt(this.x()+this.H)-this.yAt(this.x()-this.H))/(2*this.H); },
+  num(x, dp=4){ const k=Math.pow(10,dp), r=Math.round(x*k)/k; return neg(Object.is(r,-0)?0:r); },
+  eq(x, dp=4){ const k=Math.pow(10,dp); return Math.abs(x-Math.round(x*k)/k)<1e-9 ? '=' : '≈'; },
+  par(x){ const t=this.num(x); return t.startsWith('−') ? '('+t+')' : t; },
+  rate(k, a, b){
+    if(k===0) return \`\${a} stands still for a moment as \${b} moves\`;
+    const m=Math.abs(k);
+    return \`\${a} moves \${m===1 ? 'as fast as' : this.num(m)+' times as fast as'} \${b}\${k<0 ? ', the other way' : ''}\`;
+  },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const P=this.pair(), x=this.x(), u=this.u(), y=this.y(), gp=this.gp(), fp=this.fp(), dy=this.dy();
+    const X=this.num(x), x1=x-this.H, x2=x+this.H, y1=this.yAt(x1), y2=this.yAt(x2), r=this.nudge(), out=[];
+    out.push(\`y = f(u) with f(u) = \${P.f}, and u = g(x) = \${P.g}.\`);
+    out.push(\`At x = \${X}: u = g(\${X}) \${this.eq(u)} \${this.num(u)}, so y = f(\${this.num(u)}) \${this.eq(y)} \${this.num(y)}.\`);
+    out.push(\`g′(x) = \${P.gd}, so g′(\${X}) \${this.eq(gp)} \${this.num(gp)}: \${this.rate(gp,'u','x')}.\`);
+    out.push(\`f′(u) = \${P.fd}, so f′(\${this.num(u)}) \${this.eq(fp)} \${this.num(fp)}: \${this.rate(fp,'y','u')}.\`);
+    if(!this.slip)
+      out.push(\`So dy/dx = f′(u) × g′(x) = \${this.par(fp)} × \${this.par(gp)} \${this.eq(dy)} \${this.num(dy)}: \${this.rate(dy,'y','x')}.\`);
+    else {
+      const w=this.wrong(), fx=P.Fd(x);
+      out.push(\`The slip takes f′ at x: f′(x) × g′(x) = f′(\${X}) × \${this.par(gp)} = \${this.par(fx)} × \${this.par(gp)} \${this.eq(w)} \${this.num(w)}.\`);
+    }
+    const ab=v=>(this.eq(v,6)==='≈'?'about ':'')+this.num(v,6);
+    out.push(\`Check with a nudge: from x = \${this.num(x1)} to \${this.num(x2)}, y goes from \${ab(y1)} to \${ab(y2)}, so Δy/Δx ≈ \${this.num(r,2)}.\`);
+    if(!this.slip) out.push(\`That agrees with dy/dx = \${this.num(dy)}.\`);
+    else if(this.wrong()!==dy)
+      out.push(\`So the slip's \${this.num(this.wrong())} is wrong: f′ has to be taken at u = \${this.num(u)}, where y sits, not at x = \${X}. The chain rule's answer is \${this.num(dy)}.\`);
+    else if(gp===0)
+      out.push(\`The slip gets it right here, but only because g′(\${X}) = 0 makes both answers 0.\`);
+    else
+      out.push(\`The slip gets it right here, but only by luck: g(\${X}) = \${this.num(u)}, the same as x, so f′ is taken at the same number either way.\`);
+    return out;
+  },
+  open(){ UI.go('s-chain'); },
+  pick(i){ this.pi=i; this.touched=true; this.render(); },
+  rule(s){ this.slip=s; this.touched=true; this.render(); },
+  moveX(by){ const v=this.xh+by; if(v<this.XLO || v>this.XHI) return; this.xh=v; this.touched=true; this.render(); },
+  render(){
+    const P=this.pair(), x=this.x();
+    document.getElementById('chPairs').innerHTML=this.PAIRS.map((p,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.pi}" onclick="Chain.pick(\${i})" aria-label="f(u) = \${p.f} and g(x) = \${p.g}">\${p.label}</button>\`).join('');
+    document.getElementById('chRules').innerHTML=[['The chain rule','f′(g(x)) × g′(x)',false],['The slip','f′(x) × g′(x)',true]].map(([n,f,s])=>
+      \`<button class="btn sm ghost" aria-pressed="\${s===this.slip}" onclick="Chain.rule(\${s})" aria-label="\${n}: \${f}">\${n}</button>\`).join('');
+    document.getElementById('chX').textContent=\`x = \${this.num(x)}\`;
+    document.getElementById('chXLo').disabled=this.xh<=this.XLO;
+    document.getElementById('chXHi').disabled=this.xh>=this.XHI;
+    const dy=this.dy();
+    const w=this.wrong(), y0=this.y();
+    Figure.render({kind:'curve', f:P.y, lo:-2, hi:2, ylim:P.ylim, tangent:x, pts:[[x,y0,FIG_COL.d]],
+      also: this.slip ? {f:{poly:[[w,1],[y0-w*x,0]]}, col:FIG_COL.a} : undefined,
+      caption:\`The gold curve is y = \${P.label}. The dashed red tangent at x = \${this.num(x)} has slope dy/dx \${this.eq(dy)} \${this.num(dy)}\`+
+        (this.slip ? (w===dy ? '; the slip\\'s blue line lies right along it.' : \`; the slip's blue line, with slope \${this.num(w)}, cuts across it.\`) : '.')},
+      document.getElementById('chFig'));
+    document.getElementById('chRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('chGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LINK BY LINK','every chain followed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
