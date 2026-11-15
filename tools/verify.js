@@ -70,6 +70,7 @@ function loadGame() {
     ';const Tail={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'1/x²'"), script.indexOf("  open(){ UI.go('s-tail'); },")) + '};exports.Tail=Tail;' +
     ';const Lathe={' + script.slice(script.indexOf("  SETS:[\n    {id:'cone', btn:'Cone'"), script.indexOf("  open(){ UI.go('s-lathe'); },")) + '};exports.Lathe=Lathe;' +
     ';const Swap={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos', btn:'cos(x²)'"), script.indexOf("  open(){ UI.go('s-swap'); },")) + '};exports.Swap=Swap;' +
+    ';const Implicit={' + script.slice(script.indexOf("  SETS:[\n    {id:'circle', btn:'Circle'"), script.indexOf("  open(){ UI.go('s-implicit'); },")) + '};exports.Implicit=Implicit;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -88,7 +89,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2683,6 +2684,97 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The implicit slope workshop: every point on every curve. Each point must
+   lie on its curve exactly, and the points must run anticlockwise as the +
+   button says. The y′ formula is checked against the curve's own partial
+   derivatives, y′ = −Fx/Fy; each nudge is recomputed by solving the curve's
+   quadratic for y outright, not by the workshop's own Newton steps; the drawn
+   curve, tangent, point and radius are measured; every sentence is rebuilt,
+   and every goal. */
+const implicitNotes = (() => {
+  const W = Implicit;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (u, w) => w ? gcd(w, u % w) : Math.abs(u);
+  if (W.SETS.map(S => S.id).join() !== 'circle,ellipse,tilt') fail('implicit', 'sets', W.SETS.map(S => S.id).join());
+  W.touched = false; W.si = 0; W.k = W.START;
+  for (const g of W.GOALS) if (g.ok(W)) fail('implicit', g.id, 'met where the workshop opens');
+  const num = (v, d = 4) => { const q = Math.round(v * 10 ** d) / 10 ** d; return neg(Object.is(q, -0) ? 0 : q); };
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const a = S.F(1, 0), c = S.F(0, 1), b = S.F(1, 1) - a - c;   // F = a x² + b xy + c y²
+    let last = -Infinity;
+    S.P.forEach(([x, y], k) => {
+      const key = `${S.id} (${x}, ${y})`;
+      W.si = si; W.k = k; n++;
+      if (S.F(x, y) !== S.c) fail('implicit', key, 'is not on the curve');
+      let ang = Math.atan2(y, x); if (ang < 0) ang += 2 * Math.PI;
+      if (k && ang <= last) fail('implicit', key, 'the points do not run anticlockwise');
+      last = ang;
+      // y′ = −Fx/Fy from the curve itself
+      const h = 1e-6, Fx = (S.F(x + h, y) - S.F(x - h, y)) / (2 * h), Fy = (S.F(x, y + h) - S.F(x, y - h)) / (2 * h);
+      const [N, D] = W.nd();
+      if (Math.abs(N * Fy - D * Fx) > 1e-6 || Math.sign(Fy) * Math.sign(D) < 0) fail('implicit', key, `y′ = −${N}/${D} is not −Fx/Fy = −${Fx}/${Fy}`);
+      if (!Number.isInteger(N) || !Number.isInteger(D)) fail('implicit', key, 'N and D should be whole numbers');
+      const want = [`${S.eq} ties y to x without solving for y, so differentiate both sides with respect to x, treating y as a function of x: each y term picks up a y′ by the chain rule.`, S.diff];
+      const X = num(x), Y = num(y);
+      if (D === 0) {
+        if (Math.abs(Fy) > 1e-9) fail('implicit', key, 'the formula divides by 0 where the curve is not vertical');
+        want.push(`At (${X}, ${Y}): ${S.dS} = 0, so the formula for y′ divides by 0 and there is no slope. The tangent stands straight up, and the curve turns back on itself here.`,
+          `A nudge cannot check it either: the curve has no point just ${x > 0 ? 'right' : 'left'} of x = ${X}.`);
+        // and truly none: the quadratic in y has no real root just past x
+        const xx = x + Math.sign(x) * 0.01, disc = (b * xx) ** 2 - 4 * c * (a * xx * xx - S.c);
+        if (disc >= 0) fail('implicit', key, 'the curve does have points just past x');
+      } else {
+        const sl = -N / D, g = gcd(N, D), p = -N / g * Math.sign(D), q = Math.abs(D) / g;
+        const fr = q === 1 ? neg(p) : `${neg(p)}/${q}`;
+        want.push(`At (${X}, ${Y}): ${S.nS} = ${num(N)} and ${S.dS} = ${num(D)}, so y′ = ${N === 0 ? '0' : fr}` +
+          (N === 0 ? `: the tangent lies flat, at the very ${y > 0 ? 'top' : 'bottom'} of the curve.` : sl > 0 ? ': the tangent climbs.' : ': the tangent falls.'));
+        const yq = xx => { const B = b * xx, C = a * xx * xx - S.c, r = Math.sqrt(B * B - 4 * c * C); const ys = [(-B + r) / (2 * c), (-B - r) / (2 * c)]; return Math.abs(ys[0] - y) < Math.abs(ys[1] - y) ? ys[0] : ys[1]; };
+        const l = yq(x - 0.01), r = yq(x + 0.01), s2 = (r - l) / 0.02;
+        if (Math.abs(s2 - (N === 0 ? 0 : sl)) > Math.max(0.002, 0.01 * Math.abs(sl))) fail('implicit', key, `the nudge gives ${s2}, not y′`);
+        const exact = Math.abs(Math.round(sl * 1e4) / 1e4 - sl) < 1e-10;
+        want.push(`Check with a nudge along the curve: x = ${num(x - 0.01)} gives y ≈ ${num(l)} and x = ${num(x + 0.01)} gives y ≈ ${num(r)}, a rise of about ${num(r - l)} over a run of 0.02, which is about ${num(s2)}, matching y′ ${exact ? '=' : '≈'} ${num(N === 0 ? 0 : sl)}.`);
+        if (S.id === 'circle' && x !== 0) {
+          const g2 = gcd(y, x), rp = y / g2 * Math.sign(x), rq = Math.abs(x) / g2;
+          if (Math.abs((y / x) * sl + 1) > 1e-12) fail('implicit', key, 'the tangent is not at a right angle to the radius');
+          want.push(`The radius out to this point has slope y/x = ${rq === 1 ? neg(rp) : `${neg(rp)}/${rq}`}. The tangent's slope ${fr} is its negative reciprocal, so the tangent meets the radius at a right angle, as a circle's tangent always does.`);
+        }
+      }
+      const got = W.working();
+      if (got.length !== want.length) fail('implicit', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((line, i) => { if (got[i] !== line) fail('implicit', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${line}`); });
+      // the drawing
+      const svg = W.svg(), ux = px => (px - 180) / 20, uy = py => (130 - py) / 20;
+      const cm = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!cm) fail('implicit', key, 'the curve is not drawn');
+      else for (const t of cm[1].split(' ')) { const [px, py] = t.split(',').map(Number); if (Math.abs(S.F(ux(px), uy(py)) - S.c) > 0.02 * S.c) { fail('implicit', key, 'the drawn curve leaves the curve'); break; } }
+      const pm = svg.match(/data-k="pt" cx="([^"]+)" cy="([^"]+)"/);
+      if (!pm || Math.abs(ux(+pm[1]) - x) > 0.01 || Math.abs(uy(+pm[2]) - y) > 0.01) fail('implicit', key, 'the gold point is not at the point');
+      const tm = svg.match(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/);
+      if (!tm) fail('implicit', key, 'no tangent drawn');
+      else {
+        const [x1, y1, x2, y2] = tm.slice(1).map(Number), dx = ux(x2) - ux(x1), dy = uy(y2) - uy(y1);
+        if (Math.abs((ux(x1) + ux(x2)) / 2 - x) > 0.01 || Math.abs((uy(y1) + uy(y2)) / 2 - y) > 0.01) fail('implicit', key, 'the tangent is not centred on the point');
+        if (D === 0 ? Math.abs(dx) > 0.01 : Math.abs(dy - (N === 0 ? 0 : -N / D) * dx) > 0.01) fail('implicit', key, 'the drawn tangent has the wrong slope');
+      }
+      const rm = svg.match(/data-k="radius" x1="180" y1="130" x2="([^"]+)" y2="([^"]+)"/);
+      if (!!rm !== (S.id === 'circle')) fail('implicit', key, 'the radius should be drawn on the circle alone');
+      if (rm && (Math.abs(ux(+rm[1]) - x) > 0.01 || Math.abs(uy(+rm[2]) - y) > 0.01)) fail('implicit', key, 'the radius does not reach the point');
+      // the goals
+      W.touched = true;
+      const meant = { flat: si === 0 && N === 0, stand: si === 0 && D === 0, egg: si === 1 && N === 0, climb: si === 2 && D !== 0 && -N / D > 0 };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('implicit', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('implicit', g.id, 'this goal cannot be found');
+  W.si = 0; W.k = W.START; W.touched = false; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The swap workshop: every u tried on every integral. Each du is checked
    against a numerical derivative of u; each right u must turn the integrand
    into g(u) du exactly, and its answer must climb, step by step across the
@@ -3903,6 +3995,7 @@ console.log(`  water levels            ${pad(avgNotes.n.toLocaleString(), 10)}  
 console.log(`  endless areas           ${pad(tailNotes.n.toLocaleString(), 10)}  (each area by the power rule and again by Simpson's rule, each doubling's share against the last, the bars read back, ${tailNotes.goals} goals findable)`);
 console.log(`  lathe cuts              ${pad(latheNotes.n.toLocaleString(), 10)}  (each solid's disks summed from its own f², the exact volume by antiderivative and by Simpson's rule, the disks read back, ${latheNotes.goals} goals findable)`);
 console.log(`  swaps tried             ${pad(swapNotes.n.toLocaleString(), 10)}  (each du against a numerical derivative, each right u turning the integrand into g(u) du, the drawn answer rising by the area under the integrand, ${swapNotes.goals} goals findable)`);
+console.log(`  implicit points         ${pad(implicitNotes.n.toLocaleString(), 10)}  (each on its curve, y′ against −Fx/Fy, each nudge solved outright, the tangent and radius measured, ${implicitNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

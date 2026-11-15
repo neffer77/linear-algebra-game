@@ -1,159 +1,166 @@
 {
- "change": "The Swap Workshop: u-substitution",
+ "change": "The Implicit Slope Workshop: implicit differentiation",
  "mutations": [
   {
-   "name": "cos(x²)'s du drops the 2",
+   "name": "the circle's y′ loses its minus sign",
    "file": "index.html",
-   "find": "{u:'x²', du:'2x dx', uf:x=>x*x, duf:x=>2*x, g:u=>Math.cos(u),",
-   "replace": "{u:'x²', du:'x dx', uf:x=>x*x, duf:x=>x, g:u=>Math.cos(u),",
+   "find": "nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y,",
+   "replace": "nS:'x', dS:'y', N:(x,y)=>-x, D:(x,y)=>y,",
    "run": "verify"
   },
   {
-   "name": "the power's swap forgets to divide by 5",
+   "name": "the ellipse forgets the 4",
    "file": "index.html",
-   "find": "F:x=>(x**3+1)**5/5,",
-   "replace": "F:x=>(x**3+1)**5,",
+   "find": "nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>4*y,",
+   "replace": "nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>y,",
    "run": "verify"
   },
   {
-   "name": "the exponential's answer keeps the 2",
+   "name": "the tilted curve skips the product rule",
    "file": "index.html",
-   "find": "g:u=>Math.exp(u)/2,",
-   "replace": "g:u=>Math.exp(u),",
+   "find": "nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x+y, D:(x,y)=>x+2*y,",
+   "replace": "nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x, D:(x,y)=>2*y,",
    "run": "verify"
   },
   {
-   "name": "the log's du is wrong",
+   "name": "a point falls off the ellipse",
    "file": "index.html",
-   "find": "{u:'ln x', du:'(1/x) dx', uf:x=>Math.log(x), duf:x=>1/x,",
-   "replace": "{u:'ln x', du:'(1/x) dx', uf:x=>Math.log(x), duf:x=>1/(x*x),",
+   "find": "P:[[5,0],[4,1.5],[3,2],[0,2.5]",
+   "replace": "P:[[5,0],[4,1.5],[3,2.1],[0,2.5]",
    "run": "verify"
   },
   {
-   "name": "u = 2x is marked right",
+   "name": "two tilted points swap order",
    "file": "index.html",
-   "find": "{u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2,\n       left:'That only swaps",
-   "replace": "{u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2, F:x=>0,\n       left:'That only swaps",
+   "find": "[[2,1],[1,2],[-1,3],[-2,3],",
+   "replace": "[[2,1],[-1,3],[1,2],[-2,3],",
    "run": "verify"
   },
   {
-   "name": "the integrand of the power is wrong",
+   "name": "the nudge steps only one side",
    "file": "index.html",
-   "find": "f:x=>3*x*x*(x**3+1)**4, D:[-1,1],",
-   "replace": "f:x=>3*x*x*(x**3+1)**3, D:[-1,1],",
+   "find": "l=this.yAt(x-h,y), r=this.yAt(x+h,y); return {h, l, r, s:(r-l)/(2*h)};",
+   "replace": "l=this.yAt(x,y), r=this.yAt(x+h,y); return {h, l, r, s:(r-l)/(2*h)};",
    "run": "verify"
   },
   {
-   "name": "the answer is never drawn",
+   "name": "the flat tangent is called the top everywhere",
    "file": "index.html",
-   "find": "if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);",
-   "replace": "",
+   "find": "at the very ${y>0?'top':'bottom'} of the curve.",
+   "replace": "at the very top of the curve.",
    "run": "verify"
   },
   {
-   "name": "the answer is drawn upside down",
+   "name": "the radius sentence is dropped",
    "file": "index.html",
-   "find": "const line=(fn,k,col)=>`<polyline data-k=\"${k}\" points=\"${xs.map(x=>`${PX(x).toFixed(2)},${PY(fn(x)).toFixed(2)}`)",
-   "replace": "const line=(fn,k,col)=>`<polyline data-k=\"${k}\" points=\"${xs.map(x=>`${PX(x).toFixed(2)},${PY(k==='F'?-fn(x):fn(x)).toFixed(2)}`)",
+   "find": "    if(S.id==='circle' && x!==0)\n      out.push(",
+   "replace": "    if(false)\n      out.push(",
    "run": "verify"
   },
   {
-   "name": "the check line is dropped",
+   "name": "the tangent is drawn along the radius",
    "file": "index.html",
-   "find": "      out.push(`Check by differentiating: ${o.check}`);\n",
-   "replace": "",
+   "find": "const L=Math.hypot(n,d), tx=d/L*2, ty=-n/L*2;",
+   "replace": "const L=Math.hypot(n,d), tx=n/L*2, ty=d/L*2;",
    "run": "verify"
   },
   {
-   "name": "the miss line is dropped",
+   "name": "the curve is drawn too big",
    "file": "index.html",
-   "find": "      out.push(`This u does not simplify it. Try another.`);\n",
-   "replace": "",
+   "find": "r=Math.sqrt(S.c/S.F(cx,cy));",
+   "replace": "r=1.1*Math.sqrt(S.c/S.F(cx,cy));",
    "run": "verify"
   },
   {
-   "name": "the miss goal fires before any u",
+   "name": "the radius is drawn on every curve",
    "file": "index.html",
-   "find": "ok:K=>K.oi!==null && !K.works()}",
-   "replace": "ok:K=>!K.works()}",
+   "find": "    if(S.id==='circle') out+=`<line data-k=\"radius\"",
+   "replace": "    out+=`<line data-k=\"radius\"",
    "run": "verify"
   },
   {
-   "name": "the log goal fires on the exponential",
+   "name": "the climb goal takes a falling tangent",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.works()},",
-   "replace": "ok:K=>K.si>=2 && K.works()},",
+   "find": "ok:K=>K.si===2 && K.slope()>0}",
+   "replace": "ok:K=>K.si===2 && K.slope()!==0}",
    "run": "verify"
   },
   {
    "name": "a goal is met where it opens",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.works()},",
-   "replace": "ok:K=>K.si===0},",
+   "find": "{id:'egg', t:'On the ellipse, find its top or bottom.', toast:'Found the top of the ellipse',\n     ok:K=>K.si===1 && K.nd()[0]===0},",
+   "replace": "{id:'egg', t:'On the ellipse, find its top or bottom.', toast:'Found the top of the ellipse',\n     ok:K=>K.nd()[0]===0 || K.si===0},",
    "run": "verify"
   },
   {
-   "name": "a new integral keeps the old u",
+   "name": "the point stops instead of wrapping",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.oi=null; this.render(); },",
-   "replace": "pick(i){ this.si=i; this.render(); },",
-   "run": "play:swap"
+   "find": "move(by){ const m=this.set().P.length; this.k=(this.k+by+m)%m;",
+   "replace": "move(by){ const m=this.set().P.length; this.k=Math.max(0,Math.min(m-1,this.k+by));",
+   "run": "play:implicit"
   },
   {
-   "name": "the caption never mentions gold",
+   "name": "a new curve keeps the old point",
    "file": "index.html",
-   "find": "' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':",
-   "replace": "' Find the right u and the answer appears in gold.':",
-   "run": "play:swap"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  move(by)",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(by)",
+   "run": "play:implicit"
   },
   {
-   "name": "the u buttons lose their names",
+   "name": "the caption forgets the radius",
    "file": "index.html",
-   "find": "aria-label=\"Try u = ${o.u}\">u = ${o.u}</button>",
-   "replace": ">u = ${o.u}</button>",
-   "run": "play:swap"
+   "find": "The green line is the tangent there${this.si===0?', and the dashed line is the radius out to the point':''}.",
+   "replace": "The green line is the tangent there.",
+   "run": "play:implicit"
   },
   {
-   "name": "the integral buttons lose their names",
+   "name": "the stepper buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Swap.pick(${i})\" aria-label=\"${s.I}\">",
-   "replace": "onclick=\"Swap.pick(${i})\">",
-   "run": "play:swap"
+   "find": "<button id=\"imKLo\" onclick=\"Implicit.move(-1)\" aria-label=\"Step the point clockwise around the curve\">",
+   "replace": "<button id=\"imKLo\" onclick=\"Implicit.move(-1)\">",
+   "run": "play:implicit"
   },
   {
-   "name": "the chosen u is not marked pressed",
+   "name": "the curve buttons lose their equations",
    "file": "index.html",
-   "find": "aria-pressed=\"${j===this.oi}\" onclick=\"Swap.tryU(${j})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Swap.tryU(${j})\"",
-   "run": "play:swap"
+   "find": "aria-label=\"${s.btn}: ${s.eq}\">${s.btn}</button>",
+   "replace": "aria-label=\"${s.btn}\">${s.btn}</button>",
+   "run": "play:implicit"
+  },
+  {
+   "name": "the chosen curve is not marked pressed",
+   "file": "index.html",
+   "find": "aria-pressed=\"${i===this.si}\" onclick=\"Implicit.pick(${i})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"Implicit.pick(${i})\"",
+   "run": "play:implicit"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"The integrand of ${S.I} in blue",
-   "replace": "role=\"img\" data-x=\"The integrand of ${S.I} in blue",
-   "run": "play:swap"
+   "find": "role=\"img\" aria-label=\"${S.eq} in blue, with its tangent at",
+   "replace": "role=\"img\" data-x=\"${S.eq} in blue, with its tangent at",
+   "run": "play:implicit"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every integral swapped','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every integral swapped','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:swap"
+   "find": "'every tangent found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every tangent found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:implicit"
   },
   {
-   "name": "the Tome loses the swap workshop",
+   "name": "the Tome loses the implicit workshop",
    "file": "index.html",
-   "find": "id=\"tomeSwap\"",
-   "replace": "id=\"tomeSwapX\"",
-   "run": "play:swap"
+   "find": "id=\"tomeImplicit\"",
+   "replace": "id=\"tomeImplicitX\"",
+   "run": "play:implicit"
   },
   {
-   "name": "the workshop saves its u",
+   "name": "the workshop saves its point",
    "file": "index.html",
-   "find": "tryU(j){ this.oi=j; this.touched=true; this.render(); },",
-   "replace": "tryU(j){ this.oi=j; Game.s.swap=j; this.touched=true; this.render(); },",
-   "run": "play:swap"
+   "find": "this.k=(this.k+by+m)%m; this.touched=true;",
+   "replace": "this.k=(this.k+by+m)%m; Game.s.implicitK=this.k; this.touched=true;",
+   "run": "play:implicit"
   }
  ]
 }

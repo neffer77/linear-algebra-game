@@ -1424,6 +1424,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ IMPLICIT SLOPE WORKSHOP ============ -->
+  <div class="screen" id="s-implicit">
+    <div class="panel"><h2>⭕ Implicit Slope Workshop</h2><div class="sub">A circle is not the graph of y = f(x), yet every point on it has a tangent. Differentiate both sides of its equation, letting every y term pick up a y′ by the chain rule, and solve for y′. Step a point around a curve and check each slope with a nudge.</div></div>
+    <div class="panel">
+      <div id="imSets" class="wsModes" role="group" aria-label="Which curve"></div>
+      <div id="imFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="imKLo" onclick="Implicit.move(-1)" aria-label="Step the point clockwise around the curve">−</button>
+          <b id="imK" style="font-size:17px;min-width:0"></b>
+          <button id="imKHi" onclick="Implicit.move(1)" aria-label="Step the point anticlockwise around the curve">+</button></div>
+      </div>
+      <div id="imRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="imGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3421,6 +3440,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
     Tail:    ["♾️ Endless Area Workshop", ['improper']],
@@ -12802,6 +12822,7 @@ const UI = {
     if(id==='s-tail') Tail.render();
     if(id==='s-lathe') Lathe.render();
     if(id==='s-swap') Swap.render();
+    if(id==='s-implicit') Implicit.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13525,6 +13546,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a point around a circle and find its slope without ever solving for y. Meet the flat tops, the tangents that stand straight up, and a curve that needs the product rule.</div>
+         <button class="btn sm" id="tomeImplicit" style="width:auto;margin-top:8px" onclick="Implicit.open()">Open the implicit slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔄 Swap Workshop</h2>
@@ -17282,6 +17308,114 @@ const Swap = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE SWAP','every integral swapped','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The implicit slope workshop: y′ without solving for y ----------
+   A circle is not the graph of one function, yet every point on it has a
+   tangent. Differentiate both sides of its equation, treating y as a function
+   of x so that every y term picks up a y′ by the chain rule, and solve for y′.
+   Step a point around three curves, check each slope with a nudge along the
+   curve, and find the flat tops, the tangents that stand straight up, and a
+   curve whose xy term needs the product rule. Nothing is saved. */
+const Implicit = {
+  SETS:[
+    {id:'circle', btn:'Circle', eq:'x² + y² = 25', c:25,
+     F:(x,y)=>x*x+y*y, Fy:(x,y)=>2*y,
+     diff:'2x + 2y·y′ = 0, so y′ = −x/y.',
+     nS:'x', dS:'y', N:(x,y)=>x, D:(x,y)=>y,
+     P:[[5,0],[4,3],[3,4],[0,5],[-3,4],[-4,3],[-5,0],[-4,-3],[-3,-4],[0,-5],[3,-4],[4,-3]]},
+    {id:'ellipse', btn:'Ellipse', eq:'x² + 4y² = 25', c:25,
+     F:(x,y)=>x*x+4*y*y, Fy:(x,y)=>8*y,
+     diff:'2x + 8y·y′ = 0, so y′ = −x/(4y).',
+     nS:'x', dS:'4y', N:(x,y)=>x, D:(x,y)=>4*y,
+     P:[[5,0],[4,1.5],[3,2],[0,2.5],[-3,2],[-4,1.5],[-5,0],[-4,-1.5],[-3,-2],[0,-2.5],[3,-2],[4,-1.5]]},
+    {id:'tilt', btn:'Tilted', eq:'x² + xy + y² = 7', c:7,
+     F:(x,y)=>x*x+x*y+y*y, Fy:(x,y)=>x+2*y,
+     diff:'2x + (y + x·y′) + 2y·y′ = 0, the xy term by the product rule, so y′ = −(2x + y)/(x + 2y).',
+     nS:'2x + y', dS:'x + 2y', N:(x,y)=>2*x+y, D:(x,y)=>x+2*y,
+     P:[[2,1],[1,2],[-1,3],[-2,3],[-3,2],[-3,1],[-2,-1],[-1,-2],[1,-3],[2,-3],[3,-2],[3,-1]]}
+  ],
+  START:1,
+  si:0, k:1, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'flat', t:'On the circle, find a point where the tangent lies flat.', toast:'Found a flat tangent',
+     ok:K=>K.si===0 && K.nd()[0]===0},
+    {id:'stand', t:'On the circle, find where the formula for y′ divides by 0, and see what the tangent does there.', toast:'The tangent stands up',
+     ok:K=>K.si===0 && K.nd()[1]===0},
+    {id:'egg', t:'On the ellipse, find its top or bottom.', toast:'Found the top of the ellipse',
+     ok:K=>K.si===1 && K.nd()[0]===0},
+    {id:'climb', t:'On the tilted curve, find a point where the tangent climbs.', toast:'A climbing tangent',
+     ok:K=>K.si===2 && K.slope()>0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  pt(){ return this.set().P[this.k]; },
+  /* y′ = −N/D at the point */
+  nd(){ const [x,y]=this.pt(), S=this.set(); return [S.N(x,y), S.D(x,y)]; },
+  slope(){ const [n,d]=this.nd(); return d===0 ? null : n===0 ? 0 : -n/d; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  /* the y on the curve at x nearest y0, by Newton's method on F(x, y) = c */
+  yAt(x,y0){ const S=this.set(); let y=y0; for(let i=0;i<40;i++){ const d=S.Fy(x,y); if(d===0) break; y-=(S.F(x,y)-S.c)/d; } return y; },
+  nudge(){ const [x,y]=this.pt(), h=0.01, l=this.yAt(x-h,y), r=this.yAt(x+h,y); return {h, l, r, s:(r-l)/(2*h)}; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), [x,y]=this.pt(), X=this.num(x), Y=this.num(y), [n,d]=this.nd(), out=[];
+    out.push(\`\${S.eq} ties y to x without solving for y, so differentiate both sides with respect to x, treating y as a function of x: each y term picks up a y′ by the chain rule.\`);
+    out.push(S.diff);
+    if(d===0){
+      out.push(\`At (\${X}, \${Y}): \${S.dS} = 0, so the formula for y′ divides by 0 and there is no slope. The tangent stands straight up, and the curve turns back on itself here.\`);
+      out.push(\`A nudge cannot check it either: the curve has no point just \${x>0?'right':'left'} of x = \${X}.\`);
+      return out;
+    }
+    const s=n===0 ? 0 : -n/d;
+    out.push(\`At (\${X}, \${Y}): \${S.nS} = \${this.num(n)} and \${S.dS} = \${this.num(d)}, so y′ = \${this.fr(-n,d)}\`+
+      (n===0 ? \`: the tangent lies flat, at the very \${y>0?'top':'bottom'} of the curve.\` : s>0 ? \`: the tangent climbs.\` : \`: the tangent falls.\`));
+    const g=this.nudge();
+    out.push(\`Check with a nudge along the curve: x = \${this.num(x-g.h)} gives y ≈ \${this.num(g.l)} and x = \${this.num(x+g.h)} gives y ≈ \${this.num(g.r)}, a rise of about \${this.num(g.r-g.l)} over a run of 0.02, which is about \${this.num(g.s)}, matching y′ \${this.is(s)}.\`);
+    if(S.id==='circle' && x!==0)
+      out.push(\`The radius out to this point has slope y/x = \${this.fr(y,x)}. The tangent's slope \${this.fr(-n,d)} is its negative reciprocal, so the tangent meets the radius at a right angle, as a circle's tangent always does.\`);
+    return out;
+  },
+  /* the curve in blue, traced around the origin (each of these is x² + bxy + cy²
+     = c, so along any direction the curve sits at one distance); the gold point,
+     its tangent in green, and on the circle the dashed radius */
+  svg(){
+    const S=this.set(), [x,y]=this.pt(), [n,d]=this.nd(), U=20, PX=v=>180+v*U, PY=v=>130-v*U;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=2*Math.PI*i/120, cx=Math.cos(t), cy=Math.sin(t), r=Math.sqrt(S.c/S.F(cx,cy)); pts.push(\`\${PX(r*cx).toFixed(2)},\${PY(r*cy).toFixed(2)}\`); }
+    const L=Math.hypot(n,d), tx=d/L*2, ty=-n/L*2;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="\${S.eq} in blue, with its tangent at (\${this.num(x)}, \${this.num(y)}) \${d===0?'standing straight up':n===0?'lying flat':'of slope '+this.fr(-n,d)}">\`;
+    out+=\`<line x1="20" y1="130" x2="340" y2="130" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="180" y1="6" x2="180" y2="254" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    if(S.id==='circle') out+=\`<line data-k="radius" x1="180" y1="130" x2="\${PX(x).toFixed(2)}" y2="\${PY(y).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1.5" stroke-dasharray="4 4"/>\`;
+    out+=\`<line data-k="tan" x1="\${PX(x-tx).toFixed(2)}" y1="\${PY(y-ty).toFixed(2)}" x2="\${PX(x+tx).toFixed(2)}" y2="\${PY(y+ty).toFixed(2)}" stroke="\${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/>\`;
+    out+=\`<circle data-k="pt" cx="\${PX(x).toFixed(2)}" cy="\${PY(y).toFixed(2)}" r="5" fill="\${FIG_COL.b}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-implicit'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  move(by){ const m=this.set().P.length; this.k=(this.k+by+m)%m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('imSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Implicit.pick(\${i})" aria-label="\${s.btn}: \${s.eq}">\${s.btn}</button>\`).join('');
+    const [x,y]=this.pt();
+    document.getElementById('imK').textContent=\`(\${this.num(x)}, \${this.num(y)})\`;
+    document.getElementById('imFig').innerHTML=this.svg()+
+      \`<div class="figcap">The curve is in blue and the gold point steps around it. The green line is the tangent there\${this.si===0?', and the dashed line is the radius out to the point':''}.</div>\`;
+    document.getElementById('imRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('imGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE HIDDEN SLOPE','every tangent found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
