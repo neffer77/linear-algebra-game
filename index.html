@@ -1439,6 +1439,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ EIGENVALUE DETECTIVE ============ -->
+  <div class="screen" id="s-detect">
+    <div class="panel"><h2>🔍 Eigenvalue Detective</h2><div class="sub">An eigenvalue is a λ where A − λI crushes some arrow flat, which is exactly where det(A − λI) = 0. Step λ along and watch that determinant trace out a curve, the characteristic polynomial, and run down where it meets the axis.</div></div>
+    <div class="panel">
+      <div id="cpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
+      <div id="cpMat" aria-hidden="true" style="text-align:center;margin:4px 0 6px"></div>
+      <div id="cpFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="cpLLo" onclick="Detect.move(-1)" aria-label="Lower λ by a half">−</button>
+          <b id="cpL" style="font-size:17px;min-width:0"></b>
+          <button id="cpLHi" onclick="Detect.move(1)" aria-label="Raise λ by a half">+</button></div>
+      </div>
+      <div id="cpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="cpGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3419,6 +3439,7 @@ const WORKSHOP_FOR = (() => {
     Workshop:["🛠 Matrix Workshop", ['matVec','transMatrix','det2']],
     Dot:     ["🎯 Dot Product Workshop", ['dot','angleVec','orth','proj','vecProj']],
     Eigen:   ["👑 Eigenvector Hunt", ['eigen2','eigenvec']],
+    Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
     Compose: ["🔁 Order Matters", ['matMul']],
     Span:    ["🧭 Span Workshop", ['vecCombo']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2']],
@@ -12821,6 +12842,7 @@ const UI = {
     if(id==='s-swap') Swap.render();
     if(id==='s-implicit') Implicit.render();
     if(id==='s-parts') Parts.render();
+    if(id==='s-detect') Detect.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13449,6 +13471,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">👑 Eigenvector Hunt</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line.</div>
          <button class="btn sm" id="tomeEig" style="width:auto;margin-top:8px" onclick="Eigen.open()">Open the eigenvector hunt</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔍 Eigenvalue Detective</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant.</div>
+         <button class="btn sm" id="tomeDetect" style="width:auto;margin-top:8px" onclick="Detect.open()">Open the eigenvalue detective</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
@@ -17547,6 +17574,118 @@ const Parts = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE PARTS','every integral split','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The eigenvalue detective: the characteristic polynomial ----------
+   Step λ along a line and watch det(A − λI). Where it hits 0, A − λI crushes
+   some arrow to ⟨0, 0⟩, and that arrow is an eigenvector A only stretches by
+   λ. Traced over every λ, det(A − λI) is a parabola, the characteristic
+   polynomial λ² − (trace)λ + det A, so the eigenvalues add up to the trace and
+   multiply to the determinant. A triangular matrix wears them on its
+   diagonal, one matrix has a single eigenvalue counted twice, and a matrix
+   that turns the plane has none at all. Nothing is saved. */
+const Detect = {
+  SETS:[
+    {id:'pair', btn:'Two roots', A:[[4,1],[2,3]]},
+    {id:'tri', btn:'Triangular', A:[[3,2],[0,-1]]},
+    {id:'twice', btn:'Repeated', A:[[3,1],[0,3]]},
+    {id:'turn', btn:'Turning', A:[[2,-1],[1,2]]}
+  ],
+  L:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6],
+  START:0,
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'root', t:'On the first matrix, find a λ where det(A − λI) = 0: an eigenvalue.', toast:'Found an eigenvalue',
+     ok:K=>K.si===0 && K.p()===0},
+    {id:'tri', t:'Find an eigenvalue of the triangular matrix, and see where it was hiding all along.', toast:'It was on the diagonal',
+     ok:K=>K.si===1 && K.p()===0},
+    {id:'twice', t:'Find the eigenvalue of the repeated matrix that counts twice.', toast:'One eigenvalue, counted twice',
+     ok:K=>K.si===2 && K.p()===0},
+    {id:'none', t:'On the turning matrix, find the bottom of the curve and see why no λ works.', toast:'No real eigenvalue',
+     ok:K=>K.si===3 && K.lam()===K.tr()/2},
+    {id:'det', t:'Step to λ = 0 and see what det(A − λI) is there.', toast:'At λ = 0 it is det A',
+     ok:K=>K.lam()===0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  lam(){ return this.L[this.k]; },
+  tr(){ const A=this.set().A; return A[0][0]+A[1][1]; },
+  det(){ const A=this.set().A; return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },
+  /* A − λI and its determinant, the characteristic polynomial at λ */
+  M(l=this.lam()){ const A=this.set().A; return [[A[0][0]-l,A[0][1]],[A[1][0],A[1][1]-l]]; },
+  p(l=this.lam()){ const M=this.M(l); return M[0][0]*M[1][1]-M[0][1]*M[1][0]; },
+  amt(n){ return n<0 ? `(${neg(n)})` : neg(n); },
+  vec(w){ return `⟨${neg(w[0])}, ${neg(w[1])}⟩`; },
+  rows(M){ return `rows ${neg(M[0][0])}, ${neg(M[0][1])} and ${neg(M[1][0])}, ${neg(M[1][1])}`; },
+  /* λ² − tλ + d, written the way it is read */
+  poly(){ const t=this.tr(), d=this.det();
+    return 'λ²'+(t===0?'':` ${t>0?'−':'+'} ${Math.abs(t)===1?'':Math.abs(t)}λ`)+(d===0?'':` ${d>0?'+':'−'} ${Math.abs(d)}`); },
+  /* an arrow A − λI crushes, in lowest whole numbers with a positive lead */
+  crushed(){
+    const M=this.M(); let v = (M[0][0]||M[0][1]) ? [-M[0][1],M[0][0]] : [-M[1][1],M[1][0]];
+    const g=gcd(Math.abs(v[0]),Math.abs(v[1]))||1; v=v.map(x=>x/g);
+    if(v[0]<0 || (v[0]===0 && v[1]<0)) v=v.map(x=>-x);
+    return v.map(x=>Object.is(x,-0)?0:x);
+  },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const A=this.set().A, l=this.lam(), L=neg(l), M=this.M(), p=this.p(), t=this.tr(), d=this.det(), out=[];
+    out.push(`A has ${this.rows(A)}. An eigenvalue is a number λ for which A − λI crushes some arrow to ⟨0, 0⟩, and that happens exactly when det(A − λI) = 0.`);
+    out.push(`At λ = ${L}: A − λI has ${this.rows(M)}, so det(A − λI) = ${this.amt(M[0][0])} × ${this.amt(M[1][1])} − ${this.amt(M[0][1])} × ${this.amt(M[1][0])} = ${neg(p)}.`);
+    if(l===0) out.push(`At λ = 0, A − λI is A itself, so this is det A = ${neg(d)}: the curve crosses λ = 0 at the determinant.`);
+    if(p===0){
+      const v=this.crushed(), Av=[A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]];
+      out.push(`det(A − λI) = 0, so λ = ${L} is an eigenvalue. One arrow A − λI crushes is ${this.vec(v)}, and A sends it to ${this.vec(Av)}, which is ${this.amt(l)} × ${this.vec(v)}: A only stretches it${l<0?', flipping it round since λ is negative':''}.`);
+      const o=t-l;
+      if(o===l) out.push(`This is the only eigenvalue, and it counts twice: ${L} + ${this.amt(l)} = ${neg(t)} is the trace and ${this.amt(l)} × ${this.amt(l)} = ${neg(d)} is det A. Only the one direction ${this.vec(v)} stays on its line.`);
+      else out.push(`The eigenvalues add up to the trace, ${neg(A[0][0])} + ${this.amt(A[1][1])} = ${neg(t)}, so the other one is ${neg(t)} − ${this.amt(l)} = ${neg(o)}. Check: ${this.amt(l)} × ${this.amt(o)} = ${neg(d)}, which is det A.`);
+      if(A[1][0]===0 && A[0][1]!==0 && o!==l) out.push(`A is triangular, with 0 below its diagonal, so det(A − λI) is just (${neg(A[0][0])} − λ)(${neg(A[1][1])} − λ): its eigenvalues are its diagonal entries, ${neg(A[0][0])} and ${neg(A[1][1])}.`);
+    } else out.push(`That is not 0, so λ = ${L} is not an eigenvalue: A − λI crushes no arrow but ⟨0, 0⟩.`);
+    out.push(`Worked out for every λ, det(A − λI) = ${this.poly()}, the characteristic polynomial. Its λ term is minus the trace times λ and its constant is det A: here the trace is ${neg(t)} and det A = ${neg(d)}.`);
+    if(t*t<4*d && l===t/2)
+      out.push(`This is the bottom of the curve, at λ = trace/2 = ${L}, and it is still ${neg(p)} above 0. The curve never reaches the axis, so no real λ works: A turns every arrow off its line and has no real eigenvalues.`);
+    return out;
+  },
+  /* det(A − λI) against λ in blue, the axis, and the gold point at this λ */
+  R:[-2.5,6.5],
+  span(){ let lo=0, hi=0; for(let i=0;i<=90;i++){ const v=this.p(this.R[0]+(this.R[1]-this.R[0])*i/90); lo=Math.min(lo,v); hi=Math.max(hi,v); } const pad=(hi-lo)*0.06; return [lo-pad,hi+pad]; },
+  svg(){
+    const [lo,hi]=this.span(), [a,b]=this.R, l=this.lam(), p=this.p();
+    const PX=v=>20+(v-a)/(b-a)*320, PY=v=>188-(v-lo)/(hi-lo)*176;
+    const pts=[]; for(let i=0;i<=90;i++){ const x=a+(b-a)*i/90; pts.push(`${PX(x).toFixed(2)},${PY(this.p(x)).toFixed(2)}`); }
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="det(A − λI) = ${this.poly()} in blue against λ, with the gold point at λ = ${neg(l)}, height ${neg(p)}">`;
+    out+=`<line x1="20" y1="${PY(0).toFixed(2)}" x2="340" y2="${PY(0).toFixed(2)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line x1="${PX(0).toFixed(2)}" y1="8" x2="${PX(0).toFixed(2)}" y2="192" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    out+=`<line data-k="drop" x1="${PX(l).toFixed(2)}" y1="${PY(0).toFixed(2)}" x2="${PX(l).toFixed(2)}" y2="${PY(p).toFixed(2)}" stroke="${FIG_COL.b}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    out+=`<circle data-k="pt" cx="${PX(l).toFixed(2)}" cy="${PY(p).toFixed(2)}" r="5" fill="${p===0?FIG_COL.c:FIG_COL.b}"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-detect'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('cpSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Detect.pick(${i})" aria-label="${s.btn}: A has ${this.rows(s.A)}">${s.btn}</button>`).join('');
+    document.getElementById('cpL').textContent=`λ = ${neg(this.lam())}`;
+    document.getElementById('cpLLo').disabled=this.k<=0;
+    document.getElementById('cpLHi').disabled=this.k>=this.L.length-1;
+    document.getElementById('cpMat').innerHTML=`<span style="display:inline-block;margin:2px 8px">A = ${mat(this.set().A)}</span> <span style="display:inline-block;margin:2px 8px">A − λI = ${mat(this.M())}</span>`;
+    document.getElementById('cpFig').innerHTML=this.svg()+
+      `<div class="figcap">The blue curve is det(A − λI) for every λ, and the gold point is the λ you are on. It turns green where the curve meets the axis: an eigenvalue.</div>`;
+    document.getElementById('cpRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('cpGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('EIGENVALUE DETECTIVE','every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

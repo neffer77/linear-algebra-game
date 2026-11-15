@@ -76,6 +76,7 @@ const SUITES = [
   require('./play/swap'),        // u-substitution as a swap
   require('./play/implicit'),    // implicit differentiation round a curve
   require('./play/parts'),       // integration by parts as a split
+  require('./play/detect'),      // eigenvalues where det(A − λI) = 0
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

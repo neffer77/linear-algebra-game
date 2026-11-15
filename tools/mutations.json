@@ -1,159 +1,194 @@
 {
- "change": "The Parts Workshop: integration by parts",
+ "change": "The Eigenvalue Detective: the characteristic polynomial",
  "mutations": [
   {
-   "name": "x eˣ's answer drops the − eˣ",
+   "name": "the first matrix changes",
    "file": "index.html",
-   "find": "back:'x eˣ − eˣ + C', F:x=>(x-1)*Math.exp(x),",
-   "replace": "back:'x eˣ − eˣ + C', F:x=>x*Math.exp(x),",
+   "find": "{id:'pair', btn:'Two roots', A:[[4,1],[2,3]]},",
+   "replace": "{id:'pair', btn:'Two roots', A:[[4,1],[2,2]]},",
    "run": "verify"
   },
   {
-   "name": "x cos x's answer gets the sign of cos x wrong",
+   "name": "the triangular matrix gets a corner below its diagonal",
    "file": "index.html",
-   "find": "F:x=>x*Math.sin(x)+Math.cos(x),",
-   "replace": "F:x=>x*Math.sin(x)-Math.cos(x),",
+   "find": "{id:'tri', btn:'Triangular', A:[[3,2],[0,-1]]},",
+   "replace": "{id:'tri', btn:'Triangular', A:[[3,2],[1,-1]]},",
    "run": "verify"
   },
   {
-   "name": "ln x's du is wrong",
+   "name": "A − λI subtracts λ from one corner only",
    "file": "index.html",
-   "find": "{u:'ln x', dv:'dx', du:'(1/x) dx', v:'x', uf:x=>Math.log(x), duf:x=>1/x,",
-   "replace": "{u:'ln x', dv:'dx', du:'(1/x) dx', v:'x', uf:x=>Math.log(x), duf:x=>1/(x*x),",
+   "find": "M(l=this.lam()){ const A=this.set().A; return [[A[0][0]-l,A[0][1]],[A[1][0],A[1][1]-l]]; },",
+   "replace": "M(l=this.lam()){ const A=this.set().A; return [[A[0][0]-l,A[0][1]],[A[1][0],A[1][1]]]; },",
    "run": "verify"
   },
   {
-   "name": "x ln x's v forgets the half",
+   "name": "the determinant adds the cross term",
    "file": "index.html",
-   "find": "duf:x=>1/x, dvf:x=>x, vf:x=>x*x/2,\n       parts:'(x²/2) ln x",
-   "replace": "duf:x=>1/x, dvf:x=>x, vf:x=>x*x,\n       parts:'(x²/2) ln x",
+   "find": "p(l=this.lam()){ const M=this.M(l); return M[0][0]*M[1][1]-M[0][1]*M[1][0]; },",
+   "replace": "p(l=this.lam()){ const M=this.M(l); return M[0][0]*M[1][1]+M[0][1]*M[1][0]; },",
    "run": "verify"
   },
   {
-   "name": "x ln x's answer forgets the x²/4",
+   "name": "the trace takes the off-diagonal",
    "file": "index.html",
-   "find": "F:x=>x*x/2*Math.log(x)-x*x/4,",
-   "replace": "F:x=>x*x/2*Math.log(x),",
+   "find": "tr(){ const A=this.set().A; return A[0][0]+A[1][1]; },",
+   "replace": "tr(){ const A=this.set().A; return A[0][0]+A[0][1]; },",
    "run": "verify"
   },
   {
-   "name": "a split no longer multiplies back to the integrand",
+   "name": "the polynomial's λ term gets the wrong sign",
    "file": "index.html",
-   "find": "{u:'x eˣ', dv:'dx', du:'(eˣ + x eˣ) dx', v:'x', uf:x=>x*Math.exp(x), duf:x=>(1+x)*Math.exp(x), dvf:()=>1,",
-   "replace": "{u:'x eˣ', dv:'dx', du:'(eˣ + x eˣ) dx', v:'x', uf:x=>x*Math.exp(x), duf:x=>(1+x)*Math.exp(x), dvf:()=>2,",
+   "find": "return 'λ²'+(t===0?'':` ${t>0?'−':'+'} ",
+   "replace": "return 'λ²'+(t===0?'':` ${t>0?'+':'−'} ",
    "run": "verify"
   },
   {
-   "name": "u = eˣ is marked right",
+   "name": "the crushed arrow is the wrong one",
    "file": "index.html",
-   "find": "dvf:x=>x, vf:x=>x*x/2,\n       parts:'(x²/2) eˣ − ∫ (x²/2) eˣ dx',",
-   "replace": "dvf:x=>x, vf:x=>x*x/2, F:x=>(x-1)*Math.exp(x),\n       parts:'(x²/2) eˣ − ∫ (x²/2) eˣ dx',",
+   "find": "let v = (M[0][0]||M[0][1]) ? [-M[0][1],M[0][0]] : [-M[1][1],M[1][0]];",
+   "replace": "let v = (M[0][0]||M[0][1]) ? [M[0][1],M[0][0]] : [-M[1][1],M[1][0]];",
    "run": "verify"
   },
   {
-   "name": "the integral is wrong",
+   "name": "the crushed arrow is not reduced",
    "file": "index.html",
-   "find": "{id:'xcos', btn:'x cos x', I:'∫ x cos x dx', f:x=>x*Math.cos(x),",
-   "replace": "{id:'xcos', btn:'x cos x', I:'∫ x cos x dx', f:x=>x*Math.sin(x),",
+   "find": "const g=gcd(Math.abs(v[0]),Math.abs(v[1]))||1; v=v.map(x=>x/g);",
+   "replace": "const g=1; v=v.map(x=>x/g);",
    "run": "verify"
   },
   {
-   "name": "the answer is never drawn",
+   "name": "the other eigenvalue is found by subtracting the wrong way",
    "file": "index.html",
-   "find": "    if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-parts'); },",
-   "replace": "    return out+`</svg>`;\n  },\n  open(){ UI.go('s-parts'); },",
+   "find": "      const o=t-l;\n",
+   "replace": "      const o=l-t;\n",
    "run": "verify"
   },
   {
-   "name": "the check line is dropped",
+   "name": "the flip clause is dropped",
    "file": "index.html",
-   "find": "      out.push(`Put it together: ${o.back}`);\n      out.push(`Check by differentiating: ${o.check}`);\n",
-   "replace": "      out.push(`Put it together: ${o.back}`);\n",
+   "find": "A only stretches it${l<0?', flipping it round since λ is negative':''}.`);",
+   "replace": "A only stretches it.`);",
    "run": "verify"
   },
   {
-   "name": "the parts line is dropped",
+   "name": "the triangular line is dropped",
    "file": "index.html",
-   "find": "    out.push(`So ${S.I} = ${o.parts}.`);\n",
-   "replace": "",
+   "find": "    if(A[1][0]===0 && A[0][1]!==0 && o!==l) out.push(",
+   "replace": "    if(false) out.push(",
    "run": "verify"
   },
   {
-   "name": "a stuck split runs on as if it had a v",
+   "name": "the bottom of the turning curve is missed",
    "file": "index.html",
-   "find": "    if(!o.vf){\n      out.push(`Try u = ${o.u} and dv = ${o.dv}.`);",
-   "replace": "    if(false){\n      out.push(`Try u = ${o.u} and dv = ${o.dv}.`);",
+   "find": "    if(t*t<4*d && l===t/2)\n",
+   "replace": "    if(t*t<4*d && l===t)\n",
    "run": "verify"
   },
   {
-   "name": "the worse goal takes a stuck split",
+   "name": "the λ = 0 line is dropped",
    "file": "index.html",
-   "find": "toast:'That split makes it worse', ok:K=>{ const o=K.opt(); return !!(o && o.vf && !o.F); }}",
-   "replace": "toast:'That split makes it worse', ok:K=>{ const o=K.opt(); return !!(o && !o.F); }}",
+   "find": "    if(l===0) out.push(`At λ = 0, A − λI is A itself",
+   "replace": "    if(false) out.push(`At λ = 0, A − λI is A itself",
    "run": "verify"
   },
   {
-   "name": "the ln goal fires on x ln x",
+   "name": "the point never turns green",
    "file": "index.html",
-   "find": "toast:'Solved: x ln x − x + C', ok:K=>K.si===2 && K.works()},",
-   "replace": "toast:'Solved: x ln x − x + C', ok:K=>K.si>=2 && K.works()},",
+   "find": "r=\"5\" fill=\"${p===0?FIG_COL.c:FIG_COL.b}\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-detect'); },",
+   "replace": "r=\"5\" fill=\"${FIG_COL.b}\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-detect'); },",
    "run": "verify"
   },
   {
-   "name": "a new integral keeps the old split",
+   "name": "the curve is drawn as det A minus λ",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.oi=null; this.render(); },\n  trySplit",
-   "replace": "pick(i){ this.si=i; this.render(); },\n  trySplit",
-   "run": "play:parts"
+   "find": "pts.push(`${PX(x).toFixed(2)},${PY(this.p(x)).toFixed(2)}`); }\n    let out=`<svg viewBox=\"0 0 360 200\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI)",
+   "replace": "pts.push(`${PX(x).toFixed(2)},${PY(this.det()-x).toFixed(2)}`); }\n    let out=`<svg viewBox=\"0 0 360 200\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI)",
+   "run": "verify"
   },
   {
-   "name": "the caption never mentions gold",
+   "name": "the none goal takes any λ on the turning matrix",
    "file": "index.html",
-   "find": "' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':' Find the right split",
-   "replace": "' Look for the answer in gold.':' Find the right split",
-   "run": "play:parts"
+   "find": "ok:K=>K.si===3 && K.lam()===K.tr()/2},",
+   "replace": "ok:K=>K.si===3},",
+   "run": "verify"
   },
   {
-   "name": "the split buttons lose their names",
+   "name": "the det goal needs the first matrix",
    "file": "index.html",
-   "find": "aria-label=\"Try u = ${o.u} and dv = ${o.dv}\">",
-   "replace": ">",
-   "run": "play:parts"
+   "find": "toast:'At λ = 0 it is det A',\n     ok:K=>K.lam()===0}",
+   "replace": "toast:'At λ = 0 it is det A',\n     ok:K=>K.si===1 && K.lam()===0}",
+   "run": "verify"
   },
   {
-   "name": "the integral buttons lose their names",
+   "name": "each matrix starts on an eigenvalue",
    "file": "index.html",
-   "find": "onclick=\"Parts.pick(${i})\" aria-label=\"${s.I}\">",
-   "replace": "onclick=\"Parts.pick(${i})\">",
-   "run": "play:parts"
+   "find": "  L:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6],\n  START:0,",
+   "replace": "  L:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6],\n  START:2,",
+   "run": "verify"
   },
   {
-   "name": "the chosen split is not marked pressed",
+   "name": "a new matrix keeps the old λ",
    "file": "index.html",
-   "find": "aria-pressed=\"${j===this.oi}\" onclick=\"Parts.trySplit(${j})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Parts.trySplit(${j})\"",
-   "run": "play:parts"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return;",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return;",
+   "run": "play:detect"
+  },
+  {
+   "name": "the stepper runs off its top end",
+   "file": "index.html",
+   "find": "    document.getElementById('cpLHi').disabled=this.k>=this.L.length-1;",
+   "replace": "    document.getElementById('cpLHi').disabled=false;",
+   "run": "play:detect"
+  },
+  {
+   "name": "the caption never mentions green",
+   "file": "index.html",
+   "find": "It turns green where the curve meets the axis: an eigenvalue.</div>`;",
+   "replace": "</div>`;",
+   "run": "play:detect"
+  },
+  {
+   "name": "the matrix buttons lose their names",
+   "file": "index.html",
+   "find": "onclick=\"Detect.pick(${i})\" aria-label=\"${s.btn}: A has ${this.rows(s.A)}\">",
+   "replace": "onclick=\"Detect.pick(${i})\">",
+   "run": "play:detect"
+  },
+  {
+   "name": "the chosen matrix is not marked pressed",
+   "file": "index.html",
+   "find": "aria-pressed=\"${i===this.si}\" onclick=\"Detect.pick(${i})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"Detect.pick(${i})\"",
+   "run": "play:detect"
+  },
+  {
+   "name": "the matrices are read out twice to a screen reader",
+   "file": "index.html",
+   "find": "<div id=\"cpMat\" aria-hidden=\"true\"",
+   "replace": "<div id=\"cpMat\"",
+   "run": "play:detect"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every integral split','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every integral split','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:parts"
+   "find": "'every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:detect"
   },
   {
-   "name": "the Tome loses the parts workshop",
+   "name": "the Tome loses the eigenvalue detective",
    "file": "index.html",
-   "find": "id=\"tomeParts\"",
-   "replace": "id=\"tomePartsX\"",
-   "run": "play:parts"
+   "find": "id=\"tomeDetect\"",
+   "replace": "id=\"tomeDetectX\"",
+   "run": "play:detect"
   },
   {
-   "name": "the workshop saves its split",
+   "name": "the workshop saves its λ",
    "file": "index.html",
-   "find": "trySplit(j){ this.oi=j; this.touched=true; this.render(); },",
-   "replace": "trySplit(j){ this.oi=j; Game.s.parts=j; this.touched=true; this.render(); },",
-   "run": "play:parts"
+   "find": "move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('cpSets')",
+   "replace": "move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; Game.s.lam=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('cpSets')",
+   "run": "play:detect"
   }
  ]
 }
