@@ -1009,6 +1009,24 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ DOWNHILL WORKSHOP ============ -->
+  <div class="screen" id="s-descent">
+    <div class="panel"><h2>⛰️ Downhill Workshop</h2><div class="sub">f(x, y) = (x − 1)² + 2(y + 1)² is a valley with its bottom at (1, −1). The gradient ∇f points straight uphill, so a step against it, of size η, heads down. Pick η and walk: too small crawls, too big overshoots.</div></div>
+    <div class="panel">
+      <div id="gdEtas" class="wsModes" role="group" aria-label="Step size"></div>
+      <div id="gdFig"></div>
+      <div class="wsModes" style="margin:8px 0">
+        <button class="btn sm" id="gdStep" onclick="Descent.step()">⬇ Step downhill</button>
+        <button class="btn sm ghost" id="gdReset" onclick="Descent.reset()">↺ Start again</button>
+      </div>
+      <div id="gdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="gdGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ LIMIT WORKSHOP ============ -->
   <div class="screen" id="s-limit">
     <div class="panel"><h2>🌫️ Limit Workshop</h2><div class="sub">Some formulas give no number at one point. Close in on it from the left or the right, h at a time, and watch where f(x) is heading. A limit is what both sides agree on.</div></div>
@@ -5721,7 +5739,7 @@ const FIG_W = 320;
 // dead air either side; a number line is the opposite and needs almost no
 // height at all. FIG_H is the height of the figure being drawn right now —
 // render() sets it before dispatching, and drawing is synchronous.
-const FIG_H_BY_KIND = {plane:196, grid:196, curve:152, region:152, bars:152, numberline:104};
+const FIG_H_BY_KIND = {plane:196, grid:196, curve:152, region:152, bars:152, numberline:104, contour:220};
 let FIG_H = 152;
 const FIG_COL = {
   axis:'#6b5f92', grid:'rgba(140,125,190,.18)', ink:'#e8e2f5', dim:'#a99ccb',
@@ -5745,7 +5763,7 @@ function figEval(f, x){
 }
 
 const Figure = {
-  KINDS:['plane','grid','curve','region','bars','numberline'],
+  KINDS:['plane','grid','curve','region','bars','numberline','contour'],
 
   /** Paint `spec` into a fresh canvas appended to `host`. */
   render(spec, host){
@@ -6085,6 +6103,46 @@ const Figure = {
     else { g.fillStyle=FIG_COL.d; g.fill(); }
     g.fillStyle=FIG_COL.ink; g.font='bold 12px system-ui,sans-serif';
     g.fillText(s.label||('x → '+String(a).replace('-','−')), X(a), y-44);
+  },
+
+  /* ---- 7. contour: a valley seen from above, and a walk down it ----
+     f = w₀(x − m₀)² + w₁(y − m₁)², so each level f = c is an ellipse with
+     half-widths √(c/w₀) and √(c/w₁). The path is the walk so far; next, if
+     given, is drawn as a dashed arrow from where the walk stands. */
+  contour(g, s){
+    this.frame(g);
+    const span=s.span||4, k=Math.min(FIG_W,FIG_H)/(2.2*span);
+    const X=x=>FIG_W/2+x*k, Y=y=>FIG_H/2-y*k;
+    const [m0,m1]=s.min||[0,0], [w0,w1]=s.w||[1,1];
+    g.strokeStyle=FIG_COL.grid; g.lineWidth=1;
+    const L=Math.ceil(FIG_W/(2*k));
+    for(let i=-L;i<=L;i++){
+      g.beginPath(); g.moveTo(X(i),0); g.lineTo(X(i),FIG_H); g.stroke();
+      g.beginPath(); g.moveTo(0,Y(i)); g.lineTo(FIG_W,Y(i)); g.stroke();
+    }
+    g.strokeStyle=FIG_COL.axis; g.lineWidth=1.4;
+    g.beginPath(); g.moveTo(0,Y(0)); g.lineTo(FIG_W,Y(0)); g.stroke();
+    g.beginPath(); g.moveTo(X(0),0); g.lineTo(X(0),FIG_H); g.stroke();
+    // the levels, faint far out and brighter towards the bottom
+    const lv=s.levels||[1,4,9];
+    lv.forEach((c,i)=>{
+      g.strokeStyle=`rgba(242,193,78,${(0.55-0.4*i/Math.max(1,lv.length-1)).toFixed(2)})`; g.lineWidth=1.3;
+      g.beginPath(); g.ellipse(X(m0),Y(m1), Math.sqrt(c/w0)*k, Math.sqrt(c/w1)*k, 0, 0, Math.PI*2); g.stroke();
+    });
+    g.fillStyle=FIG_COL.b; g.font='bold 14px system-ui,sans-serif'; g.textAlign='center'; g.textBaseline='middle';
+    g.fillText('★', X(m0), Y(m1));
+    // the walk so far
+    const P=s.path||[];
+    if(P.length){
+      g.strokeStyle=FIG_COL.a; g.lineWidth=2; g.beginPath();
+      P.forEach(([x,y],i)=> i?g.lineTo(X(x),Y(y)):g.moveTo(X(x),Y(y))); g.stroke();
+      g.fillStyle=FIG_COL.a;
+      P.forEach(([x,y],i)=>{ g.beginPath(); g.arc(X(x),Y(y), i===P.length-1?5:2.6, 0, Math.PI*2); g.fill(); });
+      if(s.next){
+        const [x,y]=P[P.length-1];
+        g.setLineDash([5,4]); this.arrow(g, X(x),Y(y), X(s.next[0]),Y(s.next[1]), FIG_COL.c, '', 1.8); g.setLineDash([]);
+      }
+    }
   }
 };
 
@@ -12263,6 +12321,7 @@ const UI = {
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
     if(id==='s-limit') Limit.render();
+    if(id==='s-descent') Descent.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12907,6 +12966,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be.</div>
+         <button class="btn sm" id="tomeDescent" style="width:auto;margin-top:8px" onclick="Descent.open()">Open the downhill workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
@@ -14249,6 +14313,115 @@ const Compose = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ORDER KEEPER','every pair placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ DOWNHILL WORKSHOP ============
+   Where the two subjects meet: a valley f(x, y), its gradient as an arrow
+   pointing straight uphill, and a walk against that arrow, one step of size η
+   at a time. The readout works f, ∇f and the step for the numbers on screen,
+   and says what the last step did: went downhill, zigzagged across the valley
+   floor, or overshot and climbed. Each step is rounded to 4 decimal places. */
+const Descent = {
+  START:[-2, 1],
+  ETAS:[0.1, 0.25, 0.4, 0.55],
+  MAXSTEPS:30, MAXF:1000,
+  ei:0, path:[[-2, 1]], touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'floor',  t:'Pick the step size that lands on the valley floor, y = −1, in one step.',
+     ok:D=>D.steps()===1 && D.p()[1]===-1},
+    {id:'bottom', t:'Reach the bottom of the valley, where f is under 0.001.',
+     ok:D=>D.f()<0.001},
+    {id:'zig',    t:'Find a step size that zigzags across the floor but still goes downhill.',
+     ok:D=>D.last()==='zig'},
+    {id:'up',     t:'Find a step size so big that a step goes uphill.',
+     ok:D=>D.last()==='up'},
+    {id:'crawl',  t:'Take five steps downhill and still have f above 0.5: a step too small crawls.',
+     ok:D=>D.steps()>=5 && D.fs().every((v,i,a)=>!i || v<a[i-1]) && D.f()>0.5},
+    {id:'blow',   t:'Let f run past 100.',
+     ok:D=>D.f()>100}
+  ],
+  r4:v=>+(+v).toFixed(4),
+  r8:v=>+(+v).toFixed(8),
+  n(v){ return neg(this.r4(v)); },
+  b(v){ return v<0 ? `(${this.n(v)})` : this.n(v); },
+  // f itself, shown to 8 places once it is too small for 4
+  fN(v){ return v!==0 && Math.abs(v)<0.0001 ? v.toFixed(8).replace(/0+$/,'') : this.n(v); },
+  eta(){ return this.ETAS[this.ei]; },
+  p(){ return this.path[this.path.length-1]; },
+  steps(){ return this.path.length-1; },
+  fs(){ return this.path.map(q=>this.fAt(q)); },
+  fAt(p){ return this.r8((p[0]-1)**2 + 2*(p[1]+1)**2); },
+  f(){ return this.fAt(this.p()); },
+  grad(p){ p=p||this.p(); return [this.r4(2*(p[0]-1)), this.r4(4*(p[1]+1))]; },
+  // one step against the gradient, each part of η∇f rounded to 4 places
+  next(p){
+    p=p||this.p(); const g=this.grad(p), e=this.eta(), s=[this.r4(e*g[0]), this.r4(e*g[1])];
+    return { g, s, exact:s[0]===this.r8(e*g[0]) && s[1]===this.r8(e*g[1]), p:[this.r4(p[0]-s[0]), this.r4(p[1]-s[1])] };
+  },
+  // did the step into path[k] cross the valley floor in x or in y?
+  crossed(k){ const a=this.path[k-1], b=this.path[k]; return (a[0]-1)*(b[0]-1)<0 || (a[1]+1)*(b[1]+1)<0; },
+  // what the last step did: up, zig (crossed the floor, f fell), down, or none
+  last(){
+    if(!this.steps()) return 'none';
+    const k=this.steps(), a=this.fAt(this.path[k-1]), b=this.fAt(this.path[k]);
+    if(b>a) return 'up';
+    return this.crossed(k) ? 'zig' : 'down';
+  },
+  atBottom(){ const q=this.p(); return q[0]===1 && q[1]===-1; },
+  stuck(){ return this.steps()>=this.MAXSTEPS || this.f()>this.MAXF; },
+  op(v){ return v<0 ? `+ ${this.n(-v)}` : `− ${this.n(v)}`; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const [x,y]=this.p(), F=this.f(), e=this.eta(), dx=this.r4(x-1), dy=this.r4(y+1);
+    const out=[`At p = (${this.n(x)}, ${this.n(y)}), f = (${this.n(x)} − 1)² + 2(${this.n(y)} + 1)² = ${this.b(dx)}² + 2·${this.b(dy)}² ${this.r4(F)===F||Math.abs(F)<0.0001?'=':'≈'} ${this.fN(F)}.`];
+    const g=this.grad();
+    out.push(`∇f = ⟨2(x − 1), 4(y + 1)⟩ = ⟨2·${this.b(dx)}, 4·${this.b(dy)}⟩ = ⟨${this.n(g[0])}, ${this.n(g[1])}⟩${this.atBottom()?'':': the way straight uphill'}.`);
+    if(this.atBottom())
+      out.push(`Nothing is uphill, so this is the bottom of the valley at (1, −1), where f = 0.`);
+    else if(this.stuck())
+      out.push(`That is far enough for one walk: press Start again.`);
+    else {
+      const N=this.next();
+      out.push(`A step of η = ${e} goes the other way: p − η∇f = (${this.n(x)} − ${e}·${this.b(g[0])}, ${this.n(y)} − ${e}·${this.b(g[1])}) ${N.exact?'=':'≈'} (${this.n(x)} ${this.op(N.s[0])}, ${this.n(y)} ${this.op(N.s[1])}) = (${this.n(N.p[0])}, ${this.n(N.p[1])}).`);
+    }
+    const L=this.last(), k=this.steps(), a=k?this.fAt(this.path[k-1]):0, fb=this.f();
+    if(L==='none') out.push(`Press Step downhill to walk against the gradient.`);
+    else if(L==='up') out.push(`That step went uphill: f rose from ${this.fN(a)} to ${this.fN(fb)}. η is too big, so the step jumped right over the valley floor and landed higher up the other side.`);
+    else if(L==='zig') out.push(`That step jumped across the valley floor, so the walk zigzags, but f still fell from ${this.fN(a)} to ${this.fN(fb)}.`);
+    else out.push(`That step took f from ${this.fN(a)} down to ${this.fN(fb)}.`);
+    return out;
+  },
+  open(){ UI.go('s-descent'); },
+  pick(i){ this.ei=i; this.reset(); },
+  reset(){ this.path=[this.START.slice()]; this.touched=true; this.render(); },
+  step(){
+    if(this.stuck() || this.atBottom()) return;
+    this.path.push(this.next().p); this.touched=true; this.render();
+  },
+  render(){
+    const atBottom=this.atBottom();
+    document.getElementById('gdEtas').innerHTML=this.ETAS.map((e,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.ei}" aria-label="Step size ${e}" onclick="Descent.pick(${i})">η = ${e}</button>`).join('');
+    document.getElementById('gdStep').disabled=this.stuck() || atBottom;
+    const nx=(this.stuck()||atBottom) ? null : this.next().p;
+    Figure.render({kind:'contour', min:[1,-1], w:[1,2], levels:[0.5,2,4.5,8,12.5,18,24.5,32],
+      span:4, path:this.path.map(q=>q.slice()), next:nx,
+      caption:`Rings are levels of f, lowest at the gold star (1, −1). Blue is the walk so far${nx?', and the dashed arrow is the next step':''}.`},
+      document.getElementById('gdFig'));
+    document.getElementById('gdRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('gdGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('VALLEY WALKER','every step size tried','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
