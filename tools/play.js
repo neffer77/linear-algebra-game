@@ -82,6 +82,7 @@ const SUITES = [
   require('./play/cover'),       // partial fractions by covering up roots
   require('./play/slice'),       // double integrals one slice at a time
   require('./play/tracer'),      // the derivative traced out as dots
+  require('./play/arrow'),       // adding, stretching and measuring vectors
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

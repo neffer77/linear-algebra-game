@@ -78,6 +78,7 @@ function loadGame() {
     ';const Cover={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'Two factors'"), script.indexOf("  open(){ UI.go('s-cover'); },")) + '};exports.Cover=Cover;' +
     ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
+    ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -96,7 +97,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2691,6 +2692,124 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The arrow workshop: every pair, every k, with and without v.
+   Each sum is worked out by hand from u and v, never from the workshop's own
+   arithmetic; every vector written in the readout is read back as numbers;
+   each length is Pythagoras on the parts as written, and the root as written
+   must be the length; the unit vector must point the same way with length 1;
+   the lengths written for u and v must be their true lengths; every
+   sentence's condition is worked out independently; and the drawing is read
+   back: one scale both ways, v starting at the tip of k·u, w ending where v
+   ends, the right triangle under w, and everything on the page. */
+const arrowNotes = (() => {
+  const W = Arrow;
+  const num = t => +t.replace(/−/g, '-');
+  const vecs = t => [...t.matchAll(/⟨(−?[\d.]+), (−?[\d.]+)⟩/g)].map(m => [num(m[1]), num(m[2])]);
+  const root = t => (t.startsWith('√') ? Math.sqrt(num(t.slice(1))) : num(t));
+  const near = (p, q, e = 1e-9) => Math.abs(p[0] - q[0]) < e && Math.abs(p[1] - q[1]) < e;
+  if (W.SETS.map(S => S.id).join() !== 'a,b,c') fail('arrow', 'sets', W.SETS.map(S => S.id).join());
+  W.SETS.forEach(S => {
+    if (Math.abs(root(S.uL) - Math.hypot(...S.u)) > 1e-12) fail('arrow', S.id, `‖u‖ is written ${S.uL}`);
+    if (Math.abs(root(S.vL) - Math.hypot(...S.v)) > 1e-12) fail('arrow', S.id, `‖v‖ is written ${S.vL}`);
+  });
+  if (W.K.join() !== '-2,-1.5,-1,-0.5,0,0.5,1,1.5,2') fail('arrow', 'k', `k should step by halves from −2 to 2, not ${W.K.join()}`);
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.START; W.m = false; W.done.clear(); };
+  reset();
+  if (W.kv() !== 1) fail('arrow', 'start', 'the workshop should open with k = 1');
+  for (const g of W.GOALS) if (g.ok(W)) fail('arrow', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.m = true; W.k = 0; W.pick(si); if (W.kv() !== 1 || W.m) fail('arrow', S.id, 'picking a pair does not start again at k = 1 without v');
+    for (const g of W.GOALS) if (g.ok(W)) fail('arrow', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  W.SETS.forEach((S, si) => {
+    const lu = Math.hypot(...S.u), lv = Math.hypot(...S.v);
+    for (let ki = 0; ki < W.K.length; ki++) for (const m of [false, true]) {
+      reset(); W.si = si; W.k = ki; W.m = m; W.touched = true; n++;
+      const k = W.K[ki], key = `${S.id} k = ${k}${m ? ' + v' : ''}`;
+      const ku = [k * S.u[0], k * S.u[1]], w = m ? [ku[0] + S.v[0], ku[1] + S.v[1]] : ku, L = Math.hypot(...w), zero = L < 1e-12;
+      if (!near(W.w(), w)) fail('arrow', key, `w is ${W.w()}, but by hand it is ${w}`);
+      if (Math.abs(W.len() - L) > 6e-5) fail('arrow', key, `the length reads ${W.len()}, but it is ${L}`);
+      const got = W.working(), txt = got.join('\n');
+      if (!near(vecs(got[0])[0], S.u) || !near(vecs(got[0])[1], S.v)) fail('arrow', key, got[0]);
+      if (/w = k·u \+ v\./.test(got[0]) !== m) fail('arrow', key, 'the opening sentence names the wrong sum');
+      const kv = vecs(got[1]); if (!near(kv[kv.length - 1], ku)) fail('arrow', key, `k·u should be ${ku}: ${got[1]}`);
+      if (k !== 0 && k !== 1) {
+        if (/the same way/.test(got[1]) !== (k > 0)) fail('arrow', key, 'the direction of k·u is wrong');
+        const a = Math.abs(k), says = /just as long/.test(got[1]) ? 1 : /half as long/.test(got[1]) ? 0.5 : num((got[1].match(/(−?[\d.]+) times as long/) || [, 'NaN'])[1]);
+        if (says !== a) fail('arrow', key, `k·u should be ${a} times as long: ${got[1]}`);
+      }
+      const wv = vecs(got[2]); if (!near(wv[wv.length - 1], w)) fail('arrow', key, `w should be ${w}: ${got[2]}`);
+      if (/Walk v from the tip/.test(got[2]) !== m) fail('arrow', key, 'the walk sentence is wrong');
+      if (m && (!near(wv[0], ku) || !near(wv[1], S.v))) fail('arrow', key, 'the parts added are not k·u and v');
+      const len = got.find(l => l.startsWith('‖w‖ = √('));
+      const pm = len && len.match(/^‖w‖ = √\((?:\((−?[\d.]+)\)|(−?[\d.]+))² \+ (?:\((−?[\d.]+)\)|(−?[\d.]+))²\) = (?:√(−?[\d.]+) [=≈] )?(−?[\d.]+)/);
+      if (!pm) fail('arrow', key, `no length sentence: ${txt}`);
+      else {
+        const a = num(pm[1] || pm[2]), b = num(pm[3] || pm[4]);
+        const sqw = c => { const q = Math.round(c * 1e4) / 1e4, t = (q < 0 ? '−' : '') + Math.abs(q); return q < 0 ? `(${t})²` : `${t}²`; };
+        if (!len.startsWith(`‖w‖ = √(${sqw(w[0])} + ${sqw(w[1])})`)) fail('arrow', key, `the parts are not squared as ${sqw(w[0])} + ${sqw(w[1])}: ${len}`);
+        if (!near([a, b], w)) fail('arrow', key, `the length is worked on ${a}, ${b}, not on w`);
+        if (!zero && Math.abs(num(pm[5]) - (a * a + b * b)) > 1e-9) fail('arrow', key, `√${pm[5]} is not √(${a}² + ${b}²)`);
+        if (Math.abs(num(pm[6]) - L) > 6e-5) fail('arrow', key, `the length is written ${pm[6]}, not ${L}`);
+        if (!zero && (len.includes(`√${pm[5]} = `) !== (Math.abs(Math.round(L * 1e4) / 1e4 - L) < 1e-10))) fail('arrow', key, 'the length is marked exact or not wrongly');
+      }
+      if (/zero vector, with no length/.test(txt) !== zero) fail('arrow', key, 'the zero-vector sentence is wrong');
+      if (/has no unit vector/.test(txt) !== zero) fail('arrow', key, 'the no-unit-vector sentence is wrong');
+      if (/lies flat along the x-axis/.test(txt) !== (!zero && Math.abs(w[1]) < 1e-12)) fail('arrow', key, 'the flat sentence is wrong');
+      if (/upright along the y-axis/.test(txt) !== (!zero && Math.abs(w[0]) < 1e-12)) fail('arrow', key, 'the upright sentence is wrong');
+      const sc = txt.match(/That is \|k\| × ‖u‖ = ([\d.]+) × (√?[\d.]+) [=≈] ([\d.]+)/);
+      if (!!sc !== (!m && !zero)) fail('arrow', key, 'the stretching sentence is wrong');
+      if (sc && (num(sc[1]) !== Math.abs(k) || Math.abs(root(sc[2]) - lu) > 1e-9 || Math.abs(num(sc[3]) - Math.abs(k) * lu) > 6e-5 || Math.abs(Math.abs(k) * lu - L) > 1e-9)) fail('arrow', key, `|k| × ‖u‖ is worked wrongly: ${sc[0]}`);
+      const tri = txt.match(/‖u‖ \+ ‖v‖ = (√?[\d.]+) \+ (√?[\d.]+) [=≈] ([\d.]+), more than ‖w‖ [=≈] ([\d.]+)/);
+      if (!!tri !== (m && k === 1 && !zero)) fail('arrow', key, 'the lengths-do-not-add sentence is wrong');
+      if (tri && (Math.abs(root(tri[1]) - lu) > 1e-9 || Math.abs(root(tri[2]) - lv) > 1e-9 || Math.abs(num(tri[3]) - (lu + lv)) > 6e-5 || Math.abs(num(tri[4]) - L) > 6e-5 || !(lu + lv > L + 1e-9))) fail('arrow', key, `the sum of lengths is worked wrongly: ${tri[0]}`);
+      const unit = got.find(l => /unit vector/.test(l) && !/no unit vector/.test(l));
+      if (!zero) {
+        const isOne = Math.abs(L - 1) < 1e-9;
+        if (/is a unit vector already/.test(txt) !== isOne) fail('arrow', key, 'the already-a-unit-vector sentence is wrong');
+        if (!isOne) { const uv = vecs(unit); const hat = uv[uv.length - 1];
+          if (!near(uv[0], w)) fail('arrow', key, 'the unit vector does not start from w');
+          if (!hat || !near(hat, [w[0] / L, w[1] / L], 6e-5)) fail('arrow', key, `the unit vector should be ${[w[0] / L, w[1] / L]}: ${unit}`);
+          else if (Math.abs(Math.hypot(...hat) - 1) > 2e-4 || hat[0] * w[0] + hat[1] * w[1] <= 0) fail('arrow', key, 'the unit vector does not have length 1 the same way');
+          const by = unit.match(/÷ (√?[\d.]+) [=≈]/); if (!by || Math.abs(root(by[1]) - L) > 6e-5) fail('arrow', key, 'w is not divided by its length'); }
+      }
+      // the drawing
+      const svg = W.svg();
+      const ax = svg.match(/data-k="xaxis" x1="20" y1="([\d.-]+)"/), ay = svg.match(/data-k="yaxis" x1="([\d.-]+)"/);
+      if (!ax || !ay) { fail('arrow', key, 'the axes are not drawn'); continue; }
+      const O = [+ay[1], +ax[1]];
+      const tip = k2 => { const h = svg.match(new RegExp(`data-k="${k2}-head" points="([\\d.-]+),([\\d.-]+)`)); return h && [+h[1], +h[2]]; };
+      const start = k2 => { const h = svg.match(new RegExp(`data-k="${k2}" x1="([\\d.-]+)" y1="([\\d.-]+)"`)); return h && [+h[1], +h[2]]; };
+      const scale = (pt, v) => [(pt[0] - O[0]) / v[0], -(pt[1] - O[1]) / v[1]];
+      const B = W.box().sc;
+      const at = (pt, v) => pt && Math.abs(pt[0] - (O[0] + v[0] * B)) < 0.02 && Math.abs(pt[1] - (O[1] - v[1] * B)) < 0.02;
+      if (!at(tip('u'), S.u) || !near(start('u'), O, 0.02)) fail('arrow', key, 'u is not drawn from the start');
+      if (k === 0) { if (tip('ku')) fail('arrow', key, 'k·u is drawn though it is nothing'); }
+      else if (!at(tip('ku'), ku) || !near(start('ku'), O, 0.02)) fail('arrow', key, 'k·u is not drawn at its place');
+      if (!!tip('v') !== m) fail('arrow', key, 'v shows at the wrong time');
+      if (m && (!at(start('v'), ku) || !at(tip('v'), w))) fail('arrow', key, 'v is not walked from the tip of k·u');
+      if (zero) { if (tip('w') || !/data-k="zero"/.test(svg)) fail('arrow', key, 'the zero vector is not drawn as a dot'); }
+      else if (!at(tip('w'), w) || !near(start('w'), O, 0.02) || /data-k="zero"/.test(svg)) fail('arrow', key, 'w is not drawn from the start to where you land');
+      const leg = svg.match(/data-k="leg" points="([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+)"/);
+      if (!!leg !== (Math.abs(w[0]) > 1e-12 && Math.abs(w[1]) > 1e-12)) fail('arrow', key, 'the right triangle shows at the wrong time');
+      if (leg && !(near([+leg[1], +leg[2]], O, 0.02) && at([+leg[3], +leg[4]], [w[0], 0]) && at([+leg[5], +leg[6]], w))) fail('arrow', key, 'the right triangle is not under w');
+      for (const [, x, y] of svg.matchAll(/points="([\d.-]+),([\d.-]+)/g)) if (+x < 0 || +x > 360 || +y < 0 || +y > 200) fail('arrow', key, 'an arrow runs off the drawing');
+      const meant = { tip: si === 0 && m && k === 1, double: si === 0 && !m && Math.abs(L - 10) < 1e-9, flip: si === 0 && !m && k === -1,
+        unit: si === 1 && Math.abs(L - 1) < 1e-9, cancel: si === 1 && m && zero, whole: si === 2 && m && !zero && Math.abs(L - Math.round(L)) < 1e-9 };
+      for (const g of W.GOALS) { if (!!g.ok(W) !== meant[g.id]) fail('arrow', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+    }
+    // the stepper stops at both ends, and the button adds and takes v off
+    reset(); W.si = si;
+    for (let i = 0; i < 12; i++) W.moveK(1);
+    if (W.k !== W.K.length - 1) fail('arrow', S.id, 'k does not stop at its top');
+    for (let i = 0; i < 12; i++) W.moveK(-1);
+    if (W.k !== 0) fail('arrow', S.id, 'k does not stop at its bottom');
+    W.toggle(); if (!W.m) fail('arrow', S.id, 'the button does not add v'); W.toggle(); if (W.m) fail('arrow', S.id, 'the button does not take v off');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('arrow', g.id, 'this goal cannot be found');
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The slope tracer workshop: every curve, every stop, every set of marks.
    Each slope is checked against the derivative worked out by hand, never
    against the nudge the workshop uses; the nudge's rise must give the slope
@@ -4672,6 +4791,7 @@ console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  
 console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}  (the cleared identity at every x, the pieces adding back to f, the antiderivative differentiated back, every choice of kept equations, the drawing read back, ${coverNotes.goals} goals findable)`);
 console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
+console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
