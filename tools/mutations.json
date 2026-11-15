@@ -1,117 +1,117 @@
 {
- "change": "The Newton's Method Workshop: a tangent's road to a root",
+ "change": "The Chain Rule Workshop: why the slopes of two links multiply",
  "mutations": [
   {
-   "name": "the derivative forgets the power",
+   "name": "dy/dx adds the slopes",
    "file": "index.html",
-   "find": "fp(x){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*p*Math.pow(x,p-1):0),0); },",
-   "replace": "fp(x){ return this.curve().f.poly.reduce((t,[c,p])=>t+(p?c*Math.pow(x,p-1):0),0); },",
+   "find": "  dy(){ return this.fp()*this.gp(); },",
+   "replace": "  dy(){ return this.fp()+this.gp(); },",
    "run": "verify"
   },
   {
-   "name": "a step adds f/f′ instead of taking it away",
+   "name": "f′ is taken at x",
    "file": "index.html",
-   "find": "xs.push(x-this.f(x)/d);",
-   "replace": "xs.push(x+this.f(x)/d);",
+   "find": "  fp(){ return this.pair().Fd(this.u()); },",
+   "replace": "  fp(){ return this.pair().Fd(this.x()); },",
    "run": "verify"
   },
   {
-   "name": "a root counts from twice as far",
+   "name": "the slip is taken at u",
    "file": "index.html",
-   "find": "rootAt(x){ return this.curve().roots.find(([r])=>Math.abs(x-r)<5e-5); },",
-   "replace": "rootAt(x){ return this.curve().roots.find(([r])=>Math.abs(x-r)<1e-4); },",
+   "find": "  wrong(){ return this.pair().Fd(this.x())*this.gp(); },",
+   "replace": "  wrong(){ return this.pair().Fd(this.u())*this.gp(); },",
    "run": "verify"
   },
   {
-   "name": "= is written for a rounded number",
+   "name": "the nudge goes one way only",
    "file": "index.html",
-   "find": "eq(x, sure=true){ return sure && this.exact(x) ? '=' : '≈'; },",
-   "replace": "eq(x, sure=true){ return this.exact(x) ? '=' : '≈'; },",
+   "find": "nudge(){ return (this.yAt(this.x()+this.H)-this.yAt(this.x()-this.H))/(2*this.H); },",
+   "replace": "nudge(){ return (this.yAt(this.x()+this.H)-this.yAt(this.x()))/this.H; },",
    "run": "verify"
   },
   {
-   "name": "a negative f′ is not bracketed",
+   "name": "a negative slope is not bracketed",
    "file": "index.html",
-   "find": "par(x){ const t=this.num(x); return t.startsWith('−') ? '('+t+')' : t; },",
-   "replace": "par(x){ return this.num(x); },",
+   "find": "  par(x){ const t=this.num(x); return t.startsWith('−') ? '('+t+')' : t; },\n  rate(",
+   "replace": "  par(x){ return this.num(x); },\n  rate(",
    "run": "verify"
   },
   {
-   "name": "the loop names the last guess",
+   "name": "a slope of 1 reads 1 times as fast",
    "file": "index.html",
-   "find": "${s(lp[1])} ${this.eq(xs[lp[1]],ok[lp[1]])} ${this.num(xs[lp[1]])} is back where",
-   "replace": "${s(lp[1])} ${this.eq(X,ok[n])} ${this.num(X)} is back where",
+   "find": "${m===1 ? 'as fast as' : this.num(m)+' times as fast as'}",
+   "replace": "${this.num(m)+' times as fast as'}",
    "run": "verify"
   },
   {
-   "name": "the jump is told on the cubic too",
+   "name": "the lucky slip blames g′",
    "file": "index.html",
-   "find": "if(C.up && j){",
-   "replace": "if(j){",
+   "find": "    else if(gp===0)\n      out.push(`The slip gets it right here, but only because",
+   "replace": "    else if(gp!==0)\n      out.push(`The slip gets it right here, but only because",
    "run": "verify"
   },
   {
-   "name": "six steps is never the end",
+   "name": "the figure draws (3x + 1)²",
    "file": "index.html",
-   "find": "(n<this.NMAX ? ': take a step to go there.' : ', but six steps is as far as this goes.'));",
-   "replace": "': take a step to go there.');",
+   "find": "y:{poly:[[9,2],[-6,1],[1,0]]}",
+   "replace": "y:{poly:[[9,2],[6,1],[1,0]]}",
    "run": "verify"
   },
   {
-   "name": "a new curve puts x₀ back",
+   "name": "x stops at 1.5",
    "file": "index.html",
-   "find": "  open(){ UI.go('s-newton'); },\n  pick(i){ this.ci=i; this.touched=true;",
-   "replace": "  open(){ UI.go('s-newton'); },\n  pick(i){ this.ci=i; this.xh=2; this.touched=true;",
-   "run": "play:newton"
+   "find": "  XLO:-4, XHI:4, H:0.001,",
+   "replace": "  XLO:-4, XHI:3, H:0.001,",
+   "run": "play:chainrule"
   },
   {
-   "name": "x₀ stops at 2.5",
+   "name": "a new pair goes back to the chain rule",
    "file": "index.html",
-   "find": "XLO:-6, XHI:6, NMAX:6,",
-   "replace": "XLO:-6, XHI:5, NMAX:6,",
-   "run": "play:newton"
+   "find": "  pick(i){ this.pi=i; this.touched=true; this.render(); },\n  rule(s)",
+   "replace": "  pick(i){ this.pi=i; this.slip=false; this.touched=true; this.render(); },\n  rule(s)",
+   "run": "play:chainrule"
   },
   {
-   "name": "a flat tangent leaves the step button on",
+   "name": "the slip's line is not drawn",
    "file": "index.html",
-   "find": "document.getElementById('nwNHi').disabled=n>=this.NMAX || D===0;",
-   "replace": "document.getElementById('nwNHi').disabled=n>=this.NMAX;",
-   "run": "play:newton"
+   "find": "      also: this.slip ? {f:{poly:[[w,1],[y0-w*x,0]]}, col:FIG_COL.a} : undefined,",
+   "replace": "      also: undefined,",
+   "run": "play:chainrule"
   },
   {
-   "name": "the step count says 1 steps",
+   "name": "the caption says nothing of the slip",
    "file": "index.html",
-   "find": "`${n} step${n===1?'':'s'}`",
-   "replace": "`${n} steps`",
-   "run": "play:newton"
+   "find": "+\n        (this.slip ? (w===dy ? '; the slip\\'s blue line lies right along it.' : `; the slip's blue line, with slope ${this.num(w)}, cuts across it.`) : '.')},",
+   "replace": "+'.'},",
+   "run": "play:chainrule"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n",
-   "replace": "'ROOT HUNTER','every root run down','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }\n    }\n  }\n};\n",
-   "run": "play:newton"
+   "find": "'LINK BY LINK','every chain followed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'LINK BY LINK','every chain followed','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:chainrule"
   },
   {
-   "name": "the function buttons lose their names",
+   "name": "the rule buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Newton.pick(${i})\" aria-label=\"f(x) = ${c.name}\">",
-   "replace": "onclick=\"Newton.pick(${i})\">",
-   "run": "play:newton"
+   "find": "onclick=\"Chain.rule(${s})\" aria-label=\"${n}: ${f}\">",
+   "replace": "onclick=\"Chain.rule(${s})\">",
+   "run": "play:chainrule"
   },
   {
-   "name": "a root reached from a root counts",
+   "name": "the slip counts as caught even when right",
    "file": "index.html",
-   "find": "if(this.touched && n>0 && this.ci===2 && this.f(xs[0])!==0){",
-   "replace": "if(this.touched && n>0 && this.ci===2){",
-   "run": "play:newton"
+   "find": "ok:C=>C.slip && C.wrong() !== C.dy()},",
+   "replace": "ok:C=>C.slip},",
+   "run": "verify"
   },
   {
-   "name": "the flat caption is lost",
+   "name": "racing x counts falling fast too",
    "file": "index.html",
-   "find": ": D===0 ? 'The dashed tangent at the red point is flat: it runs alongside the axis and never meets it.'",
-   "replace": ": D===0 ? 'The dashed tangent at the red point is flat.'",
-   "run": "play:newton"
+   "find": "     ok:C=>C.dy()>50},",
+   "replace": "     ok:C=>Math.abs(C.dy())>50},",
+   "run": "verify"
   }
  ]
 }
