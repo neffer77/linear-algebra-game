@@ -1,334 +1,369 @@
 {
- "change": "Which dy/dx? See y = f(g(x)), pick which of four formulas is its slope",
+ "change": "Which dy/dx? in the product rule workshop: see y = f(x) · g(x), pick which of four formulas is its slope",
  "mutations": [
   {
-   "name": "the inside forgets its number",
+   "name": "x²'s slope is x",
    "file": "index.html",
-   "find": "  g(c,x){ return c.sq ? x*x+c.b : c.a*x+c.b; },",
-   "replace": "  g(c,x){ return c.sq ? x*x : c.a*x+c.b; },",
+   "find": "fp(c,x){ return c.f==='x2' ? 2*x :",
+   "replace": "fp(c,x){ return c.f==='x2' ? x :",
    "run": "verify"
   },
   {
-   "name": "the inner slope of x² is x",
+   "name": "x³'s slope keeps its power",
    "file": "index.html",
-   "find": "  gp(c,x){ return c.sq ? 2*x : c.a; },",
-   "replace": "  gp(c,x){ return c.sq ? x : c.a; },",
+   "find": "c.f==='x3' ? 3*x*x : c.f==='x' ? 1 : c.a; },",
+   "replace": "c.f==='x3' ? 3*x**3 : c.f==='x' ? 1 : c.a; },",
    "run": "verify"
   },
   {
-   "name": "the power's slope keeps its power",
+   "name": "cos x's slope has no minus",
    "file": "index.html",
-   "find": "Fp(c,u){ return c.fam==='pow' ? c.n*u**(c.n-1)",
-   "replace": "Fp(c,u){ return c.fam==='pow' ? c.n*u**c.n",
+   "find": "c.g==='cos' ? -Math.sin(x) : c.g==='exp' ? Math.exp(x) : c.p; },",
+   "replace": "c.g==='cos' ? Math.sin(x) : c.g==='exp' ? Math.exp(x) : c.p; },",
    "run": "verify"
   },
   {
-   "name": "cos u's slope has no minus",
+   "name": "the line g forgets its number",
    "file": "index.html",
-   "find": "c.fam==='cos' ? -Math.sin(u) : Math.exp(u); },",
-   "replace": "c.fam==='cos' ? Math.sin(u) : Math.exp(u); },",
+   "find": "c.g==='exp' ? Math.exp(x) : c.p*x+c.q; },",
+   "replace": "c.g==='exp' ? Math.exp(x) : c.p*x; },",
    "run": "verify"
   },
   {
-   "name": "the chain rule forgets the inner slope",
+   "name": "the product rule subtracts",
    "file": "index.html",
-   "find": "if(k==='right') return this.Fp(c,u)*gp;",
-   "replace": "if(k==='right') return this.Fp(c,u);",
+   "find": "if(k==='right') return fp*g+f*gp;",
+   "replace": "if(k==='right') return fp*g-f*gp;",
    "run": "verify"
   },
   {
-   "name": "the at-x slip is taken at u",
+   "name": "the minus slip adds",
    "file": "index.html",
-   "find": "if(k==='atx') return this.Fp(c,x)*gp;",
-   "replace": "if(k==='atx') return this.Fp(c,u)*gp*2;",
+   "find": "if(k==='minus') return fp*g-f*gp;",
+   "replace": "if(k==='minus') return fp*g+f*gp*2;",
    "run": "verify"
   },
   {
-   "name": "the inside slip multiplies again",
+   "name": "the both slip is f·g",
    "file": "index.html",
-   "find": "if(k==='inside') return this.Fp(c,gp);",
-   "replace": "if(k==='inside') return this.Fp(c,gp)*gp;",
+   "find": "if(k==='both') return fp*gp;",
+   "replace": "if(k==='both') return fp*g*gp;",
    "run": "verify"
   },
   {
-   "name": "eᵘ's power-rule slip keeps the power",
+   "name": "the one-strip slip keeps the other",
    "file": "index.html",
-   "find": "return u*Math.exp(u-1)*gp;",
-   "replace": "return u*Math.exp(u)*gp;",
+   "find": "if(k==='one') return fp*g;",
+   "replace": "if(k==='one') return f*gp*2;",
    "run": "verify"
   },
   {
-   "name": "a minus inside is written as plus",
+   "name": "a line's 1 is written",
    "file": "index.html",
-   "find": "return b===0 ? head : head+(b<0?' − ':' + ')+Math.abs(b);",
-   "replace": "return b===0 ? head : head+' + '+Math.abs(b);",
+   "find": "const h=(a===1?'':a===-1?'−':neg(a))+'x';",
+   "replace": "const h=(a===-1?'−':neg(a))+'x';",
    "run": "verify"
   },
   {
-   "name": "a 2 in front of x is dropped",
+   "name": "a line's minus becomes a plus",
    "file": "index.html",
-   "find": "(c.a===1?'':c.a===-1?'−':neg(c.a))+'x'",
-   "replace": "(Math.abs(c.a)<=2?'':neg(c.a))+'x'",
+   "find": "return b===0 ? h : h+(b<0?' − ':' + ')+Math.abs(b); },",
+   "replace": "return b===0 ? h : h+' + '+Math.abs(b); },",
    "run": "verify"
   },
   {
-   "name": "the power is dropped from 3u²",
+   "name": "a line f loses its brackets",
    "file": "index.html",
-   "find": "const p=c.fam==='pow' && c.n>2 ? sup(c.n-1) : '';",
-   "replace": "const p='';",
+   "find": "t:c.f==='x2'?'x²':c.f==='x3'?'x³':c.f==='x'?'x':'('+this.lin(c.a,c.b)+')'};",
+   "replace": "t:c.f==='x2'?'x²':c.f==='x3'?'x³':c.f==='x'?'x':this.lin(c.a,c.b)};",
    "run": "verify"
   },
   {
-   "name": "a negative number goes unbracketed",
+   "name": "cos x's slope is written without its minus",
    "file": "index.html",
-   "find": "if(kind==='num' && !A.startsWith('−')) return `${c.n} · ${A}${p}`;",
-   "replace": "if(kind==='num') return `${c.n} · ${A}${p}`;",
+   "find": "{s:c.g==='cos'?-1:1, t:c.g==='sin'?'cos x':c.g==='cos'?'sin x':'eˣ'}",
+   "replace": "{s:1, t:c.g==='sin'?'cos x':c.g==='cos'?'sin x':'eˣ'}",
    "run": "verify"
   },
   {
-   "name": "cos x is written without its x",
+   "name": "x³'s slope is written 3x",
    "file": "index.html",
-   "find": "const arg=kind==='x' ? ' x'",
-   "replace": "const arg=kind==='x' ? ''",
+   "find": "t:c.f==='x2'?'2x':c.f==='x3'?'3x²':'1'}",
+   "replace": "t:c.f==='x2'?'2x':c.f==='x3'?'3x':'1'}",
    "run": "verify"
   },
   {
-   "name": "eˣ is written e^(x) with the inside",
+   "name": "a number goes last",
    "file": "index.html",
-   "find": "return kind==='x' ? 'eˣ' : `e^(${A})`;",
-   "replace": "return `e^(${A})`;",
+   "find": "let [P,Q]=/^\\d+$/.test(B.t) && !/^\\d+$/.test(A.t) ? [B,A] : [A,B];",
+   "replace": "let [P,Q]=[A,B];",
    "run": "verify"
   },
   {
-   "name": "the inner slope is not bracketed when negative",
+   "name": "a 1 is written in a product",
    "file": "index.html",
-   "find": "  times(c){ const t=this.gpText(c); return ' · '+(t.startsWith('−')?'('+t+')':t); },",
-   "replace": "  times(c){ return ' · '+this.gpText(c); },",
+   "find": "    if(P.t==='1') return {s, t:Q.t};\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "y forgets its power",
+   "name": "a number and x get a dot between",
    "file": "index.html",
-   "find": "if(c.fam==='pow') return `(${G})${sup(c.n)}`;\n    if(c.fam==='exp') return `e^(${G})`;",
-   "replace": "if(c.fam==='pow') return `(${G})`;\n    if(c.fam==='exp') return `e^(${G})`;",
+   "find": "t:/^\\d+$/.test(P.t) && /^[x(]/.test(Q.t) ? P.t+Q.t : P.t+' · '+Q.t};",
+   "replace": "t:P.t+' · '+Q.t};",
    "run": "verify"
   },
   {
-   "name": "the chain rule is written without its inner slope",
+   "name": "a minus term is added",
    "file": "index.html",
-   "find": "if(k==='right') return this.fpText(c,G,'expr')+T;",
-   "replace": "if(k==='right') return this.fpText(c,G,'expr');",
+   "find": "(u.s<0?' − ':' + ')+u.t).join('');",
+   "replace": "' + '+(u.s<0?'−':'')+u.t).join('');",
    "run": "verify"
   },
   {
-   "name": "the inside slip is written as the chain rule",
+   "name": "a lone bracket is kept",
    "file": "index.html",
-   "find": "if(k==='inside') return this.fpText(c,this.gpText(c),c.sq?'expr':'num');",
-   "replace": "if(k==='inside') return this.fpText(c,G,'expr')+T;",
+   "find": "    if(ts.length===1 && ts[0].s>0 && /^\\([^()]*\\)$/.test(ts[0].t)) return ts[0].t.slice(1,-1);\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "the e power slip's power is not lowered",
+   "name": "the minus slip is written as the rule",
    "file": "index.html",
-   "find": "return `(${G})e^(${this.gText(c,-1)})`+T;",
-   "replace": "return `(${G})e^(${G})`+T;",
+   "find": "if(k==='minus') return this.sum([side,{s:-top.s,t:top.t}]);",
+   "replace": "if(k==='minus') return this.sum([side,top]);",
+   "run": "verify"
+  },
+  {
+   "name": "the both slip is written as f′g",
+   "file": "index.html",
+   "find": "if(k==='both') return this.sum([this.term(Fp,Gp)]);",
+   "replace": "if(k==='both') return this.sum([this.term(Fp,G)]);",
+   "run": "verify"
+  },
+  {
+   "name": "y is written f + g",
+   "file": "index.html",
+   "find": "yText(c){ return this.fac(c,'f').t+' · '+this.fac(c,'g').t; },",
+   "replace": "yText(c){ return this.fac(c,'f').t+' + '+this.fac(c,'g').t; },",
+   "run": "verify"
+  },
+  {
+   "name": "two lines may multiply",
+   "file": "index.html",
+   "find": "      if(c.f==='lin' && c.g==='lin') continue;\n",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "a power f keeps line numbers",
+   "file": "index.html",
+   "find": "      if(c.f!=='lin'){ c.a=0; c.b=0; }\n",
+   "replace": "",
    "run": "verify"
   },
   {
    "name": "a slip may look right at the point",
    "file": "index.html",
-   "find": "      if(this.SLIPS.some(k=>Math.abs(this.angle(c,this.value(c,k,c.x0))-ra)<10)) continue;\n",
+   "find": "if(Math.abs(this.angle(c,this.value(c,k,c.x0))-ra)>=10 && keep.every",
+   "replace": "if(keep.every",
+   "run": "verify"
+  },
+  {
+   "name": "two options may be the same slope",
+   "file": "index.html",
+   "find": "&& keep.every(w=>differ(sig(k),sig(w)))) keep.push(k);",
+   "replace": ") keep.push(k);",
+   "run": "verify"
+  },
+  {
+   "name": "a curve may offer two slips",
+   "file": "index.html",
+   "find": "      if(this.slips(c).length<3) continue;\n",
    "replace": "",
    "run": "verify"
   },
   {
    "name": "the right formula always comes first",
    "file": "index.html",
-   "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN",
-   "replace": "    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN",
+   "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "replace": "    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "run": "verify"
+  },
+  {
+   "name": "one slip is never offered",
+   "file": "index.html",
+   "find": "    const rest=this.slips(c);\n",
+   "replace": "    const rest=this.slips(c).filter(k=>k!=='other');\n",
    "run": "verify"
   },
   {
    "name": "the same curve may come twice",
    "file": "index.html",
-   "find": "for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    // every slip",
-   "replace": "c=this.build();\n    // every slip",
+   "find": "for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(c);",
+   "replace": "c=this.build();\n    const rest=this.slips(c);",
    "run": "verify"
   },
   {
    "name": "a miss counts as picked",
    "file": "index.html",
-   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Chain.render();",
-   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Chain.render();",
+   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Product.render();",
    "run": "verify"
   },
   {
    "name": "a missed formula can be tapped again",
    "file": "index.html",
-   "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN",
-   "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN",
+   "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
    "run": "verify"
   },
   {
    "name": "no banner at five",
    "file": "index.html",
-   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN READER'",
-   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('CHAIN READER'",
+   "find": "this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "replace": "this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "run": "verify"
+  },
+  {
+   "name": "a first try is not counted",
+   "file": "index.html",
+   "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
+   "replace": "      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PRODUCT",
    "run": "verify"
   },
   {
    "name": "a right pick keeps the old curve",
    "file": "index.html",
-   "find": "      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Chain.render();",
-   "replace": "      this.last={c:r.c};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Chain.render();",
+   "find": "      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "replace": "      this.last={c:r.c};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
    "run": "verify"
   },
   {
    "name": "the slope is rounded to whole numbers",
    "file": "index.html",
-   "find": "  num(v){ const r=Math.round(v*100)/100; return neg(Object.is(r,-0)?0:r); },",
-   "replace": "  num(v){ const r=Math.round(v); return neg(Object.is(r,-0)?0:r); },",
-   "run": "verify"
-  },
-  {
-   "name": "a rounded slope is not said to be about",
-   "file": "index.html",
-   "find": "  about(v){ return (Math.abs(v-Math.round(v*100)/100)<1e-9?'':'about ')+this.num(v); },",
-   "replace": "  about(v){ return this.num(v); },",
+   "find": "  about(v){ return (Math.abs(v-Math.round(v*100)/100)<1e-9?'':'about ')+this.num(v); },\n  sgn(u)",
+   "replace": "  about(v){ return (Math.abs(v-Math.round(v*100)/100)<1e-9?'':'about ')+neg(Math.round(v)); },\n  sgn(u)",
    "run": "verify"
   },
   {
    "name": "the nudge is one-sided",
    "file": "index.html",
-   "find": "n=(this.y(c,x+H)-this.y(c,x-H))/(2*H);",
-   "replace": "n=(this.y(c,x+H)-this.y(c,x))/H;",
+   "find": "the part from f changing.`;\n  },\n  // what the miss looks like at x₀: its red line against a nudge of the curve\n  check(c,k,L){\n    const x=c.x0, H=this.H, n=(this.y(c,x+H)-this.y(c,x-H))/(2*H);",
+   "replace": "the part from f changing.`;\n  },\n  // what the miss looks like at x₀: its red line against a nudge of the curve\n  check(c,k,L){\n    const x=c.x0, H=this.H, n=(this.y(c,x+H)-this.y(c,x))/H;",
    "run": "verify"
   },
   {
-   "name": "the work names f′ wrong",
+   "name": "the work names g′ wrong",
    "file": "index.html",
-   "find": "so f′(u) = ${this.fpUText(c)} and g′(x) = ${this.gpText(c)}: dy/dx",
-   "replace": "so f′(u) = ${this.fText(c)} and g′(x) = ${this.gpText(c)}: dy/dx",
+   "find": "so f′(x) = ${this.sgn(this.fac(c,'fp'))} and g′(x) = ${this.sgn(this.fac(c,'gp'))}",
+   "replace": "so f′(x) = ${this.sgn(this.fac(c,'fp'))} and g′(x) = ${this.fac(c,'gp').t}",
    "run": "verify"
   },
   {
-   "name": "the at-x slip names the inside wrong",
+   "name": "the both slip is told as the minus one",
    "file": "index.html",
-   "find": "it puts x where the inside, u = ${G}, belongs.",
-   "replace": "it puts x where the inside, u = ${this.gpText(c)}, belongs.",
+   "find": "    if(k==='both') return `${L} multiplies the two slopes",
+   "replace": "    if(k==='mnus') return `${L} multiplies the two slopes",
    "run": "verify"
   },
   {
-   "name": "sin and cos slips are swapped",
+   "name": "the one-strip slips are swapped",
    "file": "index.html",
-   "find": "if(c.fam==='sin') return `${L} puts a minus in front",
-   "replace": "if(c.fam==='cos') return `${L} puts a minus in front",
+   "find": "    if(k==='one') return `${L} keeps only f′g",
+   "replace": "    if(k==='other') return `${L} keeps only f′g",
    "run": "verify"
   },
   {
    "name": "the red line has the right slope",
    "file": "index.html",
-   "find": "const m=this.value(c,r.opts[i].k,c.x0), t=",
-   "replace": "const m=this.value(c,'right',c.x0), t=",
+   "find": "const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
+   "replace": "const m=this.value(c,'right',c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
    "run": "verify"
   },
   {
-   "name": "the red line misses the point",
+   "name": "the point and red lines sit on the axis",
    "file": "index.html",
-   "find": "y1=\"${Y(y0-m*t)}\" x2=\"${X(c.x0+t)}\" y2=\"${Y(y0+m*t)}\"",
-   "replace": "y1=\"${Y(y0-m*t+span/10)}\" x2=\"${X(c.x0+t)}\" y2=\"${Y(y0+m*t+span/10)}\"",
+   "find": "const r=this.round, y0=this.y(c,c.x0);\n    if(r && r.c===c) [...r.out].sort().forEach(i=>{\n      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
+   "replace": "const r=this.round, y0=0;\n    if(r && r.c===c) [...r.out].sort().forEach(i=>{\n      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
    "run": "verify"
   },
   {
-   "name": "the point sits on the axis",
+   "name": "the curve is drawn as f alone",
    "file": "index.html",
-   "find": "<circle data-k=\"point\" cx=\"${X(c.x0)}\" cy=\"${Y(y0)}\"",
-   "replace": "<circle data-k=\"point\" cx=\"${X(c.x0)}\" cy=\"${Y(0)}\"",
-   "run": "verify"
-  },
-  {
-   "name": "the curve is drawn upside down",
-   "file": "index.html",
-   "find": "Y=y=>(H-14-(y-lo)/(hi-lo)*(H-22)).toFixed(1);\n    const span=hi-lo",
-   "replace": "Y=y=>(8+(y-lo)/(hi-lo)*(H-22)).toFixed(1);\n    const span=hi-lo",
-   "run": "verify"
-  },
-  {
-   "name": "x₀ is not picked out",
-   "file": "index.html",
-   "find": "${x===c.x0?' font-weight=\"bold\"':''}",
-   "replace": "",
+   "find": "d+=(j?' L':'M')+X(x)+','+Y(this.y(c,x)); }\n    s+=`<path data-k=\"curve\" d=\"${d}\" fill=\"none\" stroke=\"#5aa9e6\" stroke-width=\"2.2\"/>`;\n    const r=this.round, y0=this.y(c,c.x0);\n    if(r && r.c===c) [...r.out].sort().forEach(i=>{\n      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
+   "replace": "d+=(j?' L':'M')+X(x)+','+Y(this.f(c,x)); }\n    s+=`<path data-k=\"curve\" d=\"${d}\" fill=\"none\" stroke=\"#5aa9e6\" stroke-width=\"2.2\"/>`;\n    const r=this.round, y0=this.y(c,c.x0);\n    if(r && r.c===c) [...r.out].sort().forEach(i=>{\n      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));\n      s+=`<g clip-path=\"url(#ppClip)\">",
    "run": "verify"
   },
   {
    "name": "the picture does not name the red lines",
    "file": "index.html",
-   "find": "${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}",
-   "replace": "",
+   "find": "<svg id=\"ppFig\" viewBox=\"0 0 300 180\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}",
+   "replace": "<svg id=\"ppFig\" viewBox=\"0 0 300 180\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}",
    "run": "verify"
   },
   {
    "name": "a missed formula is not shut",
    "file": "index.html",
-   "find": "${gone?'disabled ':''}onclick=\"ChainPick.choose",
-   "replace": "onclick=\"ChainPick.choose",
+   "find": "${gone?'disabled ':''}onclick=\"ProductPick.choose",
+   "replace": "onclick=\"ProductPick.choose",
    "run": "verify"
   },
   {
    "name": "the rule is not stated",
    "file": "index.html",
-   "find": "RULE:'The chain rule: if y = f(u) with u = g(x), then dy/dx = f′(u) × g′(x). Take the outer slope at the inside, u = g(x), then multiply by the inner slope. Which formula is dy/dx?'",
+   "find": "RULE:'The product rule: if y = f(x) · g(x), then dy/dx = f′g + fg′. Let each factor change in turn while the other holds still, and add the two parts. Which formula is dy/dx?'",
    "replace": "RULE:'Which formula is dy/dx?'",
    "run": "verify"
   },
   {
-   "name": "the two links stay shown",
+   "name": "the field stays shown",
    "file": "index.html",
-   "find": "for(const id of ['chPairs','chFig','chRules','chXs','chRead','chGoalPanel'])",
-   "replace": "for(const id of ['chPairs','chFig','chRules'])",
-   "run": "play:chainpick"
+   "find": "for(const id of ['pdSets','pdFig','pdHs','pdRead','pdGoalPanel'])",
+   "replace": "for(const id of ['pdSets','pdFig'])",
+   "run": "play:productpick"
   },
   {
    "name": "the mode buttons forget which dy/dx",
    "file": "index.html",
-   "find": ",['pick','🎯 Which dy/dx?','See y = f(g(x)) and pick which of four formulas is its slope']]",
+   "find": ",['pick','🎯 Which dy/dx?','See y = f(x) · g(x) and pick which of four formulas is its slope']]",
    "replace": "]",
-   "run": "play:chainpick"
+   "run": "play:productpick"
   },
   {
    "name": "the formulas run in one column",
    "file": "index.html",
-   "find": "<div id=\"cpPick\" style=\"display:grid;grid-template-columns:1fr 1fr",
-   "replace": "<div id=\"cpPick\" style=\"display:grid;grid-template-columns:1fr",
-   "run": "play:chainpick"
+   "find": "<div id=\"ppPick\" style=\"display:grid;grid-template-columns:1fr 1fr",
+   "replace": "<div id=\"ppPick\" style=\"display:grid;grid-template-columns:1fr",
+   "run": "play:productpick"
   },
   {
    "name": "no toast for a pick",
    "file": "index.html",
-   "find": "      else UI.toast(`✓ ${'ABCD'[i]} is dy/dx",
-   "replace": "      else (()=>{})(`✓ ${'ABCD'[i]} is dy/dx",
-   "run": "play:chainpick"
+   "find": "      else UI.toast(`✓ ${'ABCD'[i]} is dy/dx, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "replace": "      else (()=>{})();\n      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "run": "play:productpick"
   },
   {
    "name": "the Tome forgets which dy/dx",
    "file": "index.html",
-   "find": " Then turn it round: see y = f(g(x)), and pick which of four formulas is its slope.",
+   "find": " Then turn it round: see y = f(x) · g(x), and pick which of four formulas is its slope.",
    "replace": "",
-   "run": "play:chainpick"
+   "run": "play:productpick"
   },
   {
    "name": "a pick is saved",
    "file": "index.html",
-   "find": "      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Chain.render();",
-   "replace": "      this.last={c:r.c}; Game.s.cp=this.matched;\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Chain.render();",
-   "run": "play:chainpick"
+   "find": "      this.last={c:r.c};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "replace": "      this.last={c:r.c}; Game.s.pp=this.matched;\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Product.render();",
+   "run": "play:productpick"
   },
   {
    "name": "a mode button loses its name",
    "file": "index.html",
-   "find": "onclick=\"Chain.setMode('${m}')\" aria-label=\"${l}\"",
-   "replace": "onclick=\"Chain.setMode('${m}')\"",
-   "run": "play:chainpick"
+   "find": "onclick=\"Product.setMode('${m}')\" aria-label=\"${l}\"",
+   "replace": "onclick=\"Product.setMode('${m}')\"",
+   "run": "play:productpick"
   }
  ]
 }
