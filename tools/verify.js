@@ -51,6 +51,7 @@ function loadGame() {
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
     ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
+    ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
@@ -66,7 +67,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1882,6 +1883,102 @@ const composeNotes = (() => {
   return { n, goals: C.GOALS.length };
 })();
 
+/* Every state of the limit workshop: each formula, both sides and every h.
+   Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
+   not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
+   printed x), and every number in the working is checked against the ones
+   before it. The verdict is read for each pair of sides watched: a side's
+   trend is judged here from f at h = 0.1, 0.01 and 0.001, and the two sides
+   must agree for a limit to be named. Each goal must be findable, and none
+   met where the workshop opens. */
+const limitNotes = (() => {
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L = Limit, num = s => +String(s).replace(/[()]/g, '').replace(/−/g, '-');
+  const SERIES = x => 1 - x ** 2 / 6 + x ** 4 / 120 - x ** 6 / 5040 + x ** 8 / 362880 - x ** 10 / 39916800;
+  const ALT = { hole: x => x + 1, sinc: SERIES, sgn: x => (x > 0 ? 1 : -1), inv: x => 1 / x };
+  const NUM = '(\\(?−?[\\d.]+\\)?)';
+  let n = 0;
+  // where each side heads, judged from three values closing in
+  const trend = (F, side) => {
+    const v = [0.1, 0.01, 0.001].map(h => ALT[F.id](F.a + (side === 'L' ? -h : h)));
+    if (v.every(y => y === v[0])) return { stays: v[0] };
+    if (Math.abs(v[2]) > 900 && Math.abs(v[2] / v[1]) > 9) return { off: v[2] > 0 ? 'up' : 'down' };
+    const to = Math.round(v[2] * 100) / 100;
+    if (Math.abs(v[2] - to) < Math.abs(v[1] - to) && Math.abs(v[2] - to) < 0.01) return { to };
+    return null;
+  };
+  const says = (tr, txt) => tr && (tr.stays !== undefined ? txt === `stays at ${neg(tr.stays)}`
+    : tr.off ? txt === (tr.off === 'up' ? 'climbs without end' : 'falls without end') : txt === `heads for ${neg(tr.to)}`);
+  for (let fi = 0; fi < L.FNS.length; fi++) {
+    const F = L.FNS[fi];
+    const tl = trend(F, 'L'), tr = trend(F, 'R');
+    if (!tl || !tr) { fail('limit', F.id, 'a side heads nowhere this check can name'); continue; }
+    for (const side of ['L', 'R']) for (let hi = 0; hi < L.HS.length; hi++) {
+      L.fi = fi; L.side = side; L.hi = hi; L.near = {}; n++;
+      const key = `${F.id} ${side} h=${L.HS[hi]}`, h = L.HS[hi], x = +(F.a + (side === 'L' ? -h : h)).toFixed(9);
+      if (L.x() !== x) { fail('limit', key, `x is ${L.x()}, not ${x}`); continue; }
+      const W = L.working(), X = neg(x);
+      if (W[0] !== `f(x) = ${F.at}, with x closing in on ${neg(F.a)} from the ${side === 'L' ? 'left' : 'right'}: h = ${h}, so x = ${neg(F.a)} ${side === 'L' ? '−' : '+'} ${h} = ${X}.`)
+        fail('limit', key, `the first line reads: ${W[0]}`);
+      const want = ALT[F.id](x);
+      if (F.id === 'hole') {
+        const m = new RegExp(`^f\\(${X}\\) = \\(${NUM}² − 1\\)/\\(${X} − 1\\) = \\(${NUM} − 1\\)/${NUM} = ${NUM}/${NUM} = ${NUM}\\.$`).exec(W[1]);
+        if (!m) { fail('limit', key, `the working does not read: ${W[1]}`); continue; }
+        const [, xs, sq, b1, t, b2, v] = m.map(num);
+        if (xs !== x || Math.abs(sq - x * x) > 1e-12 || Math.abs(t - (sq - 1)) > 1e-12 || b1 !== b2 || Math.abs(b1 - (x - 1)) > 1e-12 || Math.abs(t / b1 - v) > 1e-9)
+          fail('limit', key, `a step of the working does not follow: ${W[1]}`);
+        if ([[m[3], b1], [m[4], t], [m[5], b2]].some(([raw, n]) => /\(/.test(raw) !== (n < 0))) fail('limit', key, `a negative is not bracketed: ${W[1]}`);
+        if (Math.abs(v - want) > 1e-9) fail('limit', key, `f is printed as ${v}, x + 1 is ${want}`);
+      } else if (F.id === 'sinc') {
+        const m = new RegExp(`^f\\(${X}\\) = sin\\(${X}\\)/${NUM} ≈ ${NUM}/${NUM} ≈ ${NUM}\\.$`).exec(W[1]);
+        if (!m) { fail('limit', key, `the working does not read: ${W[1]}`); continue; }
+        const [, d1, sv, d2, v] = m.map(num);
+        if (d1 !== x || d2 !== x) fail('limit', key, 'it divides by something other than x');
+        if (Math.abs(sv - Math.sin(x)) > Math.abs(Math.sin(x)) * 1e-7) fail('limit', key, `sin is printed as ${sv}`);
+        if (/\(/.test(m[2]) !== (sv < 0) || /\(/.test(m[3]) !== (x < 0)) fail('limit', key, 'a negative is not bracketed');
+        if (Math.abs(v - want) > 1e-7) fail('limit', key, `f is printed as ${v}, the series gives ${want}`);
+      } else if (F.id === 'sgn') {
+        if (W[1] !== `f(${X}) = |${X}|/${x < 0 ? `(${X})` : X} = ${neg(Math.abs(x))}/${x < 0 ? `(${X})` : X} = ${neg(want)}.`) fail('limit', key, `the working reads: ${W[1]}`);
+      } else {
+        const m = new RegExp(`^f\\(${X}\\) = 1/${NUM} = ${NUM}\\.$`).exec(W[1]);
+        if (!m || num(m[1]) !== x || Math.abs(num(m[2]) * x - 1) > 1e-9) fail('limit', key, `the working reads: ${W[1]}`);
+      }
+      if (!W[2].includes(F.id === 'inv' ? 'it is 1/0, which is no number at all' : 'gives 0/0, which is no number at all'))
+        fail('limit', key, 'it does not say why x = a itself has no value');
+      // the verdict, for each pair of sides watched up close
+      for (const seen of [[], ['L'], ['R'], ['L', 'R']]) {
+        L.near = seen.length ? { [F.id]: new Set(seen) } : {};
+        const v = L.working()[3];
+        if (!seen.length) { if (!/^Bring h down to 0\.001/.test(v)) fail('limit', key, 'nothing watched, yet a verdict is given'); continue; }
+        if (seen.length === 1) {
+          const s1 = seen[0], m = /^From the (left|right), f\(x\) (.+)\. A limit needs both sides to agree, so close in from the (left|right) too\.$/.exec(v);
+          if (!m || m[1] !== (s1 === 'L' ? 'left' : 'right') || m[3] === m[1]) { fail('limit', key, `one side's verdict reads: ${v}`); continue; }
+          if (!says(s1 === 'L' ? tl : tr, m[2])) fail('limit', key, `it says f(x) ${m[2]} from the ${m[1]}, which is not where it heads`);
+          continue;
+        }
+        const agree = tl.to !== undefined && tr.to !== undefined && tl.to === tr.to;
+        if (agree !== /so the limit as x → \S+ is /.test(v)) fail('limit', key, `the verdict on both sides is wrong: ${v}`);
+        if (agree && !v.includes(`closes in on ${neg(tl.to)}, so the limit as x → ${neg(F.a)} is ${neg(tl.to)}`)) fail('limit', key, `the limit is misnamed: ${v}`);
+        if (!agree && !/does not exist|there is no limit/.test(v)) fail('limit', key, 'two sides that disagree are not said to give no limit');
+      }
+      L.near = {};
+    }
+  }
+  // every goal, found by watching every side of every formula up close
+  const found = {};
+  L.near = {};
+  for (let fi = 0; fi < L.FNS.length; fi++) for (const side of ['L', 'R']) for (let hi = 0; hi < L.HS.length; hi++) {
+    L.fi = fi; L.side = side; L.hi = hi;
+    if (hi === L.HS.length - 1) (L.near[L.fn().id] = L.near[L.fn().id] || new Set()).add(side);
+    for (const g of L.GOALS) if (g.ok(L)) found[g.id] = true;
+  }
+  for (const g of L.GOALS) if (!found[g.id]) fail('limit', g.id, 'this goal cannot be found');
+  L.fi = 0; L.side = 'R'; L.hi = 0; L.near = {};
+  if (L.GOALS.some(g => g.ok(L))) fail('limit', 'start', 'a goal is already met where the workshop opens');
+  if (L.touched !== false) fail('limit', 'start', 'the workshop opens as if already turned');
+  return { n, goals: L.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1930,6 +2027,7 @@ console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10
 console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
 console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
 console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
+console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

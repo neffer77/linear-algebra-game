@@ -1,17 +1,20 @@
 {
- "change": "Order Matters: two moves of the plane, one after the other",
+ "change": "The Limit Workshop: closing in on a point from the left and the right",
  "mutations": [
-  {"name": "the pair is multiplied the other way round", "file": "index.html", "find": "  P(){ return this.mul(this.second().m, this.first().m); },", "replace": "  P(){ return this.mul(this.first().m, this.second().m); },", "run": "verify"},
-  {"name": "a product reads row by row", "file": "index.html", "find": "mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],", "replace": "mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*f, a*g+b*h],[c*e+d*f, c*g+d*h]],", "run": "verify"},
-  {"name": "the shear leans the other way", "file": "index.html", "find": "m:[[1,1],[0,1]],", "replace": "m:[[1,0],[1,1]],", "run": "verify"},
-  {"name": "ĵ is followed through the second move with î's column", "file": "index.html", "find": "      out.push(`${nm} goes to ${v(mid)} under the first move, then to ${v(this.app(S.m,mid))} under the second.`);", "replace": "      out.push(`${nm} goes to ${v(mid)} under the first move, then to ${v(this.app(S.m,this.col(F.m,0)))} under the second.`);", "run": "verify"},
-  {"name": "the determinants add", "file": "index.html", "find": "and its determinant is ${par(dF)} × ${par(dS)} = ${neg(D)}", "replace": "and its determinant is ${par(dF)} × ${par(dS)} = ${neg(dF+dS)}", "run": "verify"},
-  {"name": "negative factors go unbracketed", "file": "index.html", "find": "its determinant is ${par(dF)} × ${par(dS)}", "replace": "its determinant is ${neg(dF)} × ${neg(dS)}", "run": "verify"},
-  {"name": "the other order is said to match whenever det does", "file": "index.html", "find": "  same(){ return this.eq(this.P(), this.Q()); },", "replace": "  same(){ return this.det(this.P())===this.det(this.Q()); },", "run": "verify"},
-  {"name": "a half-turn is not named", "file": "index.html", "find": "    else if(this.eq(P,[[-1,0],[0,-1]])) out.push('Every arrow now points the opposite way: together they make a half-turn.');\n", "replace": "", "run": "verify"},
-  {"name": "Order Matters missing from the Tome", "file": "index.html", "find": "id=\"tomeCompose\"", "replace": "id=\"tomeComposeGone\"", "run": "play:compose"},
-  {"name": "Order Matters is not drawn when opened", "file": "index.html", "find": "    if(id==='s-compose') Compose.render();\n", "replace": "", "run": "play:compose"},
-  {"name": "goals are counted before anything is pressed", "file": "index.html", "find": "    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('cmGoals')", "replace": "    for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    document.getElementById('cmGoals')", "run": "play:compose"},
-  {"name": "the other order is not drawn", "file": "index.html", "find": "ghost:same?null:this.Q(), ticks:true,", "replace": "ghost:null, ticks:true,", "run": "play:compose"}
+ {"name": "the hole's working squares the wrong number", "file": "index.html", "find": "      const sq=+(x*x).toFixed(9), top=+(sq-1).toFixed(9), bot=+(x-1).toFixed(9);", "replace": "      const sq=+(x*2).toFixed(9), top=+(sq-1).toFixed(9), bot=+(x-1).toFixed(9);", "run": "verify"},
+ {"name": "a negative bottom is not bracketed", "file": "index.html", "find": "= (${this.n(sq)} − 1)/${this.b(bot)} =", "replace": "= (${this.n(sq)} − 1)/${this.n(bot)} =", "run": "verify"},
+ {"name": "x steps the wrong way from the left", "file": "index.html", "find": "x(){ const v=this.fn().a+(this.side==='L'?-1:1)*this.h(); return +v.toFixed(9); },", "replace": "x(){ const v=this.fn().a+this.h(); return +v.toFixed(9); },", "run": "verify"},
+ {"name": "sin x / x is worked as sin x times x", "file": "index.html", "find": "    if(id==='sinc') return Math.sin(x)/x;", "replace": "    if(id==='sinc') return Math.sin(x)*x;", "run": "verify"},
+ {"name": "the sign of sin is not bracketed", "file": "index.html", "find": "≈ ${sv<0?`(${this.sig(sv)})`:this.sig(sv)}/", "replace": "≈ ${this.sig(sv)}/", "run": "verify"},
+ {"name": "|x| / x says it stays at 1 from the left", "file": "index.html", "find": "     side:{L:'stays at −1', R:'stays at 1'},", "replace": "     side:{L:'stays at 1', R:'stays at 1'},", "run": "verify"},
+ {"name": "the side to try next is the same side", "file": "index.html", "find": "const s=L?'L':'R', other=L?'right':'left';", "replace": "const s=L?'L':'R', other=L?'left':'right';", "run": "verify"},
+ {"name": "1/x is said to have a limit", "file": "index.html", "find": "     both:'From the right it climbs without end and from the left it falls without end, so there is no limit: the graph runs up and down the line x = 0.',", "replace": "     both:'From both sides f(x) closes in on 0, so the limit as x → 0 is 0.',", "run": "verify"},
+ {"name": "one side watched counts as both", "file": "index.html", "find": "    if(L && R) out.push(F.both);", "replace": "    if(L || R) out.push(F.both);", "run": "verify"},
+ {"name": "the limit workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeLimit\" style=\"width:auto;margin-top:8px\" onclick=\"Limit.open()\">Open the limit workshop</button>", "replace": "", "run": "play:limit"},
+ {"name": "the limit workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-limit') Limit.render();\n", "replace": "", "run": "play:limit"},
+ {"name": "a side watched up close is not remembered", "file": "index.html", "find": "    if(this.touched && this.closest()) (this.near[F.id]=this.near[F.id]||new Set()).add(this.side);\n", "replace": "", "run": "play:limit"},
+ {"name": "h runs past its smallest", "file": "index.html", "find": "    document.getElementById('lmHLo').disabled=this.hi===this.HS.length-1;", "replace": "    document.getElementById('lmHLo').disabled=false;", "run": "play:limit"},
+ {"name": "the hole is not drawn", "file": "index.html", "find": "Figure.render({kind:'curve', f:F.f, lo:F.lo, hi:F.hi, ylim:F.ylim, holes:F.holes,", "replace": "Figure.render({kind:'curve', f:F.f, lo:F.lo, hi:F.hi, ylim:F.ylim,", "run": "play:limit"},
+ {"name": "1/x runs off the picture", "file": "index.html", "find": "{id:'inv', at:'1/x', a:0, f:{fn:'inv'}, lo:-2, hi:2, ylim:[-12,12], holes:[],", "replace": "{id:'inv', at:'1/x', a:0, f:{fn:'inv'}, lo:-2, hi:2, holes:[],", "run": "play:limit"}
  ]
 }
