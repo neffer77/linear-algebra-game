@@ -1,131 +1,124 @@
 {
- "change": "The Cistern Workshop: what an integral adds up",
+ "change": "The L'Hôpital Workshop: ratios that give 0/0",
  "mutations": [
   {
-   "name": "the fading spring's total forgets the halving",
+   "name": "the cube's top slope forgets the power",
    "file": "index.html",
-   "find": "fform:'6 − 2t', Fform:'6t − t²', fp:[[-2,1],[6,0]], Fp:[[-1,2],[6,1]],",
-   "replace": "fform:'6 − 2t', Fform:'6t − t²', fp:[[-2,1],[6,0]], Fp:[[-2,2],[6,1]],",
+   "find": "fpaw:'3 × 2² = 12', gpaw:'2 × 2 = 4', fpa:12, gpa:4,",
+   "replace": "fpaw:'3 × 2² = 12', gpaw:'2 × 2 = 4', fpa:6, gpa:4,",
    "run": "verify"
   },
   {
-   "name": "the sluice's total is the flow's derivative",
+   "name": "the square's bottom is x + 1",
    "file": "index.html",
-   "find": "Fp:[[1,3],[-6,2],[9,1]]",
-   "replace": "Fp:[[6,1],[-12,0]]",
+   "find": "f:{poly:[[1,2],[-1,0]]}, g:{poly:[[1,1],[-1,0]]}, ylim:[-2,5.5]",
+   "replace": "f:{poly:[[1,2],[-1,0]]}, g:{poly:[[1,1],[1,0]]}, ylim:[-2,5.5]",
    "run": "verify"
   },
   {
-   "name": "the steady total starts at 4",
+   "name": "the plus two ratio takes the rule's answer",
    "file": "index.html",
-   "find": "fform:'4', Fform:'4t', fp:[[4,0]], Fp:[[4,1]],",
-   "replace": "fform:'4', Fform:'4t', fp:[[4,0]], Fp:[[4,1],[4,0]],",
+   "find": "return this.zero() ? S.fpa/S.gpa : this.top(S.a)/this.bot(S.a);",
+   "replace": "return S.fpa/S.gpa;",
    "run": "verify"
   },
   {
-   "name": "the strip is taken at the next tenth",
+   "name": "x steps away from the point",
    "file": "index.html",
-   "find": "strip=f*0.1, same=",
-   "replace": "strip=this.f(t+0.1)*0.1, same=",
+   "find": "  x(){ return this.set().a+this.h(); },",
+   "replace": "  x(){ return this.set().a+Math.abs(this.h()); },",
    "run": "verify"
   },
   {
-   "name": "a turn upward reads as the most",
+   "name": "h can land on 0",
    "file": "index.html",
-   "find": "else if(this.f(t-0.25)>0) out.push(",
-   "replace": "else if(this.f(t-0.25)!==0) out.push(",
+   "find": "H:[-1,-0.5,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.5,1],",
+   "replace": "H:[-1,-0.5,-0.1,-0.01,0,0.001,0.01,0.1,0.5,1],",
    "run": "verify"
   },
   {
-   "name": "the cancelled area is the total now",
+   "name": "the gap is not rounded",
    "file": "index.html",
-   "find": "for(let k=0;k<=this.th;k++) top=Math.max(top,this.F(k/2));",
-   "replace": "top=F;",
+   "find": "gap(){ return Math.round(Math.abs(this.ratio()-this.lim())*1e4)/1e4; },",
+   "replace": "gap(){ return Math.abs(this.ratio()-this.lim()); },",
    "run": "verify"
   },
   {
-   "name": "fullest counts on any spring",
+   "name": "an exact top reads as about",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.th===6},",
-   "replace": "ok:K=>K.th===6},",
+   "find": "const is=(v,d)=>(this.exact(v,d)?'= ':'≈ ')+this.num(v,d);",
+   "replace": "const is=(v,d)=>'≈ '+this.num(v,d);",
    "run": "verify"
   },
   {
-   "name": "draining counts when empty",
+   "name": "from the right counts from either side",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.f()<0 && K.F()>0},",
-   "replace": "ok:K=>K.si===0 && K.f()<0},",
+   "find": "ok:K=>K.si===0 && K.h()>0 && K.gap()<=0.01},",
+   "replace": "ok:K=>K.si===0 && K.gap()<=0.01},",
    "run": "verify"
   },
   {
-   "name": "empty counts at the start",
+   "name": "the trap counts at any h",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.th>0 && K.F()===0},",
-   "replace": "ok:K=>K.si===0 && K.F()===0},",
+   "find": "ok:K=>K.si===3 && Math.abs(K.h())<=0.01}",
+   "replace": "ok:K=>K.si===3}",
    "run": "verify"
   },
   {
-   "name": "the sluice's low counts at its high",
+   "name": "far out reads as close",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.th===6}",
-   "replace": "ok:K=>K.si===2 && K.th===2}",
+   "find": "} else if(G<=0.01){",
+   "replace": "} else if(G<=0.5){",
    "run": "verify"
   },
   {
-   "name": "the shading stops at the start",
+   "name": "the bottom's point is not drawn",
    "file": "index.html",
-   "find": "shade:{f:{poly:S.fp}, a:0, b:t},",
-   "replace": "shade:{f:{poly:S.fp}, a:0, b:S.start/2},",
-   "run": "play:cistern"
+   "find": "pts:[[x,this.top(),FIG_COL.d],[x,this.bot(),FIG_COL.a]],",
+   "replace": "pts:[[x,this.top(),FIG_COL.d]],",
+   "run": "play:hopital"
   },
   {
-   "name": "the flow's point is not drawn",
+   "name": "a new ratio keeps the old h",
    "file": "index.html",
-   "find": "ylim:S.ylim, tangent:t, pts:[[t,this.F(),FIG_COL.d],[t,f,FIG_COL.a]],",
-   "replace": "ylim:S.ylim, tangent:t, pts:[[t,this.F(),FIG_COL.d]],",
-   "run": "play:cistern"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true;",
+   "replace": "pick(i){ this.si=i; this.touched=true;",
+   "run": "play:hopital"
   },
   {
-   "name": "a new spring keeps the old hour",
+   "name": "the caption forgets where both cross 0",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.th=this.SETS[i].start; this.touched=true;",
-   "replace": "pick(i){ this.si=i; this.th=Math.min(this.th,this.SETS[i].hi); this.touched=true;",
-   "run": "play:cistern"
-  },
-  {
-   "name": "the caption leaves out the slope",
-   "file": "index.html",
-   "find": "has slope ${this.num(f)}, the height of the blue curve there.`},",
-   "replace": "has the slope of the blue curve.`},",
-   "run": "play:cistern"
+   "find": "${this.zero() ? `Both cross 0 at x = ${S.a}.` : `Neither is 0 at x = ${S.a}.`}",
+   "replace": "",
+   "run": "play:hopital"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:cistern"
+   "find": "'MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:hopital"
   },
   {
-   "name": "the sluice runs to hour 4.5",
+   "name": "the stepper runs past its end",
    "file": "index.html",
-   "find": "{id:'tide', btn:'Tidal sluice', lo:0, hi:8,",
-   "replace": "{id:'tide', btn:'Tidal sluice', lo:0, hi:9,",
-   "run": "play:cistern"
+   "find": "document.getElementById('hpHHi').disabled=this.k>=this.H.length-1;",
+   "replace": "document.getElementById('hpHHi').disabled=false;",
+   "run": "play:hopital"
   },
   {
-   "name": "the spring buttons lose their names",
+   "name": "the ratio buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Cistern.pick(${i})\" aria-label=\"${s.btn}: f(t) = ${s.fform}\">",
-   "replace": "onclick=\"Cistern.pick(${i})\">",
-   "run": "play:cistern"
+   "find": "onclick=\"Hopital.pick(${i})\" aria-label=\"${s.btn}: ${s.q}\">",
+   "replace": "onclick=\"Hopital.pick(${i})\">",
+   "run": "play:hopital"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeCistern\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeCisternX\"",
-   "run": "play:cistern"
+   "find": "<button class=\"btn sm\" id=\"tomeHopital\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeHopitalX\"",
+   "run": "play:hopital"
   }
  ]
 }
