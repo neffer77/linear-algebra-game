@@ -76,6 +76,7 @@ function loadGame() {
     ';const Hill={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Round bowl'"), script.indexOf("  open(){ UI.go('s-hill'); },")) + '};exports.Hill=Hill;' +
     ';const Cofactor={' + script.slice(script.indexOf("  SETS:[\n    {id:'gap', btn:'Two zeros'"), script.indexOf("  open(){ UI.go('s-cof'); },")) + '};exports.Cofactor=Cofactor;' +
     ';const Cover={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'Two factors'"), script.indexOf("  open(){ UI.go('s-cover'); },")) + '};exports.Cover=Cover;' +
+    ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -94,7 +95,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2689,6 +2690,91 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The slice workshop: every function, both ways of slicing, every slice.
+   Each slice's area is integrated afresh by Simpson's rule straight from
+   f(x, y), never from the workshop's own formula; the swept total is
+   integrated again from those areas, and both orders must land on the same
+   double integral. The slice and S(t) as written are evaluated as formulas
+   and must agree with f and with the areas. Every sentence's condition is
+   worked out independently, the drawing is read back, and every goal is
+   found by a real history of presses. */
+const sliceNotes = (() => {
+  const W = Slice;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const simpson = (g, a, b, n = 200) => { if (a === b) return 0; const h = (b - a) / n; let s = g(a) + g(b); for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * g(a + i * h); return s * h / 3; };
+  // a formula as written, such as 1.5y, x², 2y + 2 or 9, read as code
+  const evalF = (str, vars) => Function(...Object.keys(vars), 'return ' + str.replace(/−/g, '-').replace(/²/g, '**2').replace(/(\d)([xy])/g, '$1*$2'))(...Object.values(vars));
+  if (W.SETS.map(S => S.id).join() !== 'xy,sq,sum') fail('slice', 'sets', W.SETS.map(S => S.id).join());
+  const reset = () => { W.touched = false; W.k = W.START; W.hold = 'x'; W.swept.forEach(z => z.clear()); W.seen = new Set([W.START]); };
+  reset(); W.si = 0;
+  for (const g of W.GOALS) if (g.ok(W)) fail('slice', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => ['x', 'y'].forEach(h => { reset(); W.si = si; W.hold = h; for (const g of W.GOALS) if (g.ok(W)) fail('slice', g.id, `met where ${S.id} starts holding ${h}, so picking it gives the goal away`); }));
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const totals = {};
+    for (const h of ['x', 'y']) {
+      const v = h === 'x' ? 'y' : 'x', L = h === 'x' ? S.a : S.b, M = h === 'x' ? S.b : S.a;
+      const area = t => simpson(u => (h === 'x' ? S.f(t, u) : S.f(u, t)), 0, M);
+      totals[h] = simpson(area, 0, L, 60);
+      reset(); W.si = si; W.hold = h;
+      if (W.steps() !== 2 * L) fail('slice', `${S.id} ${h}`, 'the slice should step by halves across the whole side');
+      const flat = Math.abs(area(0) - area(L)) < 1e-9 && Math.abs(area(L / 2) - area(0)) < 1e-9;
+      for (let k = 0; k <= 2 * L; k++) {
+        for (const hist of [[], [h], [h === 'x' ? 'y' : 'x'], ['x', 'y']]) {
+          for (const seen of [[k], [k, (k + 1) % (2 * L + 1)]]) {
+            reset(); W.si = si; W.hold = h; W.k = k; W.touched = true; hist.forEach(z => W.swept[si].add(z)); W.seen = new Set(seen); n++;
+            const t = k / 2, key = `${S.id} hold ${h} = ${t} swept ${hist.join('') || 'none'} seen ${seen.length}`;
+            const A = area(t);
+            if (Math.abs(W.area() - A) > 1e-6) fail('slice', key, `the slice area reads ${W.area()}, but integrating f gives ${A}`);
+            const sw = simpson(area, 0, t, 60);
+            if (Math.abs(W.o().W(t) - sw) > 1e-6) fail('slice', key, `the swept total reads ${W.o().W(t)}, but adding the slices gives ${sw}`);
+            // the slice and S as written
+            for (const u of [0, 0.7, 1.3, M]) { const got = evalF(W.o().slice(t), { [v]: u }), want = h === 'x' ? S.f(t, u) : S.f(u, t);
+              if (Math.abs(got - want) > 1e-9) fail('slice', key, `the slice ${W.o().slice(t)} at ${v} = ${u} is ${got}, but f is ${want}`); }
+            if (Math.abs(evalF(W.o().Ss, { [h]: t }) - A) > 1e-6) fail('slice', key, `S(${h}) = ${W.o().Ss} does not give the slice area ${A}`);
+            const got = W.working(), T = neg(t), txt = got.join('\n');
+            const sl = W.o().slice(t), slP = / \+ /.test(sl) ? `(${sl})` : sl;
+            if (got[1] !== `Hold ${h} = ${T}: the slice is ${h === 'x' ? `f(${T}, y)` : `f(x, ${T})`} = ${sl} for ${v} from 0 to ${M}, and its area is ∫ ${slP} d${v} from ${v} = 0 to ${M}, which is ${neg(Math.round(A * 1e4) / 1e4)}.`) fail('slice', key, got[1]);
+            if (/no area: f is 0/.test(txt) !== (Math.abs(A) < 1e-9)) fail('slice', key, 'the no-area sentence is wrong');
+            if (/Every slice has the same area/.test(txt) !== flat) fail('slice', key, 'the same-area sentence is wrong');
+            if (/is the average slice/.test(txt) !== (!flat && Math.abs(A - totals[h] / L) < 1e-6)) fail('slice', key, 'the average-slice sentence is wrong');
+            if (/Nothing is swept yet/.test(txt) !== (t === 0)) fail('slice', key, 'the nothing-swept sentence is wrong');
+            if (t > 0 && !txt.includes(`= ${neg(Math.round(sw * 1e4) / 1e4)}.`)) fail('slice', key, 'the swept total is not written');
+            if (/That is every slice/.test(txt) !== (t === L)) fail('slice', key, 'the every-slice sentence is wrong');
+            if (/Slicing the other way gave the same/.test(txt) !== (t === L && hist.length === 2)) fail('slice', key, 'the other-way sentence is wrong');
+            const svg = W.svg();
+            if ((svg.match(/data-k="cell"/g) || []).length !== 4 * S.a * S.b) fail('slice', key, 'the rectangle is not drawn in half-unit cells');
+            if (/data-k="swept"/.test(svg) !== (t > 0) || /data-k="under"/.test(svg) !== (t > 0)) fail('slice', key, 'the swept part is shaded at the wrong time');
+            const ln = svg.match(/data-k="slice" x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)"/);
+            if (!ln || (h === 'x' ? !(+ln[1] === +ln[3] && Math.abs(+ln[1] - (20 + 45 * t)) < 1e-6) : !(+ln[2] === +ln[4] && Math.abs(+ln[2] - (185 - 45 * t)) < 1e-6))) fail('slice', key, 'the slice line is not where the slice is');
+            const meant = { zero: si === 0 && Math.abs(A) < 1e-9, all: si === 0 && hist.length >= 1, swap: si === 0 && hist.length === 2,
+              flat: si === 1 && h === 'y' && seen.length >= 2, mid: si === 2 && Math.abs(A - totals[h] / L) < 1e-6 };
+            for (const gl of W.GOALS) {
+              if (!!gl.ok(W) !== meant[gl.id]) fail('slice', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`);
+              if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+            }
+          }
+        }
+      }
+      // sweeping to the far edge is what records it, and only then
+      reset(); W.si = si; W.hold = h;
+      const stub = W.render; W.render = () => {};
+      for (let k = W.k; k < W.steps() - 1; k++) W.moveT(1);
+      if (W.swept[si].has(h)) fail('slice', `${S.id} ${h}`, 'swept is recorded before the far edge');
+      W.moveT(1);
+      if (!W.swept[si].has(h)) fail('slice', `${S.id} ${h}`, 'reaching the far edge is not recorded');
+      W.moveT(1); if (W.k !== W.steps()) fail('slice', `${S.id} ${h}`, 'the slice steps past the far edge');
+      W.render = stub;
+    }
+    if (Math.abs(totals.x - totals.y) > 1e-6) fail('slice', S.id, `the two orders give ${totals.x} and ${totals.y}`);
+    const cap = W.SETS[si].O; if (Math.abs(cap.x.W(S.a) - totals.x) > 1e-6) fail('slice', S.id, 'the double integral is wrong');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('slice', g.id, 'this goal cannot be found');
+  reset(); W.si = 0; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The cover-up workshop: every fraction, every x, every set of kept
    equations. The split must really equal f: the cleared identity is checked
    at every x on the stepper and at many in between, the pieces must add back
@@ -4499,6 +4585,7 @@ console.log(`  λ stepped               ${pad(detectNotes.n.toLocaleString(), 10
 console.log(`  headings faced          ${pad(hillNotes.n.toLocaleString(), 10)}  (∇f against numerical partials, each slope ∇f · û against a central difference, steepest, level and steepest down exactly along, across and against ∇f, every contour drawn on its level, ${hillNotes.goals} goals findable)`);
 console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  (det A by the rule of Sarrus against every row and column, each minor struck out afresh, each sign from the checkerboard, the grid read back, two lines tried agreeing, ${cofNotes.goals} goals findable)`);
 console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}  (the cleared identity at every x, the pieces adding back to f, the antiderivative differentiated back, every choice of kept equations, the drawing read back, ${coverNotes.goals} goals findable)`);
+console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
