@@ -990,6 +990,28 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TAYLOR WORKSHOP ============ -->
+  <div class="screen" id="s-taylor">
+    <div class="panel"><h2>🌀 Taylor Workshop</h2><div class="sub">eˣ, sin x and cos x can each be built from powers of x, one term at a time. Add terms, move x, and watch the polynomial close in on the curve, fast near 0 and slower far from it.</div></div>
+    <div class="panel">
+      <div id="tyCurves" class="wsModes" role="group" aria-label="Function"></div>
+      <div id="tyFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+        <div class="wsCell"><button id="tyNLo" onclick="Taylor.moveN(-1)" aria-label="Lower the highest power of x">−</button>
+          <b id="tyN" style="font-size:17px;min-width:0"></b>
+          <button id="tyNHi" onclick="Taylor.moveN(1)" aria-label="Raise the highest power of x">+</button></div>
+        <div class="wsCell"><button id="tyXLo" onclick="Taylor.moveX(-1)" aria-label="Move x left">−</button>
+          <b id="tyX" style="font-size:17px;min-width:0"></b>
+          <button id="tyXHi" onclick="Taylor.moveX(1)" aria-label="Move x right">+</button></div>
+      </div>
+      <div id="tyRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tyGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -5943,6 +5965,19 @@ const Figure = {
     }
     g.stroke();
 
+    // a second curve on the same axes, such as a polynomial standing in for
+    // the first; the axes are the first curve's, so it may leave the frame
+    if(s.also){
+      g.strokeStyle=s.also.col||FIG_COL.a; g.lineWidth=2;
+      g.beginPath();
+      let on=false;
+      for(let i=0;i<=N;i++){
+        const x=x0+(x1-x0)*i/N, y=Math.max(-1e4, Math.min(1e4, Y(figEval(s.also.f, x))));
+        if(!isFinite(y)){ on=false; continue; }
+        if(on) g.lineTo(X(x),y); else { g.moveTo(X(x),y); on=true; }
+      }
+      g.stroke();
+    }
     // tangent line at a point
     if(s.tangent!==undefined){
       const a=s.tangent, h=1e-4;
@@ -12170,6 +12205,7 @@ const UI = {
     if(id==='s-workshop') Workshop.render();
     if(id==='s-slope') Slope.render();
     if(id==='s-area') Area.render();
+    if(id==='s-taylor') Taylor.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     Calc.syncButton();
@@ -12801,6 +12837,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral.</div>
          <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve.</div>
+         <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">${p.b}</div></div>`).join('');
@@ -14053,6 +14094,129 @@ const Eigen = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('EIGEN HUNTER','every kept direction found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/^On the \w+ matrix, (\w)/,(m,c)=>c.toUpperCase()).replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ TAYLOR WORKSHOP ============
+   A function rebuilt from powers of x, one term at a time: the polynomial
+   P built from the first terms of its Taylor series at 0, worked out at a
+   chosen x and set against the function itself, so the player sees each new
+   term close the gap, and sees where it takes more terms to get there. */
+const Taylor = {
+  CURVES:[
+    {id:'exp', at:'eˣ', f:{fn:'exp'},
+     series:'eˣ = 1 + x + x²/2! + x³/3! + …: every power of x, each over its factorial.'},
+    {id:'sin', at:'sin x', f:{fn:'sin'},
+     series:'sin x = x − x³/3! + x⁵/5! − …: only the odd powers, with signs that take turns.'},
+    {id:'cos', at:'cos x', f:{fn:'cos'},
+     series:'cos x = 1 − x²/2! + x⁴/4! − …: only the even powers, with signs that take turns.'}
+  ],
+  XS:[-3, -2, -1, -0.5, 0, 0.5, 1, 2, 3],
+  NMAX:9,
+  ci:0, n:1, xi:6, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'close', t:'Get eˣ at x = 1 within 0.001: that is the number e.',
+     ok:T=>T.ci===0 && T.x()===1 && Math.abs(T.err())<0.001},
+    {id:'neg',   t:'Get eˣ at x = −2 within 0.01, as the guesses swing above and below.',
+     ok:T=>T.ci===0 && T.x()===-2 && Math.abs(T.err())<0.01},
+    {id:'far',   t:'Get sin x at x = 3 within 0.01.',
+     ok:T=>T.ci===1 && T.x()===3 && Math.abs(T.err())<0.01},
+    {id:'zero',  t:'Find where P is exactly right, however many terms it has.',
+     ok:T=>T.x()===0},
+    {id:'skip',  t:'Add a term that changes nothing: a power the function skips.',
+     ok:T=>T.n>0 && T.c(T.n)===0},
+    {id:'worse', t:'Add a term that makes the guess worse.',
+     ok:T=>T.worse()}
+  ],
+  curve(){ return this.CURVES[this.ci]; },
+  x(){ return this.XS[this.xi]; },
+  fact(k){ let p=1; for(let i=2;i<=k;i++) p*=i; return p; },
+  // the coefficient of xᵏ in the series at 0
+  c(k){
+    const id=this.curve().id, s=this.fact(k);
+    if(id==='exp') return 1/s;
+    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;
+    return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;
+  },
+  P(x, n){ let s=0; for(let k=0;k<=(n===undefined?this.n:n);k++) s+=this.c(k)*Math.pow(x,k); return s; },
+  fx(){ return figEval(this.curve().f, this.x()); },
+  err(n){ return this.P(this.x(), n)-this.fx(); },
+  // the last term made the guess worse than it was without it
+  worse(){
+    return this.x()!==0 && this.n>0 && this.c(this.n)!==0 && Math.abs(this.err())>Math.abs(this.err(this.n-1))+1e-12;
+  },
+  sup(k){ return String(k).replace(/\d/g, d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  sub(k){ return String(k).replace(/\d/g, d=>'₀₁₂₃₄₅₆₇₈₉'[d]); },
+  exact(v){ return Math.abs(+v.toFixed(9)-v)<1e-12; },
+  num(v){
+    const r=this.exact(v) ? +v.toFixed(9) : +v.toFixed(4);
+    return neg(Object.is(r,-0)?0:r);
+  },
+  // how far off, to two significant figures once it is under 0.0001
+  gap(e){
+    e=Math.abs(e);
+    if(e>=0.0001) return 'about '+(+e.toFixed(4));
+    if(e>=0.000001) return 'about '+(+e.toPrecision(2)).toFixed(-Math.floor(Math.log10(e))+1);
+    return 'less than 0.000001';
+  },
+  term(k){ return k===0 ? '1' : k===1 ? 'x' : `x${this.sup(k)}/${k}!`; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const C=this.curve(), n=this.n, x=this.x(), X=neg(x), Pn=`P${this.sub(n)}`;
+    const ks=[]; for(let k=0;k<=n;k++) if(this.c(k)!==0) ks.push(k);
+    const out=[C.series];
+    out.push(ks.length
+      ? `${Pn}(x) = ${ks.map((k,i)=>{ const t=this.term(k); return i===0 ? (this.c(k)<0?'−':'')+t : (this.c(k)<0?' − ':' + ')+t; }).join('')}, the series up to x${this.sup(n)}.`
+      : `${Pn}(x) = 0: ${C.at} has no constant term, so it starts at x.`);
+    if(ks.length){
+      const vals=ks.map(k=>this.c(k)*Math.pow(x,k));
+      const shown=vals.filter(v=>this.exact(v) || Math.abs(v)>=0.00005);
+      const hidden=vals.length-shown.length;
+      const all=vals.every(v=>this.exact(v)), P=this.P(x);
+      const joined=shown.map((v,i)=>i===0 ? this.num(v) : (v<0?' − ':' + ')+this.num(Math.abs(v))).join('');
+      const tot=all ? `= ${this.num(P)}` : `≈ ${neg(+P.toFixed(4))}`;
+      out.push(shown.length===1 && !hidden ? `${Pn}(${X}) ${tot}.`
+        : `${Pn}(${X}) = ${joined}${hidden ? ` + (${hidden} more term${hidden>1?'s':''}, each under 0.0001)` : ''} ${tot}.`);
+    }
+    const fx=this.fx(), e=this.err();
+    out.push(`At x = ${X}, ${C.at} ${this.exact(fx)?'=':'≈'} ${this.num(fx)}, so ${Pn} is ${Math.abs(e)<1e-12 ? 'exactly right' : (e>0?'over':'short')+' by '+this.gap(e)}.`);
+    if(x===0) out.push('At x = 0 every power of x is 0, so P matches the function exactly there, however many terms it has.');
+    else if(n>0 && this.c(n)===0) out.push(`${C.at} has no x${this.sup(n)} term, so ${Pn} is the same polynomial as P${this.sub(n-1)}.`);
+    else if(this.worse()) out.push(`Adding the x${this.sup(n)} term made this worse: far from 0 the powers of x grow faster than the factorials at first, so the guesses swing about until enough terms are in.`);
+    return out;
+  },
+  open(){ UI.go('s-taylor'); },
+  pick(i){ this.ci=i; this.touched=true; this.render(); },
+  moveN(by){ const v=this.n+by; if(v<0||v>this.NMAX) return; this.n=v; this.touched=true; this.render(); },
+  moveX(by){ const v=this.xi+by; if(v<0||v>=this.XS.length) return; this.xi=v; this.touched=true; this.render(); },
+  render(){
+    const C=this.curve(), n=this.n, x=this.x();
+    document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.ci}" onclick="Taylor.pick(${i})">${c.at}</button>`).join('');
+    document.getElementById('tyN').textContent=`up to x${this.sup(n)}`;
+    document.getElementById('tyX').textContent=`x = ${neg(x)}`;
+    document.getElementById('tyNLo').disabled=n===0;
+    document.getElementById('tyNHi').disabled=n===this.NMAX;
+    document.getElementById('tyXLo').disabled=this.xi===0;
+    document.getElementById('tyXHi').disabled=this.xi===this.XS.length-1;
+    const poly=[]; for(let k=0;k<=n;k++) if(this.c(k)!==0) poly.push([this.c(k),k]);
+    Figure.render({kind:'curve', f:C.f, lo:-3, hi:3, also:{f:{poly}, col:FIG_COL.a},
+      pts:[[x, this.fx(), FIG_COL.b], [x, this.P(x), FIG_COL.a]],
+      caption:`${C.at} in gold, P${this.sub(n)} in blue, both marked at x = ${neg(x)}.`},
+      document.getElementById('tyFig'));
+    document.getElementById('tyRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tyGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };

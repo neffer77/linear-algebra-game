@@ -1,7 +1,18 @@
 {
- "change": "Goal toasts keep their decimals",
+ "change": "Taylor Workshop: a function rebuilt from powers of x",
  "mutations": [
-  {"name": "the area toast cuts 0.1 at its point", "file": "index.html", "find": "        Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')", "replace": "        Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')", "run": "play:area"},
-  {"name": "the slope toast cuts 0.01 at its point", "file": "index.html", "find": "        Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|:).*$/,'')", "replace": "        Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')", "run": "play:slope"}
+  {"name": "sin's signs never turn", "file": "index.html", "find": "    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;", "replace": "    if(id==='sin') return k%2 ? 1/s : 0;", "run": "verify"},
+  {"name": "cos's signs start negative", "file": "index.html", "find": "    return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;", "replace": "    return k%2 ? 0 : (k/2%2 ? 1 : -1)/s;", "run": "verify"},
+  {"name": "the factorial stops one short", "file": "index.html", "find": "  fact(k){ let p=1; for(let i=2;i<=k;i++) p*=i; return p; },", "replace": "  fact(k){ let p=1; for(let i=2;i<k;i++) p*=i; return p; },", "run": "verify"},
+  {"name": "terms under 0.005 are hidden", "file": "index.html", "find": "Math.abs(v)>=0.00005);", "replace": "Math.abs(v)>=0.005);", "run": "verify"},
+  {"name": "a rounded total is given with =", "file": "index.html", "find": "      const tot=all ? `= ${this.num(P)}` : `≈ ${neg(+P.toFixed(4))}`;", "replace": "      const tot=`= ${this.num(P)}`;", "run": "verify"},
+  {"name": "a better guess is called worse", "file": "index.html", "find": "Math.abs(this.err())>Math.abs(this.err(this.n-1))+1e-12;", "replace": "Math.abs(this.err())<Math.abs(this.err(this.n-1))-1e-12;", "run": "verify"},
+  {"name": "over and short are swapped", "file": "index.html", "find": "(e>0?'over':'short')+' by '", "replace": "(e<0?'over':'short')+' by '", "run": "verify"},
+  {"name": "x = 0 is not explained", "file": "index.html", "find": "    if(x===0) out.push('At x = 0 every power of x is 0, so P matches the function exactly there, however many terms it has.');\n    else if(n>0", "replace": "    if(n>0", "run": "verify"},
+  {"name": "the workshop missing from the Tome", "file": "index.html", "find": "id=\"tomeTaylor\"", "replace": "id=\"tomeTaylorGone\"", "run": "play:taylor"},
+  {"name": "the workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-taylor') Taylor.render();\n", "replace": "", "run": "play:taylor"},
+  {"name": "the highest power runs past x⁹", "file": "index.html", "find": "  moveN(by){ const v=this.n+by; if(v<0||v>this.NMAX) return; this.n=v;", "replace": "  moveN(by){ const v=this.n+by; if(v<0) return; this.n=v;", "run": "play:taylor"},
+  {"name": "x runs past 3", "file": "index.html", "find": "  moveX(by){ const v=this.xi+by; if(v<0||v>=this.XS.length) return;", "replace": "  moveX(by){ const v=this.xi+by; if(v<0) return;", "run": "play:taylor"},
+  {"name": "the Taylor toast cuts 0.001 at its point", "file": "index.html", "find": "        Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')", "replace": "        Celebrate.banner('SERIES SMITH','every term placed','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')", "run": "play:taylor"}
  ]
 }
