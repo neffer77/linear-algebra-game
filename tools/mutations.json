@@ -1,285 +1,278 @@
 {
- "change": "The Diagonal Workshop: eigenvectors make P⁻¹AP diagonal",
+ "change": "The Trig Integral Workshop: divide by the k inside",
  "mutations": [
   {
-   "name": "the symmetric matrix is lopsided",
+   "name": "cos 2x is really cos x",
    "file": "index.html",
-   "find": "{id:'sym', btn:'Symmetric', A:[[2,1],[1,2]], c:[0,1]}",
-   "replace": "{id:'sym', btn:'Symmetric', A:[[2,1],[2,2]], c:[0,1]}",
+   "find": "{id:'cos2', btn:'cos 2x', g:'cos', a:1, k:2,",
+   "replace": "{id:'cos2', btn:'cos 2x', g:'cos', a:1, k:1,",
    "run": "verify"
   },
   {
-   "name": "the shear starts on its eigenvector",
+   "name": "6 cos 3x loses its 6",
    "file": "index.html",
-   "find": "{id:'shear', btn:'Shear', A:[[1,1],[0,1]], c:[1,2]}",
-   "replace": "{id:'shear', btn:'Shear', A:[[1,1],[0,1]], c:[0,2]}",
+   "find": "{id:'big', btn:'6 cos 3x', g:'cos', a:6, k:3,",
+   "replace": "{id:'big', btn:'6 cos 3x', g:'cos', a:3, k:3,",
    "run": "verify"
   },
   {
-   "name": "the palette loses (1, −2)",
+   "name": "the slope of cos has no minus",
    "file": "index.html",
-   "find": "  PAL:[[1,0],[0,1],[1,1],[1,-1],[1,2],[1,-2],[2,1],[-1,1]],",
-   "replace": "  PAL:[[1,0],[0,1],[1,1],[1,-1],[1,2],[2,-1],[2,1],[-1,1]],",
+   "find": "  dk(){ const v=this.c()*this.set().k*(this.g==='cos'?-1:1);",
+   "replace": "  dk(){ const v=this.c()*this.set().k*(this.g==='cos'?1:1);",
    "run": "verify"
   },
   {
-   "name": "A·p multiplies by Aᵀ",
+   "name": "the slope forgets the k inside",
    "file": "index.html",
-   "find": "return [A[0][0]*p[0]+A[0][1]*p[1], A[1][0]*p[0]+A[1][1]*p[1]]; },",
-   "replace": "return [A[0][0]*p[0]+A[1][0]*p[1], A[0][1]*p[0]+A[1][1]*p[1]]; },",
+   "find": "  dk(){ const v=this.c()*this.set().k*",
+   "replace": "  dk(){ const v=this.c()*1*",
    "run": "verify"
   },
   {
-   "name": "an eigenvector test that takes any arrow",
+   "name": "the slope keeps the same wave",
    "file": "index.html",
-   "find": "return p[0]*q[1]-p[1]*q[0]===0; },",
-   "replace": "return p[0]*q[1]-p[1]*q[0]===0 || p[0]===1; },",
+   "find": "  dg(){ return this.other(this.g); },",
+   "replace": "  dg(){ return this.g; },",
    "run": "verify"
   },
   {
-   "name": "the eigenvalue reads the first part only",
+   "name": "a match ignores the wave",
    "file": "index.html",
-   "find": "  lam(k){ const p=this.p(k), q=this.Ap(k); return (p[0]*q[0]+p[1]*q[1])/(p[0]*p[0]+p[1]*p[1]); },",
-   "replace": "  lam(k){ const p=this.p(k), q=this.Ap(k); return q[0]; },",
+   "find": "match(){ const S=this.set(); return this.dg()===S.g && this.dk()===S.a; },",
+   "replace": "match(){ const S=this.set(); return this.dk()===S.a; },",
    "run": "verify"
   },
   {
-   "name": "det P is the wrong way round",
+   "name": "c loses −1/3",
    "file": "index.html",
-   "find": "  det(){ const a=this.p(0), b=this.p(1); return a[0]*b[1]-b[0]*a[1]; },",
-   "replace": "  det(){ const a=this.p(0), b=this.p(1); return b[0]*a[1]-a[0]*b[1]; },",
+   "find": "  C:[-3,-2,-1,-1/2,-1/3,1/3,1/2,1,2,3],",
+   "replace": "  C:[-3,-2,-1,-1/2,1/3,1/2,1,2,3],",
    "run": "verify"
   },
   {
-   "name": "adj(P) is not swapped",
+   "name": "picking a target keeps the guess",
    "file": "index.html",
-   "find": "adj=[[b[1],-b[0]],[-a[1],a[0]]]",
-   "replace": "adj=[[a[0],-b[0]],[-a[1],b[1]]]",
+   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  fun(g){ this.g=g;",
+   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  fun(g){ this.g=g;",
    "run": "verify"
   },
   {
-   "name": "P⁻¹AP is AP",
+   "name": "a target starts on its own wave",
    "file": "index.html",
-   "find": "return [0,1].map(i=>[0,1].map(j=>adj[i][0]*AP[j][0]+adj[i][1]*AP[j][1])); },",
-   "replace": "return [0,1].map(i=>[0,1].map(j=>AP[j][i]*this.det())); },",
+   "find": "  start(){ this.g=this.other(this.set().g);",
+   "replace": "  start(){ this.g=this.set().g;",
    "run": "verify"
   },
   {
-   "name": "diagonal needs only one eigenvector",
+   "name": "a third reads as a decimal",
    "file": "index.html",
-   "find": "  diag(){ return this.det()!==0 && this.eig(0) && this.eig(1); },",
-   "replace": "  diag(){ return this.det()!==0 && (this.eig(0) || this.eig(1)); },",
+   "find": "    for(let d=1; d<=6; d++){ const n=Math.round(a*d);",
+   "replace": "    for(let d=1; d<=2; d++){ const n=Math.round(a*d);",
    "run": "verify"
   },
   {
-   "name": "diagonal with no inverse",
+   "name": "a fraction in front loses its brackets",
    "file": "index.html",
-   "find": "  diag(){ return this.det()!==0 && this.eig(0) && this.eig(1); },",
-   "replace": "  diag(){ return this.eig(0) && this.eig(1); },",
+   "find": "(Number.isInteger(m) ? m : `(${this.fr(m)})`)+'·'+w); },",
+   "replace": "(Number.isInteger(m) ? m : this.fr(m))+'·'+w); },",
    "run": "verify"
   },
   {
-   "name": "fractions are not reduced",
+   "name": "a negative c loses its brackets",
    "file": "index.html",
-   "find": "const g=this.gcd(n,d); n/=g; d/=g;",
-   "replace": "const g=1;",
+   "find": "  par(v){ return v<0 || !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },",
+   "replace": "  par(v){ return !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },",
    "run": "verify"
   },
   {
-   "name": "a fraction keeps its minus at the bottom",
+   "name": "x/2 is written 0.5x",
    "file": "index.html",
-   "find": "  frac(n,d){ if(d<0){ n=-n; d=-d; }",
-   "replace": "  frac(n,d){",
+   "find": "  arg(k){ return k===1 ? 'x' : k===0.5 ? 'x/2' : k+'x'; },",
+   "replace": "  arg(k){ return k===1 ? 'x' : k+'x'; },",
    "run": "verify"
   },
   {
-   "name": "the eigenvalue is called 1",
+   "name": "the sine line writes its slope as a sine",
    "file": "index.html",
-   "find": "so p${sub[k]} is an eigenvector, with eigenvalue ${neg(this.lam(k))}.`",
-   "replace": "so p${sub[k]} is an eigenvector, with eigenvalue 1.`",
+   "find": "· cos(${this.arg(k)}) = ${this.wave(d,'cos',k)}.`);",
+   "replace": "· cos(${this.arg(k)}) = ${this.wave(d,'sin',k)}.`);",
    "run": "verify"
   },
   {
-   "name": "A·p is not written as λ·p",
+   "name": "the cosine line drops its minus",
    "file": "index.html",
-   "find": "= ${neg(this.lam(k))}·p${sub[k]}, so p${sub[k]}",
-   "replace": "= λ·p${sub[k]}, so p${sub[k]}",
+   "find": "F′(x) = −${this.par(c)} · ${this.par(k)} · sin(",
+   "replace": "F′(x) = ${this.par(c)} · ${this.par(k)} · sin(",
    "run": "verify"
   },
   {
-   "name": "the det line multiplies the wrong pairs",
+   "name": "the integral is written without its F",
    "file": "index.html",
-   "find": "out.push(`det P = (${neg(P[0][0])})(${neg(P[1][1])}) − (${neg(P[1][0])})(${neg(P[0][1])}) = ${neg(d)}.`);",
-   "replace": "out.push(`det P = (${neg(P[0][0])})(${neg(P[0][1])}) − (${neg(P[1][0])})(${neg(P[1][1])}) = ${neg(d)}.`);",
+   "find": "dx = ${this.Fs()} + C.`);",
+   "replace": "dx = F + C.`);",
    "run": "verify"
   },
   {
-   "name": "the det line shows the wrong value",
+   "name": "the half sentence shows on every target",
    "file": "index.html",
-   "find": "(${neg(P[0][1])}) = ${neg(d)}.`);",
-   "replace": "(${neg(P[0][1])}) = ${neg(Math.abs(d))}.`);",
+   "find": "      out.push(k===0.5\n",
+   "replace": "      out.push(true\n",
    "run": "verify"
   },
   {
-   "name": "no inverse is not said",
+   "name": "the wrong-wave sentence names F's wave as f's",
    "file": "index.html",
-   "find": "      out.push('So p₁ and p₂ lie on one line, P has no inverse, and P⁻¹AP cannot be formed at all. P needs two independent columns.');",
-   "replace": "      out.push('So P⁻¹AP has rows (0, 0) and (0, 0).');",
+   "find": "F has to be a ${S.g==='sin'?'cosine':'sine'}.`);",
+   "replace": "F has to be a ${S.g==='sin'?'sine':'cosine'}.`);",
    "run": "verify"
   },
   {
-   "name": "P⁻¹AP is written by columns",
+   "name": "the ratio is upside down",
    "file": "index.html",
-   "find": "out.push(`So P has an inverse, and P⁻¹AP has rows (${M[0].join(', ')}) and (${M[1].join(', ')}).`);",
-   "replace": "out.push(`So P has an inverse, and P⁻¹AP has rows (${M[0][0]}, ${M[1][0]}) and (${M[0][1]}, ${M[1][1]}).`);",
+   "find": "      const r=d/S.a;",
+   "replace": "      const r=S.a/d;",
    "run": "verify"
   },
   {
-   "name": "D is read in the wrong order",
+   "name": "the sign flip is never said",
    "file": "index.html",
-   "find": "D has ${neg(this.lam(0))} then ${neg(this.lam(1))} on its diagonal",
-   "replace": "D has ${neg(this.lam(1))} then ${neg(this.lam(0))} on its diagonal",
+   "find": "+(r<0 ? ' with its sign flipped' : '')}.`);\n      if(r===-1 && S.g==='sin')",
+   "replace": "}.`);\n      if(r===-1 && S.g==='sin')",
    "run": "verify"
   },
   {
-   "name": "the right angle is claimed everywhere",
+   "name": "the two minus notes are swapped",
    "file": "index.html",
-   "find": "        if(this.si===0) out.push('A is symmetric, and its two eigenvectors meet at a right angle.');",
-   "replace": "        out.push('A is symmetric, and its two eigenvectors meet at a right angle.');",
+   "find": "      if(r===-1 && S.g==='sin') out.push(`The slope of cos carries",
+   "replace": "      if(r===-1 && S.g==='cos') out.push(`The slope of cos carries",
    "run": "verify"
   },
   {
-   "name": "the cleared column is the wrong one",
+   "name": "the slip is named for any c",
    "file": "index.html",
-   "find": "const k=this.eig(0)?0:1, j=1-k;",
-   "replace": "const k=this.eig(0)?1:0, j=1-k;",
+   "find": "if(S.id==='cos2' && this.g==='sin' && c===2) out.push(`Multiplying",
+   "replace": "if(S.id==='cos2' && this.g==='sin' && c!==1) out.push(`Multiplying",
    "run": "verify"
   },
   {
-   "name": "the leftover entry is read from the wrong place",
+   "name": "the slope is drawn as F",
    "file": "index.html",
-   "find": "Column ${j+1} still has ${M[k][j]} off the diagonal.`);",
-   "replace": "Column ${j+1} still has ${M[j][k]} off the diagonal.`);",
+   "find": "for(const s of this.path(this.fn(d,this.dg(),S.k))) out+=",
+   "replace": "for(const s of this.path(this.fn(this.c(),this.g,S.k))) out+=",
    "run": "verify"
   },
   {
-   "name": "the neither sentence is dropped",
+   "name": "the target is drawn without its number",
    "file": "index.html",
-   "find": "      } else out.push('Neither column is an eigenvector, so neither column of P⁻¹AP is cleared.');",
-   "replace": "      }",
+   "find": "for(const s of this.path(this.fn(S.a,S.g,S.k))) out+=",
+   "replace": "for(const s of this.path(this.fn(1,S.g,S.k))) out+=",
    "run": "verify"
   },
   {
-   "name": "the figure draws A·p₂ from p₁",
+   "name": "the waves run off the chart",
    "file": "index.html",
-   "find": "{v:Q[1], col:FIG_COL.d, label:'Ap₂'}",
-   "replace": "{v:Q[1], from:P[0], col:FIG_COL.d, label:'Ap₂'}",
+   "find": "if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(t).toFixed(2)},${this.PY(v).toFixed(2)}`); }\n    if(seg.length>1) segs.push(seg); return segs; },\n  fn(a,g,k)",
+   "replace": "if(!isFinite(v)){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(t).toFixed(2)},${this.PY(v).toFixed(2)}`); }\n    if(seg.length>1) segs.push(seg); return segs; },\n  fn(a,g,k)",
    "run": "verify"
   },
   {
-   "name": "the figure draws p₁ twice",
+   "name": "the slow wave is marked π and 2π",
    "file": "index.html",
-   "find": "{v:P[1], col:FIG_COL.c, label:'p₂'},",
-   "replace": "{v:P[0], col:FIG_COL.c, label:'p₂'},",
+   "find": "for(const [t,l] of (S.X>7 ? [[2*Math.PI,'2π'],[4*Math.PI,'4π']] : [[Math.PI,'π'],[2*Math.PI,'2π']]))",
+   "replace": "for(const [t,l] of [[Math.PI,'π'],[2*Math.PI,'2π']])",
    "run": "verify"
   },
   {
-   "name": "the dashed lines are dropped",
+   "name": "the figure says the waves meet when they do not",
    "file": "index.html",
-   "find": "      lines:[P[0],P[1]],",
-   "replace": "      lines:[],",
+   "find": "for x from 0 to ${S.X>7?'4π':'2π'}${this.match()?': they lie",
+   "replace": "for x from 0 to ${S.X>7?'4π':'2π'}${this.dg()===this.set().g?': they lie",
    "run": "verify"
   },
   {
-   "name": "two arrows share a colour",
+   "name": "the slip goal takes c = 3",
    "file": "index.html",
-   "find": "{v:Q[0], col:FIG_COL.b, label:'Ap₁'}",
-   "replace": "{v:Q[0], col:FIG_COL.a, label:'Ap₁'}",
+   "find": "ok:K=>K.si===0 && K.g==='sin' && K.c()===2},",
+   "replace": "ok:K=>K.si===0 && K.g==='sin' && K.c()>=2},",
    "run": "verify"
   },
   {
-   "name": "picking a matrix keeps the columns",
+   "name": "the sign goal takes any negative",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  col(k,i)",
-   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  col(k,i)",
+   "find": "ok:K=>K.g!==K.set().g && K.dk()===-K.set().a},",
+   "replace": "ok:K=>K.g!==K.set().g && K.dk()<0},",
    "run": "verify"
   },
   {
-   "name": "the half goal takes the shear",
+   "name": "the half goal takes 6 cos 3x",
    "file": "index.html",
-   "find": "     ok:K=>K.si!==2 && K.det()!==0 && K.eig(0)!==K.eig(1)},",
-   "replace": "     ok:K=>K.det()!==0 && K.eig(0)!==K.eig(1)},",
+   "find": "ok:K=>K.si===3 && K.match()}",
+   "replace": "ok:K=>K.si>=2 && K.match()}",
    "run": "verify"
   },
   {
-   "name": "the order goal takes one order",
+   "name": "the c stepper is never switched off",
    "file": "index.html",
-   "find": "     ok:K=>K.seen.some(S=>S.size>=2)},",
-   "replace": "     ok:K=>K.seen.some(S=>S.size>=1)},",
-   "run": "verify"
+   "find": "document.getElementById('itCHi').disabled=this.ci>=this.C.length-1;",
+   "replace": "document.getElementById('itCHi').disabled=false;",
+   "run": "play:trigint"
   },
   {
-   "name": "D orders are not recorded",
+   "name": "the wave buttons do not show which is pressed",
    "file": "index.html",
-   "find": "  note(){ if(this.diag()) this.seen[this.si].add(this.lam(0)+','+this.lam(1)); },",
-   "replace": "  note(){ },",
-   "run": "verify"
+   "find": "`<button class=\"btn sm ghost\" aria-pressed=\"${this.g===g}\" onclick=\"TrigInt.fun",
+   "replace": "`<button class=\"btn sm ghost\" aria-pressed=\"false\" onclick=\"TrigInt.fun",
+   "run": "play:trigint"
   },
   {
-   "name": "the skew goal takes any matrix",
+   "name": "a wave button loses its name",
    "file": "index.html",
-   "find": "     ok:K=>K.si===1 && K.diag()},",
-   "replace": "     ok:K=>K.diag()},",
-   "run": "verify"
+   "find": "aria-label=\"Make F a ${g==='sin'?'sine':'cosine'}\"",
+   "replace": "data-x=\"Make F a ${g==='sin'?'sine':'cosine'}\"",
+   "run": "play:trigint"
   },
   {
-   "name": "the workshop saves its columns",
+   "name": "the guess is not shown big",
    "file": "index.html",
-   "find": "  col(k,i){ this.c[k]=i; this.touched=true;",
-   "replace": "  col(k,i){ this.c[k]=i; Game.s.dgCol=i; this.touched=true;",
-   "run": "play:diag"
+   "find": "document.getElementById('itF').textContent=`F(x) = ${this.Fs()}`;",
+   "replace": "document.getElementById('itF').textContent=`F(x)`;",
+   "run": "play:trigint"
   },
   {
-   "name": "the caption is dropped",
+   "name": "the target buttons run in one row",
    "file": "index.html",
-   "find": "      caption:'p₁ in blue and p₂ in green,",
-   "replace": "      caption2:'p₁ in blue and p₂ in green,",
-   "run": "play:diag"
-  },
-  {
-   "name": "an arrow button loses its name",
-   "file": "index.html",
-   "find": "aria-label=\"Make column ${k+1} of P ${this.vec(v)}\"",
-   "replace": "aria-label=\"\"",
-   "run": "play:diag"
-  },
-  {
-   "name": "the arrow buttons run in one row",
-   "file": "index.html",
-   "find": "      `<div class=\"wsModes\" style=\"flex-wrap:wrap\" role=\"group\" aria-label=\"Column ${k+1} of P\">`+",
-   "replace": "      `<div class=\"wsModes\" style=\"flex-wrap:nowrap\" role=\"group\" aria-label=\"Column ${k+1} of P\">`+",
-   "run": "play:diag"
-  },
-  {
-   "name": "the columns picked do not show",
-   "file": "index.html",
-   "find": "aria-pressed=\"${this.c[k]===i}\" onclick=\"Diag.col(${k},${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"Diag.col(${k},${i})\"",
-   "run": "play:diag"
+   "find": "<div id=\"itSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"itSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:trigint"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:diag"
+   "run": "play:trigint"
   },
   {
-   "name": "the Tome loses the diagonal workshop",
+   "name": "the Tome loses the trig integral workshop",
    "file": "index.html",
-   "find": "id=\"tomeDiag\"",
-   "replace": "id=\"tomeDiagX\"",
-   "run": "play:diag"
+   "find": "id=\"tomeTrigInt\"",
+   "replace": "id=\"tomeTrigIntX\"",
+   "run": "play:trigint"
+  },
+  {
+   "name": "the workshop saves its c",
+   "file": "index.html",
+   "find": "  moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i;",
+   "replace": "  moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i; Game.s.trigC=i;",
+   "run": "play:trigint"
+  },
+  {
+   "name": "the caption is dropped",
+   "file": "index.html",
+   "find": "<div class=\"figcap\">The dashed gold wave is the target f.",
+   "replace": "<div class=\"figcapX\">The dashed gold wave is the target f.",
+   "run": "play:trigint"
   }
  ]
 }

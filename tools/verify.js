@@ -85,6 +85,7 @@ function loadGame() {
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
+    ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -103,7 +104,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2695,6 +2696,103 @@ const ladderNotes = (() => {
   });
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
+/* The trig integral workshop: every target, both waves, every number in front.
+   Whether a guess works is decided here by a nudge on F itself at four
+   points, never by the chain rule; every wave the readout writes is parsed
+   back into a function and checked against F, f and F′; every sentence's
+   condition is decided independently; and the drawing is read back. */
+const trigIntNotes = (() => {
+  const W = TrigInt;
+  const frac = t => { const q = t.replace(/−/g, '-').split('/'); return q.length === 2 ? +q[0] / +q[1] : +q[0]; };
+  const unb = t => frac(t.replace(/[()]/g, ''));
+  const argK = a => a === 'x' ? 1 : a === 'x/2' ? 0.5 : /^\d+x$/.test(a) ? +a.slice(0, -1) : NaN;
+  const parseW = t => { const m = t.match(/^(−)?(?:(\d+)·|\((\d+\/\d+)\)·)?(sin|cos)\(([^)]+)\)$/);
+    if (!m) return null; const a = (m[1] ? -1 : 1) * (m[2] ? +m[2] : m[3] ? frac(m[3]) : 1), k = argK(m[5]);
+    return x => a * (m[4] === 'sin' ? Math.sin(k * x) : Math.cos(k * x)); };
+  const XS = [0.3, 1.1, 2.0, 2.9];
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  const same = (g, h) => XS.every(x => Math.abs(g(x) - h(x)) < 1e-4 * Math.max(1, Math.abs(h(x))));
+  const fr = v => { const s = v < 0 ? '−' : '', a = Math.abs(v); for (let d = 1; d <= 12; d++) { const n = Math.round(a * d); if (Math.abs(n / d - a) < 1e-9) return s + (d === 1 ? n : n + '/' + d); } return s + a; };
+  if (W.SETS.map(S => `${S.id}:${S.g}:${S.a}:${S.k}`).join() !== 'cos2:cos:1:2,sin3:sin:1:3,big:cos:6:3,half:sin:1:0.5') fail('trigint', 'sets', W.SETS.map(S => S.id).join());
+  if (W.C.map(fr).join() !== '−3,−2,−1,−1/2,−1/3,1/3,1/2,1,2,3') fail('trigint', 'range', 'c should step −3, −2, −1, −1/2, −1/3, 1/3, 1/2, 1, 2, 3');
+  const reset = () => { W.touched = false; W.si = 0; W.start(); W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('trigint', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.g = S.g; W.ci = 0; W.pick(si);
+    if (W.g === S.g || W.c() !== 1) fail('trigint', S.id, 'picking a target does not start the guess again on the other wave with c = 1');
+    for (const g of W.GOALS) if (g.ok(W)) fail('trigint', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  const found = {}; let n = 0;
+  W.SETS.forEach((S, si) => {
+    const tf = x => S.a * (S.g === 'sin' ? Math.sin(S.k * x) : Math.cos(S.k * x));
+    const PXi = px => (px - 30) / 310 * S.X, PYi = py => S.y[0] + (188 - py) / 176 * (S.y[1] - S.y[0]);
+    for (const g of ['sin', 'cos']) W.C.forEach((c, ci) => {
+      reset(); W.si = si; W.g = g; W.ci = ci; n++;
+      const key = `${S.id} ${g} c=${fr(c)}`, F = x => c * (g === 'sin' ? Math.sin(S.k * x) : Math.cos(S.k * x)), dF = x => sl(F, x);
+      const works = same(dF, tf), sineF = Math.abs(dF(0)) < 1e-6, sineT = S.g === 'sin', rightWave = sineF === sineT;
+      const r = rightWave ? Math.round(dF(1.1) / tf(1.1) * 36) / 36 : NaN;
+      const got = W.working(), txt = got.join(' ');
+      const t0 = got[0].match(/^The target is f\(x\) = (.+)\. Find an F whose slope is f: an antiderivative of f\.$/);
+      if (!t0 || !parseW(t0[1]) || !same(parseW(t0[1]), tf)) fail('trigint', key, `the target is written wrong: ${got[0]}`);
+      const t1 = got[1].match(/^Your guess is F\(x\) = (.+)\.$/);
+      if (!t1 || !parseW(t1[1]) || !same(parseW(t1[1]), F)) fail('trigint', key, `the guess is written wrong: ${got[1]}`);
+      const m2 = g === 'sin'
+        ? got[2].match(/^Its slope by the chain rule: the slope of sin is cos, times the (\S+) inside, so F′\(x\) = (\S+) · (\S+) · cos\(([^)]+)\) = (.+)\.$/)
+        : got[2].match(/^Its slope by the chain rule: the slope of cos is −sin, times the (\S+) inside, so F′\(x\) = −(\S+) · (\S+) · sin\(([^)]+)\) = (.+)\.$/);
+      if (!m2) fail('trigint', key, `the chain rule line is not worked: ${got[2]}`);
+      else {
+        if (frac(m2[1]) !== S.k || unb(m2[3]) !== S.k || argK(m2[4]) !== S.k) fail('trigint', key, `the k inside is named wrong: ${got[2]}`);
+        if (Math.abs(unb(m2[2]) - c) > 1e-9 || (/−|\//.test(m2[2]) && !/^\(.*\)$/.test(m2[2]))) fail('trigint', key, `c is named wrong, or a negative or a fraction without brackets: ${got[2]}`);
+        if (!parseW(m2[5]) || !same(parseW(m2[5]), dF)) fail('trigint', key, `F′ is not the slope of F: ${got[2]}`);
+      }
+      const ml = got.find(l => l.startsWith('That is f exactly'));
+      if (!!ml !== works) fail('trigint', key, `the guess ${works ? 'works' : 'does not work'}, but the readout says otherwise`);
+      if (ml) { const m = ml.match(/^That is f exactly, so F is an antiderivative of f: ∫ (.+) dx = (.+) \+ C\.$/);
+        if (!m || !parseW(m[1]) || !same(parseW(m[1]), tf) || !parseW(m[2]) || !same(parseW(m[2]), F)) fail('trigint', key, `the integral is written wrong: ${ml}`); }
+      if (/dividing by 1\/2 doubles/.test(txt) !== (works && S.k === 0.5)) fail('trigint', key, 'the half sentence shows at the wrong time');
+      if (/so integrating has to divide by it/.test(txt) !== (works && S.k !== 0.5)) fail('trigint', key, 'the divide sentence shows at the wrong time');
+      const wl = got.find(l => l.startsWith('But F′ is a'));
+      if (!!wl !== (!works && !rightWave)) fail('trigint', key, 'the wrong-wave sentence shows at the wrong time');
+      if (wl && wl !== `But F′ is a ${sineF ? 'sine' : 'cosine'} where f is a ${sineT ? 'sine' : 'cosine'}: the slope of sin is cos and the slope of cos is −sin, so to land on a ${sineT ? 'sine' : 'cosine'}, F has to be a ${sineT ? 'cosine' : 'sine'}.`) fail('trigint', key, wl);
+      const rl = got.find(l => l.startsWith('The wave is right'));
+      if (!!rl !== (!works && rightWave)) fail('trigint', key, 'the right-wave sentence shows at the wrong time');
+      if (rl) { const m = rl.match(/the number in front is (\S+) where f has (\S+): F′ is (.+)\.$/);
+        const say = r === -1 ? 'minus f' : `${fr(Math.abs(r))} times f` + (r < 0 ? ' with its sign flipped' : '');
+        if (!m || Math.abs(frac(m[1]) - r * S.a) > 1e-9 || frac(m[2]) !== S.a || m[3] !== say) fail('trigint', key, `F′ is ${r} times f: ${rl}`); }
+      if (/carries a minus, so to land on/.test(txt) !== (r === -1 && sineT)) fail('trigint', key, 'the minus of cos is explained at the wrong time');
+      if (/has no minus, so a minus in front of F stays in F′/.test(txt) !== (r === -1 && !sineT)) fail('trigint', key, 'the minus in front is explained at the wrong time');
+      const slip = si === 0 && rightWave && r === 4;
+      if (/Multiplying by the 2 inside is the slope run forwards/.test(txt) !== slip) fail('trigint', key, 'the multiply slip is named at the wrong time');
+      // the drawing
+      const svg = W.svg();
+      if (/they lie on top of each other/.test(svg) !== works) fail('trigint', key, 'the figure says the curves meet when they do not, or the other way round');
+      for (const m of svg.matchAll(/ (?:x1|x2|x)="(-?[\d.]+)"| (?:y1|y2|y)="(-?[\d.]+)"/g)) {
+        if (m[1] !== undefined && (+m[1] < 0 || +m[1] > 360)) fail('trigint', key, `something is drawn off the side at x = ${m[1]}`);
+        if (m[2] !== undefined && (+m[2] < 0 || +m[2] > 200)) fail('trigint', key, `something is drawn off the top or bottom at y = ${m[2]}`);
+      }
+      const curve = (kk, h) => { let pts = 0;
+        for (const pl of svg.matchAll(new RegExp(`data-k="${kk}" points="([^"]+)"`, 'g'))) for (const pt of pl[1].split(' ')) {
+          const [px, py] = pt.split(',').map(Number); pts++;
+          if (px < 30 || px > 340 || py < 12 || py > 188 || Math.abs(PYi(py) - h(PXi(px))) > 0.002 * (S.y[1] - S.y[0])) { fail('trigint', key, `the ${kk} curve leaves its function at ${pt}`); break; }
+        } return pts; };
+      if (curve('target', tf) < 200) fail('trigint', key, 'the target is not drawn whole');
+      if (curve('slope', dF) < 100) fail('trigint', key, 'the slope is not drawn');
+      const ticks = [...svg.matchAll(/<text[^>]*>([^<]+)<\/text>/g)].map(m => m[1]).join();
+      if (ticks !== (S.X > 7 ? '2π,4π' : 'π,2π')) fail('trigint', key, `the axis is marked ${ticks}`);
+      const meant = { cos2: si === 0 && works, slip, swap: !rightWave, sign: r === -1,
+        sin3: si === 1 && works, big: si === 2 && works, half: si === 3 && works };
+      for (const gl of W.GOALS) { if (!!gl.ok(W) !== meant[gl.id]) fail('trigint', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}`); if (gl.ok(W)) found[gl.id] = found[gl.id] || key; }
+    });
+    reset(); W.si = si;
+    for (let t = 0; t < 20; t++) W.moveC(1); if (W.c() !== 3) fail('trigint', S.id, 'c does not stop at 3');
+    for (let t = 0; t < 20; t++) W.moveC(-1); if (W.c() !== -3) fail('trigint', S.id, 'c does not stop at −3');
+    W.fun('cos'); if (W.g !== 'cos') fail('trigint', S.id, 'the cos button does not make F a cosine');
+    W.fun('sin'); if (W.g !== 'sin') fail('trigint', S.id, 'the sin button does not make F a sine');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('trigint', g.id, 'this goal cannot be found');
+  reset();
   return { n, goals: Object.keys(found).length };
 })();
 
@@ -5529,6 +5627,7 @@ console.log(`  quotients divided       ${pad(quotNotes.n.toLocaleString(), 10)} 
 console.log(`  antiderivatives guessed ${pad(antiNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the power rule; every term written parsed back and checked against F and its slope, every sentence, both curves read back, ${antiNotes.goals} goals findable)`);
 console.log(`  transpose moves played ${pad(transposeNotes.n.toLocaleString(), 10)}  (where each entry belongs decided from (Aᵀ)ₚq = A_qp, never by the workshop; every entry tried in every slot and 900 games at random, every sentence parsed back, both grids read cell by cell, ${transposeNotes.goals} goals findable)`);
 console.log(`  diagonal workshop states ${pad(diagNotes.n.toLocaleString(), 10)}  (eigenvectors decided from A·p and p, P⁻¹AP from the inverse formula, never by the workshop; every pair of columns on every matrix and 40 games at random, every number parsed back, the figure read from its spec, ${diagNotes.goals} goals findable)`);
+console.log(`  trig integral guesses ${pad(trigIntNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the chain rule; every wave written parsed back and checked against F, f and F′, every sentence, both curves read back, ${trigIntNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

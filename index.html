@@ -1692,6 +1692,27 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TRIG INTEGRAL WORKSHOP ============ -->
+  <div class="screen" id="s-trigint">
+    <div class="panel"><h2>🎢 Trig Integral Workshop</h2><div class="sub">To integrate sin(kx) or cos(kx), run the chain rule backwards: swap the wave and divide by the k inside. Guess F = c·sin(kx) or c·cos(kx) by hand and see whether its slope lands on f.</div></div>
+    <div class="panel">
+      <div id="itSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
+      <div id="itFig"></div>
+      <div id="itF" style="text-align:center;font-size:18px;font-weight:700;margin:6px 0"></div>
+      <div id="itFun" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which wave F is"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="itCLo" onclick="TrigInt.moveC(-1)" aria-label="Make the number in front, c, smaller">−</button>
+          <b id="itC" style="font-size:17px;min-width:0"></b>
+          <button id="itCHi" onclick="TrigInt.moveC(1)" aria-label="Make the number in front, c, bigger">+</button></div>
+      </div>
+      <div id="itRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="itGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3702,6 +3723,7 @@ const WORKSHOP_FOR = (() => {
     Anti:    ["🪃 Antiderivative Workshop", ['indefPower']],
     Transpose:["🪞 Transpose Workshop", ['transpose']],
     Diag:    ["🔑 Diagonal Workshop", ['diagonalisable']],
+    TrigInt: ["🎢 Trig Integral Workshop", ['intTrig']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13100,6 +13122,7 @@ const UI = {
     if(id==='s-anti') Anti.render();
     if(id==='s-transpose') Transpose.render();
     if(id==='s-diag') Diag.render();
+    if(id==='s-trigint') TrigInt.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13888,6 +13911,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔑 Diagonal Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise.</div>
          <button class="btn sm" id="tomeDiag" style="width:auto;margin-top:8px" onclick="Diag.open()">Open the diagonal workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🎢 Trig Integral Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles.</div>
+         <button class="btn sm" id="tomeTrigInt" style="width:auto;margin-top:8px" onclick="TrigInt.open()">Open the trig integral workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19493,6 +19521,130 @@ const Diag = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE DIAGONAL','every matrix unlocked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The trig integral workshop: divide by the k inside ----------
+   Guess F(x) = c·sin(kx) or c·cos(kx) by hand, take its slope by the chain
+   rule, and see whether it lands on the target. Multiplying by the k inside
+   instead of dividing is the classic slip, the slope of cos carries a minus,
+   and dividing by a half doubles. Nothing is saved. */
+const TrigInt = {
+  SETS:[
+    {id:'cos2', btn:'cos 2x', g:'cos', a:1, k:2, X:2*Math.PI, y:[-4.5,4.5]},
+    {id:'sin3', btn:'sin 3x', g:'sin', a:1, k:3, X:2*Math.PI, y:[-9.5,9.5]},
+    {id:'big', btn:'6 cos 3x', g:'cos', a:6, k:3, X:2*Math.PI, y:[-9.5,9.5]},
+    {id:'half', btn:'sin(x/2)', g:'sin', a:1, k:0.5, X:4*Math.PI, y:[-2,2]}
+  ],
+  C:[-3,-2,-1,-1/2,-1/3,1/3,1/2,1,2,3],
+  si:0, g:'sin', ci:7, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'cos2', t:'Find an F whose slope is cos 2x.', toast:'cos 2x undone',
+     ok:K=>K.si===0 && K.match()},
+    {id:'slip', t:'On cos 2x, multiply by the 2 inside instead of dividing, and see how far off the slope comes out.', toast:'Divide by the k inside',
+     ok:K=>K.si===0 && K.g==='sin' && K.c()===2},
+    {id:'swap', t:'Try to undo a wave with the same function, sin for a sine or cos for a cosine, and see what its slope turns into.', toast:'Sine and cosine swap',
+     ok:K=>K.g===K.set().g},
+    {id:'sign', t:'Find an F whose slope is exactly minus the target.', toast:'Mind the minus',
+     ok:K=>K.g!==K.set().g && K.dk()===-K.set().a},
+    {id:'sin3', t:'Find an F whose slope is sin 3x.', toast:'A sine undone',
+     ok:K=>K.si===1 && K.match()},
+    {id:'big', t:'Find an F whose slope is 6 cos 3x.', toast:'The 6 and the 3 together',
+     ok:K=>K.si===2 && K.match()},
+    {id:'half', t:'Find an F whose slope is sin(x/2).', toast:'Dividing by a half doubles',
+     ok:K=>K.si===3 && K.match()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  c(){ return this.C[this.ci]; },
+  other(g){ return g==='sin' ? 'cos' : 'sin'; },
+  /* the slope of c·sin(kx) is (c·k)·cos(kx); of c·cos(kx), −(c·k)·sin(kx) */
+  dg(){ return this.other(this.g); },
+  dk(){ const v=this.c()*this.set().k*(this.g==='cos'?-1:1); return Math.round(v*36)/36; },
+  match(){ const S=this.set(); return this.dg()===S.g && this.dk()===S.a; },
+  /* numbers as fractions, so 1/3 reads as it would on paper */
+  fr(v){ const s=v<0?'−':'', a=Math.abs(v);
+    for(let d=1; d<=6; d++){ const n=Math.round(a*d); if(Math.abs(n/d-a)<1e-9) return s+(d===1 ? n : n+'/'+d); }
+    return s+a; },
+  par(v){ return v<0 || !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },
+  arg(k){ return k===1 ? 'x' : k===0.5 ? 'x/2' : k+'x'; },
+  wave(a,g,k){ const w=`${g}(${this.arg(k)})`, m=Math.abs(a); return (a<0?'−':'')+(m===1 ? w : (Number.isInteger(m) ? m : `(${this.fr(m)})`)+'·'+w); },
+  tgt(){ const S=this.set(); return this.wave(S.a,S.g,S.k); },
+  Fs(){ return this.wave(this.c(),this.g,this.set().k); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), c=this.c(), k=S.k, out=[];
+    out.push(`The target is f(x) = ${this.tgt()}. Find an F whose slope is f: an antiderivative of f.`);
+    out.push(`Your guess is F(x) = ${this.Fs()}.`);
+    const d=this.dk(), dg=this.dg();
+    if(this.g==='sin') out.push(`Its slope by the chain rule: the slope of sin is cos, times the ${this.fr(k)} inside, so F′(x) = ${this.par(c)} · ${this.par(k)} · cos(${this.arg(k)}) = ${this.wave(d,'cos',k)}.`);
+    else out.push(`Its slope by the chain rule: the slope of cos is −sin, times the ${this.fr(k)} inside, so F′(x) = −${this.par(c)} · ${this.par(k)} · sin(${this.arg(k)}) = ${this.wave(d,'sin',k)}.`);
+    if(this.match()){
+      out.push(`That is f exactly, so F is an antiderivative of f: ∫ ${this.tgt()} dx = ${this.Fs()} + C.`);
+      out.push(k===0.5
+        ? `Here the number inside is 1/2, and dividing by 1/2 doubles: that is where the 2 comes from.`
+        : `Differentiating multiplies by the ${this.fr(k)} inside, so integrating has to divide by it.`);
+    }
+    else if(dg!==S.g)
+      out.push(`But F′ is a ${dg==='sin'?'sine':'cosine'} where f is a ${S.g==='sin'?'sine':'cosine'}: the slope of sin is cos and the slope of cos is −sin, so to land on a ${S.g==='sin'?'sine':'cosine'}, F has to be a ${S.g==='sin'?'cosine':'sine'}.`);
+    else {
+      const r=d/S.a;
+      out.push(`The wave is right, ${S.g}(${this.arg(k)}), but the number in front is ${this.fr(d)} where f has ${this.fr(S.a)}: F′ is ${r===-1 ? 'minus f' : `${this.fr(Math.abs(r))} times f`+(r<0 ? ' with its sign flipped' : '')}.`);
+      if(r===-1 && S.g==='sin') out.push(`The slope of cos carries a minus, so to land on +${S.g}(${this.arg(k)}), F needs a minus of its own in front.`);
+      else if(r===-1) out.push(`The slope of sin has no minus, so a minus in front of F stays in F′.`);
+      if(S.id==='cos2' && this.g==='sin' && c===2) out.push(`Multiplying by the 2 inside is the slope run forwards. Running it backwards divides: 1 ÷ 2 = 1/2.`);
+    }
+    return out;
+  },
+  /* the target f dashed in gold and the slope F′ in green */
+  PX(v){ return 30+v/this.set().X*310; },
+  PY(v){ const [y0,y1]=this.set().y; return 188-(v-y0)/(y1-y0)*176; },
+  path(fn){ const [y0,y1]=this.set().y, X=this.set().X, segs=[]; let seg=[];
+    for(let i=0;i<=240;i++){ const t=X*i/240, v=fn(t);
+      if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }
+      seg.push(`${this.PX(t).toFixed(2)},${this.PY(v).toFixed(2)}`); }
+    if(seg.length>1) segs.push(seg); return segs; },
+  fn(a,g,k){ return g==='sin' ? t=>a*Math.sin(k*t) : t=>a*Math.cos(k*t); },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), d=this.dk();
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${this.tgt()} dashed in gold and F′(x) = ${this.wave(d,this.dg(),S.k)} in green, for x from 0 to ${S.X>7?'4π':'2π'}${this.match()?': they lie on top of each other':''}">`;
+    out+=`<line data-k="xaxis" x1="30" y1="${f(this.PY(0))}" x2="340" y2="${f(this.PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="30" y1="12" x2="30" y2="188" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(const [t,l] of (S.X>7 ? [[2*Math.PI,'2π'],[4*Math.PI,'4π']] : [[Math.PI,'π'],[2*Math.PI,'2π']]))
+      out+=`<line x1="${f(this.PX(t))}" y1="${f(this.PY(0)-3)}" x2="${f(this.PX(t))}" y2="${f(this.PY(0)+3)}" stroke="${FIG_COL.axis}" stroke-width="1"/><text x="${f(Math.min(334,this.PX(t)))}" y="${f(this.PY(0)+14)}" text-anchor="middle" font-size="10" fill="${FIG_COL.dim}">${l}</text>`;
+    for(const s of this.path(this.fn(d,this.dg(),S.k))) out+=`<polyline data-k="slope" points="${s.join(' ')}" fill="none" stroke="${FIG_COL.c}" stroke-width="3" stroke-linejoin="round"/>`;
+    for(const s of this.path(this.fn(S.a,S.g,S.k))) out+=`<polyline data-k="target" points="${s.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5" stroke-dasharray="6 5" stroke-linejoin="round"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-trigint'); },
+  /* each target starts on the other function with c = 1, so no goal is met yet */
+  start(){ this.g=this.other(this.set().g); this.ci=this.C.indexOf(1); },
+  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
+  fun(g){ this.g=g; this.touched=true; this.render(); },
+  moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('itSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="TrigInt.pick(${i})" aria-label="Target f(x) = ${this.wave(s.a,s.g,s.k)}">${s.btn}</button>`).join('');
+    document.getElementById('itFun').innerHTML=['sin','cos'].map(g=>
+      `<button class="btn sm ghost" aria-pressed="${this.g===g}" onclick="TrigInt.fun('${g}')" aria-label="Make F a ${g==='sin'?'sine':'cosine'}">${g}</button>`).join('');
+    document.getElementById('itC').textContent=`c = ${this.fr(this.c())}`;
+    document.getElementById('itCLo').disabled=this.ci<=0;
+    document.getElementById('itCHi').disabled=this.ci>=this.C.length-1;
+    document.getElementById('itF').textContent=`F(x) = ${this.Fs()}`;
+    document.getElementById('itFig').innerHTML=this.svg()+
+      `<div class="figcap">The dashed gold wave is the target f. The green wave is the slope of your guess, F′. When F is right, the green lands exactly on the gold.</div>`;
+    document.getElementById('itRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('itGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE WAVES','every wave undone','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
