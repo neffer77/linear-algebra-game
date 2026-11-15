@@ -1,180 +1,264 @@
 {
- "change": "The workshop index: every workshop one tap from the top of the Tome",
+ "change": "Which is f′? See f, pick which of three graphs is its slope",
  "mutations": [
   {
-   "name": "a workshop is filed under its last topic",
+   "name": "the sine's slope is −cos",
    "file": "index.html",
-   "find": "      w.at=pos[w.topics[0]];",
-   "replace": "      w.at=pos[w.topics[w.topics.length-1]];",
+   "find": "{f:Math.sin, fs:'sin x', d:Math.cos,",
+   "replace": "{f:Math.sin, fs:'sin x', d:x=>-Math.cos(x),",
    "run": "verify"
   },
   {
-   "name": "a strand's row is not sorted",
+   "name": "the cosine's slope is sin",
    "file": "index.html",
-   "find": "    out.forEach(g=>g.items.sort((a,b)=>a.at[1]-b.at[1]));\n",
+   "find": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x),",
+   "replace": "{f:Math.cos, fs:'cos x', d:Math.sin,",
+   "run": "verify"
+  },
+  {
+   "name": "the upside-down graph is f′ itself",
+   "file": "index.html",
+   "find": "neg:x=>-w.d(x),",
+   "replace": "neg:w.d,",
+   "run": "verify"
+  },
+  {
+   "name": "the wave's f″ is f itself",
+   "file": "index.html",
+   "find": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x), dd:x=>-Math.cos(x)}",
+   "replace": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x), dd:Math.cos}",
+   "run": "verify"
+  },
+  {
+   "name": "a quadratic's f is built from the wrong constant",
+   "file": "index.html",
+   "find": "const F=P.int(D,R.i(-1,1))",
+   "replace": "const F=[R.i(-1,1),...D.map(a=>a/2)]",
+   "run": "verify"
+  },
+  {
+   "name": "the integral divides by the wrong power",
+   "file": "index.html",
+   "find": "int:(c,C)=>[C,...c.map((a,i)=>a/(i+1))]",
+   "replace": "int:(c,C)=>[C,...c.map((a,i)=>a/(i+2))]",
+   "run": "verify"
+  },
+  {
+   "name": "f″ is f′ again",
+   "file": "index.html",
+   "find": "DD=P.d(D), sh=",
+   "replace": "DD=D, sh=",
+   "run": "verify"
+  },
+  {
+   "name": "the slid graph never slides",
+   "file": "index.html",
+   "find": "shift:x=>P.v(D,x-sh)",
+   "replace": "shift:x=>P.v(D,x)",
+   "run": "verify"
+  },
+  {
+   "name": "the line slides by 1, too faintly to deal",
+   "file": "index.html",
+   "find": "sh=R.pick([2,-2]);",
+   "replace": "sh=R.pick([1,-1]);",
+   "run": "verify"
+  },
+  {
+   "name": "two wrong graphs may be the same",
+   "file": "index.html",
+   "find": "!pick.includes(k) && !pick.some(j=>this.same(F,F.G[j],F.G[k]))",
+   "replace": "!pick.includes(k)",
+   "run": "verify"
+  },
+  {
+   "name": "the same f may come twice",
+   "file": "index.html",
+   "find": "      if(this.round && F.fs===this.round.F.fs && JSON.stringify(F.D)===JSON.stringify(this.round.F.D)) continue;\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "a strand's row runs backwards",
+   "name": "a tell is taken where the signs agree",
    "file": "index.html",
-   "find": "g.items.sort((a,b)=>a.at[1]-b.at[1])",
-   "replace": "g.items.sort((a,b)=>b.at[1]-a.at[1])",
+   "find": "if(Math.sign(a)*Math.sign(b)>=0) continue;",
+   "replace": "if(Math.sign(a)*Math.sign(b)<0) continue;",
    "run": "verify"
   },
   {
-   "name": "a workshop is listed once per topic",
+   "name": "a tell may sit at the frame",
    "file": "index.html",
-   "find": "      (by[w.mod] || (by[w.mod]={mod:w.mod, name:w.name, topics:[]})).topics.push(k);",
-   "replace": "      (by[w.mod+k]={mod:w.mod, name:w.name, topics:[k]});",
+   "find": "for(const x of this.grid(F).slice(1,-1)){",
+   "replace": "for(const x of this.grid(F)){",
    "run": "verify"
   },
   {
-   "name": "the strands are put in name order",
+   "name": "words read a run the wrong way",
    "file": "index.html",
-   "find": "    return out.filter(g=>g.items.length);",
-   "replace": "    return out.filter(g=>g.items.length).sort((a,b)=>a.strand<b.strand?-1:1);",
+   "find": "(i?'then ':'')+(q.s>0?up:down)",
+   "replace": "(i?'then ':'')+(q.s<0?up:down)",
    "run": "verify"
   },
   {
-   "name": "the emoji is dropped",
+   "name": "about is never said",
    "file": "index.html",
-   "find": "      w.emoji=w.name.slice(0,sp);",
-   "replace": "      w.emoji='';",
+   "find": "return {s:r.s, from:z, about:!on}; });",
+   "replace": "return {s:r.s, from:z, about:false}; });",
    "run": "verify"
   },
   {
-   "name": "the short name keeps Workshop",
+   "name": "a crossing is named a step late",
    "file": "index.html",
-   "find": "      w.short=w.title.replace(/ Workshop$/,'');",
-   "replace": "      w.short=w.title;",
+   "find": "z=this.snap(F,(lo+r.from)/2)",
+   "replace": "z=this.snap(F,r.from+0.25)",
    "run": "verify"
   },
   {
-   "name": "one solid topic makes it solid",
+   "name": "a wave's x reads π/2 as π/4",
    "file": "index.html",
-   "find": "    if(seen.length===w.topics.length && seen.every(",
-   "replace": "    if(seen.length && seen.every(",
+   "find": "s+({1:'π/4',2:'π/2',3:'3π/4',4:'π'})[a];\n  },\n  big(F,g)",
+   "replace": "s+({1:'π/4',2:'π/4',3:'3π/4',4:'π'})[a];\n  },\n  big(F,g)",
    "run": "verify"
   },
   {
-   "name": "solid is any mastery",
+   "name": "flat spots miss the last one",
    "file": "index.html",
-   "find": "seen.every(k=>Mastery.eff(k)>=this.SOLID)) return 'solid';",
-   "replace": "seen.every(k=>Mastery.eff(k)>=0)) return 'solid';",
+   "find": "const xs=this.grid(F).filter(x=>Math.abs(F.G.d(x))<1e-9);\n    return xs.map(",
+   "replace": "const xs=this.grid(F).filter(x=>Math.abs(F.G.d(x))<1e-9).slice(0,1);\n    return xs.map(",
    "run": "verify"
   },
   {
-   "name": "solid takes more than it should",
+   "name": "the why says climbing where f falls",
    "file": "index.html",
-   "find": "seen.every(k=>Mastery.eff(k)>=this.SOLID)",
-   "replace": "seen.every(k=>Mastery.eff(k)>this.SOLID)",
+   "find": "so f′ must sit ${up?'above':'below'}",
+   "replace": "so f′ must sit ${up?'below':'above'}",
    "run": "verify"
   },
   {
-   "name": "weak needs every topic low",
+   "name": "the slip is named wrong",
    "file": "index.html",
-   "find": "    if(seen.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
-   "replace": "    if(seen.length && seen.every(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "find": "It is ${this.NAMES[k]}.`];",
+   "replace": "It is ${this.NAMES.self}.`];",
    "run": "verify"
   },
   {
-   "name": "weak counts unseen topics",
+   "name": "a miss counts as read",
    "file": "index.html",
-   "find": "    if(seen.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
-   "replace": "    if(w.topics.some(k=>Mastery.eff(k)<this.WEAK)) return 'weak';",
+   "find": "      r.out.add(i); this.misses++;",
+   "replace": "      r.out.add(i); this.misses++; this.matched++;",
    "run": "verify"
   },
   {
-   "name": "weak takes the edge",
+   "name": "a miss still counts the first try",
    "file": "index.html",
-   "find": "Mastery.eff(k)<this.WEAK)) return 'weak';",
-   "replace": "Mastery.eff(k)<=this.WEAK)) return 'weak';",
+   "find": "if(this.misses===0) this.firstTry++;",
+   "replace": "this.firstTry++;",
    "run": "verify"
   },
   {
-   "name": "a chip forgets its state's colour",
+   "name": "a missed graph can be tapped again",
    "file": "index.html",
-   "find": "class=\"btn sm ghost wiChip${st?' '+st:''}\"",
-   "replace": "class=\"btn sm ghost wiChip\"",
+   "find": "    if(r.out.has(i)) return;\n    this.picked=i;",
+   "replace": "    this.picked=i;",
    "run": "verify"
   },
   {
-   "name": "the ✓ shows on every chip",
+   "name": "the toast counts tries wrong",
    "file": "index.html",
-   "find": "${st==='solid'?' ✓':''}</button>",
-   "replace": " ✓</button>",
+   "find": "const tries=this.misses+1;",
+   "replace": "const tries=this.misses;",
    "run": "verify"
   },
   {
-   "name": "a screen reader is not told it is solid",
+   "name": "no banner at five",
    "file": "index.html",
-   "find": "const note=st==='solid' ? ', every topic it covers solid' :",
-   "replace": "const note=st==='solid' ? '' :",
+   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SLOPE SPOTTER'",
+   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('SLOPE SPOTTER'",
    "run": "verify"
   },
   {
-   "name": "a screen reader is not told one needs work",
+   "name": "the tell is marked before a miss",
    "file": "index.html",
-   "find": ": st==='weak' ? ', a topic it covers needs work' : '';",
-   "replace": ": '';",
+   "find": "const tellX=miss===null ? null : this.tell(F,F.G[r.deal[miss]]);",
+   "replace": "const tellX=this.tell(F,F.G[r.deal[0]==='d'?1:0]);",
    "run": "verify"
   },
   {
-   "name": "a chip opens the wrong workshop",
+   "name": "a missed graph is not shut",
    "file": "index.html",
-   "find": "onclick=\"${w.mod}.open()\" aria-label",
-   "replace": "onclick=\"Workshop.open()\" aria-label",
+   "find": "${gone?'disabled ':''}onclick=\"SlopeMatch.choose",
+   "replace": "onclick=\"SlopeMatch.choose",
    "run": "verify"
   },
   {
-   "name": "the count is wrong",
+   "name": "a curve is drawn off its frame",
    "file": "index.html",
-   "find": "${n} hands-on workshops.",
-   "replace": "${gs.length} hands-on workshops.",
+   "find": "v=Math.max(-ys,Math.min(ys,g(x)));",
+   "replace": "v=g(x)*1.5;",
    "run": "verify"
   },
   {
-   "name": "a strand heading is dropped",
+   "name": "the rule is not stated",
    "file": "index.html",
-   "find": "${gs.map(g=>`<div class=\"wiStrand\">${g.strand}</div>",
-   "replace": "${gs.map(g=>`<div>${g.strand}</div>",
+   "find": "f′ sits above the axis wherever f climbs, below wherever f falls, and crosses 0 where f's tangent lies flat. Which graph is f′?",
+   "replace": "Which graph is f′?",
    "run": "verify"
   },
   {
-   "name": "the Tome leaves the index out",
+   "name": "the after-read sentence forgets the flat spots",
    "file": "index.html",
-   "find": "      WorkshopIndex.html() +\n",
+   "find": "      if(fl.length) parts.push(`0 at x = ${fl.join(' and x = ')}, where f's tangent lay flat`);\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "the chips run in one row",
+   "name": "the mode buttons do not show which is pressed",
    "file": "index.html",
-   "find": ".wiRow{display:flex;flex-wrap:wrap;gap:6px}",
-   "replace": ".wiRow{display:flex;flex-wrap:nowrap;gap:6px;white-space:nowrap}",
-   "run": "play:wsindex"
+   "find": "aria-pressed=\"${this.mode===m}\" onclick=\"Tracer.setMode",
+   "replace": "aria-pressed=\"false\" onclick=\"Tracer.setMode",
+   "run": "play:slopematch"
   },
   {
-   "name": "the chips stretch the full width",
+   "name": "a mode button loses its name",
    "file": "index.html",
-   "find": ".btn.wiChip{width:auto;margin:0;padding:6px 10px}",
-   "replace": ".btn.wiChip{margin:0;padding:6px 10px}",
-   "run": "play:wsindex"
+   "find": "aria-label=\"${m==='trace'?'Trace the slopes of f along the curve':'See f and pick which of three graphs is f′'}\"",
+   "replace": "",
+   "run": "play:slopematch"
   },
   {
-   "name": "the green ring is not drawn",
+   "name": "the tracer stays shown in the new mode",
    "file": "index.html",
-   "find": ".btn.wiChip.solid{border-color:var(--green)}",
-   "replace": ".wiChip.solidX{border-color:var(--green)}",
-   "run": "play:wsindex"
+   "find": "for(const id of ['tcSets','tcFig','tcStep','tcRead','tcGoalPanel']) document.getElementById(id).style.display=match?'none':'';",
+   "replace": "",
+   "run": "play:slopematch"
   },
   {
-   "name": "the index saves what it read",
+   "name": "the graphs run in one column",
    "file": "index.html",
-   "find": "  html(){\n    const gs=this.groups(),",
-   "replace": "  html(){\n    if(Game.s) Game.s.wsSeen=1;\n    const gs=this.groups(),",
-   "run": "play:wsindex"
+   "find": "<div id=\"smPick\" style=\"display:grid;grid-template-columns:repeat(3,1fr)",
+   "replace": "<div id=\"smPick\" style=\"display:grid;grid-template-columns:1fr",
+   "run": "play:slopematch"
+  },
+  {
+   "name": "no toast for a read",
+   "file": "index.html",
+   "find": "      else UI.toast(`✓ Graph ${'ABC'[i]} is f′",
+   "replace": "      else (()=>{})(`✓ Graph ${'ABC'[i]} is f′",
+   "run": "play:slopematch"
+  },
+  {
+   "name": "the Tome forgets the new mode",
+   "file": "index.html",
+   "find": "Then turn it round: see f, and pick which of three graphs is f′.",
+   "replace": "",
+   "run": "play:slopematch"
+  },
+  {
+   "name": "a read is saved",
+   "file": "index.html",
+   "find": "      this.last={F:r.F, i};\n      this.newRound();",
+   "replace": "      this.last={F:r.F, i}; Game.s.sm=this.matched;\n      this.newRound();",
+   "run": "play:slopematch"
   }
  ]
 }
