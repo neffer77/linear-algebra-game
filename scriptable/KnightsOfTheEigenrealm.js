@@ -1497,6 +1497,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ COFACTOR WORKSHOP ============ -->
+  <div class="screen" id="s-cof">
+    <div class="panel"><h2>♟️ Cofactor Workshop</h2><div class="sub">A 3×3 determinant can be expanded along any row or any column: each entry times the 2×2 determinant left when its row and column are struck out, with signs from a checkerboard. Every line gives the same answer, so pick the one that saves the most work.</div></div>
+    <div class="panel">
+      <div id="cfSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
+      <div id="cfFig"></div>
+      <div id="cfLines" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which line to expand along"></div>
+      <div id="cfRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="cfGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3478,6 +3493,7 @@ const WORKSHOP_FOR = (() => {
     Dot:     ["🎯 Dot Product Workshop", ['dot','angleVec','orth','proj','vecProj']],
     Eigen:   ["👑 Eigenvector Hunt", ['eigen2','eigenvec']],
     Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
+    Cofactor:["♟️ Cofactor Workshop", ['det3']],
     Compose: ["🔁 Order Matters", ['matMul']],
     Span:    ["🧭 Span Workshop", ['vecCombo']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2']],
@@ -12883,6 +12899,7 @@ const UI = {
     if(id==='s-parts') Parts.render();
     if(id==='s-detect') Detect.render();
     if(id==='s-hill') Hill.render();
+    if(id==='s-cof') Cofactor.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13516,6 +13533,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔍 Eigenvalue Detective</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant.</div>
          <button class="btn sm" id="tomeDetect" style="width:auto;margin-top:8px" onclick="Detect.open()">Open the eigenvalue detective</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">♟️ Cofactor Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Expand a 3×3 determinant along any row or column you like and watch every line agree. Find the line with the most zeros, a triangular matrix that is just its diagonal, and a matrix that flattens space.</div>
+         <button class="btn sm" id="tomeCof" style="width:auto;margin-top:8px" onclick="Cofactor.open()">Open the cofactor workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
@@ -17858,6 +17880,111 @@ const Hill = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('HILLWALKER','every heading read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The cofactor workshop: a 3×3 determinant, any way you like ----------
+   Pick a row or a column and expand along it: each entry times its minor,
+   the 2×2 determinant left when its row and column are struck out, with a
+   sign from the checkerboard + − + / − + − / + − +. Every row and column
+   gives the same answer, so the clever choice is the line with the most
+   zeros. A triangular matrix is just its diagonal multiplied, and a matrix
+   whose rows lie in one plane has determinant 0. Nothing is saved. */
+const Cofactor = {
+  SETS:[
+    {id:'gap', btn:'Two zeros', A:[[2,0,1],[3,0,4],[1,5,2]]},
+    {id:'tri', btn:'Triangular', A:[[3,1,4],[0,2,5],[0,0,-1]]},
+    {id:'flat', btn:'Flattened', A:[[1,2,3],[4,5,6],[7,8,9]]}
+  ],
+  si:0, li:null, touched:false,
+  tried:[new Set(),new Set(),new Set()],
+  done:new Set(),
+  GOALS:[
+    {id:'quick', t:'On the first matrix, expand along the line that needs only one minor worked out.', toast:'One minor instead of three',
+     ok:K=>K.si===0 && K.li!==null && K.zeros()===2},
+    {id:'mid', t:'Expand along row 2, where the checkerboard signs go − + −.', toast:'The signs start with a minus',
+     ok:K=>K.li===1},
+    {id:'same', t:'Expand the same matrix two different ways and see the answers agree.', toast:'Every line agrees',
+     ok:K=>K.li!==null && K.tried[K.si].size>=2},
+    {id:'tri', t:'On the triangular matrix, find a line that leaves just one term.', toast:'Just the diagonal',
+     ok:K=>K.si===1 && K.li!==null && K.zeros()===2},
+    {id:'flat', t:'Find the determinant of the flattened matrix, and see why it is 0.', toast:'det A = 0',
+     ok:K=>K.si===2 && K.li!==null}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* the cells along line li: rows 1 to 3 are li = 0 to 2, columns 1 to 3 are li = 3 to 5 */
+  cells(li=this.li){ return [0,1,2].map(t=>li<3 ? [li,t] : [t,li-3]); },
+  name(li=this.li){ return li<3 ? \`row \${li+1}\` : \`column \${li-2}\`; },
+  sign(i,j){ return (i+j)%2 ? -1 : 1; },
+  minor(i,j){ const A=this.set().A; return A.filter((_,r)=>r!==i).map(R=>R.filter((_,c)=>c!==j)); },
+  m2(M){ return M[0][0]*M[1][1]-M[0][1]*M[1][0]; },
+  terms(li=this.li){ const A=this.set().A; return this.cells(li).map(([i,j])=>this.sign(i,j)*A[i][j]*this.m2(this.minor(i,j))); },
+  det(li=this.li){ return this.terms(li).reduce((s,t)=>s+t,0); },
+  zeros(li=this.li){ const A=this.set().A; return this.cells(li).filter(([i,j])=>A[i][j]===0).length; },
+  amt(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  rows(M){ return M.map(R=>R.map(neg).join(', ')).join(M.length===3?'; ':' and ').replace(/; ([^;]*)$/,' and $1'); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const A=this.set().A, out=[];
+    out.push(\`A has rows \${this.rows(A)}. To find det A, pick any row or column and expand along it: each entry times its minor, the 2×2 determinant left when you strike out the entry's row and column, with a sign from the checkerboard + − + / − + − / + − +.\`);
+    if(this.li===null){ out.push('Pick a row or a column below.'); return out; }
+    const C=this.cells(), T=this.terms(), d=this.det(), z=this.zeros(), nm=this.name();
+    out.push(\`Expand along \${nm}, where the signs go \${C.map(([i,j])=>this.sign(i,j)>0?'+':'−').join(' ')}.\`);
+    C.forEach(([i,j],t)=>{
+      const a=A[i][j], s=this.sign(i,j);
+      if(a===0) out.push(\`Entry (\${i+1}, \${j+1}) is 0, so its term is 0 whatever its minor is, and there is no need to work the minor out.\`);
+      else { const M=this.minor(i,j), m=this.m2(M);
+        out.push(\`Entry (\${i+1}, \${j+1}) is \${neg(a)}, with sign \${s>0?'+':'−'}. Strike out row \${i+1} and column \${j+1} to leave rows \${this.rows(M)}, whose determinant is \${this.amt(M[0][0])} × \${this.amt(M[1][1])} − \${this.amt(M[0][1])} × \${this.amt(M[1][0])} = \${neg(m)}. The term is \${s>0?'':'−'}\${this.amt(a)} × \${this.amt(m)} = \${neg(T[t])}.\`); }
+    });
+    out.push(\`Add the terms: det A = \${T.map(t=>this.amt(t)).join(' + ')} = \${neg(d)}.\`+
+      (z ? \` The \${z===1?'zero':'two zeros'} on this \${nm.split(' ')[0]} saved working out \${z===1?'a minor':'two minors'}.\` : ''));
+    const tr=[...this.tried[this.si]].sort((a,b)=>a-b);
+    if(tr.length>=2) out.push(\`Every row and column gives the same det A = \${neg(d)}: you have expanded along \${tr.map(l=>this.name(l)).join(', ').replace(/, ([^,]*)$/,' and $1')}.\`);
+    if(this.set().id==='tri' && z===2)
+      out.push(\`A is triangular, with 0 below its diagonal, so this \${nm.split(' ')[0]} leaves one term, and det A is just the diagonal multiplied: \${A.map((R,k)=>this.amt(R[k])).join(' × ')} = \${neg(d)}.\`);
+    if(this.set().id==='flat')
+      out.push(\`det A = 0 because row 3 is 2 × row 2 − row 1: the three rows lie in one plane, so A flattens space onto it, and a matrix with det A = 0 has no inverse.\`);
+    return out;
+  },
+  /* the matrix as a grid: each cell its entry, its checkerboard sign in the
+     corner, and the picked line outlined in gold with its zeros struck out */
+  svg(){
+    const A=this.set().A, on=this.li===null ? [] : this.cells().map(c=>c.join());
+    const X=j=>96+j*56, Y=i=>14+i*56;
+    let out=\`<svg viewBox="0 0 360 190" style="width:100%;height:auto;display:block" role="img" aria-label="A as a grid, \${this.li===null?'no line picked yet':\`\${this.name()} picked\`}">\`;
+    for(let i=0;i<3;i++) for(let j=0;j<3;j++){
+      const pick=on.includes(\`\${i},\${j}\`), z=A[i][j]===0;
+      out+=\`<g data-k="cell" data-i="\${i}" data-j="\${j}" data-on="\${pick}">\`+
+        \`<rect x="\${X(j)}" y="\${Y(i)}" width="52" height="52" rx="6" fill="\${pick?FIG_COL.fill:'none'}" stroke="\${pick?FIG_COL.b:FIG_COL.grid}" stroke-width="\${pick?2.5:1.5}"/>\`+
+        \`<text x="\${X(j)+7}" y="\${Y(i)+14}" font-size="12" fill="\${FIG_COL.dim}">\${this.sign(i,j)>0?'+':'−'}</text>\`+
+        \`<text x="\${X(j)+26}" y="\${Y(i)+33}" text-anchor="middle" font-size="20" font-weight="700" fill="\${pick&&z?FIG_COL.dim:FIG_COL.ink}">\${neg(A[i][j])}</text>\`+
+        (pick&&z ? \`<line data-k="skip" x1="\${X(j)+10}" y1="\${Y(i)+42}" x2="\${X(j)+42}" y2="\${Y(i)+10}" stroke="\${FIG_COL.dim}" stroke-width="2"/>\` : '')+
+        \`</g>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-cof'); },
+  pick(i){ this.si=i; this.li=null; this.render(); },
+  expand(li){ this.li=li; this.tried[this.si].add(li); this.touched=true; this.render(); },
+  render(){
+    document.getElementById('cfSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Cofactor.pick(\${i})" aria-label="\${s.btn}: A has rows \${this.rows(s.A)}">\${s.btn}</button>\`).join('');
+    document.getElementById('cfLines').innerHTML=[0,1,2,3,4,5].map(l=>
+      \`<button class="btn sm ghost" style="flex:1 1 28%" aria-pressed="\${l===this.li}" onclick="Cofactor.expand(\${l})" aria-label="Expand along \${this.name(l)}">\${this.name(l).replace(/^./,c=>c.toUpperCase())}</button>\`).join('');
+    document.getElementById('cfFig').innerHTML=this.svg()+
+      \`<div class="figcap">Each cell shows its entry, with its checkerboard sign in the corner. The row or column you expand along is outlined in gold, and a 0 on it is struck out: its term is 0.</div>\`;
+    document.getElementById('cfRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('cfGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('COFACTOR MASTER','every line expanded','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

@@ -74,6 +74,7 @@ function loadGame() {
     ';const Parts={' + script.slice(script.indexOf("  SETS:[\n    {id:'xe', btn:'x eˣ'"), script.indexOf("  open(){ UI.go('s-parts'); },")) + '};exports.Parts=Parts;' +
     ';const Detect={' + script.slice(script.indexOf("  SETS:[\n    {id:'pair', btn:'Two roots'"), script.indexOf("  open(){ UI.go('s-detect'); },")) + '};exports.Detect=Detect;' +
     ';const Hill={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Round bowl'"), script.indexOf("  open(){ UI.go('s-hill'); },")) + '};exports.Hill=Hill;' +
+    ';const Cofactor={' + script.slice(script.indexOf("  SETS:[\n    {id:'gap', btn:'Two zeros'"), script.indexOf("  open(){ UI.go('s-cof'); },")) + '};exports.Cofactor=Cofactor;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -92,7 +93,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2687,6 +2688,98 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The cofactor workshop: every row and column of every matrix. det A is
+   worked by the rule of Sarrus, which never expands along anything, and each
+   line's expansion must land on it; each minor is rebuilt by striking out
+   its row and column, each sign from (−1)^(i + j); the first matrix must have
+   exactly one line that needs a single minor, the triangular one must be its
+   diagonal multiplied, and the flattened one must really have row 3 = 2 × row
+   2 − row 1. Every sentence is rebuilt, the grid is read back, and every
+   goal, including the one that needs two lines tried. */
+const cofNotes = (() => {
+  const W = Cofactor;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n)), amt = n => (n < 0 ? `(${neg(n)})` : neg(n));
+  const rows = M => { const r = M.map(R => R.map(neg).join(', ')); return M.length === 3 ? `${r[0]}; ${r[1]} and ${r[2]}` : `${r[0]} and ${r[1]}`; };
+  const line = l => (l < 3 ? `row ${l + 1}` : `column ${l - 2}`);
+  const cellsOf = l => [0, 1, 2].map(t => (l < 3 ? [l, t] : [t, l - 3]));
+  const and = xs => (xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1]);
+  if (W.SETS.map(S => S.id).join() !== 'gap,tri,flat') fail('cof', 'sets', W.SETS.map(S => S.id).join());
+  const reset = () => { W.touched = false; W.li = null; W.tried.forEach(t => t.clear()); };
+  reset(); W.si = 0;
+  for (const g of W.GOALS) if (g.ok(W)) fail('cof', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { W.si = si; W.li = null; for (const g of W.GOALS) if (g.ok(W)) fail('cof', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const A = S.A;
+    const sarrus = A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] + A[0][2] * A[1][0] * A[2][1]
+      - A[0][2] * A[1][1] * A[2][0] - A[0][0] * A[1][2] * A[2][1] - A[0][1] * A[1][0] * A[2][2];
+    const zl = [0, 1, 2, 3, 4, 5].map(l => cellsOf(l).filter(([i, j]) => A[i][j] === 0).length);
+    if (S.id === 'gap' && zl.join() !== '1,1,0,0,2,0') fail('cof', S.id, `the first matrix should have one line with two zeros, column 2: ${zl}`);
+    if (S.id === 'tri') {
+      if (A[1][0] || A[2][0] || A[2][1]) fail('cof', S.id, 'the triangular matrix has something below its diagonal');
+      if (sarrus !== A[0][0] * A[1][1] * A[2][2]) fail('cof', S.id, 'det A is not the diagonal multiplied');
+    }
+    if (S.id === 'flat') {
+      if (A[2].some((v, k) => v !== 2 * A[1][k] - A[0][k])) fail('cof', S.id, 'row 3 is not 2 × row 2 − row 1');
+      if (sarrus !== 0) fail('cof', S.id, 'the flattened matrix does not have det A = 0');
+    }
+    const head = `A has rows ${rows(A)}. To find det A, pick any row or column and expand along it: each entry times its minor, the 2×2 determinant left when you strike out the entry's row and column, with a sign from the checkerboard + − + / − + − / + − +.`;
+    reset(); W.si = si; n++;
+    let got = W.working();
+    if (got.join('\n') !== [head, 'Pick a row or a column below.'].join('\n')) fail('cof', `${S.id} unpicked`, got.join(' | '));
+    if (!/no line picked yet/.test(W.svg())) fail('cof', `${S.id} unpicked`, 'the grid should say no line is picked');
+    const cases = [];
+    for (let l = 0; l < 6; l++) cases.push([l]);
+    for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) if (a !== b) cases.push([a, b]);
+    for (const seq of cases) {
+      reset(); W.si = si; W.touched = true; n++;
+      for (const l of seq) { W.li = l; W.tried[si].add(l); }
+      const l = W.li, key = `${S.id} ${seq.map(line).join(' then ')}`, C = cellsOf(l);
+      if (JSON.stringify(W.cells()) !== JSON.stringify(C)) fail('cof', key, 'the cells along the line are not that row or column');
+      const want = [head, `Expand along ${line(l)}, where the signs go ${C.map(([i, j]) => ((i + j) % 2 ? '−' : '+')).join(' ')}.`];
+      const T = [];
+      for (const [i, j] of C) {
+        const a = A[i][j], s = (i + j) % 2 ? -1 : 1;
+        const M = A.filter((_, r) => r !== i).map(R => R.filter((_, c) => c !== j)), m = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+        T.push(s * a * m);
+        if (a === 0) want.push(`Entry (${i + 1}, ${j + 1}) is 0, so its term is 0 whatever its minor is, and there is no need to work the minor out.`);
+        else want.push(`Entry (${i + 1}, ${j + 1}) is ${neg(a)}, with sign ${s > 0 ? '+' : '−'}. Strike out row ${i + 1} and column ${j + 1} to leave rows ${rows(M)}, whose determinant is ${amt(M[0][0])} × ${amt(M[1][1])} − ${amt(M[0][1])} × ${amt(M[1][0])} = ${neg(m)}. The term is ${s > 0 ? '' : '−'}${amt(a)} × ${amt(m)} = ${neg(s * a * m)}.`);
+      }
+      const d = T.reduce((x, y) => x + y, 0), z = zl[l];
+      if (d !== sarrus) fail('cof', key, `expanding gives ${d}, but det A is ${sarrus}`);
+      if (W.det() !== sarrus) fail('cof', key, `det reads ${W.det()}, not ${sarrus}`);
+      want.push(`Add the terms: det A = ${T.map(amt).join(' + ')} = ${neg(d)}.` + (z ? ` The ${z === 1 ? 'zero' : 'two zeros'} on this ${line(l).split(' ')[0]} saved working out ${z === 1 ? 'a minor' : 'two minors'}.` : ''));
+      if (seq.length >= 2) want.push(`Every row and column gives the same det A = ${neg(d)}: you have expanded along ${and([...seq].sort((p, q) => p - q).map(line))}.`);
+      if (S.id === 'tri' && z === 2) want.push(`A is triangular, with 0 below its diagonal, so this ${line(l).split(' ')[0]} leaves one term, and det A is just the diagonal multiplied: ${amt(A[0][0])} × ${amt(A[1][1])} × ${amt(A[2][2])} = ${neg(d)}.`);
+      if (S.id === 'flat') want.push(`det A = 0 because row 3 is 2 × row 2 − row 1: the three rows lie in one plane, so A flattens space onto it, and a matrix with det A = 0 has no inverse.`);
+      got = W.working();
+      if (got.length !== want.length) fail('cof', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((ln, k) => { if (got[k] !== ln) fail('cof', key, `line ${k + 1} reads: ${got[k]}\n      expected: ${ln}`); });
+      // the grid: every cell its entry and sign, the picked line and only it outlined, its zeros struck out
+      const svg = W.svg();
+      if (!svg.includes(`aria-label="A as a grid, ${line(l)} picked"`)) fail('cof', key, 'the grid does not name the picked line');
+      const cells = [...svg.matchAll(/<g data-k="cell" data-i="(\d)" data-j="(\d)" data-on="(true|false)">(.*?)<\/g>/g)];
+      if (cells.length !== 9) fail('cof', key, `${cells.length} cells drawn`);
+      for (const [, si2, sj2, on, inner] of cells) {
+        const i = +si2, j = +sj2, pick = C.some(([p, q]) => p === i && q === j);
+        if ((on === 'true') !== pick) fail('cof', key, `cell (${i + 1}, ${j + 1}) is ${on === 'true' ? '' : 'not '}outlined`);
+        const tx = [...inner.matchAll(/>([^<]*)<\/text>/g)].map(m => m[1]);
+        if (tx[0] !== ((i + j) % 2 ? '−' : '+') || tx[1] !== neg(A[i][j])) fail('cof', key, `cell (${i + 1}, ${j + 1}) shows ${tx}`);
+        if (/data-k="skip"/.test(inner) !== (pick && A[i][j] === 0)) fail('cof', key, `cell (${i + 1}, ${j + 1}) is struck out wrongly`);
+      }
+      const meant = { quick: si === 0 && z === 2, mid: l === 1, same: seq.length >= 2, tri: si === 1 && z === 2, flat: si === 2 };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('cof', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    }
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('cof', g.id, 'this goal cannot be found');
+  reset(); W.si = 0; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The hillwalker workshop: every heading on every hill. The gradient is
    checked against numerical partials, and the partials the readout writes are
    evaluated at the point; every heading must have length 1 and the twelve
@@ -4299,6 +4392,7 @@ console.log(`  implicit points         ${pad(implicitNotes.n.toLocaleString(), 1
 console.log(`  splits tried            ${pad(partsNotes.n.toLocaleString(), 10)}  (each u times dv giving back the integrand, du and v checked numerically, each answer and the integral it leaves checked by differentiating, the drawn answer rising by the area, ${partsNotes.goals} goals findable)`);
 console.log(`  λ stepped               ${pad(detectNotes.n.toLocaleString(), 10)}  (det(A − λI) against the characteristic polynomial, each eigenvalue against the quadratic formula, each crushed arrow multiplied out, the trace and determinant checked, the curve measured, ${detectNotes.goals} goals findable)`);
 console.log(`  headings faced          ${pad(hillNotes.n.toLocaleString(), 10)}  (∇f against numerical partials, each slope ∇f · û against a central difference, steepest, level and steepest down exactly along, across and against ∇f, every contour drawn on its level, ${hillNotes.goals} goals findable)`);
+console.log(`  expansions tried        ${pad(cofNotes.n.toLocaleString(), 10)}  (det A by the rule of Sarrus against every row and column, each minor struck out afresh, each sign from the checkerboard, the grid read back, two lines tried agreeing, ${cofNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
