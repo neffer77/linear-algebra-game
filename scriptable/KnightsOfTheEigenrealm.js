@@ -1462,7 +1462,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-detect">
     <div class="panel"><h2>🔍 Eigenvalue Detective</h2><div class="sub">An eigenvalue is a λ where A − λI crushes some arrow flat, which is exactly where det(A − λI) = 0. Step λ along and watch that determinant trace out a curve, the characteristic polynomial, and run down where it meets the axis.</div></div>
     <div class="panel">
-      <div id="cpSets" class="wsModes" role="group" aria-label="Which matrix"></div>
+      <div id="cpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
       <div id="cpMat" aria-hidden="true" style="text-align:center;margin:4px 0 6px"></div>
       <div id="cpFig"></div>
       <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
