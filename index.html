@@ -1033,6 +1033,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ BEST FIT WORKSHOP ============ -->
+  <div class="screen" id="s-fit">
+    <div class="panel"><h2>📏 Best Fit Workshop</h2><div class="sub">Set a line y = m·x + c through a handful of points. Each point misses the line by its y minus the line's height there. Square every miss and add them up: the line with the smallest total is the best fit, the least-squares line.</div></div>
+    <div class="panel">
+      <div id="ftSets" class="wsModes" role="group" aria-label="The points"></div>
+      <div id="ftAmts" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The slope m and the height c"></div>
+      <div id="ftFig"></div>
+      <div id="ftRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="ftGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ UNDO WORKSHOP ============ -->
   <div class="screen" id="s-undo">
     <div class="panel"><h2>↩️ Undo Workshop</h2><div class="sub">A matrix A moves the plane. Turn the four numbers of B until B puts everything back: follow î and ĵ through A, then through B, and bring both home. The B that does it is A⁻¹, the inverse of A.</div></div>
@@ -12393,6 +12408,7 @@ const UI = {
     if(id==='s-span') Span.render();
     if(id==='s-elim') Elim.render();
     if(id==='s-undo') Undo.render();
+    if(id==='s-fit') Fit.render();
     if(id==='s-limit') Limit.render();
     if(id==='s-descent') Descent.render();
     Calc.syncButton();
@@ -13034,6 +13050,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">↩️ Undo Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo.</div>
          <button class="btn sm" id="tomeUndo" style="width:auto;margin-top:8px" onclick="Undo.open()">Open the undo workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats.</div>
+         <button class="btn sm" id="tomeFit" style="width:auto;margin-top:8px" onclick="Fit.open()">Open the best fit workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
@@ -14702,6 +14723,125 @@ const Undo = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('UNDOER','every move put back','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ BEST FIT WORKSHOP ============
+   A line y = m·x + c through scattered points, set by hand. Each point's
+   miss is its y minus the line's height there; the readout works every miss,
+   adds them, adds their squares, and says what one step of m or c would do
+   to that total, so the player can walk downhill on it without holding a
+   number in their head. The line with the smallest total is the least-squares
+   line: the same idea as projection, in a larger room. m and c are kept as
+   whole numbers of half-steps so no total is ever a rounding error. */
+const Fit = {
+  SETS:[
+    {btn:'Line-up',   pts:[[-2,-1],[-1,0],[1,2],[2,3]],          is:'four points on one line'},
+    {btn:'Scatter',   pts:[[-2,2],[-1,0],[1,3],[2,3]],           is:'four scattered points'},
+    {btn:'Far point', pts:[[-2,-1],[-1,-1],[0,-1],[1,-1],[2,4]], is:'four points in a row and one far away'}
+  ],
+  MLO:-4, MHI:4, CLO:-6, CHI:6,   // in half-steps: m and c run from −2 to 2 and −3 to 3
+  si:0, mh:1, ch:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'through', t:'On the line-up, run the line through every point.', toast:'Ran the line through every point',
+     ok:F=>F.sse()===0},
+    {id:'shift',   t:'Slide that line so every point misses by the same amount.', toast:'Every point missed by the same amount',
+     ok:F=>{ const r=F.misses(); return r[0]!==0 && r.every(x=>x===r[0]); }},
+    {id:'best',    t:'On the scatter, find the line no other line beats.', toast:'Found the best line for the scatter',
+     ok:F=>F.si===1 && F.best()},
+    {id:'cancel',  t:'Find a line whose misses add to 0 but that is not the best line.', toast:'Misses that cancel on a line that is not the best',
+     ok:F=>F.total()===0 && !F.best()},
+    {id:'far',     t:'With the far point, find the best line, and see where it goes.', toast:'Found where the far point pulls the best line',
+     ok:F=>F.si===2 && F.best()},
+    {id:'row',     t:'Run the line through the four points in a row, and see what the far point costs.', toast:'Saw what the far point costs',
+     ok:F=>F.si===2 && F.mh===0 && F.ch===-2}
+  ],
+  P(){ return this.SETS[this.si].pts; },
+  m(){ return this.mh/2; },
+  c(){ return this.ch/2; },
+  at(x, mh=this.mh, ch=this.ch){ return (mh*x+ch)/2; },
+  misses(mh=this.mh, ch=this.ch){ return this.P().map(([x,y])=>y-this.at(x,mh,ch)); },
+  total(){ return this.misses().reduce((s,r)=>s+r,0); },
+  sse(mh=this.mh, ch=this.ch){ return this.misses(mh,ch).reduce((s,r)=>s+r*r,0); },
+  // the smallest total over every line the steppers can reach
+  least(){
+    let lo=Infinity;
+    for(let mh=this.MLO; mh<=this.MHI; mh++) for(let ch=this.CLO; ch<=this.CHI; ch++) lo=Math.min(lo, this.sse(mh,ch));
+    return lo;
+  },
+  best(){ return this.sse()===this.least(); },
+  num(n){ return neg(Math.round(n*100)/100); },
+  par(n){ return n<0 ? `(${this.num(n)})` : this.num(n); },
+  sumTxt(a){ return a.map((n,i)=>i ? (n<0 ? ` − ${this.num(-n)}` : ` + ${this.num(n)}`) : this.num(n)).join(''); },
+  line(){
+    const m=this.m(), c=this.c();
+    const mx = m===0 ? '' : m===1 ? 'x' : m===-1 ? '−x' : this.num(m)+'x';
+    if(!mx) return 'y = '+this.num(c);
+    return 'y = '+mx+(c>0 ? ' + '+this.num(c) : c<0 ? ' − '+this.num(-c) : '');
+  },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const P=this.P(), r=this.misses(), out=[];
+    out.push(`The line is ${this.line()}. A point's miss is its y minus the line's height at its x.`);
+    out.push('Misses: '+P.map(([x,y],i)=>`at x = ${neg(x)}, ${neg(y)} − ${this.par(this.at(x))} = ${this.num(r[i])}`).join('; ')+'.');
+    const S=this.sse(), lo=this.least(), T=this.total();
+    out.push(`They add to ${this.sumTxt(r)} = ${this.num(T)}, and their squares to ${r.map(x=>this.num(x*x)).join(' + ')} = ${this.num(S)}.`);
+    if(S===0) out.push('Every miss is 0: the line runs through every point, so no line can do better.');
+    else if(S===lo){
+      const n=P.length, xb=P.reduce((s,p)=>s+p[0],0)/n, yb=P.reduce((s,p)=>s+p[1],0)/n;
+      out.push(`No line does better: this is the least-squares line, the one with the smallest total of squared misses. It runs through the average point (${this.num(xb)}, ${this.num(yb)}).`+
+        (this.si===2 ? ` The far point at (${neg(P[4][0])}, ${neg(P[4][1])}) tilts it off the four in a row: one big miss, squared, outweighs several small ones.` : ''));
+    } else {
+      if(r.every(x=>x===r[0])) out.push(`Every point misses by the same ${this.num(r[0])}: sliding a line up or down adds the same amount to every miss.`);
+      if(this.si===2 && r.slice(0,4).every(x=>x===0)){
+        const f=r[4];
+        out.push(`The line runs through the four points in a row, but the far point misses by ${this.num(f)}, and ${this.par(f)}² = ${this.num(f*f)} is more than the best line's whole total of ${this.num(lo)}.`);
+      }
+      if(T===0) out.push('The misses add to 0, yet a better line exists: misses above and below cancel out, so only their squares can pick the best line.');
+      const nb=[];
+      if(this.mh>this.MLO) nb.push(`m down gives ${this.num(this.sse(this.mh-1,this.ch))}`);
+      if(this.mh<this.MHI) nb.push(`m up gives ${this.num(this.sse(this.mh+1,this.ch))}`);
+      if(this.ch>this.CLO) nb.push(`c down gives ${this.num(this.sse(this.mh,this.ch-1))}`);
+      if(this.ch<this.CHI) nb.push(`c up gives ${this.num(this.sse(this.mh,this.ch+1))}`);
+      out.push(`A smaller total is out there. One step from here: ${nb.join(', ')}.`);
+    }
+    return out;
+  },
+  open(){ UI.go('s-fit'); },
+  pick(i){ this.si=i; this.touched=true; this.render(); },
+  step(w, by){
+    if(w==='m'){ const v=this.mh+by; if(v<this.MLO || v>this.MHI) return; this.mh=v; }
+    else { const v=this.ch+by; if(v<this.CLO || v>this.CHI) return; this.ch=v; }
+    this.touched=true; this.render();
+  },
+  render(){
+    document.getElementById('ftSets').innerHTML=this.SETS.map((o,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Fit.pick(${i})"
+        aria-label="${o.btn}: ${o.is}, at ${o.pts.map(p=>`(${neg(p[0])}, ${neg(p[1])})`).join(', ')}">${o.btn}</button>`).join('');
+    const nm={m:'the slope m', c:'the height c'}, val={m:this.m(), c:this.c()};
+    const lo={m:this.mh<=this.MLO, c:this.ch<=this.CLO}, hi={m:this.mh>=this.MHI, c:this.ch>=this.CHI};
+    document.getElementById('ftAmts').innerHTML=['m','c'].map(w=>`<b class="dtName ${w==='m'?'c0':'c1'}">${w}</b><div class="wsCell ${w==='m'?'c0':'c1'}">
+        <button onclick="Fit.step('${w}',-1)" aria-label="Lower ${nm[w]}"${lo[w]?' disabled':''}>−</button>
+        <b aria-label="${w}, ${nm[w].slice(0,-2)}: ${this.num(val[w])}">${this.num(val[w])}</b>
+        <button onclick="Fit.step('${w}',1)" aria-label="Raise ${nm[w]}"${hi[w]?' disabled':''}>+</button></div>`).join('');
+    const P=this.P(), r=this.misses();
+    const vecs=P.map(([x],i)=>r[i] ? {v:[0,r[i]], from:[x,this.at(x)], col:FIG_COL.d, label:''} : null).filter(Boolean);
+    Figure.render({kind:'plane', span:6, vecs, marks:P, eqs:[{a:-this.m(), b:1, c:this.c(), col:FIG_COL.a}],
+      caption:`The gold rings are the points and the blue line is ${this.line()}; each red arrow is a miss, from the line to its point.`},
+      document.getElementById('ftFig'));
+    document.getElementById('ftRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('ftGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LINE FITTER','the best line found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

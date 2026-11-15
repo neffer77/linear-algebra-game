@@ -54,6 +54,7 @@ function loadGame() {
     ';const Span={' + script.slice(script.indexOf('  PAIRS:[\n    {u:[2,1],'), script.indexOf('  open(){ UI.go(\'s-span\'); },')) + '};exports.Span=Span;' +
     ';const Elim={' + script.slice(script.indexOf('  SYSTEMS:[\n    [[1,2,5],'), script.indexOf('  open(){ UI.go(\'s-elim\'); },')) + '};exports.Elim=Elim;' +
     ';const Undo={' + script.slice(script.indexOf('  MATS:[\n    {m:[[1,1],[0,1]],  btn:\'Shear\''), script.indexOf('  open(){ UI.go(\'s-undo\'); },')) + '};exports.Undo=Undo;' +
+    ';const Fit={' + script.slice(script.indexOf("  SETS:[\n    {btn:'Line-up'"), script.indexOf("  open(){ UI.go('s-fit'); },")) + '};exports.Fit=Fit;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -71,7 +72,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2168,6 +2169,89 @@ const undoNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* Every state of the best fit workshop: each set of points, every m and c.
+   Each miss is worked here from the point and the line, every number in the
+   working is read back and checked, the totals are redone, and the best line
+   is found here by trying every line and must be the only one with the least
+   total. The verdict, the neighbours' totals and the special lines (through
+   every point, every miss the same, the four in a row) are each checked
+   against that arithmetic. Each goal must be findable, and none met where
+   the workshop opens. */
+const fitNotes = (() => {
+  const F = Fit, num = s => +String(s).replace(/[()]/g, '').replace(/−/g, '-');
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const found = {};
+  let n = 0;
+  if (F.si !== 0 || F.mh !== 1 || F.ch !== 0 || F.touched) fail('fit', 'start', 'the workshop does not open on the line-up with y = 0.5x, untouched');
+  for (const g of F.GOALS) if (g.ok(F)) fail('fit', 'start', `${g.id} is met before anything is pressed`);
+  const N = '(\\(?−?[\\d.]+\\)?)';
+  F.SETS.forEach((S, si) => {
+    const P = S.pts, sse = (mh, ch) => P.reduce((t, [x, y]) => t + (y - (mh * x + ch) / 2) ** 2, 0);
+    let lo = Infinity, at = [];
+    for (let mh = -4; mh <= 4; mh++) for (let ch = -6; ch <= 6; ch++) {
+      const e = sse(mh, ch);
+      if (e < lo) { lo = e; at = [[mh, ch]]; } else if (e === lo) at.push([mh, ch]);
+    }
+    if (at.length !== 1) fail('fit', S.btn, `${at.length} lines share the least total`);
+    const xb = P.reduce((t, p) => t + p[0], 0) / P.length, yb = P.reduce((t, p) => t + p[1], 0) / P.length;
+    if (at.length === 1 && at[0][0] * xb + at[0][1] !== 2 * yb) fail('fit', S.btn, 'the best line misses the average point');
+    for (let mh = -4; mh <= 4; mh++) for (let ch = -6; ch <= 6; ch++) {
+      F.si = si; F.mh = mh; F.ch = ch; F.touched = true; n++;
+      const key = `${S.btn} m=${mh / 2} c=${ch / 2}`, L = F.working();
+      const m = mh / 2, c = ch / 2, r = P.map(([x, y]) => y - (m * x + c)), E = sse(mh, ch), T = r.reduce((a, b) => a + b, 0);
+      // the line, read back
+      const lm = /^The line is y = (.*?)\. A point's miss is its y minus the line's height at its x\.$/.exec(L[0]);
+      if (!lm) { fail('fit', key, `the first line reads: ${L[0]}`); continue; }
+      const t = lm[1].replace(/−/g, '-').replace(/ /g, '');
+      const tm = /^(-?[\d.]*)x(.*)$/.exec(t);
+      const rm = tm ? (tm[1] === '' ? 1 : tm[1] === '-' ? -1 : +tm[1]) : 0, rc = tm ? (tm[2] ? +tm[2] : 0) : +t;
+      if (rm !== m || rc !== c || /(^|[^.\d])1x|(^|[^.\d])0x|\+-|\+0(?![.\d])/.test(t)) fail('fit', key, `the line is written wrongly: ${lm[1]}`);
+      // each miss, read back
+      const ms = L[1].replace(/^Misses: /, '').replace(/\.$/, '').split('; ');
+      if (!L[1].startsWith('Misses: ') || ms.length !== P.length) fail('fit', key, `the misses line reads: ${L[1]}`);
+      else ms.forEach((txt, i) => {
+        const q = new RegExp(`^at x = (−?\\d+), (−?\\d+) − ${N} = ${N}$`).exec(txt);
+        if (!q) { fail('fit', key, `a miss reads: ${txt}`); return; }
+        const [x, y] = P[i], h = m * x + c;
+        if (num(q[1]) !== x || num(q[2]) !== y || num(q[3]) !== h || num(q[4]) !== r[i]) fail('fit', key, `a miss is wrong: ${txt}`);
+        if (/\(/.test(q[3]) !== (h < 0) || /\(/.test(q[4])) fail('fit', key, `a miss is bracketed wrongly: ${txt}`);
+      });
+      // the totals
+      const tt = /^They add to (.*) = (−?[\d.]+), and their squares to (.*) = ([\d.]+)\.$/.exec(L[2]);
+      if (!tt) { fail('fit', key, `the totals read: ${L[2]}`); continue; }
+      const parts = tt[1].replace(/ − /g, ' + -').replace(/−/g, '-').split(' + ').map(Number);
+      if (parts.join() !== r.join() || num(tt[2]) !== T) fail('fit', key, `the misses do not add up: ${L[2]}`);
+      const sq = tt[3].split(' + ').map(Number);
+      if (sq.join() !== r.map(v => v * v).join() || num(tt[4]) !== E) fail('fit', key, `the squares do not add up: ${L[2]}`);
+      // the verdict
+      const rest = L.slice(3).join(' ');
+      if (E === 0) { if (L.length !== 4 || !/^Every miss is 0: the line runs through every point/.test(L[3])) fail('fit', key, `through every point is not said: ${rest}`); }
+      else if (E === lo) {
+        if (L.length !== 4 || !L[3].startsWith('No line does better: this is the least-squares line') || !L[3].includes(`(${neg(xb)}, ${neg(yb)})`)) fail('fit', key, `the best line is not said: ${rest}`);
+        if ((si === 2) !== /far point/.test(L[3])) fail('fit', key, `the far point is said wrongly: ${rest}`);
+      } else {
+        if (/No line does better|Every miss is 0/.test(rest)) fail('fit', key, `a line that is not the best is called the best: ${rest}`);
+        if (r.every(v => v === r[0]) !== /misses by the same/.test(rest)) fail('fit', key, `every miss the same is said wrongly: ${rest}`);
+        const row = si === 2 && r.slice(0, 4).every(v => v === 0);
+        if (row !== /four points in a row/.test(rest)) fail('fit', key, `the row is said wrongly: ${rest}`);
+        if (row && !rest.includes(`and ${r[4] < 0 ? '(' + neg(r[4]) + ')' : neg(r[4])}² = ${r[4] ** 2} is more than the best line's whole total of ${lo}.`)) fail('fit', key, `the far point's cost is wrong: ${rest}`);
+        if ((T === 0) !== /misses add to 0, yet/.test(rest)) fail('fit', key, `cancelling misses are said wrongly: ${rest}`);
+        const want = [];
+        if (mh > -4) want.push(`m down gives ${neg(sse(mh - 1, ch))}`);
+        if (mh < 4) want.push(`m up gives ${neg(sse(mh + 1, ch))}`);
+        if (ch > -6) want.push(`c down gives ${neg(sse(mh, ch - 1))}`);
+        if (ch < 6) want.push(`c up gives ${neg(sse(mh, ch + 1))}`);
+        if (L[L.length - 1] !== `A smaller total is out there. One step from here: ${want.join(', ')}.`) fail('fit', key, `the steps from here are wrong: ${L[L.length - 1]}`);
+      }
+      if (F.best() !== (E === lo)) fail('fit', key, 'best() disagrees with every line tried');
+      for (const g of F.GOALS) if (g.ok(F)) found[g.id] = found[g.id] || key;
+    }
+  });
+  for (const g of F.GOALS) if (!found[g.id]) fail('fit', g.id, 'this goal cannot be found');
+  F.si = 0; F.mh = 1; F.ch = 0; F.touched = false; F.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2400,6 +2484,7 @@ console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(),
 console.log(`  span workshop states       ${pad(spanNotes.n.toLocaleString(), 10)}  (a·u + b·v, the target, what the pair spans, ${spanNotes.goals} goals findable)`);
 console.log(`  elimination states         ${pad(elimNotes.n.toLocaleString(), 10)}  (each row operation redone, worked, the crossing kept, ${elimNotes.goals} goals findable)`);
 console.log(`  undo workshop states       ${pad(undoNotes.n.toLocaleString(), 10)}  (î and ĵ followed through A and B, the one inverse, ${undoNotes.goals} goals findable)`);
+console.log(`  best fit states            ${pad(fitNotes.n.toLocaleString(), 10)}  (every miss and both totals worked, the one best line, ${fitNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

@@ -1,103 +1,117 @@
 {
- "change": "The Undo Workshop: the matrix that puts a move back",
+ "change": "The Best Fit Workshop: the line that misses least",
  "mutations": [
   {
-   "name": "B's bottom row uses its top row",
+   "name": "a miss is the line minus the point",
    "file": "index.html",
-   "find": "out.push(`B sends A${nm} = ${this.vec(v)} to ⟨${neg(B[0][0])}·${this.amt(v[0])} + ${this.amt(B[0][1])}·${this.amt(v[1])}, ${neg(B[1][0])}",
-   "replace": "out.push(`B sends A${nm} = ${this.vec(v)} to ⟨${neg(B[0][0])}·${this.amt(v[0])} + ${this.amt(B[0][1])}·${this.amt(v[1])}, ${neg(B[0][0])}",
+   "find": "misses(mh=this.mh, ch=this.ch){ return this.P().map(([x,y])=>y-this.at(x,mh,ch)); },",
+   "replace": "misses(mh=this.mh, ch=this.ch){ return this.P().map(([x,y])=>this.at(x,mh,ch)-y); },",
    "run": "verify"
   },
   {
-   "name": "B is applied by columns instead of rows",
+   "name": "the total adds sizes, not squares",
    "file": "index.html",
-   "find": "end(j){ return this.app(this.B, this.col(this.A(), j)); },",
-   "replace": "end(j){ const [[a,b],[c,d]]=this.B; return this.app([[a,c],[b,d]], this.col(this.A(), j)); },",
+   "find": "sse(mh=this.mh, ch=this.ch){ return this.misses(mh,ch).reduce((s,r)=>s+r*r,0); },",
+   "replace": "sse(mh=this.mh, ch=this.ch){ return this.misses(mh,ch).reduce((s,r)=>s+Math.abs(r),0); },",
    "run": "verify"
   },
   {
-   "name": "A's arrows are read from its rows",
+   "name": "the best line is sought at this c only",
    "file": "index.html",
-   "find": "out.push(`A is ${this.MATS[this.mi].is}: it sends î to ${this.vec(this.col(A,0))} and ĵ to ${this.vec(this.col(A,1))}.`);",
-   "replace": "out.push(`A is ${this.MATS[this.mi].is}: it sends î to ${this.vec(A[0])} and ĵ to ${this.vec(A[1])}.`);",
+   "find": "for(let ch=this.CLO; ch<=this.CHI; ch++) lo=Math.min(lo, this.sse(mh,ch));",
+   "replace": "for(let ch=this.ch; ch<=this.ch; ch++) lo=Math.min(lo, this.sse(mh,ch));",
    "run": "verify"
   },
   {
-   "name": "a negative factor is not bracketed",
+   "name": "the average point divides by one too few",
    "file": "index.html",
-   "find": "amt(n){ return n<0 ? `(${neg(n)})` : neg(n); },\n  rows(M)",
-   "replace": "amt(n){ return neg(n); },\n  rows(M)",
+   "find": "yb=P.reduce((s,p)=>s+p[1],0)/n;",
+   "replace": "yb=P.reduce((s,p)=>s+p[1],0)/(n-1);",
    "run": "verify"
   },
   {
-   "name": "home counts one arrow only",
+   "name": "a negative height is not bracketed",
    "file": "index.html",
-   "find": "undone(){ return this.home(0) && this.home(1); },",
-   "replace": "undone(){ return this.home(0); },",
+   "find": "par(n){ return n<0 ? `(${this.num(n)})` : this.num(n); },",
+   "replace": "par(n){ return this.num(n); },",
    "run": "verify"
   },
   {
-   "name": "the squash names an arrow it does not crush",
+   "name": "the line reads + − for a negative c",
    "file": "index.html",
-   "find": "const z=[A[0][1], -A[0][0]];",
-   "replace": "const z=[A[0][0], -A[0][1]];",
+   "find": "c<0 ? ' − '+this.num(-c) : '');",
+   "replace": "c<0 ? ' + '+this.num(c) : '');",
    "run": "verify"
   },
   {
-   "name": "the flip is not called its own undo",
+   "name": "m down reports m up's total",
    "file": "index.html",
-   "find": "(A.every((r,i)=>r.every((x,j)=>x===B[i][j])) ? ' A is its own undo",
-   "replace": "(A.every((r,i)=>r.every((x,j)=>x===B[j][i]&&i!==j)) ? ' A is its own undo",
+   "find": "nb.push(`m down gives ${this.num(this.sse(this.mh-1,this.ch))}`);",
+   "replace": "nb.push(`m down gives ${this.num(this.sse(this.mh+1,this.ch))}`);",
    "run": "verify"
   },
   {
-   "name": "a new A keeps the old B",
+   "name": "the far point's tilt is told on the scatter",
    "file": "index.html",
-   "find": "pick(i){ this.mi=i; this.B=[[1,0],[0,1]]; this.moved=false;",
-   "replace": "pick(i){ this.mi=i; this.moved=false;",
-   "run": "play:undo"
+   "find": "(this.si===2 ? ` The far point at",
+   "replace": "(this.si===1 ? ` The far point at",
+   "run": "verify"
   },
   {
-   "name": "the steppers stop at ±1",
+   "name": "a new set puts m and c back",
    "file": "index.html",
-   "find": "LO:-2, HI:2,\n  mi:0, B:[[1,0],[0,1]]",
-   "replace": "LO:-1, HI:1,\n  mi:0, B:[[1,0],[0,1]]",
-   "run": "play:undo"
+   "find": "pick(i){ this.si=i; this.touched=true; this.render(); },",
+   "replace": "pick(i){ this.si=i; this.mh=1; this.ch=0; this.touched=true; this.render(); },",
+   "run": "play:fit"
   },
   {
-   "name": "the half goal needs both arrows away",
+   "name": "m stops at 1.5",
    "file": "index.html",
-   "find": "ok:U=>U.moved && U.home(0)!==U.home(1)}",
-   "replace": "ok:U=>U.moved && !U.home(0) && !U.home(1)}",
-   "run": "play:undo"
+   "find": "MLO:-4, MHI:4, CLO:-6, CHI:6,",
+   "replace": "MLO:-4, MHI:3, CLO:-6, CHI:6,",
+   "run": "play:fit"
   },
   {
-   "name": "picking the squash counts as trying",
+   "name": "a miss of 0 gets an arrow",
    "file": "index.html",
-   "find": "ok:U=>U.mi===4 && U.moved}",
-   "replace": "ok:U=>U.mi===4}",
-   "run": "play:undo"
+   "find": "r[i] ? {v:[0,r[i]], from:[x,this.at(x)]",
+   "replace": "true ? {v:[0,r[i]], from:[x,this.at(x)]",
+   "run": "play:fit"
   },
   {
-   "name": "B's numbers lose their names",
+   "name": "the caption drops the arrows",
    "file": "index.html",
-   "find": "<b aria-label=\"B's ${nm} number: ${neg(v)}\">",
-   "replace": "<b>",
-   "run": "play:undo"
-  },
-  {
-   "name": "the caption drops the rings",
-   "file": "index.html",
-   "find": "Blue and green: where B then sends them. The rings are home.'",
-   "replace": "Blue and green: where B then sends them.'",
-   "run": "play:undo"
+   "find": "the blue line is ${this.line()}; each red arrow is a miss, from the line to its point.`},",
+   "replace": "the blue line is ${this.line()}.`},",
+   "run": "play:fit"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
    "find": "else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
    "replace": "else { Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
-   "run": "play:undo"
+   "run": "play:fit"
+  },
+  {
+   "name": "m and c lose their names",
+   "file": "index.html",
+   "find": "<b aria-label=\"${w}, ${nm[w].slice(0,-2)}: ${this.num(val[w])}\">",
+   "replace": "<b>",
+   "run": "play:fit"
+  },
+  {
+   "name": "misses that add to 0 count even on the best line",
+   "file": "index.html",
+   "find": "ok:F=>F.total()===0 && !F.best()}",
+   "replace": "ok:F=>F.total()===0}",
+   "run": "play:fit"
+  },
+  {
+   "name": "raising m never stops",
+   "file": "index.html",
+   "find": "hi={m:this.mh>=this.MHI,",
+   "replace": "hi={m:false,",
+   "run": "play:fit"
   }
  ]
 }
