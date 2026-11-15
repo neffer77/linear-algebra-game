@@ -1181,18 +1181,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 
   <div class="screen" id="s-chain">
     <div class="panel"><h2>⛓️ Chain Rule Workshop</h2><div class="sub">y is built in two links: u = g(x), then y = f(u). Move x and watch how fast each link moves: u moves g′(x) times as fast as x, y moves f′(u) times as fast as u, so y moves f′(u) × g′(x) times as fast as x.</div></div>
+    <div id="chMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Follow the two links or pick dy/dx"></div>
     <div class="panel">
+      <div id="chPick"></div>
       <div id="chPairs" class="wsModes" role="group" aria-label="The two links"></div>
       <div id="chFig"></div>
       <div id="chRules" class="wsModes" role="group" aria-label="The rule"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="chXs" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="chXLo" onclick="Chain.moveX(-1)" aria-label="Move x left">−</button>
           <b id="chX" style="font-size:17px;min-width:0"></b>
           <button id="chXHi" onclick="Chain.moveX(1)" aria-label="Move x right">+</button></div>
       </div>
       <div id="chRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="chGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="chGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14047,7 +14049,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once. Then turn it round: see y = f(g(x)), and pick which of four formulas is its slope.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -17144,11 +17146,19 @@ const Chain = {
       out.push(`The slip gets it right here, but only by luck: g(${X}) = ${this.num(u)}, the same as x, so f′ is taken at the same number either way.`);
     return out;
   },
+  mode:'link',
+  setMode(m){ this.mode=m; this.render(); },
   open(){ UI.go('s-chain'); },
   pick(i){ this.pi=i; this.touched=true; this.render(); },
   rule(s){ this.slip=s; this.touched=true; this.render(); },
   moveX(by){ const v=this.xh+by; if(v<this.XLO || v>this.XHI) return; this.xh=v; this.touched=true; this.render(); },
   render(){
+    document.getElementById('chMode').innerHTML=[['link','⛓️ Two links','Follow the two links and watch their slopes multiply'],['pick','🎯 Which dy/dx?','See y = f(g(x)) and pick which of four formulas is its slope']]
+      .map(([m,t,l])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Chain.setMode('${m}')" aria-label="${l}">${t}</button>`).join('');
+    const pick=this.mode==='pick';
+    for(const id of ['chPairs','chFig','chRules','chXs','chRead','chGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('chPick').innerHTML=pick ? ChainPick.html() : '';
+    if(pick) return;
     const P=this.pair(), x=this.x();
     document.getElementById('chPairs').innerHTML=this.PAIRS.map((p,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.pi}" onclick="Chain.pick(${i})" aria-label="f(u) = ${p.f} and g(x) = ${p.g}">${p.label}</button>`).join('');
@@ -17176,6 +17186,205 @@ const Chain = {
         Celebrate.banner('LINK BY LINK','every chain followed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* -------------------- which dy/dx? (chain rule workshop) -------------------- */
+/* The chain rule workshop turned round: y = f(g(x)) and four formulas for
+   dy/dx. One is the chain rule, f′(g(x)) × g′(x); the others are the slips
+   people make on the way there: stopping at f′(g(x)) without the inner slope,
+   taking f′ at x instead of at g(x), putting the inner slope inside f′, or
+   getting the outer slope itself wrong (the power kept, the sign of sin or
+   cos flipped, the power rule tried on e^u). A wrong pick draws its slope at
+   one point as a red line, which cuts across the curve instead of touching
+   it, and a nudge gives the slope the curve really has there. Nothing is
+   saved. */
+const ChainPick = {
+  RULE:'The chain rule: if y = f(u) with u = g(x), then dy/dx = f′(u) × g′(x). Take the outer slope at the inside, u = g(x), then multiply by the inner slope. Which formula is dy/dx?',
+  SLIPS:['inner','atx','inside','outer'],
+  FAMS:['pow','pow','sin','cos','exp'],
+  H:0.001,
+  // the inside u = g(x): a x + b, or x² + b
+  g(c,x){ return c.sq ? x*x+c.b : c.a*x+c.b; },
+  gp(c,x){ return c.sq ? 2*x : c.a; },
+  F(c,u){ return c.fam==='pow' ? u**c.n : c.fam==='sin' ? Math.sin(u) : c.fam==='cos' ? Math.cos(u) : Math.exp(u); },
+  Fp(c,u){ return c.fam==='pow' ? c.n*u**(c.n-1) : c.fam==='sin' ? Math.cos(u) : c.fam==='cos' ? -Math.sin(u) : Math.exp(u); },
+  y(c,x){ return this.F(c,this.g(c,x)); },
+  // each formula's slope at x: the chain rule's and each slip's
+  value(c,k,x){
+    const u=this.g(c,x), gp=this.gp(c,x);
+    if(k==='right') return this.Fp(c,u)*gp;
+    if(k==='inner') return this.Fp(c,u);
+    if(k==='atx') return this.Fp(c,x)*gp;
+    if(k==='inside') return this.Fp(c,gp);
+    if(k==='outer'){
+      if(c.fam==='pow') return c.n*u**c.n*gp;
+      if(c.fam==='sin') return -Math.cos(u)*gp;
+      if(c.fam==='cos') return Math.sin(u)*gp;
+      return u*Math.exp(u-1)*gp;
+    }
+  },
+  // the inside written out, with its number moved by `by` (for e^(u − 1))
+  gText(c,by=0){
+    const b=c.b+by, head=c.sq ? 'x²' : (c.a===1?'':c.a===-1?'−':neg(c.a))+'x';
+    return b===0 ? head : head+(b<0?' − ':' + ')+Math.abs(b);
+  },
+  gpText(c){ return c.sq ? '2x' : neg(c.a); },
+  // the outer slope f′ written at an argument: an expression, x itself, or a number
+  fpText(c,A,kind){
+    const p=c.fam==='pow' && c.n>2 ? sup(c.n-1) : '';
+    if(c.fam==='pow'){
+      if(kind==='x') return `${c.n}x${p}`;
+      if(kind==='num' && !A.startsWith('−')) return `${c.n} · ${A}${p}`;
+      return `${c.n}(${A})${p}`;
+    }
+    const arg=kind==='x' ? ' x' : kind==='num' && !A.startsWith('−') ? ' '+A : `(${A})`;
+    if(c.fam==='sin') return 'cos'+arg;
+    if(c.fam==='cos') return '−sin'+arg;
+    return kind==='x' ? 'eˣ' : `e^(${A})`;
+  },
+  times(c){ const t=this.gpText(c); return ' · '+(t.startsWith('−')?'('+t+')':t); },
+  yText(c){
+    const G=this.gText(c);
+    if(c.fam==='pow') return `(${G})${sup(c.n)}`;
+    if(c.fam==='exp') return `e^(${G})`;
+    return `${c.fam}(${G})`;
+  },
+  fText(c){ return c.fam==='pow' ? `u${sup(c.n)}` : c.fam==='exp' ? 'eᵘ' : c.fam+' u'; },
+  fpUText(c){ return c.fam==='pow' ? (c.n===2?'2u':`${c.n}u${sup(c.n-1)}`) : c.fam==='sin' ? 'cos u' : c.fam==='cos' ? '−sin u' : 'eᵘ'; },
+  text(c,k){
+    const G=this.gText(c), T=this.times(c);
+    if(k==='right') return this.fpText(c,G,'expr')+T;
+    if(k==='inner') return this.fpText(c,G,'expr');
+    if(k==='atx') return this.fpText(c,'x','x')+T;
+    if(k==='inside') return this.fpText(c,this.gpText(c),c.sq?'expr':'num');
+    if(k==='outer'){
+      if(c.fam==='pow') return `${c.n}(${G})${sup(c.n)}`+T;
+      if(c.fam==='sin') return `−cos(${G})`+T;
+      if(c.fam==='cos') return `sin(${G})`+T;
+      return `(${G})e^(${this.gText(c,-1)})`+T;
+    }
+  },
+  // the picture: x from x₀ − 1 to x₀ + 1, and the y it needs
+  view(c){
+    const x0=c.x0-1, x1=c.x0+1;
+    let lo=Infinity, hi=-Infinity;
+    for(let j=0;j<=80;j++){ const y=this.y(c,x0+(x1-x0)*j/80); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+    const pad=Math.max(0.5,(hi-lo)*0.12);
+    return {x0,x1,lo:lo-pad,hi:hi+pad};
+  },
+  // how steep a slope looks on screen, in degrees
+  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-22)/(v.x1-v.x0)))*180/Math.PI; },
+  build(){
+    for(let t=0;t<400;t++){
+      const fam=R.pick(this.FAMS), sq=R.i(0,2)===0;
+      const c={fam, n:fam==='pow'?R.i(2,4):0, sq, a:sq?0:R.pick([2,3,-2,4,-3]), b:R.pick([-3,-2,-1,1,2,3]), x0:R.pick([-1,-0.5,0.5,1])};
+      if(fam==='exp' && !sq && Math.abs(c.a)>2) continue;
+      const v=this.view(c);
+      if(v.hi-v.lo>120) continue;
+      // every slip must look wrong at x₀: its line at least 10° off the curve's
+      const ra=this.angle(c,this.value(c,'right',c.x0));
+      if(this.SLIPS.some(k=>Math.abs(this.angle(c,this.value(c,k,c.x0))-ra)<10)) continue;
+      return c;
+    }
+    return {fam:'pow',n:2,sq:false,a:3,b:-1,x0:1};
+  },
+  round:null, misses:0, picked:null, last:null, matched:0, firstTry:0,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    // every slip is at least 10° off at x₀ (build makes sure), so all four differ from the right one
+    const rest=[...this.SLIPS];
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CHAIN READER', this.matched+' slopes picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is dy/dx, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Chain.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  num(v){ const r=Math.round(v*100)/100; return neg(Object.is(r,-0)?0:r); },
+  about(v){ return (Math.abs(v-Math.round(v*100)/100)<1e-9?'':'about ')+this.num(v); },
+  // the chain rule worked for this y
+  work(c){
+    return `y = f(u) with f(u) = ${this.fText(c)} and u = g(x) = ${this.gText(c)}, so f′(u) = ${this.fpUText(c)} and g′(x) = ${this.gpText(c)}: dy/dx = f′(g(x)) × g′(x) = ${this.text(c,'right')}.`;
+  },
+  // the sentence that names a slip
+  slip(c,k,L){
+    const G=this.gText(c);
+    if(k==='inner') return `${L} stops at f′(g(x)) and forgets the inner slope: it needs × g′(x) = ${this.gpText(c)} as well, for how fast the inside moves.`;
+    if(k==='atx') return `${L} takes f′ at x itself: it puts x where the inside, u = ${G}, belongs. The outer slope has to be taken at u.`;
+    if(k==='inside') return `${L} puts the inner slope inside f′: it takes f′(g′(x)), where the chain rule takes f′(g(x)) and then multiplies by g′(x).`;
+    if(c.fam==='pow') return `${L} keeps the power at ${c.n}: the power rule drops it by one, so u${sup(c.n)} gives ${this.fpUText(c)}.`;
+    if(c.fam==='sin') return `${L} puts a minus in front: the slope of sin u is cos u, with no minus.`;
+    if(c.fam==='cos') return `${L} drops the minus: the slope of cos u is −sin u.`;
+    return `${L} tries the power rule on eᵘ: eᵘ is not a power of u, and its slope is eᵘ itself.`;
+  },
+  // what the miss looks like at x₀: its red line against a nudge of the curve
+  check(c,k,L){
+    const x=c.x0, H=this.H, n=(this.y(c,x+H)-this.y(c,x-H))/(2*H);
+    return `At x = ${neg(x)}, ${L} gives a slope of ${this.about(this.value(c,k,x))}, drawn in red: it cuts across the curve. A nudge from x = ${this.num4(x-H)} to ${this.num4(x+H)} gives Δy/Δx ≈ ${this.num(n)}.`;
+  },
+  num4(v){ const r=Math.round(v*1e4)/1e4; return neg(Object.is(r,-0)?0:r); },
+  // the curve, the point x₀ and a red line for each miss, in SVG
+  panel(c,W,H){
+    const v=this.view(c), {x0,x1,lo,hi}=v;
+    const X=x=>(14+(x-x0)/(x1-x0)*(W-22)).toFixed(1), Y=y=>(H-14-(y-lo)/(hi-lo)*(H-22)).toFixed(1);
+    const span=hi-lo, step=[0.5,1,2,5,10,20,50,100].find(s=>span/s<=7);
+    let s=`<defs><clipPath id="cpClip"><rect x="${X(x0)}" y="${Y(hi)}" width="${(+X(x1)-+X(x0)).toFixed(1)}" height="${(+Y(lo)-+Y(hi)).toFixed(1)}"/></clipPath></defs>`;
+    for(let x=Math.ceil(x0*2)/2;x<=x1+1e-9;x+=0.5) s+=`<line x1="${X(x)}" y1="${Y(lo)}" x2="${X(x)}" y2="${Y(hi)}" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    for(let y=Math.ceil(lo/step)*step;y<=hi;y+=step) s+=`<line x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    if(lo<0&&hi>0) s+=`<line x1="${X(x0)}" y1="${Y(0)}" x2="${X(x1)}" y2="${Y(0)}" stroke="${FIG_COL.axis}" stroke-width="1.4"/>`;
+    if(x0<0&&x1>0) s+=`<line x1="${X(0)}" y1="${Y(lo)}" x2="${X(0)}" y2="${Y(hi)}" stroke="${FIG_COL.axis}" stroke-width="1.4"/>`;
+    let d=''; for(let j=0;j<=80;j++){ const x=x0+(x1-x0)*j/80; d+=(j?' L':'M')+X(x)+','+Y(this.y(c,x)); }
+    s+=`<path data-k="curve" d="${d}" fill="none" stroke="#5aa9e6" stroke-width="2.2"/>`;
+    const r=this.round, y0=this.y(c,c.x0);
+    if(r && r.c===c) [...r.out].sort().forEach(i=>{
+      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));
+      s+=`<g clip-path="url(#cpClip)"><line data-k="miss${'ABCD'[i]}" x1="${X(c.x0-t)}" y1="${Y(y0-m*t)}" x2="${X(c.x0+t)}" y2="${Y(y0+m*t)}" stroke="${FIG_COL.d}" stroke-width="2" stroke-dasharray="5 3"/></g>`;
+      s+=`<text x="${(+X(c.x0+t)+2).toFixed(1)}" y="${Math.min(H-16,Math.max(10,+Y(y0+m*t))).toFixed(1)}" font-size="10" font-weight="bold" fill="${FIG_COL.d}">${'ABCD'[i]}</text>`;
+    });
+    s+=`<circle data-k="point" cx="${X(c.x0)}" cy="${Y(y0)}" r="4" fill="${FIG_COL.ink}"/>`;
+    for(let x=Math.ceil(x0*2)/2;x<=x1+1e-9;x+=0.5) s+=`<text x="${X(x)}" y="${H-2}" font-size="10" fill="${FIG_COL.dim}" text-anchor="middle"${x===c.x0?' font-weight="bold"':''}>${neg(x)}</text>`;
+    for(let y=Math.ceil(lo/step)*step;y<=hi;y+=step) s+=`<text x="${(+X(x0)-3).toFixed(1)}" y="${(+Y(y)+3).toFixed(1)}" font-size="9" fill="${FIG_COL.dim}" text-anchor="end">${neg(y)}</text>`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c;
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div style="text-align:center;font-size:17px;margin-bottom:2px">y = ${this.yText(c)}</div>`;
+    const outs=[...r.out].sort();
+    out+=`<svg id="cpFig" viewBox="0 0 300 180" style="width:100%;height:auto;display:block" role="img" aria-label="The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}">${this.panel(c,300,180)}</svg>`;
+    out+=`<div id="cpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), t=this.text(c,o.k);
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="ChainPick.choose(${i})" aria-label="${'ABCD'[i]}: dy/dx = ${t}${gone?'. Not the chain rule':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${t}</button>`;
+    }).join('')+`</div>`;
+    const lines=[], m=this.miss();
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push('That was it: '+this.work(this.last.c)+' Here is a new curve.');
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="cpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
   }
 };
 
