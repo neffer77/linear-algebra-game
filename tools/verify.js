@@ -64,6 +64,7 @@ function loadGame() {
     ';const Ladder={' + script.slice(script.indexOf("  SETS:[\n    {id:'five', btn:'5 m ladder'"), script.indexOf("  open(){ UI.go('s-ladder'); },")) + '};exports.Ladder=Ladder;' +
     ';const Kernel={' + script.slice(script.indexOf("  SETS:[\n    {id:'flat', btn:'Flat'"), script.indexOf("  open(){ UI.go('s-null'); },")) + '};exports.Kernel=Kernel;' +
     ';const Gram={' + script.slice(script.indexOf("  SETS:[\n    {id:'tilt', btn:'Tilted'"), script.indexOf("  open(){ UI.go('s-gram'); },")) + '};exports.Gram=Gram;' +
+    ';const Geo={' + script.slice(script.indexOf("  SETS:[\n    {id:'half', btn:'Halves'"), script.indexOf("  open(){ UI.go('s-geo'); },")) + '};exports.Geo=Geo;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -82,7 +83,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2677,6 +2678,98 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The geometric series workshop: every series at every number of terms.
+   The terms and running totals are worked here in exact fractions, the gap
+   to a/(1 − r) must be a·rⁿ/(1 − r) and shrink by the factor r each term as
+   the readout says, the doubling series must run away, the staircase must
+   put each term's bar from one running total to the next, and every sentence
+   and goal is rebuilt here. */
+const geoNotes = (() => {
+  const G = Geo;
+  const gd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) { const t = b; b = a % b; a = t; } return a || 1; };
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gd(n, d); n /= g; d /= g; return d === 1 ? ng(n) : `${ng(n)}/${d}`; };
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; return ng(Object.is(q, -0) ? 0 : q); };
+  const ex = v => Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10;
+  const sub = n => String(n).replace(/\d/g, c => '₀₁₂₃₄₅₆₇₈₉'[c]);
+  if (G.SETS.map(S => S.id).join() !== 'half,third,swing,double') fail('geo', 'sets', G.SETS.map(S => S.id).join());
+  G.touched = false; G.si = 0; G.n = G.START;
+  for (const g of G.GOALS) if (g.ok(G)) fail('geo', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  G.SETS.forEach((S, si) => {
+    const { a, p, q } = S, r = p / q, conv = Math.abs(r) < 1;
+    // exact running totals as fractions: S_m = a(q^m − p^m) / (q^(m−1)(q − p))
+    const Sx = m => { let N = 0, D = 1; for (let k = 0; k < m; k++) { const tn = a * p ** k, td = q ** k; N = N * td + tn * D; D *= td; const g = gd(N, D); N /= g; D /= g; } return N / D; };
+    const T = a / (1 - r);
+    if (S.id === 'swing' && p >= 0) fail('geo', S.id, 'the swinging series needs a negative r');
+    if (S.id === 'double' && conv) fail('geo', S.id, 'the doubling series must run away');
+    if (S.id !== 'double' && !conv) fail('geo', S.id, 'this series must converge');
+    G.si = si;
+    let prev = null;
+    for (let m = 1; m <= G.N; m++) {
+      G.n = m; n++;
+      const key = `${S.id} n=${m}`, Sm = Sx(m), gap = T - Sm;
+      if (Math.abs(G.S() - Sm) > 1e-9) fail('geo', key, `S reads ${G.S()}, worked here ${Sm}`);
+      if (conv) {
+        if (Math.abs(gap - a * r ** m / (1 - r)) > 1e-9) fail('geo', key, 'the gap is not a·rⁿ/(1 − r)');
+        if (prev !== null && Math.abs(gap - r * prev) > 1e-9) fail('geo', key, 'the gap did not shrink by the factor r');
+        if (Math.abs(G.gap() - gap) > 1e-9) fail('geo', key, `gap reads ${G.gap()}, worked here ${gap}`);
+      }
+      prev = gap;
+      const tf = k => fr(a * p ** k, q ** k), rs = fr(p, q);
+      const first = [0, 1, 2, 3].map(k => { const t = tf(k); return k === 0 ? t : (t[0] === '−' ? ' − ' + t.slice(1) : ' + ' + t); }).join('');
+      const want = [
+        `Each term is r = ${rs} times the one before, starting from a = ${a}: ${first} + ⋯`,
+        `Term ${m} is ${a} × ${p < 0 || q !== 1 ? `(${rs})` : rs}^${m - 1} = ${tf(m - 1)}, and ${m === 1 ? 'so far the total is' : `the first ${m} terms add up to`} S${sub(m)} ${ex(Sm) ? '=' : '≈'} ${num(Sm)}.`
+      ];
+      if (conv) {
+        const Gp = Math.abs(gap), by = Gp < 0.00005 ? 'less than 0.0001' : (ex(Gp) ? '' : 'about ') + num(Gp);
+        want.push(`|r| < 1, so the endless sum is a/(1 − r) = ${a}/(1 ${p < 0 ? '+' : '−'} ${fr(Math.abs(p), q)}) = ${fr(a * q, q - p)}.`,
+          `S${sub(m)} is ${Gp < 1e-12 ? 'exactly on it' : `${by} ${gap > 0 ? 'short of' : 'over'} it`}. Each new term multiplies that gap by r = ${rs}, so it shrinks toward 0` +
+            (p < 0 ? ', changing sides every time: a negative r swings the total above and below the sum in turn.' : ' and the total creeps up on the sum from below.'),
+          Gp <= 0.01 ? 'That is within 0.01: every term still to come, an endless tail of them, adds up to less than 0.01.' : 'That is still more than 0.01 away. Add more terms.');
+        if (p > 0 && gap <= 0) fail('geo', key, 'a positive r should creep up from below');
+      } else {
+        if (m > 1 && !(Sm > Sx(m - 1) && a * p ** (m - 1) > a * p ** (m - 2))) fail('geo', key, 'the terms and total must grow');
+        if (fr(a, 1 - p) !== '−1' && T >= 0) fail('geo', key, 'a/(1 − r) should be negative here');
+        want.push(`|r| = ${rs} is not less than 1, so each term is bigger than the last and the total runs away without end.`,
+          `a/(1 − r) = ${a}/(1 − ${rs}) = ${fr(a, 1 - p)} is not the sum: that formula only holds when |r| < 1, and no sum of positive terms is negative.`);
+      }
+      const got = G.working();
+      if (got.length !== want.length) fail('geo', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('geo', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the staircase: one bar per term, each from one running total to the next
+      const svg = G.svg();
+      let lo = 0, hi = 0;
+      for (let k = 0; k <= (conv ? G.N : m); k++) { lo = Math.min(lo, Sx(k)); hi = Math.max(hi, Sx(k)); }
+      if (conv) hi = Math.max(hi, T);
+      const X = v => 20 + (v - lo) / (hi - lo) * 320;
+      const bars = [...svg.matchAll(/data-k="term" data-n="(\d+)" x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)" height="11" rx="2" fill="([^"]+)"/g)];
+      if (bars.length !== m) fail('geo', key, `${bars.length} bars for ${m} terms`);
+      bars.forEach((b, i) => {
+        const s0 = Sx(i), s1 = Sx(i + 1), x = +b[2], w = +b[4], ww = Math.max(Math.abs(X(s1) - X(s0)), 0.5);
+        if (+b[1] !== i + 1 || Math.abs(x - Math.min(X(s0), X(s1), 340 - ww)) > 0.02 || Math.abs(w - ww) > 0.02)
+          fail('geo', key, `bar ${i + 1} does not run from S${sub(i)} to S${sub(i + 1)}`);
+        if (x < 19.9 || x + w > 340.1 || +b[3] + 11 > 200) fail('geo', key, `bar ${i + 1} runs out of the picture`);
+        if ((b[5] === bars[0][5]) !== (s1 >= s0)) fail('geo', key, `bar ${i + 1} is the wrong colour`);
+      });
+      const sl = svg.match(/data-k="sum" x1="([\d.-]+)"/);
+      if (!!sl !== conv) fail('geo', key, 'the gold sum line belongs on a converging series only');
+      if (sl && Math.abs(+sl[1] - X(T)) > 0.02) fail('geo', key, 'the gold line is not at the endless sum');
+      G.touched = true;
+      const meant = { half: si === 0 && Math.abs(gap) <= 0.01, third: si === 1 && Math.abs(gap) <= 0.01, under: si === 2 && gap > 1e-12, run: si === 3 && Sm > 1000 };
+      for (const gl of G.GOALS) {
+        if (!!gl.ok(G) !== meant[gl.id]) fail('geo', key, `goal ${gl.id} is ${gl.ok(G) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(G)) found[gl.id] = found[gl.id] || key;
+      }
+    }
+  });
+  for (const g of G.GOALS) if (!found[g.id]) fail('geo', g.id, 'this goal cannot be found');
+  G.si = 0; G.n = G.START; G.touched = false; G.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The Gram–Schmidt workshop: every pair at every number of copies taken away.
    w = u₂ − c·u₁ and w · u₁ are worked here, each pair must have exactly one
    c on the stepper that leaves w perpendicular, and it must be the shadow
@@ -3321,6 +3414,7 @@ console.log(`  product rule states      ${pad(productNotes.n.toLocaleString(), 1
 console.log(`  ladder positions         ${pad(ladderNotes.n.toLocaleString(), 10)}  (each height by Pythagoras, the top's speed by a nudge in time, the length kept, the 0.01 s check rebuilt, the bars in the speeds' ratio, ${ladderNotes.goals} goals findable)`);
 console.log(`  null space arrows        ${pad(kernelNotes.n.toLocaleString(), 10)}  (each Av worked row by row, the crushed arrows found by brute force and on one line, every rank-1 Av on its column space, both arrows drawn at their values, ${kernelNotes.goals} goals findable)`);
 console.log(`  gram–schmidt steps       ${pad(gramNotes.n.toLocaleString(), 10)}  (w and w · u₁ worked at every c, one perpendicular c per pair and it is the shadow and the shortest w, every arrow drawn at its value, ${gramNotes.goals} goals findable)`);
+console.log(`  geometric series sums   ${pad(geoNotes.n.toLocaleString(), 10)}  (every running total in exact fractions, the gap a·rⁿ/(1 − r) shrinking by r each term, the staircase bars from total to total, ${geoNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

@@ -1295,6 +1295,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ GEOMETRIC SERIES WORKSHOP ============ -->
+  <div class="screen" id="s-geo">
+    <div class="panel"><h2>🧮 Geometric Series Workshop</h2><div class="sub">Each term is the last one times r. Add them one at a time and watch the running total: when r is small enough an endless sum lands on a finite number, and when it is not the total runs away for ever.</div></div>
+    <div class="panel">
+      <div id="gnSets" class="wsModes" role="group" aria-label="Which series"></div>
+      <div id="gnFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="gnNLo" onclick="Geo.moveN(-1)" aria-label="Take the last term away">−</button>
+          <b id="gnN" style="font-size:17px;min-width:0"></b>
+          <button id="gnNHi" onclick="Geo.moveN(1)" aria-label="Add the next term">+</button></div>
+      </div>
+      <div id="gnRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="gnGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3289,6 +3308,7 @@ const WORKSHOP_FOR = (() => {
     Slope:   ["📈 Slope Workshop", ['evalDeriv','powerRule','tangent']],
     Area:    ["🏺 Area Workshop", ['area','riemannToInt']],
     Cistern: ["💧 Cistern Workshop", ['defPoly']],
+    Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
@@ -12661,6 +12681,7 @@ const UI = {
     if(id==='s-ladder') Ladder.render();
     if(id==='s-null') Kernel.render();
     if(id==='s-gram') Gram.render();
+    if(id==='s-geo') Geo.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13364,6 +13385,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">💧 Cistern Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away.</div>
          <button class="btn sm" id="tomeCistern" style="width:auto;margin-top:8px" onclick="Cistern.open()">Open the cistern workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🧮 Geometric Series Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Add an endless sum one term at a time and watch the total close in on a/(1 − r), swing around it, or run away for ever.</div>
+         <button class="btn sm" id="tomeGeo" style="width:auto;margin-top:8px" onclick="Geo.open()">Open the geometric series workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
@@ -16450,6 +16476,117 @@ const Gram = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The geometric series workshop: an endless sum ----------
+   Add the terms of a + ar + ar² + ⋯ one at a time and watch the running total.
+   When |r| < 1 the gap to a/(1 − r) shrinks by the factor r with every term,
+   so the endless sum has a finite total; a negative r swings above and below
+   it; r = 2 runs away, and a/(1 − r) there is not the sum. Nothing is saved. */
+const Geo = {
+  SETS:[
+    {id:'half', btn:'Halves', a:1, p:1, q:2},
+    {id:'third', btn:'Thirds', a:2, p:1, q:3},
+    {id:'swing', btn:'Swinging', a:1, p:-1, q:2},
+    {id:'double', btn:'Doubling', a:1, p:2, q:1}
+  ],
+  N:12, START:1,
+  si:0, n:1, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'half', t:'On the halves, add terms until the running total is within 0.01 of the endless sum.', toast:'Closed in on the halves',
+     ok:K=>K.si===0 && K.conv() && Math.abs(K.gap())<=0.01},
+    {id:'third', t:'Do the same on the thirds.', toast:'Closed in on the thirds',
+     ok:K=>K.si===1 && K.conv() && Math.abs(K.gap())<=0.01},
+    {id:'under', t:'On the swinging series, find a running total below the endless sum.', toast:'Swung below the sum',
+     ok:K=>K.si===2 && K.gap()>1e-12},
+    {id:'run', t:'On the doubling series, push the running total past 1000.', toast:'It runs away',
+     ok:K=>K.si===3 && K.S()>1000}
+  ],
+  set(){ return this.SETS[this.si]; },
+  r(){ const S=this.set(); return S.p/S.q; },
+  conv(){ return Math.abs(this.r())<1; },
+  term(k){ const S=this.set(); return S.a*S.p**k/S.q**k; },
+  /* the running total of the first m terms */
+  S(m=this.n){ let t=0; for(let k=0;k<m;k++) t+=this.term(k); return t; },
+  total(){ return this.set().a/(1-this.r()); },
+  /* how far the running total still has to go to reach the endless sum */
+  gap(){ return this.total()-this.S(); },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : `${neg(n)}/${d}`; },
+  sub(n){ return String(n).replace(/\d/g,c=>'₀₁₂₃₄₅₆₇₈₉'[c]); },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), a=S.a, n=this.n, r=this.r(), rs=this.fr(S.p,S.q);
+    const tf=k=>this.fr(a*S.p**k, S.q**k);
+    const first=[0,1,2,3].map(k=>{ const t=tf(k); return k===0 ? t : (t[0]==='−' ? ' − '+t.slice(1) : ' + '+t); }).join('');
+    const out=[];
+    out.push(`Each term is r = ${rs} times the one before, starting from a = ${a}: ${first} + ⋯`);
+    const pw=n-1, rp=S.p<0||S.q!==1 ? `(${rs})` : rs;
+    out.push(`Term ${n} is ${a} × ${rp}^${pw} = ${tf(pw)}, and ${n===1?'so far the total is':`the first ${n} terms add up to`} S${this.sub(n)} ${this.is(this.S())}.`);
+    if(this.conv()){
+      const T=this.total(), g=this.gap();
+      out.push(`|r| < 1, so the endless sum is a/(1 − r) = ${a}/(1 ${S.p<0?'+':'−'} ${this.fr(Math.abs(S.p),S.q)}) = ${this.fr(a*S.q, S.q-S.p)}.`);
+      const G=Math.abs(g), by = G<0.00005 ? 'less than 0.0001' : (this.is(G)[0]==='=' ? '' : 'about ')+this.num(G);
+      const side = G<1e-12 ? 'exactly on it' : `${by} ${g>0?'short of':'over'} it`;
+      out.push(`S${this.sub(n)} is ${side}. Each new term multiplies that gap by r = ${rs}, so it shrinks toward 0`+
+        (S.p<0 ? `, changing sides every time: a negative r swings the total above and below the sum in turn.` : ` and the total creeps up on the sum from below.`));
+      out.push(Math.abs(g)<=0.01
+        ? `That is within 0.01: every term still to come, an endless tail of them, adds up to less than 0.01.`
+        : `That is still more than 0.01 away. Add more terms.`);
+    } else {
+      out.push(`|r| = ${rs} is not less than 1, so each term is bigger than the last and the total runs away without end.`);
+      out.push(`a/(1 − r) = ${a}/(1 − ${rs}) = ${this.fr(a, 1-S.p)} is not the sum: that formula only holds when |r| < 1, and no sum of positive terms is negative.`);
+    }
+    return out;
+  },
+  /* the running total as a staircase: row k is a bar from S(k − 1) to S(k),
+     blue for a term that adds and red for one that takes away; the gold
+     dashed line is the endless sum, when there is one */
+  span(){
+    const m = this.conv() ? this.N : this.n;
+    let lo=0, hi=0;
+    for(let k=0;k<=m;k++){ const s=this.S(k); lo=Math.min(lo,s); hi=Math.max(hi,s); }
+    if(this.conv()) hi=Math.max(hi,this.total());
+    return [lo,hi];
+  },
+  svg(){
+    const [lo,hi]=this.span(), X=v=>20+(v-lo)/(hi-lo)*320;
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="${this.n} term${this.n>1?'s':''} as a staircase reaching ${this.num(this.S())}${this.conv()?', with the endless sum '+this.num(this.total())+' as a gold line':''}">`;
+    out+=`<line x1="${X(0).toFixed(2)}" y1="4" x2="${X(0).toFixed(2)}" y2="196" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let k=1;k<=this.n;k++){
+      const a=this.S(k-1), b=this.S(k), w=Math.max(Math.abs(X(b)-X(a)),0.5), x=Math.min(X(a),X(b),340-w), y=10+(k-1)*15;
+      out+=`<rect data-k="term" data-n="${k}" x="${x.toFixed(2)}" y="${y}" width="${w.toFixed(2)}" height="11" rx="2" fill="${b>=a?FIG_COL.a:FIG_COL.d}"/>`;
+    }
+    if(this.conv()){ const t=X(this.total()).toFixed(2);
+      out+=`<line data-k="sum" x1="${t}" y1="4" x2="${t}" y2="196" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>`; }
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-geo'); },
+  pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },
+  moveN(by){ const v=this.n+by; if(v<1 || v>this.N) return; this.n=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('gnSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Geo.pick(${i})" aria-label="${s.btn}: start at ${s.a}, r = ${this.fr(s.p,s.q)}">${s.btn}</button>`).join('');
+    document.getElementById('gnN').textContent=`${this.n} term${this.n>1?'s':''}`;
+    document.getElementById('gnNLo').disabled=this.n<=1;
+    document.getElementById('gnNHi').disabled=this.n>=this.N;
+    document.getElementById('gnFig').innerHTML=this.svg()+
+      `<div class="figcap">Each row is one term, laid end to end from 0: blue adds, red takes away, and the last row ends at the running total.${this.conv()?' The gold dashed line is the endless sum.':' Redrawn to fit as it grows.'}</div>`;
+    document.getElementById('gnRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('gnGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
