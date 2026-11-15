@@ -1,180 +1,159 @@
 {
- "change": "The Lathe Workshop: volumes of revolution",
+ "change": "The Swap Workshop: u-substitution",
  "mutations": [
   {
-   "name": "the disks use the left end, not the middle",
+   "name": "cos(x²)'s du drops the 2",
    "file": "index.html",
-   "find": "mid(i){ return this.set().a+(i+0.5)*this.dx(); },",
-   "replace": "mid(i){ return this.set().a+i*this.dx(); },",
+   "find": "{u:'x²', du:'2x dx', uf:x=>x*x, duf:x=>2*x, g:u=>Math.cos(u),",
+   "replace": "{u:'x²', du:'x dx', uf:x=>x*x, duf:x=>x, g:u=>Math.cos(u),",
    "run": "verify"
   },
   {
-   "name": "a disk holds f, not f squared",
+   "name": "the power's swap forgets to divide by 5",
    "file": "index.html",
-   "find": "for(let i=0;i<this.n();i++) t+=S.f(this.mid(i))**2*this.dx(); return t; },",
-   "replace": "for(let i=0;i<this.n();i++) t+=S.f(this.mid(i))*this.dx(); return t; },",
+   "find": "F:x=>(x**3+1)**5/5,",
+   "replace": "F:x=>(x**3+1)**5,",
    "run": "verify"
   },
   {
-   "name": "the cone's volume is a whole cylinder",
+   "name": "the exponential's answer keeps the 2",
    "file": "index.html",
-   "find": "V:'9π', v:9,",
-   "replace": "V:'27π', v:27,",
+   "find": "g:u=>Math.exp(u)/2,",
+   "replace": "g:u=>Math.exp(u),",
    "run": "verify"
   },
   {
-   "name": "the ball's antiderivative shown is wrong",
+   "name": "the log's du is wrong",
    "file": "index.html",
-   "find": "Gs:'4x − x³/3'",
-   "replace": "Gs:'4x − x³'",
+   "find": "{u:'ln x', du:'(1/x) dx', uf:x=>Math.log(x), duf:x=>1/x,",
+   "replace": "{u:'ln x', du:'(1/x) dx', uf:x=>Math.log(x), duf:x=>1/(x*x),",
    "run": "verify"
   },
   {
-   "name": "the horn is x² not x²/2",
+   "name": "u = 2x is marked right",
    "file": "index.html",
-   "find": "f:x=>x*x/2, G:x=>x**5/20",
-   "replace": "f:x=>x*x, G:x=>x**5/20",
+   "find": "{u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2,\n       left:'That only swaps",
+   "replace": "{u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2, F:x=>0,\n       left:'That only swaps",
    "run": "verify"
   },
   {
-   "name": "the bowl claims to be a third of its cylinder",
+   "name": "the integrand of the power is wrong",
    "file": "index.html",
-   "find": "That is exactly half the cylinder around it",
-   "replace": "That is exactly a third of the cylinder around it",
+   "find": "f:x=>3*x*x*(x**3+1)**4, D:[-1,1],",
+   "replace": "f:x=>3*x*x*(x**3+1)**3, D:[-1,1],",
    "run": "verify"
   },
   {
-   "name": "the off-by is not multiplied by π",
+   "name": "the answer is never drawn",
    "file": "index.html",
-   "find": "The disks are off by ${this.about(Math.PI*Math.abs(s-v))}",
-   "replace": "The disks are off by ${this.about(Math.abs(s-v))}",
+   "find": "if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "within 1% is claimed at 2%",
+   "name": "the answer is drawn upside down",
    "file": "index.html",
-   "find": "(off<=0.01 ? `, within 1%.`",
-   "replace": "(off<=0.02 ? `, within 1%.`",
+   "find": "const line=(fn,k,col)=>`<polyline data-k=\"${k}\" points=\"${xs.map(x=>`${PX(x).toFixed(2)},${PY(fn(x)).toFixed(2)}`)",
+   "replace": "const line=(fn,k,col)=>`<polyline data-k=\"${k}\" points=\"${xs.map(x=>`${PX(x).toFixed(2)},${PY(k==='F'?-fn(x):fn(x)).toFixed(2)}`)",
    "run": "verify"
   },
   {
-   "name": "the cone goal takes 2%",
+   "name": "the check line is dropped",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.off()<=0.01},",
-   "replace": "ok:K=>K.si===0 && K.off()<=0.02},",
+   "find": "      out.push(`Check by differentiating: ${o.check}`);\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "the horn goal fires on the ball",
+   "name": "the miss line is dropped",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.off()<=0.01},",
-   "replace": "ok:K=>K.si>=2 && K.off()<=0.01},",
+   "find": "      out.push(`This u does not simplify it. Try another.`);\n",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "the one-disk goal takes any number",
+   "name": "the miss goal fires before any u",
    "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.n()===1}",
-   "replace": "ok:K=>K.si===1}",
+   "find": "ok:K=>K.oi!==null && !K.works()}",
+   "replace": "ok:K=>!K.works()}",
    "run": "verify"
   },
   {
-   "name": "a disk is drawn only half as tall",
+   "name": "the log goal fires on the exponential",
    "file": "index.html",
-   "find": "height=\"${(PY(-r)-PY(r)).toFixed(2)}\"",
-   "replace": "height=\"${((PY(-r)-PY(r))/2).toFixed(2)}\"",
-   "run": "verify"
-  },
-  {
-   "name": "one disk goes undrawn",
-   "file": "index.html",
-   "find": "for(let i=0;i<n;i++){ const x0=S.a+i*this.dx(), r=S.f(this.mid(i));",
-   "replace": "for(let i=1;i<n;i++){ const x0=S.a+i*this.dx(), r=S.f(this.mid(i));",
-   "run": "verify"
-  },
-  {
-   "name": "the mirror curve is missing",
-   "file": "index.html",
-   "find": "for(const sg of [1,-1]) out+=`<polyline data-k=",
-   "replace": "for(const sg of [1]) out+=`<polyline data-k=",
+   "find": "ok:K=>K.si===3 && K.works()},",
+   "replace": "ok:K=>K.si>=2 && K.works()},",
    "run": "verify"
   },
   {
    "name": "a goal is met where it opens",
    "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.n()===1}",
-   "replace": "ok:K=>K.si===0 || (K.si===1 && K.n()===1)}",
+   "find": "ok:K=>K.si===0 && K.works()},",
+   "replace": "ok:K=>K.si===0},",
    "run": "verify"
   },
   {
-   "name": "a fresh solid keeps the old cut",
+   "name": "a new integral keeps the old u",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return;",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return;",
-   "run": "play:lathe"
+   "find": "pick(i){ this.si=i; this.oi=null; this.render(); },",
+   "replace": "pick(i){ this.si=i; this.render(); },",
+   "run": "play:swap"
   },
   {
-   "name": "doubling runs past 64",
+   "name": "the caption never mentions gold",
    "file": "index.html",
-   "find": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
-   "replace": "moveN(by){ const v=this.k+by; if(v<0 || v>this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
-   "run": "play:lathe"
+   "find": "' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':",
+   "replace": "' Find the right u and the answer appears in gold.':",
+   "run": "play:swap"
   },
   {
-   "name": "the stepper says disks for one",
+   "name": "the u buttons lose their names",
    "file": "index.html",
-   "find": "document.getElementById('lhN').textContent=`${this.n()} disk${this.n()>1?'s':''}`;",
-   "replace": "document.getElementById('lhN').textContent=`${this.n()} disks`;",
-   "run": "play:lathe"
+   "find": "aria-label=\"Try u = ${o.u}\">u = ${o.u}</button>",
+   "replace": ">u = ${o.u}</button>",
+   "run": "play:swap"
   },
   {
-   "name": "the halve button is never off",
+   "name": "the integral buttons lose their names",
    "file": "index.html",
-   "find": "document.getElementById('lhNLo').disabled=this.k<=0;",
-   "replace": "document.getElementById('lhNLo').disabled=false;",
-   "run": "play:lathe"
+   "find": "onclick=\"Swap.pick(${i})\" aria-label=\"${s.I}\">",
+   "replace": "onclick=\"Swap.pick(${i})\">",
+   "run": "play:swap"
   },
   {
-   "name": "the caption drops the axis",
+   "name": "the chosen u is not marked pressed",
    "file": "index.html",
-   "find": "the dashed line is the axis it spins around, and each gold bar",
-   "replace": "and each gold bar",
-   "run": "play:lathe"
-  },
-  {
-   "name": "the solid buttons lose their names",
-   "file": "index.html",
-   "find": "aria-label=\"${s.btn}: spin f(x) = ${s.fs} over [${neg(s.a)}, ${s.b}]\">${s.btn}</button>",
-   "replace": ">${s.btn}</button>",
-   "run": "play:lathe"
+   "find": "aria-pressed=\"${j===this.oi}\" onclick=\"Swap.tryU(${j})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"Swap.tryU(${j})\"",
+   "run": "play:swap"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} spun around",
-   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} spun around",
-   "run": "play:lathe"
+   "find": "role=\"img\" aria-label=\"The integrand of ${S.I} in blue",
+   "replace": "role=\"img\" data-x=\"The integrand of ${S.I} in blue",
+   "run": "play:swap"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every solid measured','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every solid measured','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:lathe"
+   "find": "'every integral swapped','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every integral swapped','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:swap"
   },
   {
-   "name": "the Tome loses the lathe workshop",
+   "name": "the Tome loses the swap workshop",
    "file": "index.html",
-   "find": "id=\"tomeLathe\"",
-   "replace": "id=\"tomeLatheX\"",
-   "run": "play:lathe"
+   "find": "id=\"tomeSwap\"",
+   "replace": "id=\"tomeSwapX\"",
+   "run": "play:swap"
   },
   {
-   "name": "the workshop saves its cut",
+   "name": "the workshop saves its u",
    "file": "index.html",
-   "find": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
-   "replace": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; Game.s.lathe=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
-   "run": "play:lathe"
+   "find": "tryU(j){ this.oi=j; this.touched=true; this.render(); },",
+   "replace": "tryU(j){ this.oi=j; Game.s.swap=j; this.touched=true; this.render(); },",
+   "run": "play:swap"
   }
  ]
 }

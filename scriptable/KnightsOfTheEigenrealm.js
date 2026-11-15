@@ -1409,6 +1409,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SWAP WORKSHOP ============ -->
+  <div class="screen" id="s-swap">
+    <div class="panel"><h2>🔄 Swap Workshop</h2><div class="sub">u-substitution is a swap: trade a piece of the integrand for u, and its derivative for du. Pick a u and see what the swap leaves. The right one absorbs every x and turns the integral into one you know.</div></div>
+    <div class="panel">
+      <div id="swSets" class="wsModes" role="group" aria-label="Which integral"></div>
+      <div id="swFig"></div>
+      <div id="swOpts" class="wsModes" role="group" aria-label="Which u to try"></div>
+      <div id="swRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="swGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3406,6 +3421,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
     Tail:    ["♾️ Endless Area Workshop", ['improper']],
     Avg:     ["🌊 Water Level Workshop", ['avgValue']],
@@ -12785,6 +12801,7 @@ const UI = {
     if(id==='s-avg') Avg.render();
     if(id==='s-tail') Tail.render();
     if(id==='s-lathe') Lathe.render();
+    if(id==='s-swap') Swap.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13508,6 +13525,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔄 Swap Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pick a u and see what u-substitution turns an integral into. The right u absorbs every x; a wrong one leaves the problem as hard as before.</div>
+         <button class="btn sm" id="tomeSwap" style="width:auto;margin-top:8px" onclick="Swap.open()">Open the swap workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏺 Lathe Workshop</h2>
@@ -17144,6 +17166,122 @@ const Lathe = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE LATHE','every solid measured','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The swap workshop: u-substitution ----------
+   Pick a u and see what its du turns the integral into. The right u is the
+   inside piece whose derivative is already sitting in the integrand: then
+   every x is absorbed, the integral in u is one you know, and putting x back
+   gives an answer whose derivative, by the chain rule, is the integrand. A
+   wrong u leaves x's behind. Nothing is saved. */
+const Swap = {
+  SETS:[
+    {id:'cos', btn:'cos(x²)', I:'∫ 2x cos(x²) dx', f:x=>2*x*Math.cos(x*x), D:[0,2.5],
+     opts:[
+      {u:'x²', du:'2x dx', uf:x=>x*x, duf:x=>2*x, g:u=>Math.cos(u),
+       swap:'The 2x dx in the integrand is exactly du, and cos(x²) is cos u, so the integral becomes ∫ cos u du = sin u + C.',
+       back:'sin(x²) + C', F:x=>Math.sin(x*x), check:'d/dx sin(x²) = cos(x²) × 2x, the chain rule undoing the swap.'},
+      {u:'2x cos(x²)', du:'(2cos(x²) − 4x² sin(x²)) dx', uf:x=>2*x*Math.cos(x*x), duf:x=>2*Math.cos(x*x)-4*x*x*Math.sin(x*x),
+       left:'That du is nowhere in the integrand. Taking u to be the whole integrand never helps: its derivative is always messier than what you started with.'},
+      {u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2,
+       left:'That only swaps the 2x for u and the dx for du/2, leaving ∫ (u/2) cos(u²/4) du, no simpler than before.'}]},
+    {id:'pow', btn:'(x³ + 1)⁴', I:'∫ 3x²(x³ + 1)⁴ dx', f:x=>3*x*x*(x**3+1)**4, D:[-1,1],
+     opts:[
+      {u:'3x²', du:'6x dx', uf:x=>3*x*x, duf:x=>6*x,
+       left:'There is no 6x in the integrand to make that du, and (x³ + 1)⁴ is not written in 3x², so x is left everywhere.'},
+      {u:'x³ + 1', du:'3x² dx', uf:x=>x**3+1, duf:x=>3*x*x, g:u=>u**4,
+       swap:'The 3x² dx in the integrand is exactly du, and the bracket is u, so the integral becomes ∫ u⁴ du = u⁵/5 + C.',
+       back:'(x³ + 1)⁵/5 + C', F:x=>(x**3+1)**5/5, check:'d/dx (x³ + 1)⁵/5 = (x³ + 1)⁴ × 3x², the chain rule undoing the swap.'},
+      {u:'x', du:'dx', uf:x=>x, duf:()=>1,
+       left:'u = x changes nothing: the integral is just ∫ 3u²(u³ + 1)⁴ du, the same problem with a new letter.'}]},
+    {id:'exp', btn:'x·e^(x²)', I:'∫ x e^(x²) dx', f:x=>x*Math.exp(x*x), D:[-1.2,1.2],
+     opts:[
+      {u:'x', du:'dx', uf:x=>x, duf:()=>1,
+       left:'u = x changes nothing: the integral is just ∫ u e^(u²) du, the same problem with a new letter.'},
+      {u:'x²', du:'2x dx', uf:x=>x*x, duf:x=>2*x, g:u=>Math.exp(u)/2,
+       swap:'The integrand has x dx, which is half of du, so x dx = du/2 and the integral becomes ∫ eᵘ du/2 = eᵘ/2 + C. A missing constant is fine: divide it out.',
+       back:'e^(x²)/2 + C', F:x=>Math.exp(x*x)/2, check:'d/dx e^(x²)/2 = e^(x²) × 2x/2 = x e^(x²), the chain rule undoing the swap.'},
+      {u:'2x', du:'2 dx', uf:x=>2*x, duf:()=>2,
+       left:'That swaps x for u/2 and dx for du/2, leaving ∫ (u/4) e^(u²/4) du, no simpler than before.'}]},
+    {id:'log', btn:'(ln x)/x', I:'∫ (ln x)/x dx', f:x=>Math.log(x)/x, D:[0.25,4],
+     opts:[
+      {u:'1/x', du:'−1/x² dx', uf:x=>1/x, duf:x=>-1/(x*x),
+       left:'Then x = 1/u and dx = −du/u², and the integral turns into ∫ (ln u)/u du: the very same problem back.'},
+      {u:'x', du:'dx', uf:x=>x, duf:()=>1,
+       left:'u = x changes nothing: the integral is just ∫ (ln u)/u du, the same problem with a new letter.'},
+      {u:'ln x', du:'(1/x) dx', uf:x=>Math.log(x), duf:x=>1/x, g:u=>u,
+       swap:'The (1/x) dx in the integrand is exactly du, and ln x is u, so the integral becomes ∫ u du = u²/2 + C.',
+       back:'(ln x)²/2 + C', F:x=>Math.log(x)**2/2, check:'d/dx (ln x)²/2 = ln x × 1/x, the chain rule undoing the swap.'}]}
+  ],
+  si:0, oi:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'cos', t:'Find the u that turns ∫ 2x cos(x²) dx into an integral you know.', toast:'Swapped: sin(x²) + C', ok:K=>K.si===0 && K.works()},
+    {id:'pow', t:'Do the same for ∫ 3x²(x³ + 1)⁴ dx.', toast:'Swapped: (x³ + 1)⁵/5 + C', ok:K=>K.si===1 && K.works()},
+    {id:'exp', t:'And ∫ x e^(x²) dx, where du is off by a constant.', toast:'Swapped: e^(x²)/2 + C', ok:K=>K.si===2 && K.works()},
+    {id:'log', t:'And ∫ (ln x)/x dx.', toast:'Swapped: (ln x)²/2 + C', ok:K=>K.si===3 && K.works()},
+    {id:'miss', t:'Pick a u that leaves the integral no simpler, and see why.', toast:'That u does not help', ok:K=>K.oi!==null && !K.works()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  opt(){ return this.oi===null ? null : this.set().opts[this.oi]; },
+  works(){ const o=this.opt(); return !!(o && o.F); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), o=this.opt(), out=[];
+    out.push(\`\${S.I}: look for a piece whose derivative is also sitting in the integrand.\`);
+    if(!o){ out.push('Pick a u below.'); return out; }
+    out.push(\`Try u = \${o.u}. Then du = \${o.du}.\`);
+    if(o.F){
+      out.push(o.swap);
+      out.push(\`Put x back: \${o.back}\`);
+      out.push(\`Check by differentiating: \${o.check}\`);
+    } else {
+      out.push(o.left);
+      out.push(\`This u does not simplify it. Try another.\`);
+    }
+    return out;
+  },
+  /* the integrand in blue; once solved, the answer F (with C = 0) in gold,
+     whose slope at every x is the blue height there */
+  svg(){
+    const S=this.set(), o=this.opt(), [a,b]=S.D, xs=[];
+    for(let i=0;i<=90;i++) xs.push(a+(b-a)*i/90);
+    let lo=0, hi=0;
+    for(const x of xs){ lo=Math.min(lo,S.f(x)); hi=Math.max(hi,S.f(x)); if(o&&o.F){ lo=Math.min(lo,o.F(x)); hi=Math.max(hi,o.F(x)); } }
+    const pad=(hi-lo)*0.06; lo-=pad; hi+=pad;
+    const PX=x=>20+(x-a)/(b-a)*320, PY=y=>188-(y-lo)/(hi-lo)*176;
+    const line=(fn,k,col)=>\`<polyline data-k="\${k}" points="\${xs.map(x=>\`\${PX(x).toFixed(2)},\${PY(fn(x)).toFixed(2)}\`).join(' ')}" fill="none" stroke="\${col}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="The integrand of \${S.I} in blue\${o&&o.F?\`, and the answer \${o.back.replace(' + C','')} in gold\`:''}">\`;
+    out+=\`<line x1="20" y1="\${PY(0).toFixed(2)}" x2="340" y2="\${PY(0).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(a<0 && b>0) out+=\`<line x1="\${PX(0).toFixed(2)}" y1="8" x2="\${PX(0).toFixed(2)}" y2="192" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=line(S.f,'f',FIG_COL.a);
+    if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-swap'); },
+  pick(i){ this.si=i; this.oi=null; this.render(); },
+  tryU(j){ this.oi=j; this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('swSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Swap.pick(\${i})" aria-label="\${s.I}">\${s.btn}</button>\`).join('');
+    document.getElementById('swOpts').innerHTML=S.opts.map((o,j)=>
+      \`<button class="btn sm ghost" aria-pressed="\${j===this.oi}" onclick="Swap.tryU(\${j})" aria-label="Try u = \${o.u}">u = \${o.u}</button>\`).join('');
+    document.getElementById('swFig').innerHTML=this.svg()+
+      \`<div class="figcap">The blue curve is the integrand.\${this.works()?' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':' Find the right u and the answer appears in gold.'}</div>\`;
+    document.getElementById('swRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('swGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE SWAP','every integral swapped','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

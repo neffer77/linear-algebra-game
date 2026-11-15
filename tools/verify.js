@@ -69,6 +69,7 @@ function loadGame() {
     ';const Avg={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl'"), script.indexOf("  open(){ UI.go('s-avg'); },")) + '};exports.Avg=Avg;' +
     ';const Tail={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'1/x²'"), script.indexOf("  open(){ UI.go('s-tail'); },")) + '};exports.Tail=Tail;' +
     ';const Lathe={' + script.slice(script.indexOf("  SETS:[\n    {id:'cone', btn:'Cone'"), script.indexOf("  open(){ UI.go('s-lathe'); },")) + '};exports.Lathe=Lathe;' +
+    ';const Swap={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos', btn:'cos(x²)'"), script.indexOf("  open(){ UI.go('s-swap'); },")) + '};exports.Swap=Swap;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -87,7 +88,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2682,6 +2683,86 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The swap workshop: every u tried on every integral. Each du is checked
+   against a numerical derivative of u; each right u must turn the integrand
+   into g(u) du exactly, and its answer must climb, step by step across the
+   drawing, by the area under the integrand (the trapezoid rule, not the
+   answer's own formula); a wrong u must not be the one marked right. Every
+   sentence is rebuilt, and every goal. */
+const swapNotes = (() => {
+  const W = Swap;
+  const K = {
+    cos: { I: '∫ 2x cos(x²) dx', right: 'x²', f: x => 2 * x * Math.cos(x * x) },
+    pow: { I: '∫ 3x²(x³ + 1)⁴ dx', right: 'x³ + 1', f: x => 3 * x * x * (x ** 3 + 1) ** 4 },
+    exp: { I: '∫ x e^(x²) dx', right: 'x²', f: x => x * Math.exp(x * x) },
+    log: { I: '∫ (ln x)/x dx', right: 'ln x', f: x => Math.log(x) / x }
+  };
+  if (W.SETS.map(S => S.id).join() !== 'cos,pow,exp,log') fail('swap', 'sets', W.SETS.map(S => S.id).join());
+  W.touched = false; W.si = 0; W.oi = null;
+  for (const g of W.GOALS) if (g.ok(W)) fail('swap', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const k = K[S.id], [a, b] = S.D;
+    if (S.I !== k.I) fail('swap', S.id, `reads ${S.I}`);
+    for (let x = a; x <= b; x += 0.05) if (Math.abs(S.f(x) - k.f(x)) > 1e-9 * Math.max(1, Math.abs(k.f(x)))) fail('swap', S.id, `the integrand is wrong at x = ${x}`);
+    const right = S.opts.filter(o => o.F).map(o => o.u);
+    if (right.join() !== k.right) fail('swap', S.id, `the u marked right is ${right.join()}, not ${k.right}`);
+    W.si = si;
+    [null, ...S.opts.keys()].forEach(oi => {
+      W.oi = oi; n++;
+      const o = oi === null ? null : S.opts[oi], key = `${S.id} u=${o ? o.u : 'none'}`;
+      const want = [`${k.I}: look for a piece whose derivative is also sitting in the integrand.`];
+      if (!o) want.push('Pick a u below.');
+      else {
+        const h = 1e-5;
+        for (let x = a + 0.03; x < b; x += 0.07) {
+          const d = (o.uf(x + h) - o.uf(x - h)) / (2 * h);
+          if (Math.abs(d - o.duf(x)) > 1e-4 * Math.max(1, Math.abs(d))) { fail('swap', key, `du/dx is wrong at x = ${x}`); break; }
+          if (o.F && Math.abs(o.g(o.uf(x)) * o.duf(x) - k.f(x)) > 1e-9 * Math.max(1, Math.abs(k.f(x)))) { fail('swap', key, `g(u) du is not the integrand at x = ${x}`); break; }
+        }
+        want.push(`Try u = ${o.u}. Then du = ${o.du}.`);
+        if (o.F) want.push(o.swap, `Put x back: ${o.back}`, `Check by differentiating: ${o.check}`);
+        else {
+          if (/^u = x changes nothing/.test(o.left) !== (o.u === 'x')) fail('swap', key, 'only u = x changes nothing');
+          want.push(o.left, 'This u does not simplify it. Try another.');
+        }
+      }
+      const got = W.working();
+      if (got.length !== want.length) fail('swap', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('swap', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: the gold answer must rise between samples by the area under the blue integrand
+      const svg = W.svg();
+      const pts = kk => { const m = svg.match(new RegExp(`data-k="${kk}" points="([^"]+)"`)); return m ? m[1].split(' ').map(t => t.split(',').map(Number)) : null; };
+      const fp = pts('f'), Fp = pts('F');
+      if (!fp) fail('swap', key, 'the integrand is not drawn');
+      if (!!Fp !== !!(o && o.F)) fail('swap', key, 'the answer should be drawn exactly when the u is right');
+      if (fp && Fp) {
+        // recover the vertical scale from the integrand, then compare each rise of F with the trapezoid area under f
+        const ys = fp.map(([px]) => k.f(a + (px - 20) / 320 * (b - a)));
+        const i0 = ys.indexOf(Math.min(...ys)), i1 = ys.indexOf(Math.max(...ys));
+        const sc = (fp[i0][1] - fp[i1][1]) / (ys[i1] - ys[i0]);
+        let worst = 0;
+        for (let i = 1; i < Fp.length; i++) {
+          const x0 = a + (Fp[i - 1][0] - 20) / 320 * (b - a), x1 = a + (Fp[i][0] - 20) / 320 * (b - a), m = 20;
+          let area = 0; for (let j = 0; j < m; j++) { const u = x0 + (x1 - x0) * j / m, v = x0 + (x1 - x0) * (j + 1) / m; area += (k.f(u) + k.f(v)) / 2 * (v - u); }
+          worst = Math.max(worst, Math.abs((Fp[i - 1][1] - Fp[i][1]) / sc - area));
+        }
+        if (worst > 0.02 * (Math.max(...ys) - Math.min(...ys)) / 50 + 0.02) fail('swap', key, `the gold answer does not rise by the area under the integrand (off by ${worst})`);
+      }
+      W.touched = true;
+      const works = !!(o && o.F), meant = { cos: si === 0 && works, pow: si === 1 && works, exp: si === 2 && works, log: si === 3 && works, miss: !!o && !works };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('swap', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('swap', g.id, 'this goal cannot be found');
+  W.si = 0; W.oi = null; W.touched = false; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The lathe workshop: every solid cut into every number of disks. Each
    radius squared is worked here from its own polynomial, the disks summed in
    exact fractions, the exact volume from the antiderivative at the two ends
@@ -3821,6 +3902,7 @@ console.log(`  bend points             ${pad(bendNotes.n.toLocaleString(), 10)} 
 console.log(`  water levels            ${pad(avgNotes.n.toLocaleString(), 10)}  (each area from the curve's own coefficients, the level against it in exact fractions, above and under the level by Simpson's rule, the shading read back, ${avgNotes.goals} goals findable)`);
 console.log(`  endless areas           ${pad(tailNotes.n.toLocaleString(), 10)}  (each area by the power rule and again by Simpson's rule, each doubling's share against the last, the bars read back, ${tailNotes.goals} goals findable)`);
 console.log(`  lathe cuts              ${pad(latheNotes.n.toLocaleString(), 10)}  (each solid's disks summed from its own f², the exact volume by antiderivative and by Simpson's rule, the disks read back, ${latheNotes.goals} goals findable)`);
+console.log(`  swaps tried             ${pad(swapNotes.n.toLocaleString(), 10)}  (each du against a numerical derivative, each right u turning the integrand into g(u) du, the drawn answer rising by the area under the integrand, ${swapNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
