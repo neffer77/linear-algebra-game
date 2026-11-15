@@ -1572,6 +1572,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ HORIZON WORKSHOP ============ -->
+  <div class="screen" id="s-horizon">
+    <div class="panel"><h2>🌅 Horizon Workshop</h2><div class="sub">Where does a fraction head as x grows without end? Step x out, ten times further each time, and watch the biggest power on top and underneath take over. Their ratio is where f heads.</div></div>
+    <div class="panel">
+      <div id="hzSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
+      <div id="hzFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="hzXLo" onclick="Horizon.moveX(-1)" aria-label="Step x back to a tenth">−</button>
+          <b id="hzX" style="font-size:17px;min-width:0"></b>
+          <button id="hzXHi" onclick="Horizon.moveX(1)" aria-label="Step x out ten times further">+</button></div>
+      </div>
+      <div id="hzRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="hzGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3576,6 +3595,7 @@ const WORKSHOP_FOR = (() => {
     Slice:   ["🍞 Slice Workshop", ['doubleInt']],
     Tracer:  ["✍️ Slope Tracer Workshop", ['trigDeriv','expLog']],
     Arrow:   ["➡️ Arrow Workshop", ['vecAdd','vecScale','mag','unitVec']],
+    Horizon: ["🌅 Horizon Workshop", ['limInf']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12968,6 +12988,7 @@ const UI = {
     if(id==='s-slice') Slice.render();
     if(id==='s-tracer') Tracer.render();
     if(id==='s-arrow') Arrow.render();
+    if(id==='s-horizon') Horizon.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13726,6 +13747,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">➡️ Arrow Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector.</div>
          <button class="btn sm" id="tomeArrow" style="width:auto;margin-top:8px" onclick="Arrow.open()">Open the arrow workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🌅 Horizon Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first.</div>
+         <button class="btn sm" id="tomeHorizon" style="width:auto;margin-top:8px" onclick="Horizon.open()">Open the horizon workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18332,7 +18358,7 @@ const Slice = {
     document.getElementById('scTLo').disabled=this.k<=0;
     document.getElementById('scTHi').disabled=this.k>=this.steps();
     document.getElementById('scFig').innerHTML=this.svg()+
-      `<div class="figcap">Left, the rectangle from above, darker where f is taller, with the slice as a gold line and the part swept so far in gold. Right, each slice's area S against where it is cut, with the swept area under it.</div>`;
+      `<div class="figcap">Left, the rectangle from above, a deeper blue where f is taller, with the slice as a gold line and the part swept so far in gold. Right, each slice's area S against where it is cut, with the swept area under it.</div>`;
     document.getElementById('scRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
     const fresh=[];
     if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
@@ -18585,6 +18611,113 @@ const Arrow = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE ARROW','every arrow walked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The horizon workshop: where a fraction heads as x grows ----------
+   Step x out toward infinity, ten times further each time, and watch the
+   biggest power on top and underneath take over. Equal powers head for the
+   ratio of their numbers, a bigger power underneath crushes f to 0, and a
+   bigger power on top sends it off for ever. Nothing is saved. */
+const Horizon = {
+  /* each side is a list of [number, power] terms, biggest power first */
+  SETS:[
+    {id:'eq', btn:'Equal powers', top:[[3,2],[5,1]], bot:[[1,2],[2,0]], L:3, ratio:'3', y:[2.4,3.6]},
+    {id:'low', btn:'Bigger below', top:[[4,1],[9,0]], bot:[[2,2],[1,0]], L:0, ratio:'2/x', y:[-0.3,4.7]},
+    {id:'high', btn:'Bigger on top', top:[[1,2],[1,0]], bot:[[2,1],[3,0]], L:null, ratio:'x/2', y:[0,60]},
+    {id:'slow', btn:'Slow starter', top:[[6,2],[-100,1]], bot:[[2,2],[1,0]], L:3, ratio:'3', y:[-4,4]}
+  ],
+  X:[1,10,100,1000,10000,100000,1000000],
+  START:2,
+  si:0, k:2, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'close', t:'On equal powers, step out until f is within 0.001 of where it heads.', toast:'Within 0.001',
+     ok:K=>K.si===0 && K.gap()<0.001},
+    {id:'zero', t:'With a bigger power below, find where f is within 0.001 of 0.', toast:'Crushed toward 0',
+     ok:K=>K.si===1 && K.gap()<0.001},
+    {id:'away', t:'With a bigger power on top, find where f is past 1,000.', toast:'Off to infinity',
+     ok:K=>K.si===2 && K.f()>1000},
+    {id:'fooled', t:'Catch the slow starter below 0, though it heads for 3.', toast:'Not there yet',
+     ok:K=>K.si===3 && K.f()<0},
+    {id:'slow', t:'Follow the slow starter until it too is within 0.001 of 3.', toast:'It gets there in the end',
+     ok:K=>K.si===3 && K.gap()<0.001}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.X[this.k]; },
+  side(T,x=this.x()){ return T.reduce((s,[c,p])=>s+c*x**p,0); },
+  f(x=this.x()){ const S=this.set(); return this.side(S.top,x)/this.side(S.bot,x); },
+  gap(x=this.x()){ const L=this.set().L; return L===null ? Infinity : Math.abs(this.f(x)-L); },
+  /* numbers with thousands marked, to four places */
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p, a=Math.abs(q), w=Math.floor(a), fr=Math.round((a-w)*p);
+    return (q<0?'−':'')+w.toLocaleString('en-US')+(fr?'.'+String(fr).padStart(d,'0').replace(/0+$/,''):''); },
+  is(v){ return (Math.abs(Math.round(v*1e4)/1e4-v)<1e-10 ? '= ' : '≈ ')+this.num(v); },
+  sup(p){ return p===2?'²':p===3?'³':''; },
+  /* a side written in x, or worked at a number */
+  poly(T,X){ return T.map(([c,p],i)=>{ const a=Math.abs(c), body= p===0 ? `${a}` : X===undefined ? `${a===1?'':a}x${this.sup(p)}` : `${a===1?'':a+'·'}${X}${this.sup(p)}`;
+      return (i===0 ? (c<0?'−':'') : (c<0?' − ':' + '))+body; }).join(''); },
+  lead(T){ const [c,p]=T[0]; return `${c===1?'':c}x${this.sup(p)}`; },
+  working(){
+    const S=this.set(), x=this.x(), X=this.num(x), t=this.side(S.top), b=this.side(S.bot), f=this.f(), out=[];
+    out.push(`f(x) = (${this.poly(S.top)})/(${this.poly(S.bot)}). Step x out toward infinity, ten times further each time, and watch where f heads.`);
+    out.push(`At x = ${X}: the top is ${this.poly(S.top,X)} = ${this.num(t)} and the bottom is ${this.poly(S.bot,X)} = ${this.num(b)}, so f(${X}) ${this.is(f)}.`);
+    const lt=S.top[0][0]*x**S.top[0][1], lb=S.bot[0][0]*x**S.bot[0][1], rt=t-lt, rb=b-lb;
+    out.push(`The biggest terms are ${this.lead(S.top)} on top and ${this.lead(S.bot)} underneath: here they make ${this.num(lt)} and ${this.num(lb)}, while the rest add ${this.num(rt)} and ${this.num(rb)}.`);
+    const loud=[Math.abs(rt)>Math.abs(lt)?'on top':'', Math.abs(rb)>Math.abs(lb)?'underneath':''].filter(Boolean);
+    if(loud.length) out.push(`At x = ${X} the rest is still bigger than the biggest term ${loud.join(' and ')}, so the biggest terms do not decide f yet${f<0 && S.L>0 ? `: that is why f is below 0 here, though it heads for ${S.L}` : ''}.`);
+    const r=lt/lb;
+    if(S.L===null) out.push(`Their ratio is ${this.lead(S.top)} ÷ ${this.lead(S.bot)} = ${S.ratio}, which is ${this.num(r)} here and keeps growing, so f has no limit: it runs off to infinity.`);
+    else if(S.top[0][1]===S.bot[0][1]) out.push(`Their ratio is ${this.lead(S.top)} ÷ ${this.lead(S.bot)} = ${S.ratio}, the same at every x, so f heads for ${S.L}.`);
+    else out.push(`Their ratio is ${this.lead(S.top)} ÷ ${this.lead(S.bot)} = ${S.ratio}, which is ${this.num(r)} here and shrinks toward 0, so f heads for 0.`);
+    if(S.L!==null){ const g=this.gap();
+      out.push(g===0 ? `f(${X}) is exactly ${S.L}.`
+        : `f(${X}) is ${this.num(g)} ${f>S.L?'above':'below'} ${S.L}${g<0.001 ? `, within 0.001 of it` : ''}.`); }
+    return out;
+  },
+  /* x on a scale of powers of ten from 1 to a million; f in blue through
+     the stops, the limit dashed in gold, and stops off the chart marked
+     with a triangle at its edge */
+  svg(){
+    const S=this.set(), [y0,y1]=S.y, PX=v=>24+Math.log10(v)/6*312, PY=v=>180-(v-y0)/(y1-y0)*168;
+    const clip=v=>Math.max(y0,Math.min(y1,v));
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f against x from 1 to a million, at x = ${this.num(this.x())} f is ${this.num(this.f())}${S.L===null?', climbing without end':`, heading for ${S.L}`}">`;
+    if(y0<0 && y1>0) out+=`<line data-k="zero" x1="24" y1="${PY(0).toFixed(2)}" x2="336" y2="${PY(0).toFixed(2)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line x1="24" y1="188" x2="336" y2="188" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    this.X.forEach((v,i)=>{ out+=`<text x="${PX(v).toFixed(2)}" y="198" font-size="9" text-anchor="middle" fill="${FIG_COL.dim}">${['1','10','100','1k','10k','100k','1M'][i]}</text>`; });
+    if(S.L!==null) out+=`<line data-k="limit" x1="24" y1="${PY(S.L).toFixed(2)}" x2="336" y2="${PY(S.L).toFixed(2)}" stroke="${FIG_COL.b}" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+    let seg=[], segs=[];
+    for(let i=0;i<=120;i++){ const v=10**(6*i/120), y=this.f(v);
+      if(y<y0 || y>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; } seg.push(`${PX(v).toFixed(2)},${PY(y).toFixed(2)}`); }
+    if(seg.length>1) segs.push(seg);
+    out+=segs.map(p=>`<polyline data-k="f" points="${p.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5"/>`).join('');
+    this.X.forEach((v,i)=>{ const y=this.f(v), cx=PX(v), on=i===this.k;
+      if(y>=y0 && y<=y1) out+=`<circle data-k="${on?'here':'stop'}" cx="${cx.toFixed(2)}" cy="${PY(y).toFixed(2)}" r="${on?6:3}" fill="${on?FIG_COL.b:FIG_COL.a}"/>`;
+      else { const up=y>y1, cy=PY(clip(y)); out+=`<polygon data-k="${on?'here-off':'off'}" data-up="${up}" points="${cx.toFixed(2)},${(up?cy-2:cy+2).toFixed(2)} ${(cx-5).toFixed(2)},${(up?cy+7:cy-7).toFixed(2)} ${(cx+5).toFixed(2)},${(up?cy+7:cy-7).toFixed(2)}" fill="${on?FIG_COL.b:FIG_COL.a}"/>`; } });
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-horizon'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('hzSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Horizon.pick(${i})" aria-label="${s.btn}: f(x) = (${this.poly(s.top)})/(${this.poly(s.bot)})">${s.btn}</button>`).join('');
+    document.getElementById('hzX').textContent=`x = ${this.num(this.x())}`;
+    document.getElementById('hzXLo').disabled=this.k<=0;
+    document.getElementById('hzXHi').disabled=this.k>=this.X.length-1;
+    document.getElementById('hzFig').innerHTML=this.svg()+
+      `<div class="figcap">x runs from 1 to a million, each mark ten times the last. f is in blue, the stop you are at in gold, and the dashed gold line is where f heads. A triangle at the edge marks a stop off the chart.</div>`;
+    document.getElementById('hzRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('hzGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE HORIZON','every limit reached','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

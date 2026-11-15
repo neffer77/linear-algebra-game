@@ -79,6 +79,7 @@ function loadGame() {
     ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
+    ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -97,7 +98,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2692,6 +2693,110 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The horizon workshop: every fraction, every stop.
+   Where each fraction heads is worked out from the powers alone, never from
+   the workshop's own sums; every worked line is evaluated as written and must
+   give the number written after it; the biggest terms and the rest are
+   checked by hand; every sentence's condition is worked out independently;
+   and the drawing is read back: the stops at their powers of ten, on the
+   curve or marked off the chart on the right side, the limit where it should
+   be, and the curve itself on f. */
+const horizonNotes = (() => {
+  const W = Horizon;
+  const num = t => +t.replace(/−/g, '-').replace(/,/g, '');
+  const side = (T, x) => T.reduce((a, [c, p]) => a + c * Math.pow(x, p), 0);
+  const calc = t => Function(`return (${t.replace(/−/g, '-').replace(/,/g, '').replace(/·/g, '*').replace(/²/g, '**2').replace(/³/g, '**3')});`)();
+  const tol = v => 5.0001e-5 + Math.abs(v) * 1e-12;
+  if (W.SETS.map(S => S.id).join() !== 'eq,low,high,slow') fail('horizon', 'sets', W.SETS.map(S => S.id).join());
+  if (W.X.join() !== '1,10,100,1000,10000,100000,1000000') fail('horizon', 'x', `x should step by tens from 1 to a million, not ${W.X.join()}`);
+  W.SETS.forEach(S => {
+    const [ct, pt] = S.top[0], [cb, pb] = S.bot[0];
+    if (S.top.some(([, p]) => p > pt) || S.bot.some(([, p]) => p > pb)) fail('horizon', S.id, 'the biggest power is not written first');
+    const L = pt < pb ? 0 : pt === pb ? ct / cb : null;
+    if (S.L !== L) fail('horizon', S.id, `f heads for ${L === null ? 'infinity' : L}, not ${S.L}`);
+    const r = pt === pb ? `${ct / cb}` : pt === pb - 1 ? `${ct / cb}/x` : pt === pb + 1 ? `x/${cb / ct}` : '?';
+    if (S.ratio !== r) fail('horizon', S.id, `the ratio of the biggest terms is ${r}, not ${S.ratio}`);
+  });
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.START; W.done.clear(); };
+  reset();
+  if (W.x() !== 100) fail('horizon', 'start', 'the workshop should open at x = 100');
+  for (const g of W.GOALS) if (g.ok(W)) fail('horizon', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.k = 6; W.pick(si); if (W.x() !== 100) fail('horizon', S.id, 'picking a fraction does not start again at x = 100');
+    for (const g of W.GOALS) if (g.ok(W)) fail('horizon', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  W.SETS.forEach((S, si) => {
+    for (let k = 0; k < W.X.length; k++) {
+      reset(); W.si = si; W.k = k; W.touched = true; n++;
+      const x = W.X[k], key = `${S.id} at x = ${x}`;
+      const t = side(S.top, x), b = side(S.bot, x), f = t / b, L = S.L, gap = L === null ? Infinity : Math.abs(f - L);
+      const got = W.working(), txt = got.join('\n');
+      const wl = got[1].match(/^At x = ([\d,]+): the top is (.+) = (−?[\d,.]+) and the bottom is (.+) = (−?[\d,.]+), so f\([\d,]+\) ([=≈]) (−?[\d,.]+)\.$/);
+      if (!wl) { fail('horizon', key, `no worked line: ${got[1]}`); continue; }
+      if (num(wl[1]) !== x) fail('horizon', key, `the worked line is at ${wl[1]}`);
+      if (calc(wl[2]) !== t || num(wl[3]) !== t) fail('horizon', key, `the top is ${t}: ${wl[2]} = ${wl[3]}`);
+      if (calc(wl[4]) !== b || num(wl[5]) !== b) fail('horizon', key, `the bottom is ${b}: ${wl[4]} = ${wl[5]}`);
+      if (Math.abs(num(wl[7]) - f) > tol(f)) fail('horizon', key, `f is ${f}, not ${wl[7]}`);
+      if ((wl[6] === '=') !== (Math.abs(Math.round(f * 1e4) / 1e4 - f) < 1e-10)) fail('horizon', key, 'f is marked exact or not wrongly');
+      const lt = S.top[0][0] * Math.pow(x, S.top[0][1]), lb = S.bot[0][0] * Math.pow(x, S.bot[0][1]);
+      const bl = got[2].match(/here they make (−?[\d,.]+) and (−?[\d,.]+), while the rest add (−?[\d,.]+) and (−?[\d,.]+)\.$/);
+      if (!bl) fail('horizon', key, `no biggest-terms line: ${got[2]}`);
+      else if (num(bl[1]) !== lt || num(bl[2]) !== lb || num(bl[3]) !== t - lt || num(bl[4]) !== b - lb) fail('horizon', key, `the biggest terms make ${lt} and ${lb} with ${t - lt} and ${b - lb} left: ${got[2]}`);
+      const loudT = Math.abs(t - lt) > Math.abs(lt), loudB = Math.abs(b - lb) > Math.abs(lb);
+      const loud = got.find(l => /do not decide f yet/.test(l));
+      if (!!loud !== (loudT || loudB)) fail('horizon', key, 'the not-yet sentence shows at the wrong time');
+      if (loud && (/on top/.test(loud) !== loudT || /underneath/.test(loud) !== loudB)) fail('horizon', key, `the not-yet sentence names the wrong side: ${loud}`);
+      if (/that is why f is below 0 here/.test(txt) !== ((loudT || loudB) && f < 0 && L > 0)) fail('horizon', key, 'the below-0 clause is wrong');
+      const rl = got.find(l => l.startsWith('Their ratio is'));
+      if (!rl) fail('horizon', key, 'no ratio sentence');
+      else if (L === null) { const m = rl.match(/which is (−?[\d,.]+) here and keeps growing, so f has no limit/); if (!m || Math.abs(num(m[1]) - lt / lb) > tol(lt / lb)) fail('horizon', key, rl); }
+      else if (S.top[0][1] === S.bot[0][1]) { if (!rl.includes(`= ${S.ratio}, the same at every x, so f heads for ${L}.`)) fail('horizon', key, rl); }
+      else { const m = rl.match(/which is (−?[\d,.]+) here and shrinks toward 0, so f heads for 0\./); if (!m || Math.abs(num(m[1]) - lt / lb) > tol(lt / lb)) fail('horizon', key, rl); }
+      const gl = got[got.length - 1];
+      if (L === null) { if (/above|below|exactly/.test(gl)) fail('horizon', key, 'a fraction with no limit is measured against one'); }
+      else {
+        const m = gl.match(/^f\([\d,]+\) is (?:exactly (−?[\d.]+)|([\d,.]+) (above|below) (−?[\d.]+))(, within 0\.001 of it)?\.$/);
+        if (!m) fail('horizon', key, `no gap sentence: ${gl}`);
+        else if (m[1] !== undefined) { if (gap !== 0) fail('horizon', key, 'f is called exactly the limit'); }
+        else {
+          if (Math.abs(num(m[2]) - gap) > tol(gap) || num(m[4]) !== L) fail('horizon', key, `f is ${gap} from ${L}: ${gl}`);
+          if ((m[3] === 'above') !== (f > L)) fail('horizon', key, `f is on the wrong side of ${L}`);
+          if (!!m[5] !== (gap < 0.001)) fail('horizon', key, 'the within-0.001 note is wrong');
+        }
+      }
+      // the drawing
+      const svg = W.svg(), [y0, y1] = S.y, PX = v => 24 + Math.log10(v) / 6 * 312, PY = v => 180 - (v - y0) / (y1 - y0) * 168;
+      const stops = [...svg.matchAll(/<(circle|polygon) data-k="(here|stop|here-off|off)"(?: data-up="(true|false)")? (?:cx="([\d.]+)" cy="([\d.]+)"|points="([\d.]+),([\d.]+))/g)];
+      if (stops.length !== W.X.length) fail('horizon', key, `${stops.length} stops are drawn`);
+      stops.forEach((m, i) => {
+        const v = W.X[i], y = side(S.top, v) / side(S.bot, v), on = y >= y0 && y <= y1;
+        if (/here/.test(m[2]) !== (i === k)) fail('horizon', key, `stop ${i} is marked ${m[2]}`);
+        if ((m[1] === 'circle') !== on) fail('horizon', key, `stop ${i} is drawn ${on ? 'off' : 'on'} the chart`);
+        const px = +(m[4] || m[6]); if (Math.abs(px - PX(v)) > 0.01) fail('horizon', key, `stop ${i} is not at x = ${v}`);
+        if (on && Math.abs(+m[5] - PY(y)) > 0.01) fail('horizon', key, `stop ${i} is not on f`);
+        if (!on && (m[3] === 'true') !== (y > y1)) fail('horizon', key, `stop ${i} points the wrong way off the chart`);
+        if (!on && Math.abs(+m[7] - PY(y > y1 ? y1 : y0)) > 2.01) fail('horizon', key, `stop ${i} is not at the edge it ran off`);
+      });
+      const lim = svg.match(/data-k="limit" x1="24" y1="([\d.]+)"/);
+      if (!!lim !== (L !== null) || (lim && Math.abs(+lim[1] - PY(L)) > 0.01)) fail('horizon', key, 'the limit line is wrong');
+      for (const pl of svg.matchAll(/data-k="f" points="([^"]+)"/g)) for (const pt of pl[1].split(' ')) {
+        const [px, py] = pt.split(',').map(Number), v = Math.pow(10, (px - 24) / 312 * 6), y = side(S.top, v) / side(S.bot, v);
+        if (Math.abs(py - PY(y)) > 0.05 || py < 11.99 || py > 180.01) fail('horizon', key, `the curve leaves f or the chart at ${pt}`);
+      }
+      if (!/data-k="f"/.test(svg)) fail('horizon', key, 'no curve is drawn');
+      const meant = { close: si === 0 && gap < 0.001, zero: si === 1 && gap < 0.001, away: si === 2 && f > 1000, fooled: si === 3 && f < 0, slow: si === 3 && gap < 0.001 };
+      for (const g of W.GOALS) { if (!!g.ok(W) !== meant[g.id]) fail('horizon', key, `goal ${g.id} is ${g.ok(W) ? 'met' : 'not met'}`); if (g.ok(W)) found[g.id] = found[g.id] || key; }
+    }
+    reset(); W.si = si;
+    for (let i = 0; i < 9; i++) W.moveX(1);
+    if (W.k !== W.X.length - 1) fail('horizon', S.id, 'x does not stop at a million');
+    for (let i = 0; i < 9; i++) W.moveX(-1);
+    if (W.k !== 0) fail('horizon', S.id, 'x does not stop at 1');
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('horizon', g.id, 'this goal cannot be found');
+  reset();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The arrow workshop: every pair, every k, with and without v.
    Each sum is worked out by hand from u and v, never from the workshop's own
    arithmetic; every vector written in the readout is read back as numbers;
@@ -4792,6 +4897,7 @@ console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}
 console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
+console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

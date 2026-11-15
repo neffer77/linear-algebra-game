@@ -807,7 +807,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Fifty-six topics link to thirty-six workshops,
+  back button returns to the summary. Fifty-seven topics link to thirty-seven workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -964,6 +964,13 @@ The game is built so that losing teaches you as much as winning.
   gives the unit vector, and stretching by k stretches the length by |k|.
   Adding u and v shows that lengths do not add the way parts do. Six things to
   find, and fights on adding, scaling, length and unit vectors now offer it.
+- **🌅 Horizon Workshop** — limits at infinity. Step x out from 1 to a million,
+  ten times further each press, and watch a fraction's biggest terms take over
+  from the rest. Equal powers head for the ratio of their numbers, a bigger
+  power underneath crushes f to 0, and a bigger power on top sends it off for
+  ever. A slow starter dips below 0 before settling on 3, because the biggest
+  terms only decide f once they outgrow the rest. Five things to find, and a
+  fight on limits at infinity now offers it.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1128,7 +1135,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Seventy-three suites, about 3,350 checks, about a minute:
+loop only exists once the page is running. Seventy-four suites, about 3,390 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1196,6 +1203,7 @@ loop only exists once the page is running. Seventy-three suites, about 3,350 che
 | `slice` | the Tome opens the slice workshop on xy over 0 to 2 by 0 to 3, holding x = 0.5 with nothing found; x = 0 is a slice with no area and nothing swept or shaded; sweeping on to x = 2 adds the slices to 9 and switches the forward button off; holding y instead starts the slice again, renames the step buttons, and sweeping to y = 3 gives the same 9; on x² every slice across y has area 9, found once a second slice is looked at, while across x they grow; on x + y the slice at x = 1 is the average one, finishing all five; the stepper stops at 0, every button is named, it fits a phone, and nothing is saved |
 | `tracer` | the Tome opens the slope tracer workshop on sin x at 0, slope 1 with one dot and nothing found; π/2 has a flat tangent at the top of a hump; π falls as steeply as sin x ever does and switches the forward button off; stepping back to −π marks all nine stops and the dots trace cos x, drawn dashed; cos x falls fastest at π/2; three slopes of eˣ land on eˣ; ln x has slope 2 at 0.5, finishing all six; every button is named, it fits a phone, and nothing is saved |
 | `arrow` | the Tome opens the arrow workshop on u = ⟨3, 4⟩ at k = 1, length 5 by Pythagoras with its unit vector and nothing found; adding v at the tip lands flat on the x-axis, draws v in gold and shows the lengths do not add; k = 2 doubles the length and switches the forward button off; k = 0 leaves the zero vector, drawn as a dot; k = −1 turns it round; on ⟨1.2, 1.6⟩ k = ½ is a unit vector and adding v cancels it; on ⟨1, 1⟩ u + v has length 2, finishing all six; the stepper stops at −2, every button is named, it fits a phone, and nothing is saved |
+| `horizon` | the Tome opens the horizon workshop on (3x² + 5x)/(x² + 2) at x = 100, worked in full with its biggest terms and their ratio 3, with nothing found; two presses reach x = 10,000 and within 0.001 of 3; a bigger power below heads for 0 by its ratio 2/x; a bigger power on top runs past 1,000, marked at the chart's edge with no limit line; the slow starter is below 0 at x = 10, where the rest still outweighs the biggest term, then settles within 0.001 of 3, finishing all five; the stepper stops at 1 and a million, every button is named, it fits a phone, and nothing is saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
