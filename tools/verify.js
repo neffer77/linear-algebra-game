@@ -63,6 +63,7 @@ function loadGame() {
     ';const Product={' + script.slice(script.indexOf("  SETS:[\n    {id:'lin', btn:'Line'"), script.indexOf("  open(){ UI.go('s-product'); },")) + '};exports.Product=Product;' +
     ';const Ladder={' + script.slice(script.indexOf("  SETS:[\n    {id:'five', btn:'5 m ladder'"), script.indexOf("  open(){ UI.go('s-ladder'); },")) + '};exports.Ladder=Ladder;' +
     ';const Kernel={' + script.slice(script.indexOf("  SETS:[\n    {id:'flat', btn:'Flat'"), script.indexOf("  open(){ UI.go('s-null'); },")) + '};exports.Kernel=Kernel;' +
+    ';const Gram={' + script.slice(script.indexOf("  SETS:[\n    {id:'tilt', btn:'Tilted'"), script.indexOf("  open(){ UI.go('s-gram'); },")) + '};exports.Gram=Gram;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -81,7 +82,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2676,6 +2677,84 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The Gram–Schmidt workshop: every pair at every number of copies taken away.
+   w = u₂ − c·u₁ and w · u₁ are worked here, each pair must have exactly one
+   c on the stepper that leaves w perpendicular, and it must be the shadow
+   (u₂ · u₁)/(u₁ · u₁) and give the shortest w, as the readout claims. The
+   drawing puts every arrow at its value inside the picture, the dashed copy
+   of w must run from c·u₁'s tip to u₂'s, and every sentence and goal is
+   rebuilt here. */
+const gramNotes = (() => {
+  const G = Gram;
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; const z = Object.is(q, -0) ? 0 : q; return z < 0 ? '−' + Math.abs(z) : String(z); };
+  const V = p => `⟨${num(p[0])}, ${num(p[1])}⟩`;
+  const par = n => (n < 0 ? `(${num(n)})` : num(n));
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  if (G.SETS.map(S => S.id).join() !== 'tilt,half,none') fail('gram', 'sets', G.SETS.map(S => S.id).join());
+  G.touched = false; G.si = 0; G.k = G.START;
+  for (const g of G.GOALS) if (g.ok(G)) fail('gram', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  G.SETS.forEach((S, si) => {
+    const u = S.u1, u2 = S.u2, nn = u[0] * u[0] + u[1] * u[1], dp = u2[0] * u[0] + u2[1] * u[1], best = dp / nn;
+    const W = c => [u2[0] - c * u[0], u2[1] - c * u[1]];
+    const perp = G.C.filter(c => near(W(c)[0] * u[0] + W(c)[1] * u[1], 0));
+    if (perp.length !== 1 || !near(perp[0], best)) fail('gram', S.id, `perpendicular at c = ${perp.join(', ') || 'none'}, the shadow is ${best}`);
+    if (S.id === 'half' && Number.isInteger(best)) fail('gram', S.id, 'the half pair must need a fraction of a copy');
+    if (S.id === 'none' && dp !== 0) fail('gram', S.id, 'the square pair must start at right angles');
+    if (S.id !== 'none' && dp === 0) fail('gram', S.id, 'this pair must lean on u₁');
+    const Lb = Math.hypot(...W(best));
+    if (G.C.some(c => !near(c, best) && Math.hypot(...W(c)) <= Lb)) fail('gram', S.id, 'the perpendicular w is not the shortest');
+    G.si = si;
+    G.C.forEach((c, k) => {
+      G.k = k; n++;
+      const key = `${S.id} c=${c}`, w = W(c), d = w[0] * u[0] + w[1] * u[1];
+      if (!near(G.w()[0], w[0]) || !near(G.w()[1], w[1]) || !near(G.dot(), d)) fail('gram', key, `w reads ${G.w()}, w · u₁ ${G.dot()}; worked here ${w}, ${d}`);
+      const L = Math.hypot(w[0], w[1]), sq = w[0] * w[0] + w[1] * w[1];
+      const want = [
+        `u₁ = ${V(u)} is fixed. Take c copies of it away from u₂ = ${V(u2)}, and what is left is w = u₂ − c·u₁.`,
+        `With c = ${num(c)}: w = ${V(u2)} − ${par(c)} × ${V(u)} = ${V(w)}.`,
+        `w · u₁ = ${par(w[0])} × ${par(u[0])} + ${par(w[1])} × ${par(u[1])} = ${num(d)}` +
+          (d > 1e-9 ? `: more than 0, so w still leans along u₁. Each extra copy taken away lowers w · u₁ by u₁ · u₁ = ${nn}.`
+           : d < -1e-9 ? `: less than 0, so too much is taken away and w leans back against u₁. Each copy put back raises w · u₁ by u₁ · u₁ = ${nn}.`
+           : ': w is perpendicular to u₁.'),
+        `|w| = √${num(sq)} ${near(Math.round(L * 1e4) / 1e4, L) ? '=' : '≈'} ${num(L)}` + (near(d, 0) ? ', the shortest w can be: any other c leaves some of u₁ behind in it.' : '.')
+      ];
+      if (near(d, 0)) want.push(dp === 0
+        ? 'u₂ · u₁ = 0 from the start, so u₂ casts no shadow on u₁ and there is nothing to take away: Gram–Schmidt leaves a pair that is already at right angles alone.'
+        : `That c is exactly (u₂ · u₁)/(u₁ · u₁) = ${dp}/${nn} = ${num(best)}, the length of u₂'s shadow on u₁ in copies of u₁. Taking that shadow away is the one step of Gram–Schmidt.`);
+      const got = G.working();
+      if (got.length !== want.length) fail('gram', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('gram', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: every arrow at its value to one scale, inside the picture
+      const svg = G.svg();
+      const seg = role => { const m = svg.match(new RegExp(`data-k="${role}" x1="([\\d.-]+)" y1="([\\d.-]+)" x2="([\\d.-]+)" y2="([\\d.-]+)"`)); return m && m.slice(1).map(Number); };
+      const at = (sg, a, b) => sg && Math.abs(sg[0] - (180 + a[0] * 15)) < 0.02 && Math.abs(sg[1] - (105 - a[1] * 15)) < 0.02 &&
+        Math.abs(sg[2] - (180 + b[0] * 15)) < 0.02 && Math.abs(sg[3] - (105 - b[1] * 15)) < 0.02;
+      const cu = [c * u[0], c * u[1]];
+      if (!at(seg('u1'), [0, 0], u)) fail('gram', key, 'u₁ is not drawn at its value');
+      if (!at(seg('u2'), [0, 0], u2)) fail('gram', key, 'u₂ is not drawn at its value');
+      if (!at(seg('w'), [0, 0], w)) fail('gram', key, 'w is not drawn at its value');
+      if (c === 0) { if (seg('cu') || seg('wcopy')) fail('gram', key, 'nothing is taken away at c = 0, so no dashed arrows belong'); }
+      else {
+        if (!at(seg('cu'), [0, 0], cu)) fail('gram', key, 'the dashed c·u₁ is not drawn at its value');
+        if (!at(seg('wcopy'), cu, u2)) fail('gram', key, 'the dashed copy of w does not run from c·u₁ to u₂');
+      }
+      for (const m of svg.matchAll(/(?:x[12]|cx)="([\d.-]+)"/g)) if (+m[1] < 0 || +m[1] > 360) fail('gram', key, 'an arrow runs out of the picture');
+      for (const m of svg.matchAll(/(?:y[12]|cy)="([\d.-]+)"/g)) if (+m[1] < 0 || +m[1] > 200) fail('gram', key, 'an arrow runs out of the picture');
+      G.touched = true;
+      const meant = { tilt: si === 0 && near(d, 0), half: si === 1 && near(d, 0), over: d < -1e-9, none: si === 2 && c === 0 && near(d, 0) };
+      for (const gl of G.GOALS) {
+        if (!!gl.ok(G) !== meant[gl.id]) fail('gram', key, `goal ${gl.id} is ${gl.ok(G) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(G)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of G.GOALS) if (!found[g.id]) fail('gram', g.id, 'this goal cannot be found');
+  G.si = 0; G.k = G.START; G.touched = false; G.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The null space workshop: every matrix at every arrow the steppers allow.
    Av is worked here row by row, the crushed arrows are found by brute force
    and must be exactly the multiples of one arrow on a flat or steep matrix and
@@ -3241,6 +3320,7 @@ console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 
 console.log(`  product rule states      ${pad(productNotes.n.toLocaleString(), 10)}  (each field worked from its formulas, strips and corner adding to the new area, the rule against a nudge, every gap shrinking, f′ × g′ kept wrong, drawn to scale, ${productNotes.goals} goals findable)`);
 console.log(`  ladder positions         ${pad(ladderNotes.n.toLocaleString(), 10)}  (each height by Pythagoras, the top's speed by a nudge in time, the length kept, the 0.01 s check rebuilt, the bars in the speeds' ratio, ${ladderNotes.goals} goals findable)`);
 console.log(`  null space arrows        ${pad(kernelNotes.n.toLocaleString(), 10)}  (each Av worked row by row, the crushed arrows found by brute force and on one line, every rank-1 Av on its column space, both arrows drawn at their values, ${kernelNotes.goals} goals findable)`);
+console.log(`  gram–schmidt steps       ${pad(gramNotes.n.toLocaleString(), 10)}  (w and w · u₁ worked at every c, one perpendicular c per pair and it is the shadow and the shortest w, every arrow drawn at its value, ${gramNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

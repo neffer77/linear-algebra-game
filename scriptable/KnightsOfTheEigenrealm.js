@@ -1295,6 +1295,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ GRAM–SCHMIDT WORKSHOP ============ -->
+  <div class="screen" id="s-gram">
+    <div class="panel"><h2>📐 Gram–Schmidt Workshop</h2><div class="sub">Two arrows that lean on each other make a clumsy basis. Take copies of the first away from the second until what is left stands at a right angle to it. The right number of copies is the second arrow's shadow on the first, and taking it away is all Gram–Schmidt does.</div></div>
+    <div class="panel">
+      <div id="gsSets" class="wsModes" role="group" aria-label="Which pair of arrows"></div>
+      <div id="gsFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="gsCLo" onclick="Gram.moveC(-1)" aria-label="Take half a copy of u₁ less">−</button>
+          <b id="gsC" style="font-size:17px;min-width:0"></b>
+          <button id="gsCHi" onclick="Gram.moveC(1)" aria-label="Take half a copy of u₁ more">+</button></div>
+      </div>
+      <div id="gsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="gsGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3280,6 +3299,7 @@ const WORKSHOP_FOR = (() => {
     Elim:    ["⚖️ Elimination Workshop", ['solve2']],
     Undo:    ["↩️ Undo Workshop", ['inv2']],
     Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
+    Gram:    ["📐 Gram–Schmidt Workshop", ['gramSchmidt']],
     Castles: ["🏰 Two Castles Workshop", ['matPow']],
     Limit:   ["🌫️ Limit Workshop", ['limRational']],
     Hopital: ["🔬 L'Hôpital Workshop", ['lhopital']],
@@ -12659,6 +12679,7 @@ const UI = {
     if(id==='s-product') Product.render();
     if(id==='s-ladder') Ladder.render();
     if(id==='s-null') Kernel.render();
+    if(id==='s-gram') Gram.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13312,6 +13333,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🕳️ Null Space Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns.</div>
          <button class="btn sm" id="tomeNull" style="width:auto;margin-top:8px" onclick="Kernel.open()">Open the null space workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📐 Gram–Schmidt Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Take copies of one arrow away from another until what is left stands at a right angle, and see why the right amount is the shadow (u₂ · u₁)/(u₁ · u₁).</div>
+         <button class="btn sm" id="tomeGram" style="width:auto;margin-top:8px" onclick="Gram.open()">Open the Gram–Schmidt workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
@@ -16346,6 +16372,103 @@ const Kernel = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The Gram–Schmidt workshop: take away the shadow ----------
+   u₁ is fixed and u₂ leans along it. Take c copies of u₁ away from u₂ and
+   watch w = u₂ − c·u₁: each copy lowers w · u₁ by u₁ · u₁, so exactly one c,
+   (u₂ · u₁)/(u₁ · u₁), leaves w perpendicular to u₁, and that w is the
+   shortest of them all. That one step is Gram–Schmidt. Nothing is saved. */
+const Gram = {
+  SETS:[
+    {id:'tilt', btn:'Tilted', u1:[2,1], u2:[3,4]},
+    {id:'half', btn:'Half', u1:[3,1], u2:[1,2]},
+    {id:'none', btn:'Square', u1:[1,1], u2:[-2,2]}
+  ],
+  C:[-1,-0.5,0,0.5,1,1.5,2,2.5,3],
+  START:2,
+  si:0, k:2, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'tilt', t:'On the tilted pair, take away just enough of u₁ that w is perpendicular to it.', toast:'Straightened the tilted pair',
+     ok:K=>K.si===0 && K.dot()===0},
+    {id:'half', t:'Do the same on the half pair, where the right amount is not a whole number.', toast:'Half a copy was right',
+     ok:K=>K.si===1 && K.dot()===0},
+    {id:'over', t:'Take away too much, so that w leans back against u₁.', toast:'Too much taken away',
+     ok:K=>K.dot()<0},
+    {id:'none', t:'Find the pair where nothing needs taking away at all.', toast:'Already at right angles',
+     ok:K=>K.si===2 && K.c()===0 && K.dot()===0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  c(){ return this.C[this.k]; },
+  w(){ const S=this.set(), c=this.c(); return [S.u2[0]-c*S.u1[0], S.u2[1]-c*S.u1[1]]; },
+  dot(){ const w=this.w(), u=this.set().u1; return this.r(w[0]*u[0]+w[1]*u[1]); },
+  /* rounding away float noise: every value here is a whole number or a half */
+  r(v){ const q=Math.round(v*1e6)/1e6; return Object.is(q,-0)?0:q; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  v(p){ return \`⟨\${this.num(p[0])}, \${this.num(p[1])}⟩\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), u=S.u1, c=this.c(), w=this.w(), d=this.dot(), nn=u[0]*u[0]+u[1]*u[1];
+    const dp=S.u2[0]*u[0]+S.u2[1]*u[1], best=dp/nn;
+    const par=n=>n<0?\`(\${this.num(n)})\`:this.num(n);
+    const L=Math.hypot(w[0],w[1]), sq=this.r(w[0]*w[0]+w[1]*w[1]), exact=Math.abs(Math.round(L*1e4)/1e4-L)<1e-10;
+    const out=[];
+    out.push(\`u₁ = \${this.v(u)} is fixed. Take c copies of it away from u₂ = \${this.v(S.u2)}, and what is left is w = u₂ − c·u₁.\`);
+    out.push(\`With c = \${this.num(c)}: w = \${this.v(S.u2)} − \${par(c)} × \${this.v(u)} = \${this.v(w)}.\`);
+    out.push(\`w · u₁ = \${par(w[0])} × \${par(u[0])} + \${par(w[1])} × \${par(u[1])} = \${this.num(d)}\`+
+      (d>0 ? \`: more than 0, so w still leans along u₁. Each extra copy taken away lowers w · u₁ by u₁ · u₁ = \${nn}.\`
+       : d<0 ? \`: less than 0, so too much is taken away and w leans back against u₁. Each copy put back raises w · u₁ by u₁ · u₁ = \${nn}.\`
+       : \`: w is perpendicular to u₁.\`));
+    out.push(\`|w| = √\${this.num(sq)} \${exact?'=':'≈'} \${this.num(L)}\`+
+      (d===0 ? \`, the shortest w can be: any other c leaves some of u₁ behind in it.\` : \`.\`));
+    if(d===0 && dp===0)
+      out.push(\`u₂ · u₁ = 0 from the start, so u₂ casts no shadow on u₁ and there is nothing to take away: Gram–Schmidt leaves a pair that is already at right angles alone.\`);
+    else if(d===0)
+      out.push(\`That c is exactly (u₂ · u₁)/(u₁ · u₁) = \${dp}/\${nn} = \${this.num(best)}, the length of u₂'s shadow on u₁ in copies of u₁. Taking that shadow away is the one step of Gram–Schmidt.\`);
+    return out;
+  },
+  /* the plane to one scale: u₁ in gold, u₂ in blue, c·u₁ dashed gold, w in red
+     from the origin, and a dashed red copy of w from c·u₁'s tip to u₂'s tip */
+  svg(){
+    const S=this.set(), c=this.c(), w=this.w(), O=[180,105], k=15;
+    const P=p=>[(O[0]+p[0]*k).toFixed(2), (O[1]-p[1]*k).toFixed(2)];
+    const seg=(a,b,col,role,dash,wd)=>{ const A=P(a), B=P(b);
+      return \`<line data-k="\${role}" x1="\${A[0]}" y1="\${A[1]}" x2="\${B[0]}" y2="\${B[1]}" stroke="\${col}" stroke-width="\${wd||3}" stroke-linecap="round"\${dash?' stroke-dasharray="5 4"':''}/>\`; };
+    const dot=(p,col)=>{ const A=P(p); return \`<circle cx="\${A[0]}" cy="\${A[1]}" r="4" fill="\${col}"/>\`; };
+    const cu=[c*S.u1[0], c*S.u1[1]];
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="u₁ = \${this.v(S.u1)} in gold, u₂ = \${this.v(S.u2)} in blue, and w = \${this.v(w)} in red\${this.dot()===0?', at a right angle to u₁':''}">\`;
+    out+=\`<line x1="0" y1="\${O[1]}" x2="360" y2="\${O[1]}" stroke="\${FIG_COL.axis}" stroke-width="1"/><line x1="\${O[0]}" y1="0" x2="\${O[0]}" y2="200" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(c!==0) out+=seg([0,0],cu,FIG_COL.b,'cu',true,2)+seg(cu,S.u2,FIG_COL.d,'wcopy',true,2);
+    out+=seg([0,0],S.u2,FIG_COL.a,'u2')+dot(S.u2,FIG_COL.a)+seg([0,0],S.u1,FIG_COL.b,'u1')+dot(S.u1,FIG_COL.b);
+    if(w[0]||w[1]) out+=seg([0,0],w,FIG_COL.d,'w')+dot(w,FIG_COL.d);
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-gram'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveC(by){ const v=this.k+by; if(v<0 || v>=this.C.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('gsSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Gram.pick(\${i})" aria-label="\${s.btn}: u₁ = \${this.v(s.u1)}, u₂ = \${this.v(s.u2)}">\${s.btn}</button>\`).join('');
+    document.getElementById('gsC').textContent=\`c = \${this.num(this.c())}\`;
+    document.getElementById('gsCLo').disabled=this.k<=0;
+    document.getElementById('gsCHi').disabled=this.k>=this.C.length-1;
+    document.getElementById('gsFig').innerHTML=this.svg()+
+      \`<div class="figcap">u₁ in gold and u₂ in blue. Dashed gold is the c copies of u₁ taken away, and w in red is what is left of u₂, drawn from the origin and again from the dashed tip to u₂.</div>\`;
+    document.getElementById('gsRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('gsGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
