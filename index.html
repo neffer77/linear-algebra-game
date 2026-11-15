@@ -1352,6 +1352,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ ENDLESS AREA WORKSHOP ============ -->
+  <div class="screen" id="s-tail">
+    <div class="panel"><h2>♾️ Endless Area Workshop</h2><div class="sub">Can a region that goes on forever have a finite area? Push the right end b out, doubling it each time, and watch what each doubling adds. If every doubling adds a fixed fraction of the one before, the area closes in on a number; if not, it runs away.</div></div>
+    <div class="panel">
+      <div id="tlSets" class="wsModes" role="group" aria-label="Which curve"></div>
+      <div id="tlFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="tlBLo" onclick="Tail.moveB(-1)" aria-label="Halve b">−</button>
+          <b id="tlB" style="font-size:17px;min-width:0"></b>
+          <button id="tlBHi" onclick="Tail.moveB(1)" aria-label="Double b">+</button></div>
+      </div>
+      <div id="tlRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tlGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3349,6 +3368,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Tail:    ["♾️ Endless Area Workshop", ['improper']],
     Avg:     ["🌊 Water Level Workshop", ['avgValue']],
     Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
@@ -12724,6 +12744,7 @@ const UI = {
     if(id==='s-geo') Geo.render();
     if(id==='s-bend') Bend.render();
     if(id==='s-avg') Avg.render();
+    if(id==='s-tail') Tail.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13447,6 +13468,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">♾️ Endless Area Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Push the end of ∫₁^b dx/xᵖ out forever and see which areas stay finite. The borderline is p = 1: 1/x falls to 0 yet its area never stops growing.</div>
+         <button class="btn sm" id="tomeTail" style="width:auto;margin-top:8px" onclick="Tail.open()">Open the endless area workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌊 Water Level Workshop</h2>
@@ -16868,6 +16894,117 @@ const Avg = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE LEVEL','every tank evened out','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The endless area workshop: an improper integral ----------
+   Push the right end b of ∫₁^b dx/xᵖ out, doubling it each time, and watch
+   the area. Each doubling adds 2^(1 − p) times what the one before added, so
+   the doublings are a geometric series: for p > 1 they shrink and the area
+   closes in on 1/(p − 1); at p = 1 each adds the same ln 2 and the area runs
+   away though the curve falls to 0; below that it runs away faster. Nothing
+   is saved. */
+const Tail = {
+  SETS:[
+    {id:'sq', btn:'1/x²', p:2, fs:'1/x²', Ft:'−1/x', At:'1 − 1/b', lim:'1', rr:'half'},
+    {id:'cube', btn:'1/x³', p:3, fs:'1/x³', Ft:'−1/(2x²)', At:'1/2 − 1/(2b²)', lim:'1/2', rr:'a quarter of'},
+    {id:'inv', btn:'1/x', p:1, fs:'1/x', Ft:'ln x', At:'ln b'},
+    {id:'root', btn:'1/√x', p:0.5, fs:'1/√x', Ft:'2√x', At:'2√b − 2'}
+  ],
+  N:10, START:0,
+  si:0, n:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'sq', t:'Push b out until the area under 1/x² is within 0.01 of where it is heading.', toast:'Closed in on 1',
+     ok:K=>K.si===0 && K.gap()<=0.01},
+    {id:'cube', t:'Do the same under 1/x³.', toast:'Closed in on 1/2',
+     ok:K=>K.si===1 && K.gap()<=0.01},
+    {id:'inv', t:'Push the area under 1/x past 5, though 1/x itself falls toward 0.', toast:'1/x runs away',
+     ok:K=>K.si===2 && K.A()>5},
+    {id:'root', t:'Push the area under 1/√x past 10.', toast:'1/√x runs away faster',
+     ok:K=>K.si===3 && K.A()>10}
+  ],
+  set(){ return this.SETS[this.si]; },
+  b(m=this.n){ return 2**m; },
+  conv(){ return this.set().p>1; },
+  /* the area from 1 to b */
+  A(m=this.n){ const p=this.set().p, b=this.b(m); return p===1 ? Math.log(b) : (b**(1-p)-1)/(1-p); },
+  lim(){ return 1/(this.set().p-1); },
+  /* how far the area still is from where it is heading */
+  gap(){ return this.conv() ? this.lim()-this.A() : Infinity; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  about(v){ const s=this.is(v); return (s[0]==='≈'?'about ':'')+s.slice(2); },
+  sup(n){ return String(n).replace(/\d/g,c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]); },
+  /* the area formula with this b put in */
+  put(){ const S=this.set(), b=this.b();
+    return S.id==='sq' ? `1 − 1/${b}` : S.id==='cube' ? `1/2 − 1/${2*b*b}` : S.id==='inv' ? `ln ${b}` : `2√${b} − 2`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), b=this.b(), n=this.n, out=[];
+    out.push(`f(x) = ${S.fs}, from x = 1 out to x = b. Its antiderivative is ${S.Ft}, so the area from 1 to b is ${S.At}.`);
+    out.push(`Out to b = ${b}: the area is ${this.put()} ${this.is(this.A())}.`);
+    if(n===0) out.push(`Push b out: each press doubles it.`);
+    else {
+      const add=this.A()-this.A(n-1), was=n>1 ? this.A(n-1)-this.A(n-2) : 0;
+      out.push(`Doubling b from ${b/2} to ${b} added ${this.about(add)}`+ (n===1 ? `.` :
+        S.p===1 ? `, exactly what every doubling before it added: ln 2 ≈ 0.6931.`
+        : S.p<1 ? `, √2 ≈ 1.4142 times what the doubling before it added.`
+        : `, ${S.rr} what the doubling before it added.`));
+    }
+    if(this.conv()){
+      const g=this.gap();
+      out.push(`So the doublings add up like a geometric series with r = ${S.p===2?'1/2':'1/4'}, and the area closes in on ∫₁^∞ ${S.fs} dx = 1/(p − 1) = ${S.lim}. Out to ${b} it is ${this.about(g)} short of it${g<=0.01?', within 0.01':''}.`);
+    } else if(S.p===1)
+      out.push(`Every doubling adds the same ln 2, so the area grows without end even though 1/x itself falls toward 0: ∫₁^∞ 1/x dx diverges. p = 1 is the borderline.`);
+    else
+      out.push(`Each doubling adds more than the last, so the area runs away: ∫₁^∞ 1/√x dx diverges. Only p > 1 makes each doubling add less than the one before.`);
+    return out;
+  },
+  /* top: the curve over [1, 8] with the area to b shaded; bottom: one bar per
+     doubling, laid end to end from 0, with the gold dashed limit when there is one */
+  svg(){
+    const S=this.set(), p=S.p, b=this.b(), f=x=>x**-p;
+    const PX=x=>20+(x-1)/7*320, PY=y=>100-y*88;
+    const xs=[]; for(let i=0;i<=70;i++) xs.push(1+7*i/70);
+    let out=`<svg viewBox="0 0 360 250" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.fs} in blue with the area from 1 to ${b} shaded, and ${this.n} doubling${this.n===1?'':'s'} as bars reaching ${this.num(this.A())}${this.conv()?', with the limit '+S.lim+' as a gold line':''}">`;
+    out+=`<line x1="20" y1="100" x2="340" y2="100" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    const e=Math.min(b,8);
+    if(b>1){ const sx=xs.filter(x=>x<=e+1e-9); if(sx[sx.length-1]<e) sx.push(e);
+      out+=`<polygon data-k="area" points="${sx.map(x=>`${PX(x).toFixed(2)},${PY(f(x)).toFixed(2)}`).concat([`${PX(e).toFixed(2)},100.00`,`${PX(1).toFixed(2)},100.00`]).join(' ')}" fill="${FIG_COL.a}" fill-opacity=".35"/>`; }
+    out+=`<polyline data-k="curve" points="${xs.map(x=>`${PX(x).toFixed(2)},${PY(f(x)).toFixed(2)}`).join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    const hi=this.conv() ? this.lim() : Math.max(this.A(),1e-9), X=v=>20+v/hi*320;
+    out+=`<line x1="20" y1="110" x2="20" y2="246" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let k=1;k<=this.n;k++){
+      const a=this.A(k-1), c=this.A(k), w=Math.max(X(c)-X(a),0.5);
+      out+=`<rect data-k="step" data-n="${k}" x="${X(a).toFixed(2)}" y="${114+(k-1)*13}" width="${w.toFixed(2)}" height="11" rx="2" fill="${FIG_COL.a}"/>`;
+    }
+    if(this.conv()) out+=`<line data-k="lim" x1="${X(this.lim()).toFixed(2)}" y1="110" x2="${X(this.lim()).toFixed(2)}" y2="246" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-tail'); },
+  pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },
+  moveB(by){ const v=this.n+by; if(v<0 || v>this.N) return; this.n=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tlSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Tail.pick(${i})" aria-label="f(x) = ${s.fs}, p = ${s.p}">${s.btn}</button>`).join('');
+    document.getElementById('tlB').textContent=`b = ${this.b()}`;
+    document.getElementById('tlBLo').disabled=this.n<=0;
+    document.getElementById('tlBHi').disabled=this.n>=this.N;
+    document.getElementById('tlFig').innerHTML=this.svg()+
+      `<div class="figcap">Top: the curve from 1 to 8, with the area out to b shaded. Bottom: one bar for each doubling of b, laid end to end from 0, so the last bar ends at the area.${this.conv()?' The gold dashed line is where the area is heading.':' Redrawn to fit as it grows.'}</div>`;
+    document.getElementById('tlRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tlGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE ENDLESS AREA','every tail measured','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

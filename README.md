@@ -807,7 +807,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Thirty-eight topics link to twenty-four workshops,
+  back button returns to the summary. Thirty-nine topics link to twenty-five workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -869,6 +869,15 @@ The game is built so that losing teaches you as much as winning.
   middle of the two ends is the answer only for a straight line. Four curves,
   one with an average of 4/3, and five things to find, and a fight where
   average value falls now offers it.
+- **♾️ Endless Area Workshop** — can a region that goes on forever have a
+  finite area? Push the right end b of ∫₁^b dx/xᵖ out, doubling it with each
+  press. The readout works the area from the antiderivative and says what
+  each doubling added against the one before: half as much under 1/x², a
+  quarter under 1/x³, so the doublings form a geometric series and the area
+  closes in on 1/(p − 1); exactly ln 2 every time under 1/x, so it runs away
+  though 1/x falls to 0; and more each time under 1/√x. A bar per doubling
+  and a gold limit line show it. Four curves and four things to find, and a
+  fight where improper integrals fall now offers it.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1033,7 +1042,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Sixty-one suites, about 2,750 checks, about a minute:
+loop only exists once the page is running. Sixty-two suites, about 2,800 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1089,6 +1098,7 @@ loop only exists once the page is running. Sixty-one suites, about 2,750 checks,
 | `geo` | the Tome opens the geometric series workshop on the halves with one term, 1 short of the endless sum 2; eight terms add up to S₈ ≈ 1.9922, within 0.01, and the staircase all but reaches the gold line; the thirds close in on 3 after six terms; the swinging series writes real minus signs, starts over its sum 2/3 and drops below it with a red bar going back; the doubling series has no gold line, passes 1000 at S₁₀ = 1023, and says why a/(1 − r) = −1 is not its sum, which finishes the hunt; the stepper stops at 1 and 12 terms, every button and the drawing are named, it fits a phone and saves nothing |
 | `bend` | the Tome opens the bend workshop on the S-curve x³ − 3x at x = −2, with f′ = 9, f″ = −12 and the curve bending down below a red tangent; x = −1 is the hilltop, a flat tangent with f″ = −6; at x = 0 the slope bottoms out at −3 and f″ changes sign either side, so the bend flips from cap to cup under a gold tangent; x = 1 is the valley floor under a green one; the shifted curve x³/3 − x² flips at x = 1; on x⁴/4, x = 0 has f″ = 0 but bends up both sides, so it is no inflection point and is a valley floor all the same, which finishes the hunt; the stepper stops at −2 and 2, every button and the drawing are named, it fits a phone and saves nothing |
 | `avg` | the Tome opens the water level workshop on the bowl x² over [0, 3] at level 0, with the area 9 worked and the curve above the level the whole way; at 2 the curve sticks up by about 4.8856 and the gaps take about 1.8856, 3 apart, so raise it; at 3 both are about 3.4641, the average value (1/3) × 9 = 3, and the middle of the ends, 9/2, is not it; at 7/2 the gaps win by 3/2; the ramp 2x + 1 levels at 5, the middle of its ends; x³ on [0, 2] at 2; the narrow bowl at 4/3 in steps of a third, which finishes the hunt; the stepper stops at 0 and the top of the curve, every button and the drawing are named, it fits a phone and saves nothing |
+| `tail` | the Tome opens the endless area workshop on 1/x² at b = 1 with no area and the gold limit 1 showing; each press doubles b, and each doubling adds half what the one before added, so at 64 the area is not yet within 0.01 of 1 and at 128 it is; under 1/x³ each doubling adds a quarter as much and b = 8 is enough for 1/2; under 1/x every doubling adds ln 2, there is no limit line, and the area passes 5 at b = 256; under 1/√x each adds √2 times the last and 2√64 − 2 = 14 finishes the hunt; the stepper stops at 1 and 1024, every button and the drawing are named, it fits a phone and saves nothing |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |

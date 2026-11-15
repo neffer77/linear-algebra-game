@@ -67,6 +67,7 @@ function loadGame() {
     ';const Geo={' + script.slice(script.indexOf("  SETS:[\n    {id:'half', btn:'Halves'"), script.indexOf("  open(){ UI.go('s-geo'); },")) + '};exports.Geo=Geo;' +
     ';const Bend={' + script.slice(script.indexOf("  SETS:[\n    {id:'s', btn:'S-curve'"), script.indexOf("  open(){ UI.go('s-bend'); },")) + '};exports.Bend=Bend;' +
     ';const Avg={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl'"), script.indexOf("  open(){ UI.go('s-avg'); },")) + '};exports.Avg=Avg;' +
+    ';const Tail={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'1/x²'"), script.indexOf("  open(){ UI.go('s-tail'); },")) + '};exports.Tail=Tail;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -85,7 +86,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2680,6 +2681,97 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The endless area workshop: every curve out to every b. Each area is worked
+   here twice, from the power rule and by Simpson's rule on the curve itself
+   (with x = eᵘ, so the long stretch out to 1024 is sampled evenly), every
+   doubling's share against the one before, every sentence rebuilt from those,
+   the bars in the drawing read back, and every goal rebuilt here. */
+const tailNotes = (() => {
+  const T = Tail;
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = v => { const q = Math.round(v * 1e4) / 1e4; return ng(Object.is(q, -0) ? 0 : q); };
+  const ex = v => Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10;
+  const is = v => (ex(v) ? '= ' : '≈ ') + num(v);
+  const about = v => (ex(v) ? '' : 'about ') + num(v);
+  const K = {
+    sq:   { p: 2, fs: '1/x²', Ft: '−1/x', At: '1 − 1/b', put: b => `1 − 1/${b}`, lim: 1, ls: '1', r: '1/2', share: 'half' },
+    cube: { p: 3, fs: '1/x³', Ft: '−1/(2x²)', At: '1/2 − 1/(2b²)', put: b => `1/2 − 1/${2 * b * b}`, lim: 0.5, ls: '1/2', r: '1/4', share: 'a quarter of' },
+    inv:  { p: 1, fs: '1/x', Ft: 'ln x', At: 'ln b', put: b => `ln ${b}` },
+    root: { p: 0.5, fs: '1/√x', Ft: '2√x', At: '2√b − 2', put: b => `2√${b} − 2` }
+  };
+  // ∫₁^b x^(−p) dx by the power rule, and again by Simpson's rule with x = eᵘ, dx = eᵘ du
+  const rule = (p, b) => p === 1 ? Math.log(b) : (b ** (1 - p) - 1) / (1 - p);
+  const simpson = (p, b) => { const U = Math.log(b); if (U < 1e-12) return 0; const m = 2000, h = U / m, g = u => Math.exp(u * (1 - p));
+    let t = g(0) + g(U); for (let i = 1; i < m; i++) t += (i % 2 ? 4 : 2) * g(i * h); return t * h / 3; };
+  if (T.SETS.map(S => S.id).join() !== 'sq,cube,inv,root') fail('tail', 'sets', T.SETS.map(S => S.id).join());
+  T.touched = false; T.si = 0; T.n = T.START;
+  for (const g of T.GOALS) if (g.ok(T)) fail('tail', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {}, first = {};
+  T.SETS.forEach((S, si) => {
+    const k = K[S.id];
+    if (S.p !== k.p || S.fs !== k.fs || S.Ft !== k.Ft || S.At !== k.At) fail('tail', S.id, 'the power or formulas it shows are not this curve\'s');
+    // the antiderivative it names must differentiate back to the curve: check F(b) − F(1) by Simpson's rule
+    T.si = si;
+    for (let m = 0; m <= T.N; m++) {
+      T.n = m; n++;
+      const b = 2 ** m, key = `${S.id} b=${b}`, A = rule(k.p, b), A0 = m ? rule(k.p, b / 2) : 0;
+      if (Math.abs(simpson(k.p, b) - A) > 1e-7) fail('tail', key, `the power rule gives ${A}, Simpson's rule ${simpson(k.p, b)}`);
+      if (Math.abs(T.A() - A) > 1e-9) fail('tail', key, `reads the area as ${T.A()}, worked here ${A}`);
+      if (T.b() !== b) fail('tail', key, `b reads ${T.b()}`);
+      const want = [
+        `f(x) = ${k.fs}, from x = 1 out to x = b. Its antiderivative is ${k.Ft}, so the area from 1 to b is ${k.At}.`,
+        `Out to b = ${b}: the area is ${k.put(b)} ${is(A)}.`
+      ];
+      if (m === 0) want.push('Push b out: each press doubles it.');
+      else {
+        const add = A - A0, was = m > 1 ? A0 - rule(k.p, b / 4) : 0;
+        // each doubling adds 2^(1 − p) times what the one before added
+        if (m > 1 && Math.abs(add / was - 2 ** (1 - k.p)) > 1e-9) fail('tail', key, 'a doubling does not add 2^(1 − p) times the one before');
+        want.push(`Doubling b from ${b / 2} to ${b} added ${about(add)}` + (m === 1 ? '.' :
+          k.p === 1 ? ', exactly what every doubling before it added: ln 2 ≈ 0.6931.'
+          : k.p < 1 ? ', √2 ≈ 1.4142 times what the doubling before it added.'
+          : `, ${k.share} what the doubling before it added.`));
+      }
+      if (k.p > 1) {
+        const g = k.lim - A;
+        if (Math.abs(1 / (k.p - 1) - k.lim) > 1e-12) fail('tail', S.id, 'the limit is not 1/(p − 1)');
+        if (!(g > 0)) fail('tail', key, 'the area should stay short of its limit');
+        want.push(`So the doublings add up like a geometric series with r = ${k.r}, and the area closes in on ∫₁^∞ ${k.fs} dx = 1/(p − 1) = ${k.ls}. Out to ${b} it is ${about(g)} short of it${g <= 0.01 ? ', within 0.01' : ''}.`);
+      } else if (k.p === 1)
+        want.push('Every doubling adds the same ln 2, so the area grows without end even though 1/x itself falls toward 0: ∫₁^∞ 1/x dx diverges. p = 1 is the borderline.');
+      else
+        want.push('Each doubling adds more than the last, so the area runs away: ∫₁^∞ 1/√x dx diverges. Only p > 1 makes each doubling add less than the one before.');
+      const got = T.working();
+      if (got.length !== want.length) fail('tail', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('tail', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: one bar per doubling, end to end from 0, the last ending at the area
+      const svg = T.svg(), hi = k.p > 1 ? k.lim : Math.max(A, 1e-9), UX = px => (px - 20) / 320 * hi;
+      const bars = [...svg.matchAll(/data-k="step" data-n="(\d+)" x="([\d.]+)" y="[\d.]+" width="([\d.]+)"/g)].map(q => [+q[1], +q[2], +q[3]]);
+      if (bars.length !== m) fail('tail', key, `${bars.length} bars for ${m} doublings`);
+      bars.forEach(([j, x, w]) => {
+        const a = rule(k.p, 2 ** (j - 1)), c = rule(k.p, 2 ** j), tol = hi / 320 * 0.02 + 1e-9;
+        if (Math.abs(UX(x) - a) > tol || (c - a > hi / 320 && Math.abs(UX(x + w) - c) > tol)) fail('tail', key, `bar ${j} does not run from the area before it to the area after`);
+      });
+      const lim = svg.match(/data-k="lim" x1="([\d.]+)"/);
+      if (!!lim !== (k.p > 1)) fail('tail', key, 'the limit line should show only where there is a limit');
+      if (lim && Math.abs(UX(+lim[1]) - k.lim) > 1e-3) fail('tail', key, 'the limit line is not at 1/(p − 1)');
+      if (/data-k="area"/.test(svg) !== (b > 1)) fail('tail', key, 'the area should be shaded once b is past 1');
+      T.touched = true;
+      const meant = { sq: si === 0 && k.lim - A <= 0.01, cube: si === 1 && k.lim - A <= 0.01, inv: si === 2 && A > 5, root: si === 3 && A > 10 };
+      for (const gl of T.GOALS) {
+        if (!!gl.ok(T) !== meant[gl.id]) fail('tail', key, `goal ${gl.id} is ${gl.ok(T) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(T)) { found[gl.id] = found[gl.id] || key; if (!(gl.id in first)) first[gl.id] = b; }
+      }
+    }
+  });
+  // where each goal is first met: 1 − 1/128, 1/2 − 1/128, ln 256 > 5 and 2√64 − 2 = 14 > 10
+  const at = { sq: 128, cube: 8, inv: 256, root: 64 };
+  for (const g of T.GOALS) { if (!found[g.id]) fail('tail', g.id, 'this goal cannot be found'); else if (first[g.id] !== at[g.id]) fail('tail', g.id, `first met at b = ${first[g.id]}, not ${at[g.id]}`); }
+  T.si = 0; T.n = T.START; T.touched = false; T.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The water level workshop: every curve at every level. Each curve's area is
    worked here from its own coefficients, the level against it in exact
    fractions, the curve above the level and the gaps under it by Simpson's rule
@@ -3639,6 +3731,7 @@ console.log(`  gram–schmidt steps       ${pad(gramNotes.n.toLocaleString(), 10
 console.log(`  geometric series sums   ${pad(geoNotes.n.toLocaleString(), 10)}  (every running total in exact fractions, the gap a·rⁿ/(1 − r) shrinking by r each term, the staircase bars from total to total, ${geoNotes.goals} goals findable)`);
 console.log(`  bend points             ${pad(bendNotes.n.toLocaleString(), 10)}  (f′ and f″ from each curve's own coefficients, the slope either side moving as f″ says, the curve on the side of its tangent the readout names, the drawing read back, ${bendNotes.goals} goals findable)`);
 console.log(`  water levels            ${pad(avgNotes.n.toLocaleString(), 10)}  (each area from the curve's own coefficients, the level against it in exact fractions, above and under the level by Simpson's rule, the shading read back, ${avgNotes.goals} goals findable)`);
+console.log(`  endless areas           ${pad(tailNotes.n.toLocaleString(), 10)}  (each area by the power rule and again by Simpson's rule, each doubling's share against the last, the bars read back, ${tailNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
