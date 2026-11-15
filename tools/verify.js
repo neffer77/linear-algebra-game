@@ -51,6 +51,7 @@ function loadGame() {
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
     ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
+    ';const Span={' + script.slice(script.indexOf('  PAIRS:[\n    {u:[2,1],'), script.indexOf('  open(){ UI.go(\'s-span\'); },')) + '};exports.Span=Span;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
@@ -68,7 +69,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1884,6 +1885,102 @@ const composeNotes = (() => {
   return { n, goals: C.GOALS.length };
 })();
 
+/* Every state of the span workshop: each pair and both amounts from −2 to 2.
+   a·u, b·v and their sum are worked here from the pair, and every number on
+   the first line is checked against them, negatives bracketed. Whether the
+   pair is dependent is judged here from u and v alone; a dependent pair must
+   say v = ku, work a + kb, and say its target is off the line (checked here
+   by the cross product), while an independent one must say how far the
+   target still is, or that it is hit. ⟨0, 0⟩ must be explained whenever it is
+   made, and "reached before" must appear only where a second way exists,
+   which only a dependent pair has. Each goal must be findable, none met at
+   the start. */
+const spanNotes = (() => {
+  const S = Span, neg = n => (n < 0 ? '−' + Math.abs(n) : String(n)), num = x => +String(x).replace(/[()]/g, '').replace(/−/g, '-');
+  const V = '⟨(−?\\d+), (−?\\d+)⟩', A = '(\\(?−?\\d+\\)?)';
+  const vec = w => `⟨${neg(w[0])}, ${neg(w[1])}⟩`;
+  const br = (raw, n) => /\(/.test(raw) === (n < 0);
+  const found = {};
+  let n = 0;
+  const saved = [S.pi, S.a, S.b, S.moved, S.touched];
+  if (saved[0] !== 0 || saved[1] !== 1 || saved[2] !== 1 || S.touched || S.moved || S.before) fail('span', 'start', 'the workshop does not open on the first pair at a = b = 1, untouched');
+  for (const g of S.GOALS) if (g.ok(S)) fail('span', 'start', `${g.id} is met before anything is pressed`);
+  S.PAIRS.forEach((P, pi) => {
+    const [u, v, t] = [P.u, P.v, P.t], det = u[0] * v[1] - u[1] * v[0];
+    const sums = {};
+    for (let a = S.LO; a <= S.HI; a++) for (let b = S.LO; b <= S.HI; b++) {
+      S.pi = pi; S.a = a; S.b = b; S.moved = pi === 3; S.before = null; n++;
+      const key = `${pi}:${a},${b}`, L = S.working();
+      const au = [a * u[0], a * u[1]], bv = [b * v[0], b * v[1]], sum = [au[0] + bv[0], au[1] + bv[1]];
+      (sums[sum.join()] = sums[sum.join()] || []).push([a, b]);
+      const m = new RegExp(`^a·u \\+ b·v = ${A}·${V} \\+ ${A}·${V} = ${V} \\+ ${V} = ${V}\\.$`).exec(L[0]);
+      if (!m) { fail('span', key, `the first line reads: ${L[0]}`); continue; }
+      const N = m.slice(1).map(num);
+      if (N[0] !== a || N[3] !== b || !br(m[1], a) || !br(m[4], b)) fail('span', key, 'an amount is printed wrong, or a negative is not bracketed');
+      if (N[1] !== u[0] || N[2] !== u[1] || N[4] !== v[0] || N[5] !== v[1]) fail('span', key, 'u or v is printed as another arrow');
+      if (N[6] !== au[0] || N[7] !== au[1] || N[8] !== bv[0] || N[9] !== bv[1]) fail('span', key, 'a·u or b·v is worked wrong');
+      if (N[10] !== sum[0] || N[11] !== sum[1]) fail('span', key, 'the sum is worked wrong');
+      let k = 2;
+      if (det === 0) {
+        const kk = v[0] / u[0];
+        const dm = /^v = (\d+)u, so a·u \+ b·v = \(a \+ (\d+)b\)·u = \((−?\d+) \+ (\d+)·(\(?−?\d+\)?)\)·u = (−?\d+)·u: every mix lies on the dashed line through u, and together the two arrows span only that line\.$/.exec(L[1]);
+        if (!dm || +dm[1] !== kk || +dm[2] !== kk || +dm[4] !== kk || num(dm[3]) !== a || num(dm[5]) !== b || !br(dm[5], b) || num(dm[6]) !== a + kk * b)
+          fail('span', key, `a dependent pair is not worked as (a + kb)·u: ${L[1]}`);
+        if ((a + kk * b) * u[0] !== sum[0] || (a + kk * b) * u[1] !== sum[1]) fail('span', key, '(a + kb)·u is not the sum');
+        if (u[0] * t[1] - u[1] * t[0] === 0) fail('span', key, 'the dependent pair\'s target is on its line after all');
+        if (L[2] !== `The gold target ${vec(t)} is off that line, so no amounts a and b can ever reach it.`) fail('span', key, `the unreachable target is not said so: ${L[2]}`);
+        k = 3;
+      } else {
+        const hit = sum[0] === t[0] && sum[1] === t[1];
+        if (S.onTarget() !== hit) fail('span', key, 'the target is judged wrongly');
+        const want = hit ? `That is the gold target ${vec(t)}: a = ${neg(a)} and b = ${neg(b)} land right on it.`
+          : `The gold target is ${vec(t)}, and ${vec(t)} − ${vec(sum)} = ${vec([t[0] - sum[0], t[1] - sum[1]])} is still to go.`;
+        if (L[1] !== want) fail('span', key, `the target line should be ${want}, it is ${L[1]}`);
+        const basis = u[0] === 1 && u[1] === 0 && v[0] === 0 && v[1] === 1;
+        if (basis !== /^With u = î = ⟨1, 0⟩ and v = ĵ = ⟨0, 1⟩/.test(L[2])) fail('span', key, 'î and ĵ are named where they are not, or not where they are');
+        if (!basis && !/^u and v point different ways, so the right amounts reach any point of the plane: together they span it/.test(L[2])) fail('span', key, `an independent pair is not said to span the plane: ${L[2]}`);
+        k = 3;
+      }
+      const zero = !sum[0] && !sum[1];
+      if (zero) {
+        const z = L[k++] || '';
+        if (a === 0 && b === 0) {
+          if (!/^With a = b = 0 you get ⟨0, 0⟩, as every pair does\./.test(z) || /independent/.test(z) !== (det !== 0)) fail('span', key, `a = b = 0 is not explained: ${z}`);
+        } else if (det === 0) {
+          if (z !== `${a < 0 ? '(' + neg(a) + ')' : a}·u + ${b < 0 ? '(' + neg(b) + ')' : b}·v = ⟨0, 0⟩ with the amounts not both 0, so u and v are dependent: one undoes the other.`) fail('span', key, `⟨0, 0⟩ made with amounts is not explained: ${z}`);
+        } else fail('span', key, 'an independent pair made ⟨0, 0⟩ with amounts not both 0');
+      }
+      if (L.length !== k) fail('span', key, `the readout has ${L.length} lines, not ${k}`);
+      for (const g of S.GOALS) if (g.id !== 'twice' && g.ok(S)) (found[g.id] = found[g.id] || []).push(key);
+    }
+    // a point reached two ways happens only for a dependent pair
+    const many = Object.values(sums).some(w => w.length > 1);
+    if (many !== (det === 0)) fail('span', `pair ${pi + 1}`, 'points are reached more than one way where u and v are independent, or never where they are not');
+    if (det !== 0 && !(sums[t.join()] || []).length) fail('span', `pair ${pi + 1}`, 'the target cannot be reached inside the amounts on offer');
+  });
+  // remembering a second way: walk the dependent pair to ⟨2, 2⟩ two ways
+  S.seen = {}; S.pi = 3; S.a = 2; S.b = 0; S.look();
+  if (S.before) fail('span', 'twice', 'a first visit is said to be a second');
+  S.a = 0; S.b = 1; S.look();
+  if (!S.before || S.before.join() !== '2,0') fail('span', 'twice', 'the earlier way to ⟨2, 2⟩ is not remembered');
+  else {
+    const last = S.working().slice(-1)[0];
+    if (last !== 'You reached ⟨2, 2⟩ before with a = 2 and b = 0: when both arrows lie on one line, the same point can be reached more than one way.') fail('span', 'twice', `the second way is not said: ${last}`);
+    if (S.GOALS.find(g => g.id === 'twice').ok(S)) found.twice = ['3:0,1'];
+  }
+  // coming back by the same amounts is not a second way, on any pair
+  for (let pi = 0; pi < S.PAIRS.length; pi++) {
+    S.seen = {}; S.pi = pi; S.a = 1; S.b = 1; S.look();
+    S.a = 2; S.look(); S.a = 1; S.look();
+    if (S.before) fail('span', 'twice', `pair ${pi + 1}: returning to a = 1, b = 1 is said to be a second way`);
+  }
+  S.seen = {}; S.before = null; S.pi = 0;
+  for (const g of S.GOALS) if (!found[g.id]) fail('span', g.id, 'this goal cannot be found');
+  if (Object.keys(found.zero || {}).length && !found.zero.every(k => k.startsWith('3:'))) fail('span', 'zero', 'an independent pair makes ⟨0, 0⟩ with amounts');
+  [S.pi, S.a, S.b, S.moved, S.touched] = saved;
+  return { n, goals: S.GOALS.length };
+})();
+
 /* Every state of the limit workshop: each formula, both sides and every h.
    Each value is worked here another way ((x² − 1)/(x − 1) is x + 1 once x is
    not 1, sin x / x from its series, |x| / x is the sign of x, 1/x from the
@@ -2113,6 +2210,7 @@ console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10
 console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
 console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
 console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
+console.log(`  span workshop states       ${pad(spanNotes.n.toLocaleString(), 10)}  (a·u + b·v, the target, what the pair spans, ${spanNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

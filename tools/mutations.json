@@ -1,19 +1,18 @@
 {
- "change": "The Downhill Workshop: a walk down a valley against its gradient",
+ "change": "The Span Workshop: a of one arrow and b of another",
  "mutations": [
- {"name": "f forgets the 2 on the y term", "file": "index.html", "find": "fAt(p){ return this.r8((p[0]-1)**2 + 2*(p[1]+1)**2); },", "replace": "fAt(p){ return this.r8((p[0]-1)**2 + (p[1]+1)**2); },", "run": "verify"},
- {"name": "the gradient's y part uses 2 for 4", "file": "index.html", "find": "return [this.r4(2*(p[0]-1)), this.r4(4*(p[1]+1))]; },", "replace": "return [this.r4(2*(p[0]-1)), this.r4(2*(p[1]+1))]; },", "run": "verify"},
- {"name": "a step goes with the gradient, uphill", "file": "index.html", "find": "p:[this.r4(p[0]-s[0]), this.r4(p[1]-s[1])] };", "replace": "p:[this.r4(p[0]+s[0]), this.r4(p[1]-s[1])] };", "run": "verify"},
- {"name": "a negative y + 1 is not bracketed", "file": "index.html", "find": "= ${this.b(dx)}² + 2·${this.b(dy)}² ", "replace": "= ${this.b(dx)}² + 2·${this.n(dy)}² ", "run": "verify"},
- {"name": "a zigzag is called a plain step down", "file": "index.html", "find": "return this.crossed(k) ? 'zig' : 'down';", "replace": "return 'down';", "run": "verify"},
- {"name": "a rounded step is shown with =", "file": "index.html", "find": "${N.exact?'=':'≈'} (${this.n(x)} ${this.op(N.s[0])}", "replace": "= (${this.n(x)} ${this.op(N.s[0])}", "run": "verify"},
- {"name": "a walk past f = 1000 is never stopped", "file": "index.html", "find": "stuck(){ return this.steps()>=this.MAXSTEPS || this.f()>this.MAXF; },", "replace": "stuck(){ return this.steps()>=this.MAXSTEPS; },", "run": "verify"},
- {"name": "the gradient is called uphill at the bottom too", "file": "index.html", "find": "${this.atBottom()?'':': the way straight uphill'}.", "replace": "${': the way straight uphill'}.", "run": "verify"},
- {"name": "the downhill workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeDescent\" style=\"width:auto;margin-top:8px\" onclick=\"Descent.open()\">Open the downhill workshop</button>", "replace": "", "run": "play:descent"},
- {"name": "the downhill workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-descent') Descent.render();\n", "replace": "", "run": "play:descent"},
- {"name": "Step downhill still works at the bottom", "file": "index.html", "find": "document.getElementById('gdStep').disabled=this.stuck() || atBottom;", "replace": "document.getElementById('gdStep').disabled=this.stuck();", "run": "play:descent"},
- {"name": "picking a step size keeps the old walk", "file": "index.html", "find": "pick(i){ this.ei=i; this.reset(); },", "replace": "pick(i){ this.ei=i; this.touched=true; this.render(); },", "run": "play:descent"},
- {"name": "the next step is not drawn", "file": "index.html", "find": "span:4, path:this.path.map(q=>q.slice()), next:nx,", "replace": "span:4, path:this.path.map(q=>q.slice()),", "run": "play:descent"},
- {"name": "the step sizes are not named", "file": "index.html", "find": "aria-label=\"Step size ${e}\" ", "replace": "", "run": "play:descent"}
+ {"name": "b·v is worked with u", "file": "index.html", "find": "bv(){ const v=this.P().v; return [this.b*v[0], this.b*v[1]]; },", "replace": "bv(){ const v=this.P().u; return [this.b*v[0], this.b*v[1]]; },", "run": "verify"},
+ {"name": "a negative amount is not bracketed", "file": "index.html", "find": "amt(n){ return n<0 ? `(${neg(n)})` : String(n); },", "replace": "amt(n){ return neg(n); },", "run": "verify"},
+ {"name": "the still-to-go arrow is the wrong way round", "file": "index.html", "find": "${this.vec([t[0]-s[0], t[1]-s[1]])} is still to go.", "replace": "${this.vec([s[0]-t[0], s[1]-t[1]])} is still to go.", "run": "verify"},
+ {"name": "the line pair is worked with 1b for 2b", "file": "index.html", "find": "= ${neg(this.a+P.k*this.b)}·u: every mix", "replace": "= ${neg(this.a+this.b)}·u: every mix", "run": "verify"},
+ {"name": "⟨0, 0⟩ from a = b = 0 counts as dependent", "file": "index.html", "find": "dependentZero(){ return this.isZero(this.sum()) && !(this.a===0 && this.b===0); },", "replace": "dependentZero(){ return this.isZero(this.sum()); },", "run": "verify"},
+ {"name": "a second way to a point is never remembered", "file": "index.html", "find": "this.before = w && (w[0]!==this.a || w[1]!==this.b) ? w : null;", "replace": "this.before = null;", "run": "verify"},
+ {"name": "the same amounts count as a second way", "file": "index.html", "find": "this.before = w && (w[0]!==this.a || w[1]!==this.b) ? w : null;", "replace": "this.before = w || null;", "run": "verify"},
+ {"name": "the span workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeSpan\" style=\"width:auto;margin-top:8px\" onclick=\"Span.open()\">Open the span workshop</button>", "replace": "", "run": "play:span"},
+ {"name": "the span workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-span') Span.render();\n", "replace": "", "run": "play:span"},
+ {"name": "b·v is drawn from the origin", "file": "index.html", "find": "vecs.push({v:bv, from:au, col:FIG_COL.c, label:'b·v'});", "replace": "vecs.push({v:bv, col:FIG_COL.c, label:'b·v'});", "run": "play:span"},
+ {"name": "the target ring is not drawn", "file": "index.html", "find": "vecs, marks:[P.t], lines:", "replace": "vecs, marks:[], lines:", "run": "play:span"},
+ {"name": "the steppers run past −2", "file": "index.html", "find": "aria-label=\"Less of ${names[w]}\"${this[w]<=this.LO?' disabled':''}", "replace": "aria-label=\"Less of ${names[w]}\"", "run": "play:span"},
+ {"name": "moving along the line is never found", "file": "index.html", "find": "this.moved=this.moved || this.pi===3;", "replace": "this.moved=false;", "run": "play:span"}
  ]
 }
