@@ -2977,6 +2977,8 @@ const intPickNotes = (() => {
       const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1], +m[2].replace('−', '-')]);
       const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1] - 3, +m[2].replace('−', '-')]);
       if (xt.length < 3 || yt.length < 2 || xt[0][1] !== a - 1 || xt[xt.length - 1][1] !== b + 1) { fail('intpick', key, 'the ticks do not run from a − 1 to b + 1'); continue; }
+      // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('intpick', key, 'a y label runs off the left edge of the picture');
       const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
       if (!(kx > 0 && ky < 0)) fail('intpick', key, 'the picture is drawn back to front or upside down: higher numbers must sit further right and further up');
       const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
@@ -3141,6 +3143,8 @@ const chainPickNotes = (() => {
       const { svg, xt, yt } = pic(h0);
       if (xt.length !== 5 || xt[0][1] !== c.x0 - 1 || xt[4][1] !== c.x0 + 1) { fail('chainpick', key, 'the ticks do not run from x₀ − 1 to x₀ + 1 in halves'); continue; }
       if (yt.length < 2 || yt.length > 8) { fail('chainpick', key, `there are ${yt.length} y ticks`); continue; }
+      // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('chainpick', key, 'a y label runs off the left edge of the picture');
       const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
       if (!(kx > 0 && ky < 0)) fail('chainpick', key, 'the picture is drawn back to front or upside down');
       const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
@@ -3327,6 +3331,8 @@ const productPickNotes = (() => {
       const { svg, xt, yt } = pic(h0);
       if (xt.length !== 5 || xt[0][1] !== c.x0 - 1 || xt[4][1] !== c.x0 + 1) { fail('productpick', key, 'the ticks do not run from x₀ − 1 to x₀ + 1 in halves'); continue; }
       if (yt.length < 2 || yt.length > 8) { fail('productpick', key, `there are ${yt.length} y ticks`); continue; }
+      // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('productpick', key, 'a y label runs off the left edge of the picture');
       const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
       if (!(kx > 0 && ky < 0)) fail('productpick', key, 'the picture is drawn back to front or upside down');
       const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
