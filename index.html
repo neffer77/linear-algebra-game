@@ -17673,7 +17673,7 @@ const Detect = {
     document.getElementById('cpL').textContent=`λ = ${neg(this.lam())}`;
     document.getElementById('cpLLo').disabled=this.k<=0;
     document.getElementById('cpLHi').disabled=this.k>=this.L.length-1;
-    document.getElementById('cpMat').innerHTML=`A = ${mat(this.set().A)} &nbsp; A − λI = ${mat(this.M())}`;
+    document.getElementById('cpMat').innerHTML=`<span style="display:inline-block;margin:2px 8px">A = ${mat(this.set().A)}</span> <span style="display:inline-block;margin:2px 8px">A − λI = ${mat(this.M())}</span>`;
     document.getElementById('cpFig').innerHTML=this.svg()+
       `<div class="figcap">The blue curve is det(A − λI) for every λ, and the gold point is the λ you are on. It turns green where the curve meets the axis: an eigenvalue.</div>`;
     document.getElementById('cpRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
