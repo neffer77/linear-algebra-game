@@ -985,10 +985,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ AREA WORKSHOP ============ -->
   <div class="screen" id="s-area">
     <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
+    <div id="arMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in with rectangles or pick the integral"></div>
     <div class="panel">
+      <div id="arPick"></div>
       <div id="arCurves" class="wsModes" role="group" aria-label="Curve"></div>
       <div id="arFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="arNs" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="arNLo" onclick="Area.moveN(-1)" aria-label="Fewer rectangles">−</button>
           <b id="arN" style="font-size:19px;min-width:0"></b>
           <button id="arNHi" onclick="Area.moveN(1)" aria-label="More rectangles">+</button></div>
@@ -996,7 +998,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="arRules" class="wsModes" role="group" aria-label="Height taken from"></div>
       <div id="arRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="arGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="arGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14039,7 +14041,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral. Then turn it round: see a shaded curve, and pick which of four numbers is its integral.</div>
          <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15305,6 +15307,8 @@ const Area = {
   },
   eq(x){ return (this.exact(x)?'= ':'≈ ')+this.num(x); },
   pn(x){ const t=this.num(x); return t.startsWith('−')?'('+t+')':t; },
+  mode:'bars',
+  setMode(m){ this.mode=m; this.render(); },
   open(){ UI.go('s-area'); },
   // Nothing is found until the player has turned something: the sum it opens
   // on falls short, and that is no discovery.
@@ -15312,6 +15316,12 @@ const Area = {
   moveN(by){ const v=this.ni+by; if(v<0||v>=this.NS.length) return; this.ni=v; this.touched=true; this.render(); },
   setRule(i){ this.ri=i; this.touched=true; this.render(); },
   render(){
+    document.getElementById('arMode').innerHTML=[['bars','🏺 Close in','Close in on the area with rectangles'],['pick','🎯 Which integral?','See a shaded curve and pick which of four numbers is its integral']]
+      .map(([m,t,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Area.setMode('\${m}')" aria-label="\${l}">\${t}</button>\`).join('');
+    const pick=this.mode==='pick';
+    for(const id of ['arCurves','arFig','arNs','arRules','arRead','arGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('arPick').innerHTML=pick ? IntPick.html() : '';
+    if(pick) return;
     const C=this.curve(), n=this.n(), w=this.dx(), xs=this.xs(), hs=this.heights(), S=this.sum(), e=this.err();
     const edge=this.RULES[this.ri][1];
     document.getElementById('arCurves').innerHTML=this.CURVES.map((c,i)=>
@@ -15348,6 +15358,184 @@ const Area = {
         Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* -------------------- which integral? (area workshop) -------------------- */
+/* The area workshop turned round: a curve with part of it shaded, gold above
+   the axis and red below, and four numbers. One is the integral, F(b) − F(a);
+   the others are the slips people make on the way there: the ends taken the
+   wrong way round, F(a) forgotten, the red part counted as plus, the power
+   rule run backwards without dividing, or f taken at the ends instead of F.
+   The curve is built from whole-number roots, so every part of the shaded
+   area, red and gold, is a fraction with a small bottom. Nothing is saved. */
+const IntPick = {
+  RULE:'An integral adds up signed area: gold above the axis counts plus, red below counts minus. Undo the power rule to get F, then ∫ₐᵇ f dx = F(b) − F(a). Which number is the integral of the shaded part?',
+  SLIPS:['swap','top','abs','nodiv','ends'],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  // a fraction n/6, reduced: [top, bottom]
+  frac(n6){ const g=this.gcd(n6,6); return [n6/g, 6/g]; },
+  fmt(n6){ const [n,d]=this.frac(n6); return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  // F(x) = p x³/3 + q x²/2 + r x, as sixths; and the slips' own F and f
+  F6(c,x){ return 2*c.p*x**3+3*c.q*x**2+6*c.r*x; },
+  G6(c,x){ return 6*(c.p*x**3+c.q*x**2+c.r*x); },
+  f6(c,x){ return 6*(c.p*x*x+c.q*x+c.r); },
+  f(c,x){ return c.p*x*x+c.q*x+c.r; },
+  // where f crosses the axis strictly between a and b
+  cuts(c){ return c.roots.filter(t=>t>c.a&&t<c.b&&this.f(c,t-0.5)*this.f(c,t+0.5)<0).sort((u,v)=>u-v); },
+  // each piece of the shaded part between crossings, signed, in sixths
+  pieces(c){
+    const xs=[c.a,...this.cuts(c),c.b];
+    return xs.slice(1).map((x,i)=>this.F6(c,x)-this.F6(c,xs[i]));
+  },
+  value(c,k){
+    const {a,b}=c;
+    if(k==='right') return this.F6(c,b)-this.F6(c,a);
+    if(k==='swap') return this.F6(c,a)-this.F6(c,b);
+    if(k==='top') return this.F6(c,b);
+    if(k==='abs') return this.pieces(c).reduce((s,v)=>s+Math.abs(v),0);
+    if(k==='nodiv') return this.G6(c,b)-this.G6(c,a);
+    if(k==='ends') return this.f6(c,b)-this.f6(c,a);
+  },
+  build(){
+    for(let g=0;g<400;g++){
+      let p, q, r, roots;
+      if(R.i(0,3)){
+        p=R.pick([1,-1]); const s=R.i(-2,3), t=R.i(-2,3);
+        q=-p*(s+t); r=p*s*t; roots=s===t?[s]:[s,t];
+      } else {
+        p=0; q=R.pick([1,-1,2,-2]); const s=R.i(-2,3); r=-q*s; roots=[s];
+      }
+      const a=R.i(-2,2), b=a+R.i(1,3);
+      if(b>3) continue;
+      const c={p,q,r,roots,a,b};
+      let big=0; for(let x=a-1;x<=b+1;x+=0.25) big=Math.max(big,Math.abs(this.f(c,x)));
+      if(big>9) continue;
+      const v=this.value(c,'right');
+      if(v===0 || this.frac(v)[1]>3) continue;
+      if(this.pieces(c).some(w=>w===0)) continue;
+      // a curve that crosses inside the shading is the picture this is for: two
+      // in three of the ones that do not are passed over
+      if(!this.cuts(c).length && R.i(0,2)) continue;
+      return c;
+    }
+    return {p:0,q:1,r:-1,roots:[1],a:0,b:3};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const right=this.value(c,'right'), seen=new Set([right]), cand=[];
+    for(const k of this.SLIPS){ const v=this.value(c,k); if(!seen.has(v)){ seen.add(v); cand.push({k,v}); } }
+    // counting the red part as plus is the slip this picture is for, so it is
+    // always offered when the curve crosses; the rest are drawn at random
+    const abs=cand.find(o=>o.k==='abs'), rest=cand.filter(o=>o.k!=='abs');
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const wrong=(abs?[abs,...rest]:rest).slice(0,3);
+    if(wrong.length<3) return this.newRound();
+    const opts=[{k:'right',v:right},...wrong];
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('INTEGRAL READER', this.matched+' integrals picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the integral, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Area.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // a polynomial written out from its terms, each [coefficient in sixths, power, over]
+  poly(ts){
+    const out=[];
+    for(const [n6,pw] of ts){
+      if(!n6) continue;
+      const [n,d]=this.frac(n6), x=pw===0?'':pw===1?'x':pw===2?'x²':'x³';
+      const m=Math.abs(n), body=pw===0 ? (d===1?String(m):\`\${m}/\${d}\`) : (m===1?x:m+x)+(d===1?'':'/'+d);
+      out.push((n<0?(out.length?' − ':'−'):(out.length?' + ':''))+body);
+    }
+    return out.join('')||'0';
+  },
+  fText(c){ return 'f(x) = '+this.poly([[6*c.p,2],[6*c.q,1],[6*c.r,0]]); },
+  FText(c){ return 'F(x) = '+this.poly([[2*c.p,3],[3*c.q,2],[6*c.r,1]]); },
+  GText(c){ return this.poly([[6*c.p,3],[6*c.q,2],[6*c.r,1]]); },
+  sub(n){ return String(n).replace('-','₋').replace(/\\d/g,d=>'₀₁₂₃₄₅₆₇₈₉'[d]); },
+  sup(n){ return String(n).replace('-','⁻').replace(/\\d/g,d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  intText(c){ return \`∫\${this.sub(c.a)}\${this.sup(c.b)} f dx\`; },
+  pn(n6){ const t=this.fmt(n6); return t.startsWith('−')?'('+t+')':t; },
+  // F(b) − F(a) for the numbers on screen
+  work(c){
+    const Fb=this.F6(c,c.b), Fa=this.F6(c,c.a);
+    return \`\${this.FText(c)}, so F(\${neg(c.b)}) = \${this.fmt(Fb)} and F(\${neg(c.a)}) = \${this.fmt(Fa)}: \${this.intText(c)} = F(\${neg(c.b)}) − F(\${neg(c.a)}) = \${this.fmt(Fb)} − \${this.pn(Fa)} = \${this.fmt(Fb-Fa)}.\`;
+  },
+  // the sentence that names a slip, for the numbers on screen
+  slip(c,o,L){
+    const {a,b}=c, A=neg(a), B=neg(b);
+    if(o.k==='swap') return \`\${L} is F(\${A}) − F(\${B}) = \${this.fmt(o.v)}: the ends taken the wrong way round, which flips the sign. The top end comes first.\`;
+    if(o.k==='top') return \`\${L} is F(\${B}) alone = \${this.fmt(o.v)}: it forgets to take away F(\${A}), which is \${this.fmt(this.F6(c,a))}, not 0.\`;
+    if(o.k==='abs'){
+      const ps=this.pieces(c), gold=ps.filter(w=>w>0).reduce((s,w)=>s+w,0), red=-ps.filter(w=>w<0).reduce((s,w)=>s+w,0);
+      return \`\${L} counts the red part as plus: the gold part is \${this.fmt(gold)} and the red part \${this.fmt(red)}, and \${L} adds them to \${this.fmt(o.v)}. Area under the axis counts as minus, so the integral is \${this.fmt(gold)} − \${this.fmt(red)} = \${this.fmt(gold-red)}.\`;
+    }
+    if(o.k==='nodiv') return \`\${L} forgets to divide by the new power: it takes \${this.GText(c)} for F, which gives \${this.fmt(o.v)}. Its slope is not f: undoing xⁿ gives xⁿ⁺¹/(n + 1).\`;
+    if(o.k==='ends') return \`\${L} is f(\${B}) − f(\${A}) = \${this.fmt(o.v)}: f at the two ends, not F. That measures how much f rises, not the area under it.\`;
+  },
+  why(i){ const r=this.round; return [this.slip(r.c,r.opts[i],'ABCD'[i]), this.work(r.c)]; },
+  // the curve, the shaded part and whole-number ticks, in SVG
+  panel(c,W,H){
+    const x0=c.a-1, x1=c.b+1;
+    let lo=0, hi=0; for(let x=x0;x<=x1+1e-9;x+=0.05){ const y=this.f(c,x); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+    lo=Math.floor(lo)-0.5; hi=Math.ceil(hi)+0.5;
+    const X=x=>(14+(x-x0)/(x1-x0)*(W-22)).toFixed(1), Y=y=>(H-14-(y-lo)/(hi-lo)*(H-22)).toFixed(1);
+    let s='';
+    for(let x=Math.ceil(x0);x<=x1;x++) s+=\`<line x1="\${X(x)}" y1="\${Y(lo)}" x2="\${X(x)}" y2="\${Y(hi)}" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+    for(let y=Math.ceil(lo);y<=hi;y++) s+=\`<line x1="\${X(x0)}" y1="\${Y(y)}" x2="\${X(x1)}" y2="\${Y(y)}" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+    // the shaded part, one band for each piece between crossings
+    const xs=[c.a,...this.cuts(c),c.b], ps=this.pieces(c);
+    for(let k=0;k<xs.length-1;k++){
+      const u=xs[k], v=xs[k+1], up=ps[k]>0, N=24;
+      let d=\`M\${X(u)},\${Y(0)}\`;
+      for(let j=0;j<=N;j++){ const x=u+(v-u)*j/N; d+=\` L\${X(x)},\${Y(this.f(c,x))}\`; }
+      s+=\`<path data-k="\${up?'gold':'red'}" d="\${d} L\${X(v)},\${Y(0)} Z" fill="\${up?'rgba(242,193,78,.35)':'rgba(229,72,77,.35)'}"/>\`;
+    }
+    s+=\`<line x1="\${X(x0)}" y1="\${Y(0)}" x2="\${X(x1)}" y2="\${Y(0)}" stroke="\${FIG_COL.axis}" stroke-width="1.4"/>\`;
+    if(x0<0&&x1>0) s+=\`<line x1="\${X(0)}" y1="\${Y(lo)}" x2="\${X(0)}" y2="\${Y(hi)}" stroke="\${FIG_COL.axis}" stroke-width="1.4"/>\`;
+    let d=''; for(let j=0;j<=80;j++){ const x=x0+(x1-x0)*j/80; d+=(j?' L':'M')+X(x)+','+Y(this.f(c,x)); }
+    s+=\`<path data-k="curve" d="\${d}" fill="none" stroke="#5aa9e6" stroke-width="2.2"/>\`;
+    for(let x=Math.ceil(x0);x<=x1;x++) s+=\`<text x="\${X(x)}" y="\${H-2}" font-size="10" fill="\${FIG_COL.dim}" text-anchor="middle"\${x===c.a||x===c.b?' font-weight="bold"':''}>\${neg(x)}</text>\`;
+    for(let y=Math.ceil(lo);y<=hi;y++) if(y) s+=\`<text x="\${(+X(x0)-3).toFixed(1)}" y="\${(+Y(y)+3).toFixed(1)}" font-size="9" fill="\${FIG_COL.dim}" text-anchor="end">\${neg(y)}</text>\`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c;
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div style="text-align:center;font-size:16px;margin-bottom:2px">\${this.fText(c)}, shaded from x = \${neg(c.a)} to x = \${neg(c.b)}</div>\`;
+    out+=\`<svg id="ipFig" viewBox="0 0 300 180" style="width:100%;height:auto;display:block" role="img" aria-label="The curve \${this.fText(c)}, shaded from x = \${neg(c.a)} to x = \${neg(c.b)}\${this.cuts(c).length?', crossing the axis at x = '+this.cuts(c).map(neg).join(' and x = '):''}\${this.pieces(c).some(w=>w<0)?'; part of it is under the axis, in red':''}">\${this.panel(c,300,180)}</svg>\`;
+    out+=\`<div id="ipPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i);
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="IntPick.choose(\${i})" aria-label="\${'ABCD'[i]}: \${this.fmt(o.v)}\${gone?'. Not the integral':''}" style="margin:0"><b>\${'ABCD'[i]}</b> \${this.fmt(o.v)}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[], m=this.miss();
+    if(m!==null) lines.push(...this.why(m));
+    else if(this.last) lines.push('That was it: '+this.work(this.last.c)+' Here is a new curve.');
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="ipRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
   }
 };
 

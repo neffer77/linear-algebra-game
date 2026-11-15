@@ -2899,6 +2899,142 @@ const eigSpotNotes = (() => {
   return { rounds, misses };
 })();
 
+/* Which integral? The pick-a-number round in the area workshop. Every
+   integral is worked again here by Simpson's rule, which is exact for these
+   curves and never uses F; every slip is worked from what it gets wrong, and
+   the picture is read back off its own ticks and checked against f. */
+const intPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Area = {render(){ env.renders++; }};" +
+    cut('const IntPick = {', '/* ============ DOT PRODUCT WORKSHOP ============') + 'return IntPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const fr = n6 => { const g = gcd(n6, 6), n = n6 / g, d = 6 / g; return d === 1 ? ng(n) : `${ng(n)}/${d}`; };
+  const pr = n6 => { const t = fr(n6); return t.startsWith('−') ? '(' + t + ')' : t; };
+  const f = (c, x) => c.p * x * x + c.q * x + c.r;
+  // ∫ from u to v, times 6, by Simpson's rule: exact for a quadratic, and no F in sight
+  const simp6 = (c, u, v) => { const t = (v - u) * (f(c, u) + 4 * f(c, (u + v) / 2) + f(c, v)); if (!Number.isInteger(t)) throw new Error('not whole'); return t; };
+  const sub = n => String(n).replace('-', '₋').replace(/\d/g, d => '₀₁₂₃₄₅₆₇₈₉'[d]);
+  const sup = n => String(n).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);
+  // a polynomial written by hand: whole coefficients for f, and F's own
+  const term = (num, den, pw, first) => {
+    if (!num) return '';
+    const g = gcd(num, den), n = num / g, d = den / g, m = Math.abs(n), x = ['', 'x', 'x²', 'x³'][pw];
+    const body = pw === 0 ? (d === 1 ? String(m) : `${m}/${d}`) : (m === 1 ? x : m + x) + (d === 1 ? '' : '/' + d);
+    return (n < 0 ? (first ? '−' : ' − ') : (first ? '' : ' + ')) + body;
+  };
+  const write = ts => { let o = ''; for (const [n, d, pw] of ts) o += term(n, d, pw, o === ''); return o || '0'; };
+  const fT = c => 'f(x) = ' + write([[c.p, 1, 2], [c.q, 1, 1], [c.r, 1, 0]]);
+  const FT = c => 'F(x) = ' + write([[c.p, 3, 3], [c.q, 2, 2], [c.r, 1, 1]]);
+  const read = () => txt(S.html().split('id="ipRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'An integral adds up signed area: gold above the axis counts plus, red below counts minus. Undo the power rule to get F, then ∫ₐᵇ f dx = F(b) − F(a). Which number is the integral of the shaded part?') fail('intpick', 'rule', 'the rule is not stated');
+  if (S.round !== null || S.matched !== 0) fail('intpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, crossing = 0;
+  const slots = new Set(), kinds = {}, dens = new Set();
+  for (let seed = 1; seed <= 400; seed++) {
+    env.seed = seed * 104729; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = r.c, key = `seed ${seed} round ${k}`, { a, b } = c;
+      rounds++;
+      if (![c.p, c.q, c.r, a, b].every(Number.isInteger) || !(b > a) || a < -2 || b > 3 || (!c.p && !c.q)) fail('intpick', key, `the curve ${JSON.stringify(c)} is not a fair one`);
+      if (c.roots.some(t => f(c, t) !== 0)) fail('intpick', key, 'a root of f is not one');
+      for (let x = a - 1; x <= b + 1; x += 0.125) if (Math.abs(f(c, x)) > 9) { fail('intpick', key, `f runs to ${f(c, x)} at x = ${x}`); break; }
+      if (prev && JSON.stringify(prev) === JSON.stringify(c)) fail('intpick', key, 'the same curve comes twice in a row');
+      // where f crosses inside (a, b), found by stepping, and each piece's signed area
+      const cuts = []; for (let x = a + 1; x < b; x++) if (f(c, x) === 0 && f(c, x - 0.5) * f(c, x + 0.5) < 0) cuts.push(x);
+      for (let x = a; x < b; x++) if (f(c, x + 0.5) === 0 && f(c, x + 0.25) * f(c, x + 0.75) < 0) fail('intpick', key, 'f crosses between whole numbers');
+      if (cuts.length) crossing++;
+      const xs = [a, ...cuts, b], pieces = xs.slice(1).map((x, i) => simp6(c, xs[i], x));
+      const V = simp6(c, a, b);
+      if (V === 0 || 6 / gcd(V, 6) > 3) fail('intpick', key, `the integral ${V}/6 is not a fair answer`);
+      dens.add(6 / gcd(V, 6));
+      const want = { right: V, swap: -V, top: simp6(c, 0, b), abs: pieces.reduce((s, w) => s + Math.abs(w), 0),
+        nodiv: 6 * ((c.p * b ** 3 + c.q * b * b + c.r * b) - (c.p * a ** 3 + c.q * a * a + c.r * a)), ends: 6 * (f(c, b) - f(c, a)) };
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1 || new Set(r.opts.map(o => o.v)).size !== 4) fail('intpick', key, 'there are not four different numbers, one of them right');
+      for (const o of r.opts) { if (o.v !== want[o.k]) fail('intpick', key, `${o.k} is ${o.v}/6, not ${want[o.k]}/6`); kinds[o.k] = (kinds[o.k] || 0) + 1; }
+      if (cuts.length && want.abs !== V && !r.opts.some(o => o.k === 'abs')) fail('intpick', key, 'the red part counted as plus is not offered where the curve crosses');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const h0 = S.html(), t0 = txt(h0);
+      if (!t0.startsWith(`${S.RULE} ${fT(c)}, shaded from x = ${ng(a)} to x = ${ng(b)}`)) fail('intpick', key, `the curve is not written first: ${t0.slice(S.RULE.length, S.RULE.length + 60)}`);
+      const lab = `The curve ${fT(c)}, shaded from x = ${ng(a)} to x = ${ng(b)}${cuts.length ? ', crossing the axis at x = ' + cuts.map(ng).join(' and x = ') : ''}${pieces.some(w => w < 0) ? '; part of it is under the axis, in red' : ''}`;
+      if (!h0.includes(`role="img" aria-label="${lab}"`)) fail('intpick', key, 'the picture is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="IntPick\.choose\((\d)\)" aria-label="([ABCD]): ([^".]+)(\. Not the integral)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== fr(r.opts[i].v) || m[6] || m[7] !== 'ABCD'[i] || m[8] !== fr(r.opts[i].v))) fail('intpick', key, 'the four numbers are not offered as they are, A to D');
+      // the picture, read back off its own ticks
+      const svg = h0.split('id="ipFig"')[1].split('</svg>')[0];
+      const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1], +m[2].replace('−', '-')]);
+      const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1] - 3, +m[2].replace('−', '-')]);
+      if (xt.length < 3 || yt.length < 2 || xt[0][1] !== a - 1 || xt[xt.length - 1][1] !== b + 1) { fail('intpick', key, 'the ticks do not run from a − 1 to b + 1'); continue; }
+      const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      if (!(kx > 0 && ky < 0)) fail('intpick', key, 'the picture is drawn back to front or upside down: higher numbers must sit further right and further up');
+      const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
+      const bold = [...svg.matchAll(/font-weight="bold">([^<]+)</g)].map(m => +m[1].replace('−', '-'));
+      if (JSON.stringify(bold) !== JSON.stringify([a, b])) fail('intpick', key, 'a and b are not picked out on the axis');
+      const curve = svg.match(/<path data-k="curve" d="([^"]+)"/);
+      if (!curve) fail('intpick', key, 'no curve is drawn');
+      else for (const m of curve[1].matchAll(/([-\d.]+),([-\d.]+)/g)) { const x = ux(+m[1]), y = uy(+m[2]); if (Math.abs(y - f(c, x)) > 0.05 + 0.05 * Math.abs(f(c, x))) { fail('intpick', key, `the curve passes (${x.toFixed(2)}, ${y.toFixed(2)}), off f`); break; } }
+      const bands = [...svg.matchAll(/<path data-k="(gold|red)" d="([^"]+)" fill="([^"]+)"/g)];
+      if (bands.some(m => m[3] !== (m[1] === 'gold' ? 'rgba(242,193,78,.35)' : 'rgba(229,72,77,.35)'))) fail('intpick', key, `the shading is filled ${bands.map(m => m[3])}, not gold above and red below`);
+      if (bands.length !== pieces.length || bands.some((m, i) => m[1] !== (pieces[i] > 0 ? 'gold' : 'red'))) fail('intpick', key, `the shading is ${bands.map(m => m[1])}, not ${pieces.map(w => w > 0 ? 'gold' : 'red')}`);
+      bands.forEach((m, i) => { const pts = [...m[2].matchAll(/([-\d.]+),([-\d.]+)/g)].map(q => [ux(+q[1]), uy(+q[2])]);
+        const xs0 = pts.map(p => p[0]); if (Math.abs(Math.min(...xs0) - xs[i]) > 0.02 || Math.abs(Math.max(...xs0) - xs[i + 1]) > 0.02) fail('intpick', key, `band ${i} runs from ${Math.min(...xs0)} to ${Math.max(...xs0)}`);
+        if (Math.abs(pts[0][1]) > 0.1 || Math.abs(pts[pts.length - 1][1]) > 0.1 || pts.slice(1, -1).some(p => Math.abs(p[1] - f(c, p[0])) > 0.05 + 0.05 * Math.abs(f(c, p[0])))) fail('intpick', key, `band ${i} does not hug the curve`); });
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: F(x) = ')) fail('intpick', key, `before a pick the readout says ${read()}`);
+      const Fv = x => simp6(c, 0, x);
+      const work = `${FT(c)}, so F(${ng(b)}) = ${fr(Fv(b))} and F(${ng(a)}) = ${fr(Fv(a))}: ∫${sub(a)}${sup(b)} f dx = F(${ng(b)}) − F(${ng(a)}) = ${fr(Fv(b))} − ${pr(Fv(a))} = ${fr(V)}.`;
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('intpick', key, 'a miss is counted, or not crossed off');
+        const gold = pieces.filter(w => w > 0).reduce((s, w) => s + w, 0), red = -pieces.filter(w => w < 0).reduce((s, w) => s + w, 0);
+        const slip = {
+          swap: `${L} is F(${ng(a)}) − F(${ng(b)}) = ${fr(o.v)}: the ends taken the wrong way round, which flips the sign. The top end comes first.`,
+          top: `${L} is F(${ng(b)}) alone = ${fr(o.v)}: it forgets to take away F(${ng(a)}), which is ${fr(Fv(a))}, not 0.`,
+          abs: `${L} counts the red part as plus: the gold part is ${fr(gold)} and the red part ${fr(red)}, and ${L} adds them to ${fr(o.v)}. Area under the axis counts as minus, so the integral is ${fr(gold)} − ${fr(red)} = ${fr(V)}.`,
+          nodiv: `${L} forgets to divide by the new power: it takes ${write([[c.p, 1, 3], [c.q, 1, 2], [c.r, 1, 1]])} for F, which gives ${fr(o.v)}. Its slope is not f: undoing xⁿ gives xⁿ⁺¹/(n + 1).`,
+          ends: `${L} is f(${ng(b)}) − f(${ng(a)}) = ${fr(o.v)}: f at the two ends, not F. That measures how much f rises, not the area under it.`
+        }[o.k];
+        const want2 = `${slip} ${work} ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want2) fail('intpick', key, `the miss is explained as: ${read()} | want ${want2}`);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="IntPick\\.choose\\(${i}\\)" aria-label="${L}: [^"]+\\. Not the integral"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('intpick', key, 'the missed numbers are not shut and told as not the integral');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('intpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('intpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('intpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('intpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'INTEGRAL READER / 5 integrals picked') fail('intpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is the integral, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('intpick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${work} Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('intpick', key, `after a pick: ${read()}`);
+      prev = c;
+    }
+  }
+  for (const k of ['swap', 'top', 'abs', 'nodiv', 'ends']) if (!kinds[k]) fail('intpick', 'slips', `the slip ${k} is never offered`);
+  if (slots.size !== 4) fail('intpick', 'deal', `the right number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (crossing < rounds / 3) fail('intpick', 'deal', `only ${crossing} of ${rounds} curves cross the axis inside the shading`);
+  if (!dens.has(1) || !dens.has(2) || !dens.has(3)) fail('intpick', 'deal', `the answers only have bottoms ${[...dens]}`);
+  if (fives !== 40) fail('intpick', 'banner', `five integrals were picked ${fives} times, not 40`);
+  return { rounds, misses, crossing };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -6633,6 +6769,7 @@ console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)
 console.log(`  f′ picked out     ${pad(slopeMatchNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-f′, f′ checked as the slope of f by nudging f at ${slopeMatchNotes.n.toLocaleString()} points; every wrong graph checked to be its slip and caught where it breaks the rule, ${slopeMatchNotes.misses.toLocaleString()} misses explained; every graph told as words read back)`);
 console.log(`  matrices picked   ${pad(matPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-matrix, each wrong matrix checked to be its slip by where it sends î and ĵ; ${matPickNotes.misses.toLocaleString()} wrong picks drawn and explained, ${matPickNotes.picks.toLocaleString()} right picks counted)`);
 console.log(`  eigen spotted     ${pad(eigSpotNotes.rounds.toLocaleString(), 15)}  (rounds of spot-the-eigenvector, the kept arrow multiplied out and every other knocked a visible angle off its line; ${eigSpotNotes.misses.toLocaleString()} wrong picks worked and explained; every panel's arrows read back)`);
+console.log(`  integrals picked  ${pad(intPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-integral, each worked again by Simpson's rule and every slip from what it gets wrong; ${intPickNotes.crossing.toLocaleString()} cross the axis inside the shading; ${intPickNotes.misses.toLocaleString()} wrong picks explained; every picture read back off its own ticks)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
