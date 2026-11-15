@@ -1,20 +1,103 @@
 {
- "change": "The Elimination Workshop: two equations solved with row operations",
+ "change": "The Undo Workshop: the matrix that puts a move back",
  "mutations": [
- {"name": "an add uses this row twice", "file": "index.html", "find": "const out=r.map((x,j)=>x+k*o[j]);", "replace": "const out=r.map((x,j)=>x+k*r[j]);", "run": "verify"},
- {"name": "a divide that leaves fractions is allowed", "file": "index.html", "find": "return r.every(x=>x%this.k===0) ? r.map(x=>x/this.k||0) : null;", "replace": "return r.map(x=>Math.round(x/this.k)||0);", "run": "verify"},
- {"name": "a coefficient of −1 is written −1x", "file": "index.html", "find": "const m=Math.abs(n), body=(m===1?'':m)+v;", "replace": "const m=Math.abs(n), body=(n===1?'':m)+v;", "run": "verify"},
- {"name": "a negative entry is not bracketed in an add", "file": "index.html", "find": "${neg(x)} ${s} ${m===1?'':m+'·'}${this.amt(L.by[j])} = ", "replace": "${neg(x)} ${s} ${m===1?'':m+'·'}${neg(L.by[j])} = ", "run": "verify"},
- {"name": "0 = 0 is read as no solution", "file": "index.html", "find": "bad(){ return this.R().findIndex(r=>!r[0] && !r[1] && r[2]); },", "replace": "bad(){ return this.R().findIndex(r=>!r[0] && !r[1]); },", "run": "verify"},
- {"name": "the rows count as solved the wrong way up only", "file": "index.html", "find": "return (xr(p)&&yr(q)) || (yr(p)&&xr(q));", "replace": "return yr(p)&&xr(q);", "run": "verify"},
- {"name": "undo forgets the last operation", "file": "index.html", "find": "undo(){ const h=this.hist.pop(); if(!h) return; this.rows=h.rows; this.last=h.last; },", "replace": "undo(){ const h=this.hist.pop(); if(!h) return; this.rows=h.rows; },", "run": "verify"},
- {"name": "a cleared row says to divide by 1", "file": "index.html", "find": "out.push(`${gone} is gone from row ${s+1}, which now says ${this.eq(r)}. `+(left===1", "replace": "out.push(`${gone} is gone from row ${s+1}, which now says ${this.eq(r)}. `+(left===0", "run": "verify"},
- {"name": "the elimination workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeElim\" style=\"width:auto;margin-top:8px\" onclick=\"Elim.open()\">Open the elimination workshop</button>", "replace": "", "run": "play:elim"},
- {"name": "the elimination workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-elim') Elim.render();\n", "replace": "", "run": "play:elim"},
- {"name": "k can be 0", "file": "index.html", "find": "let k=this.k+by; if(k===0) k+=by;", "replace": "let k=this.k+by;", "run": "play:elim"},
- {"name": "a row with 0 = c is still drawn", "file": "index.html", "find": "col:i?FIG_COL.c:FIG_COL.a})).filter(e=>e.a||e.b);", "replace": "col:i?FIG_COL.c:FIG_COL.a}));", "run": "play:elim"},
- {"name": "the crossing is not ringed", "file": "index.html", "find": "vecs:[], eqs, marks:P?[P]:[],", "replace": "vecs:[], eqs, marks:[],", "run": "play:elim"},
- {"name": "Start again keeps the old rows", "file": "index.html", "find": "again(){ this.pickSys(this.si); },", "replace": "again(){ this.hist=[]; this.render(); },", "run": "play:elim"},
- {"name": "picking a row does nothing", "file": "index.html", "find": "pickRow(i){ this.ri=i; this.render(); },", "replace": "pickRow(i){ this.render(); },", "run": "play:elim"}
+  {
+   "name": "B's bottom row uses its top row",
+   "file": "index.html",
+   "find": "out.push(`B sends A${nm} = ${this.vec(v)} to ⟨${neg(B[0][0])}·${this.amt(v[0])} + ${this.amt(B[0][1])}·${this.amt(v[1])}, ${neg(B[1][0])}",
+   "replace": "out.push(`B sends A${nm} = ${this.vec(v)} to ⟨${neg(B[0][0])}·${this.amt(v[0])} + ${this.amt(B[0][1])}·${this.amt(v[1])}, ${neg(B[0][0])}",
+   "run": "verify"
+  },
+  {
+   "name": "B is applied by columns instead of rows",
+   "file": "index.html",
+   "find": "end(j){ return this.app(this.B, this.col(this.A(), j)); },",
+   "replace": "end(j){ const [[a,b],[c,d]]=this.B; return this.app([[a,c],[b,d]], this.col(this.A(), j)); },",
+   "run": "verify"
+  },
+  {
+   "name": "A's arrows are read from its rows",
+   "file": "index.html",
+   "find": "out.push(`A is ${this.MATS[this.mi].is}: it sends î to ${this.vec(this.col(A,0))} and ĵ to ${this.vec(this.col(A,1))}.`);",
+   "replace": "out.push(`A is ${this.MATS[this.mi].is}: it sends î to ${this.vec(A[0])} and ĵ to ${this.vec(A[1])}.`);",
+   "run": "verify"
+  },
+  {
+   "name": "a negative factor is not bracketed",
+   "file": "index.html",
+   "find": "amt(n){ return n<0 ? `(${neg(n)})` : neg(n); },\n  rows(M)",
+   "replace": "amt(n){ return neg(n); },\n  rows(M)",
+   "run": "verify"
+  },
+  {
+   "name": "home counts one arrow only",
+   "file": "index.html",
+   "find": "undone(){ return this.home(0) && this.home(1); },",
+   "replace": "undone(){ return this.home(0); },",
+   "run": "verify"
+  },
+  {
+   "name": "the squash names an arrow it does not crush",
+   "file": "index.html",
+   "find": "const z=[A[0][1], -A[0][0]];",
+   "replace": "const z=[A[0][0], -A[0][1]];",
+   "run": "verify"
+  },
+  {
+   "name": "the flip is not called its own undo",
+   "file": "index.html",
+   "find": "(A.every((r,i)=>r.every((x,j)=>x===B[i][j])) ? ' A is its own undo",
+   "replace": "(A.every((r,i)=>r.every((x,j)=>x===B[j][i]&&i!==j)) ? ' A is its own undo",
+   "run": "verify"
+  },
+  {
+   "name": "a new A keeps the old B",
+   "file": "index.html",
+   "find": "pick(i){ this.mi=i; this.B=[[1,0],[0,1]]; this.moved=false;",
+   "replace": "pick(i){ this.mi=i; this.moved=false;",
+   "run": "play:undo"
+  },
+  {
+   "name": "the steppers stop at ±1",
+   "file": "index.html",
+   "find": "LO:-2, HI:2,\n  mi:0, B:[[1,0],[0,1]]",
+   "replace": "LO:-1, HI:1,\n  mi:0, B:[[1,0],[0,1]]",
+   "run": "play:undo"
+  },
+  {
+   "name": "the half goal needs both arrows away",
+   "file": "index.html",
+   "find": "ok:U=>U.moved && U.home(0)!==U.home(1)}",
+   "replace": "ok:U=>U.moved && !U.home(0) && !U.home(1)}",
+   "run": "play:undo"
+  },
+  {
+   "name": "picking the squash counts as trying",
+   "file": "index.html",
+   "find": "ok:U=>U.mi===4 && U.moved}",
+   "replace": "ok:U=>U.mi===4}",
+   "run": "play:undo"
+  },
+  {
+   "name": "B's numbers lose their names",
+   "file": "index.html",
+   "find": "<b aria-label=\"B's ${nm} number: ${neg(v)}\">",
+   "replace": "<b>",
+   "run": "play:undo"
+  },
+  {
+   "name": "the caption drops the rings",
+   "file": "index.html",
+   "find": "Blue and green: where B then sends them. The rings are home.'",
+   "replace": "Blue and green: where B then sends them.'",
+   "run": "play:undo"
+  },
+  {
+   "name": "a found goal gives no toast",
+   "file": "index.html",
+   "find": "else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
+   "replace": "else { Sfx.good(); }\n    }\n  }\n};\n\n/* ============ ORDER MATTERS",
+   "run": "play:undo"
+  }
  ]
 }
