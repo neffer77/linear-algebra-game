@@ -50,6 +50,7 @@ function loadGame() {
     // The area workshop, lifted the same way: after Slope's, so its CURVES is found from Area on.
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
+    ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
@@ -64,7 +65,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1732,6 +1733,82 @@ const eigNotes = (() => {
   return { n, goals: E.GOALS.length };
 })();
 
+/* Every state of the Taylor workshop: each function, every highest power
+   from 0 to 9, and every x it offers. The coefficients are worked here from
+   the derivatives at 0 (eˣ's are all 1, sin's and cos's go round in fours),
+   and each line the player reads is read back: the powers listed and their
+   signs, every term shown and the count of those too small to show, the
+   total with = only where nothing was rounded, the function's value, which
+   side P falls and by how much, and the one note that fits. Each goal must be
+   findable, and none met where the workshop opens. */
+const taylorNotes = (() => {
+  const T = Taylor, found = {}, num = s => +String(s).trim().replace(/−/g, '-');
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', fact = k => k ? k * fact(k - 1) : 1;
+  const DER = { exp: [1, 1, 1, 1], sin: [0, 1, 0, -1], cos: [1, 0, -1, 0] };
+  const F = { exp: Math.exp, sin: Math.sin, cos: Math.cos };
+  const isExact = v => Math.abs(Math.round(v * 1e9) - v * 1e9) < 1e-3;
+  let n = 0;
+  T.CURVES.forEach((C, ci) => {
+    const co = k => DER[C.id][k % 4] / fact(k);
+    for (let deg = 0; deg <= T.NMAX; deg++) for (let xi = 0; xi < T.XS.length; xi++) {
+      T.ci = ci; T.n = deg; T.xi = xi; n++;
+      const x = T.XS[xi], key = `${C.id} n=${deg} x=${x}`, L = T.working();
+      for (let k = 0; k <= T.NMAX; k++) if (Math.abs(T.c(k) - co(k)) > 1e-15) fail('taylor', key, `the x^${k} coefficient is ${T.c(k)}, not ${co(k)}`);
+      const ks = [...Array(deg + 1).keys()].filter(k => co(k) !== 0);
+      const vals = ks.map(k => co(k) * x ** k), P = vals.reduce((a, b) => a + b, 0), fx = F[C.id](x), err = P - fx;
+      // the polynomial line: its powers, in order, with their signs
+      const pm = L[1].match(/^P\S+\(x\) = (.*?)(, the series up to x([⁰¹²³⁴⁵⁶⁷⁸⁹]+)\.|: .* has no constant term, so it starts at x\.)$/);
+      if (!pm) { fail('taylor', key, `the polynomial does not read: ${L[1]}`); continue; }
+      if (ks.length) {
+        const terms = [...('+ ' + pm[1]).replace(/^\+ −/, '− ').matchAll(/([+−]) (1|x(?:([⁰¹²³⁴⁵⁶⁷⁸⁹]+)\/(\d+)!)?)/g)];
+        const got = terms.map(t => [t[2] === '1' ? 0 : t[3] ? [...t[3]].reduce((a, d) => a * 10 + SUP.indexOf(d), 0) : 1, t[1], t[4]]);
+        if (got.length !== ks.length || got.some(([k, sg, f], i) => k !== ks[i] || (sg === '−') !== (co(k) < 0) || (f !== undefined && +f !== k)))
+          fail('taylor', key, `the polynomial lists the wrong powers or signs: ${L[1]}`);
+        if (pm[3] !== [...String(deg)].map(d => SUP[d]).join('')) fail('taylor', key, 'the highest power is named wrongly');
+      } else if (!/no constant term/.test(pm[2])) fail('taylor', key, 'an empty polynomial is not explained');
+      // the value line
+      let li = 2;
+      if (ks.length) {
+        const vl = L[li++].replace(/\.$/, ''), tm = vl.match(/ ([=≈]) (−?[\d.]+)$/);
+        const shownI = vals.map((v, i) => i).filter(i => isExact(vals[i]) || Math.abs(vals[i]) >= 0.00005);
+        const allExact = vals.every(isExact);
+        if (!tm) { fail('taylor', key, `the value line does not read: ${vl}`); continue; }
+        if ((tm[1] === '=') !== allExact) fail('taylor', key, 'the total is marked = or ≈ wrongly');
+        if (Math.abs(num(tm[2]) - P) > (allExact ? 1e-9 : 5.1e-5)) fail('taylor', key, `P is printed as ${tm[2]}, it is ${P}`);
+        const body = vl.slice(vl.indexOf(') = ') + 4, vl.length - tm[0].length);
+        const hm = body.match(/ \+ \((\d+) more terms?, each under 0\.0001\)$/);
+        if ((hm ? +hm[1] : 0) !== vals.length - shownI.length) fail('taylor', key, 'the hidden terms are miscounted');
+        if (vl.indexOf(') = ') + 4 <= vl.length - tm[0].length) {
+          const sv = [...('+ ' + body.replace(/ \+ \(.*$/, '')).replace(/^\+ −/, '− ').matchAll(/([+−]) ([\d.]+)/g)].map(m => (m[1] === '−' ? -1 : 1) * +m[2]);
+          if (sv.length !== shownI.length || sv.some((v, j) => Math.abs(v - vals[shownI[j]]) > 5.1e-5)) fail('taylor', key, `the terms are worked wrongly: ${vl}`);
+        } else if (shownI.length !== 1 || vals.length !== 1) fail('taylor', key, 'a sum of several terms is not shown');
+        for (const i of shownI) if (!isExact(vals[i]) && Math.abs(vals[i]) < 0.00005) fail('taylor', key, 'a term too small to read is shown');
+      }
+      const fm = L[li].match(/^At x = (−?[\d.]+), (.+?) ([=≈]) (−?[\d.]+), so P\S+ is (exactly right|(over|short) by (about ([\d.]+)|less than 0\.000001))\.$/);
+      if (!fm) { fail('taylor', key, `the comparison does not read: ${L[li]}`); continue; }
+      if (num(fm[1]) !== x || fm[2] !== C.at) fail('taylor', key, 'the comparison names the wrong x or function');
+      if (Math.abs(num(fm[4]) - fx) > (fm[3] === '=' ? 1e-12 : 5.1e-5) || (fm[3] === '=') !== isExact(fx)) fail('taylor', key, `${C.at} is printed as ${fm[4]}, it is ${fx}`);
+      if ((fm[5] === 'exactly right') !== (Math.abs(err) < 1e-12)) fail('taylor', key, 'exactly right is claimed wrongly');
+      if (fm[6] && (fm[6] === 'over') !== (err > 0)) fail('taylor', key, 'over and short are swapped');
+      if (fm[9] !== undefined && Math.abs(+fm[9] - Math.abs(err)) > Math.max(5.1e-5, Math.abs(err) * 0.05)) fail('taylor', key, `the gap is printed as ${fm[9]}, it is ${Math.abs(err)}`);
+      if (fm[7] === 'less than 0.000001' && Math.abs(err) >= 1e-6) fail('taylor', key, 'a visible gap is called less than 0.000001');
+      const note = L[li + 1] || '';
+      const worse = x !== 0 && deg > 0 && co(deg) !== 0 && Math.abs(err) > Math.abs(err - vals[vals.length - 1]) + 1e-12;
+      const want = x === 0 ? 'zero' : deg > 0 && co(deg) === 0 ? 'skip' : worse ? 'worse' : '';
+      const have = /^At x = 0 every power/.test(note) ? 'zero' : /has no x\S+ term, so/.test(note) ? 'skip' : /^Adding the x\S+ term made this worse/.test(note) ? 'worse' : note ? '?' : '';
+      if (want !== have) fail('taylor', key, `the note should be ${want || 'none'}, it is ${have || 'none'}`);
+      if (L.length > li + 2) fail('taylor', key, 'more than one note');
+      for (const g of T.GOALS) if (g.ok(T)) found[g.id] = (found[g.id] || 0) + 1;
+      if (T.GOALS.find(g => g.id === 'worse').ok(T) !== worse) fail('taylor', key, 'a worse guess is judged wrongly');
+    }
+  });
+  for (const g of T.GOALS) if (!found[g.id]) fail('taylor', g.id, 'this goal cannot be found');
+  T.ci = 0; T.n = 1; T.xi = 6;
+  if (T.GOALS.some(g => g.ok(T))) fail('taylor', 'start', 'a goal is already met where the workshop opens');
+  if (T.touched !== false) fail('taylor', 'start', 'the workshop opens as if already turned');
+  return { n, goals: T.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1778,6 +1855,7 @@ console.log(`  slope workshop states      ${pad(slopeNotes.n.toLocaleString(), 1
 console.log(`  dot product pairs          ${pad(dotNotes.n.toLocaleString(), 10)}  (products, lengths, angle, shadow, ${dotNotes.goals} goals findable)`);
 console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10)}  (Riemann sums, working, gap, ${areaNotes.goals} goals findable)`);
 console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
+console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

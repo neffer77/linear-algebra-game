@@ -51,6 +51,7 @@ const SUITES = [
   require('./play/eig'),         // one arrow, four matrices: hunt the directions each only stretches
   require('./play/slope'),       // a secant becomes a tangent as h closes in
   require('./play/area'),        // rectangles under a curve close in on the integral
+  require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
   require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
