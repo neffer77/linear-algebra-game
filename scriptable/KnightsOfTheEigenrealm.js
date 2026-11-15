@@ -1798,6 +1798,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ PATH CHAIN WORKSHOP ============ -->
+  <div class="screen" id="s-pathchain">
+    <div class="panel"><h2>🛤️ Path Chain Workshop</h2><div class="sub">A point walks along a path over a hill z = f(x, y). As t moves, x and y both move, so z changes for two reasons: the x part (∂z/∂x)(dx/dt) and the y part (∂z/∂y)(dy/dt). Step along and watch the two parts add up, then drop one or forget the speeds and catch each slip.</div></div>
+    <div class="panel">
+      <div id="pcSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill and path"></div>
+      <div id="pcFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="pcTLo" onclick="PathChain.moveT(-1)" aria-label="Move t one step smaller">−</button>
+          <b id="pcT" style="font-size:17px;min-width:0"></b>
+          <button id="pcTHi" onclick="PathChain.moveT(1)" aria-label="Move t one step bigger">+</button></div>
+      </div>
+      <div id="pcModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work dz/dt"></div>
+      <div id="pcRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="pcGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3812,6 +3832,7 @@ const WORKSHOP_FOR = (() => {
     TanPlane: ["🪁 Tangent Plane Workshop", ['tangentPlane']],
     InvSlope: ["🪩 Inverse Slope Workshop", ['invTrigDeriv']],
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
+    PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13214,6 +13235,7 @@ const UI = {
     if(id==='s-tanplane') TanPlane.render();
     if(id==='s-invslope') InvSlope.render();
     if(id==='s-logdiff') LogDiff.render();
+    if(id==='s-pathchain') PathChain.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14022,6 +14044,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪵 Log Slope Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it.</div>
          <button class="btn sm" id="tomeLogDiff" style="width:auto;margin-top:8px" onclick="LogDiff.open()">Open the log slope workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🛤️ Path Chain Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Walk a point along a path over a hill and watch dz/dt come from two parts, one for x moving and one for y. Find where the parts cancel, the top of a path, and a tug of war, then drop a part or forget the speeds and catch each slip.</div>
+         <button class="btn sm" id="tomePathChain" style="width:auto;margin-top:8px" onclick="PathChain.open()">Open the path chain workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -20199,6 +20226,169 @@ const LogDiff = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE LOG','every moving power tamed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The path chain workshop: z changes for two reasons ----------
+   A point walks along a path x(t), y(t) over a hill z = f(x, y). As t moves,
+   x and y both move, so dz/dt has two parts: how steep the hill is along x
+   times how fast x moves, plus the same for y. The slips keep only one part,
+   or forget the speeds altogether, and each is caught with a nudge. Nothing
+   is saved. */
+const PathChain = {
+  SETS:[
+    {id:'xy', btn:'z = xy', z:'xy', path:'x = t², y = t', name:'z = xy along x = t², y = t',
+     f:(x,y)=>x*y, fx:(x,y)=>y, fy:(x,y)=>x, fxS:'y', fyS:'x',
+     X:t=>t*t, Y:t=>t, dX:t=>2*t, dY:t=>1, dXS:'2t', dYS:'1',
+     T:[-1,-0.5,0,0.5,1,1.5], start:4, D:[-1.25,1.75], R:[-1.6,3.6]},
+    {id:'ring', btn:'z = x² + y²', z:'x² + y²', path:'x = cos t, y = sin t', name:'z = x² + y² along x = cos t, y = sin t',
+     f:(x,y)=>x*x+y*y, fx:(x,y)=>2*x, fy:(x,y)=>2*y, fxS:'2x', fyS:'2y',
+     X:t=>Math.cos(t), Y:t=>Math.sin(t), dX:t=>-Math.sin(t), dY:t=>Math.cos(t), dXS:'−sin t', dYS:'cos t',
+     T:[0,'π/6','π/4','π/3','π/2','2π/3','π'], start:0, D:[-0.2,3.35], R:[0,2]},
+    {id:'hill', btn:'z = x²y', z:'x²y', path:'x = t, y = 2 − t', name:'z = x²y along x = t, y = 2 − t',
+     f:(x,y)=>x*x*y, fx:(x,y)=>2*x*y, fy:(x,y)=>x*x, fxS:'2xy', fyS:'x²',
+     X:t=>t, Y:t=>2-t, dX:t=>1, dY:t=>-1, dXS:'1', dYS:'−1',
+     T:[0,'1/3','2/3',1,'4/3','5/3',2], start:3, D:[-0.15,2.15], R:[-0.3,1.5]}
+  ],
+  VAL:{'π/6':Math.PI/6,'π/4':Math.PI/4,'π/3':Math.PI/3,'π/2':Math.PI/2,'2π/3':2*Math.PI/3,'π':Math.PI,'1/3':1/3,'2/3':2/3,'4/3':4/3,'5/3':5/3},
+  MODES:['Both parts','x part only','y part only','Forget the speeds'],
+  H:0.001,
+  si:0, k:4, mode:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'cancel', t:'On the circle, find where both parts are working but z does not change.', toast:'The parts cancel',
+     ok:K=>K.si===1 && K.mode===0 && K.P()!==0 && K.right()===0},
+    {id:'peak', t:'Find the highest point of z along x = t, y = 2 − t.', toast:'The top of the path',
+     ok:K=>K.si===2 && K.mode===0 && K.raw()==='4/3'},
+    {id:'tug', t:'Find a point where the x part pushes z up but the y part wins and z falls.', toast:'A tug of war',
+     ok:K=>K.mode===0 && K.P()>0 && K.right()<0},
+    {id:'xonly', t:'Keep only the x part, and catch it out.', toast:'y moves too',
+     ok:K=>K.mode===1 && K.wrong()!==K.right()},
+    {id:'yonly', t:'Keep only the y part, and catch that out too.', toast:'x moves too',
+     ok:K=>K.mode===2 && K.wrong()!==K.right()},
+    {id:'speeds', t:'Forget dx/dt and dy/dt, and catch it out.', toast:'The speeds count',
+     ok:K=>K.mode===3 && K.wrong()!==K.right()},
+    {id:'luck', t:'Find where forgetting the speeds gives the right rate anyway.', toast:'Right by luck',
+     ok:K=>K.mode===3 && K.wrong()===K.right() && K.right()!==0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  raw(){ return this.set().T[this.k]; },
+  t(){ const v=this.raw(); return typeof v==='string' ? this.VAL[v] : v; },
+  ts(){ const v=this.raw(); return typeof v==='string' ? v : neg(v); },
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  x(t=this.t()){ return this.r(this.set().X(t)); },
+  y(t=this.t()){ return this.r(this.set().Y(t)); },
+  z(t=this.t()){ const S=this.set(); return S.f(S.X(t),S.Y(t)); },
+  /* worked from the unrounded point, so parts that cancel come out exactly 0 */
+  fx(){ const S=this.set(), t=this.t(); return this.r(S.fx(S.X(t),S.Y(t))); },
+  fy(){ const S=this.set(), t=this.t(); return this.r(S.fy(S.X(t),S.Y(t))); },
+  dx(){ return this.r(this.set().dX(this.t())); },
+  dy(){ return this.r(this.set().dY(this.t())); },
+  /* the x part and the y part of dz/dt */
+  P(){ const S=this.set(), t=this.t(); return this.r(S.fx(S.X(t),S.Y(t))*S.dX(t)); },
+  Q(){ const S=this.set(), t=this.t(); return this.r(S.fy(S.X(t),S.Y(t))*S.dY(t)); },
+  right(){ return this.r(this.P()+this.Q()); },
+  wrong(){ return this.mode===1 ? this.P() : this.mode===2 ? this.Q() : this.mode===3 ? this.r(this.fx()+this.fy()) : this.right(); },
+  nudge(){ const t=this.t(); return (this.z(t+this.H)-this.z(t-this.H))/(2*this.H); },
+  /* a slip's line is drawn only where it gives a different rate */
+  slipOn(){ return this.mode>0 && this.wrong()!==this.right(); },
+  num(v,d=3){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=3){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },
+  par(v){ return v<0 ? \`(\${this.num(v)})\` : this.num(v); },
+  working(){
+    const S=this.set(), T=this.ts(), x=this.x(), y=this.y(), z=this.r(this.z()), out=[];
+    const fx=this.fx(), fy=this.fy(), dx=this.dx(), dy=this.dy(), P=this.P(), Q=this.Q(), R=this.right(), W=this.wrong();
+    out.push(\`z = \${S.z}, and the point walks along \${S.path}. As t changes both x and y move, so z changes for two reasons.\`);
+    const sp=(s,v)=>/^−?\\d+$/.test(s) ? s : \`\${s} \${this.is(v)}\`;
+    out.push(\`At t = \${T}: x \${this.is(x)} and y \${this.is(y)}, so z \${this.is(z)}. Along the path, dx/dt = \${sp(S.dXS,dx)} and dy/dt = \${sp(S.dYS,dy)}.\`);
+    if(this.mode===0){
+      out.push(\`dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt), with ∂z/∂x = \${S.fxS} \${this.is(fx)} and ∂z/∂y = \${S.fyS} \${this.is(fy)}.\`);
+      out.push(\`The x part is \${this.par(fx)} × \${this.par(dx)} \${this.is(P)} and the y part is \${this.par(fy)} × \${this.par(dy)} \${this.is(Q)}, so dz/dt \${this.is(R)}.\`);
+    } else if(this.mode===1){
+      out.push(\`The slip keeps only the x part: (∂z/∂x)(dx/dt) = \${this.par(fx)} × \${this.par(dx)} \${this.is(P)}, as if y stood still.\`);
+    } else if(this.mode===2){
+      out.push(\`The slip keeps only the y part: (∂z/∂y)(dy/dt) = \${this.par(fy)} × \${this.par(dy)} \${this.is(Q)}, as if x stood still.\`);
+    } else {
+      out.push(\`The slip forgets the speeds and adds the slopes of the hill: ∂z/∂x + ∂z/∂y = \${this.num(fx)} + \${this.par(fy)} \${this.is(W)}.\`);
+    }
+    out.push(\`Check with a nudge: from t ≈ \${this.num(this.t()-this.H,4)} to \${this.num(this.t()+this.H,4)}, z goes from about \${this.num(this.z(this.t()-this.H),6)} to about \${this.num(this.z(this.t()+this.H),6)}, so Δz/Δt ≈ \${this.num(this.nudge())}.\`);
+    if(this.mode===0){
+      if(R===0 && P!==0){
+        let s=\`That agrees: dz/dt = 0. The two parts cancel: one pushes z up exactly as fast as the other pulls it down.\`;
+        if(S.id==='ring') s+=\` The path circles the bowl at radius 1, so z never changes at all.\`;
+        if(S.id==='hill') s+=\` This is the highest point of z along the path, 32/27 ≈ \${this.num(32/27)}.\`;
+        out.push(s);
+      } else if(R===0) out.push(S.id==='ring'
+        ? \`That agrees: dz/dt = 0, and both parts are 0 here. The path circles the bowl at radius 1, so z never changes at all.\`
+        : \`That agrees: dz/dt = 0, and both parts are 0 here.\`);
+      else if(P>0 && R<0) out.push(\`That agrees with dz/dt \${this.is(R)}: the x part pushes z up, but the y part pulls harder, so z falls.\`);
+      else out.push(\`That agrees with dz/dt \${this.is(R)}: z \${R>0?'rises':'falls'} as t rises here.\`);
+    } else if(W!==R){
+      out.push(this.mode===1 ? \`So keeping only the x part is wrong: it misses the y part, \${this.num(Q)}. The rate is \${this.num(R)}.\`
+        : this.mode===2 ? \`So keeping only the y part is wrong: it misses the x part, \${this.num(P)}. The rate is \${this.num(R)}.\`
+        : \`So forgetting the speeds is wrong: each slope of the hill has to be multiplied by how fast the path moves that way. The rate is \${this.num(R)}.\`);
+    } else if(R===0) out.push(\`Here everything is 0, so even the slip gives 0. Anywhere else it would be wrong.\`);
+    else if(this.mode<3) out.push(\`It gets it right here only because the \${this.mode===1?'y':'x'} part happens to be 0. Anywhere else it would be wrong.\`);
+    else out.push(\`It gets it right here by luck: dx/dt = 1 and dy/dt = 1, so multiplying by them changes nothing. Anywhere else it would be wrong.\`);
+    return out;
+  },
+  /* z against t, with its tangent in green, a slip's line in red, and the two parts as bars */
+  L:40, T0:12, W:300, Hh:180,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.T0+this.Hh-(v-a)/(b-a)*this.Hh; },
+  seg(pt,pz,m,key,col,extra=''){
+    const [a,b]=this.set().D, [c,d]=this.set().R, w=(b-a)/5, f=v=>v.toFixed(2);
+    let t0=pt-w, t1=pt+w;
+    if(m!==0){ const ta=pt+(c-pz)/m, tb=pt+(d-pz)/m; t0=Math.max(t0,Math.min(ta,tb)); t1=Math.min(t1,Math.max(ta,tb)); }
+    t0=Math.max(t0,a); t1=Math.min(t1,b);
+    return \`<line data-k="\${key}" x1="\${f(this.PX(t0))}" y1="\${f(this.PY(pz+m*(t0-pt)))}" x2="\${f(this.PX(t1))}" y2="\${f(this.PY(pz+m*(t1-pt)))}" stroke="\${col}" stroke-width="2.5" stroke-linecap="round"\${extra}/>\`;
+  },
+  svg(){
+    const S=this.set(), [a,b]=S.D, [c,d]=S.R, t=this.t(), z=this.z(), f=v=>v.toFixed(2), pts=[];
+    for(let i=0;i<=240;i++){ const v=a+(b-a)*i/240, w=this.z(v); if(w>=c && w<=d) pts.push(\`\${f(this.PX(v))},\${f(this.PY(w))}\`); }
+    const P=this.P(), Q=this.Q(), R=this.right(), big=Math.max(1,Math.abs(P),Math.abs(Q),Math.abs(R)), u=120/big, mid=220;
+    let out=\`<svg viewBox="0 0 360 290" style="width:100%;height:auto;display:block" role="img" aria-label="z along the path in blue, with its tangent at t = \${this.ts()}, rate \${this.num(R)}\${this.slipOn()?\`, and the slip’s line, rate \${this.num(this.wrong())}\`:''}. Below, the x part \${this.num(P)} and the y part \${this.num(Q)} add to \${this.num(R)}">\`;
+    if(c<=0 && d>=0) out+=\`<line data-k="taxis" x1="\${this.L}" y1="\${f(this.PY(0))}" x2="\${this.L+this.W}" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<text x="\${this.L+this.W}" y="\${this.T0+this.Hh+14}" font-size="11" text-anchor="end" fill="\${FIG_COL.dim}">t</text>\`;
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    if(this.slipOn()) out+=this.seg(t,z,this.wrong(),'slip',FIG_COL.d,' stroke-dasharray="5 4"');
+    out+=this.seg(t,z,R,'tan',FIG_COL.c);
+    out+=\`<circle data-k="pt" cx="\${f(this.PX(t))}" cy="\${f(this.PY(z))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    /* the bars: x part, y part, and their sum, from a common zero line */
+    out+=\`<line data-k="zero" x1="\${mid}" y1="\${this.T0+this.Hh+20}" x2="\${mid}" y2="282" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    [['xpart','x part',P,FIG_COL.a],['ypart','y part',Q,FIG_COL.b],['sum','dz/dt',R,FIG_COL.c]].forEach(([k,lab,v,col],i)=>{
+      const y0=this.T0+this.Hh+26+i*20, x0=Math.min(mid,mid+v*u), w=Math.abs(v*u);
+      out+=\`<text x="8" y="\${y0+10}" font-size="11" fill="\${FIG_COL.dim}">\${lab}</text>\`;
+      out+=\`<rect data-k="\${k}" x="\${f(x0)}" y="\${y0}" width="\${f(w)}" height="13" rx="2" fill="\${col}"/>\`;
+    });
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-pathchain'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
+  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },
+  setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('pcSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="PathChain.pick(\${i})" aria-label="\${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('pcModes').innerHTML=this.MODES.map((m,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.mode}" onclick="PathChain.setMode(\${i})" aria-label="\${['Add the x part and the y part','Try the slip that keeps only the x part','Try the slip that keeps only the y part','Try the slip that forgets dx/dt and dy/dt'][i]}">\${m}</button>\`).join('');
+    document.getElementById('pcT').textContent=\`t = \${this.ts()}\`;
+    document.getElementById('pcTLo').disabled=this.k<=0;
+    document.getElementById('pcTHi').disabled=this.k>=this.set().T.length-1;
+    document.getElementById('pcFig').innerHTML=this.svg()+
+      \`<div class="figcap">The blue curve is z as the point walks the path, and the green line is its tangent at the gold point. A slip’s line is drawn dashed in red. Below, the x part and the y part are bars that add up to dz/dt.</div>\`;
+    document.getElementById('pcRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('pcGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE PATH','both reasons counted','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

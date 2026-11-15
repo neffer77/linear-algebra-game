@@ -89,6 +89,7 @@ function loadGame() {
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
+    ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcSets')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -107,7 +108,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2700,6 +2701,139 @@ const ladderNotes = (() => {
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
   return { n, goals: Object.keys(found).length };
+})();
+
+/* The path chain workshop: every hill, every t and every method. The true
+   rate is found here by nudging z along Math's own path, and each part by
+   nudging the hill in x or y and the path in t, never from the formulas the
+   readout uses; every number it works out is checked against those; every
+   sentence's condition is decided independently; and the drawing, bars
+   included, is read back. */
+const pathChainNotes = (() => {
+  const W = PathChain;
+  const num = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const r3 = v => Math.round(v * 1000) / 1000;
+  const near3 = (t, v) => Math.abs(num(t) - r3(v)) < 1e-9;
+  const eqv = (sign, t, v) => near3(t, v) && (sign === '=') === (Math.abs(r3(v) - v) < 1e-9);
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  const HILL = {
+    xy: [(x, y) => x * y, t => t * t, t => t],
+    ring: [(x, y) => x * x + y * y, Math.cos, Math.sin],
+    hill: [(x, y) => x * x * y, t => t, t => 2 - t],
+  };
+  const VAL = { 'π/6': Math.PI / 6, 'π/4': Math.PI / 4, 'π/3': Math.PI / 3, 'π/2': Math.PI / 2, '2π/3': 2 * Math.PI / 3, 'π': Math.PI, '1/3': 1 / 3, '2/3': 2 / 3, '4/3': 4 / 3, '5/3': 5 / 3 };
+  if (W.SETS.map(S => S.id).join() !== 'xy,ring,hill') fail('pathchain', 'sets', W.SETS.map(S => S.id).join());
+  if (W.MODES.join() !== 'Both parts,x part only,y part only,Forget the speeds') fail('pathchain', 'modes', W.MODES.join());
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.SETS[0].start; W.mode = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('pathchain', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.mode = 2; W.k = 0; W.pick(si);
+    if (W.mode !== 0 || W.k !== S.start) fail('pathchain', S.id, 'picking a hill does not start t and the method again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('pathchain', g.id, `met where ${S.id} starts, so picking it gives the goal away`);
+    W.k = S.T.length - 1; W.moveT(1); if (W.k !== S.T.length - 1) fail('pathchain', S.id, 't does not stop at its last step');
+    W.k = 0; W.moveT(-1); if (W.k !== 0) fail('pathchain', S.id, 't does not stop at its first step'); });
+  const truth = {
+    cancel: (id, t, m, R, P) => id === 'ring' && m === 0 && Math.abs(P) > 1e-9 && Math.abs(R) < 1e-9,
+    peak: (id, t, m) => id === 'hill' && m === 0 && Math.abs(t - 4 / 3) < 1e-12,
+    tug: (id, t, m, R, P) => m === 0 && P > 1e-9 && R < -1e-9,
+    xonly: (id, t, m, R, P) => m === 1 && Math.abs(P - R) > 1e-6,
+    yonly: (id, t, m, R, P, Q) => m === 2 && Math.abs(Q - R) > 1e-6,
+    speeds: (id, t, m, R, P, Q, F) => m === 3 && Math.abs(F - R) > 1e-6,
+    luck: (id, t, m, R, P, Q, F) => m === 3 && Math.abs(F - R) < 1e-6 && Math.abs(R) > 1e-6,
+  };
+  if (Object.keys(truth).join() !== W.GOALS.map(g => g.id).join()) fail('pathchain', 'goals', W.GOALS.map(g => g.id).join());
+  if (W.SETS[2].T.join() !== '0,1/3,2/3,1,4/3,5/3,2') fail('pathchain', 'hill', `t should step from 0 to 2 in thirds: ${W.SETS[2].T.join()}`);
+  if (!W.SETS[1].T.includes('π/4')) fail('pathchain', 'ring', `the circle should stop at π/4: ${W.SETS[1].T.join()}`);
+  const found = {}; let n = 0, pts = 0;
+  W.SETS.forEach((S, si) => {
+    const [F, X, Y] = HILL[S.id], Z = t => F(X(t), Y(t));
+    const ts = S.T.map(v => typeof v === 'string' ? VAL[v] : v);
+    if (ts.some((t, i) => i && t <= ts[i - 1])) fail('pathchain', S.id, `t should rise: ${S.T.join()}`);
+    S.T.forEach((tv, k) => [0, 1, 2, 3].forEach(mode => {
+      reset(); W.si = si; W.k = k; W.mode = mode; W.touched = true; n++;
+      const t = ts[k], T = typeof tv === 'string' ? tv : (tv < 0 ? '−' + -tv : String(tv));
+      const key = `${S.id} t=${T} mode ${mode}`, got = W.working(), txt = got.join(' ');
+      const x = X(t), y = Y(t), z = Z(t), R = sl(Z, t);
+      const fx = sl(v => F(v, y), x), fy = sl(v => F(x, v), y), dx = sl(X, t), dy = sl(Y, t);
+      const P = fx * dx, Q = fy * dy, Fs = fx + fy;
+      if (Math.abs(W.right() - R) > 1e-6 || Math.abs(W.P() - P) > 1e-6 || Math.abs(W.Q() - Q) > 1e-6) fail('pathchain', key, `the rate ${W.right()} or its parts are not the nudged ${R}`);
+      if (Math.abs(P + Q - R) > 1e-6) fail('pathchain', key, 'the two parts do not add to the rate');
+      if (got[0] !== `z = ${S.z}, and the point walks along ${S.path}. As t changes both x and y move, so z changes for two reasons.`) fail('pathchain', key, got[0]);
+      const m1 = got[1].match(/^At t = (\S+): x ([=≈]) (\S+) and y ([=≈]) (\S+), so z ([=≈]) (\S+)\. Along the path, dx\/dt = (.+?) and dy\/dt = (.+)\.$/);
+      if (!m1) fail('pathchain', key, `the point is not worked: ${got[1]}`);
+      else {
+        if (m1[1] !== T) fail('pathchain', key, `t is not named: ${got[1]}`);
+        if (!eqv(m1[2], m1[3], x) || !eqv(m1[4], m1[5], y) || !eqv(m1[6], m1[7], z)) fail('pathchain', key, `the point is wrong: ${got[1]}`);
+        [[m1[8], S.dXS, dx], [m1[9], S.dYS, dy]].forEach(([s, f, v]) => {
+          const m = s.match(/^(.+?)(?: ([=≈]) (\S+))?$/);
+          if (/^−?\d+$/.test(f) ? s !== f || num(f) !== Math.round(v) || Math.abs(v - num(f)) > 1e-6 : !m || m[1] !== f || !m[2] || !eqv(m[2], m[3], v)) fail('pathchain', key, `a speed is wrong: ${s}`);
+        });
+      }
+      const nl = got[got.length - 2].match(/^Check with a nudge: from t ≈ (\S+) to (\S+), z goes from about (\S+) to about (\S+), so Δz\/Δt ≈ (\S+)\.$/);
+      if (!nl || !near3(nl[5], R) || Math.abs(num(nl[1]) - (t - 0.001)) > 1e-4 || Math.abs(num(nl[2]) - (t + 0.001)) > 1e-4 || Math.abs(num(nl[3]) - Z(t - 0.001)) > 1e-6 || Math.abs(num(nl[4]) - Z(t + 0.001)) > 1e-6) fail('pathchain', key, `the nudge is wrong: ${got[got.length - 2]}`);
+      const last = got[got.length - 1], zero = Math.abs(R) < 1e-9, wrongV = [R, P, Q, Fs][mode], same = Math.abs(wrongV - R) < 1e-6;
+      if (mode === 0) {
+        const m2 = got[2].match(/^dz\/dt = \(∂z\/∂x\)\(dx\/dt\) \+ \(∂z\/∂y\)\(dy\/dt\), with ∂z\/∂x = (\S+) ([=≈]) (\S+) and ∂z\/∂y = (\S+) ([=≈]) (\S+)\.$/);
+        if (!m2 || m2[1] !== S.fxS || m2[4] !== S.fyS || !eqv(m2[2], m2[3], fx) || !eqv(m2[5], m2[6], fy)) fail('pathchain', key, `the partials are wrong: ${got[2]}`);
+        const m3 = got[3].match(/^The x part is (\S+) × (\S+) ([=≈]) (\S+) and the y part is (\S+) × (\S+) ([=≈]) (\S+), so dz\/dt ([=≈]) (\S+)\.$/);
+        if (!m3 || !near3(m3[1], fx) || !near3(m3[2], dx) || !eqv(m3[3], m3[4], P) || !near3(m3[5], fy) || !near3(m3[6], dy) || !eqv(m3[7], m3[8], Q) || !eqv(m3[9], m3[10], R)) fail('pathchain', key, `the parts are wrong: ${got[3]}`);
+        const cancel = zero && Math.abs(P) > 1e-9;
+        if (cancel !== /The two parts cancel/.test(last)) fail('pathchain', key, `the cancel sentence shows at the wrong time: ${last}`);
+        if ((S.id === 'ring') !== /circles the bowl at radius 1/.test(last) && zero) fail('pathchain', key, `the circle is not explained: ${last}`);
+        const top = S.id === 'hill' && Math.abs(t - 4 / 3) < 1e-12;
+        if (top !== /highest point of z along the path, 32\/27 ≈ 1\.185\./.test(last) || (top && Math.abs(z - 32 / 27) > 1e-12)) fail('pathchain', key, `the top sentence shows at the wrong time: ${last}`);
+        if (zero && !cancel && !/both parts are 0 here/.test(last)) fail('pathchain', key, `a still point is not said: ${last}`);
+        const tug = P > 1e-9 && R < -1e-9;
+        if (tug !== /the y part pulls harder/.test(last)) fail('pathchain', key, `the tug of war shows at the wrong time: ${last}`);
+        if (!zero && !tug && last !== `That agrees with dz/dt ${Math.abs(r3(R) - R) < 1e-9 ? '=' : '≈'} ${W.num(R)}: z ${R > 0 ? 'rises' : 'falls'} as t rises here.`) fail('pathchain', key, `the verdict is wrong: ${last}`);
+      } else {
+        const want = mode === 1 ? /^The slip keeps only the x part: \(∂z\/∂x\)\(dx\/dt\) = (\S+) × (\S+) ([=≈]) (\S+), as if y stood still\.$/
+          : mode === 2 ? /^The slip keeps only the y part: \(∂z\/∂y\)\(dy\/dt\) = (\S+) × (\S+) ([=≈]) (\S+), as if x stood still\.$/
+          : /^The slip forgets the speeds and adds the slopes of the hill: ∂z\/∂x \+ ∂z\/∂y = (\S+) \+ (\S+) ([=≈]) (\S+)\.$/;
+        const m = got[2].match(want), a1 = mode === 2 ? fy : fx, a2 = mode === 1 ? dx : mode === 2 ? dy : fy;
+        if (!m || !near3(m[1], a1) || !near3(m[2], a2) || !eqv(m[3], m[4], wrongV)) fail('pathchain', key, `the slip is wrong: ${got[2]}`);
+        if (!same) {
+          const miss = mode === 1 ? `it misses the y part, ${W.num(Q)}.` : mode === 2 ? `it misses the x part, ${W.num(P)}.` : 'multiplied by how fast the path moves that way.';
+          if (!last.includes('is wrong') || !last.includes(miss) || !last.endsWith(`The rate is ${W.num(R)}.`)) fail('pathchain', key, `the slip is not caught: ${last}`);
+        } else if (zero !== /everything is 0/.test(last) || (!zero && mode === 3) !== /by luck/.test(last)) fail('pathchain', key, `a slip that agrees is not explained: ${last}`);
+        else if (!zero && mode < 3 && last !== `It gets it right here only because the ${mode === 1 ? 'y' : 'x'} part happens to be 0. Anywhere else it would be wrong.`) fail('pathchain', key, `a dropped part is not said to be 0: ${last}`);
+        if (!zero && same && mode < 3 && Math.abs(mode === 1 ? Q : P) > 1e-6) fail('pathchain', key, 'a dropped part is called 0 but is not');
+        if (!zero && same && mode === 3 && (Math.abs(dx - 1) > 1e-6 || Math.abs(dy - 1) > 1e-6)) fail('pathchain', key, 'luck is said where a speed is not 1');
+      }
+      if (/× −/.test(txt)) fail('pathchain', key, 'a negative number is multiplied without brackets');
+      if (/ = (\S+) = \1[.,]/.test(txt)) fail('pathchain', key, 'a number is said to equal itself');
+      /* the figure: the point on the curve, the tangent's slope, the slip's line only when it differs, and the bars */
+      const svg = W.svg(), [a, b] = S.D, [c, d] = S.R;
+      const PX = v => W.L + (v - a) / (b - a) * W.W, PY = v => W.T0 + W.Hh - (v - c) / (d - c) * W.Hh;
+      const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+      if (!pt || Math.abs(+pt[1] - PX(t)) > 0.01 || Math.abs(+pt[2] - PY(z)) > 0.01) fail('pathchain', key, 'the gold point is not on the curve at t');
+      const line = k2 => { const m = svg.match(new RegExp(`data-k="${k2}" x1="([\\d.-]+)" y1="([\\d.-]+)" x2="([\\d.-]+)" y2="([\\d.-]+)"`)); return m && m.slice(1).map(Number); };
+      const slope = L => -((L[3] - L[1]) / (W.Hh / (d - c))) / ((L[2] - L[0]) / (W.W / (b - a)));
+      const Tn = line('tan'), Sl = line('slip');
+      if (!Tn || Math.abs(slope(Tn) - R) > 0.02 * Math.max(1, Math.abs(R))) fail('pathchain', key, `the tangent is drawn with slope ${Tn && slope(Tn)}, not ${R}`);
+      if ((mode > 0 && !same) !== !!Sl || (Sl && Math.abs(slope(Sl) - wrongV) > 0.02 * Math.max(1, Math.abs(wrongV)))) fail('pathchain', key, `the slip's line is wrong`);
+      for (const L of [Tn, Sl].filter(Boolean)) if (L.some((v, i) => i % 2 ? v < W.T0 - 0.5 || v > W.T0 + W.Hh + 0.5 : v < W.L - 0.5 || v > W.L + W.W + 0.5)) fail('pathchain', key, 'a line runs off the chart');
+      const zx = svg.match(/data-k="zero" x1="([\d.-]+)"/), mid = zx && +zx[1];
+      const bar = k2 => { const m = svg.match(new RegExp(`data-k="${k2}" x="([\\d.-]+)" y="[\\d.-]+" width="([\\d.-]+)"`)); return m ? (+m[1] < mid - 0.01 ? -1 : 1) * +m[2] : NaN; };
+      const u = 120 / Math.max(1, Math.abs(P), Math.abs(Q), Math.abs(R)), bx = bar('xpart'), by = bar('ypart'), bs = bar('sum');
+      const bars = [...svg.matchAll(/<rect [^>]*x="([\d.-]+)" y="[\d.-]+" width="([\d.-]+)"/g)].map(m => [+m[1], +m[1] + +m[2]]);
+      if (bars.some(([l, rr]) => l < 60 - 0.01 || rr > 352)) fail('pathchain', key, 'a bar runs into its label or off the side');
+      if (!zx || Math.abs(bx - P * u) > 0.02 || Math.abs(by - Q * u) > 0.02 || Math.abs(bs - R * u) > 0.02 || Math.abs(bx + by - bs) > 0.05) fail('pathchain', key, `the bars do not show the parts: ${bx}, ${by}, ${bs}`);
+      const poly = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!poly) fail('pathchain', key, 'no curve');
+      else for (const q of poly[1].split(' ')) { const [qx, qy] = q.split(',').map(Number), vt = a + (qx - W.L) / W.W * (b - a); pts++;
+        if (Math.abs(qy - PY(Z(vt))) > 0.05 || qy < W.T0 - 0.5 || qy > W.T0 + W.Hh + 0.5) { fail('pathchain', key, `the curve leaves z = ${S.z} at ${q}`); break; } }
+      if (!/aria-label="[^"]+"/.test(svg)) fail('pathchain', key, 'the figure has no description');
+      for (const g of W.GOALS) {
+        const want = truth[g.id](S.id, t, mode, R, P, Q, Fs);
+        if (!!g.ok(W) !== want) fail('pathchain', g.id, `${key}: goal ${g.id} is ${want ? 'not ' : ''}met`);
+        if (want) found[g.id] = 1;
+      }
+    }));
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('pathchain', g.id, 'no step finds this goal');
+  reset();
+  return { n, pts, goals: Object.keys(found).length };
 })();
 
 /* The log slope workshop: every slope is checked against a nudge on Math's
@@ -5962,6 +6096,7 @@ console.log(`  trig integral guesses ${pad(trigIntNotes.n.toLocaleString(), 10)}
 console.log(`  tangent planes ${pad(tanPlaneNotes.n.toLocaleString(), 17)}  (the height and slopes found by nudging the surface, never from 2ax; every plane written parsed back and evaluated, every number worked checked, every sentence, both slices read back, ${tanPlaneNotes.goals} goals findable)`);
 console.log(`  inverse slopes ${pad(invSlopeNotes.n.toLocaleString(), 17)}  (true slopes found by nudging Math's own arcsin, arccos and arctan, never from the identities; every number worked checked, every sentence, ${invSlopeNotes.pts.toLocaleString()} curve points read back, ${invSlopeNotes.goals} goals findable)`);
 console.log(`  log slopes ${pad(logDiffNotes.n.toLocaleString(), 21)}  (true slopes found by nudging Math's own x to its power, never from ln x + 1; every number worked checked, every sentence, ${logDiffNotes.pts.toLocaleString()} curve points read back, ${logDiffNotes.goals} goals findable)`);
+console.log(`  path chain rates ${pad(pathChainNotes.n.toLocaleString(), 15)}  (true rates found by nudging z along Math's own path, each part by nudging the hill and the path; every number worked checked, every sentence, the bars read back, ${pathChainNotes.pts.toLocaleString()} curve points, ${pathChainNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

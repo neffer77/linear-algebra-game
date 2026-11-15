@@ -1,264 +1,299 @@
 {
- "change": "The Log Slope Workshop: take ln first when x is in the base and the power",
+ "change": "The Path Chain Workshop: dz/dt along a path is an x part plus a y part",
  "mutations": [
   {
-   "name": "xˣ's power is fixed at 1",
+   "name": "∂z/∂x of xy is x",
    "file": "index.html",
-   "find": "     p:x=>x, dp:x=>1, pw:'x'",
-   "replace": "     p:x=>1, dp:x=>1, pw:'x'",
+   "find": "f:(x,y)=>x*y, fx:(x,y)=>y, fy:(x,y)=>x,",
+   "replace": "f:(x,y)=>x*y, fx:(x,y)=>x, fy:(x,y)=>x,",
    "run": "verify"
   },
   {
-   "name": "x²ˣ forgets its 2 in p′",
+   "name": "the circle's ∂z/∂y forgets its 2",
    "file": "index.html",
-   "find": "     p:x=>2*x, dp:x=>2,",
-   "replace": "     p:x=>2*x, dp:x=>1,",
+   "find": "fx:(x,y)=>2*x, fy:(x,y)=>2*y,",
+   "replace": "fx:(x,y)=>2*x, fy:(x,y)=>y,",
    "run": "verify"
   },
   {
-   "name": "x^(1/x)'s p′ loses its minus",
+   "name": "∂z/∂x of x²y forgets y",
    "file": "index.html",
-   "find": "dp:x=>-1/(x*x),",
-   "replace": "dp:x=>1/(x*x),",
+   "find": "fx:(x,y)=>2*x*y, fy:(x,y)=>x*x,",
+   "replace": "fx:(x,y)=>2*x, fy:(x,y)=>x*x,",
    "run": "verify"
   },
   {
-   "name": "y′/y forgets the product rule",
+   "name": "x = t² has speed t",
    "file": "index.html",
-   "find": "return this.r(S.dp(x)*this.ln()+S.p(x)/x); },",
-   "replace": "return this.r(S.dp(x)*this.ln()); },",
+   "find": "X:t=>t*t, Y:t=>t, dX:t=>2*t,",
+   "replace": "X:t=>t*t, Y:t=>t, dX:t=>t,",
    "run": "verify"
   },
   {
-   "name": "y is never multiplied back",
+   "name": "cos t moves at +sin t",
    "file": "index.html",
-   "find": "  right(){ return this.r(this.y()*this.dl()); },",
-   "replace": "  right(){ return this.dl(); },",
+   "find": "dX:t=>-Math.sin(t), dY:t=>Math.cos(t),",
+   "replace": "dX:t=>Math.sin(t), dY:t=>Math.cos(t),",
    "run": "verify"
   },
   {
-   "name": "the power rule keeps its power",
+   "name": "y = 2 − t moves at +1",
    "file": "index.html",
-   "find": "return this.r(p*x**(p-1)); },",
-   "replace": "return this.r(p*x**p); },",
+   "find": "X:t=>t, Y:t=>2-t, dX:t=>1, dY:t=>-1,",
+   "replace": "X:t=>t, Y:t=>2-t, dX:t=>1, dY:t=>1,",
    "run": "verify"
   },
   {
-   "name": "the exponent rule forgets p′",
+   "name": "the y part forgets dy/dt",
    "file": "index.html",
-   "find": "return this.r(this.y()*this.ln()*S.dp(x)); },",
-   "replace": "return this.r(this.y()*this.ln()); },",
+   "find": "return this.r(S.fy(S.X(t),S.Y(t))*S.dY(t)); },",
+   "replace": "return this.r(S.fy(S.X(t),S.Y(t))); },",
    "run": "verify"
   },
   {
-   "name": "the sum is the power rule twice",
+   "name": "dz/dt is the x part only",
    "file": "index.html",
-   "find": "this.mode===3 ? this.r(this.partP()+this.partE())",
-   "replace": "this.mode===3 ? this.r(2*this.partP())",
+   "find": "  right(){ return this.r(this.P()+this.Q()); },",
+   "replace": "  right(){ return this.P(); },",
+   "run": "verify"
+  },
+  {
+   "name": "forgetting the speeds multiplies them",
+   "file": "index.html",
+   "find": "this.mode===3 ? this.r(this.fx()+this.fy())",
+   "replace": "this.mode===3 ? this.r(this.fx()*this.fy())",
    "run": "verify"
   },
   {
    "name": "the nudge is one-sided",
    "file": "index.html",
-   "find": "return (this.y(x+this.H)-this.y(x-this.H))/(2*this.H); },\n  num(v,d=3)",
-   "replace": "return (this.y(x+this.H)-this.y(x))/(this.H); },\n  num(v,d=3)",
+   "find": "return (this.z(t+this.H)-this.z(t-this.H))/(2*this.H); },\n  /* a slip's line",
+   "replace": "return (this.z(t+this.H)-this.z(t))/(this.H); },\n  /* a slip's line",
    "run": "verify"
   },
   {
-   "name": "ln 1/e is taken as 1",
+   "name": "4/3 is not a step",
    "file": "index.html",
-   "find": "v==='1/e' ? -1 : v===1 ? 0",
-   "replace": "v==='1/e' ? 1 : v===1 ? 0",
+   "find": "T:[0,'1/3','2/3',1,'4/3','5/3',2]",
+   "replace": "T:[0,'1/3','2/3',1,1.25,'5/3',2]",
    "run": "verify"
   },
   {
-   "name": "1/e is not a step",
+   "name": "the circle starts on its cancel",
    "file": "index.html",
-   "find": "X:[0.25,'1/e',0.5,1,1.5,2]",
-   "replace": "X:[0.25,0.375,0.5,1,1.5,2]",
+   "find": "T:[0,'π/6','π/4','π/3','π/2','2π/3','π'], start:0",
+   "replace": "T:[0,'π/6','π/4','π/3','π/2','2π/3','π'], start:2",
    "run": "verify"
   },
   {
-   "name": "x²ˣ starts at x = 1",
+   "name": "t runs past its last step",
    "file": "index.html",
-   "find": "X:[0.25,'1/e',0.5,1,1.25,1.5], start:4",
-   "replace": "X:[0.25,'1/e',0.5,1,1.25,1.5], start:3",
+   "find": "  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
+   "replace": "  moveT(by){ const v=this.k+by; if(v<0 || v>this.set().T.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
    "run": "verify"
   },
   {
-   "name": "x runs past its last step",
+   "name": "picking a hill keeps the slip",
    "file": "index.html",
-   "find": "if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
-   "replace": "if(v<0 || v>this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
-   "run": "verify"
-  },
-  {
-   "name": "picking a curve keeps the slip",
-   "file": "index.html",
-   "find": "this.mode=0; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
-   "replace": "this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "find": "this.mode=0; this.touched=true; this.render(); },\n  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
+   "replace": "this.touched=true; this.render(); },\n  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
    "run": "verify"
   },
   {
    "name": "an exact number is any number",
    "file": "index.html",
-   "find": "(Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  /* y = x^p",
-   "replace": "(Math.abs(Math.round(v*p)/p-v)<1 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  /* y = x^p",
+   "find": "(Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  working(){\n    const S=this.set(), T=this.ts()",
+   "replace": "(Math.abs(Math.round(v*p)/p-v)<1 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  working(){\n    const S=this.set(), T=this.ts()",
    "run": "verify"
   },
   {
-   "name": "the flat goal takes a slip",
+   "name": "a negative speed is multiplied bare",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.mode===0 && K.x()===1/Math.E},",
-   "replace": "ok:K=>K.si===0 && K.x()===1/Math.E},",
+   "find": "The x part is ${this.par(fx)} × ${this.par(dx)}",
+   "replace": "The x part is ${this.par(fx)} × ${this.num(dx)}",
    "run": "verify"
   },
   {
-   "name": "the peak goal takes any x",
+   "name": "the cancel goal takes a still point",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.mode===0 && K.x()===Math.E},",
+   "find": "ok:K=>K.si===1 && K.mode===0 && K.P()!==0 && K.right()===0},",
+   "replace": "ok:K=>K.si===1 && K.mode===0 && K.right()===0},",
+   "run": "verify"
+  },
+  {
+   "name": "the peak goal takes any t",
+   "file": "index.html",
+   "find": "ok:K=>K.si===2 && K.mode===0 && K.raw()==='4/3'},",
    "replace": "ok:K=>K.si===2 && K.mode===0},",
    "run": "verify"
   },
   {
-   "name": "the power rule is found without being caught",
+   "name": "the tug goal takes any fall",
    "file": "index.html",
-   "find": "ok:K=>K.mode===1 && K.wrong()!==K.right()},\n    {id:'expo'",
-   "replace": "ok:K=>K.mode===1},\n    {id:'expo'",
+   "find": "ok:K=>K.mode===0 && K.P()>0 && K.right()<0},",
+   "replace": "ok:K=>K.mode===0 && K.right()<0},",
    "run": "verify"
   },
   {
-   "name": "luck takes any slip",
+   "name": "the x-only slip is found without being caught",
    "file": "index.html",
-   "find": "ok:K=>K.mode===1 && K.wrong()===K.right()},",
-   "replace": "ok:K=>K.mode>=1 && K.wrong()===K.right()},",
+   "find": "toast:'y moves too',\n     ok:K=>K.mode===1 && K.wrong()!==K.right()},",
+   "replace": "toast:'y moves too',\n     ok:K=>K.mode===1},",
    "run": "verify"
   },
   {
-   "name": "the sum takes a zero part",
+   "name": "luck takes a zero rate",
    "file": "index.html",
-   "find": "ok:K=>K.mode===3 && K.partP()!==0 && K.partE()!==0}",
-   "replace": "ok:K=>K.mode===3}",
+   "find": "ok:K=>K.mode===3 && K.wrong()===K.right() && K.right()!==0}",
+   "replace": "ok:K=>K.mode===3 && K.wrong()===K.right()}",
    "run": "verify"
   },
   {
-   "name": "the top sentence names the bottom",
+   "name": "the cancel sentence shows at every still point",
    "file": "index.html",
-   "find": "this is the top of x^(1/x), e^(1/e)",
-   "replace": "this is the lowest point of x^(1/x), e^(1/e)",
+   "find": "if(R===0 && P!==0){",
+   "replace": "if(R===0){",
+   "run": "verify"
+  },
+  {
+   "name": "the top is said on the circle",
+   "file": "index.html",
+   "find": "if(S.id==='hill') s+=` This is the highest point",
+   "replace": "if(S.id!=='xy') s+=` This is the highest point",
    "run": "verify"
   },
   {
    "name": "rising and falling are swapped",
    "file": "index.html",
-   "find": "y ${R>0?'rises':'falls'} as x rises here.",
-   "replace": "y ${R<0?'rises':'falls'} as x rises here.",
+   "find": "z ${R>0?'rises':'falls'} as t rises here.",
+   "replace": "z ${R<0?'rises':'falls'} as t rises here.",
+   "run": "verify"
+  },
+  {
+   "name": "the tug of war is said for any fall",
+   "file": "index.html",
+   "find": "else if(P>0 && R<0) out.push",
+   "replace": "else if(R<0) out.push",
    "run": "verify"
   },
   {
    "name": "a slip is never caught",
    "file": "index.html",
-   "find": "    else if(W!==R) out.push(this.mode===1\n      ? `So the power",
-   "replace": "    else if(false) out.push(this.mode===1\n      ? `So the power",
+   "find": "    } else if(W!==R){\n      out.push(this.mode===1 ? `So keeping only",
+   "replace": "    } else if(false){\n      out.push(this.mode===1 ? `So keeping only",
    "run": "verify"
   },
   {
    "name": "the missing part is the slip's own",
    "file": "index.html",
-   "find": "x moving in the power, x^(${S.pw})·ln x·(${S.dP}) ${this.is(this.partE())}",
-   "replace": "x moving in the power, x^(${S.pw})·ln x·(${S.dP}) ${this.is(this.partP())}",
+   "find": "it misses the y part, ${this.num(Q)}.",
+   "replace": "it misses the y part, ${this.num(P)}.",
    "run": "verify"
   },
   {
-   "name": "the multiply back drops y",
+   "name": "a dropped part is always called luck",
    "file": "index.html",
-   "find": "so multiply back by y: y′ = ${this.num(y)} × ${this.par(D)} ${this.is(R)}.`",
-   "replace": "so multiply back by y: y′ = ${this.num(y)} × ${this.par(D)} ${this.is(D)}.`",
+   "find": "    else if(this.mode<3) out.push(`It gets it right here only because",
+   "replace": "    else if(false) out.push(`It gets it right here only because",
    "run": "verify"
   },
   {
-   "name": "the slip's line is drawn for the sum",
+   "name": "the slip's line is drawn when it agrees",
    "file": "index.html",
-   "find": "  slipOn(){ return this.mode>0 && Math.abs",
-   "replace": "  slipOn(){ return this.mode>0 || Math.abs",
+   "find": "  slipOn(){ return this.mode>0 && this.wrong()!==this.right(); },",
+   "replace": "  slipOn(){ return this.mode>0; },",
    "run": "verify"
   },
   {
-   "name": "the tangent is drawn with the slip's slope",
+   "name": "the tangent is drawn with the slip's rate",
    "file": "index.html",
-   "find": "    out+=this.seg(x,y,this.right(),'tan',FIG_COL.c);",
-   "replace": "    out+=this.seg(x,y,this.wrong(),'tan',FIG_COL.c);",
+   "find": "    out+=this.seg(t,z,R,'tan',FIG_COL.c);",
+   "replace": "    out+=this.seg(t,z,this.wrong(),'tan',FIG_COL.c);",
    "run": "verify"
   },
   {
    "name": "the lines run off the chart",
    "file": "index.html",
-   "find": "    x0=Math.max(x0,a); x1=Math.min(x1,b);\n    return `<line data-k=\"${key}\"",
+   "find": "    t0=Math.max(t0,a); t1=Math.min(t1,b);\n    return `<line data-k=\"${key}\"",
    "replace": "    return `<line data-k=\"${key}\"",
    "run": "verify"
   },
   {
    "name": "the point sits on the axis",
    "file": "index.html",
-   "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\"",
-   "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(0))}\"",
+   "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(t))}\" cy=\"${f(this.PY(z))}\"",
+   "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(t))}\" cy=\"${f(this.PY(0))}\"",
    "run": "verify"
   },
   {
-   "name": "the curve buttons run in one row",
+   "name": "the sum bar shows the x part",
    "file": "index.html",
-   "find": "<div id=\"lgSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"lgSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:logdiff"
+   "find": "['sum','dz/dt',R,FIG_COL.c]",
+   "replace": "['sum','dz/dt',P,FIG_COL.c]",
+   "run": "verify"
+  },
+  {
+   "name": "bars are drawn without their sign",
+   "file": "index.html",
+   "find": "const y0=this.T0+this.Hh+26+i*20, x0=Math.min(mid,mid+v*u)",
+   "replace": "const y0=this.T0+this.Hh+26+i*20, x0=mid",
+   "run": "verify"
+  },
+  {
+   "name": "the hill buttons run in one row",
+   "file": "index.html",
+   "find": "<div id=\"pcSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"pcSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:pathchain"
   },
   {
    "name": "a method button loses its name",
    "file": "index.html",
-   "find": "aria-label=\"${['Take ln of both sides first',",
+   "find": "aria-label=\"${['Add the x part and the y part',",
    "replace": "aria-label=\"${['',",
-   "run": "play:logdiff"
+   "run": "play:pathchain"
   },
   {
    "name": "the method buttons do not show which is pressed",
    "file": "index.html",
-   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"LogDiff.setMode",
-   "replace": "aria-pressed=\"false\" onclick=\"LogDiff.setMode",
-   "run": "play:logdiff"
+   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"PathChain.setMode",
+   "replace": "aria-pressed=\"false\" onclick=\"PathChain.setMode",
+   "run": "play:pathchain"
   },
   {
-   "name": "the x stepper is never switched off",
+   "name": "the t stepper is never switched off",
    "file": "index.html",
-   "find": "document.getElementById('lgXHi').disabled=this.k>=this.set().X.length-1;",
+   "find": "document.getElementById('pcTHi').disabled=this.k>=this.set().T.length-1;",
    "replace": "",
-   "run": "play:logdiff"
+   "run": "play:pathchain"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:logdiff"
+   "run": "play:pathchain"
   },
   {
-   "name": "the Tome loses the log slope workshop",
+   "name": "the Tome loses the path chain workshop",
    "file": "index.html",
-   "find": "id=\"tomeLogDiff\"",
-   "replace": "id=\"tomeLogDiffX\"",
-   "run": "play:logdiff"
+   "find": "id=\"tomePathChain\"",
+   "replace": "id=\"tomePathChainX\"",
+   "run": "play:pathchain"
   },
   {
-   "name": "the workshop saves its x",
+   "name": "the workshop saves its t",
    "file": "index.html",
-   "find": "if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
-   "replace": "if(v<0 || v>=this.set().X.length) return; this.k=v; Game.s.lg=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
-   "run": "play:logdiff"
+   "find": "  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
+   "replace": "  moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; Game.s.pc=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('pcSets')",
+   "run": "play:pathchain"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">The curve is blue. The green line is the tangent that taking ln",
-   "replace": "<div class=\"figcapX\">The curve is blue. The green line is the tangent that taking ln",
-   "run": "play:logdiff"
+   "find": "<div class=\"figcap\">The blue curve is z as the point walks",
+   "replace": "<div class=\"figcapX\">The blue curve is z as the point walks",
+   "run": "play:pathchain"
   }
  ]
 }

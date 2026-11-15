@@ -93,6 +93,7 @@ const SUITES = [
   require('./play/tanplane'),    // a height and two slopes
   require('./play/invslope'),   // mirror the curve, flip the slope
   require('./play/logdiff'),    // x in the base and the power: take ln first
+  require('./play/pathchain'),  // dz/dt along a path: an x part and a y part
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
