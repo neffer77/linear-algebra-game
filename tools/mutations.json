@@ -1,187 +1,180 @@
 {
- "change": "The Endless Area Workshop: improper integrals",
+ "change": "The Lathe Workshop: volumes of revolution",
  "mutations": [
   {
-   "name": "the area under 1/x² drops its 1 − ",
+   "name": "the disks use the left end, not the middle",
    "file": "index.html",
-   "find": "return p===1 ? Math.log(b) : (b**(1-p)-1)/(1-p); },",
-   "replace": "return p===1 ? Math.log(b) : (b**(1-p))/(1-p); },",
+   "find": "mid(i){ return this.set().a+(i+0.5)*this.dx(); },",
+   "replace": "mid(i){ return this.set().a+i*this.dx(); },",
    "run": "verify"
   },
   {
-   "name": "1/x gets the power rule's area",
+   "name": "a disk holds f, not f squared",
    "file": "index.html",
-   "find": "return p===1 ? Math.log(b) :",
-   "replace": "return p===0 ? Math.log(b) :",
+   "find": "for(let i=0;i<this.n();i++) t+=S.f(this.mid(i))**2*this.dx(); return t; },",
+   "replace": "for(let i=0;i<this.n();i++) t+=S.f(this.mid(i))*this.dx(); return t; },",
    "run": "verify"
   },
   {
-   "name": "the limit is 1/p, not 1/(p − 1)",
+   "name": "the cone's volume is a whole cylinder",
    "file": "index.html",
-   "find": "lim(){ return 1/(this.set().p-1); },",
-   "replace": "lim(){ return 1/this.set().p; },",
+   "find": "V:'9π', v:9,",
+   "replace": "V:'27π', v:27,",
    "run": "verify"
   },
   {
-   "name": "a press adds one to b, not doubles it",
+   "name": "the ball's antiderivative shown is wrong",
    "file": "index.html",
-   "find": "b(m=this.n){ return 2**m; },",
-   "replace": "b(m=this.n){ return m+1; },",
+   "find": "Gs:'4x − x³/3'",
+   "replace": "Gs:'4x − x³'",
    "run": "verify"
   },
   {
-   "name": "the cube's shown antiderivative is not its own",
+   "name": "the horn is x² not x²/2",
    "file": "index.html",
-   "find": "Ft:'−1/(2x²)'",
-   "replace": "Ft:'−1/(3x³)'",
+   "find": "f:x=>x*x/2, G:x=>x**5/20",
+   "replace": "f:x=>x*x, G:x=>x**5/20",
    "run": "verify"
   },
   {
-   "name": "the root's formula forgets its −2",
+   "name": "the bowl claims to be a third of its cylinder",
    "file": "index.html",
-   "find": "At:'2√b − 2'}",
-   "replace": "At:'2√b'}",
+   "find": "That is exactly half the cylinder around it",
+   "replace": "That is exactly a third of the cylinder around it",
    "run": "verify"
   },
   {
-   "name": "the cube's share is a half",
+   "name": "the off-by is not multiplied by π",
    "file": "index.html",
-   "find": "rr:'a quarter of'}",
-   "replace": "rr:'half'}",
+   "find": "The disks are off by ${this.about(Math.PI*Math.abs(s-v))}",
+   "replace": "The disks are off by ${this.about(Math.abs(s-v))}",
    "run": "verify"
   },
   {
-   "name": "the borderline is said to settle",
+   "name": "within 1% is claimed at 2%",
    "file": "index.html",
-   "find": "1/x itself falls toward 0: ∫₁^∞ 1/x dx diverges.",
-   "replace": "1/x itself falls toward 0: ∫₁^∞ 1/x dx converges.",
+   "find": "(off<=0.01 ? `, within 1%.`",
+   "replace": "(off<=0.02 ? `, within 1%.`",
    "run": "verify"
   },
   {
-   "name": "within 0.01 is claimed too early",
+   "name": "the cone goal takes 2%",
    "file": "index.html",
-   "find": "${g<=0.01?', within 0.01':''}",
-   "replace": "${g<=0.02?', within 0.01':''}",
+   "find": "ok:K=>K.si===0 && K.off()<=0.01},",
+   "replace": "ok:K=>K.si===0 && K.off()<=0.02},",
    "run": "verify"
   },
   {
-   "name": "the first goal closes at 0.02",
+   "name": "the horn goal fires on the ball",
    "file": "index.html",
-   "find": "toast:'Closed in on 1',\n     ok:K=>K.si===0 && K.gap()<=0.01},",
-   "replace": "toast:'Closed in on 1',\n     ok:K=>K.si===0 && K.gap()<=0.02},",
+   "find": "ok:K=>K.si===3 && K.off()<=0.01},",
+   "replace": "ok:K=>K.si>=2 && K.off()<=0.01},",
    "run": "verify"
   },
   {
-   "name": "1/x needs only to pass 4",
+   "name": "the one-disk goal takes any number",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.A()>5},",
-   "replace": "ok:K=>K.si===2 && K.A()>4},",
+   "find": "ok:K=>K.si===1 && K.n()===1}",
+   "replace": "ok:K=>K.si===1}",
    "run": "verify"
   },
   {
-   "name": "a fresh curve keeps the old b",
+   "name": "a disk is drawn only half as tall",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },\n  moveB",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveB",
-   "run": "play:tail"
-  },
-  {
-   "name": "the bars skip the last doubling",
-   "file": "index.html",
-   "find": "for(let k=1;k<=this.n;k++){\n      const a=this.A(k-1), c=this.A(k), w=Math.max(X(c)-X(a),0.5);",
-   "replace": "for(let k=1;k<this.n;k++){\n      const a=this.A(k-1), c=this.A(k), w=Math.max(X(c)-X(a),0.5);",
+   "find": "height=\"${(PY(-r)-PY(r)).toFixed(2)}\"",
+   "replace": "height=\"${((PY(-r)-PY(r))/2).toFixed(2)}\"",
    "run": "verify"
   },
   {
-   "name": "the limit line shows under 1/x too",
+   "name": "one disk goes undrawn",
    "file": "index.html",
-   "find": "if(this.conv()) out+=`<line data-k=\"lim\"",
-   "replace": "if(true) out+=`<line data-k=\"lim\"",
+   "find": "for(let i=0;i<n;i++){ const x0=S.a+i*this.dx(), r=S.f(this.mid(i));",
+   "replace": "for(let i=1;i<n;i++){ const x0=S.a+i*this.dx(), r=S.f(this.mid(i));",
    "run": "verify"
   },
   {
-   "name": "the area is never shaded",
+   "name": "the mirror curve is missing",
    "file": "index.html",
-   "find": "if(b>1){ const sx=xs.filter(x=>x<=e+1e-9);",
-   "replace": "if(b<1){ const sx=xs.filter(x=>x<=e+1e-9);",
+   "find": "for(const sg of [1,-1]) out+=`<polyline data-k=",
+   "replace": "for(const sg of [1]) out+=`<polyline data-k=",
    "run": "verify"
   },
   {
    "name": "a goal is met where it opens",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.A()>5},",
-   "replace": "ok:K=>K.si===0 || (K.si===2 && K.A()>5)},",
+   "find": "ok:K=>K.si===1 && K.n()===1}",
+   "replace": "ok:K=>K.si===0 || (K.si===1 && K.n()===1)}",
    "run": "verify"
   },
   {
-   "name": "doubling runs past 1024",
+   "name": "a fresh solid keeps the old cut",
    "file": "index.html",
-   "find": "if(v<0 || v>this.N) return; this.n=v;",
-   "replace": "if(v<0 || v>this.N+3) return; this.n=v;",
-   "run": "play:tail"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return;",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return;",
+   "run": "play:lathe"
   },
   {
-   "name": "halving runs below 1",
+   "name": "doubling runs past 64",
    "file": "index.html",
-   "find": "if(v<0 || v>this.N) return; this.n=v;",
-   "replace": "if(v<-1 || v>this.N) return; this.n=v;",
-   "run": "play:tail"
+   "find": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
+   "replace": "moveN(by){ const v=this.k+by; if(v<0 || v>this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
+   "run": "play:lathe"
   },
   {
-   "name": "the double button is off one step early",
+   "name": "the stepper says disks for one",
    "file": "index.html",
-   "find": "document.getElementById('tlBHi').disabled=this.n>=this.N;",
-   "replace": "document.getElementById('tlBHi').disabled=this.n>=this.N-1;",
-   "run": "play:tail"
+   "find": "document.getElementById('lhN').textContent=`${this.n()} disk${this.n()>1?'s':''}`;",
+   "replace": "document.getElementById('lhN').textContent=`${this.n()} disks`;",
+   "run": "play:lathe"
   },
   {
-   "name": "the stepper reads n, not b",
+   "name": "the halve button is never off",
    "file": "index.html",
-   "find": "document.getElementById('tlB').textContent=`b = ${this.b()}`;",
-   "replace": "document.getElementById('tlB').textContent=`b = ${this.n}`;",
-   "run": "play:tail"
+   "find": "document.getElementById('lhNLo').disabled=this.k<=0;",
+   "replace": "document.getElementById('lhNLo').disabled=false;",
+   "run": "play:lathe"
   },
   {
-   "name": "the caption drops its bars",
+   "name": "the caption drops the axis",
    "file": "index.html",
-   "find": "Bottom: one bar for each doubling of b, laid end to end from 0, so the last bar ends at the area.",
-   "replace": "Bottom: the area.",
-   "run": "play:tail"
+   "find": "the dashed line is the axis it spins around, and each gold bar",
+   "replace": "and each gold bar",
+   "run": "play:lathe"
   },
   {
-   "name": "the curve buttons lose their names",
+   "name": "the solid buttons lose their names",
    "file": "index.html",
-   "find": "aria-label=\"f(x) = ${s.fs}, p = ${s.p}\">${s.btn}</button>",
+   "find": "aria-label=\"${s.btn}: spin f(x) = ${s.fs} over [${neg(s.a)}, ${s.b}]\">${s.btn}</button>",
    "replace": ">${s.btn}</button>",
-   "run": "play:tail"
+   "run": "play:lathe"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} in blue with the area",
-   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} in blue with the area",
-   "run": "play:tail"
+   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} spun around",
+   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} spun around",
+   "run": "play:lathe"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every tail measured','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every tail measured','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:tail"
+   "find": "'every solid measured','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every solid measured','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:lathe"
   },
   {
-   "name": "the Tome loses the endless area workshop",
+   "name": "the Tome loses the lathe workshop",
    "file": "index.html",
-   "find": "id=\"tomeTail\"",
-   "replace": "id=\"tomeTailX\"",
-   "run": "play:tail"
+   "find": "id=\"tomeLathe\"",
+   "replace": "id=\"tomeLatheX\"",
+   "run": "play:lathe"
   },
   {
-   "name": "the workshop saves its b",
+   "name": "the workshop saves its cut",
    "file": "index.html",
-   "find": "moveB(by){ const v=this.n+by; if(v<0 || v>this.N) return; this.n=v; this.touched=true; this.render(); },",
-   "replace": "moveB(by){ const v=this.n+by; if(v<0 || v>this.N) return; this.n=v; Game.s.tailB=v; this.touched=true; this.render(); },",
-   "run": "play:tail"
+   "find": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
+   "replace": "moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; Game.s.lathe=v; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lhSets')",
+   "run": "play:lathe"
   }
  ]
 }

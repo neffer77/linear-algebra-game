@@ -1371,6 +1371,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ LATHE WORKSHOP ============ -->
+  <div class="screen" id="s-lathe">
+    <div class="panel"><h2>🏺 Lathe Workshop</h2><div class="sub">Spin a curve around the x-axis and it sweeps out a solid. Cut the solid into thin slices: each one spins into a disk, and the disks add up to the volume, closer and closer as the slices thin.</div></div>
+    <div class="panel">
+      <div id="lhSets" class="wsModes" role="group" aria-label="Which curve"></div>
+      <div id="lhFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="lhNLo" onclick="Lathe.moveN(-1)" aria-label="Halve the number of disks">−</button>
+          <b id="lhN" style="font-size:17px;min-width:0"></b>
+          <button id="lhNHi" onclick="Lathe.moveN(1)" aria-label="Double the number of disks">+</button></div>
+      </div>
+      <div id="lhRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="lhGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3368,6 +3387,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Lathe:   ["🏺 Lathe Workshop", ['volRev']],
     Tail:    ["♾️ Endless Area Workshop", ['improper']],
     Avg:     ["🌊 Water Level Workshop", ['avgValue']],
     Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
@@ -12745,6 +12765,7 @@ const UI = {
     if(id==='s-bend') Bend.render();
     if(id==='s-avg') Avg.render();
     if(id==='s-tail') Tail.render();
+    if(id==='s-lathe') Lathe.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13468,6 +13489,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🏺 Lathe Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Spin a curve into a solid and measure it with disks. Watch the cone and the ball land on their school formulas, and find the solid one disk measures exactly.</div>
+         <button class="btn sm" id="tomeLathe" style="width:auto;margin-top:8px" onclick="Lathe.open()">Open the lathe workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">♾️ Endless Area Workshop</h2>
@@ -17005,6 +17031,100 @@ const Tail = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE ENDLESS AREA','every tail measured','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The lathe workshop: a volume of revolution ----------
+   Spin a curve around the x-axis and cut the solid into thin slices. Each
+   slice spins into a disk of radius f(x) at its middle, holding π f(x)² Δx,
+   and the disks add up to the volume, π∫f(x)² dx, more closely as the slices
+   thin. The cone and the ball land on their school formulas; the bowl is half
+   its cylinder, and so exact that one disk measures it. Nothing is saved. */
+const Lathe = {
+  SETS:[
+    {id:'cone', btn:'Cone', a:0, b:3, fs:'x', gs:'x²', Gs:'x³/3', f:x=>x, G:x=>x**3/3, V:'9π', v:9,
+     fact:'That is the cone formula, (1/3)πr²h = (1/3)π × 3² × 3 = 9π.'},
+    {id:'bowl', btn:'Bowl', a:0, b:4, fs:'√x', gs:'x', Gs:'x²/2', f:x=>Math.sqrt(x), G:x=>x*x/2, V:'8π', v:8,
+     fact:'That is exactly half the cylinder around it, π × 2² × 4 = 16π.'},
+    {id:'ball', btn:'Ball', a:-2, b:2, fs:'√(4 − x²)', gs:'(4 − x²)', Gs:'4x − x³/3', f:x=>Math.sqrt(Math.max(4-x*x,0)), G:x=>4*x-x**3/3, V:'32π/3', v:32/3,
+     fact:'That is the sphere formula, (4/3)πr³ = (4/3)π × 2³ = 32π/3.'},
+    {id:'horn', btn:'Horn', a:0, b:2, fs:'x²/2', gs:'x⁴/4', Gs:'x⁵/20', f:x=>x*x/2, G:x=>x**5/20, V:'8π/5', v:8/5,
+     fact:'The horn is thin near 0, so most of its volume sits out near x = 2.'}
+  ],
+  NS:[1,2,4,8,16,32,64], START:2,
+  si:0, k:2, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'cone', t:'Cut the cone into enough disks that they come within 1% of its volume.', toast:'The cone measured',
+     ok:K=>K.si===0 && K.off()<=0.01},
+    {id:'ball', t:'Do the same for the ball.', toast:'The ball measured',
+     ok:K=>K.si===2 && K.off()<=0.01},
+    {id:'horn', t:'And for the horn, which takes more.', toast:'The horn measured',
+     ok:K=>K.si===3 && K.off()<=0.01},
+    {id:'one', t:'Find the solid that a single disk measures exactly.', toast:'One disk is enough for the bowl',
+     ok:K=>K.si===1 && K.n()===1}
+  ],
+  set(){ return this.SETS[this.si]; },
+  n(){ return this.NS[this.k]; },
+  dx(){ const S=this.set(); return (S.b-S.a)/this.n(); },
+  mid(i){ return this.set().a+(i+0.5)*this.dx(); },
+  /* the disks' total, in units of π: Σ f(middle)² Δx */
+  sum(){ const S=this.set(); let t=0; for(let i=0;i<this.n();i++) t+=S.f(this.mid(i))**2*this.dx(); return t; },
+  /* how far off the disks are, as a share of the true volume */
+  off(){ const v=this.set().v; return Math.abs(this.sum()-v)/v; },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : `${neg(n)}/${d}`; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  about(v){ const s=this.is(v); return (s[0]==='≈'?'about ':'')+s.slice(2); },
+  sub(n){ return String(n).replace(/\d/g,c=>'₀₁₂₃₄₅₆₇₈₉'[c]).replace('−','₋'); },
+  sup(n){ return String(n).replace(/\d/g,c=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[c]).replace('−','⁻'); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), n=this.n(), s=this.sum(), v=S.v, off=this.off(), ab=`${this.sub(neg(S.a))}${this.sup(neg(S.b))}`, out=[];
+    out.push(`Spin f(x) = ${S.fs} around the x-axis over [${neg(S.a)}, ${S.b}]. Each slice of width Δx spins into a disk whose radius is f at the slice's middle, so it holds π f(x)² Δx.`);
+    out.push(`With ${n} slice${n>1?'s':''} of width ${this.fr(S.b-S.a,n)}, the disk${n>1?'s add up':' comes'} to ${this.about(s)} times π, which is ${this.about(Math.PI*s)}.`);
+    out.push(`The exact volume is π∫${ab} ${S.gs} dx = π[${S.Gs}]${ab} = ${S.V} ${this.is(Math.PI*v)}.`);
+    out.push(off<1e-12 ? `The disks are exactly right${n===1?', even with just one':''}: the graph of f(x)² = ${S.gs} is a straight line, so on each slice the part above the middle's height exactly makes up for the part below it.`
+      : `The disks are off by ${this.about(Math.PI*Math.abs(s-v))}, ${this.num(off*100,2)}% of the volume`+(off<=0.01 ? `, within 1%.` : `. Cut thinner slices to come closer.`));
+    out.push(S.fact);
+    return out;
+  },
+  /* the side view: the curve and its mirror in blue, each disk as a bar of
+     height 2f(middle) across its slice, the axis it spins around in grey */
+  svg(){
+    const S=this.set(), n=this.n(), R=S.id==='horn'?2:S.id==='cone'?3:2;
+    const PX=x=>20+(x-S.a)/(S.b-S.a)*320, PY=y=>100-y/R*84;
+    const xs=[]; for(let i=0;i<=80;i++) xs.push(S.a+(S.b-S.a)*i/80);
+    let out=`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.fs} spun around the x-axis, cut into ${n} disk${n>1?'s':''} holding ${this.num(Math.PI*this.sum())}, against the exact ${S.V}">`;
+    for(let i=0;i<n;i++){ const x0=S.a+i*this.dx(), r=S.f(this.mid(i));
+      out+=`<rect data-k="disk" data-n="${i+1}" x="${PX(x0).toFixed(2)}" y="${PY(r).toFixed(2)}" width="${(320/n).toFixed(2)}" height="${(PY(-r)-PY(r)).toFixed(2)}" fill="${FIG_COL.b}" fill-opacity=".45" stroke="${FIG_COL.b}" stroke-width="${n>16?0.3:1}"/>`; }
+    out+=`<line x1="10" y1="100" x2="350" y2="100" stroke="${FIG_COL.axis}" stroke-width="1" stroke-dasharray="4 3"/>`;
+    for(const sg of [1,-1]) out+=`<polyline data-k="${sg>0?'top':'bottom'}" points="${xs.map(x=>`${PX(x).toFixed(2)},${PY(sg*S.f(x)).toFixed(2)}`).join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-lathe'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('lhSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Lathe.pick(${i})" aria-label="${s.btn}: spin f(x) = ${s.fs} over [${neg(s.a)}, ${s.b}]">${s.btn}</button>`).join('');
+    document.getElementById('lhN').textContent=`${this.n()} disk${this.n()>1?'s':''}`;
+    document.getElementById('lhNLo').disabled=this.k<=0;
+    document.getElementById('lhNHi').disabled=this.k>=this.NS.length-1;
+    document.getElementById('lhFig').innerHTML=this.svg()+
+      `<div class="figcap">Seen from the side: the blue curve and its mirror trace the solid, the dashed line is the axis it spins around, and each gold bar is one disk, as wide as its slice and as tall as the solid at the slice's middle.</div>`;
+    document.getElementById('lhRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('lhGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE LATHE','every solid measured','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
