@@ -60,6 +60,7 @@ function loadGame() {
     ';const Castles={' + script.slice(script.indexOf("  RULES:[\n    {btn:'Drift'"), script.indexOf("  open(){ UI.go('s-castles'); },")) + '};exports.Castles=Castles;' +
     ';const Cistern={' + script.slice(script.indexOf("  SETS:[\n    {id:'fade', btn:'Fading spring'"), script.indexOf("  open(){ UI.go('s-cistern'); },")) + '};exports.Cistern=Cistern;' +
     ';const Hopital={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'Square'"), script.indexOf("  open(){ UI.go('s-hopital'); },")) + '};exports.Hopital=Hopital;' +
+    ';const Product={' + script.slice(script.indexOf("  SETS:[\n    {id:'lin', btn:'Line'"), script.indexOf("  open(){ UI.go('s-product'); },")) + '};exports.Product=Product;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -78,7 +79,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2605,6 +2606,88 @@ const handsOnNotes = (() => {
   return { topics: Object.keys(FOR).length, mods: mods.size };
 })();
 
+/* The product rule workshop: every field and every step. Each width and depth
+   is worked here from its own formula, the strips and the corner from those,
+   and they must add up to the new area exactly. The rule's rate is checked
+   against a nudge of f × g, the gap must shrink as h closes in, f′ × g′ must
+   stay well away from the true rate, the drawing must be to scale, and every
+   sentence and goal is rebuilt here. */
+const productNotes = (() => {
+  const K = Product;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const show = (v, d = 4) => { const p = 10 ** d, r = Math.round(v * p) / p; return neg(Object.is(r, -0) ? 0 : r); };
+  const sure = (v, d) => Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-12;
+  const F = { lin: x => x + 1, sq: x => x, mix: x => x * x };
+  const G = { lin: x => 2 * x + 1, sq: x => x, mix: x => x + 1 };
+  if (K.SETS.map(S => S.id).join() !== 'lin,sq,mix') fail('product', 'sets', K.SETS.map(S => S.id).join());
+  if (K.H.some(h => !(h > 0)) || K.H.some((h, i) => i && h >= K.H[i - 1])) fail('product', 'steps', 'h must be positive and shrink step by step');
+  if (K.H[K.START] !== Math.max(...K.H)) fail('product', 'start', `h starts at ${K.H[K.START]}, not at its widest`);
+  K.touched = false; K.si = 0; K.k = K.START;
+  for (const g of K.GOALS) if (g.ok(K)) fail('product', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.SETS.forEach((S, si) => {
+    const f = F[S.id], g = G[S.id], a = S.a, fa = f(a), ga = g(a);
+    for (const x of [a - 0.6, a + 0.2, a + 1.3])
+      if (Math.abs(S.f(x) - f(x)) > 1e-12 || Math.abs(S.g(x) - g(x)) > 1e-12) fail('product', S.id, `f or g disagrees with ${S.fs} and ${S.gs} at x = ${x}`);
+    const d = Fn => (Fn(a + 1e-6) - Fn(a - 1e-6)) / 2e-6;
+    if (Math.abs(d(f) - S.fp) > 1e-6 || Math.abs(d(g) - S.gp) > 1e-6) fail('product', S.id, `the slopes at x = ${a} are ${d(f)} and ${d(g)}, the readout says ${S.fp} and ${S.gp}`);
+    const R = S.fp * ga + fa * S.gp;
+    if (Math.abs(d(x => f(x) * g(x)) - R) > 1e-5) fail('product', S.id, `a nudge of f × g grows at ${d(x => f(x) * g(x))}, the readout says ${R}`);
+    if (Math.abs(S.fp * S.gp - R) < 1) fail('product', S.id, "f′ × g′ is too close to the true rate to show it wrong");
+    let last = Infinity;
+    K.H.forEach((h, k) => {
+      K.si = si; K.k = k; n++;
+      const key = `${S.id} h=${h}`, x = a + h, df = f(x) - fa, dg = g(x) - ga;
+      const s1 = df * ga, s2 = fa * dg, c = df * dg, rate = (s1 + s2 + c) / h;
+      if (Math.abs(fa * ga + s1 + s2 + c - f(x) * g(x)) > 1e-9) fail('product', key, 'the old field, the strips and the corner do not make the new field');
+      if (Math.abs(K.rate() - rate) > 1e-9 || Math.abs(K.corner() - c) > 1e-12) fail('product', key, `the rate is ${K.rate()}, expected ${rate}`);
+      const gap = Math.round(Math.abs(rate - R) * 1e4) / 1e4;
+      if (K.gap() !== gap) fail('product', key, `the gap is ${K.gap()}, expected ${gap}`);
+      if (gap > last) fail('product', key, 'the rate moves away from f′g + fg′ as h closes in');
+      last = gap;
+      if (Math.abs(rate - S.fp * S.gp) < 0.9) fail('product', key, 'the rate is near f′ × g′');
+      const is = (v, dd = 6) => `${sure(v, dd) ? '=' : '≈'} ${show(v, dd)}`;
+      const P = S.fp * ga, Q = fa * S.gp;
+      const ab = v => (sure(v, 4) ? '' : 'about ') + show(v);
+      const want = [
+        `The field is f(x) = ${S.fs} wide and g(x) = ${S.gs} deep, so its area is f × g. At x = ${a} it is ${show(fa)} × ${show(ga)} = ${show(fa * ga)}.`,
+        `With h = ${show(h)}, x = ${a} + ${show(h)} = ${show(x)}: the width grows by Δf ${is(df)} and the depth by Δg ${is(dg)}.`,
+        `So the area gains a side strip Δf × g ${is(s1)}, a top strip f × Δg ${is(s2)} and a corner Δf × Δg ${is(c)}, ${sure(s1 + s2 + c, 6) ? '' : 'about '}${show(s1 + s2 + c, 6)} in all.`,
+        `Per unit of h, the side strip adds ${ab(s1 / h)}, the top strip ${ab(s2 / h)} and the corner ${ab(c / h)}, so the area grows at ${ab(rate)}.`,
+        `As h shrinks, Δf/h heads for f′(${a}) = ${S.fpw} and Δg/h for g′(${a}) = ${S.gpw}. So the strips head for f′g = ${S.fp} × ${show(ga)} = ${show(P)} and fg′ = ${show(fa)} × ${S.gp} = ${show(Q)}, and the corner for 0: the area grows at f′g + fg′ = ${show(P)} + ${show(Q)} = ${show(R)}. That is the product rule.`,
+        gap <= 0.01
+          ? `${gap === 0 ? `To four places that is ${show(R)} itself` : `That is ${show(gap)} from ${show(R)}`}: the corner has all but vanished. Multiplying the slopes, f′ × g′ = ${show(S.fp * S.gp)}, only sizes that vanishing corner, which is why it is not the derivative.`
+          : `That is ${show(gap)} from ${show(R)}: at this step the corner still counts. Bring h closer to 0.`
+      ];
+      const got = K.working();
+      if (got.length !== want.length) fail('product', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('product', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: four rectangles, to one scale, inside the frame
+      const rects = [...K.svg().matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map(m => m.slice(1).map(Number));
+      if (rects.length !== 4) fail('product', key, `the drawing has ${rects.length} pieces, not 4`);
+      else {
+        const sc = rects[0][2] / fa, sizes = [[fa, ga], [df, ga], [fa, dg], [df, dg]];
+        rects.forEach((r, i) => {
+          if (Math.abs(r[2] - sizes[i][0] * sc) > 0.02 || Math.abs(r[3] - sizes[i][1] * sc) > 0.02) fail('product', key, `piece ${i + 1} is not drawn to scale`);
+          if (r[0] < 0 || r[1] < 0 || r[0] + r[2] > 360.01 || r[1] + r[3] > 200.01) fail('product', key, `piece ${i + 1} runs out of the frame`);
+        });
+        if (Math.abs(rects[1][0] - (rects[0][0] + rects[0][2])) > 0.02 || Math.abs(rects[2][1] + rects[2][3] - rects[0][1]) > 0.02) fail('product', key, 'the strips do not sit against the field');
+        if (Math.abs(rects[3][0] - rects[1][0]) > 0.02 || Math.abs(rects[3][1] - rects[2][1]) > 0.02) fail('product', key, 'the corner is not where the two strips meet');
+      }
+      const meant = { lin: si === 0 && gap <= 0.01, sq: si === 1 && gap <= 0.01, mix: si === 2 && gap <= 0.01,
+        corner: c > Math.min(s1, s2), even: Math.abs(s1 - s2) < 1e-9 };
+      for (const gl of K.GOALS) {
+        if (!!gl.ok(K) !== meant[gl.id]) fail('product', key, `goal ${gl.id} is ${gl.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(K)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of K.GOALS) if (!found[g.id]) fail('product', g.id, 'this goal cannot be found');
+  K.si = 0; K.k = K.START; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The L'Hôpital workshop: every ratio is checked against its own formula, the
    rule's answer against the slopes found by a nudge, the limit against the
    ratio very close to the point, and every sentence rebuilt here. On the 0/0
@@ -3005,6 +3088,7 @@ console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(),
 console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 10)}  (what each holds from its lengths, the slope by a nudge, the best found by trying every x, ${optimNotes.goals} goals findable)`);
 console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 10)}  (each total against the area under the flow added up in strips, F′ = f by a nudge, every turn checked, ${cisternNotes.goals} goals findable)`);
 console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 10)}  (each ratio against its formula, the slopes by a nudge, the limit read right at the point, every gap shrinking, the rule caught wrong off 0/0, ${hopitalNotes.goals} goals findable)`);
+console.log(`  product rule states      ${pad(productNotes.n.toLocaleString(), 10)}  (each field worked from its formulas, strips and corner adding to the new area, the rule against a nudge, every gap shrinking, f′ × g′ kept wrong, drawn to scale, ${productNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

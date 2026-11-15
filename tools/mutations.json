@@ -1,68 +1,152 @@
 {
- "change": "A fight's summary offers the workshop that fits each fall",
+ "change": "The Product Rule Workshop: two strips and a corner",
  "mutations": [
   {
-   "name": "L'Hôpital's rule points to the limit workshop",
+   "name": "the mixed field's slope forgets the 2",
    "file": "index.html",
-   "find": "    Limit:   [\"🌫️ Limit Workshop\", ['limRational']],\n    Hopital: [\"🔬 L'Hôpital Workshop\", ['lhopital']],",
-   "replace": "    Limit:   [\"🌫️ Limit Workshop\", ['limRational','lhopital']],\n    Hopital: [\"🔬 L'Hôpital Workshop\", []],",
-   "run": "play:handson"
-  },
-  {
-   "name": "a workshop's name drifts from the Tome's",
-   "file": "index.html",
-   "find": "    Chain:   [\"⛓️ Chain Rule Workshop\", ['chainRule']],",
-   "replace": "    Chain:   [\"⛓️ Chain Workshop\", ['chainRule']],",
+   "find": "fpw:'2 × 1 = 2', gpw:'1', fp:2, gp:1,",
+   "replace": "fpw:'2 × 1 = 2', gpw:'1', fp:1, gp:1,",
    "run": "verify"
   },
   {
-   "name": "a topic's key is misspelt",
+   "name": "the line field is 2x deep",
    "file": "index.html",
-   "find": "    Optim:   [\"🏗️ Biggest Build Workshop\", ['optimisation','critical']],",
-   "replace": "    Optim:   [\"🏗️ Biggest Build Workshop\", ['optimization','critical']],",
+   "find": "f:x=>x+1, g:x=>2*x+1},",
+   "replace": "f:x=>x+1, g:x=>2*x},",
    "run": "verify"
   },
   {
-   "name": "a topic that rose is offered a workshop",
+   "name": "the corner is left out of the rate",
    "file": "index.html",
-   "find": "rows.filter(x=>x.d.to<x.d.from && WORKSHOP_FOR[x.k])",
-   "replace": "rows.filter(x=>x.d.to!==x.d.from && WORKSHOP_FOR[x.k])",
-   "run": "play:handson"
+   "find": "rate(){ return (this.side()+this.top()+this.corner())/this.h(); },",
+   "replace": "rate(){ return (this.side()+this.top())/this.h(); },",
+   "run": "verify"
   },
   {
-   "name": "any number of workshops is offered",
+   "name": "the rule multiplies the slopes",
    "file": "index.html",
-   "find": "if(!seen.has(w.mod) && pick.length<2){",
-   "replace": "if(!seen.has(w.mod) && pick.length<9){",
-   "run": "play:handson"
+   "find": "rule(){ const S=this.set(); return S.fp*this.ga()+this.fa()*S.gp; },",
+   "replace": "rule(){ const S=this.set(); return S.fp*S.gp; },",
+   "run": "verify"
   },
   {
-   "name": "one workshop is offered twice",
+   "name": "the top strip uses the new width",
    "file": "index.html",
-   "find": "if(!seen.has(w.mod) && pick.length<2){",
-   "replace": "if(pick.length<2){",
-   "run": "play:handson"
+   "find": "top(){ return this.fa()*this.dg(); },",
+   "replace": "top(){ return (this.fa()+this.df())*this.dg(); },",
+   "run": "verify"
   },
   {
-   "name": "the smallest fall comes first",
+   "name": "h can land on 0",
    "file": "index.html",
-   "find": ".sort((a,b)=>(a.d.to-a.d.from)-(b.d.to-b.d.from))",
-   "replace": ".sort((a,b)=>(b.d.to-b.d.from)-(a.d.to-a.d.from))",
-   "run": "play:handson"
+   "find": "H:[1, 0.5, 0.1, 0.01, 0.001],",
+   "replace": "H:[1, 0.5, 0.1, 0.01, 0],",
+   "run": "verify"
   },
   {
-   "name": "the heading shows with nothing under it",
+   "name": "the gap is not rounded",
    "file": "index.html",
-   "find": "    if(!pick.length) return '';\n    return `<div id=\"handsOn\"",
-   "replace": "    return `<div id=\"handsOn\"",
-   "run": "play:handson"
+   "find": "gap(){ return Math.round(Math.abs(this.rate()-this.rule())*1e4)/1e4; },",
+   "replace": "gap(){ return Math.abs(this.rate()-this.rule()); },",
+   "run": "verify"
   },
   {
-   "name": "the button forgets the topic",
+   "name": "far out reads as close",
    "file": "index.html",
-   "find": "${w.name}, for ${TOPIC_LABEL[k]}</button>",
-   "replace": "${w.name}</button>",
-   "run": "play:handson"
+   "find": "    if(G<=0.01)\n      out.push(`${G===0",
+   "replace": "    if(G<=0.5)\n      out.push(`${G===0",
+   "run": "verify"
+  },
+  {
+   "name": "an inexact total reads as exact",
+   "file": "index.html",
+   "find": "${this.exact(s1+s2+c,6)?'':'about '}",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "the corner goal takes the bigger strip",
+   "file": "index.html",
+   "find": "ok:K=>K.corner()>Math.min(K.side(), K.top())},",
+   "replace": "ok:K=>K.corner()>Math.max(K.side(), K.top())},",
+   "run": "verify"
+  },
+  {
+   "name": "the even goal counts any field",
+   "file": "index.html",
+   "find": "ok:K=>Math.abs(K.side()-K.top())<1e-9}",
+   "replace": "ok:K=>K.side()>0}",
+   "run": "verify"
+  },
+  {
+   "name": "the corner is drawn at the field's corner",
+   "file": "index.html",
+   "find": "r(fa,ga,df,dg,FIG_COL.d,.85)",
+   "replace": "r(0,0,df,dg,FIG_COL.d,.85)",
+   "run": "verify"
+  },
+  {
+   "name": "the drawing is scaled to the old field",
+   "file": "index.html",
+   "find": "const W=S.f(a+Hmax), D=S.g(a+Hmax), k=Math.min(320/W, 176/D);",
+   "replace": "const W=S.f(a), D=S.g(a), k=Math.min(320/W, 176/D);",
+   "run": "verify"
+  },
+  {
+   "name": "a new field keeps the old h",
+   "file": "index.html",
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    const S=this.set();",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },\n  render(){\n    const S=this.set();",
+   "run": "play:product"
+  },
+  {
+   "name": "the caption forgets the corner",
+   "file": "index.html",
+   "find": ", and red the corner, Δf × Δg.</div>`;",
+   "replace": ".</div>`;",
+   "run": "play:product"
+  },
+  {
+   "name": "a found goal gives no toast",
+   "file": "index.html",
+   "find": "'MASTER OF THE FIELD','every strip and corner read','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE FIELD','every strip and corner read','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:product"
+  },
+  {
+   "name": "the stepper runs past its end",
+   "file": "index.html",
+   "find": "document.getElementById('pdHHi').disabled=this.k<=0;",
+   "replace": "document.getElementById('pdHHi').disabled=false;",
+   "run": "play:product"
+  },
+  {
+   "name": "the field buttons lose their names",
+   "file": "index.html",
+   "find": "onclick=\"Product.pick(${i})\" aria-label=\"${s.btn}: ${s.q}\">",
+   "replace": "onclick=\"Product.pick(${i})\">",
+   "run": "play:product"
+  },
+  {
+   "name": "the drawing loses its name",
+   "file": "index.html",
+   "find": "role=\"img\" aria-label=\"A field ${this.num(fa)} wide",
+   "replace": "role=\"img\" data-x=\"A field ${this.num(fa)} wide",
+   "run": "play:product"
+  },
+  {
+   "name": "the Tome card is missing",
+   "file": "index.html",
+   "find": "<button class=\"btn sm\" id=\"tomeProduct\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeProductX\"",
+   "run": "play:product"
+  },
+  {
+   "name": "the product rule points to the slope workshop",
+   "file": "index.html",
+   "find": "    Product: [\"🌾 Product Rule Workshop\", ['productRule']],",
+   "replace": "    Product: [\"🌾 Product Rule Workshop\", []],\n    Slope2:  [\"📈 Slope Workshop\", ['productRule']],",
+   "run": "verify"
   }
  ]
 }
