@@ -86,6 +86,7 @@ const SUITES = [
   require('./play/horizon'),     // where a fraction heads as x grows
   require('./play/cross'),       // an arrow square to two others
   require('./play/quot'),        // the slope of f/g
+  require('./play/anti'),        // the power rule run backwards
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
