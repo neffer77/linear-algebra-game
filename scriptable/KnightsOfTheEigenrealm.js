@@ -1333,6 +1333,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ BEND WORKSHOP ============ -->
+  <div class="screen" id="s-bend">
+    <div class="panel"><h2>〰️ Bend Workshop</h2><div class="sub">The first derivative is the slope. The second, f″, is how fast that slope is changing. Slide a point along a curve and watch its tangent: where the slope rises the curve bends up like a cup, where it falls it bends down like a cap, and where the bend flips over the tangent cuts straight through.</div></div>
+    <div class="panel">
+      <div id="bdSets" class="wsModes" role="group" aria-label="Which curve"></div>
+      <div id="bdFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="bdXLo" onclick="Bend.moveX(-1)" aria-label="Move the point half a step left">−</button>
+          <b id="bdX" style="font-size:17px;min-width:0"></b>
+          <button id="bdXHi" onclick="Bend.moveX(1)" aria-label="Move the point half a step right">+</button></div>
+      </div>
+      <div id="bdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="bdGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3330,6 +3349,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
     Descent: ["⛰️ Downhill Workshop", ['gradient']]
   };
@@ -12701,6 +12721,7 @@ const UI = {
     if(id==='s-null') Kernel.render();
     if(id==='s-gram') Gram.render();
     if(id==='s-geo') Geo.render();
+    if(id==='s-bend') Bend.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13424,6 +13445,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">〰️ Bend Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide along a curve and watch the slope of its slope: where it rises the curve bends up like a cup, where it falls it bends down like a cap. Find where the bend flips, and the flat spot that only looks like it does.</div>
+         <button class="btn sm" id="tomeBend" style="width:auto;margin-top:8px" onclick="Bend.open()">Open the bend workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏗️ Biggest Build Workshop</h2>
@@ -16606,6 +16632,120 @@ const Geo = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The bend workshop: the slope of the slope ----------
+   Slide a point along a curve and watch its tangent. Where the slope is
+   rising, f″ > 0 and the curve bends up like a cup, above its tangent; where
+   it is falling, f″ < 0 and the curve bends down like a cap, below it. Where
+   the bend flips over the tangent crosses the curve: an inflection point. But
+   f″ = 0 alone is not enough, as x⁴/4 shows. Nothing is saved. */
+const Bend = {
+  SETS:[
+    {id:'s', btn:'S-curve', fs:'x³ − 3x', d1s:'3x² − 3', d2s:'6x',
+     f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>6*x},
+    {id:'shift', btn:'Shifted', fs:'x³/3 − x²', d1s:'x² − 2x', d2s:'2x − 2',
+     f:x=>x**3/3-x*x, d1:x=>x*x-2*x, d2:x=>2*x-2},
+    {id:'flat', btn:'Flat-bottomed', fs:'x⁴/4', d1s:'x³', d2s:'3x²',
+     f:x=>x**4/4, d1:x=>x**3, d2:x=>3*x*x}
+  ],
+  X:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],
+  START:0,
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'top', t:'On the S-curve, find the hilltop: the tangent is flat and the curve bends down like a cap.', toast:'Found the hilltop',
+     ok:K=>K.si===0 && K.f1()===0 && K.f2()<0},
+    {id:'floor', t:'Find its valley floor: the tangent is flat and the curve bends up like a cup.', toast:'Found the valley floor',
+     ok:K=>K.si===0 && K.f1()===0 && K.f2()>0},
+    {id:'flip', t:'Find where the S-curve\\'s bend flips over, so that its tangent crosses it.', toast:'The bend flips',
+     ok:K=>K.si===0 && K.infl()},
+    {id:'shift', t:'Find where the shifted curve\\'s bend flips.', toast:'Found the shifted flip',
+     ok:K=>K.si===1 && K.infl()},
+    {id:'fake', t:'On the flat-bottomed curve, find the point where f″ = 0 but the bend does not flip.', toast:'f″ = 0, and still no flip',
+     ok:K=>K.si===2 && K.f2()===0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.X[this.k]; },
+  /* rounding away float noise: every f′ and f″ here is a whole number or a quarter */
+  r(v){ const q=Math.round(v*1e6)/1e6; return Object.is(q,-0)?0:q; },
+  f1(x=this.x()){ return this.r(this.set().d1(x)); },
+  f2(x=this.x()){ return this.r(this.set().d2(x)); },
+  /* the bend flips at x when f″ is 0 there and has opposite signs half a step either side */
+  infl(){ const x=this.x(); return this.f2()===0 && this.f2(x-0.5)*this.f2(x+0.5)<0; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=4){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), x=this.x(), X=this.num(x), s=this.f1(), c=this.f2();
+    const L=this.num(x-0.5), R=this.num(x+0.5), lo=this.f1(x-0.5), hi=this.f1(x+0.5);
+    const out=[];
+    out.push(\`f(x) = \${S.fs}, so its slope is f′(x) = \${S.d1s}, and the slope of that, f″(x) = \${S.d2s}, says how fast the slope itself is changing.\`);
+    out.push(\`At x = \${X}: f(\${X}) \${this.is(S.f(x))}, the tangent's slope is f′(\${X}) = \${this.num(s)}, and f″(\${X}) = \${this.num(c)}.\`);
+    out.push(\`Half a step either side, the slope goes from f′(\${L}) = \${this.num(lo)} to f′(\${R}) = \${this.num(hi)}\`+
+      (hi>lo ? \`: it is rising.\` : hi<lo ? \`: it is falling.\`
+       : \`, the same both sides, while f′(\${X}) = \${this.num(s)} is lower than either: the slope bottoms out right here and turns from falling to rising.\`));
+    if(c>0) out.push(\`f″(\${X}) = \${this.num(c)} is more than 0, which says the same in one number: the curve bends up like a cup and sits above its tangent.\`);
+    else if(c<0) out.push(\`f″(\${X}) = \${this.num(c)} is less than 0, which says the same in one number: the curve bends down like a cap and sits below its tangent.\`);
+    else {
+      const a=this.f2(x-0.5), b=this.f2(x+0.5);
+      out.push(a*b<0
+        ? \`f″(\${X}) = 0, and half a step either side f″(\${L}) = \${this.num(a)} and f″(\${R}) = \${this.num(b)} have opposite signs: the bend flips from \${a<0?'cap to cup':'cup to cap'} here. That is an inflection point, and the tangent crosses the curve.\`
+        : \`f″(\${X}) = 0, but half a step either side f″(\${L}) = \${this.num(a)} and f″(\${R}) = \${this.num(b)} are both \${a>0?'more':'less'} than 0: the curve bends \${a>0?'up':'down'} on both sides, so this is not an inflection point. f″ = 0 says where to look, not that the bend flips.\`);
+    }
+    if(s===0) out.push(c!==0
+      ? \`The tangent is flat and the curve bends \${c<0?'down':'up'} away from it, so this is a \${c<0?'hilltop, a local maximum':'valley floor, a local minimum'}. Reading f″ at a flat tangent like this is the second derivative test.\`
+      : (()=>{ const fl=S.f(x-0.5), fr=S.f(x+0.5), y=S.f(x), up=fl>y && fr>y, dn=fl<y && fr<y;
+          return \`The tangent is flat here too, and with f″ = 0 the second derivative test cannot tell a hilltop from a valley floor, so look either side: f(\${L}) \${this.is(fl)} and f(\${R}) \${this.is(fr)} are \${up?'both higher, so this is a valley floor all the same':dn?'both lower, so this is a hilltop all the same':'one higher and one lower, so this is neither'}.\`; })());
+    return out;
+  },
+  /* the curve in blue across −2.25 to 2.25, scaled to fit; the tangent at the
+     gold point runs 0.9 either side, green where the curve bends up, red where
+     it bends down, gold where f″ = 0 */
+  D:[-2.25,2.25],
+  span(){
+    const S=this.set(); let lo=Infinity, hi=-Infinity;
+    for(let i=0;i<=90;i++){ const y=S.f(this.D[0]+(this.D[1]-this.D[0])*i/90); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+    const pad=(hi-lo)*0.08; return [lo-pad, hi+pad];
+  },
+  svg(){
+    const S=this.set(), [lo,hi]=this.span(), x=this.x(), y=S.f(x), s=this.f1(), c=this.f2();
+    const PX=v=>20+(v-this.D[0])/(this.D[1]-this.D[0])*320, PY=v=>188-(v-lo)/(hi-lo)*176;
+    const pts=[]; for(let i=0;i<=90;i++){ const t=this.D[0]+(this.D[1]-this.D[0])*i/90; pts.push(\`\${PX(t).toFixed(2)},\${PY(S.f(t)).toFixed(2)}\`); }
+    const col = c>0 ? FIG_COL.c : c<0 ? FIG_COL.d : FIG_COL.b;
+    const t0=Math.max(x-0.9,this.D[0]), t1=Math.min(x+0.9,this.D[1]);
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${S.fs} in blue, with its tangent at x = \${this.num(x)}, slope \${this.num(s)}, \${c>0?'the curve bending up above it':c<0?'the curve bending down below it':'where f″ = 0'}">\`;
+    if(lo<0 && hi>0) out+=\`<line x1="20" y1="\${PY(0).toFixed(2)}" x2="340" y2="\${PY(0).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line x1="\${PX(0).toFixed(2)}" y1="8" x2="\${PX(0).toFixed(2)}" y2="192" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    out+=\`<line data-k="tan" x1="\${PX(t0).toFixed(2)}" y1="\${PY(y+s*(t0-x)).toFixed(2)}" x2="\${PX(t1).toFixed(2)}" y2="\${PY(y+s*(t1-x)).toFixed(2)}" stroke="\${col}" stroke-width="2.5" stroke-linecap="round"/>\`;
+    out+=\`<circle data-k="pt" cx="\${PX(x).toFixed(2)}" cy="\${PY(y).toFixed(2)}" r="5" fill="\${FIG_COL.b}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-bend'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('bdSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Bend.pick(\${i})" aria-label="\${s.btn}: f(x) = \${s.fs}">\${s.btn}</button>\`).join('');
+    document.getElementById('bdX').textContent=\`x = \${this.num(this.x())}\`;
+    document.getElementById('bdXLo').disabled=this.k<=0;
+    document.getElementById('bdXHi').disabled=this.k>=this.X.length-1;
+    document.getElementById('bdFig').innerHTML=this.svg()+
+      \`<div class="figcap">The curve is f, in blue. The short line is its tangent at the gold point: green where the curve bends up, red where it bends down, and gold where f″ = 0.</div>\`;
+    document.getElementById('bdRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('bdGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
