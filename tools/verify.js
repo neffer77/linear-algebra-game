@@ -61,6 +61,7 @@ function loadGame() {
     ';const Cistern={' + script.slice(script.indexOf("  SETS:[\n    {id:'fade', btn:'Fading spring'"), script.indexOf("  open(){ UI.go('s-cistern'); },")) + '};exports.Cistern=Cistern;' +
     ';const Hopital={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'Square'"), script.indexOf("  open(){ UI.go('s-hopital'); },")) + '};exports.Hopital=Hopital;' +
     ';const Product={' + script.slice(script.indexOf("  SETS:[\n    {id:'lin', btn:'Line'"), script.indexOf("  open(){ UI.go('s-product'); },")) + '};exports.Product=Product;' +
+    ';const Ladder={' + script.slice(script.indexOf("  SETS:[\n    {id:'five', btn:'5 m ladder'"), script.indexOf("  open(){ UI.go('s-ladder'); },")) + '};exports.Ladder=Ladder;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -79,7 +80,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2606,6 +2607,74 @@ const handsOnNotes = (() => {
   return { topics: Object.keys(FOR).length, mods: mods.size };
 })();
 
+/* The ladder workshop: every ladder at every foot position. The top's height
+   is worked from Pythagoras, the top's speed from a nudge in time of that
+   height, the ladder's length must hold, the 0.01 s check is rebuilt from the
+   two heights, and the speed bars must stand in the top's ratio to the foot.
+   Every sentence and goal is rebuilt here. */
+const ladderNotes = (() => {
+  const K = Ladder;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const show = (v, d = 4) => { const p = 10 ** d, r = Math.round(v * p) / p; return neg(Object.is(r, -0) ? 0 : r); };
+  const sure = (v, d = 4) => Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-12;
+  const is = (v, d = 4) => `${sure(v, d) ? '=' : '≈'} ${show(v, d)}`;
+  const ab = (v, d = 4) => (sure(v, d) ? '' : 'about ') + show(v, d);
+  if (K.SETS.map(S => S.id).join() !== 'five,thirteen,ten') fail('ladder', 'sets', K.SETS.map(S => S.id).join());
+  K.touched = false; K.si = 0; K.k = K.SETS[0].s;
+  for (const g of K.GOALS) if (g.ok(K)) fail('ladder', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.SETS.forEach((S, si) => {
+    const L = S.L, v = S.v;
+    if (S.X.some((x, i) => !(x > 0 && x < L) || (i && x <= S.X[i - 1]))) fail('ladder', S.id, 'the foot must step out, staying between the wall and the ladder\'s length');
+    if (!S.X.some(x => Number.isInteger(x) && Number.isInteger(Math.sqrt(L * L - x * x)))) fail('ladder', S.id, 'no whole-number place, as the battles ask about');
+    S.X.forEach((x, k) => {
+      K.si = si; K.k = k; n++;
+      const key = `${S.id} x=${x}`, H = X => Math.sqrt(L * L - X * X), y = H(x);
+      if (Math.abs(K.y() ** 2 + x * x - L * L) > 1e-9) fail('ladder', key, 'the ladder has changed length');
+      const dt = 1e-7, rate = (H(x + v * dt) - H(x - v * dt)) / (2 * dt);
+      if (Math.abs(K.yp() - rate) > 1e-5) fail('ladder', key, `the top moves at ${rate} m/s by a nudge, the readout says ${K.yp()}`);
+      if (Math.abs(K.yp() / -v - x / y) > 1e-9) fail('ladder', key, 'the top is not x/y times as fast as the foot');
+      const x2 = x + v * K.DT, f = y - H(x2), M = Math.round(Math.abs(f / K.DT + K.yp()) * 1e4) / 1e4;
+      if (K.miss() !== M) fail('ladder', key, `the check misses by ${K.miss()}, expected ${M}`);
+      if (!(f / K.DT > -K.yp())) fail('ladder', key, 'the top should fall faster over the next moment than at this one');
+      const r = x / y, yp = -x * v / y;
+      const cmp = Math.abs(r - 1) < 1e-9 ? 'exactly as fast as' : r < 1 ? 'slower than' : 'faster than';
+      const want = [
+        `The ladder is ${L} m long, so x² + y² = ${L * L} at every moment. With the foot x = ${show(x)} m from the wall, the top is y = √(${L * L} − ${show(x * x)}) ${is(y)} m up.`,
+        'Differentiate both sides in time: 2x·x′ + 2y·y′ = 0, so y′ = −x·x′/y.',
+        `The foot slides out at x′ = ${v} m/s, so y′ = −${show(x)} × ${v} / ${show(y)} ${is(yp)} m/s.`,
+        `So the top slides down at ${ab(-yp)} m/s, ${cmp} the foot's ${v} m/s: the top always moves x/y times as fast as the foot, and here x/y ${is(r)}.`,
+        `Check: ${K.DT} s later the foot is at ${show(x2)} m and the top at ${is(H(x2))} m, so the top fell ${is(f, 6)} m, about ${show(f / K.DT)} m/s. ` +
+          (M <= 0.1 ? 'That matches y′ to within 0.1 m/s: over so short a time the speed hardly changes.'
+                    : `That is already ${show(M)} m/s faster than y′ says: this near the ground the top's speed is changing fast.`)
+      ];
+      const got = K.working();
+      if (got.length !== want.length) fail('ladder', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('ladder', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: the ladder's ends on the wall and the ground, the bars in the speeds' ratio
+      const svg = K.svg();
+      const lad = svg.match(/<line x1="([\d.]+)" y1="([\d.]+)" x2="([\d.]+)" y2="([\d.]+)" stroke="[^"]+" stroke-width="4"/);
+      const bars = [...svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)"/g)].map(m => +m[3]);
+      if (!lad) fail('ladder', key, 'the ladder is not drawn');
+      else {
+        const [fx, fy, tx, ty] = lad.slice(1).map(Number), k0 = (fx - tx) / x;
+        if (Math.abs((fy - ty) - y * k0) > 0.03) fail('ladder', key, 'the ladder is not drawn to scale');
+        if (Math.hypot(fx - tx, fy - ty) > 175) fail('ladder', key, 'the ladder runs out of the picture');
+      }
+      if (bars.length !== 2 || Math.abs(bars[1] / bars[0] - r) > 0.01 || Math.max(...bars) > 140) fail('ladder', key, `the speed bars are ${bars.join(' and ')}, not in the ratio ${r}`);
+      const meant = { slow: -yp < v - 1e-9, whole: Number.isInteger(x) && Math.abs(y - Math.round(y)) < 1e-9, fast: -yp > 3 * v, bend: M > 0.1 };
+      for (const gl of K.GOALS) {
+        if (!!gl.ok(K) !== meant[gl.id]) fail('ladder', key, `goal ${gl.id} is ${gl.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(K)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
+  K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The product rule workshop: every field and every step. Each width and depth
    is worked here from its own formula, the strips and the corner from those,
    and they must add up to the new area exactly. The rule's rate is checked
@@ -3089,6 +3158,7 @@ console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 1
 console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 10)}  (each total against the area under the flow added up in strips, F′ = f by a nudge, every turn checked, ${cisternNotes.goals} goals findable)`);
 console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 10)}  (each ratio against its formula, the slopes by a nudge, the limit read right at the point, every gap shrinking, the rule caught wrong off 0/0, ${hopitalNotes.goals} goals findable)`);
 console.log(`  product rule states      ${pad(productNotes.n.toLocaleString(), 10)}  (each field worked from its formulas, strips and corner adding to the new area, the rule against a nudge, every gap shrinking, f′ × g′ kept wrong, drawn to scale, ${productNotes.goals} goals findable)`);
+console.log(`  ladder positions         ${pad(ladderNotes.n.toLocaleString(), 10)}  (each height by Pythagoras, the top's speed by a nudge in time, the length kept, the 0.01 s check rebuilt, the bars in the speeds' ratio, ${ladderNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
