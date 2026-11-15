@@ -1,215 +1,222 @@
 {
- "change": "The Slope Tracer Workshop: the derivative as a curve",
+ "change": "The Arrow Workshop: adding, stretching and measuring vectors",
  "mutations": [
   {
-   "name": "the derivative of cos is written as sin",
+   "name": "the first pair's v is wrong",
    "file": "index.html",
-   "find": "fs:'cos x', ds:'−sin x', dat:X=>`−sin(${X})`",
-   "replace": "fs:'cos x', ds:'sin x', dat:X=>`−sin(${X})`",
+   "find": "{id:'a', u:[3,4], v:[2,-4], uL:'5', vL:'√20'}",
+   "replace": "{id:'a', u:[3,4], v:[2,-3], uL:'5', vL:'√20'}",
    "run": "verify"
   },
   {
-   "name": "the true derivative of cos has the wrong sign",
+   "name": "‖v‖ is written wrongly",
    "file": "index.html",
-   "find": "f:Math.cos, d:x=>-Math.sin(x)}",
-   "replace": "f:Math.cos, d:x=>Math.sin(x)}",
+   "find": "v:[2,-4], uL:'5', vL:'√20'}",
+   "replace": "v:[2,-4], uL:'5', vL:'√18'}",
    "run": "verify"
   },
   {
-   "name": "the derivative of ln is written as x",
+   "name": "k steps by whole numbers past 1",
    "file": "index.html",
-   "find": "fs:'ln x', ds:'1/x', dat:X=>`1/${X}`",
-   "replace": "fs:'ln x', ds:'x', dat:X=>`1/${X}`",
+   "find": "K:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],",
+   "replace": "K:[-2,-1.5,-1,-0.5,0,0.5,1,2,3],",
    "run": "verify"
   },
   {
-   "name": "the trig stops run in eighths of π",
+   "name": "the workshop opens at k = 0",
    "file": "index.html",
-   "find": "S.trig ? (i-4)*Math.PI/4",
-   "replace": "S.trig ? (i-4)*Math.PI/8",
+   "find": "  START:6,\n  si:0, k:6,",
+   "replace": "  START:4,\n  si:0, k:4,",
    "run": "verify"
   },
   {
-   "name": "ln x starts at 0",
+   "name": "k·u scales only the first part",
    "file": "index.html",
-   "find": ": (i+1)/2); },",
-   "replace": ": i/2); },",
+   "find": "return [this.r(k*u[0]), this.r(k*u[1])]; },",
+   "replace": "return [this.r(k*u[0]), this.r(u[1])]; },",
    "run": "verify"
   },
   {
-   "name": "the nudge is lopsided",
+   "name": "v is subtracted",
    "file": "index.html",
-   "find": "return (f(x+h)-f(x-h))/(2*h); },",
-   "replace": "return (f(x+h)-f(x))/h; },",
+   "find": "return m ? [this.r(a[0]+v[0]), this.r(a[1]+v[1])] : a; },",
+   "replace": "return m ? [this.r(a[0]-v[0]), this.r(a[1]-v[1])] : a; },",
    "run": "verify"
   },
   {
-   "name": "the rise is worked over one side only",
+   "name": "the length adds the parts",
    "file": "index.html",
-   "find": "q=Math.round((f(x+0.001)-f(x-0.001))*1e7)/1e7;",
-   "replace": "q=Math.round((f(x+0.001)-f(x))*1e7)/1e7;",
+   "find": "  sq(p=this.w()){ return this.r(p[0]*p[0]+p[1]*p[1]); },",
+   "replace": "  sq(p=this.w()){ return this.r(Math.abs(p[0])+Math.abs(p[1])); },",
    "run": "verify"
   },
   {
-   "name": "3π/4 is labelled π/4",
+   "name": "a negative part is squared without brackets",
    "file": "index.html",
-   "find": "({1:'π/4',2:'π/2',3:'3π/4',4:'π'})",
-   "replace": "({1:'π/4',2:'π/2',3:'π/4',4:'π'})",
+   "find": "  pw(c){ return c<0 ? `(${this.num(c)})²` : `${this.num(c)}²`; },",
+   "replace": "  pw(c){ return `${this.num(c)}²`; },",
    "run": "verify"
   },
   {
-   "name": "negative x loses its sign",
+   "name": "half is called twice as long",
    "file": "index.html",
-   "find": "s=q<0?'−':'';",
-   "replace": "s='';",
+   "find": "a===0.5 ? 'half as long'",
+   "replace": "a===0.5 ? 'twice as long'",
+   "run": "verify"
+  },
+  {
+   "name": "a negative k still points the same way",
+   "file": "index.html",
+   "find": "so it points ${k>0?'the same way':'the opposite way'}",
+   "replace": "so it points the same way",
+   "run": "verify"
+  },
+  {
+   "name": "the sum is written as k·u",
+   "file": "index.html",
+   "find": "= ${this.vec(w)}, adding first with first",
+   "replace": "= ${this.vec(a)}, adding first with first",
+   "run": "verify"
+  },
+  {
+   "name": "an irrational length is marked exact",
+   "file": "index.html",
+   "find": "= √${this.num(s)} ${nice?'= ':'≈ '}${this.num(L)}",
+   "replace": "= √${this.num(s)} = ${this.num(L)}",
    "run": "verify"
   },
   {
    "name": "the flat note shows everywhere",
    "file": "index.html",
-   "find": "    if(s===0) out.push(`The slope is 0",
-   "replace": "    if(true) out.push(`The slope is 0",
+   "find": "    if(w[1]===0) out.push(`w lies flat",
+   "replace": "    if(true) out.push(`w lies flat",
    "run": "verify"
   },
   {
-   "name": "hump and dip are swapped",
+   "name": "the stretching note shows with v on",
    "file": "index.html",
-   "find": "${f(x)>0?'top of a hump':'bottom of a dip'}",
-   "replace": "${f(x)>0?'bottom of a dip':'top of a hump'}",
+   "find": "    if(!this.m) out.push(`That is |k| × ‖u‖",
+   "replace": "    if(true) out.push(`That is |k| × ‖u‖",
    "run": "verify"
   },
   {
-   "name": "the steepest note shows at any slope",
+   "name": "the lengths note shows at any k",
    "file": "index.html",
-   "find": "if(S.trig && Math.abs(s)===1) out.push(",
-   "replace": "if(S.trig) out.push(",
+   "find": "    if(this.m && k===1){ const t=",
+   "replace": "    if(this.m){ const t=",
    "run": "verify"
   },
   {
-   "name": "the slope-2 note shows anywhere on ln",
+   "name": "the unit vector divides by the squared length",
    "file": "index.html",
-   "find": "if(S.id==='ln' && s===2) out.push(",
-   "replace": "if(S.id==='ln') out.push(",
+   "find": "const x=w[0]/L, y=w[1]/L,",
+   "replace": "const x=w[0]/s, y=w[1]/s,",
    "run": "verify"
   },
   {
-   "name": "the trace is claimed after eight stops",
+   "name": "the unit vector divides by the wrong root",
    "file": "index.html",
-   "find": "  traced(){ return this.seen[this.si].size===9; },",
-   "replace": "  traced(){ return this.seen[this.si].size>=8; },",
+   "find": "÷ ${nice?this.num(L):'√'+this.num(s)}",
+   "replace": "÷ ${nice?this.num(L):'√'+this.num(s+1)}",
    "run": "verify"
   },
   {
-   "name": "the dots are drawn at the curve's height",
+   "name": "v is drawn from the start",
    "file": "index.html",
-   "find": "cy=\"${PY(this.nudge(xs[k])).toFixed(2)}\" r=\"4\"",
-   "replace": "cy=\"${PY(S.f(xs[k])).toFixed(2)}\" r=\"4\"",
+   "find": "    if(this.m) out+=this.arrow(a,w,FIG_COL.b,'v',PX,PY);",
+   "replace": "    if(this.m) out+=this.arrow([0,0],w,FIG_COL.b,'v',PX,PY);",
    "run": "verify"
   },
   {
-   "name": "the traced curve is drawn as f again",
+   "name": "the triangle is drawn on flat arrows",
    "file": "index.html",
-   "find": "if(this.traced()) out+=curve(S.d,'traced'",
-   "replace": "if(this.traced()) out+=curve(S.f,'traced'",
+   "find": "    if(w[0]!==0 && w[1]!==0) out+=`<polyline data-k=\"leg\"",
+   "replace": "    if(w[0]!==0 || w[1]!==0) out+=`<polyline data-k=\"leg\"",
    "run": "verify"
   },
   {
-   "name": "the tangent is drawn flat",
+   "name": "the plane is stretched to fill the box",
    "file": "index.html",
-   "find": "y2=\"${PY(y+s*(t1-x)).toFixed(2)}\" stroke=\"${FIG_COL.c}\"",
-   "replace": "y2=\"${PY(y).toFixed(2)}\" stroke=\"${FIG_COL.c}\"",
+   "find": "sc=Math.min(320/(x1-x0+2*pad), 176/(y1-y0+2*pad));",
+   "replace": "sc=320/(x1-x0+2*pad);",
    "run": "verify"
   },
   {
-   "name": "stepping does not mark the stop",
+   "name": "the tip goal takes v at any k",
    "file": "index.html",
-   "find": "this.k=v; this.seen[this.si].add(v); this.touched=true;",
-   "replace": "this.k=v; this.touched=true;",
+   "find": "     ok:K=>K.si===0 && K.m && K.kv()===1},",
+   "replace": "     ok:K=>K.si===0 && K.m},",
    "run": "verify"
   },
   {
-   "name": "the stepper runs past the last stop",
+   "name": "the flip goal takes any negative k",
    "file": "index.html",
-   "find": "if(v<0 || v>8) return;",
-   "replace": "if(v<0 || v>9) return;",
+   "find": "     ok:K=>K.si===0 && !K.m && K.kv()===-1},",
+   "replace": "     ok:K=>K.si===0 && !K.m && K.kv()<0},",
    "run": "verify"
   },
   {
-   "name": "the flat goal takes any slope",
+   "name": "the whole goal takes any length",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.slope()===0},",
-   "replace": "     ok:K=>K.si===0},",
+   "find": "     ok:K=>K.si===2 && K.m && K.len()>0 && Number.isInteger(K.len())}",
+   "replace": "     ok:K=>K.si===2 && K.m && K.len()>0}",
    "run": "verify"
   },
   {
-   "name": "the trace goal takes five stops",
+   "name": "a new pair keeps v on",
    "file": "index.html",
-   "find": "     ok:K=>K.si===0 && K.seen[0].size===9},",
-   "replace": "     ok:K=>K.si===0 && K.seen[0].size>=5},",
+   "find": "  pick(i){ this.si=i; this.k=this.START; this.m=false;",
+   "replace": "  pick(i){ this.si=i; this.k=this.START;",
    "run": "verify"
   },
   {
-   "name": "the exp goal takes one stop",
+   "name": "the add button does not say it is pressed",
    "file": "index.html",
-   "find": "     ok:K=>K.si===2 && K.seen[2].size>=3},",
-   "replace": "     ok:K=>K.si===2},",
-   "run": "verify"
+   "find": "add.setAttribute('aria-pressed', String(this.m));",
+   "replace": "add.setAttribute('aria-pressed', 'false');",
+   "run": "play:arrow"
   },
   {
-   "name": "the ln goal takes slope 1",
+   "name": "the back button stays on at −2",
    "file": "index.html",
-   "find": "     ok:K=>K.si===3 && K.slope()===2}",
-   "replace": "     ok:K=>K.si===3 && K.slope()===1}",
-   "run": "verify"
+   "find": "document.getElementById('vwKLo').disabled=this.k<=0;",
+   "replace": "document.getElementById('vwKLo').disabled=false;",
+   "run": "play:arrow"
   },
   {
-   "name": "a new curve keeps the old stop",
+   "name": "the pair buttons lose their names",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.k=this.START; this.seen[i].add(this.k);",
-   "replace": "  pick(i){ this.si=i; this.seen[i].add(this.k);",
-   "run": "play:tracer"
-  },
-  {
-   "name": "the back button stays on at the first stop",
-   "file": "index.html",
-   "find": "document.getElementById('tcXLo').disabled=this.k<=0;",
-   "replace": "document.getElementById('tcXLo').disabled=false;",
-   "run": "play:tracer"
-  },
-  {
-   "name": "the step buttons lose their names",
-   "file": "index.html",
-   "find": "aria-label=\"Step x on to the next stop\"",
+   "find": "aria-label=\"u = ${this.vec(s.u)} and v = ${this.vec(s.v)}\"",
    "replace": "aria-label=\"\"",
-   "run": "play:tracer"
+   "run": "play:arrow"
   },
   {
-   "name": "the curve buttons run in one row",
+   "name": "the pair buttons run in one row",
    "file": "index.html",
-   "find": "<div id=\"tcSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"tcSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
-   "run": "play:tracer"
+   "find": "<div id=\"vwSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"vwSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;min-width:420px\"",
+   "run": "play:arrow"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
-   "find": "'every slope marked','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'every slope marked','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:tracer"
+   "find": "'every arrow walked','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'every arrow walked','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:arrow"
   },
   {
-   "name": "the Tome loses the slope tracer workshop",
+   "name": "the Tome loses the arrow workshop",
    "file": "index.html",
-   "find": "id=\"tomeTracer\"",
-   "replace": "id=\"tomeTracerX\"",
-   "run": "play:tracer"
+   "find": "id=\"tomeArrow\"",
+   "replace": "id=\"tomeArrowX\"",
+   "run": "play:arrow"
   },
   {
-   "name": "the workshop saves where it traces",
+   "name": "the workshop saves its k",
    "file": "index.html",
-   "find": "  moveX(by){ const v=this.k+by; if(v<0 || v>8) return;",
-   "replace": "  moveX(by){ Game.s.traceAt=this.k; const v=this.k+by; if(v<0 || v>8) return;",
-   "run": "play:tracer"
+   "find": "  moveK(by){ const v=this.k+by;",
+   "replace": "  moveK(by){ Game.s.arrowK=this.k; const v=this.k+by;",
+   "run": "play:arrow"
   }
  ]
 }

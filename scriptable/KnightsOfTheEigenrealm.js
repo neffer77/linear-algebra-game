@@ -1571,6 +1571,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ ARROW WORKSHOP ============ -->
+  <div class="screen" id="s-arrow">
+    <div class="panel"><h2>➡️ Arrow Workshop</h2><div class="sub">A vector is an arrow: how far across and how far up. Stretch one by a number k, walk a second from its tip, and see where you land. The straight arrow from start to finish is the sum, and Pythagoras gives its length.</div></div>
+    <div class="panel">
+      <div id="vwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which pair of vectors"></div>
+      <div id="vwFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="vwKLo" onclick="Arrow.moveK(-1)" aria-label="Make k smaller by a half">−</button>
+          <b id="vwK" style="font-size:17px;min-width:0"></b>
+          <button id="vwKHi" onclick="Arrow.moveK(1)" aria-label="Make k bigger by a half">+</button></div>
+      </div>
+      <div class="wsModes" style="flex-wrap:wrap"><button id="vwAdd" class="btn sm ghost" onclick="Arrow.toggle()" aria-pressed="false">Add v at the tip</button></div>
+      <div id="vwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="vwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3574,6 +3594,7 @@ const WORKSHOP_FOR = (() => {
     Cover:   ["🙈 Cover-up Workshop", ['partialFrac']],
     Slice:   ["🍞 Slice Workshop", ['doubleInt']],
     Tracer:  ["✍️ Slope Tracer Workshop", ['trigDeriv','expLog']],
+    Arrow:   ["➡️ Arrow Workshop", ['vecAdd','vecScale','mag','unitVec']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12965,6 +12986,7 @@ const UI = {
     if(id==='s-cover') Cover.render();
     if(id==='s-slice') Slice.render();
     if(id==='s-tracer') Tracer.render();
+    if(id==='s-arrow') Arrow.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13718,6 +13740,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">✍️ Slope Tracer Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x.</div>
          <button class="btn sm" id="tomeTracer" style="width:auto;margin-top:8px" onclick="Tracer.open()">Open the slope tracer workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">➡️ Arrow Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector.</div>
+         <button class="btn sm" id="tomeArrow" style="width:auto;margin-top:8px" onclick="Arrow.open()">Open the arrow workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -18445,6 +18472,138 @@ const Tracer = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SLOPE TRACER','every slope marked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The arrow workshop: adding, stretching and measuring vectors ----------
+   Stretch u by k, then walk v from the tip of k·u if you like. The green
+   arrow w goes straight from the start to where you land. Its length comes
+   from Pythagoras on the right triangle under it, and dividing w by that
+   length gives the unit vector. Nothing is saved. */
+const Arrow = {
+  SETS:[
+    {id:'a', u:[3,4], v:[2,-4], uL:'5', vL:'√20'},
+    {id:'b', u:[1.2,1.6], v:[-0.6,-0.8], uL:'2', vL:'1'},
+    {id:'c', u:[1,1], v:[1,-1], uL:'√2', vL:'√2'}
+  ],
+  K:[-2,-1.5,-1,-0.5,0,0.5,1,1.5,2],
+  START:6,
+  si:0, k:6, m:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'tip', t:'On u = ⟨3, 4⟩, walk v from the tip of u and land flat on the x-axis.', toast:'Tip to tail',
+     ok:K=>K.si===0 && K.m && K.kv()===1},
+    {id:'double', t:'Stretch u until it is twice as long.', toast:'Twice as long',
+     ok:K=>K.si===0 && !K.m && K.len()===10},
+    {id:'flip', t:'Turn u round to point the other way, just as long.', toast:'The other way',
+     ok:K=>K.si===0 && !K.m && K.kv()===-1},
+    {id:'unit', t:'On u = ⟨1.2, 1.6⟩, find a w of length exactly 1: a unit vector.', toast:'A unit vector',
+     ok:K=>K.si===1 && K.len()===1},
+    {id:'cancel', t:'Make k·u and v cancel out to nothing.', toast:'Cancelled out',
+     ok:K=>K.si===1 && K.m && K.len()===0},
+    {id:'whole', t:'On u = ⟨1, 1⟩, whose length is √2, add v and find a sum whose length is a whole number.', toast:'A whole-number length',
+     ok:K=>K.si===2 && K.m && K.len()>0 && Number.isInteger(K.len())}
+  ],
+  set(){ return this.SETS[this.si]; },
+  kv(){ return this.K[this.k]; },
+  /* rounding away float noise: every part here is a whole number, a half or a tenth */
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  ku(k=this.kv()){ const u=this.set().u; return [this.r(k*u[0]), this.r(k*u[1])]; },
+  w(k=this.kv(), m=this.m){ const a=this.ku(k), v=this.set().v; return m ? [this.r(a[0]+v[0]), this.r(a[1]+v[1])] : a; },
+  sq(p=this.w()){ return this.r(p[0]*p[0]+p[1]*p[1]); },
+  /* the length to four places, so a whole length reads as a whole number */
+  len(p=this.w()){ return Math.round(Math.sqrt(this.sq(p))*1e4)/1e4; },
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)/1e4-v)<1e-10 ? '= ' : '≈ ')+this.num(v); },
+  vec(p){ return \`⟨\${this.num(p[0])}, \${this.num(p[1])}⟩\`; },
+  pw(c){ return c<0 ? \`(\${this.num(c)})²\` : \`\${this.num(c)}²\`; },
+  /* how far it stretches, in words */
+  times(a){ return a===1 ? 'just as long' : a===0.5 ? 'half as long' : \`\${this.num(a)} times as long\`; },
+  working(){
+    const S=this.set(), k=this.kv(), a=this.ku(), w=this.w(), s=this.sq(), L=Math.sqrt(s), out=[];
+    out.push(\`u = \${this.vec(S.u)}, v = \${this.vec(S.v)}, and w = k·u\${this.m?' + v':''}.\`);
+    out.push(k===1 ? \`k = 1 leaves u as it is: k·u = \${this.vec(a)}.\`
+      : k===0 ? \`k = 0 shrinks u to nothing: 0·\${this.vec(S.u)} = ⟨0, 0⟩.\`
+      : \`k·u = \${this.num(k)}·\${this.vec(S.u)} = \${this.vec(a)}: every part of u is multiplied by \${this.num(k)}, so it points \${k>0?'the same way':'the opposite way'}, \${this.times(Math.abs(k))}.\`);
+    out.push(this.m ? \`Walk v from the tip of k·u: w = \${this.vec(a)} + \${this.vec(S.v)} = \${this.vec(w)}, adding first with first and second with second.\`
+      : \`v is left off, so w = k·u = \${this.vec(w)}.\`);
+    if(s===0){
+      out.push(\`‖w‖ = √(0² + 0²) = 0: w is the zero vector, with no length and no direction.\`);
+      out.push(\`The zero vector has no unit vector: there is no direction to keep.\`);
+      return out;
+    }
+    const nice=Math.abs(Math.round(L*1e4)/1e4-L)<1e-10;
+    out.push(\`‖w‖ = √(\${this.pw(w[0])} + \${this.pw(w[1])}) = √\${this.num(s)} \${nice?'= ':'≈ '}\${this.num(L)}, by Pythagoras on the dashed right triangle under w.\`);
+    if(w[1]===0) out.push(\`w lies flat along the x-axis: its second part is 0, so its length is just how far it reaches across.\`);
+    if(w[0]===0) out.push(\`w stands upright along the y-axis: its first part is 0, so its length is just how far it reaches up or down.\`);
+    if(!this.m) out.push(\`That is |k| × ‖u‖ = \${this.num(Math.abs(k))} × \${S.uL} \${this.is(Math.abs(k)*Math.sqrt(this.sq(S.u)))}: stretching by k stretches the length by |k|, whichever way it points.\`);
+    if(this.m && k===1){ const t=Math.sqrt(this.sq(S.u))+Math.sqrt(this.sq(S.v));
+      out.push(\`‖u‖ + ‖v‖ = \${S.uL} + \${S.vL} \${this.is(t)}, more than ‖w‖ \${this.is(L)}: walking u and then v is a longer way round than the straight arrow w, so lengths do not add the way parts do.\`); }
+    const L4=this.len();
+    out.push(L4===1 ? \`‖w‖ = 1, so w is a unit vector already: its length is 1 and it keeps its direction.\`
+      : \`Its unit vector is w ÷ ‖w‖ = \${this.vec(w)} ÷ \${nice?this.num(L):'√'+this.num(s)} \${(()=>{ const x=w[0]/L, y=w[1]/L, ex=[x,y].every(c=>Math.abs(Math.round(c*1e4)/1e4-c)<1e-10); return (ex?'= ':'≈ ')+this.vec([x,y]); })()}: the same direction, length 1.\`);
+    return out;
+  },
+  /* the plane fitted to every arrow this pair can make, one scale both ways */
+  box(){
+    const S=this.set(); let x0=0,x1=0,y0=0,y1=0;
+    for(let k=0;k<this.K.length;k++) for(const m of [false,true]) for(const p of [this.ku(this.K[k]), this.w(this.K[k],m)]){
+      x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); }
+    const pad=0.06*Math.max(x1-x0,y1-y0), sc=Math.min(320/(x1-x0+2*pad), 176/(y1-y0+2*pad));
+    const cx=(x0+x1)/2, cy=(y0+y1)/2;
+    return {sc, PX:v=>180+(v-cx)*sc, PY:v=>100-(v-cy)*sc, x0:cx-160/sc, x1:cx+160/sc, y0:cy-88/sc, y1:cy+88/sc};
+  },
+  arrow(p,q,col,key,PX,PY,extra=''){
+    const X0=PX(p[0]), Y0=PY(p[1]), X1=PX(q[0]), Y1=PY(q[1]), d=Math.hypot(X1-X0,Y1-Y0);
+    if(d<0.5) return '';
+    const ux=(X1-X0)/d, uy=(Y1-Y0)/d, h=Math.min(9,d*0.45), bx=X1-ux*h, by=Y1-uy*h;
+    return \`<line data-k="\${key}" x1="\${X0.toFixed(2)}" y1="\${Y0.toFixed(2)}" x2="\${bx.toFixed(2)}" y2="\${by.toFixed(2)}" stroke="\${col}" stroke-width="2.5"\${extra}/>\`+
+      \`<polygon data-k="\${key}-head" points="\${X1.toFixed(2)},\${Y1.toFixed(2)} \${(bx-uy*h*0.5).toFixed(2)},\${(by+ux*h*0.5).toFixed(2)} \${(bx+uy*h*0.5).toFixed(2)},\${(by-ux*h*0.5).toFixed(2)}" fill="\${col}"/>\`;
+  },
+  svg(){
+    const S=this.set(), B=this.box(), {PX,PY}=B, a=this.ku(), w=this.w(), k=this.kv();
+    const step=B.sc<10?2:1;
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="w = \${this.vec(w)} in green, length \${this.sq()===0?'0':'about '+this.num(this.len())}, built from \${this.num(k)}·u in blue\${this.m?' and v in gold':''}">\`;
+    for(let g=Math.ceil(B.x0/step)*step; g<=B.x1; g+=step) out+=\`<line x1="\${PX(g).toFixed(2)}" y1="12" x2="\${PX(g).toFixed(2)}" y2="188" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+    for(let g=Math.ceil(B.y0/step)*step; g<=B.y1; g+=step) out+=\`<line x1="20" y1="\${PY(g).toFixed(2)}" x2="340" y2="\${PY(g).toFixed(2)}" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+    out+=\`<line data-k="xaxis" x1="20" y1="\${PY(0).toFixed(2)}" x2="340" y2="\${PY(0).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="\${PX(0).toFixed(2)}" y1="12" x2="\${PX(0).toFixed(2)}" y2="188" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=this.arrow([0,0],S.u,FIG_COL.dim,'u',PX,PY,' stroke-dasharray="4 4" opacity="0.7"');
+    if(w[0]!==0 && w[1]!==0) out+=\`<polyline data-k="leg" points="\${PX(0).toFixed(2)},\${PY(0).toFixed(2)} \${PX(w[0]).toFixed(2)},\${PY(0).toFixed(2)} \${PX(w[0]).toFixed(2)},\${PY(w[1]).toFixed(2)}" fill="none" stroke="\${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="3 3"/>\`;
+    out+=this.arrow([0,0],a,FIG_COL.a,'ku',PX,PY);
+    if(this.m) out+=this.arrow(a,w,FIG_COL.b,'v',PX,PY);
+    out+= this.sq()===0 ? \`<circle data-k="zero" cx="\${PX(0).toFixed(2)}" cy="\${PY(0).toFixed(2)}" r="5" fill="\${FIG_COL.c}"/>\`
+      : this.arrow([0,0],w,FIG_COL.c,'w',PX,PY);
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-arrow'); },
+  pick(i){ this.si=i; this.k=this.START; this.m=false; this.touched=true; this.render(); },
+  moveK(by){ const v=this.k+by; if(v<0 || v>=this.K.length) return; this.k=v; this.touched=true; this.render(); },
+  toggle(){ this.m=!this.m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('vwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Arrow.pick(\${i})" aria-label="u = \${this.vec(s.u)} and v = \${this.vec(s.v)}">u = \${this.vec(s.u)}</button>\`).join('');
+    document.getElementById('vwK').textContent=\`k = \${this.num(this.kv())}\`;
+    document.getElementById('vwKLo').disabled=this.k<=0;
+    document.getElementById('vwKHi').disabled=this.k>=this.K.length-1;
+    const add=document.getElementById('vwAdd');
+    add.textContent=this.m?'Take v off':'Add v at the tip';
+    add.setAttribute('aria-pressed', String(this.m));
+    add.setAttribute('aria-label', this.m?'Take v off the tip of k·u':'Walk v from the tip of k·u');
+    document.getElementById('vwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The faint dashed arrow is u. In blue, k·u: u stretched by k. In gold, v, walked from the tip of k·u. In green, w, straight from the start to where you land, over the dashed right triangle that gives its length.</div>\`;
+    document.getElementById('vwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('vwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE ARROW','every arrow walked','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
