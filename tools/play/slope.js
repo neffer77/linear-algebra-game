@@ -46,6 +46,7 @@ module.exports = {
     t.ok('the caption says the secant lies along the tangent',
       /lies along the tangent/.test(await t.ev(() => document.querySelector('#slFig .figcap').innerText)));
     t.eq('getting within 0.01 of f′(a) is found', await found(t), ['close']);
+    t.ok('and its toast keeps the 0.01', /✓ Bring h close enough that the secant slope is within 0\.01 of f′\(a\)/.test(await t.ev(() => [...document.querySelectorAll('.toast')].map(d => d.innerText).join(' | '))));
 
     // --- the other side ---
     await t.tap('slSide');
