@@ -1204,6 +1204,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
+  <div class="screen" id="s-optim">
+    <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
+    <div class="panel">
+      <div id="opSets" class="wsModes" role="group" aria-label="What to build"></div>
+      <div id="opFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="opXLo" onclick="Optim.moveX(-1)" aria-label="Make x half a unit smaller">−</button>
+          <b id="opX" style="font-size:17px;min-width:0"></b>
+          <button id="opXHi" onclick="Optim.moveX(1)" aria-label="Make x half a unit bigger">+</button></div>
+      </div>
+      <div id="opRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="opGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -12468,6 +12487,7 @@ const UI = {
     if(id==='s-newton') Newton.render();
     if(id==='s-chain') Chain.render();
     if(id==='s-castles') Castles.render();
+    if(id==='s-optim') Optim.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13156,6 +13176,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🏗️ Biggest Build Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing.</div>
+         <button class="btn sm" id="tomeOptim" style="width:auto;margin-top:8px" onclick="Optim.open()">Open the biggest build workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
@@ -15724,6 +15749,99 @@ const Chain = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('LINK BY LINK','every chain followed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ BIGGEST BUILD WORKSHOP ============
+   Optimisation by hand: change one length, watch what it builds and the slope
+   of that, and find where the slope is 0. The steps are half a unit so every
+   number is exact; one setting shows a flat tangent that marks the least, so
+   the player learns to check which way the curve goes on either side. */
+const Optim = {
+  SETS:[
+    {id:'wall', btn:'Wall paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
+     say:'40 m of fence makes three sides of a paddock, and the castle wall is the fourth.',
+     form:'A = x(40 − 2x) = 40x − 2x²', dform:'A′(x) = 40 − 4x',
+     f:x=>x*(40-2*x), d:x=>40-4*x, poly:[[-2,2],[40,1]], ylim:[-15,225]},
+    {id:'free', btn:'Open paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
+     say:'40 m of fence makes all four sides of a paddock in the open.',
+     form:'A = x(20 − x) = 20x − x²', dform:'A′(x) = 20 − 2x',
+     f:x=>x*(20-x), d:x=>20-2*x, poly:[[-1,2],[20,1]], ylim:[-8,112]},
+    {id:'box', btn:'Open box', lo:1, hi:12, start:2, unit:'cm', uw:'centimetre', sq:'cm³', what:'volume', V:'V', best:4,
+     say:'Cut an x by x square from each corner of a 12 cm square sheet and fold up the sides to make an open box.',
+     form:'V = x(12 − 2x)² = 4x³ − 48x² + 144x', dform:'V′(x) = 12x² − 96x + 144 = 12(x − 2)(x − 6)',
+     f:x=>x*(12-2*x)**2, d:x=>12*x*x-96*x+144, poly:[[4,3],[-48,2],[144,1]], ylim:[-10,140]}
+  ],
+  si:0, xh:8, touched:false,
+  done:new Set(), pair:new Set(),
+  GOALS:[
+    {id:'best',   t:'On the wall paddock, find the width that holds the most.', toast:'Found the widest-holding paddock',
+     ok:K=>K.si===0 && K.xh===20},
+    {id:'falls',  t:'On the wall paddock, find a width where widening it loses area.', toast:'Found widening that loses area',
+     ok:K=>K.si===0 && K.d()<0},
+    {id:'pair',   t:'On the wall paddock, find both widths that hold 150 m².', toast:'Found both widths for 150 m²',
+     ok:K=>K.si===0 && K.pair.size===2},
+    {id:'square', t:'On the open paddock, find the best shape.', toast:'Found the best open paddock',
+     ok:K=>K.si===1 && K.xh===20},
+    {id:'box',    t:'On the box, find the cut that holds the most.', toast:'Found the biggest box',
+     ok:K=>K.si===2 && K.xh===4},
+    {id:'trap',   t:'On the box, find the other flat tangent, and see what it holds.', toast:'Found the flat tangent that holds nothing',
+     ok:K=>K.si===2 && K.xh===12}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(){ return this.xh/2; },
+  v(x=this.x()){ return this.set().f(x); },
+  d(x=this.x()){ return this.set().d(x); },
+  num(x){ const r=Math.round(x*100)/100; return neg(Object.is(r,-0)?0:r); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), x=this.x(), X=this.num(x), v=this.v(), d=this.d(), V=S.V, u=S.unit, sq=S.sq;
+    const out=[S.say];
+    if(S.id==='wall') out.push(`With width x, the side along the wall is 40 − 2x, so ${S.form}.`);
+    else if(S.id==='free') out.push(`With one side x, the other is 20 − x, so ${S.form}.`);
+    else out.push(`With a cut x, the base is 12 − 2x across and the box is x deep, so ${S.form}.`);
+    if(S.id==='wall') out.push(`At x = ${X} ${u}: the side along the wall is 40 − 2·${X} = ${this.num(40-2*x)} ${u}, so A = ${X} × ${this.num(40-2*x)} = ${this.num(v)} ${sq}.`);
+    else if(S.id==='free') out.push(`At x = ${X} ${u}: the other side is 20 − ${X} = ${this.num(20-x)} ${u}, so A = ${X} × ${this.num(20-x)} = ${this.num(v)} ${sq}.`);
+    else out.push(`At x = ${X} ${u}: the base is 12 − 2·${X} = ${this.num(12-2*x)} ${u} across, so V = ${X} × ${this.num(12-2*x)} × ${this.num(12-2*x)} = ${this.num(v)} ${sq}.`);
+    const hold=t=>`x = ${this.num(t)} holds ${this.num(this.v(t))} ${sq}`, lo=this.xh>S.lo, hi=this.xh<S.hi;
+    out.push(lo && hi ? `Half a ${S.uw} either way: ${hold(x-0.5)} and ${hold(x+0.5)}.` : lo ? `Half a ${S.uw} less: ${hold(x-0.5)}.` : `Half a ${S.uw} more: ${hold(x+0.5)}.`);
+    const grow=S.id==='box' ? 'a deeper cut' : 'widening it', D=`${V}′(${X})`;
+    if(d>0) out.push(`${S.dform}, so ${D} = ${this.num(d)}, above 0: ${grow} still adds ${S.what}, about ${this.num(d)} ${sq} for each ${S.uw}.`);
+    else if(d<0) out.push(`${S.dform}, so ${D} = ${this.num(d)}, below 0: ${grow} now loses ${S.what}, about ${this.num(-d)} ${sq} for each ${S.uw}, so the best is ${S.id==='box'?'a shallower cut':'narrower'}.`);
+    else if(this.xh===S.best) out.push(`${S.dform}, so ${D} = 0: the tangent is flat. ${V}′ is above 0 just left of ${X} and below 0 just right of it, so ${V} climbs to here and falls after: ${this.num(v)} ${sq} is the most it can hold.`+
+      (S.id==='free' ? ` The best paddock is ${X} by ${this.num(20-x)}: a square.` : S.id==='box' ? ` That is a box ${this.num(12-2*x)} by ${this.num(12-2*x)} and ${X} deep.` : ''));
+    else out.push(`${S.dform}, so ${D} = 0: the tangent is flat here too, but ${V} = ${this.num(v)}: the cuts meet in the middle and there is no base left. ${V}′ is below 0 just left of ${X}, so ${V} falls to here: this flat tangent marks the least, not the most.`);
+    if(S.id==='wall' && v===150) out.push(`150 m² is three quarters of the best, 200 m². The curve is the same on both sides of its peak at 10, so one more width holds 150 m² too.`);
+    return out;
+  },
+  open(){ UI.go('s-optim'); },
+  pick(i){ this.si=i; this.xh=this.SETS[i].start; this.touched=true; this.render(); },
+  moveX(by){ const S=this.set(), v=this.xh+by; if(v<S.lo || v>S.hi) return; this.xh=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set(), x=this.x(), d=this.d();
+    document.getElementById('opSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Optim.pick(${i})" aria-label="${s.btn}: ${s.form}">${s.btn}</button>`).join('');
+    document.getElementById('opX').textContent=`x = ${this.num(x)} ${S.unit}`;
+    document.getElementById('opXLo').disabled=this.xh<=S.lo;
+    document.getElementById('opXHi').disabled=this.xh>=S.hi;
+    document.getElementById('opXLo').setAttribute('aria-label',`Make x half a ${S.uw} smaller`);
+    document.getElementById('opXHi').setAttribute('aria-label',`Make x half a ${S.uw} bigger`);
+    Figure.render({kind:'curve', f:{poly:S.poly}, lo:0, hi:S.hi/2, ylim:S.ylim, tangent:x, pts:[[x,this.v(),FIG_COL.d]],
+      caption:`The gold curve is ${S.V} for each x. The dashed red tangent at x = ${this.num(x)} has slope ${S.V}′ = ${this.num(d)}`+(d===0?', flat.':'.')},
+      document.getElementById('opFig'));
+    document.getElementById('opRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    if(this.touched && this.si===0 && this.v()===150) this.pair.add(this.xh);
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('opGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER BUILDER','every best shape found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

@@ -1,124 +1,131 @@
 {
- "change": "The Two Castles Workshop: the split a matrix leaves alone",
+ "change": "The Biggest Build Workshop: where the slope is 0",
  "mutations": [
   {
-   "name": "Drift's steady split is put at 70",
+   "name": "the wall paddock's slope is 40 − 2x",
    "file": "index.html",
-   "find": "p:0.1, q:0.3, star:75, lam:0.6,",
-   "replace": "p:0.1, q:0.3, star:70, lam:0.6,",
+   "find": "f:x=>x*(40-2*x), d:x=>40-4*x,",
+   "replace": "f:x=>x*(40-2*x), d:x=>40-2*x,",
    "run": "verify"
   },
   {
-   "name": "Drift's other eigenvalue is 0.7",
+   "name": "the wall paddock's best is put at 9 m",
    "file": "index.html",
-   "find": "p:0.1, q:0.3, star:75, lam:0.6,",
-   "replace": "p:0.1, q:0.3, star:75, lam:0.7,",
+   "find": "sq:'m²', what:'area', V:'A', best:20,\n     say:'40 m of fence makes three",
+   "replace": "sq:'m²', what:'area', V:'A', best:18,\n     say:'40 m of fence makes three",
    "run": "verify"
   },
   {
-   "name": "the gap grows by λ one night too few",
+   "name": "the box's curve leaves out its cubic",
    "file": "index.html",
-   "find": "Math.pow(this.lam(),k); },",
-   "replace": "Math.pow(this.lam(),Math.max(0,k-1)); },",
+   "find": "poly:[[4,3],[-48,2],[144,1]]",
+   "replace": "poly:[[-48,2],[144,1]]",
    "run": "verify"
   },
   {
-   "name": "A keeps what rides away",
+   "name": "the box's side is 12 − x",
    "file": "index.html",
-   "find": "const a=this.A(n-1), b=100-a, keep=(1-R.p)*a,",
-   "replace": "const a=this.A(n-1), b=100-a, keep=R.p*a,",
+   "find": "f:x=>x*(12-2*x)**2,",
+   "replace": "f:x=>x*(12-x)**2,",
    "run": "verify"
   },
   {
-   "name": "the matrix rows are swapped",
+   "name": "half a metre either way reads one side twice",
    "file": "index.html",
-   "find": "rows ${this.num(1-R.p)}, ${this.num(R.q)} and ${this.num(R.p)}, ${this.num(1-R.q)}",
-   "replace": "rows ${this.num(1-R.p)}, ${this.num(R.p)} and ${this.num(R.q)}, ${this.num(1-R.q)}",
+   "find": "${hold(x-0.5)} and ${hold(x+0.5)}.`",
+   "replace": "${hold(x-0.5)} and ${hold(x-0.5)}.`",
    "run": "verify"
   },
   {
-   "name": "near means within 2",
+   "name": "the flat tangent at the most is not checked",
    "file": "index.html",
-   "find": "Math.abs(this.A()-this.star())<1; },",
-   "replace": "Math.abs(this.A()-this.star())<2; },",
+   "find": "else if(this.xh===S.best) out.push(",
+   "replace": "else if(this.xh>0) out.push(",
    "run": "verify"
   },
   {
-   "name": "closing in counts from any start",
+   "name": "loses counts where it adds",
    "file": "index.html",
-   "find": "ok:K=>K.ri===0 && K.far() && K.near()},",
-   "replace": "ok:K=>K.ri===0 && K.near()},",
+   "find": "ok:K=>K.si===0 && K.d()<0},",
+   "replace": "ok:K=>K.si===0 && K.d()!==0},",
    "run": "verify"
   },
   {
-   "name": "one night counts on any night",
+   "name": "both widths counts after one",
    "file": "index.html",
-   "find": "ok:K=>K.ri===1 && K.a0()!==K.star() && K.n===1},",
-   "replace": "ok:K=>K.ri===1 && K.a0()!==K.star() && K.n>=1},",
+   "find": "ok:K=>K.si===0 && K.pair.size===2},",
+   "replace": "ok:K=>K.si===0 && K.pair.size>=1},",
    "run": "verify"
   },
   {
-   "name": "a flip counts after one night",
+   "name": "the box's trap counts at any flat tangent",
    "file": "index.html",
-   "find": "ok:K=>K.ri===2 && K.a0()!==K.star() && K.n>=2},",
-   "replace": "ok:K=>K.ri===2 && K.a0()!==K.star() && K.n>=1},",
+   "find": "ok:K=>K.si===2 && K.xh===12}",
+   "replace": "ok:K=>K.si===2 && K.d()===0}",
    "run": "verify"
   },
   {
-   "name": "both sides counts after one",
+   "name": "the square counts on the wall too",
    "file": "index.html",
-   "find": "ok:K=>K.ri===0 && K.sides.size===2},",
-   "replace": "ok:K=>K.ri===0 && K.sides.size>=1},",
+   "find": "ok:K=>K.si===1 && K.xh===20},",
+   "replace": "ok:K=>K.xh===20},",
    "run": "verify"
   },
   {
-   "name": "the start stops at 95",
+   "name": "150 m² is never noted",
    "file": "index.html",
-   "find": "  ALO:0, AHI:20, NMAX:10,",
-   "replace": "  ALO:0, AHI:19, NMAX:10,",
-   "run": "play:castles"
+   "find": "if(this.touched && this.si===0 && this.v()===150) this.pair.add(this.xh);",
+   "replace": "",
+   "run": "play:optim"
   },
   {
-   "name": "a new rule clears the nights",
+   "name": "a new build keeps the old x",
    "file": "index.html",
-   "find": "  pick(i){ this.ri=i; this.touched=true; this.render(); },\n  moveA",
-   "replace": "  pick(i){ this.ri=i; this.n=0; this.touched=true; this.render(); },\n  moveA",
-   "run": "play:castles"
+   "find": "pick(i){ this.si=i; this.xh=this.SETS[i].start; this.touched=true;",
+   "replace": "pick(i){ this.si=i; this.xh=Math.min(this.xh,this.SETS[i].hi); this.touched=true;",
+   "run": "play:optim"
   },
   {
-   "name": "the figure draws only tonight",
+   "name": "the tangent is drawn at the start",
    "file": "index.html",
-   "find": "const pts=[...Array(n+1)].map((_,k)=>[k,this.A(k),k===n?FIG_COL.d:FIG_COL.a]);",
-   "replace": "const pts=[[n,this.A(),FIG_COL.d]];",
-   "run": "play:castles"
+   "find": "ylim:S.ylim, tangent:x, pts:",
+   "replace": "ylim:S.ylim, tangent:S.start/2, pts:",
+   "run": "play:optim"
   },
   {
-   "name": "the caption leaves out the steady split",
+   "name": "the caption never says flat",
    "file": "index.html",
-   "find": "the gold line is the steady split, ${this.num(S)}.`},",
-   "replace": "the gold line is the steady split.`},",
-   "run": "play:castles"
+   "find": "+(d===0?', flat.':'.')},",
+   "replace": "+'.'},",
+   "run": "play:optim"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'LORD OF TWO KEEPS','every split settled','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'LORD OF TWO KEEPS','every split settled','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:castles"
+   "find": "'MASTER BUILDER','every best shape found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER BUILDER','every best shape found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:optim"
   },
   {
-   "name": "the rule buttons lose their names",
+   "name": "the stepper stops short of 19 m",
    "file": "index.html",
-   "find": "onclick=\"Castles.pick(${i})\" aria-label=\"${r.btn}: ${r.say}\">",
-   "replace": "onclick=\"Castles.pick(${i})\">",
-   "run": "play:castles"
+   "find": "{id:'wall', btn:'Wall paddock', lo:2, hi:38,",
+   "replace": "{id:'wall', btn:'Wall paddock', lo:2, hi:37,",
+   "run": "play:optim"
+  },
+  {
+   "name": "the build buttons lose their names",
+   "file": "index.html",
+   "find": "onclick=\"Optim.pick(${i})\" aria-label=\"${s.btn}: ${s.form}\">",
+   "replace": "onclick=\"Optim.pick(${i})\">",
+   "run": "play:optim"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeCastles\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeCastlesX\"",
-   "run": "play:castles"
+   "find": "<button class=\"btn sm\" id=\"tomeOptim\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeOptimX\"",
+   "run": "play:optim"
   }
  ]
 }
