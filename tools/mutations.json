@@ -1,187 +1,173 @@
 {
- "change": "The Bend Workshop: the slope of the slope",
+ "change": "The Water Level Workshop: the average value",
  "mutations": [
   {
-   "name": "f″ of the S-curve is 3x",
+   "name": "the bowl's area is 27/3 read as 27",
    "file": "index.html",
-   "find": "f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>6*x}",
-   "replace": "f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>3*x}",
+   "find": "area:[9,1], sn:1, sd:2, top:18}",
+   "replace": "area:[27,1], sn:1, sd:2, top:18}",
    "run": "verify"
   },
   {
-   "name": "f′ of the shifted curve loses its 2",
+   "name": "the narrow bowl's area loses its third",
    "file": "index.html",
-   "find": "d1:x=>x*x-2*x, d2:x=>2*x-2}",
-   "replace": "d1:x=>x*x-x, d2:x=>2*x-2}",
+   "find": "area:[8,3], sn:1, sd:3, top:12}",
+   "replace": "area:[8,1], sn:1, sd:3, top:12}",
    "run": "verify"
   },
   {
-   "name": "the shown f″ is not the curve's",
+   "name": "the ramp's curve is 2x",
    "file": "index.html",
-   "find": "d1s:'x² − 2x', d2s:'2x − 2',",
-   "replace": "d1s:'x² − 2x', d2s:'2x',",
+   "find": "f:x=>2*x+1, F:x=>x*x+x,",
+   "replace": "f:x=>2*x, F:x=>x*x+x,",
    "run": "verify"
   },
   {
-   "name": "the flip needs no sign change",
+   "name": "the shown antiderivative is not the curve's",
    "file": "index.html",
-   "find": "return this.f2()===0 && this.f2(x-0.5)*this.f2(x+0.5)<0; },",
-   "replace": "return this.f2()===0; },",
+   "find": "fs:'x³', Fs:'x⁴/4',",
+   "replace": "fs:'x³', Fs:'x⁴/3',",
    "run": "verify"
   },
   {
-   "name": "rising and falling swap",
+   "name": "the crossing is not where the curve meets the level",
    "file": "index.html",
-   "find": "(hi>lo ? `: it is rising.` : hi<lo ? `: it is falling.`",
-   "replace": "(hi<lo ? `: it is rising.` : hi>lo ? `: it is falling.`",
+   "find": "inv:c=>Math.cbrt(c),",
+   "replace": "inv:c=>Math.sqrt(c),",
    "run": "verify"
   },
   {
-   "name": "a cup sits below its tangent",
+   "name": "the level holds c, not c × width",
    "file": "index.html",
-   "find": "the curve bends up like a cup and sits above its tangent.`);",
-   "replace": "the curve bends up like a cup and sits below its tangent.`);",
+   "find": "return [p*S.sd - q*this.k*S.sn*this.w(), q*S.sd];",
+   "replace": "return [p*S.sd - q*this.k*S.sn, q*S.sd];",
    "run": "verify"
   },
   {
-   "name": "the flip names the wrong way round",
+   "name": "the gaps are measured from the wrong end",
    "file": "index.html",
-   "find": "${a<0?'cap to cup':'cup to cap'}",
-   "replace": "${a>0?'cap to cup':'cup to cap'}",
+   "find": "return c*(x-S.a) - (S.F(x)-S.F(S.a)); },",
+   "replace": "return c*(S.b-x) - (S.F(x)-S.F(S.a)); },",
    "run": "verify"
   },
   {
-   "name": "hilltop and valley floor swap",
+   "name": "too low and too high swap",
    "file": "index.html",
-   "find": "${c<0?'hilltop, a local maximum':'valley floor, a local minimum'}",
-   "replace": "${c>0?'hilltop, a local maximum':'valley floor, a local minimum'}",
+   "find": "so the level is too ${dn>0?'low: raise':'high: lower'} it.`);",
+   "replace": "so the level is too ${dn<0?'low: raise':'high: lower'} it.`);",
    "run": "verify"
   },
   {
-   "name": "a rounded height reads as exact",
+   "name": "the ends' average is taken as the answer for curves too",
    "file": "index.html",
-   "find": "return (Math.abs(Math.round(v*p)/p-v)<1e-10 ? '= ' : '≈ ')+this.num(v,d); },\n  /* the readout as plain sentences, so the checks read what the player reads */\n  working(){\n    const S=this.set(), x=this.x()",
-   "replace": "return '= '+this.num(v,d); },\n  /* the readout as plain sentences, so the checks read what the player reads */\n  working(){\n    const S=this.set(), x=this.x()",
+   "find": "${neg(fa)} + ${neg(fb)})/2 = ${E}, is not it:",
+   "replace": "${neg(fa)} + ${neg(fb)})/2 = ${E}, is it:",
    "run": "verify"
   },
   {
-   "name": "the tangent has twice the slope",
+   "name": "the average divides by the width twice",
    "file": "index.html",
-   "find": "y2=\"${PY(y+s*(t1-x)).toFixed(2)}\"",
-   "replace": "y2=\"${PY(y+2*s*(t1-x)).toFixed(2)}\"",
+   "find": "so c = ${C} is the average value, (1/${w}) × ${A} = ${C}.`",
+   "replace": "so c = ${C} is the average value, (1/${w*w}) × ${A} = ${C}.`",
    "run": "verify"
   },
   {
-   "name": "the tangent misses the point",
+   "name": "the over goal fires on any level",
    "file": "index.html",
-   "find": "y1=\"${PY(y+s*(t0-x)).toFixed(2)}\"",
-   "replace": "y1=\"${PY(s*(t0-x)).toFixed(2)}\"",
+   "find": "ok:K=>K.diff()<0}",
+   "replace": "ok:K=>K.diff()<=0}",
    "run": "verify"
   },
   {
-   "name": "the tangent is always green",
+   "name": "the steep goal fires on the wrong curve",
    "file": "index.html",
-   "find": "const col = c>0 ? FIG_COL.c : c<0 ? FIG_COL.d : FIG_COL.b;",
-   "replace": "const col = FIG_COL.c;",
+   "find": "ok:K=>K.si===2 && K.diff()===0},",
+   "replace": "ok:K=>K.si===1 && K.diff()===0},",
    "run": "verify"
   },
   {
-   "name": "the point sits on the axis",
+   "name": "the blue shading follows the curve below the level too",
    "file": "index.html",
-   "find": "cy=\"${PY(y).toFixed(2)}\" r=\"5\"",
-   "replace": "cy=\"${PY(0).toFixed(2)}\" r=\"5\"",
+   "find": "out+=`<polygon data-k=\"over\" points=\"${band(Math.max)}\"",
+   "replace": "out+=`<polygon data-k=\"over\" points=\"${band((f,c)=>f)}\"",
    "run": "verify"
   },
   {
-   "name": "the curve is drawn to the wrong height",
+   "name": "the gold level sits at twice c",
    "file": "index.html",
-   "find": "const pad=(hi-lo)*0.08; return [lo-pad, hi+pad];",
-   "replace": "const pad=(hi-lo)*0.08; return [lo-pad, hi+2*pad];",
+   "find": "y1=\"${PY(c).toFixed(2)}\" x2=\"${PX(S.b).toFixed(2)}\" y2=\"${PY(c).toFixed(2)}\"",
+   "replace": "y1=\"${PY(2*c).toFixed(2)}\" x2=\"${PX(S.b).toFixed(2)}\" y2=\"${PY(2*c).toFixed(2)}\"",
    "run": "verify"
   },
   {
-   "name": "the hilltop takes any cap",
+   "name": "a level step is a whole step on the bowl",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.f1()===0 && K.f2()<0},",
-   "replace": "ok:K=>K.si===0 && K.f2()<0},",
+   "find": "area:[9,1], sn:1, sd:2,",
+   "replace": "area:[9,1], sn:1, sd:1,",
    "run": "verify"
   },
   {
-   "name": "the fake goal takes any point",
+   "name": "a new curve keeps the old level",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.f2()===0}",
-   "replace": "ok:K=>K.si===2}",
-   "run": "verify"
-  },
-  {
-   "name": "the shifted goal is on the S-curve",
-   "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.infl()},",
-   "replace": "ok:K=>K.si===0 && K.infl()},",
-   "run": "verify"
-  },
-  {
-   "name": "a new curve keeps the old point",
-   "file": "index.html",
-   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveX",
-   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveX",
-   "run": "play:bend"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveC(by){ const v=this.k+by; if(v<0 || v>this.set().top)",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveC(by){ const v=this.k+by; if(v<0 || v>this.set().top)",
+   "run": "play:avg"
   },
   {
    "name": "the caption forgets the colours",
    "file": "index.html",
-   "find": "green where the curve bends up, red where it bends down, and gold where f″ = 0.</div>`;",
+   "find": "Blue shading is where the curve sticks up above the level, red is the gaps under it. At the average height the two hold the same.</div>`;",
    "replace": "</div>`;",
-   "run": "play:bend"
+   "run": "play:avg"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:bend"
+   "find": "'MASTER OF THE LEVEL','every tank evened out','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF THE LEVEL','every tank evened out','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:avg"
   },
   {
    "name": "the stepper never stops",
    "file": "index.html",
-   "find": "    document.getElementById('bdXHi').disabled=this.k>=this.X.length-1;\n",
+   "find": "    document.getElementById('avCHi').disabled=this.k>=S.top;\n",
    "replace": "",
-   "run": "play:bend"
+   "run": "play:avg"
   },
   {
-   "name": "the stepper hides x",
+   "name": "the stepper hides c",
    "file": "index.html",
-   "find": "document.getElementById('bdX').textContent=`x = ${this.num(this.x())}`;",
-   "replace": "document.getElementById('bdX').textContent=`${this.num(this.x())}`;",
-   "run": "play:bend"
+   "find": "document.getElementById('avC').textContent=`c = ${this.C()}`;",
+   "replace": "document.getElementById('avC').textContent=`${this.C()}`;",
+   "run": "play:avg"
   },
   {
    "name": "the curve buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Bend.pick(${i})\" aria-label=\"${s.btn}: f(x) = ${s.fs}\">",
-   "replace": "onclick=\"Bend.pick(${i})\">",
-   "run": "play:bend"
+   "find": "onclick=\"Avg.pick(${i})\" aria-label=\"${s.btn}: f(x) = ${s.fs} on [${s.a}, ${s.b}]\">",
+   "replace": "onclick=\"Avg.pick(${i})\">",
+   "run": "play:avg"
   },
   {
    "name": "the drawing loses its name",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} in blue",
-   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} in blue",
-   "run": "play:bend"
+   "find": "role=\"img\" aria-label=\"f(x) = ${S.fs} on [",
+   "replace": "role=\"img\" data-x=\"f(x) = ${S.fs} on [",
+   "run": "play:avg"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeBend\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeBendX\"",
-   "run": "play:bend"
+   "find": "<button class=\"btn sm\" id=\"tomeAvg\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeAvgX\"",
+   "run": "play:avg"
   },
   {
-   "name": "inflection points point nowhere",
+   "name": "the level line does not move",
    "file": "index.html",
-   "find": "    Bend:    [\"〰️ Bend Workshop\", ['secondDeriv','inflection']],",
-   "replace": "    Bend:    [\"〰️ Bend Workshop\", ['secondDeriv','inflexion']],",
-   "run": "verify"
+   "find": "y1=\"${PY(c).toFixed(2)}\" x2=\"${PX(S.b).toFixed(2)}\" y2=",
+   "replace": "y1=\"${PY(0).toFixed(2)}\" x2=\"${PX(S.b).toFixed(2)}\" y2=",
+   "run": "play:avg"
   }
  ]
 }
