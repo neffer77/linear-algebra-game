@@ -77,6 +77,7 @@ module.exports = {
     t.eq('every goal can be found with the buttons', await found(t), ['neg', 'opp', 'perp', 'same', 'ten', 'tilt']);
     t.ok('and the count says so', /6 of 6 found/.test(await t.ev(() => document.getElementById('dtGoals').innerText)));
     t.ok('v\'s first number stops at 4', await t.ev(l => document.querySelector(`#dtVecs button[aria-label="${l}"]`).disabled, btn('v', 0, true)));
+    t.eq('and a press past it changes nothing', await t.ev(() => { Dot.step('v', 0, 1); return Dot.v[0]; }), 4);
 
     // --- start again keeps the finds; a zero arrow has no angle ---
     await t.tapText(/^Start again$/);
