@@ -1,292 +1,271 @@
 {
- "change": "The Tangent Plane Workshop: a height and two slopes",
+ "change": "The Inverse Slope Workshop: mirror the curve, flip the slope",
  "mutations": [
   {
-   "name": "the bowl is touched at (1, 3)",
+   "name": "arcsin's f′ forgets the root",
    "file": "index.html",
-   "find": "{id:'bowl', btn:'Bowl', name:'a bowl', a:1, b:1, x0:1, y0:2,",
-   "replace": "{id:'bowl', btn:'Bowl', name:'a bowl', a:1, b:1, x0:1, y0:3,",
+   "find": "fpU:u=>Math.sqrt(1-u*u),\n     rule:'1/√(1 − u²)'",
+   "replace": "fpU:u=>1-u*u,\n     rule:'1/√(1 − u²)'",
    "run": "verify"
   },
   {
-   "name": "f_x forgets the 2",
+   "name": "arccos's f′ loses its minus",
    "file": "index.html",
-   "find": "  fx(){ const S=this.set(); return 2*S.a*S.x0; },",
-   "replace": "  fx(){ const S=this.set(); return S.a*S.x0; },",
+   "find": "fpU:u=>-Math.sqrt(1-u*u),",
+   "replace": "fpU:u=>Math.sqrt(1-u*u),",
    "run": "verify"
   },
   {
-   "name": "f_y is read at x",
+   "name": "tan's f′ is 1 − u²",
    "file": "index.html",
-   "find": "  fy(){ const S=this.set(); return 2*S.b*S.y0; },",
-   "replace": "  fy(){ const S=this.set(); return 2*S.b*S.x0; },",
+   "find": "fpU:u=>1+u*u,",
+   "replace": "fpU:u=>1-u*u,",
    "run": "verify"
   },
   {
-   "name": "the height drops the minus of y²",
+   "name": "the slope is never flipped",
    "file": "index.html",
-   "find": "return S.a*S.x0*S.x0+S.b*S.y0*S.y0; },",
-   "replace": "return S.a*S.x0*S.x0+Math.abs(S.b)*S.y0*S.y0; },",
+   "find": "  right(){ return this.r(1/this.fp()); },",
+   "replace": "  right(){ return this.fp(); },",
    "run": "verify"
   },
   {
-   "name": "a match ignores the height",
+   "name": "the wrong point is x after all",
    "file": "index.html",
-   "find": "  match(){ return this.h===this.f() && ",
-   "replace": "  match(){ return true && ",
+   "find": "  fpWrong(){ return this.r(this.set().fpAt(this.u())); },",
+   "replace": "  fpWrong(){ return this.r(this.set().fpAt(this.x())); },",
    "run": "verify"
   },
   {
-   "name": "a bracket keeps the point's sign",
+   "name": "the nudge is one-sided",
    "file": "index.html",
-   "find": "  br(v,at){ return at===0 ? v : `(${v} ${at<0?'+':'−'} ${Math.abs(at)})`; },",
-   "replace": "  br(v,at){ return at===0 ? v : `(${v} ${at<0?'−':'+'} ${Math.abs(at)})`; },",
+   "find": "return (S.inv(u+this.H)-S.inv(u-this.H))/(2*this.H); },",
+   "replace": "return (S.inv(u+this.H)-S.inv(u))/(this.H); },",
    "run": "verify"
   },
   {
-   "name": "a slope loses its minus",
+   "name": "an exact number is any number",
    "file": "index.html",
-   "find": "  term(c,v,at){ return `${c<0?'−':'+'} ",
-   "replace": "  term(c,v,at){ return `${'+'} ",
+   "find": "(Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v)",
+   "replace": "(Math.abs(Math.round(v*p)/p-v)<1 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v)",
    "run": "verify"
   },
   {
-   "name": "the dome's height loses its minus",
+   "name": "the wall is never said",
    "file": "index.html",
-   "find": "return `${S.a<0?'−':''}${this.ev(S.a,S.x0,S.a<0)}",
-   "replace": "return `${''}${this.ev(S.a,S.x0,S.a<0)}",
+   "find": "    if(fp===0){\n      out.push(`f′(x) = 0: f is flat here",
+   "replace": "    if(false){\n      out.push(`f′(x) = 0: f is flat here",
    "run": "verify"
   },
   {
-   "name": "a 2 in front is dropped when worked",
+   "name": "a slip is never caught",
    "file": "index.html",
-   "find": "return (m===1?'':m+'·')+(br||v<0",
-   "replace": "return ('')+(br||v<0",
+   "find": "    else if(W!==R) out.push(this.mode===1",
+   "replace": "    else if(false) out.push(this.mode===1",
    "run": "verify"
   },
   {
-   "name": "below and above are swapped",
+   "name": "the arccos sentence shows everywhere",
    "file": "index.html",
-   "find": "${this.h<f?'below':'above'} the point.`));",
-   "replace": "${this.h<f?'above':'below'} the point.`));",
+   "find": "      if(S.id==='acos') out.push(`Arccos falls",
+   "replace": "      if(true) out.push(`Arccos falls",
    "run": "verify"
   },
   {
-   "name": "the gap keeps its sign",
+   "name": "arctan's rule has a minus",
    "file": "index.html",
-   "find": "your plane passes ${Math.abs(this.h-f)} ",
-   "replace": "your plane passes ${(this.h-f)} ",
+   "find": "rule:'1/(1 + u²)'}",
+   "replace": "rule:'1/(1 − u²)'}",
    "run": "verify"
   },
   {
-   "name": "the x slice holds y at x₀",
+   "name": "the point is not mirrored",
    "file": "index.html",
-   "find": "out.push(`Along x, y stays at ${neg(S.y0)}",
-   "replace": "out.push(`Along x, y stays at ${neg(S.x0)}",
+   "find": "The point (${X}, ${U}) on f mirrors to (${U}, ${X}) on g.`);",
+   "replace": "The point (${U}, ${X}) on f mirrors to (${X}, ${U}) on g.`);",
    "run": "verify"
   },
   {
-   "name": "the x slice touches with f_y",
+   "name": "a negative u is squared bare",
    "file": "index.html",
-   "find": "(this.p===fx ? ': that slice touches.'",
-   "replace": "(this.p===fy ? ': that slice touches.'",
+   "find": "  sq(u){ return (u<0 ? `(${neg(u)})` : neg(u))+'²'; },",
+   "replace": "  sq(u){ return neg(u)+'²'; },",
    "run": "verify"
   },
   {
-   "name": "the swap is named with the height wrong",
+   "name": "a slope of 1 takes any method",
    "file": "index.html",
-   "find": "    else if(this.h===f && this.p===fy && this.q===fx)",
-   "replace": "    else if(this.p===fy && this.q===fx)",
+   "find": "ok:K=>K.si===0 && K.mode===0 && K.u()===0},",
+   "replace": "ok:K=>K.si===0 && K.u()===0},",
    "run": "verify"
   },
   {
-   "name": "the height slip needs only the x slope",
+   "name": "the wall is found on arccos",
    "file": "index.html",
-   "find": "    else if(this.p===fx && this.q===fy)\n      out.push(`Both",
-   "replace": "    else if(this.p===fx)\n      out.push(`Both",
+   "find": "ok:K=>K.si===0 && K.fp()===0},",
+   "replace": "ok:K=>K.fp()===0},",
    "run": "verify"
   },
   {
-   "name": "one slice is said when neither touches",
+   "name": "a slope of 1/2 is at u = 0.5",
    "file": "index.html",
-   "find": "    else if(this.h===f && (this.p===fx)!==(this.q===fy))\n      out.push(`One slice",
-   "replace": "    else if(this.h===f && true)\n      out.push(`One slice",
+   "find": "ok:K=>K.si===2 && K.mode===0 && Math.abs(K.u())===1},",
+   "replace": "ok:K=>K.si===2 && K.mode===0 && Math.abs(K.u())===0.5},",
    "run": "verify"
   },
   {
-   "name": "the saddle is called a bowl",
+   "name": "the flip is found without being caught",
    "file": "index.html",
-   "find": "out.push(S.a>0 && S.b>0 ? `The bowl curves up",
-   "replace": "out.push(S.a>0 ? `The bowl curves up",
+   "find": "ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()!==K.right()},",
+   "replace": "ok:K=>K.mode===1 && K.fp()!==0},",
    "run": "verify"
   },
   {
-   "name": "the swap goal takes any height",
+   "name": "luck takes the wrong point",
    "file": "index.html",
-   "find": "ok:K=>K.h===K.f() && K.p===K.fy() && K.q===K.fx()},",
-   "replace": "ok:K=>K.p===K.fy() && K.q===K.fx()},",
+   "find": "ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()===K.right()}",
+   "replace": "ok:K=>K.mode>=1 && K.fp()!==0 && K.wrong()===K.right()}",
    "run": "verify"
   },
   {
-   "name": "the lift goal takes the right height",
+   "name": "picking an inverse keeps the slip",
    "file": "index.html",
-   "find": "ok:K=>K.p===K.fx() && K.q===K.fy() && K.h!==K.f()},",
-   "replace": "ok:K=>K.p===K.fx() && K.q===K.fy()},",
+   "find": "this.mode=0; this.touched=true; this.render(); },\n  moveU",
+   "replace": "this.touched=true; this.render(); },\n  moveU",
    "run": "verify"
   },
   {
-   "name": "the edge goal takes any height",
+   "name": "u runs past its last step",
    "file": "index.html",
-   "find": "ok:K=>K.h===K.f() && (K.p===K.fx())!==(K.q===K.fy())},",
-   "replace": "ok:K=>(K.p===K.fx())!==(K.q===K.fy())},",
+   "find": "  moveU(by){ const v=this.k+by; if(v<0 || v>=this.set().U.length) return;",
+   "replace": "  moveU(by){ const v=this.k+by; if(v<0 || v>this.set().U.length) return;",
    "run": "verify"
   },
   {
-   "name": "the dome goal takes the lopsided bowl",
+   "name": "arctan starts at a slope of 1/2",
    "file": "index.html",
-   "find": "ok:K=>K.si===3 && K.match()}\n  ],\n  set(){ return this.SETS[this.si]; },\n  /* the height and the two slopes",
-   "replace": "ok:K=>K.si>=2 && K.match()}\n  ],\n  set(){ return this.SETS[this.si]; },\n  /* the height and the two slopes",
+   "find": "start:7, D:[-3.25,3.25]",
+   "replace": "start:6, D:[-3.25,3.25]",
    "run": "verify"
   },
   {
-   "name": "a new surface keeps the height",
+   "name": "g is drawn as f",
    "file": "index.html",
-   "find": "  start(){ this.h=0; this.p=0; this.q=0; },",
-   "replace": "  start(){ this.p=0; this.q=0; },",
+   "find": "out+=this.curve('g',FIG_COL.b,t=>{ const v=x0+(x1-x0)*t; return [S.fn(v),v]; });",
+   "replace": "out+=this.curve('g',FIG_COL.b,t=>{ const v=x0+(x1-x0)*t; return [v,S.fn(v)]; });",
    "run": "verify"
   },
   {
-   "name": "picking a surface keeps the plane",
+   "name": "the gold point is not mirrored",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  move(k,by)",
-   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  move(k,by)",
+   "find": "<circle data-k=\"gpt\" cx=\"${f(this.PX(u))}\" cy=\"${f(this.PY(x))}\"",
+   "replace": "<circle data-k=\"gpt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(u))}\"",
    "run": "verify"
   },
   {
-   "name": "the steppers run past 6",
+   "name": "g's tangent is drawn with f′",
    "file": "index.html",
-   "find": "  move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI) return;",
-   "replace": "  move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI+1) return;",
+   "find": "out+=this.seg(u,x,fp===0?Infinity:this.right(),'gtan',FIG_COL.c);",
+   "replace": "out+=this.seg(u,x,fp,'gtan',FIG_COL.c);",
    "run": "verify"
   },
   {
-   "name": "the steppers stop at −5",
+   "name": "the slip's line has the right slope",
    "file": "index.html",
-   "find": "  LO:-6, HI:6,\n  si:0, h:0, p:0, q:0,",
-   "replace": "  LO:-5, HI:6,\n  si:0, h:0, p:0, q:0,",
+   "find": "out+=this.seg(u,x,this.wrong(),'slip',FIG_COL.d",
+   "replace": "out+=this.seg(u,x,this.right(),'slip',FIG_COL.d",
    "run": "verify"
   },
   {
-   "name": "the x slice drops the y² term",
+   "name": "tangents are not cut to the chart",
    "file": "index.html",
-   "find": "const curve=[u=>S.a*(S.x0+u)**2+S.b*S.y0*S.y0,",
-   "replace": "const curve=[u=>S.a*(S.x0+u)**2,",
+   "find": "const [a,b]=this.set().D, len=0.9*(b-a)/4",
+   "replace": "const [a,b]=[-99,99], len=0.9*(this.set().D[1]-this.set().D[0])/4",
    "run": "verify"
   },
   {
-   "name": "the x slice draws the y slope",
+   "name": "the mirror is y = −x",
    "file": "index.html",
-   "find": "const line=[u=>this.h+this.p*u, u=>this.h+this.q*u];",
-   "replace": "const line=[u=>this.h+this.q*u, u=>this.h+this.q*u];",
+   "find": "<line data-k=\"mirror\" x1=\"${this.L}\" y1=\"${this.T+this.SZ}\" x2=\"${this.L+this.SZ}\" y2=\"${this.T}\"",
+   "replace": "<line data-k=\"mirror\" x1=\"${this.L}\" y1=\"${this.T}\" x2=\"${this.L+this.SZ}\" y2=\"${this.T+this.SZ}\"",
    "run": "verify"
   },
   {
-   "name": "the dot sits at the plane's height",
+   "name": "tan runs off the top of the chart",
    "file": "index.html",
-   "find": "cy=\"${f(this.PY(fz))}\" r=\"5\"",
-   "replace": "cy=\"${f(this.PY(this.h))}\" r=\"5\"",
+   "find": "p[0]<a || p[0]>b || p[1]<a || p[1]>b){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
+   "replace": "p[0]<a || p[0]>b){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
    "run": "verify"
   },
   {
-   "name": "the lines run out of their boxes",
+   "name": "the stepper is never switched off at the top",
    "file": "index.html",
-   "find": "if(v<z0 || v>z1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(side,u)",
-   "replace": "if(!isFinite(v)){ if(seg.length>1) segs.push(seg); seg=[]; continue; }\n      seg.push(`${this.PX(side,u)",
-   "run": "verify"
+   "find": "document.getElementById('ivUHi').disabled=this.k>=this.set().U.length-1;",
+   "replace": "document.getElementById('ivUHi').disabled=false;",
+   "run": "play:invslope"
   },
   {
-   "name": "the figure says touch when the height matches",
+   "name": "the method buttons do not show which is pressed",
    "file": "index.html",
-   "find": "${this.match()?': both lines touch':''}",
-   "replace": "${this.h===this.f()?': both lines touch':''}",
-   "run": "verify"
+   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"InvSlope.setMode(${i})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"InvSlope.setMode(${i})\"",
+   "run": "play:invslope"
   },
   {
-   "name": "the slices are drawn upside down",
+   "name": "an inverse button loses its name",
    "file": "index.html",
-   "find": "  PY(z){ const [z0,z1]=this.set().z; return this.B-(z-z0)/(z1-z0)*(this.B-this.T); },",
-   "replace": "  PY(z){ const [z0,z1]=this.set().z; return this.T+(z-z0)/(z1-z0)*(this.B-this.T); },",
-   "run": "verify"
+   "find": "onclick=\"InvSlope.pick(${i})\" aria-label=",
+   "replace": "onclick=\"InvSlope.pick(${i})\" data-x=",
+   "run": "play:invslope"
   },
   {
-   "name": "the steppers are never switched off at the top",
+   "name": "a method button loses its name",
    "file": "index.html",
-   "find": "document.getElementById('tq'+k+'Hi').disabled=this[k]>=this.HI;",
-   "replace": "document.getElementById('tq'+k+'Hi').disabled=false;",
-   "run": "play:tanplane"
+   "find": "onclick=\"InvSlope.setMode(${i})\" aria-label=",
+   "replace": "onclick=\"InvSlope.setMode(${i})\" data-x=",
+   "run": "play:invslope"
   },
   {
-   "name": "the surface buttons do not show which is pressed",
+   "name": "the inverse buttons run in one row",
    "file": "index.html",
-   "find": "aria-pressed=\"${i===this.si}\" onclick=\"TanPlane.pick(${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"TanPlane.pick(${i})\"",
-   "run": "play:tanplane"
+   "find": "<div id=\"ivSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"ivSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:invslope"
   },
   {
-   "name": "a surface button loses its name",
+   "name": "u shows a plain minus",
    "file": "index.html",
-   "find": "onclick=\"TanPlane.pick(${i})\" aria-label=\"${s.btn}: z = ",
-   "replace": "onclick=\"TanPlane.pick(${i})\" data-x=\"${s.btn}: z = ",
-   "run": "play:tanplane"
-  },
-  {
-   "name": "the plane is not shown big",
-   "file": "index.html",
-   "find": "document.getElementById('tqP').textContent=this.plane(this.h,this.p,this.q);",
-   "replace": "document.getElementById('tqP').textContent='z';",
-   "run": "play:tanplane"
-  },
-  {
-   "name": "a stepper shows a plain minus",
-   "file": "index.html",
-   "find": "document.getElementById('tq'+k).textContent=`${lbl} = ${neg(this[k])}`;",
-   "replace": "document.getElementById('tq'+k).textContent=`${lbl} = ${this[k]}`;",
-   "run": "play:tanplane"
-  },
-  {
-   "name": "the surface buttons run in one row",
-   "file": "index.html",
-   "find": "<div id=\"tqSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"tqSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:tanplane"
+   "find": "document.getElementById('ivU').textContent=`u = ${this.num(this.u())}`;",
+   "replace": "document.getElementById('ivU').textContent=`u = ${this.u()}`;",
+   "run": "play:invslope"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:tanplane"
+   "run": "play:invslope"
   },
   {
-   "name": "the Tome loses the tangent plane workshop",
+   "name": "the Tome loses the inverse slope workshop",
    "file": "index.html",
-   "find": "id=\"tomeTanPlane\"",
-   "replace": "id=\"tomeTanPlaneX\"",
-   "run": "play:tanplane"
+   "find": "id=\"tomeInvSlope\"",
+   "replace": "id=\"tomeInvSlopeX\"",
+   "run": "play:invslope"
   },
   {
-   "name": "the workshop saves its plane",
+   "name": "the workshop saves its u",
    "file": "index.html",
-   "find": "this[k]=v; this.touched=true; this.render(); },",
-   "replace": "this[k]=v; Game.s.tq=v; this.touched=true; this.render(); },",
-   "run": "play:tanplane"
+   "find": "if(v<0 || v>=this.set().U.length) return; this.k=v; this.touched=true;",
+   "replace": "if(v<0 || v>=this.set().U.length) return; this.k=v; Game.s.iv=v; this.touched=true;",
+   "run": "play:invslope"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">Each side is a slice",
-   "replace": "<div class=\"figcapX\">Each side is a slice",
-   "run": "play:tanplane"
+   "find": "<div class=\"figcap\">f is blue and its mirror",
+   "replace": "<div class=\"figcapX\">f is blue and its mirror",
+   "run": "play:invslope"
   }
  ]
 }
