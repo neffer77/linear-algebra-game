@@ -992,6 +992,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ SPAN WORKSHOP ============ -->
+  <div class="screen" id="s-span">
+    <div class="panel"><h2>🧭 Span Workshop</h2><div class="sub">A mix of two arrows is a·u + b·v: walk a of u, then b of v from where you stopped. Pick a pair, choose the amounts, and see which points the pair can reach together.</div></div>
+    <div class="panel">
+      <div id="spPairs" class="wsModes" role="group" aria-label="The two arrows"></div>
+      <div id="spAmts" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The amounts a and b"></div>
+      <div id="spFig"></div>
+      <div id="spRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="spGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
@@ -5882,7 +5897,13 @@ const Figure = {
       // and the caption says which arrow is which.
       this.arrow(g, X(0),Y(0), X(p[0]),Y(p[1]), FIG_COL.b, '', 3.4);
     }
-    (s.vecs||[]).forEach(o=>this.arrow(g, X(0),Y(0), X(o.v[0]),Y(o.v[1]), o.col||FIG_COL.a, o.label));
+    (s.vecs||[]).forEach(o=>{ const f=o.from||[0,0];
+      this.arrow(g, X(f[0]),Y(f[1]), X(f[0]+o.v[0]),Y(f[1]+o.v[1]), o.col||FIG_COL.a, o.label); });
+    // target rings, gold, for a point to aim at
+    (s.marks||[]).forEach(p=>{
+      g.strokeStyle=FIG_COL.b; g.lineWidth=2.2;
+      g.beginPath(); g.arc(X(p[0]),Y(p[1]),7,0,2*Math.PI); g.stroke();
+    });
     // right-triangle legs, for length problems
     if(s.legs && s.vecs && s.vecs.length){
       const v=s.vecs[0].v;
@@ -12320,6 +12341,7 @@ const UI = {
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
+    if(id==='s-span') Span.render();
     if(id==='s-limit') Limit.render();
     if(id==='s-descent') Descent.render();
     Calc.syncButton();
@@ -12946,6 +12968,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands.</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🧭 Span Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Mix two arrows, a of one and b of the other, to land on a target, and find the pair that can only ever reach a line.</div>
+         <button class="btn sm" id="tomeSpan" style="width:auto;margin-top:8px" onclick="Span.open()">Open the span workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
@@ -14223,6 +14250,115 @@ const Eigen = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('EIGEN HUNTER','every kept direction found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/^On the \w+ matrix, (\w)/,(m,c)=>c.toUpperCase()).replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ SPAN WORKSHOP ============
+   Two arrows, mixed: a of one and b of the other. The readout works a·u + b·v
+   for the numbers on screen and says how far the gold target still is, then
+   what the pair can reach at all: two arrows that point different ways reach
+   the whole plane, two on one line reach only that line, and the clue is
+   whether ⟨0, 0⟩ can be made without both amounts being 0. */
+const Span = {
+  PAIRS:[
+    {u:[2,1],  v:[1,2],  t:[4,5]},
+    {u:[1,1],  v:[1,-1], t:[-1,3]},
+    {u:[1,0],  v:[0,1],  t:[-2,1], basis:true},
+    {u:[1,1],  v:[2,2],  t:[2,-1], k:2}
+  ],
+  LO:-2, HI:2,
+  pi:0, a:1, b:1, moved:false, touched:false,
+  seen:{}, before:null,
+  done:new Set(),
+  GOALS:[
+    {id:'hit',   t:'On the first pair, land on the gold target.', toast:'Landed on the first target',
+     ok:S=>S.pi===0 && S.onTarget()},
+    {id:'neg',   t:'On the second pair, land on the gold target: it takes a negative amount.', toast:'Landed on a target with a negative amount',
+     ok:S=>S.pi===1 && S.onTarget()},
+    {id:'coords',t:'With î and ĵ, land on the gold target: the amounts are just its coordinates.', toast:'Landed on the target with î and ĵ',
+     ok:S=>S.pi===2 && S.onTarget()},
+    {id:'line',  t:'Find the pair that can never reach its target, and move along its line.', toast:'Found the pair stuck on one line',
+     ok:S=>S.pi===3 && S.moved},
+    {id:'zero',  t:'Make ⟨0, 0⟩ without both amounts being 0.', toast:'Made ⟨0, 0⟩ without both amounts 0',
+     ok:S=>S.dependentZero()},
+    {id:'twice', t:'Reach the same point in two different ways.', toast:'Reached one point two ways',
+     ok:S=>!!S.before}
+  ],
+  P(){ return this.PAIRS[this.pi]; },
+  au(){ const u=this.P().u; return [this.a*u[0], this.a*u[1]]; },
+  bv(){ const v=this.P().v; return [this.b*v[0], this.b*v[1]]; },
+  sum(){ const p=this.au(), q=this.bv(); return [p[0]+q[0], p[1]+q[1]]; },
+  onTarget(){ const s=this.sum(), t=this.P().t; return s[0]===t[0] && s[1]===t[1]; },
+  isZero(w){ return !w[0] && !w[1]; },
+  dependentZero(){ return this.isZero(this.sum()) && !(this.a===0 && this.b===0); },
+  key(){ return this.pi+':'+this.sum().join(','); },
+  vec(w){ return `⟨${neg(w[0])}, ${neg(w[1])}⟩`; },
+  amt(n){ return n<0 ? `(${neg(n)})` : String(n); },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const P=this.P(), s=this.sum(), t=P.t;
+    const out=[`a·u + b·v = ${this.amt(this.a)}·${this.vec(P.u)} + ${this.amt(this.b)}·${this.vec(P.v)} = ${this.vec(this.au())} + ${this.vec(this.bv())} = ${this.vec(s)}.`];
+    if(P.k){
+      out.push(`v = ${P.k}u, so a·u + b·v = (a + ${P.k}b)·u = (${neg(this.a)} + ${P.k}·${this.amt(this.b)})·u = ${neg(this.a+P.k*this.b)}·u: every mix lies on the dashed line through u, and together the two arrows span only that line.`);
+      out.push(`The gold target ${this.vec(t)} is off that line, so no amounts a and b can ever reach it.`);
+    } else {
+      out.push(this.onTarget()
+        ? `That is the gold target ${this.vec(t)}: a = ${neg(this.a)} and b = ${neg(this.b)} land right on it.`
+        : `The gold target is ${this.vec(t)}, and ${this.vec(t)} − ${this.vec(s)} = ${this.vec([t[0]-s[0], t[1]-s[1]])} is still to go.`);
+      out.push(P.basis
+        ? `With u = î = ⟨1, 0⟩ and v = ĵ = ⟨0, 1⟩, a·î + b·ĵ is just ⟨a, b⟩: the amounts are the point's coordinates.`
+        : `u and v point different ways, so the right amounts reach any point of the plane: together they span it, and each point has exactly one pair of amounts.`);
+    }
+    if(this.isZero(s))
+      out.push(this.a===0 && this.b===0
+        ? `With a = b = 0 you get ⟨0, 0⟩, as every pair does.${P.k?'':' For these two arrows it is the only way to make it: they are independent.'}`
+        : `${this.amt(this.a)}·u + ${this.amt(this.b)}·v = ⟨0, 0⟩ with the amounts not both 0, so u and v are dependent: one undoes the other.`);
+    if(this.before)
+      out.push(`You reached ${this.vec(s)} before with a = ${neg(this.before[0])} and b = ${neg(this.before[1])}: when both arrows lie on one line, the same point can be reached more than one way.`);
+    return out;
+  },
+  // remember how each point was reached; an earlier, different way is kept in `before`
+  look(){
+    const k=this.key(), w=this.seen[k];
+    this.before = w && (w[0]!==this.a || w[1]!==this.b) ? w : null;
+    if(!w) this.seen[k]=[this.a, this.b];
+  },
+  open(){ UI.go('s-span'); },
+  pick(i){ this.pi=i; this.moved=false; this.touched=true; this.look(); this.render(); },
+  step(which, by){
+    const x=this[which]+by;
+    if(x<this.LO || x>this.HI) return;
+    this[which]=x; this.touched=true; this.moved=this.moved || this.pi===3; this.look(); this.render();
+  },
+  render(){
+    const P=this.P(), names={a:'u', b:'v'};
+    document.getElementById('spPairs').innerHTML=this.PAIRS.map((o,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.pi}" onclick="Span.pick(${i})"
+        aria-label="Pair ${i+1}: u = ${this.vec(o.u)}, v = ${this.vec(o.v)}">${this.vec(o.u)}<br>${this.vec(o.v)}</button>`).join('');
+    document.getElementById('spAmts').innerHTML=['a','b'].map(w=>`<b class="dtName ${w==='a'?'c0':'c1'}">${w}</b><div class="wsCell ${w==='a'?'c0':'c1'}">
+        <button onclick="Span.step('${w}',-1)" aria-label="Less of ${names[w]}"${this[w]<=this.LO?' disabled':''}>−</button>
+        <b aria-label="${w}, the amount of ${names[w]}: ${neg(this[w])}">${neg(this[w])}</b>
+        <button onclick="Span.step('${w}',1)" aria-label="More of ${names[w]}"${this[w]>=this.HI?' disabled':''}>+</button></div>`).join('');
+    const au=this.au(), bv=this.bv(), s=this.sum();
+    const vecs=[];
+    if(!this.isZero(au)) vecs.push({v:au, col:FIG_COL.a, label:'a·u'});
+    if(!this.isZero(bv)) vecs.push({v:bv, from:au, col:FIG_COL.c, label:'b·v'});
+    if(!this.isZero(s)) vecs.push({v:s, col:FIG_COL.b, label:''});
+    Figure.render({kind:'plane', span:6, vecs, marks:[P.t], lines:P.k?[P.u]:[],
+      caption:`a·u in blue, then b·v in green from its tip; the gold arrow is a·u + b·v, and the ring is the target${P.k?'. Every mix stays on the dashed line':''}.`},
+      document.getElementById('spFig'));
+    document.getElementById('spRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('spGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SPAN SEEKER','every mix tried','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
 };
