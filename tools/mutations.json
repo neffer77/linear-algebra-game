@@ -1,271 +1,264 @@
 {
- "change": "The Inverse Slope Workshop: mirror the curve, flip the slope",
+ "change": "The Log Slope Workshop: take ln first when x is in the base and the power",
  "mutations": [
   {
-   "name": "arcsin's f′ forgets the root",
+   "name": "xˣ's power is fixed at 1",
    "file": "index.html",
-   "find": "fpU:u=>Math.sqrt(1-u*u),\n     rule:'1/√(1 − u²)'",
-   "replace": "fpU:u=>1-u*u,\n     rule:'1/√(1 − u²)'",
+   "find": "     p:x=>x, dp:x=>1, pw:'x'",
+   "replace": "     p:x=>1, dp:x=>1, pw:'x'",
    "run": "verify"
   },
   {
-   "name": "arccos's f′ loses its minus",
+   "name": "x²ˣ forgets its 2 in p′",
    "file": "index.html",
-   "find": "fpU:u=>-Math.sqrt(1-u*u),",
-   "replace": "fpU:u=>Math.sqrt(1-u*u),",
+   "find": "     p:x=>2*x, dp:x=>2,",
+   "replace": "     p:x=>2*x, dp:x=>1,",
    "run": "verify"
   },
   {
-   "name": "tan's f′ is 1 − u²",
+   "name": "x^(1/x)'s p′ loses its minus",
    "file": "index.html",
-   "find": "fpU:u=>1+u*u,",
-   "replace": "fpU:u=>1-u*u,",
+   "find": "dp:x=>-1/(x*x),",
+   "replace": "dp:x=>1/(x*x),",
    "run": "verify"
   },
   {
-   "name": "the slope is never flipped",
+   "name": "y′/y forgets the product rule",
    "file": "index.html",
-   "find": "  right(){ return this.r(1/this.fp()); },",
-   "replace": "  right(){ return this.fp(); },",
+   "find": "return this.r(S.dp(x)*this.ln()+S.p(x)/x); },",
+   "replace": "return this.r(S.dp(x)*this.ln()); },",
    "run": "verify"
   },
   {
-   "name": "the wrong point is x after all",
+   "name": "y is never multiplied back",
    "file": "index.html",
-   "find": "  fpWrong(){ return this.r(this.set().fpAt(this.u())); },",
-   "replace": "  fpWrong(){ return this.r(this.set().fpAt(this.x())); },",
+   "find": "  right(){ return this.r(this.y()*this.dl()); },",
+   "replace": "  right(){ return this.dl(); },",
+   "run": "verify"
+  },
+  {
+   "name": "the power rule keeps its power",
+   "file": "index.html",
+   "find": "return this.r(p*x**(p-1)); },",
+   "replace": "return this.r(p*x**p); },",
+   "run": "verify"
+  },
+  {
+   "name": "the exponent rule forgets p′",
+   "file": "index.html",
+   "find": "return this.r(this.y()*this.ln()*S.dp(x)); },",
+   "replace": "return this.r(this.y()*this.ln()); },",
+   "run": "verify"
+  },
+  {
+   "name": "the sum is the power rule twice",
+   "file": "index.html",
+   "find": "this.mode===3 ? this.r(this.partP()+this.partE())",
+   "replace": "this.mode===3 ? this.r(2*this.partP())",
    "run": "verify"
   },
   {
    "name": "the nudge is one-sided",
    "file": "index.html",
-   "find": "return (S.inv(u+this.H)-S.inv(u-this.H))/(2*this.H); },",
-   "replace": "return (S.inv(u+this.H)-S.inv(u))/(this.H); },",
+   "find": "return (this.y(x+this.H)-this.y(x-this.H))/(2*this.H); },\n  num(v,d=3)",
+   "replace": "return (this.y(x+this.H)-this.y(x))/(this.H); },\n  num(v,d=3)",
+   "run": "verify"
+  },
+  {
+   "name": "ln 1/e is taken as 1",
+   "file": "index.html",
+   "find": "v==='1/e' ? -1 : v===1 ? 0",
+   "replace": "v==='1/e' ? 1 : v===1 ? 0",
+   "run": "verify"
+  },
+  {
+   "name": "1/e is not a step",
+   "file": "index.html",
+   "find": "X:[0.25,'1/e',0.5,1,1.5,2]",
+   "replace": "X:[0.25,0.375,0.5,1,1.5,2]",
+   "run": "verify"
+  },
+  {
+   "name": "x²ˣ starts at x = 1",
+   "file": "index.html",
+   "find": "X:[0.25,'1/e',0.5,1,1.25,1.5], start:4",
+   "replace": "X:[0.25,'1/e',0.5,1,1.25,1.5], start:3",
+   "run": "verify"
+  },
+  {
+   "name": "x runs past its last step",
+   "file": "index.html",
+   "find": "if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "replace": "if(v<0 || v>this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "run": "verify"
+  },
+  {
+   "name": "picking a curve keeps the slip",
+   "file": "index.html",
+   "find": "this.mode=0; this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "replace": "this.touched=true; this.render(); },\n  moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
    "run": "verify"
   },
   {
    "name": "an exact number is any number",
    "file": "index.html",
-   "find": "(Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v)",
-   "replace": "(Math.abs(Math.round(v*p)/p-v)<1 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v)",
+   "find": "(Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  /* y = x^p",
+   "replace": "(Math.abs(Math.round(v*p)/p-v)<1 ? '= ' : '≈ ')+this.num(v,d); },\n  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },\n  /* y = x^p",
    "run": "verify"
   },
   {
-   "name": "the wall is never said",
+   "name": "the flat goal takes a slip",
    "file": "index.html",
-   "find": "    if(fp===0){\n      out.push(`f′(x) = 0: f is flat here",
-   "replace": "    if(false){\n      out.push(`f′(x) = 0: f is flat here",
+   "find": "ok:K=>K.si===0 && K.mode===0 && K.x()===1/Math.E},",
+   "replace": "ok:K=>K.si===0 && K.x()===1/Math.E},",
+   "run": "verify"
+  },
+  {
+   "name": "the peak goal takes any x",
+   "file": "index.html",
+   "find": "ok:K=>K.si===2 && K.mode===0 && K.x()===Math.E},",
+   "replace": "ok:K=>K.si===2 && K.mode===0},",
+   "run": "verify"
+  },
+  {
+   "name": "the power rule is found without being caught",
+   "file": "index.html",
+   "find": "ok:K=>K.mode===1 && K.wrong()!==K.right()},\n    {id:'expo'",
+   "replace": "ok:K=>K.mode===1},\n    {id:'expo'",
+   "run": "verify"
+  },
+  {
+   "name": "luck takes any slip",
+   "file": "index.html",
+   "find": "ok:K=>K.mode===1 && K.wrong()===K.right()},",
+   "replace": "ok:K=>K.mode>=1 && K.wrong()===K.right()},",
+   "run": "verify"
+  },
+  {
+   "name": "the sum takes a zero part",
+   "file": "index.html",
+   "find": "ok:K=>K.mode===3 && K.partP()!==0 && K.partE()!==0}",
+   "replace": "ok:K=>K.mode===3}",
+   "run": "verify"
+  },
+  {
+   "name": "the top sentence names the bottom",
+   "file": "index.html",
+   "find": "this is the top of x^(1/x), e^(1/e)",
+   "replace": "this is the lowest point of x^(1/x), e^(1/e)",
+   "run": "verify"
+  },
+  {
+   "name": "rising and falling are swapped",
+   "file": "index.html",
+   "find": "y ${R>0?'rises':'falls'} as x rises here.",
+   "replace": "y ${R<0?'rises':'falls'} as x rises here.",
    "run": "verify"
   },
   {
    "name": "a slip is never caught",
    "file": "index.html",
-   "find": "    else if(W!==R) out.push(this.mode===1",
-   "replace": "    else if(false) out.push(this.mode===1",
+   "find": "    else if(W!==R) out.push(this.mode===1\n      ? `So the power",
+   "replace": "    else if(false) out.push(this.mode===1\n      ? `So the power",
    "run": "verify"
   },
   {
-   "name": "the arccos sentence shows everywhere",
+   "name": "the missing part is the slip's own",
    "file": "index.html",
-   "find": "      if(S.id==='acos') out.push(`Arccos falls",
-   "replace": "      if(true) out.push(`Arccos falls",
+   "find": "x moving in the power, x^(${S.pw})·ln x·(${S.dP}) ${this.is(this.partE())}",
+   "replace": "x moving in the power, x^(${S.pw})·ln x·(${S.dP}) ${this.is(this.partP())}",
    "run": "verify"
   },
   {
-   "name": "arctan's rule has a minus",
+   "name": "the multiply back drops y",
    "file": "index.html",
-   "find": "rule:'1/(1 + u²)'}",
-   "replace": "rule:'1/(1 − u²)'}",
+   "find": "so multiply back by y: y′ = ${this.num(y)} × ${this.par(D)} ${this.is(R)}.`",
+   "replace": "so multiply back by y: y′ = ${this.num(y)} × ${this.par(D)} ${this.is(D)}.`",
    "run": "verify"
   },
   {
-   "name": "the point is not mirrored",
+   "name": "the slip's line is drawn for the sum",
    "file": "index.html",
-   "find": "The point (${X}, ${U}) on f mirrors to (${U}, ${X}) on g.`);",
-   "replace": "The point (${U}, ${X}) on f mirrors to (${X}, ${U}) on g.`);",
+   "find": "  slipOn(){ return this.mode>0 && Math.abs",
+   "replace": "  slipOn(){ return this.mode>0 || Math.abs",
    "run": "verify"
   },
   {
-   "name": "a negative u is squared bare",
+   "name": "the tangent is drawn with the slip's slope",
    "file": "index.html",
-   "find": "  sq(u){ return (u<0 ? `(${neg(u)})` : neg(u))+'²'; },",
-   "replace": "  sq(u){ return neg(u)+'²'; },",
+   "find": "    out+=this.seg(x,y,this.right(),'tan',FIG_COL.c);",
+   "replace": "    out+=this.seg(x,y,this.wrong(),'tan',FIG_COL.c);",
    "run": "verify"
   },
   {
-   "name": "a slope of 1 takes any method",
+   "name": "the lines run off the chart",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.mode===0 && K.u()===0},",
-   "replace": "ok:K=>K.si===0 && K.u()===0},",
+   "find": "    x0=Math.max(x0,a); x1=Math.min(x1,b);\n    return `<line data-k=\"${key}\"",
+   "replace": "    return `<line data-k=\"${key}\"",
    "run": "verify"
   },
   {
-   "name": "the wall is found on arccos",
+   "name": "the point sits on the axis",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && K.fp()===0},",
-   "replace": "ok:K=>K.fp()===0},",
+   "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\"",
+   "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(0))}\"",
    "run": "verify"
   },
   {
-   "name": "a slope of 1/2 is at u = 0.5",
+   "name": "the curve buttons run in one row",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.mode===0 && Math.abs(K.u())===1},",
-   "replace": "ok:K=>K.si===2 && K.mode===0 && Math.abs(K.u())===0.5},",
-   "run": "verify"
-  },
-  {
-   "name": "the flip is found without being caught",
-   "file": "index.html",
-   "find": "ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()!==K.right()},",
-   "replace": "ok:K=>K.mode===1 && K.fp()!==0},",
-   "run": "verify"
-  },
-  {
-   "name": "luck takes the wrong point",
-   "file": "index.html",
-   "find": "ok:K=>K.mode===1 && K.fp()!==0 && K.wrong()===K.right()}",
-   "replace": "ok:K=>K.mode>=1 && K.fp()!==0 && K.wrong()===K.right()}",
-   "run": "verify"
-  },
-  {
-   "name": "picking an inverse keeps the slip",
-   "file": "index.html",
-   "find": "this.mode=0; this.touched=true; this.render(); },\n  moveU",
-   "replace": "this.touched=true; this.render(); },\n  moveU",
-   "run": "verify"
-  },
-  {
-   "name": "u runs past its last step",
-   "file": "index.html",
-   "find": "  moveU(by){ const v=this.k+by; if(v<0 || v>=this.set().U.length) return;",
-   "replace": "  moveU(by){ const v=this.k+by; if(v<0 || v>this.set().U.length) return;",
-   "run": "verify"
-  },
-  {
-   "name": "arctan starts at a slope of 1/2",
-   "file": "index.html",
-   "find": "start:7, D:[-3.25,3.25]",
-   "replace": "start:6, D:[-3.25,3.25]",
-   "run": "verify"
-  },
-  {
-   "name": "g is drawn as f",
-   "file": "index.html",
-   "find": "out+=this.curve('g',FIG_COL.b,t=>{ const v=x0+(x1-x0)*t; return [S.fn(v),v]; });",
-   "replace": "out+=this.curve('g',FIG_COL.b,t=>{ const v=x0+(x1-x0)*t; return [v,S.fn(v)]; });",
-   "run": "verify"
-  },
-  {
-   "name": "the gold point is not mirrored",
-   "file": "index.html",
-   "find": "<circle data-k=\"gpt\" cx=\"${f(this.PX(u))}\" cy=\"${f(this.PY(x))}\"",
-   "replace": "<circle data-k=\"gpt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(u))}\"",
-   "run": "verify"
-  },
-  {
-   "name": "g's tangent is drawn with f′",
-   "file": "index.html",
-   "find": "out+=this.seg(u,x,fp===0?Infinity:this.right(),'gtan',FIG_COL.c);",
-   "replace": "out+=this.seg(u,x,fp,'gtan',FIG_COL.c);",
-   "run": "verify"
-  },
-  {
-   "name": "the slip's line has the right slope",
-   "file": "index.html",
-   "find": "out+=this.seg(u,x,this.wrong(),'slip',FIG_COL.d",
-   "replace": "out+=this.seg(u,x,this.right(),'slip',FIG_COL.d",
-   "run": "verify"
-  },
-  {
-   "name": "tangents are not cut to the chart",
-   "file": "index.html",
-   "find": "const [a,b]=this.set().D, len=0.9*(b-a)/4",
-   "replace": "const [a,b]=[-99,99], len=0.9*(this.set().D[1]-this.set().D[0])/4",
-   "run": "verify"
-  },
-  {
-   "name": "the mirror is y = −x",
-   "file": "index.html",
-   "find": "<line data-k=\"mirror\" x1=\"${this.L}\" y1=\"${this.T+this.SZ}\" x2=\"${this.L+this.SZ}\" y2=\"${this.T}\"",
-   "replace": "<line data-k=\"mirror\" x1=\"${this.L}\" y1=\"${this.T}\" x2=\"${this.L+this.SZ}\" y2=\"${this.T+this.SZ}\"",
-   "run": "verify"
-  },
-  {
-   "name": "tan runs off the top of the chart",
-   "file": "index.html",
-   "find": "p[0]<a || p[0]>b || p[1]<a || p[1]>b){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
-   "replace": "p[0]<a || p[0]>b){ if(seg.length>1) segs.push(seg); seg=[]; continue; }",
-   "run": "verify"
-  },
-  {
-   "name": "the stepper is never switched off at the top",
-   "file": "index.html",
-   "find": "document.getElementById('ivUHi').disabled=this.k>=this.set().U.length-1;",
-   "replace": "document.getElementById('ivUHi').disabled=false;",
-   "run": "play:invslope"
-  },
-  {
-   "name": "the method buttons do not show which is pressed",
-   "file": "index.html",
-   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"InvSlope.setMode(${i})\"",
-   "replace": "aria-pressed=\"false\" onclick=\"InvSlope.setMode(${i})\"",
-   "run": "play:invslope"
-  },
-  {
-   "name": "an inverse button loses its name",
-   "file": "index.html",
-   "find": "onclick=\"InvSlope.pick(${i})\" aria-label=",
-   "replace": "onclick=\"InvSlope.pick(${i})\" data-x=",
-   "run": "play:invslope"
+   "find": "<div id=\"lgSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
+   "replace": "<div id=\"lgSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
+   "run": "play:logdiff"
   },
   {
    "name": "a method button loses its name",
    "file": "index.html",
-   "find": "onclick=\"InvSlope.setMode(${i})\" aria-label=",
-   "replace": "onclick=\"InvSlope.setMode(${i})\" data-x=",
-   "run": "play:invslope"
+   "find": "aria-label=\"${['Take ln of both sides first',",
+   "replace": "aria-label=\"${['',",
+   "run": "play:logdiff"
   },
   {
-   "name": "the inverse buttons run in one row",
+   "name": "the method buttons do not show which is pressed",
    "file": "index.html",
-   "find": "<div id=\"ivSets\" class=\"wsModes\" style=\"flex-wrap:wrap\"",
-   "replace": "<div id=\"ivSets\" class=\"wsModes\" style=\"flex-wrap:nowrap;white-space:nowrap;min-width:700px\"",
-   "run": "play:invslope"
+   "find": "aria-pressed=\"${i===this.mode}\" onclick=\"LogDiff.setMode",
+   "replace": "aria-pressed=\"false\" onclick=\"LogDiff.setMode",
+   "run": "play:logdiff"
   },
   {
-   "name": "u shows a plain minus",
+   "name": "the x stepper is never switched off",
    "file": "index.html",
-   "find": "document.getElementById('ivU').textContent=`u = ${this.num(this.u())}`;",
-   "replace": "document.getElementById('ivU').textContent=`u = ${this.u()}`;",
-   "run": "play:invslope"
+   "find": "document.getElementById('lgXHi').disabled=this.k>=this.set().X.length-1;",
+   "replace": "",
+   "run": "play:logdiff"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:invslope"
+   "run": "play:logdiff"
   },
   {
-   "name": "the Tome loses the inverse slope workshop",
+   "name": "the Tome loses the log slope workshop",
    "file": "index.html",
-   "find": "id=\"tomeInvSlope\"",
-   "replace": "id=\"tomeInvSlopeX\"",
-   "run": "play:invslope"
+   "find": "id=\"tomeLogDiff\"",
+   "replace": "id=\"tomeLogDiffX\"",
+   "run": "play:logdiff"
   },
   {
-   "name": "the workshop saves its u",
+   "name": "the workshop saves its x",
    "file": "index.html",
-   "find": "if(v<0 || v>=this.set().U.length) return; this.k=v; this.touched=true;",
-   "replace": "if(v<0 || v>=this.set().U.length) return; this.k=v; Game.s.iv=v; this.touched=true;",
-   "run": "play:invslope"
+   "find": "if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "replace": "if(v<0 || v>=this.set().X.length) return; this.k=v; Game.s.lg=v; this.touched=true; this.render(); },\n  setMode(m){ this.mode=m; this.touched=true; this.render(); },\n  render(){\n    document.getElementById('lgSets')",
+   "run": "play:logdiff"
   },
   {
    "name": "the caption is dropped",
    "file": "index.html",
-   "find": "<div class=\"figcap\">f is blue and its mirror",
-   "replace": "<div class=\"figcapX\">f is blue and its mirror",
-   "run": "play:invslope"
+   "find": "<div class=\"figcap\">The curve is blue. The green line is the tangent that taking ln",
+   "replace": "<div class=\"figcapX\">The curve is blue. The green line is the tangent that taking ln",
+   "run": "play:logdiff"
   }
  ]
 }

@@ -807,7 +807,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Sixty-six topics link to forty-five workshops,
+  back button returns to the summary. Sixty-seven topics link to forty-six workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -1035,6 +1035,14 @@ The game is built so that losing teaches you as much as winning.
   flip and flipping at u instead of x are both caught, arcsin's tangent stands
   straight up at u = 1, and forgetting to flip is right by luck where f′ is 1.
   Seven things to find, and a fight on inverse trig derivatives now offers it.
+- **🪵 Log Slope Workshop** — differentiate xˣ, x²ˣ and x^(1/x), where x is
+  in the base and in the power at once. Take ln of both sides to bring the
+  power down, differentiate with the product rule, then multiply back by y,
+  and check each slope with a nudge. The power rule and the exponent rule are
+  each offered as a slip and caught missing half the slope, and added together
+  they make the whole of it. Find the bottom of xˣ at 1/e and the top of
+  x^(1/x) at e. Seven things to find, and a fight on logarithmic
+  differentiation now offers it.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1199,7 +1207,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Eighty-two suites, about 3,760 checks, about a minute:
+loop only exists once the page is running. Eighty-three suites, about 3,820 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1276,6 +1284,7 @@ loop only exists once the page is running. Eighty-two suites, about 3,760 checks
 | `trigint` | the Tome opens the trig integral workshop on cos 2x with the guess sin 2x, whose slope is twice f; a cosine is the wrong wave; c = 2 is the slip of multiplying by the 2 inside; c = 1/2 lands on f and c = −1/2 shows a minus staying in F′; −(1/3) cos 3x undoes sin 3x once the minus of cos is explained; 2 sin 3x undoes 6 cos 3x; −2 cos(x/2) undoes sin(x/2), finishing all seven; the stepper stops at its ends, every button is named, it fits a phone, and nothing is saved |
 | `tanplane` | the Tome opens the tangent plane workshop on the bowl z = x² + y² at (1, 2) with the flat plane z = 0; slopes 2 and 4 at height 0 are tilted right but lifted off the point; height 5 makes the tangent plane z = 5 + 2(x − 1) + 4(y − 2); a wrong x slope leaves one slice cutting across, and the slopes swapped are caught; the saddle, the lopsided bowl and the dome are touched, finishing all seven; the steppers stop at ±6, every button is named, it fits a phone, and nothing is saved |
 | `invslope` | the Tome opens the inverse slope workshop on arcsin at u = 0.6, where x = arcsin 0.6, f′(x) = √(1 − 0.6²) = 0.8 and the slope flips to 1.25, checked by a nudge; forgetting to flip and flipping at u are both caught; at u = 0 forgetting to flip is right by luck; at u = 1 the tangent stands straight up; arccos falls most gently at 0, where flipping at u divides by sin 0; arctan has slope 1/2 at u = 1; all seven goals; the stepper stops at its ends; every button named; fits a phone; nothing saved |
+| `logdiff` | the Tome opens the log slope workshop on xˣ at x = 1.5, where ln y = x·ln x, y′/y = ln x + 1 ≈ 1.405 and y′ = 1.837 × 1.405 ≈ 2.582, checked by a nudge; the power rule and the exponent rule are each caught missing one part, and the two parts add to the slope; at x = 1/e the tangent is flat; at x = 1 the power rule is right by luck; x²ˣ has slope 2 at x = 1; x^(1/x) peaks at x = e; all seven goals; the stepper stops at its ends; every button named; fits a phone; nothing saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |

@@ -1778,6 +1778,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ LOG SLOPE WORKSHOP ============ -->
+  <div class="screen" id="s-logdiff">
+    <div class="panel"><h2>🪵 Log Slope Workshop</h2><div class="sub">In xˣ, x is in the base and in the power at once, so neither the power rule nor the exponent rule fits. Take ln of both sides to bring the power down, differentiate, then multiply back by y. Then try each wrong rule, catch it out, and add the two together.</div></div>
+    <div class="panel">
+      <div id="lgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="lgFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="lgXLo" onclick="LogDiff.moveX(-1)" aria-label="Move x one step smaller">−</button>
+          <b id="lgX" style="font-size:17px;min-width:0"></b>
+          <button id="lgXHi" onclick="LogDiff.moveX(1)" aria-label="Move x one step bigger">+</button></div>
+      </div>
+      <div id="lgModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
+      <div id="lgRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="lgGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3791,6 +3811,7 @@ const WORKSHOP_FOR = (() => {
     TrigInt: ["🎢 Trig Integral Workshop", ['intTrig']],
     TanPlane: ["🪁 Tangent Plane Workshop", ['tangentPlane']],
     InvSlope: ["🪩 Inverse Slope Workshop", ['invTrigDeriv']],
+    LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13192,6 +13213,7 @@ const UI = {
     if(id==='s-trigint') TrigInt.render();
     if(id==='s-tanplane') TanPlane.render();
     if(id==='s-invslope') InvSlope.render();
+    if(id==='s-logdiff') LogDiff.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13995,6 +14017,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪩 Inverse Slope Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge.</div>
          <button class="btn sm" id="tomeInvSlope" style="width:auto;margin-top:8px" onclick="InvSlope.open()">Open the inverse slope workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪵 Log Slope Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it.</div>
+         <button class="btn sm" id="tomeLogDiff" style="width:auto;margin-top:8px" onclick="LogDiff.open()">Open the log slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -20021,6 +20048,157 @@ const InvSlope = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE MIRROR','every inverse slope flipped','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The log slope workshop: when x is in the base and the power ----------
+   y = xˣ fits neither the power rule (a fixed power) nor the exponent rule (a
+   fixed base). Taking ln of both sides brings the power down, the product
+   rule does the rest, and multiplying back by y finishes it. The two wrong
+   rules are offered on purpose: each catches one of the two ways x moves,
+   and added together they give the right slope. Nothing is saved. */
+const LogDiff = {
+  E:Math.E,
+  SETS:[
+    {id:'xx', btn:'xˣ', y:'xˣ', name:'x to the power x', lnY:'x·ln x', dl:'1·ln x + x·(1/x) = ln x + 1',
+     p:x=>x, dp:x=>1, pw:'x', pm1:'x − 1', P:'x', dP:'1',
+     X:[0.25,'1/e',0.5,1,1.5,2], start:4, D:[0,2.2], R:[0,4.5]},
+    {id:'x2x', btn:'x²ˣ', y:'x²ˣ', name:'x to the power 2x', lnY:'2x·ln x', dl:'2·ln x + 2x·(1/x) = 2(ln x + 1)',
+     p:x=>2*x, dp:x=>2, pw:'2x', pm1:'2x − 1', P:'2x', dP:'2',
+     X:[0.25,'1/e',0.5,1,1.25,1.5], start:4, D:[0,1.65], R:[0,4]},
+    {id:'root', btn:'x^(1/x)', y:'x^(1/x)', name:'x to the power 1/x', lnY:'(ln x)/x', dl:'((1/x)·x − ln x)/x² = (1 − ln x)/x²',
+     p:x=>1/x, dp:x=>-1/(x*x), pw:'1/x', pm1:'1/x − 1', P:'1/x', dP:'−1/x²',
+     X:[0.5,1,2,'e',3,4,5], start:2, D:[0,5.5], R:[0,1.7]}
+  ],
+  MODES:['Take ln first','Power rule','Exponent rule','Both, added'],
+  H:0.001,
+  si:0, k:4, mode:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'flat', t:'Find where xˣ is lowest, with a flat tangent.', toast:'The bottom of xˣ',
+     ok:K=>K.si===0 && K.mode===0 && K.x()===1/Math.E},
+    {id:'two', t:'On x²ˣ, find a point where the slope is exactly 2.', toast:'A slope of 2',
+     ok:K=>K.si===1 && K.mode===0 && K.x()===1},
+    {id:'peak', t:'Find the top of x^(1/x).', toast:'The top of x^(1/x)',
+     ok:K=>K.si===2 && K.mode===0 && K.x()===Math.E},
+    {id:'power', t:'Use the power rule, as if the power were fixed, and catch it out.', toast:'The power moves too',
+     ok:K=>K.mode===1 && K.wrong()!==K.right()},
+    {id:'expo', t:'Use the exponent rule, as if the base were fixed, and catch that too.', toast:'The base moves too',
+     ok:K=>K.mode===2 && K.wrong()!==K.right()},
+    {id:'luck', t:'Find a point where the power rule gets it right anyway.', toast:'Right by luck',
+     ok:K=>K.mode===1 && K.wrong()===K.right()},
+    {id:'sum', t:'Add the two wrong rules together, and see what they make.', toast:'Two halves make a whole',
+     ok:K=>K.mode===3 && K.partP()!==0 && K.partE()!==0}
+  ],
+  set(){ return this.SETS[this.si]; },
+  raw(){ return this.set().X[this.k]; },
+  x(){ const v=this.raw(); return v==='e' ? Math.E : v==='1/e' ? 1/Math.E : v; },
+  xs(){ const v=this.raw(); return typeof v==='string' ? v : neg(v); },
+  ln(){ const v=this.raw(); return v==='e' ? 1 : v==='1/e' ? -1 : v===1 ? 0 : Math.log(v); },
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  y(x=this.x()){ return x**this.set().p(x); },
+  /* d/dx of ln y, from the product (or quotient) rule */
+  dl(){ const S=this.set(), x=this.x(); return this.r(S.dp(x)*this.ln()+S.p(x)/x); },
+  right(){ return this.r(this.y()*this.dl()); },
+  /* the power rule's part, as if the power were fixed: p·x^(p−1) */
+  partP(){ const S=this.set(), x=this.x(), p=S.p(x); return this.r(p*x**(p-1)); },
+  /* the exponent rule's part, as if the base were fixed: x^p·ln x·p′ */
+  partE(){ const S=this.set(), x=this.x(); return this.r(this.y()*this.ln()*S.dp(x)); },
+  wrong(){ return this.mode===1 ? this.partP() : this.mode===2 ? this.partE() : this.mode===3 ? this.r(this.partP()+this.partE()) : this.right(); },
+  /* a slip's line is drawn only where it gives a different slope */
+  slipOn(){ return this.mode>0 && Math.abs(this.wrong()-this.right())>1e-6; },
+  nudge(){ const x=this.x(); return (this.y(x+this.H)-this.y(x-this.H))/(2*this.H); },
+  num(v,d=3){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v,d=3){ const p=10**d; return (Math.abs(Math.round(v*p)/p-v)<1e-12 ? '= ' : '≈ ')+this.num(v,d); },
+  par(v){ return v<0 ? \`(\${this.num(v)})\` : this.num(v); },
+  /* y = x^p with this x and p written in */
+  at(){ const S=this.set(), x=this.x(), X=this.xs(), p=S.p(x);
+    const base = /\\//.test(X) ? \`(\${X})\` : X;
+    const pw = S.id==='xx' ? X : S.id==='x2x' ? (typeof this.raw()==='string' ? \`2/e\` : neg(this.r(2*x))) : (this.raw()==='e' ? '1/e' : Number.isInteger(1/x) ? neg(1/x) : \`1/\${X}\`);
+    return \`\${base}^(\${pw})\`; },
+  working(){
+    const S=this.set(), x=this.x(), X=this.xs(), y=this.y(), L=this.ln(), out=[];
+    const lnTxt = L===0 ? 'ln 1 = 0' : typeof this.raw()==='string' ? \`ln \${X} = \${neg(L)}\` : \`ln \${X} \${this.is(L)}\`;
+    out.push(\`y = \${S.y}: x is in the base and in the power, so neither the power rule (a fixed power) nor the exponent rule (a fixed base) fits on its own.\`);
+    out.push(\`At x = \${X}\${typeof this.raw()==='string'?\` ≈ \${this.num(x)}\`:''}: y = \${this.at()} \${this.is(y)}, and \${lnTxt}.\`);
+    const R=this.right(), D=this.dl();
+    if(this.mode===0){
+      out.push(\`Take ln of both sides: ln y = \${S.lnY}. Differentiate both sides: y′/y = \${S.dl}.\`);
+      out.push(\`Here y′/y \${this.is(D)}, so multiply back by y: y′ = \${this.num(y)} × \${this.par(D)} \${this.is(R)}.\`);
+    } else if(this.mode===1){
+      out.push(\`The slip uses the power rule, as if the power \${S.P} were a fixed number: y′ = \${S.P}·x^(\${S.pm1}) \${this.is(this.partP())}.\`);
+    } else if(this.mode===2){
+      out.push(\`The slip uses the exponent rule, as if the base x were a fixed number: y′ = x^(\${S.pw})·ln x·(\${S.dP}) \${this.is(this.partE())}.\`);
+    } else {
+      out.push(\`Add the two: the power rule part \${S.P}·x^(\${S.pm1}) \${this.is(this.partP())}, plus the exponent rule part x^(\${S.pw})·ln x·(\${S.dP}) \${this.is(this.partE())}, makes \${this.num(this.wrong())}.\`);
+    }
+    out.push(\`Check with a nudge: from x = \${this.num(x-this.H,4)} to \${this.num(x+this.H,4)}, y goes from about \${this.num(this.y(x-this.H),6)} to about \${this.num(this.y(x+this.H),6)}, so Δy/Δx ≈ \${this.num(this.nudge())}.\`);
+    const W=this.wrong();
+    if(this.mode===0){
+      if(S.id==='root' && x===Math.E) out.push(\`That agrees: y′ = 0. At x = e, 1 − ln x = 0, so the tangent is flat: this is the top of x^(1/x), e^(1/e) ≈ \${this.num(y)}.\`);
+      else if(R===0) out.push(S.id==='xx'
+        ? \`That agrees: y′ = 0. At x = 1/e, ln x + 1 = 0, so the tangent is flat: this is the lowest point of xˣ, about \${this.num(y)}.\`
+        : \`That agrees: y′ = 0. At x = 1/e, ln x + 1 = 0, so the tangent is flat: this is the lowest point of x²ˣ, about \${this.num(y)}.\`);
+      else out.push(\`That agrees with y′ \${this.is(R)}: y \${R>0?'rises':'falls'} as x rises here.\`);
+    } else if(this.mode===3)
+      out.push(\`That is y′ exactly. x moves in two places, the base and the power, and each rule catches one of them. Taking ln catches both at once.\`);
+    else if(W!==R) out.push(this.mode===1
+      ? \`So the power rule is wrong: it misses the part that comes from x moving in the power, x^(\${S.pw})·ln x·(\${S.dP}) \${this.is(this.partE())}. The slope is \${this.num(R)}.\`
+      : \`So the exponent rule is wrong: it misses the part that comes from x moving in the base, \${S.P}·x^(\${S.pm1}) \${this.is(this.partP())}. The slope is \${this.num(R)}.\`);
+    else out.push(\`It gets it right here by luck: ln 1 = 0, so the part from x moving in the power is 0. Anywhere else it would be wrong.\`);
+    return out;
+  },
+  /* the curve, its tangent in green and a slip's line in red */
+  L:40, T:12, W:300, Hh:200,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.T+this.Hh-(v-a)/(b-a)*this.Hh; },
+  /* a line through (x, y) of slope m across a fixed width, cut to the chart */
+  seg(px,py,m,key,col,extra=''){
+    const [a,b]=this.set().D, [c,d]=this.set().R, w=(b-a)/5, f=v=>v.toFixed(2);
+    let x0=px-w, x1=px+w;
+    if(m!==0){ const xa=px+(c-py)/m, xb=px+(d-py)/m; x0=Math.max(x0,Math.min(xa,xb)); x1=Math.min(x1,Math.max(xa,xb)); }
+    x0=Math.max(x0,a); x1=Math.min(x1,b);
+    return \`<line data-k="\${key}" x1="\${f(this.PX(x0))}" y1="\${f(this.PY(py+m*(x0-px)))}" x2="\${f(this.PX(x1))}" y2="\${f(this.PY(py+m*(x1-px)))}" stroke="\${col}" stroke-width="2.5" stroke-linecap="round"\${extra}/>\`;
+  },
+  svg(){
+    const S=this.set(), [a,b]=S.D, [c,d]=S.R, x=this.x(), y=this.y(), f=v=>v.toFixed(2), pts=[];
+    for(let i=1;i<=240;i++){ const v=a+(b-a)*i/240, w=this.y(v); if(w<=d) pts.push(\`\${f(this.PX(v))},\${f(this.PY(w))}\`); }
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="y = \${S.y} in blue, with its tangent at x = \${this.xs()}, slope \${this.num(this.right())}\${this.slipOn()?\`, and the slip’s line, slope \${this.num(this.wrong())}\`:''}">\`;
+    out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(this.PY(0))}" x2="\${this.L+this.W}" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="\${this.L}" y1="\${this.T}" x2="\${this.L}" y2="\${this.T+this.Hh}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of [1,2,3,4,5].filter(t=>t<b)) out+=\`<text x="\${f(this.PX(t))}" y="\${f(this.PY(0)+14)}" font-size="11" text-anchor="middle" fill="\${FIG_COL.dim}">\${t}</text>\`;
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    if(this.slipOn()) out+=this.seg(x,y,this.wrong(),'slip',FIG_COL.d,' stroke-dasharray="5 4"');
+    out+=this.seg(x,y,this.right(),'tan',FIG_COL.c);
+    out+=\`<circle data-k="pt" cx="\${f(this.PX(x))}" cy="\${f(this.PY(y))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-logdiff'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
+  moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },
+  setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('lgSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogDiff.pick(\${i})" aria-label="y = \${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('lgModes').innerHTML=this.MODES.map((m,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.mode}" onclick="LogDiff.setMode(\${i})" aria-label="\${['Take ln of both sides first','Try the slip that uses the power rule','Try the slip that uses the exponent rule','Add the power rule part and the exponent rule part'][i]}">\${m}</button>\`).join('');
+    document.getElementById('lgX').textContent=\`x = \${this.xs()}\`;
+    document.getElementById('lgXLo').disabled=this.k<=0;
+    document.getElementById('lgXHi').disabled=this.k>=this.set().X.length-1;
+    document.getElementById('lgFig').innerHTML=this.svg()+
+      \`<div class="figcap">The curve is blue. The green line is the tangent that taking ln first gives at the gold point, and a slip’s line is drawn dashed in red.</div>\`;
+    document.getElementById('lgRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('lgGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE LOG','every moving power tamed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
