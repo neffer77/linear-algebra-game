@@ -98,6 +98,7 @@ const SUITES = [
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
+  require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

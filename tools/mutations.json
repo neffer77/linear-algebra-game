@@ -1,264 +1,285 @@
 {
- "change": "Which matrix? See a shape, pick which of four matrices makes it",
+ "change": "Spot one: see four arrows, spot the one a matrix keeps on its line",
  "mutations": [
   {
-   "name": "the transpose is the matrix itself",
+   "name": "P⁻¹ is not divided by det P",
    "file": "index.html",
-   "find": "if(k==='trans') return [[a,c],[b,d]];",
-   "replace": "if(k==='trans') return [[a,b],[c,d]];",
+   "find": "const P=[[u1[0],u2[0]],[u1[1],u2[1]]], Pi=[[P[1][1]*dp,-P[0][1]*dp],[-P[1][0]*dp,P[0][0]*dp]];",
+   "replace": "const P=[[u1[0],u2[0]],[u1[1],u2[1]]], Pi=[[P[1][1],-P[0][1]],[-P[1][0],P[0][0]]];",
    "run": "verify"
   },
   {
-   "name": "the swap keeps the columns",
+   "name": "A is built as D·P",
    "file": "index.html",
-   "find": "if(k==='swap') return [[b,a],[d,c]];",
-   "replace": "if(k==='swap') return [[a,b],[d,c]];",
+   "find": "const PD=[[P[0][0]*l1,P[0][1]*l2],[P[1][0]*l1,P[1][1]*l2]];",
+   "replace": "const PD=[[P[0][0]*l1,P[0][1]*l1],[P[1][0]*l2,P[1][1]*l2]];",
    "run": "verify"
   },
   {
-   "name": "the row swap is the column swap",
+   "name": "a diagonal matrix may be dealt",
    "file": "index.html",
-   "find": "if(k==='rows') return [[c,d],[a,b]];",
-   "replace": "if(k==='rows') return [[d,c],[b,a]];",
-   "run": "verify"
-  },
-  {
-   "name": "a wrong sign lands on the wrong entry",
-   "file": "index.html",
-   "find": "M[e>>1][e&1]=-M[e>>1][e&1]; return M;",
-   "replace": "M[e&1][e>>1]=-M[e&1][e>>1]; return M;",
-   "run": "verify"
-  },
-  {
-   "name": "a zero may be given the wrong sign",
-   "file": "index.html",
-   "find": "const nz=[0,1,2,3].filter(e=>A[e>>1][e&1]!==0), e=R.pick(nz);",
-   "replace": "const nz=[0,1,2,3], e=R.pick(nz);",
-   "run": "verify"
-  },
-  {
-   "name": "two matrices may be the same",
-   "file": "index.html",
-   "find": "if(!this.same(M,A)&&!cand.some(o=>this.same(o.M,M))) cand.push({k,M,e});",
-   "replace": "if(!this.same(M,A)) cand.push({k,M,e});",
-   "run": "verify"
-  },
-  {
-   "name": "the transpose is left out",
-   "file": "index.html",
-   "find": "    add('trans',this.slip(A,'trans'));\n",
+   "find": "      if(A[0][1]===0&&A[1][0]===0) continue;   // diagonal: î and ĵ give it away\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "no wrong sign is offered",
+   "name": "entries may run past 4",
    "file": "index.html",
-   "find": "    add('sign',this.slip(A,'sign',e),e);\n    for(const k",
-   "replace": "    for(const k",
+   "find": "if(A.flat().some(v=>Math.abs(v)>4)) continue;",
+   "replace": "if(A.flat().some(v=>Math.abs(v)>9)) continue;",
    "run": "verify"
   },
   {
-   "name": "the row swap is never offered",
+   "name": "−1 is never an eigenvalue",
    "file": "index.html",
-   "find": "R.pick([['swap','rows'],['rows','swap']])",
-   "replace": "R.pick([['swap'],['swap']])",
+   "find": "  LAMS:[-2,-1,2,3],",
+   "replace": "  LAMS:[-2,2,3],",
    "run": "verify"
   },
   {
-   "name": "only three matrices are offered",
+   "name": "the same matrix may come twice",
    "file": "index.html",
-   "find": "...cand.slice(0,3)];",
-   "replace": "...cand.slice(0,2)];",
+   "find": "if(!prevA||JSON.stringify(B.A)!==JSON.stringify(prevA)) break;",
+   "replace": "break;",
    "run": "verify"
   },
   {
-   "name": "the right matrix always comes first",
+   "name": "the right arrow is taken off its line",
    "file": "index.html",
-   "find": "for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }",
+   "find": "v=[U[k][0]*s,U[k][1]*s];",
+   "replace": "v=[U[k][0]*s,U[k][1]*s+1];",
+   "run": "verify"
+  },
+  {
+   "name": "the right arrow's λ is the other one",
+   "file": "index.html",
+   "find": "const opts=[{k:'right',v,lam:L[k]}",
+   "replace": "const opts=[{k:'right',v,lam:L[1-k]}",
+   "run": "verify"
+  },
+  {
+   "name": "a decoy may be knocked off too little to see",
+   "file": "index.html",
+   "find": "if(this.off(A,w)<12) continue;",
+   "replace": "if(this.off(A,w)<1) continue;",
+   "run": "verify"
+  },
+  {
+   "name": "two decoys may share a line",
+   "file": "index.html",
+   "find": "      if(pool.some(o=>this.par(o,w))) continue;\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "the same shape may come twice",
+   "name": "the near miss is left out",
    "file": "index.html",
-   "find": "const A=Workshop.target(this.round&&this.round.A), cand=[];",
-   "replace": "const A=Workshop.target(null), cand=[];",
+   "find": "const near=pool.shift(), wrong=[near];",
+   "replace": "const near=pool.pop(), wrong=[near];",
    "run": "verify"
   },
   {
-   "name": "a miss counts as picked",
+   "name": "only three arrows are offered",
    "file": "index.html",
-   "find": "      r.out.add(i); this.misses++; this.last=null;",
-   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;",
+   "find": "while(wrong.length<3 && pool.length)",
+   "replace": "while(wrong.length<2 && pool.length)",
+   "run": "verify"
+  },
+  {
+   "name": "the right arrow always comes first",
+   "file": "index.html",
+   "find": "for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,U,L,opts",
+   "replace": "this.round={A,U,L,opts",
+   "run": "verify"
+  },
+  {
+   "name": "the angle off is measured against the axis",
+   "file": "index.html",
+   "find": "return Math.min(t,180-t);",
+   "replace": "return t;",
+   "run": "verify"
+  },
+  {
+   "name": "a miss counts as spotted",
+   "file": "index.html",
+   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Eigen.render();",
+   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Eigen.render();",
    "run": "verify"
   },
   {
    "name": "a miss still counts the first try",
    "file": "index.html",
-   "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX",
-   "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX",
-   "run": "verify"
-  },
-  {
-   "name": "a missed matrix can be tapped again",
-   "file": "index.html",
-   "find": "    if(!r||r.out.has(i)) return;",
-   "replace": "    if(!r) return;",
-   "run": "verify"
-  },
-  {
-   "name": "the toast counts tries wrong",
-   "file": "index.html",
-   "find": "      else UI.toast(`✓ Matrix ${'ABCD'[i]} makes the shape, picked ${tries===1",
-   "replace": "      else UI.toast(`✓ Matrix ${'ABCD'[i]} makes the shape, picked ${tries===0",
+   "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN",
+   "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN",
    "run": "verify"
   },
   {
    "name": "no banner at five",
    "file": "index.html",
-   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX SPOTTER'",
-   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX SPOTTER'",
+   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN SPOTTER'",
+   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN SPOTTER'",
    "run": "verify"
   },
   {
-   "name": "a right pick keeps the old shape",
+   "name": "the toast counts tries wrong",
    "file": "index.html",
-   "find": "      this.last={A:r.A};\n      this.newRound();",
-   "replace": "      this.last={A:r.A};",
+   "find": "spotted ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.",
+   "replace": "spotted ${tries===1?'on the first try':'in '+(tries-1)+' tries'}. Here is another.",
    "run": "verify"
   },
   {
-   "name": "the why reads ĵ from the first column",
+   "name": "a right pick keeps the old matrix",
    "file": "index.html",
-   "find": "and ĵ to ${this.at([M[0][1],M[1][1]])}, drawn in gold",
-   "replace": "and ĵ to ${this.at([M[0][0],M[1][0]])}, drawn in gold",
+   "find": "      this.last={A:r.A, o:r.opts[i]};\n      this.newRound();",
+   "replace": "      this.last={A:r.A, o:r.opts[i]};",
    "run": "verify"
   },
   {
-   "name": "the dashed î is read along a row",
+   "name": "the work line multiplies down a column",
    "file": "index.html",
-   "find": "The dashed î ends at ${this.at([A[0][0],A[1][0]])}",
-   "replace": "The dashed î ends at ${this.at([A[0][0],A[0][1]])}",
+   "find": "return `A·${this.vec(v)} = ⟨${pn(a)}·${pn(x)} + ${pn(b)}·${pn(y)}, ${pn(c)}·${pn(x)} + ${pn(d)}·${pn(y)}⟩ = ⟨${sum(a*x,b*y)}, ${sum(c*x,d*y)}⟩",
+   "replace": "return `A·${this.vec(v)} = ⟨${pn(a)}·${pn(x)} + ${pn(c)}·${pn(y)}, ${pn(b)}·${pn(x)} + ${pn(d)}·${pn(y)}⟩ = ⟨${sum(a*x,c*y)}, ${sum(b*x,d*y)}⟩",
    "run": "verify"
   },
   {
-   "name": "the transpose is called a swap",
+   "name": "a minus is written as plus",
    "file": "index.html",
-   "find": "if(o.k==='trans') lines.push(`It is the transpose",
-   "replace": "if(o.k==='nope') lines.push(`It is the transpose",
+   "find": "[p,q]=this.mul(A,v);\n    const sum=(s,t)=>`${neg(s)} ${t<0?'−':'+'} ${Math.abs(t)}`;",
+   "replace": "[p,q]=this.mul(A,v);\n    const sum=(s,t)=>`${neg(s)} + ${Math.abs(t)}`;",
    "run": "verify"
   },
   {
-   "name": "a wrong sign says left for right",
+   "name": "turned round is never said",
    "file": "index.html",
-   "find": "(v>0?'right':'left')",
-   "replace": "(v>0?'left':'right')",
+   "find": "it stays on its own line${L<0?', turned right round':''}",
+   "replace": "it stays on its own line",
    "run": "verify"
   },
   {
-   "name": "a wrong sign names the wrong arrow",
+   "name": "the direction note shows for every λ",
    "file": "index.html",
-   "find": "the dashed ${cj?'ĵ':'î'} goes",
-   "replace": "the dashed ${ri?'ĵ':'î'} goes",
+   "find": "+(L<0?' Turned round still counts",
+   "replace": "+(L!==0?' Turned round still counts",
    "run": "verify"
   },
   {
-   "name": "a wrong sign names the wrong number",
+   "name": "an exact angle is called about",
    "file": "index.html",
-   "find": "so the ${Workshop.NAMES[ri][cj]} number",
-   "replace": "so the ${Workshop.NAMES[cj][ri]} number",
+   "find": "That is knocked ${Math.abs(o-d)<1e-9?'':'about '}",
+   "replace": "That is knocked about ",
    "run": "verify"
   },
   {
-   "name": "a wrong pick is not drawn",
+   "name": "a miss names the wrong arrow",
    "file": "index.html",
-   "find": ": {kind:'grid', m:r.opts[m].M, ghost:r.A,",
-   "replace": ": {kind:'grid', m:[[1,0],[0,1]], ghost:r.A,",
+   "find": "so arrow ${'ABCD'[i]} is not an eigenvector.",
+   "replace": "so arrow ${'ABCD'[3-i]} is not an eigenvector.",
    "run": "verify"
   },
   {
-   "name": "the shape is drawn without its axis numbers",
+   "name": "a missed arrow can be tapped again",
    "file": "index.html",
-   "find": "{kind:'grid', m:[[1,0],[0,1]], ghost:r.A, ticks:true,",
-   "replace": "{kind:'grid', m:[[1,0],[0,1]], ghost:r.A, ticks:false,",
+   "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN",
+   "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGEN",
    "run": "verify"
   },
   {
-   "name": "a missed matrix is not shut",
+   "name": "A·v is drawn as v",
    "file": "index.html",
-   "find": "${gone?'disabled ':''}onclick=\"MatPick.choose",
-   "replace": "onclick=\"MatPick.choose",
+   "find": "arrow(Av,gone?'#e5484d':FIG_COL.b,false)+arrow(v,'#57cc7a',false);",
+   "replace": "arrow(v,gone?'#e5484d':FIG_COL.b,false)+arrow(v,'#57cc7a',false);",
    "run": "verify"
   },
   {
-   "name": "a button reads its matrix by columns",
+   "name": "the panel is drawn upside down",
    "file": "index.html",
-   "find": "top row ${neg(M[0][0])}, ${neg(M[0][1])}; bottom row ${neg(M[1][0])}, ${neg(M[1][1])}",
-   "replace": "top row ${neg(M[0][0])}, ${neg(M[1][0])}; bottom row ${neg(M[0][1])}, ${neg(M[1][1])}",
+   "find": "Y=y=>(cy-y*k).toFixed(1);\n    const n=Math.hypot(v[0],v[1]), ux=v[0]/n*W, uy=v[1]/n*W;\n    const arrow=(p,col,dash)=>{",
+   "replace": "Y=y=>(cy+y*k).toFixed(1);\n    const n=Math.hypot(v[0],v[1]), ux=v[0]/n*W, uy=v[1]/n*W;\n    const arrow=(p,col,dash)=>{",
    "run": "verify"
   },
   {
-   "name": "the after-pick sentence reads a row",
+   "name": "a missed arrow is not drawn in red",
    "file": "index.html",
-   "find": "lines.push(`That was it: î lands on ${this.at([A[0][0],A[1][0]])}",
-   "replace": "lines.push(`That was it: î lands on ${this.at([A[0][0],A[0][1]])}",
+   "find": "arrow(Av,gone?'#e5484d':FIG_COL.b,false)",
+   "replace": "arrow(Av,FIG_COL.b,false)",
+   "run": "verify"
+  },
+  {
+   "name": "a missed arrow is not shut",
+   "file": "index.html",
+   "find": "${gone?'disabled ':''}onclick=\"EigSpot.choose",
+   "replace": "onclick=\"EigSpot.choose",
+   "run": "verify"
+  },
+  {
+   "name": "a button reads A·v as v",
+   "file": "index.html",
+   "find": "aria-label=\"Arrow ${'ABCD'[i]}: v = ${this.vec(o.v)}, sent to ${this.vec(Av)}",
+   "replace": "aria-label=\"Arrow ${'ABCD'[i]}: v = ${this.vec(o.v)}, sent to ${this.vec(o.v)}",
+   "run": "verify"
+  },
+  {
+   "name": "the matrix is read out by columns",
+   "file": "index.html",
+   "find": "aria-label=\"A has rows ${neg(A[0][0])}, ${neg(A[0][1])} and ${neg(A[1][0])}, ${neg(A[1][1])}\">A = <span class=\"egM\"",
+   "replace": "aria-label=\"A has rows ${neg(A[0][0])}, ${neg(A[1][0])} and ${neg(A[0][1])}, ${neg(A[1][1])}\">A = <span class=\"egM\"",
    "run": "verify"
   },
   {
    "name": "the rule is not stated",
    "file": "index.html",
-   "find": "RULE:'Each column of a matrix is where an arrow lands: the first column is where î ends, the second where ĵ ends. Which matrix makes the dashed shape?'",
-   "replace": "RULE:'Which matrix makes the dashed shape?'",
+   "find": "RULE:'An eigenvector stays on its own line: A may stretch it, shrink it or turn it right round, but never knock it off. Which arrow stays on its dotted line?'",
+   "replace": "RULE:'Which arrow stays on its dotted line?'",
    "run": "verify"
   },
   {
-   "name": "the steppers stay shown",
+   "name": "the hand-hunt stays shown",
    "file": "index.html",
-   "find": "for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';",
+   "find": "for(const id of ['egMats','egVec','egFig','egRead','egGoalPanel'])",
+   "replace": "for(const id of [])",
+   "run": "play:eigspot"
+  },
+  {
+   "name": "the mode buttons forget spot one",
+   "file": "index.html",
+   "find": ",['spot','🔎 Spot one','See four arrows and spot the one that stays on its line']]",
+   "replace": "]",
+   "run": "play:eigspot"
+  },
+  {
+   "name": "the arrows run in one column",
+   "file": "index.html",
+   "find": "<div id=\"esPick\" style=\"display:grid;grid-template-columns:1fr 1fr",
+   "replace": "<div id=\"esPick\" style=\"display:grid;grid-template-columns:1fr",
+   "run": "play:eigspot"
+  },
+  {
+   "name": "no toast for a spot",
+   "file": "index.html",
+   "find": "      else UI.toast(`✓ Arrow",
+   "replace": "      else (()=>{})(`✓ Arrow",
+   "run": "play:eigspot"
+  },
+  {
+   "name": "the Tome forgets spot one",
+   "file": "index.html",
+   "find": " Then turn it round: see four arrows, and spot the one that stays.",
    "replace": "",
-   "run": "play:matpick"
+   "run": "play:eigspot"
   },
   {
-   "name": "the mode buttons forget the new mode",
+   "name": "a spot is saved",
    "file": "index.html",
-   "find": "['match','🧩 Match the shape'],['pick','🔢 Which matrix?']]",
-   "replace": "['match','🧩 Match the shape']]",
-   "run": "play:matpick"
+   "find": "      this.last={A:r.A, o:r.opts[i]};\n      this.newRound();",
+   "replace": "      this.last={A:r.A, o:r.opts[i]}; Game.s.es=this.matched;\n      this.newRound();",
+   "run": "play:eigspot"
   },
   {
-   "name": "the matrices run in one column",
+   "name": "a mode button loses its name",
    "file": "index.html",
-   "find": "<div id=\"mpPick\" style=\"display:grid;grid-template-columns:1fr 1fr",
-   "replace": "<div id=\"mpPick\" style=\"display:grid;grid-template-columns:1fr",
-   "run": "play:matpick"
-  },
-  {
-   "name": "no toast for a pick",
-   "file": "index.html",
-   "find": "      else UI.toast(`✓ Matrix",
-   "replace": "      else (()=>{})(`✓ Matrix",
-   "run": "play:matpick"
-  },
-  {
-   "name": "the Tome forgets the new mode",
-   "file": "index.html",
-   "find": " Then turn it round: see a shape, and pick which of four matrices makes it.",
-   "replace": "",
-   "run": "play:matpick"
-  },
-  {
-   "name": "the four matrices stay after leaving",
-   "file": "index.html",
-   "find": "document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : '';",
-   "replace": "if(pick) document.getElementById('wsPick').innerHTML=(MatPick.start(), MatPick.html());",
-   "run": "play:matpick"
-  },
-  {
-   "name": "a pick is saved",
-   "file": "index.html",
-   "find": "      this.last={A:r.A};\n      this.newRound();",
-   "replace": "      this.last={A:r.A}; Game.s.mp=this.matched;\n      this.newRound();",
-   "run": "play:matpick"
+   "find": "onclick=\"Eigen.setMode('${m}')\" aria-label=\"${l}\"",
+   "replace": "onclick=\"Eigen.setMode('${m}')\"",
+   "run": "play:eigspot"
   }
  ]
 }
