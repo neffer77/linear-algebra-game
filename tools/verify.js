@@ -72,6 +72,7 @@ function loadGame() {
     ';const Swap={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos', btn:'cos(x²)'"), script.indexOf("  open(){ UI.go('s-swap'); },")) + '};exports.Swap=Swap;' +
     ';const Implicit={' + script.slice(script.indexOf("  SETS:[\n    {id:'circle', btn:'Circle'"), script.indexOf("  open(){ UI.go('s-implicit'); },")) + '};exports.Implicit=Implicit;' +
     ';const Parts={' + script.slice(script.indexOf("  SETS:[\n    {id:'xe', btn:'x eˣ'"), script.indexOf("  open(){ UI.go('s-parts'); },")) + '};exports.Parts=Parts;' +
+    ';const Detect={' + script.slice(script.indexOf("  SETS:[\n    {id:'pair', btn:'Two roots'"), script.indexOf("  open(){ UI.go('s-detect'); },")) + '};exports.Detect=Detect;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -90,7 +91,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2685,6 +2686,98 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The eigenvalue detective: every λ on every matrix. det(A − λI) is worked
+   from the entries, and must equal λ² − (trace)λ + det A as the readout writes
+   it; the eigenvalues found by the quadratic formula must be exactly the λ
+   where the readout says so; each crushed arrow must really be crushed, in
+   lowest terms, and A must send it to λ times itself; the other eigenvalue
+   must be the other root; the turning matrix must have no real root, and its
+   bottom must be where the readout says. The curve and the point are
+   measured, every sentence is rebuilt, and every goal. */
+const detectNotes = (() => {
+  const W = Detect;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n)), amt = n => (n < 0 ? `(${neg(n)})` : neg(n));
+  const vec = w => `⟨${neg(w[0])}, ${neg(w[1])}⟩`, rows = M => `rows ${neg(M[0][0])}, ${neg(M[0][1])} and ${neg(M[1][0])}, ${neg(M[1][1])}`;
+  const gcd = (u, w) => w ? gcd(w, u % w) : Math.abs(u);
+  if (W.SETS.map(S => S.id).join() !== 'pair,tri,twice,turn') fail('detect', 'sets', W.SETS.map(S => S.id).join());
+  W.touched = false; W.si = 0; W.k = W.START;
+  for (const g of W.GOALS) if (g.ok(W)) fail('detect', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { W.si = si; W.k = W.START; for (const g of W.GOALS) if (g.ok(W)) fail('detect', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  W.si = 0; W.k = W.START;
+  let n = 0;
+  const found = {};
+  W.SETS.forEach((S, si) => {
+    const A = S.A, t = A[0][0] + A[1][1], d = A[0][0] * A[1][1] - A[0][1] * A[1][0], disc = t * t - 4 * d;
+    const roots = disc < 0 ? [] : [...new Set([(t - Math.sqrt(disc)) / 2, (t + Math.sqrt(disc)) / 2])];
+    if ((S.id === 'turn') !== (disc < 0)) fail('detect', S.id, 'only the turning matrix should have no real eigenvalue');
+    if ((S.id === 'twice') !== (disc === 0)) fail('detect', S.id, 'only the repeated matrix should have one eigenvalue');
+    for (const r of roots) if (!W.L.includes(r)) fail('detect', S.id, `the eigenvalue ${r} cannot be reached with the stepper`);
+    const polyS = 'λ²' + (t === 0 ? '' : ` ${t > 0 ? '−' : '+'} ${Math.abs(t) === 1 ? '' : Math.abs(t)}λ`) + (d === 0 ? '' : ` ${d > 0 ? '+' : '−'} ${Math.abs(d)}`);
+    W.L.forEach((l, k) => {
+      W.si = si; W.k = k; n++;
+      const key = `${S.id} λ=${l}`, M = [[A[0][0] - l, A[0][1]], [A[1][0], A[1][1] - l]], p = M[0][0] * M[1][1] - M[0][1] * M[1][0];
+      if (Math.abs(p - (l * l - t * l + d)) > 1e-12) fail('detect', key, 'det(A − λI) is not the characteristic polynomial');
+      if (W.p() !== p) fail('detect', key, `det(A − λI) reads ${W.p()}, not ${p}`);
+      const isRoot = roots.includes(l);
+      if ((p === 0) !== isRoot) fail('detect', key, 'the eigenvalues are not where det(A − λI) = 0');
+      const L = neg(l), want = [
+        `A has ${rows(A)}. An eigenvalue is a number λ for which A − λI crushes some arrow to ⟨0, 0⟩, and that happens exactly when det(A − λI) = 0.`,
+        `At λ = ${L}: A − λI has ${rows(M)}, so det(A − λI) = ${amt(M[0][0])} × ${amt(M[1][1])} − ${amt(M[0][1])} × ${amt(M[1][0])} = ${neg(p)}.`];
+      if (l === 0) { if (p !== d) fail('detect', key, 'at λ = 0 it is not det A'); want.push(`At λ = 0, A − λI is A itself, so this is det A = ${neg(d)}: the curve crosses λ = 0 at the determinant.`); }
+      if (isRoot) {
+        const v = W.crushed();
+        if (!v[0] && !v[1]) fail('detect', key, 'the crushed arrow is ⟨0, 0⟩');
+        if (M[0][0] * v[0] + M[0][1] * v[1] || M[1][0] * v[0] + M[1][1] * v[1]) fail('detect', key, `A − λI does not crush ${vec(v)}`);
+        if (gcd(v[0], v[1]) !== 1 || v[0] < 0 || (v[0] === 0 && v[1] < 0)) fail('detect', key, `${vec(v)} is not in lowest terms with a positive lead`);
+        const Av = [A[0][0] * v[0] + A[0][1] * v[1], A[1][0] * v[0] + A[1][1] * v[1]];
+        if (Av[0] !== l * v[0] || Av[1] !== l * v[1]) fail('detect', key, 'A does not send the arrow to λ times itself');
+        want.push(`det(A − λI) = 0, so λ = ${L} is an eigenvalue. One arrow A − λI crushes is ${vec(v)}, and A sends it to ${vec(Av)}, which is ${amt(l)} × ${vec(v)}: A only stretches it${l < 0 ? ', flipping it round since λ is negative' : ''}.`);
+        const o = roots.find(r => r !== l);
+        if (o === undefined) want.push(`This is the only eigenvalue, and it counts twice: ${L} + ${amt(l)} = ${neg(t)} is the trace and ${amt(l)} × ${amt(l)} = ${neg(d)} is det A. Only the one direction ${vec(v)} stays on its line.`);
+        else {
+          if (l + o !== t || l * o !== d) fail('detect', key, 'the eigenvalues do not add to the trace and multiply to the determinant');
+          want.push(`The eigenvalues add up to the trace, ${neg(A[0][0])} + ${amt(A[1][1])} = ${neg(t)}, so the other one is ${neg(t)} − ${amt(l)} = ${neg(o)}. Check: ${amt(l)} × ${amt(o)} = ${neg(d)}, which is det A.`);
+          if (S.id === 'tri') {
+            if (A[1][0] !== 0 || ![A[0][0], A[1][1]].includes(l)) fail('detect', key, 'the triangular matrix does not wear its eigenvalues on its diagonal');
+            want.push(`A is triangular, with 0 below its diagonal, so det(A − λI) is just (${neg(A[0][0])} − λ)(${neg(A[1][1])} − λ): its eigenvalues are its diagonal entries, ${neg(A[0][0])} and ${neg(A[1][1])}.`);
+          }
+        }
+      } else want.push(`That is not 0, so λ = ${L} is not an eigenvalue: A − λI crushes no arrow but ⟨0, 0⟩.`);
+      want.push(`Worked out for every λ, det(A − λI) = ${polyS}, the characteristic polynomial. Its λ term is minus the trace times λ and its constant is det A: here the trace is ${neg(t)} and det A = ${neg(d)}.`);
+      const bottom = disc < 0 && l === t / 2;
+      if (bottom) {
+        for (const m of W.L) if (m * m - t * m + d < p) fail('detect', key, 'this is not the bottom of the curve');
+        want.push(`This is the bottom of the curve, at λ = trace/2 = ${L}, and it is still ${neg(p)} above 0. The curve never reaches the axis, so no real λ works: A turns every arrow off its line and has no real eigenvalues.`);
+      }
+      const got = W.working();
+      if (got.length !== want.length) fail('detect', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((line, i) => { if (got[i] !== line) fail('detect', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${line}`); });
+      // the drawing: recover the scale from the axis and check the curve and the point
+      const svg = W.svg(), [a, b] = W.R;
+      const cm = svg.match(/data-k="curve" points="([^"]+)"/), pm = svg.match(/data-k="pt" cx="([^"]+)" cy="([^"]+)" r="5" fill="([^"]+)"/);
+      if (!cm || !pm) fail('detect', key, 'the curve or the point is not drawn');
+      else {
+        const P = cm[1].split(' ').map(q => q.split(',').map(Number)), lam = px => a + (px - 20) / 320 * (b - a);
+        const [x0, y0] = P[0], [x1, y1] = P[P.length - 1], v0 = lam(x0) ** 2 - t * lam(x0) + d, v1 = lam(x1) ** 2 - t * lam(x1) + d;
+        const sc = (y0 - y1) / (v1 - v0), base = y0 + v0 * sc;
+        for (const [px, py] of P) { const L2 = lam(px); if (Math.abs((base - py) / sc - (L2 * L2 - t * L2 + d)) > 0.05) { fail('detect', key, 'the drawn curve is not det(A − λI)'); break; } }
+        if (Math.abs(lam(+pm[1]) - l) > 0.01 || Math.abs((base - +pm[2]) / sc - p) > 0.05) fail('detect', key, 'the gold point is not at (λ, det(A − λI))');
+        const dm = svg.match(/data-k="drop"[^>]*stroke="([^"]+)"/);
+        if (!dm || (pm[3] !== dm[1]) !== (p === 0)) fail('detect', key, 'the point should turn green exactly at an eigenvalue');
+      }
+      W.touched = true;
+      const meant = { root: si === 0 && isRoot, tri: si === 1 && isRoot, twice: si === 2 && isRoot, none: bottom, det: l === 0 };
+      for (const gl of W.GOALS) {
+        if (!!gl.ok(W) !== meant[gl.id]) fail('detect', key, `goal ${gl.id} is ${gl.ok(W) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(W)) found[gl.id] = found[gl.id] || key;
+      }
+    });
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('detect', g.id, 'this goal cannot be found');
+  W.si = 0; W.k = W.START; W.touched = false; W.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The parts workshop: every split tried on every integral. Each split must
    multiply back to the integrand (u times dv/dx); du is checked against a
    numerical derivative of u and v against a numerical integral of dv; the one
@@ -4090,6 +4183,7 @@ console.log(`  lathe cuts              ${pad(latheNotes.n.toLocaleString(), 10)}
 console.log(`  swaps tried             ${pad(swapNotes.n.toLocaleString(), 10)}  (each du against a numerical derivative, each right u turning the integrand into g(u) du, the drawn answer rising by the area under the integrand, ${swapNotes.goals} goals findable)`);
 console.log(`  implicit points         ${pad(implicitNotes.n.toLocaleString(), 10)}  (each on its curve, y′ against −Fx/Fy, each nudge solved outright, the tangent and radius measured, ${implicitNotes.goals} goals findable)`);
 console.log(`  splits tried            ${pad(partsNotes.n.toLocaleString(), 10)}  (each u times dv giving back the integrand, du and v checked numerically, each answer and the integral it leaves checked by differentiating, the drawn answer rising by the area, ${partsNotes.goals} goals findable)`);
+console.log(`  λ stepped               ${pad(detectNotes.n.toLocaleString(), 10)}  (det(A − λI) against the characteristic polynomial, each eigenvalue against the quadratic formula, each crushed arrow multiplied out, the trace and determinant checked, the curve measured, ${detectNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
