@@ -1642,10 +1642,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ QUOTIENT WORKSHOP ============ -->
   <div class="screen" id="s-quot">
     <div class="panel"><h2>➗ Quotient Rule Workshop</h2><div class="sub">The slope of f/g is not f′ over g′. Step along a fraction of two curves and work its slope with the quotient rule, check it with a nudge, then try the two slips everyone makes and catch them out.</div></div>
+    <div id="qoTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work the slope or pick dy/dx"></div>
     <div class="panel">
+      <div id="qoPick"></div>
       <div id="qoSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
       <div id="qoFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="qoXs" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="qoXLo" onclick="Quot.moveX(-1)" aria-label="Move the point half a step left">−</button>
           <b id="qoX" style="font-size:17px;min-width:0"></b>
           <button id="qoXHi" onclick="Quot.moveX(1)" aria-label="Move the point half a step right">+</button></div>
@@ -1653,7 +1655,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="qoModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
       <div id="qoRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="qoGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="qoGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14091,7 +14093,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">➗ Quotient Rule Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out. Then turn it round: see y = f(x) / g(x), and pick which of four formulas is its slope.</div>
          <button class="btn sm" id="tomeQuot" style="width:auto;margin-top:8px" onclick="Quot.open()">Open the quotient rule workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -20258,6 +20260,198 @@ const Cross = {
   }
 };
 
+/* -------------------- which slope? (quotient rule workshop) -------------------- */
+/* The quotient rule workshop turned round: y = f(x) / g(x) and four formulas
+   for dy/dx. One is the quotient rule, (f′g − fg′) / g²; the others are the
+   slips people make: the top taken the wrong way round (exactly minus the
+   slope), dividing by g where g² belongs, adding fg′ as the product rule
+   does, or dividing the slopes, f′ / g′. g is eˣ, x² + 1 or a line that keeps
+   well clear of 0 in the picture, so y never breaks. A wrong pick draws its
+   slope at one point as a red line, which cuts across the curve instead of
+   touching it, and a nudge gives the slope the curve really has there.
+   Nothing is saved. */
+const QuotPick = {
+  RULE:'The quotient rule: if y = f(x) / g(x), then dy/dx = (f′g − fg′) / g². The top growing lifts y and the bottom growing pulls it down, and the whole is over g squared. Which formula is dy/dx?',
+  SLIPS:['swap','nosq','plus','ratio'],
+  FS:['x2','x','sin','lin'], GS:['exp','sq1','lin'],
+  H:0.001,
+  // f is x², x, sin x or a x + b; g is eˣ, x² + 1 or p x + q
+  f(c,x){ return c.f==='x2' ? x*x : c.f==='x' ? x : c.f==='sin' ? Math.sin(x) : c.a*x+c.b; },
+  fp(c,x){ return c.f==='x2' ? 2*x : c.f==='x' ? 1 : c.f==='sin' ? Math.cos(x) : c.a; },
+  g(c,x){ return c.g==='exp' ? Math.exp(x) : c.g==='sq1' ? x*x+1 : c.p*x+c.q; },
+  gp(c,x){ return c.g==='exp' ? Math.exp(x) : c.g==='sq1' ? 2*x : c.p; },
+  y(c,x){ return this.f(c,x)/this.g(c,x); },
+  // each formula's slope at x: the quotient rule's and each slip's
+  value(c,k,x){
+    const f=this.f(c,x), fp=this.fp(c,x), g=this.g(c,x), gp=this.gp(c,x);
+    if(k==='right') return (fp*g-f*gp)/(g*g);
+    if(k==='swap') return (f*gp-fp*g)/(g*g);
+    if(k==='nosq') return (fp*g-f*gp)/g;
+    if(k==='plus') return (fp*g+f*gp)/(g*g);
+    if(k==='ratio') return fp/gp;
+  },
+  lin(a,b){ return (a===1?'':neg(a))+'x'+(b<0?' − ':' + ')+Math.abs(b); },
+  // each part as it is written: f and g, and their slopes
+  part(c,w){
+    if(w==='f') return {x2:'x²', x:'x', sin:'sin x', lin:'('+this.lin(c.a,c.b)+')'}[c.f];
+    if(w==='fp') return {x2:'2x', x:'1', sin:'cos x', lin:String(c.a)}[c.f];
+    if(w==='g') return {exp:'eˣ', sq1:'(x² + 1)', lin:'('+this.lin(c.p,c.q)+')'}[c.g];
+    return {exp:'eˣ', sq1:'2x', lin:String(c.p)}[c.g];
+  },
+  // two parts multiplied: a bare number goes first, right against x, a bracket
+  // or eˣ, and a space before sin or cos; a 1 is left out
+  term(A,B){
+    const [P,Q]=/^\d+$/.test(B) && !/^\d+$/.test(A) ? [B,A] : [A,B];
+    if(P==='1') return Q;
+    if(Q==='1') return P;
+    if(/^\d+$/.test(P)) return /^[x(e]/.test(Q) ? P+Q : P+' '+Q;
+    return P+' · '+Q;
+  },
+  // a part on the top of a fraction, in brackets unless it is one piece; on
+  // the bottom, only a number, eˣ or a bracket goes bare, so 1 / (2x) is not read as x/2
+  over(t){ return /^(\d+|x|x²|2x|eˣ|\([^()]*\))$/.test(t) ? t : '('+t+')'; },
+  under(t){ return /^(\d+|eˣ|\([^()]*\))$/.test(t) ? t : '('+t+')'; },
+  square(t){ return /^\(.*\)$/.test(t) ? t+'²' : '('+t+')²'; },
+  text(c,k){
+    const F=this.part(c,'f'), Fp=this.part(c,'fp'), G=this.part(c,'g'), Gp=this.part(c,'gp');
+    const side=this.term(Fp,G), top=this.term(F,Gp);
+    if(k==='ratio') return this.over(Fp)+' / '+this.under(Gp);
+    const n = k==='swap' ? top+' − '+side : side+(k==='plus'?' + ':' − ')+top;
+    return '('+n+') / '+(k==='nosq' ? G : this.square(G));
+  },
+  yText(c){ return this.over(this.part(c,'f'))+' / '+this.part(c,'g'); },
+  // the picture: x from x₀ − 1 to x₀ + 1, and the y it needs
+  view(c){
+    const x0=c.x0-1, x1=c.x0+1;
+    let lo=Infinity, hi=-Infinity;
+    for(let j=0;j<=80;j++){ const y=this.y(c,x0+(x1-x0)*j/80); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+    const pad=Math.max(0.5,(hi-lo)*0.12);
+    return {x0,x1,lo:lo-pad,hi:hi+pad};
+  },
+  // how steep a slope looks on screen, in degrees
+  angle(c,s,W=300,H=180){ const v=this.view(c); return Math.atan(s*((H-22)/(v.hi-v.lo))/((W-34)/(v.x1-v.x0)))*180/Math.PI; },
+  // the slips this curve can offer: each looks wrong at x₀, its line at least
+  // 10° off the curve's, and differs from every one kept before it; f′ / g′
+  // is left out when both slopes are bare numbers, as 1 / 3 shows no working,
+  // and when g′ is 1, as 2x / 1 is only f′
+  slips(c){
+    const xs=[-0.8,-0.3,0.2,0.7].map(d=>c.x0+d), sig=k=>xs.map(x=>this.value(c,k,x));
+    const differ=(p,q)=>p.some((v,i)=>Math.abs(v-q[i])>1e-6*(1+Math.abs(v)));
+    const ra=this.angle(c,this.value(c,'right',c.x0)), keep=[];
+    for(const k of this.SLIPS) if(!(k==='ratio' && (!/x/.test(this.text(c,k)) || this.part(c,'gp')==='1')) && Math.abs(this.angle(c,this.value(c,k,c.x0))-ra)>=10 && differ(sig(k),sig('right')) && keep.every(w=>differ(sig(k),sig(w)))) keep.push(k);
+    return keep;
+  },
+  // g stays at least 0.75 from 0 across the picture, and the picture is no taller than 40
+  fair(c){
+    for(let j=0;j<=80;j++) if(Math.abs(this.g(c,c.x0-1+j/40))<0.75) return false;
+    const v=this.view(c); return v.hi-v.lo<=40;
+  },
+  build(){
+    for(let t=0;t<400;t++){
+      const c={f:R.pick(this.FS), a:R.pick([1,2,3]), b:R.pick([-3,-2,-1,1,2,3]), g:R.pick(this.GS), p:R.pick([1,2,3]), q:R.pick([-3,-2,-1,1,2,3]), x0:R.pick([-1,-0.5,0.5,1])};
+      if(c.f==='lin' && c.g==='lin') continue;
+      if(c.f!=='lin'){ c.a=0; c.b=0; }
+      if(c.g!=='lin'){ c.p=0; c.q=0; }
+      if(!this.fair(c) || this.slips(c).length<3) continue;
+      return c;
+    }
+    return {f:'x2',a:0,b:0,g:'sq1',p:0,q:0,x0:1};
+  },
+  round:null, misses:0, picked:null, last:null, matched:0, firstTry:0,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(c);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('QUOTIENT READER', this.matched+' slopes picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is dy/dx, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Quot.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  num(v){ const r=Math.round(v*100)/100; return neg(Object.is(r,-0)?0:r); },
+  num4(v){ const r=Math.round(v*1e4)/1e4; return neg(Object.is(r,-0)?0:r); },
+  about(v){ return (Math.abs(v-Math.round(v*100)/100)<1e-9?'':'about ')+this.num(v); },
+  bare(t){ return t.replace(/^\((.*)\)$/,'$1'); },
+  // the quotient rule worked for this y
+  work(c){
+    return `f(x) = ${this.bare(this.part(c,'f'))} and g(x) = ${this.bare(this.part(c,'g'))}, so f′(x) = ${this.part(c,'fp')} and g′(x) = ${this.part(c,'gp')}: dy/dx = (f′g − fg′) / g² = ${this.text(c,'right')}.`;
+  },
+  // the sentence that names a slip
+  slip(c,k,L){
+    if(k==='swap') return `${L} takes f′g away from fg′: the top is the wrong way round, so it gives exactly minus the slope. f growing lifts y, so f′g comes first.`;
+    if(k==='nosq') return `${L} divides by g once: the quotient rule divides by g², because the slope of 1/g is −g′/g².`;
+    if(k==='plus') return `${L} adds fg′: that plus belongs to the product rule. When the bottom grows the fraction shrinks, so the quotient rule takes fg′ away.`;
+    return `${L} divides the slopes, f′ / g′: the slope of a fraction is not the fraction of the slopes.`;
+  },
+  // what the miss looks like at x₀: its red line against a nudge of the curve
+  check(c,k,L){
+    const x=c.x0, H=this.H, n=(this.y(c,x+H)-this.y(c,x-H))/(2*H);
+    return `At x = ${neg(x)}, ${L} gives a slope of ${this.about(this.value(c,k,x))}, drawn in red: it cuts across the curve. A nudge from x = ${this.num4(x-H)} to ${this.num4(x+H)} gives Δy/Δx ≈ ${this.num(n)}.`;
+  },
+  // the curve, the point x₀ and a red line for each miss, in SVG
+  panel(c,W,H){
+    const v=this.view(c), {x0,x1,lo,hi}=v;
+    const X=x=>(26+(x-x0)/(x1-x0)*(W-34)).toFixed(1), Y=y=>(H-14-(y-lo)/(hi-lo)*(H-22)).toFixed(1);
+    const span=hi-lo, step=[0.5,1,2,5,10,20,50,100].find(s=>span/s<=7);
+    let s=`<defs><clipPath id="qpClip"><rect x="${X(x0)}" y="${Y(hi)}" width="${(+X(x1)-+X(x0)).toFixed(1)}" height="${(+Y(lo)-+Y(hi)).toFixed(1)}"/></clipPath></defs>`;
+    for(let x=Math.ceil(x0*2)/2;x<=x1+1e-9;x+=0.5) s+=`<line x1="${X(x)}" y1="${Y(lo)}" x2="${X(x)}" y2="${Y(hi)}" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    for(let y=Math.ceil(lo/step)*step;y<=hi;y+=step) s+=`<line x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    if(lo<0&&hi>0) s+=`<line x1="${X(x0)}" y1="${Y(0)}" x2="${X(x1)}" y2="${Y(0)}" stroke="${FIG_COL.axis}" stroke-width="1.4"/>`;
+    if(x0<0&&x1>0) s+=`<line x1="${X(0)}" y1="${Y(lo)}" x2="${X(0)}" y2="${Y(hi)}" stroke="${FIG_COL.axis}" stroke-width="1.4"/>`;
+    let d=''; for(let j=0;j<=80;j++){ const x=x0+(x1-x0)*j/80; d+=(j?' L':'M')+X(x)+','+Y(this.y(c,x)); }
+    s+=`<path data-k="curve" d="${d}" fill="none" stroke="#5aa9e6" stroke-width="2.2"/>`;
+    const r=this.round, y0=this.y(c,c.x0);
+    if(r && r.c===c) [...r.out].sort().forEach(i=>{
+      const m=this.value(c,r.opts[i].k,c.x0), t=Math.min(1,0.6*span/Math.max(Math.abs(m),1e-9));
+      s+=`<g clip-path="url(#qpClip)"><line data-k="miss${'ABCD'[i]}" x1="${X(c.x0-t)}" y1="${Y(y0-m*t)}" x2="${X(c.x0+t)}" y2="${Y(y0+m*t)}" stroke="${FIG_COL.d}" stroke-width="2" stroke-dasharray="5 3"/></g>`;
+      s+=`<text x="${(+X(c.x0+t)+2).toFixed(1)}" y="${Math.min(H-16,Math.max(10,+Y(y0+m*t))).toFixed(1)}" font-size="10" font-weight="bold" fill="${FIG_COL.d}">${'ABCD'[i]}</text>`;
+    });
+    s+=`<circle data-k="point" cx="${X(c.x0)}" cy="${Y(y0)}" r="4" fill="${FIG_COL.ink}"/>`;
+    for(let x=Math.ceil(x0*2)/2;x<=x1+1e-9;x+=0.5) s+=`<text x="${X(x)}" y="${H-2}" font-size="10" fill="${FIG_COL.dim}" text-anchor="middle"${x===c.x0?' font-weight="bold"':''}>${neg(x)}</text>`;
+    for(let y=Math.ceil(lo/step)*step;y<=hi;y+=step) s+=`<text x="${(+X(x0)-3).toFixed(1)}" y="${(+Y(y)+3).toFixed(1)}" font-size="9" fill="${FIG_COL.dim}" text-anchor="end">${neg(y)}</text>`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c;
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div style="text-align:center;font-size:17px;margin-bottom:2px">y = ${this.yText(c)}</div>`;
+    const outs=[...r.out].sort();
+    out+=`<svg id="qpFig" viewBox="0 0 300 180" style="width:100%;height:auto;display:block" role="img" aria-label="The curve y = ${this.yText(c)} from x = ${neg(c.x0-1)} to x = ${neg(c.x0+1)}, with a point at x = ${neg(c.x0)}${outs.length?'; red lines through it with the slopes of '+outs.map(i=>'ABCD'[i]).join(' and ')+', cutting across the curve':''}">${this.panel(c,300,180)}</svg>`;
+    out+=`<div id="qpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), t=this.text(c,o.k);
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="QuotPick.choose(${i})" aria-label="${'ABCD'[i]}: dy/dx = ${t}${gone?'. Not the quotient rule':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${t}</button>`;
+    }).join('')+`</div>`;
+    const lines=[], m=this.miss();
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push('That was it: '+this.work(this.last.c)+' Here is a new curve.');
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="qpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The quotient workshop: the slope of f/g ----------
    Step along y = f/g and work its slope with the quotient rule, then check it
    with a nudge. Two slips are offered on purpose: swapping the top, which
@@ -20369,11 +20563,19 @@ const Quot = {
     }
     return out+`</svg>`;
   },
+  tab:'work',
+  setTab(t){ this.tab=t; this.render(); },
   open(){ UI.go('s-quot'); },
   pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
   render(){
+    document.getElementById('qoTab').innerHTML=[['work','➗ Work the slope','Step along a fraction and work its slope with the quotient rule'],['pick','🎯 Which dy/dx?','See y = f(x) / g(x) and pick which of four formulas is its slope']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Quot.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['qoSets','qoFig','qoXs','qoModes','qoRead','qoGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('qoPick').innerHTML=pick ? QuotPick.html() : '';
+    if(pick) return;
     document.getElementById('qoSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Quot.pick(${i})" aria-label="y = ${s.fs} over ${s.gs}">${s.btn}</button>`).join('');
     document.getElementById('qoModes').innerHTML=this.MODES.map((m,i)=>

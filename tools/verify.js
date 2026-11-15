@@ -81,7 +81,7 @@ function loadGame() {
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
-    ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoSets')")) + 'render(){}};exports.Quot=Quot;' +
+    ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoTab')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
@@ -2628,7 +2628,7 @@ const handsOnNotes = (() => {
     const { mod, name } = FOR[k];
     mods.add(mod);
     if (!LABEL[k]) fail('hands-on', k, 'is not a topic');
-    const card = html.match(new RegExp(`<h2 style="font-size:16px;color:var\\(--gold\\)">([^<]*)</h2>[\\s\\S]{0,400}?onclick="${mod}\\.open\\(\\)"`));
+    const card = html.match(new RegExp(`<h2 style="font-size:16px;color:var\\(--gold\\)">([^<]*)</h2>[\\s\\S]{0,520}?onclick="${mod}\\.open\\(\\)"`));
     if (!card) fail('hands-on', k, `the Tome has no card that opens ${mod}`);
     else if (card[1] !== name) fail('hands-on', k, `the Tome calls ${mod} "${card[1]}", the fight calls it "${name}"`);
     if (!new RegExp(`const ${mod} = \\{[\\s\\S]*?\\n  open\\(\\)\\{ UI\\.go\\('s-`).test(script)) fail('hands-on', k, `${mod} has no open()`);
@@ -3399,6 +3399,201 @@ const productPickNotes = (() => {
   for (const k of ['sin', 'cos', 'exp', 'lin']) if (!gs[k]) fail('productpick', 'deal', `g is never ${k}`);
   if (slots.size !== 4) fail('productpick', 'deal', `the right formula only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
   if (fives !== 30) fail('productpick', 'banner', `five slopes were picked ${fives} times, not 30`);
+  return { rounds, misses, lines };
+})();
+
+/* Which dy/dx? The pick-a-formula round in the quotient rule workshop. Every
+   formula on screen is read back as maths and evaluated: the quotient rule's
+   must match a nudge of y itself, and each slip must be exactly the slip it
+   is named as, worked here from f and g. g must keep clear of 0 across the
+   picture, so y never breaks. The picture is read back off its own ticks: the
+   curve must be y, and each red line must pass through the point with the
+   slope of the formula it stands for. */
+const quotPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Quot = {render(){ env.renders++; }};" +
+    cut('const QuotPick = {', '/* ---------- The quotient workshop') + 'return QuotPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // a formula as the player reads it, turned into a function of x
+  const maths = t => {
+    let e = t.replace(/eˣ/g, 'E(x)').replace(/(cos|sin) x/g, '$1(x)').replace(/cos\(/g, 'C(').replace(/sin\(/g, 'N(')
+      .replace(/x²/g, '(x**2)').replace(/\)²/g, ')**2')
+      .replace(/ · /g, '*').replace(/ \/ /g, '/').replace(/−/g, '-').replace(/(\d) ?(x|\(|[ECN])/g, '$1*$2').replace(/\)(\(|x|\d|[ECN])/g, ')*$1');
+    if (/[^-+*/() \dxECN]/.test(e.replace(/\*\*/g, ''))) return null;
+    try { const fn = new Function('x', 'E', 'C', 'N', 'return ' + e + ';'); return x => fn(x, Math.exp, Math.cos, Math.sin); } catch (er) { return null; }
+  };
+  // f and g, worked here from the round's own numbers
+  const f = (c, x) => ({ x2: x * x, x: x, sin: Math.sin(x), lin: c.a * x + c.b })[c.f];
+  const fp = (c, x) => ({ x2: 2 * x, x: 1, sin: Math.cos(x), lin: c.a })[c.f];
+  const g = (c, x) => ({ exp: Math.exp(x), sq1: x * x + 1, lin: c.p * x + c.q })[c.g];
+  const gp = (c, x) => ({ exp: Math.exp(x), sq1: 2 * x, lin: c.p })[c.g];
+  const y = (c, x) => f(c, x) / g(c, x);
+  const want = {
+    right: (c, x) => (fp(c, x) * g(c, x) - f(c, x) * gp(c, x)) / g(c, x) ** 2,
+    swap: (c, x) => (f(c, x) * gp(c, x) - fp(c, x) * g(c, x)) / g(c, x) ** 2,
+    nosq: (c, x) => (fp(c, x) * g(c, x) - f(c, x) * gp(c, x)) / g(c, x),
+    plus: (c, x) => (fp(c, x) * g(c, x) + f(c, x) * gp(c, x)) / g(c, x) ** 2,
+    ratio: (c, x) => fp(c, x) / gp(c, x)
+  };
+  const near = (p, q) => Math.abs(p - q) <= 1e-7 * (1 + Math.abs(q));
+  const xsOf = c => [-0.9, -0.4, 0.15, 0.6, 0.95].map(d => c.x0 + d);
+  const lin = (a, b) => (a === 1 ? '' : ng(a)) + 'x' + (b < 0 ? ' − ' : ' + ') + Math.abs(b);
+  const fT = c => ({ x2: 'x²', x: 'x', sin: 'sin x', lin: c.f === 'lin' ? lin(c.a, c.b) : '' })[c.f];
+  const gT = c => ({ exp: 'eˣ', sq1: 'x² + 1', lin: c.g === 'lin' ? lin(c.p, c.q) : '' })[c.g];
+  const fpT = c => ({ x2: '2x', x: '1', sin: 'cos x', lin: String(c.a) })[c.f];
+  const gpT = c => ({ exp: 'eˣ', sq1: '2x', lin: String(c.p) })[c.g];
+  const read = () => txt(S.html().split('id="qpRead"')[1].replace(/^[^>]*>/, ''));
+  const num = v => { const r = Math.round(v * 100) / 100; return ng(Object.is(r, -0) ? 0 : r); };
+  if (S.RULE !== 'The quotient rule: if y = f(x) / g(x), then dy/dx = (f′g − fg′) / g². The top growing lifts y and the bottom growing pulls it down, and the whole is over g squared. Which formula is dy/dx?') fail('quotpick', 'rule', 'the rule is not stated');
+  if (S.round !== null || S.matched !== 0) fail('quotpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, lines = 0;
+  const slots = new Set(), kinds = {}, fs_ = {}, gs = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = r.c, key = `seed ${seed} round ${k}`, XS = xsOf(c);
+      rounds++; fs_[c.f] = (fs_[c.f] || 0) + 1; gs[c.g] = (gs[c.g] || 0) + 1;
+      const fair = ['x2', 'x', 'sin', 'lin'].includes(c.f) && ['exp', 'sq1', 'lin'].includes(c.g) && !(c.f === 'lin' && c.g === 'lin')
+        && (c.f === 'lin' ? [1, 2, 3].includes(c.a) && Number.isInteger(c.b) && c.b && Math.abs(c.b) <= 3 : c.a === 0 && c.b === 0)
+        && (c.g === 'lin' ? [1, 2, 3].includes(c.p) && Number.isInteger(c.q) && c.q && Math.abs(c.q) <= 3 : c.p === 0 && c.q === 0)
+        && [-1, -0.5, 0.5, 1].includes(c.x0);
+      if (!fair) fail('quotpick', key, `the curve ${JSON.stringify(c)} is not a fair one`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(c)) fail('quotpick', key, 'the same curve comes twice in a row');
+      { let lo = Infinity, hi = -Infinity, gmin = Infinity;
+        for (let j = 0; j <= 200; j++) { const x = c.x0 - 1 + j / 100, v = y(c, x); lo = Math.min(lo, v); hi = Math.max(hi, v); gmin = Math.min(gmin, Math.abs(g(c, x))); }
+        if (gmin < 0.75) fail('quotpick', key, `g comes within ${gmin.toFixed(2)} of 0 in the picture, so y nearly breaks`);
+        if (hi - lo > 40.5) fail('quotpick', key, `y runs ${(hi - lo).toFixed(1)} tall, too squashed to read a slope off`); }
+      // y as written is y, and the quotient rule's formula matches a nudge of it
+      const yT = S.yText(c), wantY = ({ x2: 'x²', x: 'x', sin: '(sin x)', lin: '(' + fT(c) + ')' })[c.f] + ' / ' + (c.g === 'exp' ? 'eˣ' : '(' + gT(c) + ')');
+      if (yT !== wantY) fail('quotpick', key, `y is written ${yT}, not ${wantY}`);
+      const yf = maths(yT);
+      if (!yf || XS.some(x => !near(yf(x), y(c, x)))) fail('quotpick', key, `${yT} does not read back as y`);
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('quotpick', key, 'there are not four formulas, one of them right');
+      const texts = r.opts.map(o => S.text(c, o.k));
+      if (new Set(texts).size !== 4) fail('quotpick', key, 'two formulas are written the same');
+      const fns = texts.map(maths);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('quotpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!fns[i]) { fail('quotpick', key, `${texts[i]} does not read as maths`); return; }
+        if (XS.some(x => !near(fns[i](x), want[o.k](c, x)))) fail('quotpick', key, `${o.k} is written ${texts[i]}, which is not that slip`);
+        if (XS.some(x => !near(S.value(c, o.k, x), want[o.k](c, x)))) fail('quotpick', key, `${o.k} is worked wrong`);
+        if (/(^|[^\d])1 · | · 1($|[^\d])|\+ −|− −|−\(−/.test(texts[i])) fail('quotpick', key, `${texts[i]} is written untidily`);
+        if (/\d · x|\d · \(|\d · e/.test(texts[i])) fail('quotpick', key, `${texts[i]} puts a · between a number and x, eˣ or a bracket`);
+        if (/ · \d+( |\)|$)/.test(texts[i])) fail('quotpick', key, `${texts[i]} puts a number after what it multiplies`);
+        if (/\/ (\d+x|[a-z]+ x)/.test(texts[i])) fail('quotpick', key, `${texts[i]} leaves a product bare under the line, so it reads the wrong way`);
+        if (/\/ 1$|^[^x]*$/.test(texts[i])) fail('quotpick', key, `${texts[i]} shows no working`);
+        if (/(^|[^\d.])1(?=[x(e]| sin| cos)/.test(texts[i])) fail('quotpick', key, `${texts[i]} writes a 1 in front of what it multiplies`);
+        if (/\d(sin|cos)/.test(texts[i])) fail('quotpick', key, `${texts[i]} runs a number into ${'sin or cos'}`);
+        if (/ˣ²/.test(texts[i])) fail('quotpick', key, `${texts[i]} squares the power of eˣ, not eˣ itself`);
+        if (o.k !== 'ratio' && !/^\(.+ [+−] .+\) \/ \S/.test(texts[i])) fail('quotpick', key, `${texts[i]} is not two parts over a bottom`);
+      });
+      // the quotient rule written as (f′g − fg′) / g², in that order
+      const ri0 = r.opts.findIndex(o => o.k === 'right');
+      if (!/^\(.+ − .+\) \/ .+²$/.test(texts[ri0])) fail('quotpick', key, `the quotient rule ${texts[ri0]} is not (f′g − fg′) / g²`);
+      if (XS.some(x => Math.abs((y(c, x + 1e-5) - y(c, x - 1e-5)) / 2e-5 - want.right(c, x)) > 1e-4 * (1 + Math.abs(want.right(c, x))))) fail('quotpick', key, 'the quotient rule does not match a nudge of y');
+      { const v = S.view(c), ag = s => Math.atan(s * (158 / (v.hi - v.lo)) / (266 / 2)) * 180 / Math.PI;
+        r.opts.forEach((o, i) => { if (o.k !== 'right' && Math.abs(ag(want[o.k](c, c.x0)) - ag(want.right(c, c.x0))) < 10) fail('quotpick', key, `${texts[i]} looks too like the curve's own slope at x₀`); }); }
+      for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (fns[i] && fns[j] && XS.every(x => near(fns[i](x), fns[j](x)))) fail('quotpick', key, `${texts[i]} and ${texts[j]} are the same slope`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' y = ' + yT)) fail('quotpick', key, 'the rule and y are not shown first');
+      const lab = `The curve y = ${yT} from x = ${ng(c.x0 - 1)} to x = ${ng(c.x0 + 1)}, with a point at x = ${ng(c.x0)}`;
+      if (!h0.includes(`role="img" aria-label="${lab}">`)) fail('quotpick', key, 'the picture is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="QuotPick\.choose\((\d)\)" aria-label="([ABCD]): dy\/dx = ([^"]+?)(\. Not the quotient rule)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'ABCD'[i] || m[8] !== texts[i])) fail('quotpick', key, 'the four formulas are not offered as they are, A to D');
+      // the picture, read back off its own ticks
+      const pic = h => {
+        const svg = h.split('id="qpFig"')[1].split('</svg>')[0];
+        const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10" fill="[^"]+" text-anchor="middle"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1], +m[2].replace('−', '-')]);
+        const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9"[^>]*>([^<]+)<\/text>/g)].map(m => [+m[1] - 3, +m[2].replace('−', '-')]);
+        return { svg, xt, yt };
+      };
+      const { svg, xt, yt } = pic(h0);
+      if (xt.length !== 5 || xt[0][1] !== c.x0 - 1 || xt[4][1] !== c.x0 + 1) { fail('quotpick', key, 'the ticks do not run from x₀ − 1 to x₀ + 1 in halves'); continue; }
+      if (yt.length < 2 || yt.length > 8) { fail('quotpick', key, `there are ${yt.length} y ticks`); continue; }
+      // every y label fits inside the picture: at 9px a character is about 5.2px wide, and an end-anchored label runs left from its x
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('quotpick', key, 'a y label runs off the left edge of the picture');
+      const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      // the 10° rule measures angles as the picture draws them
+      if (r.opts.some(o => Math.abs(S.angle(c, want[o.k](c, c.x0)) - Math.atan(want[o.k](c, c.x0) * Math.abs(ky) / kx) * 180 / Math.PI) > 0.2)) fail('quotpick', key, 'the 10° rule measures angles another way from the picture');
+      if (!(kx > 0 && ky < 0)) fail('quotpick', key, 'the picture is drawn back to front or upside down');
+      const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
+      const span = Math.abs((yt[yt.length - 1][1] - yt[0][1]) / (yt.length - 1)) * 8;
+      if (JSON.stringify([...svg.matchAll(/font-weight="bold">([^<]+)</g)].map(m => +m[1].replace('−', '-'))) !== JSON.stringify([c.x0])) fail('quotpick', key, 'x₀ is not picked out on the axis');
+      const curve = svg.match(/<path data-k="curve" d="([^"]+)"/);
+      if (!curve) fail('quotpick', key, 'no curve is drawn');
+      else for (const m of curve[1].matchAll(/([-\d.]+),([-\d.]+)/g)) { const x = ux(+m[1]), yy = uy(+m[2]); if (Math.abs(yy - y(c, x)) > 0.02 * span + 0.01) { fail('quotpick', key, `the curve passes (${x.toFixed(2)}, ${yy.toFixed(2)}), off y`); break; } }
+      const pt = svg.match(/<circle data-k="point" cx="([-\d.]+)" cy="([-\d.]+)"/);
+      if (!pt || Math.abs(ux(+pt[1]) - c.x0) > 0.01 || Math.abs(uy(+pt[2]) - y(c, c.x0)) > 0.01 * span + 0.01) fail('quotpick', key, 'the point is not on the curve at x₀');
+      if (/data-k="miss/.test(svg)) fail('quotpick', key, 'a red line is drawn before any miss');
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: f(x) = ')) fail('quotpick', key, `before a pick the readout says ${read()}`);
+      const work = `f(x) = ${fT(c)} and g(x) = ${gT(c)}, so f′(x) = ${fpT(c)} and g′(x) = ${gpT(c)}: dy/dx = (f′g − fg′) / g² = ${texts[ri]}.`;
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('quotpick', key, 'a miss is counted, or not crossed off');
+        const slip = {
+          swap: `${L} takes f′g away from fg′: the top is the wrong way round, so it gives exactly minus the slope. f growing lifts y, so f′g comes first.`,
+          nosq: `${L} divides by g once: the quotient rule divides by g², because the slope of 1/g is −g′/g².`,
+          plus: `${L} adds fg′: that plus belongs to the product rule. When the bottom grows the fraction shrinks, so the quotient rule takes fg′ away.`,
+          ratio: `${L} divides the slopes, f′ / g′: the slope of a fraction is not the fraction of the slopes.`
+        }[o.k];
+        const s0 = want[o.k](c, c.x0), H = 0.001, nudge = (y(c, c.x0 + H) - y(c, c.x0 - H)) / (2 * H);
+        const r4 = v => ng(Math.round(v * 1e4) / 1e4);
+        const check = `At x = ${ng(c.x0)}, ${L} gives a slope of ${Math.abs(s0 - Math.round(s0 * 100) / 100) < 1e-9 ? '' : 'about '}${num(s0)}, drawn in red: it cuts across the curve. A nudge from x = ${r4(c.x0 - H)} to ${r4(c.x0 + H)} gives Δy/Δx ≈ ${num(nudge)}.`;
+        if (Math.abs(nudge - want.right(c, c.x0)) > 0.01 * (1 + Math.abs(want.right(c, c.x0)))) fail('quotpick', key, 'the nudge is not the curve\'s slope');
+        const want2 = `${slip} ${check} ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want2) fail('quotpick', key, `the miss is explained as: ${read()} | want ${want2}`);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="QuotPick\\.choose\\(${i}\\)" aria-label="${L}: dy/dx = [^"]+\\. Not the quotient rule"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('quotpick', key, 'the missed formulas are not shut and told as not the quotient rule');
+        const outs = wrong.slice(0, q + 1).slice().sort();
+        if (!h.includes(`${lab}; red lines through it with the slopes of ${outs.map(j => 'ABCD'[j]).join(' and ')}, cutting across the curve">`)) fail('quotpick', key, 'the red lines are not read out');
+        // each red line goes through the point with its formula's slope, and looks wrong
+        const sv = pic(h).svg, reds = [...sv.matchAll(/<line data-k="miss([ABCD])" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)" stroke="([^"]+)"/g)];
+        if (reds.map(m => m[1]).join() !== outs.map(j => 'ABCD'[j]).join()) fail('quotpick', key, `the red lines are ${reds.map(m => m[1])}`);
+        for (const m of reds) {
+          lines++;
+          const j = 'ABCD'.indexOf(m[1]), sj = want[r.opts[j].k](c, c.x0), P = [ux(+m[2]), uy(+m[3])], Q = [ux(+m[4]), uy(+m[5])];
+          const sl = (Q[1] - P[1]) / (Q[0] - P[0]), mid = [(P[0] + Q[0]) / 2, (P[1] + Q[1]) / 2];
+          if (m[6] !== '#e5484d' || Math.abs(sl - sj) > 0.02 * (1 + Math.abs(sj)) || Math.abs(mid[0] - c.x0) > 0.01 || Math.abs(mid[1] - y(c, c.x0)) > 0.01 * span + 0.02) fail('quotpick', key, `the red line ${m[1]} is not ${texts[j]} through the point`);
+          const ang = s => Math.atan(s * Math.abs(ky) / kx) * 180 / Math.PI;
+          if (Math.abs(ang(sj) - ang(want.right(c, c.x0))) < 10) fail('quotpick', key, `the red line ${m[1]} looks too like the curve's own slope`);
+        }
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('quotpick', key, 'tapping a missed formula again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('quotpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('quotpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('quotpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'QUOTIENT READER / 5 slopes picked') fail('quotpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is dy/dx, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('quotpick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${work} Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('quotpick', key, `after a pick: ${read()} | want That was it: ${work}`);
+      prev = c;
+    }
+  }
+  for (const k of ['swap', 'nosq', 'plus', 'ratio']) if (!kinds[k]) fail('quotpick', 'slips', `the slip ${k} is never offered`);
+  for (const k of ['x2', 'x', 'sin', 'lin']) if (!fs_[k]) fail('quotpick', 'deal', `f is never ${k}`);
+  for (const k of ['exp', 'sq1', 'lin']) if (!gs[k]) fail('quotpick', 'deal', `g is never ${k}`);
+  if (slots.size !== 4) fail('quotpick', 'deal', `the right formula only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('quotpick', 'banner', `five slopes were picked ${fives} times, not 30`);
   return { rounds, misses, lines };
 })();
 
@@ -7139,6 +7334,7 @@ console.log(`  eigen spotted     ${pad(eigSpotNotes.rounds.toLocaleString(), 15)
 console.log(`  integrals picked  ${pad(intPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-integral, each worked again by Simpson's rule and every slip from what it gets wrong; ${intPickNotes.crossing.toLocaleString()} cross the axis inside the shading; ${intPickNotes.misses.toLocaleString()} wrong picks explained; every picture read back off its own ticks)`);
 console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${chainPickNotes.misses.toLocaleString()} wrong picks explained; ${chainPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
+console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);

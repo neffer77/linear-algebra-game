@@ -102,6 +102,7 @@ const SUITES = [
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
   require('./play/chainpick'), // see y = f(g(x)), pick which of four formulas is its slope
   require('./play/productpick'), // see y = f(x) · g(x), pick which of four formulas is its slope
+  require('./play/quotpick'), // see y = f(x) / g(x), pick which of four formulas is its slope
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
