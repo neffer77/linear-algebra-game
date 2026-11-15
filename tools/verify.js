@@ -2783,6 +2783,114 @@ const wsIndexNotes = (() => {
   return { chips: items.length, strands: gs.length, cases: cases.length };
 })();
 
+/* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
+   one matrix, and each of the other three is checked to be the slip it is
+   named as by where it sends î and ĵ, worked out here from the shape alone;
+   every button, sentence, drawing and tap is read back, over many seeded
+   rounds. */
+const matPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const { S, W } = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    cut('const Workshop = {', "  open(){ UI.go('s-workshop'); },") + "render(){ env.renders++; } };" +
+    cut('const MatPick = {', '/* ---------------------------- slope workshop') + 'return { S: MatPick, W: Workshop };')(R, env);
+  const txt = h => h.replace(/<\/div>/g, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const at = (x, y) => `⟨${ng(x)}, ${ng(y)}⟩`;
+  const key2 = M => JSON.stringify(M);
+  // where a matrix sends î and ĵ: its columns
+  const I = M => [M[0][0], M[1][0]], J = M => [M[0][1], M[1][1]];
+  const eq = (p, q) => p[0] === q[0] && p[1] === q[1];
+  const named = {
+    trans: (A, D) => [0, 1].every(i => [0, 1].every(j => D[i][j] === A[j][i])),
+    swap: (A, D) => eq(I(D), J(A)) && eq(J(D), I(A)),
+    rows: (A, D) => eq(I(D), [I(A)[1], I(A)[0]]) && eq(J(D), [J(A)[1], J(A)[0]]),
+    sign: (A, D, e) => { const diff = [0, 1, 2, 3].filter(k => D[k >> 1][k & 1] !== A[k >> 1][k & 1]);
+      return diff.length === 1 && diff[0] === e && D[e >> 1][e & 1] === -A[e >> 1][e & 1] && A[e >> 1][e & 1] !== 0; }
+  };
+  const said = {
+    trans: A => `It is the transpose: its rows are the right columns. The columns are where the arrows land, so ${at(...I(A))} goes down the first column, top to bottom.`,
+    swap: () => 'It has the right two columns in the wrong order: the first column is where î lands, the second where ĵ lands.',
+    rows: () => "It swaps each arrow's across and up: in each column the top number is how far across, the bottom how far up.",
+    sign: (A, e) => { const v = A[e >> 1][e & 1], arrow = e & 1 ? 'ĵ' : 'î', dir = e >> 1 ? (v > 0 ? 'up' : 'down') : (v > 0 ? 'right' : 'left');
+      return `One number has the wrong sign: the dashed ${arrow} goes ${dir} ${Math.abs(v)}, so the ${['top-left', 'top-right', 'bottom-left', 'bottom-right'][e]} number is ${ng(v)}.`; }
+  };
+  if (S.RULE !== 'Each column of a matrix is where an arrow lands: the first column is where î ends, the second where ĵ ends. Which matrix makes the dashed shape?') fail('matpick', 'rule', 'the rule is not stated');
+  if (S.round !== null || S.matched !== 0) fail('matpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, picks = 0, fives = 0, symm = 0;
+  const dealt = new Set(), caught = new Set(), slots = new Set();
+  for (let seed = 1; seed <= 400; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`;
+      rounds++;
+      if (A.flat().some(v => v < -2 || v > 2) || W.det(A) === 0 || key2(A) === key2([[1, 0], [0, 1]])) fail('matpick', key, `the shape ${key2(A)} is not a fair one`);
+      if (prev && key2(prev) === key2(A)) fail('matpick', key, 'the same shape comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1 || key2(r.opts.find(o => o.k === 'right').M) !== key2(A)) fail('matpick', key, 'there is not one right matrix among four');
+      slots.add(r.opts.findIndex(o => o.k === 'right'));
+      if (new Set(r.opts.map(o => key2(o.M))).size !== 4) fail('matpick', key, 'two of the matrices are the same');
+      for (const o of r.opts) if (o.k !== 'right') {
+        if (!named[o.k] || !named[o.k](A, o.M, o.e)) fail('matpick', key, `${key2(o.M)} is not the ${o.k} slip of ${key2(A)}`);
+        dealt.add(o.k);
+      }
+      const symmetric = A[0][1] === A[1][0];
+      if (symmetric) symm++;
+      if (r.opts.some(o => o.k === 'trans') === symmetric) fail('matpick', key, 'the transpose is not offered whenever it differs');
+      if (!r.opts.some(o => o.k === 'sign')) fail('matpick', key, 'no wrong sign is offered');
+      const f0 = S.fig();
+      if (f0.kind !== 'grid' || key2(f0.m) !== key2([[1, 0], [0, 1]]) || key2(f0.ghost) !== key2(A) || f0.ticks !== true || f0.before !== false || !/^Gold is the square before\. The dashed shape is where one of these matrices sends it\.$/.test(f0.caption)) fail('matpick', key, 'the shape is not drawn dashed over the square');
+      const h0 = S.html();
+      const btn = [...h0.matchAll(/<button class="btn sm ghost mpOpt( miss)?" (disabled )?onclick="MatPick\.choose\((\d)\)" aria-label="Matrix ([ABCD]): top row (\S+), (\S+); bottom row (\S+), ([^".]+)(\. Not this one)?"[^>]*>\s*<b aria-hidden="true">([ABCD])<\/b><span class="mpMat" aria-hidden="true"><i class="c0">([^<]+)<\/i><i class="c1">([^<]+)<\/i><i class="c0">([^<]+)<\/i><i class="c1">([^<]+)<\/i><\/span><\/button>/g)];
+      if (btn.length !== 4 || btn.some((b, i) => b[1] || b[2] || b[9] || +b[3] !== i || b[4] !== 'ABCD'[i] || b[10] !== 'ABCD'[i] ||
+        [b[5], b[6], b[7], b[8]].join() !== r.opts[i].M.flat().map(ng).join() || [b[11], b[12], b[13], b[14]].join() !== r.opts[i].M.flat().map(ng).join())) fail('matpick', key, 'the four matrices are not offered as they are, A to D');
+      if (k === 0 ? txt(S.read()) !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !txt(S.read()).startsWith('That was it: ')) fail('matpick', key, `before a pick the readout says ${txt(S.read())}`);
+      // miss some of the wrong matrices, in an order that changes, then pick
+      const wrong = [0, 1, 2, 3].filter(i => r.opts[i].k !== 'right'); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let t = 0; t < missN; t++) {
+        const i = wrong[t], o = r.opts[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++; caught.add(o.k);
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('matpick', key, 'a miss is counted, or not crossed off');
+        const want = `Matrix ${'ABCD'[i]} sends î to ${at(...I(o.M))} and ĵ to ${at(...J(o.M))}, drawn in gold. The dashed î ends at ${at(...I(A))} and the dashed ĵ at ${at(...J(A))}. ${o.k === 'sign' ? said.sign(A, o.e) : said[o.k](A)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (txt(S.read()) !== want) fail('matpick', key, `the miss on ${o.k} is explained as: ${txt(S.read())}`);
+        const f = S.fig();
+        if (key2(f.m) !== key2(o.M) || key2(f.ghost) !== key2(A) || !/^Gold is where that matrix sends the square\. The dashed shape is the one to make\.$/.test(f.caption)) fail('matpick', key, 'the wrong pick is not drawn over the shape');
+        const h = S.html();
+        if (!new RegExp(`mpOpt miss" disabled onclick="MatPick\\.choose\\(${i}\\)" aria-label="Matrix ${'ABCD'[i]}: [^"]+\\. Not this one"`).test(h)) fail('matpick', key, 'a missed matrix is not shut and told as not this one');
+        if ((h.match(/ disabled /g) || []).length !== t + 1) fail('matpick', key, 'the wrong number of matrices are shut');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== t + 1 || env.renders !== r0) fail('matpick', key, 'tapping a missed matrix again does something');
+      }
+      const ri = r.opts.findIndex(o => o.k === 'right'), m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri); picks++;
+      if (env.renders !== r0 + 1) fail('matpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('matpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('matpick', key, 'no fresh shape after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'MATRIX SPOTTER / 5 matrices picked') fail('matpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, want = `✓ Matrix ${'ABCD'[ri]} makes the shape, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== want || env.banners.length !== nb) fail('matpick', key, `the toast is ${env.toasts[nt]}`); }
+      const after = txt(S.read());
+      if (after !== `That was it: î lands on ${at(...I(A))}, the first column, and ĵ on ${at(...J(A))}, the second. Here is a new shape. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('matpick', key, `after a pick: ${after}`);
+      if (key2(S.fig().m) !== key2([[1, 0], [0, 1]])) fail('matpick', key, 'the new shape is drawn with the old pick');
+      prev = A;
+    }
+  }
+  for (const k of Object.keys(named)) { if (!dealt.has(k)) fail('matpick', k, 'never offered'); if (!caught.has(k)) fail('matpick', k, 'never picked and explained'); }
+  if (slots.size !== 4) fail('matpick', 'deal', `the right matrix only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!symm) fail('matpick', 'symmetric', 'no symmetric shape is ever dealt, so the fill-in is never tried');
+  if (fives !== 40) fail('matpick', 'banner', `five matrices were picked ${fives} times, not 40`);
+  return { rounds, misses, picks };
+})();
+
 /* Which is f′? The graph-reading round in the slope tracer: f′ is checked as
    the slope of f by nudging f itself, never from the coefficients it was built
    from; each wrong graph is checked to be the slip it is named as, and to break
@@ -6407,6 +6515,7 @@ console.log(`  fractions split         ${pad(coverNotes.n.toLocaleString(), 10)}
 console.log(`  slices swept            ${pad(sliceNotes.n.toLocaleString(), 10)}  (each slice integrated afresh from f, the swept total added up again, both orders agreeing, the slice and S read as formulas, the drawing read back, ${sliceNotes.goals} goals findable)`);
 console.log(`  slopes traced           ${pad(tracerNotes.n.toLocaleString(), 10)}  (each slope against the derivative worked by hand, the nudge's rise, every x label, every sentence, the dots and traced curve read back, ${tracerNotes.goals} goals findable)`);
 console.log(`  f′ picked out     ${pad(slopeMatchNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-f′, f′ checked as the slope of f by nudging f at ${slopeMatchNotes.n.toLocaleString()} points; every wrong graph checked to be its slip and caught where it breaks the rule, ${slopeMatchNotes.misses.toLocaleString()} misses explained; every graph told as words read back)`);
+console.log(`  matrices picked   ${pad(matPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-matrix, each wrong matrix checked to be its slip by where it sends î and ĵ; ${matPickNotes.misses.toLocaleString()} wrong picks drawn and explained, ${matPickNotes.picks.toLocaleString()} right picks counted)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
 console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}  (each worked by the sign rule, every product in every worked line evaluated with its slots, the square-to-both checks, the length as the area, the target's general form, every sentence, the drawing read back, ${crossNotes.goals} goals findable)`);
