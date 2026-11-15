@@ -1,179 +1,186 @@
 {
- "change": "The Null Space Workshop: what a matrix crushes",
+ "change": "The Gram–Schmidt Workshop: take away the shadow",
  "mutations": [
   {
-   "name": "Av uses a column for a row",
+   "name": "w adds the copies instead of taking them away",
    "file": "index.html",
-   "find": "  av(){ const A=this.set().A; return [A[0][0]*this.x+A[0][1]*this.y, A[1][0]*this.x+A[1][1]*this.y]; },",
-   "replace": "  av(){ const A=this.set().A; return [A[0][0]*this.x+A[1][0]*this.y, A[0][1]*this.x+A[1][1]*this.y]; },",
+   "find": "return [S.u2[0]-c*S.u1[0], S.u2[1]-c*S.u1[1]]; },",
+   "replace": "return [S.u2[0]+c*S.u1[0], S.u2[1]+c*S.u1[1]]; },",
    "run": "verify"
   },
   {
-   "name": "the determinant adds",
+   "name": "the dot product crosses its slots",
    "file": "index.html",
-   "find": "return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },",
-   "replace": "return A[0][0]*A[1][1]+A[0][1]*A[1][0]; },",
+   "find": "return this.r(w[0]*u[0]+w[1]*u[1]); },",
+   "replace": "return this.r(w[0]*u[1]+w[1]*u[0]); },",
    "run": "verify"
   },
   {
-   "name": "the row multiple reads off the wrong entries",
+   "name": "u₁ · u₁ adds instead of squaring",
    "file": "index.html",
-   "find": "  k(){ const A=this.set().A; return A[1][0]/A[0][0]; },",
-   "replace": "  k(){ const A=this.set().A; return A[0][1]/A[0][0]; },",
+   "find": "d=this.dot(), nn=u[0]*u[0]+u[1]*u[1];",
+   "replace": "d=this.dot(), nn=u[0]+u[1];",
    "run": "verify"
   },
   {
-   "name": "zero counts as crushed",
+   "name": "the shadow divides the wrong way",
    "file": "index.html",
-   "find": "return p[0]===0 && p[1]===0 && (this.x!==0 || this.y!==0); },",
-   "replace": "return p[0]===0 && p[1]===0; },",
+   "find": "const dp=S.u2[0]*u[0]+S.u2[1]*u[1], best=dp/nn;",
+   "replace": "const dp=S.u2[0]*u[0]+S.u2[1]*u[1], best=nn/dp;",
    "run": "verify"
   },
   {
-   "name": "the steep matrix is not singular",
+   "name": "the half pair needs a whole copy",
    "file": "index.html",
-   "find": "{id:'steep', btn:'Steep', A:[[2,-1],[-6,3]]}",
-   "replace": "{id:'steep', btn:'Steep', A:[[2,-1],[-6,4]]}",
+   "find": "{id:'half', btn:'Half', u1:[3,1], u2:[1,2]}",
+   "replace": "{id:'half', btn:'Half', u1:[3,1], u2:[5,5]}",
    "run": "verify"
   },
   {
-   "name": "the full-rank matrix is singular",
+   "name": "the square pair is not at right angles",
    "file": "index.html",
-   "find": "{id:'full', btn:'Full rank', A:[[2,1],[1,1]]}",
-   "replace": "{id:'full', btn:'Full rank', A:[[2,1],[4,2]]}",
+   "find": "{id:'none', btn:'Square', u1:[1,1], u2:[-2,2]}",
+   "replace": "{id:'none', btn:'Square', u1:[1,1], u2:[-2,3]}",
    "run": "verify"
   },
   {
-   "name": "the flat matrix crushes nothing in reach",
+   "name": "the stepper skips the halves",
    "file": "index.html",
-   "find": "{id:'flat', btn:'Flat', A:[[1,2],[2,4]]}",
-   "replace": "{id:'flat', btn:'Flat', A:[[1,4],[2,8]]}",
+   "find": "  C:[-1,-0.5,0,0.5,1,1.5,2,2.5,3],",
+   "replace": "  C:[-1,0,1,2,3],",
    "run": "verify"
   },
   {
    "name": "a negative entry loses its brackets",
    "file": "index.html",
-   "find": "    const par=n=>n<0?`(${neg(n)})`:String(n);\n    const row=",
-   "replace": "    const par=n=>neg(n);\n    const row=",
+   "find": "    const par=n=>n<0?`(${this.num(n)})`:this.num(n);\n    const L=",
+   "replace": "    const par=n=>this.num(n);\n    const L=",
    "run": "verify"
   },
   {
-   "name": "a crushed arrow reads as not crushed",
+   "name": "too much reads as too little",
    "file": "index.html",
-   "find": "    else if(this.crushed())\n      out.push(",
-   "replace": "    else if(false)\n      out.push(",
+   "find": "      (d>0 ? `: more than 0",
+   "replace": "      (d<0 ? `: more than 0",
    "run": "verify"
   },
   {
-   "name": "rank and nullity miscount",
+   "name": "an irrational length reads as exact",
    "file": "index.html",
-   "find": "so the nullity is 0: rank 2 + nullity 0 = 2 columns",
-   "replace": "so the nullity is 1: rank 2 + nullity 1 = 2 columns",
+   "find": "${exact?'=':'≈'} ${this.num(L)}",
+   "replace": "= ${this.num(L)}",
    "run": "verify"
   },
   {
-   "name": "the line goal takes one arrow",
+   "name": "the shortest claim shows everywhere",
    "file": "index.html",
-   "find": "ok:K=>K.seen[K.si].size>=2},",
-   "replace": "ok:K=>K.seen[K.si].size>=1},",
+   "find": "      (d===0 ? `, the shortest w can be:",
+   "replace": "      (true ? `, the shortest w can be:",
    "run": "verify"
   },
   {
-   "name": "the reach goal takes any point",
+   "name": "the over goal takes any lean",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.av()[0]===1 && K.av()[1]===0}",
-   "replace": "ok:K=>K.si===2 && K.av()[0]===1}",
+   "find": "     ok:K=>K.dot()<0},",
+   "replace": "     ok:K=>K.dot()!==0},",
    "run": "verify"
   },
   {
-   "name": "Av is drawn to v's scale",
+   "name": "the square goal ignores c",
    "file": "index.html",
-   "find": "kv=80/(this.HI+0.5), ka=80/this.reach();",
-   "replace": "kv=80/(this.HI+0.5), ka=kv;",
+   "find": "ok:K=>K.si===2 && K.c()===0 && K.dot()===0}",
+   "replace": "ok:K=>K.si===2}",
    "run": "verify"
   },
   {
-   "name": "the gold line is drawn on every matrix",
+   "name": "w is drawn upside down",
    "file": "index.html",
-   "find": "    if(this.det()===0) out+=thru(R,",
-   "replace": "    if(true) out+=thru(R,",
+   "find": "const P=p=>[(O[0]+p[0]*k).toFixed(2), (O[1]-p[1]*k).toFixed(2)];",
+   "replace": "const P=p=>[(O[0]+p[0]*k).toFixed(2), (O[1]+p[1]*k).toFixed(2)];",
    "run": "verify"
   },
   {
-   "name": "the null-space line is drawn along a row",
+   "name": "the dashed copy of w starts at the origin",
    "file": "index.html",
-   "find": "out+=thru(L,[-A[0][1],A[0][0]],FIG_COL.d,'null');",
-   "replace": "out+=thru(L,[A[0][0],A[0][1]],FIG_COL.d,'null');",
+   "find": "seg(cu,S.u2,FIG_COL.d,'wcopy',true,2)",
+   "replace": "seg([0,0],S.u2,FIG_COL.d,'wcopy',true,2)",
    "run": "verify"
   },
   {
-   "name": "Av is drawn upside down",
+   "name": "dashed arrows show with nothing taken away",
    "file": "index.html",
-   "find": "const tx=(c[0]+q[0]*k).toFixed(2), ty=(c[1]-q[1]*k).toFixed(2);",
-   "replace": "const tx=(c[0]+q[0]*k).toFixed(2), ty=(c[1]+q[1]*k).toFixed(2);",
+   "find": "    if(c!==0) out+=seg([0,0],cu,",
+   "replace": "    if(true) out+=seg([0,0],cu,",
    "run": "verify"
   },
   {
-   "name": "a new matrix keeps the old arrow",
+   "name": "the plane is drawn too big for the picture",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true;",
-   "replace": "pick(i){ this.si=i; this.touched=true;",
-   "run": "play:null"
+   "find": "const S=this.set(), c=this.c(), w=this.w(), O=[180,105], k=15;",
+   "replace": "const S=this.set(), c=this.c(), w=this.w(), O=[180,105], k=25;",
+   "run": "verify"
   },
   {
-   "name": "crushed arrows are never remembered",
+   "name": "a new pair keeps the old c",
    "file": "index.html",
-   "find": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.look(); this.render(); },\n  step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.look(); this.render(); },",
-   "replace": "pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.render(); },\n  step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.render(); },",
-   "run": "play:null"
+   "find": "pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },\n  moveC(",
+   "replace": "pick(i){ this.si=i; this.touched=true; this.render(); },\n  moveC(",
+   "run": "play:gram"
   },
   {
-   "name": "the caption forgets the gold line",
+   "name": "the caption forgets the dashed copy",
    "file": "index.html",
-   "find": "${this.det()===0?' The gold dashed line is everywhere Av can land.':''}",
-   "replace": "",
-   "run": "play:null"
+   "find": "drawn from the origin and again from the dashed tip to u₂.</div>`;",
+   "replace": "drawn from the origin.</div>`;",
+   "run": "play:gram"
   },
   {
    "name": "a found goal gives no toast",
    "file": "index.html",
-   "find": "'MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
-   "replace": "'MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
-   "run": "play:null"
+   "find": "'MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());\n      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }",
+   "replace": "'MASTER OF RIGHT ANGLES','every shadow taken away','var(--gold)',()=>Sfx.mastered());\n      else { Sfx.good(); }",
+   "run": "play:gram"
   },
   {
-   "name": "the stepper runs past its end",
+   "name": "the stepper never stops",
    "file": "index.html",
-   "find": "aria-label=\"Lower ${names[w]}\"${this[w]<=this.LO?' disabled':''}>",
-   "replace": "aria-label=\"Lower ${names[w]}\">",
-   "run": "play:null"
+   "find": "    document.getElementById('gsCHi').disabled=this.k>=this.C.length-1;\n",
+   "replace": "",
+   "run": "play:gram"
   },
   {
-   "name": "the matrix buttons lose their names",
+   "name": "the pair buttons lose their names",
    "file": "index.html",
-   "find": "onclick=\"Kernel.pick(${i})\" aria-label=\"${s.btn}: rows ${this.v(s.A[0])} and ${this.v(s.A[1])}\">",
-   "replace": "onclick=\"Kernel.pick(${i})\">",
-   "run": "play:null"
+   "find": "onclick=\"Gram.pick(${i})\" aria-label=\"${s.btn}: u₁ = ${this.v(s.u1)}, u₂ = ${this.v(s.u2)}\">",
+   "replace": "onclick=\"Gram.pick(${i})\">",
+   "run": "play:gram"
   },
   {
-   "name": "the drawing loses its name",
+   "name": "the drawing forgets the right angle",
    "file": "index.html",
-   "find": "role=\"img\" aria-label=\"Left, v = ",
-   "replace": "role=\"img\" data-x=\"Left, v = ",
-   "run": "play:null"
+   "find": "${this.dot()===0?', at a right angle to u₁':''}\">",
+   "replace": "\">",
+   "run": "play:gram"
   },
   {
    "name": "the Tome card is missing",
    "file": "index.html",
-   "find": "<button class=\"btn sm\" id=\"tomeNull\"",
-   "replace": "<button class=\"btn sm\" id=\"tomeNullX\"",
-   "run": "play:null"
+   "find": "<button class=\"btn sm\" id=\"tomeGram\"",
+   "replace": "<button class=\"btn sm\" id=\"tomeGramX\"",
+   "run": "play:gram"
   },
   {
-   "name": "rank-nullity points nowhere",
+   "name": "the c stepper loses its name",
    "file": "index.html",
-   "find": "['nullSpace','colSpace','rankNullity']],",
-   "replace": "['nullSpace','colSpace','rankNulity']],",
+   "find": "<button id=\"gsCLo\" onclick=\"Gram.moveC(-1)\" aria-label=\"Take half a copy of u₁ less\">",
+   "replace": "<button id=\"gsCLo\" onclick=\"Gram.moveC(-1)\">",
+   "run": "play:gram"
+  },
+  {
+   "name": "Gram–Schmidt points nowhere",
+   "file": "index.html",
+   "find": "    Gram:    [\"📐 Gram–Schmidt Workshop\", ['gramSchmidt']],",
+   "replace": "    Gram:    [\"📐 Gram–Schmidt Workshop\", ['gramSchmit']],",
    "run": "verify"
   }
  ]
