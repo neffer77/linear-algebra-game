@@ -1732,6 +1732,32 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TANGENT PLANE WORKSHOP ============ -->
+  <div class="screen" id="s-tanplane">
+    <div class="panel"><h2>🪁 Tangent Plane Workshop</h2><div class="sub">A tangent plane is built from three numbers: the height at the point and a slope along each axis. Set them by hand and watch two slices through the surface, one along x and one along y, to see whether the plane touches.</div></div>
+    <div class="panel">
+      <div id="tqSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which surface"></div>
+      <div id="tqFig"></div>
+      <div id="tqP" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="tqhLo" onclick="TanPlane.move('h',-1)" aria-label="Make the height of the plane smaller">−</button>
+          <b id="tqh" style="font-size:16px;min-width:0"></b>
+          <button id="tqhHi" onclick="TanPlane.move('h',1)" aria-label="Make the height of the plane bigger">+</button></div>
+        <div class="wsCell"><button id="tqpLo" onclick="TanPlane.move('p',-1)" aria-label="Make the slope along x smaller">−</button>
+          <b id="tqp" style="font-size:16px;min-width:0"></b>
+          <button id="tqpHi" onclick="TanPlane.move('p',1)" aria-label="Make the slope along x bigger">+</button></div>
+        <div class="wsCell"><button id="tqqLo" onclick="TanPlane.move('q',-1)" aria-label="Make the slope along y smaller">−</button>
+          <b id="tqq" style="font-size:16px;min-width:0"></b>
+          <button id="tqqHi" onclick="TanPlane.move('q',1)" aria-label="Make the slope along y bigger">+</button></div>
+      </div>
+      <div id="tqRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tqGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3743,6 +3769,7 @@ const WORKSHOP_FOR = (() => {
     Transpose:["🪞 Transpose Workshop", ['transpose']],
     Diag:    ["🔑 Diagonal Workshop", ['diagonalisable']],
     TrigInt: ["🎢 Trig Integral Workshop", ['intTrig']],
+    TanPlane: ["🪁 Tangent Plane Workshop", ['tangentPlane']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13142,6 +13169,7 @@ const UI = {
     if(id==='s-transpose') Transpose.render();
     if(id==='s-diag') Diag.render();
     if(id==='s-trigint') TrigInt.render();
+    if(id==='s-tanplane') TanPlane.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13935,6 +13963,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🎢 Trig Integral Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles.</div>
          <button class="btn sm" id="tomeTrigInt" style="width:auto;margin-top:8px" onclick="TrigInt.open()">Open the trig integral workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪁 Tangent Plane Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once.</div>
+         <button class="btn sm" id="tomeTanPlane" style="width:auto;margin-top:8px" onclick="TanPlane.open()">Open the tangent plane workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19664,6 +19697,137 @@ const TrigInt = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE WAVES','every wave undone','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The tangent plane workshop: a height and two slopes ----------
+   The surface is z = a·x² + b·y², and the player builds the plane
+   z = h + p(x − x₀) + q(y − y₀) that should touch it at (x₀, y₀). Two side
+   views slice the surface along x and along y: each slice is a curve, and
+   the plane shows in it as a line with slope p or q. The plane touches only
+   when the height matches and both lines are tangent at once. Nothing is
+   saved. */
+const TanPlane = {
+  SETS:[
+    {id:'bowl', btn:'Bowl', name:'a bowl', a:1, b:1, x0:1, y0:2, z:[-4,18]},
+    {id:'saddle', btn:'Saddle', name:'a saddle', a:1, b:-1, x0:2, y0:1, z:[-6,16]},
+    {id:'lop', btn:'Lopsided', name:'a lopsided bowl', a:2, b:1, x0:-1, y0:1, z:[-4,20]},
+    {id:'dome', btn:'Dome', name:'a dome', a:-1, b:-1, x0:1, y0:-1, z:[-12,4]}
+  ],
+  LO:-6, HI:6,
+  si:0, h:0, p:0, q:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'bowl', t:'Build the plane that touches the bowl.', toast:'The bowl touched',
+     ok:K=>K.si===0 && K.match()},
+    {id:'swap', t:'Put the two slopes in each other’s places, f_y with x and f_x with y, and see both slices cut across.', toast:'f_x goes with x',
+     ok:K=>K.h===K.f() && K.p===K.fy() && K.q===K.fx()},
+    {id:'lift', t:'Get both slopes right with the height wrong, and see the plane miss the point.', toast:'Height first',
+     ok:K=>K.p===K.fx() && K.q===K.fy() && K.h!==K.f()},
+    {id:'edge', t:'Make one slice touch while the other cuts across.', toast:'Both slices at once',
+     ok:K=>K.h===K.f() && (K.p===K.fx())!==(K.q===K.fy())},
+    {id:'saddle', t:'Build the plane that touches the saddle.', toast:'A saddle touched',
+     ok:K=>K.si===1 && K.match()},
+    {id:'lop', t:'Build the plane that touches the lopsided bowl.', toast:'A lopsided bowl touched',
+     ok:K=>K.si===2 && K.match()},
+    {id:'dome', t:'Build the plane that touches the dome.', toast:'The dome touched',
+     ok:K=>K.si===3 && K.match()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* the height and the two slopes the surface has at the point */
+  f(){ const S=this.set(); return S.a*S.x0*S.x0+S.b*S.y0*S.y0; },
+  fx(){ const S=this.set(); return 2*S.a*S.x0; },
+  fy(){ const S=this.set(); return 2*S.b*S.y0; },
+  match(){ return this.h===this.f() && this.p===this.fx() && this.q===this.fy(); },
+  /* writing: x² terms, brackets for (x − x₀), and squares of negatives in brackets */
+  sq(c,v){ const m=Math.abs(c); return (c<0?'−':'')+(m===1?'':m)+v+'²'; },
+  surf(){ const S=this.set(); return \`\${this.sq(S.a,'x')} \${S.b<0?'−':'+'} \${this.sq(Math.abs(S.b),'y')}\`; },
+  br(v,at){ return at===0 ? v : \`(\${v} \${at<0?'+':'−'} \${Math.abs(at)})\`; },
+  term(c,v,at){ return \`\${c<0?'−':'+'} \${Math.abs(c)}\${this.br(v,at)}\`; },
+  plane(h,p,q){ const S=this.set(); return \`z = \${neg(h)} \${this.term(p,'x',S.x0)} \${this.term(q,'y',S.y0)}\`; },
+  pt(){ const S=this.set(); return \`(\${neg(S.x0)}, \${neg(S.y0)})\`; },
+  ev(c,v,br){ const m=Math.abs(c); return (m===1?'':m+'·')+(br||v<0?\`(\${neg(v)})\`:v)+'²'; },
+  evf(){ const S=this.set(); return \`\${S.a<0?'−':''}\${this.ev(S.a,S.x0,S.a<0)} \${S.b<0?'−':'+'} \${this.ev(S.b,S.y0)}\`; },
+  dx(c,v){ return \`\${neg(2*c)}\${v}\`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), f=this.f(), fx=this.fx(), fy=this.fy(), out=[];
+    out.push(\`The surface is z = \${this.surf()}, \${S.name}. Build the plane that touches it at \${this.pt()}.\`);
+    out.push(\`Your plane is \${this.plane(this.h,this.p,this.q)}.\`);
+    out.push(\`At \${this.pt()} both brackets are 0, so your plane has height \${neg(this.h)} there. The surface has f\${this.pt()} = \${this.evf()} = \${neg(f)}\`+
+      (this.h===f ? ': the heights match.' : \`, so your plane passes \${Math.abs(this.h-f)} \${this.h<f?'below':'above'} the point.\`));
+    out.push(\`Along x, y stays at \${neg(S.y0)} and only the x² term changes, so the slope is f_x = \${this.dx(S.a,'x')} = \${neg(fx)} at x = \${neg(S.x0)}. Your plane has slope \${neg(this.p)} along x\`+
+      (this.p===fx ? ': that slice touches.' : ', so in that slice the line cuts across the curve.'));
+    out.push(\`Along y, x stays at \${neg(S.x0)} and only the y² term changes, so the slope is f_y = \${this.dx(S.b,'y')} = \${neg(fy)} at y = \${neg(S.y0)}. Your plane has slope \${neg(this.q)} along y\`+
+      (this.q===fy ? ': that slice touches.' : ', so in that slice the line cuts across the curve.'));
+    if(this.match()){
+      out.push(\`All three match, so this is the tangent plane: \${this.plane(f,fx,fy)}. It is y = f(a) + f′(a)(x − a) with a second slope: the height at the point, plus each slope times how far you move.\`);
+      out.push(S.a>0 && S.b>0 ? \`The bowl curves up away from the plane in every direction, so the plane touches it at this one point and passes below it everywhere else.\`
+        : S.a<0 && S.b<0 ? \`The dome curves down away from the plane in every direction, so the plane touches it at this one point and passes above it everywhere else.\`
+        : \`Along x the saddle curves up away from the plane and along y it curves down, so a saddle crosses its own tangent plane.\`);
+    }
+    else if(this.h===f && this.p===fy && this.q===fx)
+      out.push(\`Those are the two slopes in each other’s places. f_x is the slope as x moves, so it belongs with \${this.br('x',S.x0)}, and f_y with \${this.br('y',S.y0)}.\`);
+    else if(this.p===fx && this.q===fy)
+      out.push(\`Both slopes are right, so the plane is tilted correctly, but it is lifted off the point: the height f\${this.pt()} = \${neg(f)} comes first.\`);
+    else if(this.h===f && (this.p===fx)!==(this.q===fy))
+      out.push(\`One slice touches and the other cuts across. A tangent plane has to fit both slices at once.\`);
+    return out;
+  },
+  /* two side views: the surface sliced along x on the left and along y on the right */
+  W:[[20,172],[188,340]], T:22, B:182,
+  PX(side,u){ const [l,r]=this.W[side]; return l+(u+2.5)/5*(r-l); },
+  PY(z){ const [z0,z1]=this.set().z; return this.B-(z-z0)/(z1-z0)*(this.B-this.T); },
+  path(side,fn){ const [z0,z1]=this.set().z, segs=[]; let seg=[];
+    for(let i=0;i<=100;i++){ const u=-2.5+5*i/100, v=fn(u);
+      if(v<z0 || v>z1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }
+      seg.push(\`\${this.PX(side,u).toFixed(2)},\${this.PY(v).toFixed(2)}\`); }
+    if(seg.length>1) segs.push(seg); return segs; },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), fz=this.f();
+    const curve=[u=>S.a*(S.x0+u)**2+S.b*S.y0*S.y0, u=>S.a*S.x0*S.x0+S.b*(S.y0+u)**2];
+    const line=[u=>this.h+this.p*u, u=>this.h+this.q*u];
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="Two slices through \${S.name} at \${this.pt()}: along x the plane is a line of slope \${neg(this.p)} against the curve's \${neg(this.fx())}, along y a line of slope \${neg(this.q)} against \${neg(this.fy())}\${this.match()?': both lines touch':''}">\`;
+    ['along x (y = '+neg(S.y0)+')','along y (x = '+neg(S.x0)+')'].forEach((lbl,side)=>{
+      const [l,r]=this.W[side], mid=this.PX(side,0);
+      out+=\`<rect x="\${l}" y="\${this.T}" width="\${r-l}" height="\${this.B-this.T}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      if(S.z[0]<0 && S.z[1]>0) out+=\`<line data-k="zaxis" x1="\${l}" y1="\${f(this.PY(0))}" x2="\${r}" y2="\${f(this.PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${f(mid)}" y1="\${this.T}" x2="\${f(mid)}" y2="\${this.B}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="2 4"/>\`;
+      out+=\`<text x="\${f((l+r)/2)}" y="14" text-anchor="middle" font-size="11" fill="\${FIG_COL.dim}">\${lbl}</text>\`;
+      for(const s of this.path(side,curve[side])) out+=\`<polyline data-k="curve\${side}" points="\${s.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+      for(const s of this.path(side,line[side])) out+=\`<polyline data-k="plane\${side}" points="\${s.join(' ')}" fill="none" stroke="\${FIG_COL.c}" stroke-width="2.5"/>\`;
+      out+=\`<circle data-k="point\${side}" cx="\${f(mid)}" cy="\${f(this.PY(fz))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    });
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-tanplane'); },
+  /* each surface starts with the flat plane z = 0, so no goal is met yet */
+  start(){ this.h=0; this.p=0; this.q=0; },
+  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
+  move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI) return; this[k]=v; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tqSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TanPlane.pick(\${i})" aria-label="\${s.btn}: z = \${this.sq(s.a,'x')} \${s.b<0?'−':'+'} \${this.sq(Math.abs(s.b),'y')} at (\${neg(s.x0)}, \${neg(s.y0)})">\${s.btn}</button>\`).join('');
+    for(const [k,lbl] of [['h','height'],['p','slope along x'],['q','slope along y']]){
+      document.getElementById('tq'+k).textContent=\`\${lbl} = \${neg(this[k])}\`;
+      document.getElementById('tq'+k+'Lo').disabled=this[k]<=this.LO;
+      document.getElementById('tq'+k+'Hi').disabled=this[k]>=this.HI;
+    }
+    document.getElementById('tqP').textContent=this.plane(this.h,this.p,this.q);
+    document.getElementById('tqFig').innerHTML=this.svg()+
+      \`<div class="figcap">Each side is a slice through the surface: the gold curve is the surface, the green line is your plane, and the gold dot is the point. The plane touches when both green lines are tangent at the dot.</div>\`;
+    document.getElementById('tqRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tqGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE PLANE','every surface touched','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
