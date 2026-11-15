@@ -51,6 +51,7 @@ function loadGame() {
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
     ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
     ';const Compose={' + script.slice(script.indexOf('  MOVES:[\n    {id:\'turn\''), script.indexOf('  open(){ UI.go(\'s-compose\'); },')) + '};exports.Compose=Compose;' +
+    ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
     ';const Taylor={' + script.slice(script.indexOf('  CURVES:[\n    {id:\'exp\''), script.indexOf('  open(){ UI.go(\'s-taylor\'); },')) + '};exports.Taylor=Taylor;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
@@ -67,7 +68,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1979,6 +1980,91 @@ const limitNotes = (() => {
   return { n, goals: L.GOALS.length };
 })();
 
+/* Every step of every walk in the downhill workshop, at each step size, from
+   the start until the walk reaches the bottom or is stopped. f and ∇f are
+   worked here from the formula, every number in the readout is checked
+   against the ones before it, and the next point it prints must be where
+   the walk then goes. What the last step did (downhill, a zigzag across the
+   floor, or uphill) is judged here from f before and after and from which
+   side of the floor each point lies. Each goal must be findable, and none
+   met where the workshop opens. */
+const descentNotes = (() => {
+  const D = Descent, neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => +String(t).replace(/[()]/g, '').replace(/−/g, '-');
+  const F = ([x, y]) => (x - 1) ** 2 + 2 * (y + 1) ** 2;
+  const N = '(\\(?−?[\\d.]+\\)?)', bracketed = (raw, v) => /\(/.test(raw) === (v < 0);
+  let n = 0, ups = {}, zigs = {};
+  const found = {};
+  for (let ei = 0; ei < D.ETAS.length; ei++) {
+    D.ei = ei; D.path = [D.START.slice()];
+    const eta = D.ETAS[ei];
+    for (let k = 0; k <= D.MAXSTEPS; k++) {
+      const key = `η=${eta} step ${k}`, q = D.path[D.path.length - 1], W = D.working(); n++;
+      // f
+      let m = new RegExp(`^At p = \\(${N}, ${N}\\), f = \\(${N} − 1\\)² \\+ 2\\(${N} \\+ 1\\)² = ${N}² \\+ 2·${N}² (=|≈) ([\\d.]+)\\.$`).exec(W[0]);
+      if (!m) { fail('descent', key, `the first line reads: ${W[0]}`); break; }
+      const [x, y] = [num(m[1]), num(m[2])];
+      if (x !== q[0] || y !== q[1] || num(m[3]) !== x || num(m[4]) !== y) fail('descent', key, 'p is printed as somewhere else');
+      const dx = num(m[5]), dy = num(m[6]);
+      if (Math.abs(dx - (x - 1)) > 1e-9 || Math.abs(dy - (y + 1)) > 1e-9) fail('descent', key, `x − 1 or y + 1 is wrong: ${W[0]}`);
+      if (!bracketed(m[5], dx) || !bracketed(m[6], dy)) fail('descent', key, 'a negative is not bracketed');
+      const f = F(q), shown = +m[8];
+      if (m[7] === '=' ? Math.abs(shown - f) > 1e-9 : Math.abs(shown - f) > 5e-5 + 1e-12 || Math.abs(shown - f) < 1e-12)
+        fail('descent', key, `f is printed as ${m[7]} ${shown}, it is ${f}`);
+      // the gradient
+      m = new RegExp(`^∇f = ⟨2\\(x − 1\\), 4\\(y \\+ 1\\)⟩ = ⟨2·${N}, 4·${N}⟩ = ⟨(−?[\\d.]+), (−?[\\d.]+)⟩(: the way straight uphill)?\\.$`).exec(W[1]);
+      if (!m) { fail('descent', key, `the gradient reads: ${W[1]}`); break; }
+      const gx = num(m[3]), gy = num(m[4]);
+      if (!m[5] !== (x === 1 && y === -1)) fail('descent', key, `∇f is called the way uphill where it is not, or not where it is: ${W[1]}`);
+      if (num(m[1]) !== dx || num(m[2]) !== dy || Math.abs(gx - 2 * (x - 1)) > 1e-9 || Math.abs(gy - 4 * (y + 1)) > 1e-9)
+        fail('descent', key, `∇f is not ⟨2(x − 1), 4(y + 1)⟩: ${W[1]}`);
+      // the step, or why there is none
+      const bottom = x === 1 && y === -1;
+      if (bottom) {
+        if (!/^Nothing is uphill, so this is the bottom of the valley/.test(W[2]) || gx !== 0 || gy !== 0) fail('descent', key, 'at the bottom it does not say so');
+      } else if (k === D.MAXSTEPS || f > D.MAXF) {
+        if (!/press Start again/.test(W[2])) fail('descent', key, 'a walk that has gone far enough is not stopped');
+      } else {
+        m = new RegExp(`^A step of η = ${eta} goes the other way: p − η∇f = \\(${N} − ${eta}·${N}, ${N} − ${eta}·${N}\\) (=|≈) \\(${N} ([+−]) ([\\d.]+), ${N} ([+−]) ([\\d.]+)\\) = \\(${N}, ${N}\\)\\.$`).exec(W[2]);
+        if (!m) { fail('descent', key, `the step reads: ${W[2]}`); break; }
+        const s0 = (m[7] === '−' ? 1 : -1) * +m[8], s1 = (m[10] === '−' ? 1 : -1) * +m[11];
+        const exact = Math.abs(eta * gx - s0) < 1e-12 && Math.abs(eta * gy - s1) < 1e-12;
+        if (num(m[2]) !== gx || num(m[4]) !== gy || num(m[1]) !== x || num(m[3]) !== y || num(m[6]) !== x || num(m[9]) !== y)
+          fail('descent', key, `the step does not start from p and ∇f: ${W[2]}`);
+        if (Math.abs(s0 - eta * gx) > 5e-5 + 1e-12 || Math.abs(s1 - eta * gy) > 5e-5 + 1e-12) fail('descent', key, `η∇f is printed wrongly: ${W[2]}`);
+        if ((m[5] === '=') !== exact) fail('descent', key, `an exact step is marked ≈, or a rounded one =: ${W[2]}`);
+        const nx = num(m[12]), ny = num(m[13]);
+        if (Math.abs(nx - (x - s0)) > 1e-9 || Math.abs(ny - (y - s1)) > 1e-9) fail('descent', key, `the subtraction is wrong: ${W[2]}`);
+        const nxt = D.next().p;
+        if (nxt[0] !== nx || nxt[1] !== ny) fail('descent', key, 'the walk does not go where the readout says');
+      }
+      // what the last step did
+      if (k === 0) { if (!/^Press Step downhill/.test(W[3])) fail('descent', key, 'a walk not started says otherwise'); }
+      else {
+        const pq = D.path[D.path.length - 2], fa = F(pq), fb = f;
+        const cross = (pq[0] - 1) * (x - 1) < 0 || (pq[1] + 1) * (y + 1) < 0;
+        const kind = fb > fa ? 'up' : cross ? 'zig' : 'down';
+        const say = { up: /^That step went uphill: f rose from /, zig: /^That step jumped across the valley floor, so the walk zigzags, but f still fell from /, down: /^That step took f from .* down to / }[kind];
+        if (!say.test(W[3])) fail('descent', key, `the last step was ${kind}, but it reads: ${W[3]}`);
+        const vals = (W[3].match(/from (\S+) (?:down )?to (\S+?)\.(?:\s|$)/) || []).slice(1).map(Number);
+        if (vals.length !== 2 || Math.abs(vals[0] - fa) > 5e-5 || Math.abs(vals[1] - fb) > 5e-5) fail('descent', key, `the f before and after are wrong: ${W[3]}`);
+        if (kind === 'up') ups[eta] = true;
+        if (kind === 'zig') zigs[eta] = true;
+      }
+      for (const g of D.GOALS) if (g.ok(D)) found[g.id] = true;
+      if (bottom || k === D.MAXSTEPS || f > D.MAXF) break;
+      D.path.push(D.next().p);
+    }
+  }
+  if (!ups[0.55] || ups[0.1] || ups[0.25] || ups[0.4]) fail('descent', 'walks', 'only the biggest step size should ever climb');
+  if (!zigs[0.4] || zigs[0.1] || zigs[0.25]) fail('descent', 'walks', 'only the larger step sizes should zigzag');
+  for (const g of D.GOALS) if (!found[g.id]) fail('descent', g.id, 'this goal cannot be found');
+  D.ei = 0; D.path = [D.START.slice()];
+  if (D.GOALS.some(g => g.ok(D))) fail('descent', 'start', 'a goal is already met where the workshop opens');
+  if (F(D.START) !== 17) fail('descent', 'start', 'the walk does not start at f = 17');
+  return { n, goals: D.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -2027,6 +2113,7 @@ console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10
 console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
 console.log(`  taylor workshop states     ${pad(taylorNotes.n.toLocaleString(), 10)}  (coefficients, terms, value, gap, ${taylorNotes.goals} goals findable)`);
 console.log(`  order matters pairs        ${pad(composeNotes.n.toLocaleString(), 10)}  (both moves, columns, det, the other order, ${composeNotes.goals} goals findable)`);
+console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));

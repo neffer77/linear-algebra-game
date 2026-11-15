@@ -1,20 +1,19 @@
 {
- "change": "The Limit Workshop: closing in on a point from the left and the right",
+ "change": "The Downhill Workshop: a walk down a valley against its gradient",
  "mutations": [
- {"name": "the hole's working squares the wrong number", "file": "index.html", "find": "      const sq=+(x*x).toFixed(9), top=+(sq-1).toFixed(9), bot=+(x-1).toFixed(9);", "replace": "      const sq=+(x*2).toFixed(9), top=+(sq-1).toFixed(9), bot=+(x-1).toFixed(9);", "run": "verify"},
- {"name": "a negative bottom is not bracketed", "file": "index.html", "find": "= (${this.n(sq)} − 1)/${this.b(bot)} =", "replace": "= (${this.n(sq)} − 1)/${this.n(bot)} =", "run": "verify"},
- {"name": "x steps the wrong way from the left", "file": "index.html", "find": "x(){ const v=this.fn().a+(this.side==='L'?-1:1)*this.h(); return +v.toFixed(9); },", "replace": "x(){ const v=this.fn().a+this.h(); return +v.toFixed(9); },", "run": "verify"},
- {"name": "sin x / x is worked as sin x times x", "file": "index.html", "find": "    if(id==='sinc') return Math.sin(x)/x;", "replace": "    if(id==='sinc') return Math.sin(x)*x;", "run": "verify"},
- {"name": "the sign of sin is not bracketed", "file": "index.html", "find": "≈ ${sv<0?`(${this.sig(sv)})`:this.sig(sv)}/", "replace": "≈ ${this.sig(sv)}/", "run": "verify"},
- {"name": "|x| / x says it stays at 1 from the left", "file": "index.html", "find": "     side:{L:'stays at −1', R:'stays at 1'},", "replace": "     side:{L:'stays at 1', R:'stays at 1'},", "run": "verify"},
- {"name": "the side to try next is the same side", "file": "index.html", "find": "const s=L?'L':'R', other=L?'right':'left';", "replace": "const s=L?'L':'R', other=L?'left':'right';", "run": "verify"},
- {"name": "1/x is said to have a limit", "file": "index.html", "find": "     both:'From the right it climbs without end and from the left it falls without end, so there is no limit: the graph runs up and down the line x = 0.',", "replace": "     both:'From both sides f(x) closes in on 0, so the limit as x → 0 is 0.',", "run": "verify"},
- {"name": "one side watched counts as both", "file": "index.html", "find": "    if(L && R) out.push(F.both);", "replace": "    if(L || R) out.push(F.both);", "run": "verify"},
- {"name": "the limit workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeLimit\" style=\"width:auto;margin-top:8px\" onclick=\"Limit.open()\">Open the limit workshop</button>", "replace": "", "run": "play:limit"},
- {"name": "the limit workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-limit') Limit.render();\n", "replace": "", "run": "play:limit"},
- {"name": "a side watched up close is not remembered", "file": "index.html", "find": "    if(this.touched && this.closest()) (this.near[F.id]=this.near[F.id]||new Set()).add(this.side);\n", "replace": "", "run": "play:limit"},
- {"name": "h runs past its smallest", "file": "index.html", "find": "    document.getElementById('lmHLo').disabled=this.hi===this.HS.length-1;", "replace": "    document.getElementById('lmHLo').disabled=false;", "run": "play:limit"},
- {"name": "the hole is not drawn", "file": "index.html", "find": "Figure.render({kind:'curve', f:F.f, lo:F.lo, hi:F.hi, ylim:F.ylim, holes:F.holes,", "replace": "Figure.render({kind:'curve', f:F.f, lo:F.lo, hi:F.hi, ylim:F.ylim,", "run": "play:limit"},
- {"name": "1/x runs off the picture", "file": "index.html", "find": "{id:'inv', at:'1/x', a:0, f:{fn:'inv'}, lo:-2, hi:2, ylim:[-12,12], holes:[],", "replace": "{id:'inv', at:'1/x', a:0, f:{fn:'inv'}, lo:-2, hi:2, holes:[],", "run": "play:limit"}
+ {"name": "f forgets the 2 on the y term", "file": "index.html", "find": "fAt(p){ return this.r8((p[0]-1)**2 + 2*(p[1]+1)**2); },", "replace": "fAt(p){ return this.r8((p[0]-1)**2 + (p[1]+1)**2); },", "run": "verify"},
+ {"name": "the gradient's y part uses 2 for 4", "file": "index.html", "find": "return [this.r4(2*(p[0]-1)), this.r4(4*(p[1]+1))]; },", "replace": "return [this.r4(2*(p[0]-1)), this.r4(2*(p[1]+1))]; },", "run": "verify"},
+ {"name": "a step goes with the gradient, uphill", "file": "index.html", "find": "p:[this.r4(p[0]-s[0]), this.r4(p[1]-s[1])] };", "replace": "p:[this.r4(p[0]+s[0]), this.r4(p[1]-s[1])] };", "run": "verify"},
+ {"name": "a negative y + 1 is not bracketed", "file": "index.html", "find": "= ${this.b(dx)}² + 2·${this.b(dy)}² ", "replace": "= ${this.b(dx)}² + 2·${this.n(dy)}² ", "run": "verify"},
+ {"name": "a zigzag is called a plain step down", "file": "index.html", "find": "return this.crossed(k) ? 'zig' : 'down';", "replace": "return 'down';", "run": "verify"},
+ {"name": "a rounded step is shown with =", "file": "index.html", "find": "${N.exact?'=':'≈'} (${this.n(x)} ${this.op(N.s[0])}", "replace": "= (${this.n(x)} ${this.op(N.s[0])}", "run": "verify"},
+ {"name": "a walk past f = 1000 is never stopped", "file": "index.html", "find": "stuck(){ return this.steps()>=this.MAXSTEPS || this.f()>this.MAXF; },", "replace": "stuck(){ return this.steps()>=this.MAXSTEPS; },", "run": "verify"},
+ {"name": "the gradient is called uphill at the bottom too", "file": "index.html", "find": "${this.atBottom()?'':': the way straight uphill'}.", "replace": "${': the way straight uphill'}.", "run": "verify"},
+ {"name": "the downhill workshop is gone from the Tome", "file": "index.html", "find": "<button class=\"btn sm\" id=\"tomeDescent\" style=\"width:auto;margin-top:8px\" onclick=\"Descent.open()\">Open the downhill workshop</button>", "replace": "", "run": "play:descent"},
+ {"name": "the downhill workshop is not drawn when opened", "file": "index.html", "find": "    if(id==='s-descent') Descent.render();\n", "replace": "", "run": "play:descent"},
+ {"name": "Step downhill still works at the bottom", "file": "index.html", "find": "document.getElementById('gdStep').disabled=this.stuck() || atBottom;", "replace": "document.getElementById('gdStep').disabled=this.stuck();", "run": "play:descent"},
+ {"name": "picking a step size keeps the old walk", "file": "index.html", "find": "pick(i){ this.ei=i; this.reset(); },", "replace": "pick(i){ this.ei=i; this.touched=true; this.render(); },", "run": "play:descent"},
+ {"name": "the next step is not drawn", "file": "index.html", "find": "span:4, path:this.path.map(q=>q.slice()), next:nx,", "replace": "span:4, path:this.path.map(q=>q.slice()),", "run": "play:descent"},
+ {"name": "the step sizes are not named", "file": "index.html", "find": "aria-label=\"Step size ${e}\" ", "replace": "", "run": "play:descent"}
  ]
 }
