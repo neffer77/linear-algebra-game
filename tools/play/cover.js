@@ -21,7 +21,8 @@ const pick = (t, k) => t.ev(k => document.querySelectorAll('#cvSets button')[k].
 const shown = t => t.ev(() => document.getElementById('cvX').innerText);
 const toast = t => t.ev(() => [...document.querySelectorAll('.toast')].map(d => d.innerText).join(' | '));
 const tryCol = t => t.ev(() => document.querySelector('#cvFig line[data-k="try"]').getAttribute('stroke'));
-const pieces = t => t.ev(() => document.querySelectorAll('#cvFig [data-k="piece"]').length);
+// a piece is drawn in two parts, one either side of its asymptote, so count pieces, not lines
+const pieces = t => t.ev(() => new Set([...document.querySelectorAll('#cvFig [data-k="piece"]')].map(p => p.dataset.j)).size);
 
 module.exports = {
   name: 'cover',

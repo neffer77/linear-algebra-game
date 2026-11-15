@@ -18123,7 +18123,7 @@ const Cover = {
     out+=\`<defs><clipPath id="cvClip"><rect x="20" y="12" width="320" height="176"/></clipPath></defs><g clip-path="url(#cvClip)">\`;
     out+=\`<line x1="20" y1="\${PY(0)}" x2="340" y2="\${PY(0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
     for(const r of [...new Set(S.den)]) out+=\`<line data-k="asym" data-x="\${r}" x1="\${PX(r).toFixed(2)}" y1="12" x2="\${PX(r).toFixed(2)}" y2="188" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="4 4"/>\`;
-    if(this.found().length===n) S.P.forEach((p,j)=>{ out+=curve(t=>this.VAL[this.si][j]/p.r.reduce((q,r)=>q*(t-r),1), \`data-k="piece" stroke="\${FIG_COL.b}" stroke-width="1.5" opacity="0.6"\`); });
+    if(this.found().length===n) S.P.forEach((p,j)=>{ out+=curve(t=>this.VAL[this.si][j]/p.r.reduce((q,r)=>q*(t-r),1), \`data-k="piece" data-j="\${j}" stroke="\${FIG_COL.b}" stroke-width="1.5" opacity="0.6"\`); });
     out+=curve(t=>this.N(t)/this.D(t), \`data-k="f" stroke="\${FIG_COL.a}" stroke-width="2.5"\`);
     const root=this.isRoot();
     out+=\`<line data-k="try" x1="\${PX(x0).toFixed(2)}" y1="12" x2="\${PX(x0).toFixed(2)}" y2="188" stroke="\${root?FIG_COL.d:FIG_COL.b}" stroke-width="2"/>\`;
