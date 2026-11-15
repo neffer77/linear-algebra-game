@@ -761,6 +761,11 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .btn.wiChip.weak{border-color:var(--gold)}
 .smOpt b{display:block;font-size:13px}
 .btn.smOpt.miss{border-color:#e5484d;opacity:.75}
+.mpMat{display:inline-grid;grid-template-columns:auto auto;gap:2px 14px;border-left:2px solid var(--dim);border-right:2px solid var(--dim);border-radius:5px;padding:2px 8px;font-size:17px;margin-left:10px;vertical-align:middle}
+.mpMat i{font-style:normal;font-weight:700;text-align:right;min-width:1.4em}
+.mpMat i.c0{color:#5aa9e6}
+.mpMat i.c1{color:#57cc7a}
+.btn.mpOpt.miss{border-color:#e5484d;opacity:.75}
 .wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
 .wsModes.wrap{flex-wrap:wrap}
 .wsModes.wrap button{flex:1 1 28%;min-width:0}
@@ -1919,8 +1924,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="wsTask" class="small center" style="display:none"></div>
       <div id="wsMat" class="wsMat"></div>
       <div id="wsFig"></div>
+      <div id="wsPick"></div>
       <div id="wsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
-      <div style="display:flex;gap:8px">
+      <div id="wsBtns" style="display:flex;gap:8px">
         <button class="btn sm ghost" onclick="Workshop.reset()">Start again</button>
         <button class="btn sm ghost" id="wsSurprise" onclick="Workshop.surprise()">Surprise me</button>
       </div>
@@ -13941,7 +13947,7 @@ const UI = {
       WorkshopIndex.html() +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -14994,8 +15000,19 @@ const Workshop = {
   },
   render(){
     const M=this.M, match=this.mode==='match' && this.goal;
-    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape']]
+    document.getElementById('wsMode').innerHTML=[['free','🛠 Free play'],['match','🧩 Match the shape'],['pick','🔢 Which matrix?']]
       .map(([m,t])=>\`<button class="btn sm ghost" aria-pressed="\${this.mode===m}" onclick="Workshop.setMode('\${m}')">\${t}</button>\`).join('');
+    // Which matrix? The shape is drawn and four matrices offered: no steppers.
+    const pick=this.mode==='pick';
+    for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : '';
+    if(pick){
+      const task=document.getElementById('wsTask'); task.style.display=''; task.textContent=MatPick.RULE;
+      Figure.render(MatPick.fig(), document.getElementById('wsFig'));
+      document.getElementById('wsRead').innerHTML=MatPick.read();
+      document.getElementById('wsGoalPanel').style.display='none';
+      return;
+    }
     document.getElementById('wsMat').innerHTML=[0,1].map(i=>[0,1].map(j=>{
       const v=M[i][j], nm=this.NAMES[i][j];
       return \`<div class="wsCell c\${j}">
@@ -15059,6 +15076,102 @@ const Workshop = {
         Celebrate.banner('WORKSHOP MASTERED','every shape made','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|:).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ------------------------ which matrix? (matrix workshop) ----------------------- */
+/* Match the shape turned round once more: the shape is drawn, and four
+   matrices are offered. One makes it. The other three are the slips people
+   make writing a matrix down from its picture: the rows written as columns
+   (the transpose), the right two columns in the wrong order, each arrow's
+   across and up swapped, and one number with the wrong sign. A wrong pick is
+   drawn in gold over the dashed shape, so the slip can be seen as well as
+   named. Nothing is timed, and nothing goes in the save. */
+const MatPick = {
+  RULE:'Each column of a matrix is where an arrow lands: the first column is where î ends, the second where ĵ ends. Which matrix makes the dashed shape?',
+  slip(A,k,e){
+    const [[a,b],[c,d]]=A;
+    if(k==='trans') return [[a,c],[b,d]];
+    if(k==='swap') return [[b,a],[d,c]];
+    if(k==='rows') return [[c,d],[a,b]];
+    // sign: entry e, counted 0 to 3 along the rows
+    const M=A.map(r=>r.slice()); M[e>>1][e&1]=-M[e>>1][e&1]; return M;
+  },
+  same:(P,Q)=>P[0][0]===Q[0][0]&&P[0][1]===Q[0][1]&&P[1][0]===Q[1][0]&&P[1][1]===Q[1][1],
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const A=Workshop.target(this.round&&this.round.A), cand=[];
+    const add=(k,M,e)=>{ if(!this.same(M,A)&&!cand.some(o=>this.same(o.M,M))) cand.push({k,M,e}); };
+    // The transpose whenever it differs from A, since mixing rows and columns
+    // is the slip this round is for; one wrong sign; then one of the others.
+    // A symmetric A has no transpose to offer, so a second wrong sign fills in.
+    const nz=[0,1,2,3].filter(e=>A[e>>1][e&1]!==0), e=R.pick(nz);
+    add('trans',this.slip(A,'trans'));
+    add('sign',this.slip(A,'sign',e),e);
+    for(const k of R.pick([['swap','rows'],['rows','swap']])) add(k,this.slip(A,k));
+    for(const e2 of nz) add('sign',this.slip(A,'sign',e2),e2);
+    const opts=[{k:'right',M:A},...cand.slice(0,3)];
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('MATRIX SPOTTER', this.matched+' matrices picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ Matrix \${'ABCD'[i]} makes the shape, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={A:r.A};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Workshop.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  at:v=>\`⟨\${neg(v[0])}, \${neg(v[1])}⟩\`,
+  // Why a wrong pick is wrong: where it sends î and ĵ against where the dashed
+  // ones end, and the slip it is, said for the numbers on screen.
+  why(i){
+    const A=this.round.A, o=this.round.opts[i], M=o.M, L='ABCD'[i];
+    const lines=[\`Matrix \${L} sends î to \${this.at([M[0][0],M[1][0]])} and ĵ to \${this.at([M[0][1],M[1][1]])}, drawn in gold. The dashed î ends at \${this.at([A[0][0],A[1][0]])} and the dashed ĵ at \${this.at([A[0][1],A[1][1]])}.\`];
+    if(o.k==='trans') lines.push(\`It is the transpose: its rows are the right columns. The columns are where the arrows land, so \${this.at([A[0][0],A[1][0]])} goes down the first column, top to bottom.\`);
+    else if(o.k==='swap') lines.push('It has the right two columns in the wrong order: the first column is where î lands, the second where ĵ lands.');
+    else if(o.k==='rows') lines.push('It swaps each arrow\\'s across and up: in each column the top number is how far across, the bottom how far up.');
+    else {
+      const ri=o.e>>1, cj=o.e&1, v=A[ri][cj];
+      const dir=ri ? (v>0?'up':'down') : (v>0?'right':'left');
+      lines.push(\`One number has the wrong sign: the dashed \${cj?'ĵ':'î'} goes \${dir} \${Math.abs(v)}, so the \${Workshop.NAMES[ri][cj]} number is \${neg(v)}.\`);
+    }
+    return lines;
+  },
+  fig(){
+    const r=this.round, m=this.miss();
+    return m===null
+      ? {kind:'grid', m:[[1,0],[0,1]], ghost:r.A, ticks:true, before:false, caption:'Gold is the square before. The dashed shape is where one of these matrices sends it.'}
+      : {kind:'grid', m:r.opts[m].M, ghost:r.A, ticks:true, before:false, caption:'Gold is where that matrix sends the square. The dashed shape is the one to make.'};
+  },
+  html(){
+    const r=this.round;
+    return \`<div id="mpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0">\`+r.opts.map((o,i)=>{
+      const M=o.M, gone=r.out.has(i), L='ABCD'[i];
+      return \`<button class="btn sm ghost mpOpt\${gone?' miss':''}" \${gone?'disabled ':''}onclick="MatPick.choose(\${i})" aria-label="Matrix \${L}: top row \${neg(M[0][0])}, \${neg(M[0][1])}; bottom row \${neg(M[1][0])}, \${neg(M[1][1])}\${gone?'. Not this one':''}" style="margin:0">
+        <b aria-hidden="true">\${L}</b><span class="mpMat" aria-hidden="true"><i class="c0">\${neg(M[0][0])}</i><i class="c1">\${neg(M[0][1])}</i><i class="c0">\${neg(M[1][0])}</i><i class="c1">\${neg(M[1][1])}</i></span></button>\`;
+    }).join('')+\`</div>\`;
+  },
+  read(){
+    const m=this.miss(), lines=[];
+    if(m!==null) lines.push(...this.why(m));
+    else if(this.last){ const A=this.last.A;
+      lines.push(\`That was it: î lands on \${this.at([A[0][0],A[1][0]])}, the first column, and ĵ on \${this.at([A[0][1],A[1][1]])}, the second. Here is a new shape.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    return lines.map(l=>\`<div>\${l}</div>\`).join('');
   }
 };
 

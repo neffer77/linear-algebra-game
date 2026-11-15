@@ -1,264 +1,264 @@
 {
- "change": "Which is f′? See f, pick which of three graphs is its slope",
+ "change": "Which matrix? See a shape, pick which of four matrices makes it",
  "mutations": [
   {
-   "name": "the sine's slope is −cos",
+   "name": "the transpose is the matrix itself",
    "file": "index.html",
-   "find": "{f:Math.sin, fs:'sin x', d:Math.cos,",
-   "replace": "{f:Math.sin, fs:'sin x', d:x=>-Math.cos(x),",
+   "find": "if(k==='trans') return [[a,c],[b,d]];",
+   "replace": "if(k==='trans') return [[a,b],[c,d]];",
    "run": "verify"
   },
   {
-   "name": "the cosine's slope is sin",
+   "name": "the swap keeps the columns",
    "file": "index.html",
-   "find": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x),",
-   "replace": "{f:Math.cos, fs:'cos x', d:Math.sin,",
+   "find": "if(k==='swap') return [[b,a],[d,c]];",
+   "replace": "if(k==='swap') return [[a,b],[d,c]];",
    "run": "verify"
   },
   {
-   "name": "the upside-down graph is f′ itself",
+   "name": "the row swap is the column swap",
    "file": "index.html",
-   "find": "neg:x=>-w.d(x),",
-   "replace": "neg:w.d,",
+   "find": "if(k==='rows') return [[c,d],[a,b]];",
+   "replace": "if(k==='rows') return [[d,c],[b,a]];",
    "run": "verify"
   },
   {
-   "name": "the wave's f″ is f itself",
+   "name": "a wrong sign lands on the wrong entry",
    "file": "index.html",
-   "find": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x), dd:x=>-Math.cos(x)}",
-   "replace": "{f:Math.cos, fs:'cos x', d:x=>-Math.sin(x), dd:Math.cos}",
+   "find": "M[e>>1][e&1]=-M[e>>1][e&1]; return M;",
+   "replace": "M[e&1][e>>1]=-M[e&1][e>>1]; return M;",
    "run": "verify"
   },
   {
-   "name": "a quadratic's f is built from the wrong constant",
+   "name": "a zero may be given the wrong sign",
    "file": "index.html",
-   "find": "const F=P.int(D,R.i(-1,1))",
-   "replace": "const F=[R.i(-1,1),...D.map(a=>a/2)]",
+   "find": "const nz=[0,1,2,3].filter(e=>A[e>>1][e&1]!==0), e=R.pick(nz);",
+   "replace": "const nz=[0,1,2,3], e=R.pick(nz);",
    "run": "verify"
   },
   {
-   "name": "the integral divides by the wrong power",
+   "name": "two matrices may be the same",
    "file": "index.html",
-   "find": "int:(c,C)=>[C,...c.map((a,i)=>a/(i+1))]",
-   "replace": "int:(c,C)=>[C,...c.map((a,i)=>a/(i+2))]",
+   "find": "if(!this.same(M,A)&&!cand.some(o=>this.same(o.M,M))) cand.push({k,M,e});",
+   "replace": "if(!this.same(M,A)) cand.push({k,M,e});",
    "run": "verify"
   },
   {
-   "name": "f″ is f′ again",
+   "name": "the transpose is left out",
    "file": "index.html",
-   "find": "DD=P.d(D), sh=",
-   "replace": "DD=D, sh=",
-   "run": "verify"
-  },
-  {
-   "name": "the slid graph never slides",
-   "file": "index.html",
-   "find": "shift:x=>P.v(D,x-sh)",
-   "replace": "shift:x=>P.v(D,x)",
-   "run": "verify"
-  },
-  {
-   "name": "the line slides by 1, too faintly to deal",
-   "file": "index.html",
-   "find": "sh=R.pick([2,-2]);",
-   "replace": "sh=R.pick([1,-1]);",
-   "run": "verify"
-  },
-  {
-   "name": "two wrong graphs may be the same",
-   "file": "index.html",
-   "find": "!pick.includes(k) && !pick.some(j=>this.same(F,F.G[j],F.G[k]))",
-   "replace": "!pick.includes(k)",
-   "run": "verify"
-  },
-  {
-   "name": "the same f may come twice",
-   "file": "index.html",
-   "find": "      if(this.round && F.fs===this.round.F.fs && JSON.stringify(F.D)===JSON.stringify(this.round.F.D)) continue;\n",
+   "find": "    add('trans',this.slip(A,'trans'));\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "a tell is taken where the signs agree",
+   "name": "no wrong sign is offered",
    "file": "index.html",
-   "find": "if(Math.sign(a)*Math.sign(b)>=0) continue;",
-   "replace": "if(Math.sign(a)*Math.sign(b)<0) continue;",
+   "find": "    add('sign',this.slip(A,'sign',e),e);\n    for(const k",
+   "replace": "    for(const k",
    "run": "verify"
   },
   {
-   "name": "a tell may sit at the frame",
+   "name": "the row swap is never offered",
    "file": "index.html",
-   "find": "for(const x of this.grid(F).slice(1,-1)){",
-   "replace": "for(const x of this.grid(F)){",
+   "find": "R.pick([['swap','rows'],['rows','swap']])",
+   "replace": "R.pick([['swap'],['swap']])",
    "run": "verify"
   },
   {
-   "name": "words read a run the wrong way",
+   "name": "only three matrices are offered",
    "file": "index.html",
-   "find": "(i?'then ':'')+(q.s>0?up:down)",
-   "replace": "(i?'then ':'')+(q.s<0?up:down)",
+   "find": "...cand.slice(0,3)];",
+   "replace": "...cand.slice(0,2)];",
    "run": "verify"
   },
   {
-   "name": "about is never said",
+   "name": "the right matrix always comes first",
    "file": "index.html",
-   "find": "return {s:r.s, from:z, about:!on}; });",
-   "replace": "return {s:r.s, from:z, about:false}; });",
+   "find": "for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }",
+   "replace": "",
    "run": "verify"
   },
   {
-   "name": "a crossing is named a step late",
+   "name": "the same shape may come twice",
    "file": "index.html",
-   "find": "z=this.snap(F,(lo+r.from)/2)",
-   "replace": "z=this.snap(F,r.from+0.25)",
+   "find": "const A=Workshop.target(this.round&&this.round.A), cand=[];",
+   "replace": "const A=Workshop.target(null), cand=[];",
    "run": "verify"
   },
   {
-   "name": "a wave's x reads π/2 as π/4",
+   "name": "a miss counts as picked",
    "file": "index.html",
-   "find": "s+({1:'π/4',2:'π/2',3:'3π/4',4:'π'})[a];\n  },\n  big(F,g)",
-   "replace": "s+({1:'π/4',2:'π/4',3:'3π/4',4:'π'})[a];\n  },\n  big(F,g)",
-   "run": "verify"
-  },
-  {
-   "name": "flat spots miss the last one",
-   "file": "index.html",
-   "find": "const xs=this.grid(F).filter(x=>Math.abs(F.G.d(x))<1e-9);\n    return xs.map(",
-   "replace": "const xs=this.grid(F).filter(x=>Math.abs(F.G.d(x))<1e-9).slice(0,1);\n    return xs.map(",
-   "run": "verify"
-  },
-  {
-   "name": "the why says climbing where f falls",
-   "file": "index.html",
-   "find": "so f′ must sit ${up?'above':'below'}",
-   "replace": "so f′ must sit ${up?'below':'above'}",
-   "run": "verify"
-  },
-  {
-   "name": "the slip is named wrong",
-   "file": "index.html",
-   "find": "It is ${this.NAMES[k]}.`];",
-   "replace": "It is ${this.NAMES.self}.`];",
-   "run": "verify"
-  },
-  {
-   "name": "a miss counts as read",
-   "file": "index.html",
-   "find": "      r.out.add(i); this.misses++;",
-   "replace": "      r.out.add(i); this.misses++; this.matched++;",
+   "find": "      r.out.add(i); this.misses++; this.last=null;",
+   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;",
    "run": "verify"
   },
   {
    "name": "a miss still counts the first try",
    "file": "index.html",
-   "find": "if(this.misses===0) this.firstTry++;",
-   "replace": "this.firstTry++;",
+   "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX",
+   "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX",
    "run": "verify"
   },
   {
-   "name": "a missed graph can be tapped again",
+   "name": "a missed matrix can be tapped again",
    "file": "index.html",
-   "find": "    if(r.out.has(i)) return;\n    this.picked=i;",
-   "replace": "    this.picked=i;",
+   "find": "    if(!r||r.out.has(i)) return;",
+   "replace": "    if(!r) return;",
    "run": "verify"
   },
   {
    "name": "the toast counts tries wrong",
    "file": "index.html",
-   "find": "const tries=this.misses+1;",
-   "replace": "const tries=this.misses;",
+   "find": "      else UI.toast(`✓ Matrix ${'ABCD'[i]} makes the shape, picked ${tries===1",
+   "replace": "      else UI.toast(`✓ Matrix ${'ABCD'[i]} makes the shape, picked ${tries===0",
    "run": "verify"
   },
   {
    "name": "no banner at five",
    "file": "index.html",
-   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SLOPE SPOTTER'",
-   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('SLOPE SPOTTER'",
+   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX SPOTTER'",
+   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('MATRIX SPOTTER'",
    "run": "verify"
   },
   {
-   "name": "the tell is marked before a miss",
+   "name": "a right pick keeps the old shape",
    "file": "index.html",
-   "find": "const tellX=miss===null ? null : this.tell(F,F.G[r.deal[miss]]);",
-   "replace": "const tellX=this.tell(F,F.G[r.deal[0]==='d'?1:0]);",
+   "find": "      this.last={A:r.A};\n      this.newRound();",
+   "replace": "      this.last={A:r.A};",
    "run": "verify"
   },
   {
-   "name": "a missed graph is not shut",
+   "name": "the why reads ĵ from the first column",
    "file": "index.html",
-   "find": "${gone?'disabled ':''}onclick=\"SlopeMatch.choose",
-   "replace": "onclick=\"SlopeMatch.choose",
+   "find": "and ĵ to ${this.at([M[0][1],M[1][1]])}, drawn in gold",
+   "replace": "and ĵ to ${this.at([M[0][0],M[1][0]])}, drawn in gold",
    "run": "verify"
   },
   {
-   "name": "a curve is drawn off its frame",
+   "name": "the dashed î is read along a row",
    "file": "index.html",
-   "find": "v=Math.max(-ys,Math.min(ys,g(x)));",
-   "replace": "v=g(x)*1.5;",
+   "find": "The dashed î ends at ${this.at([A[0][0],A[1][0]])}",
+   "replace": "The dashed î ends at ${this.at([A[0][0],A[0][1]])}",
+   "run": "verify"
+  },
+  {
+   "name": "the transpose is called a swap",
+   "file": "index.html",
+   "find": "if(o.k==='trans') lines.push(`It is the transpose",
+   "replace": "if(o.k==='nope') lines.push(`It is the transpose",
+   "run": "verify"
+  },
+  {
+   "name": "a wrong sign says left for right",
+   "file": "index.html",
+   "find": "(v>0?'right':'left')",
+   "replace": "(v>0?'left':'right')",
+   "run": "verify"
+  },
+  {
+   "name": "a wrong sign names the wrong arrow",
+   "file": "index.html",
+   "find": "the dashed ${cj?'ĵ':'î'} goes",
+   "replace": "the dashed ${ri?'ĵ':'î'} goes",
+   "run": "verify"
+  },
+  {
+   "name": "a wrong sign names the wrong number",
+   "file": "index.html",
+   "find": "so the ${Workshop.NAMES[ri][cj]} number",
+   "replace": "so the ${Workshop.NAMES[cj][ri]} number",
+   "run": "verify"
+  },
+  {
+   "name": "a wrong pick is not drawn",
+   "file": "index.html",
+   "find": ": {kind:'grid', m:r.opts[m].M, ghost:r.A,",
+   "replace": ": {kind:'grid', m:[[1,0],[0,1]], ghost:r.A,",
+   "run": "verify"
+  },
+  {
+   "name": "the shape is drawn without its axis numbers",
+   "file": "index.html",
+   "find": "{kind:'grid', m:[[1,0],[0,1]], ghost:r.A, ticks:true,",
+   "replace": "{kind:'grid', m:[[1,0],[0,1]], ghost:r.A, ticks:false,",
+   "run": "verify"
+  },
+  {
+   "name": "a missed matrix is not shut",
+   "file": "index.html",
+   "find": "${gone?'disabled ':''}onclick=\"MatPick.choose",
+   "replace": "onclick=\"MatPick.choose",
+   "run": "verify"
+  },
+  {
+   "name": "a button reads its matrix by columns",
+   "file": "index.html",
+   "find": "top row ${neg(M[0][0])}, ${neg(M[0][1])}; bottom row ${neg(M[1][0])}, ${neg(M[1][1])}",
+   "replace": "top row ${neg(M[0][0])}, ${neg(M[1][0])}; bottom row ${neg(M[0][1])}, ${neg(M[1][1])}",
+   "run": "verify"
+  },
+  {
+   "name": "the after-pick sentence reads a row",
+   "file": "index.html",
+   "find": "lines.push(`That was it: î lands on ${this.at([A[0][0],A[1][0]])}",
+   "replace": "lines.push(`That was it: î lands on ${this.at([A[0][0],A[0][1]])}",
    "run": "verify"
   },
   {
    "name": "the rule is not stated",
    "file": "index.html",
-   "find": "f′ sits above the axis wherever f climbs, below wherever f falls, and crosses 0 where f's tangent lies flat. Which graph is f′?",
-   "replace": "Which graph is f′?",
+   "find": "RULE:'Each column of a matrix is where an arrow lands: the first column is where î ends, the second where ĵ ends. Which matrix makes the dashed shape?'",
+   "replace": "RULE:'Which matrix makes the dashed shape?'",
    "run": "verify"
   },
   {
-   "name": "the after-read sentence forgets the flat spots",
+   "name": "the steppers stay shown",
    "file": "index.html",
-   "find": "      if(fl.length) parts.push(`0 at x = ${fl.join(' and x = ')}, where f's tangent lay flat`);\n",
+   "find": "for(const id of ['wsMat','wsBtns']) document.getElementById(id).style.display=pick?'none':'';",
    "replace": "",
-   "run": "verify"
+   "run": "play:matpick"
   },
   {
-   "name": "the mode buttons do not show which is pressed",
+   "name": "the mode buttons forget the new mode",
    "file": "index.html",
-   "find": "aria-pressed=\"${this.mode===m}\" onclick=\"Tracer.setMode",
-   "replace": "aria-pressed=\"false\" onclick=\"Tracer.setMode",
-   "run": "play:slopematch"
+   "find": "['match','🧩 Match the shape'],['pick','🔢 Which matrix?']]",
+   "replace": "['match','🧩 Match the shape']]",
+   "run": "play:matpick"
   },
   {
-   "name": "a mode button loses its name",
+   "name": "the matrices run in one column",
    "file": "index.html",
-   "find": "aria-label=\"${m==='trace'?'Trace the slopes of f along the curve':'See f and pick which of three graphs is f′'}\"",
-   "replace": "",
-   "run": "play:slopematch"
+   "find": "<div id=\"mpPick\" style=\"display:grid;grid-template-columns:1fr 1fr",
+   "replace": "<div id=\"mpPick\" style=\"display:grid;grid-template-columns:1fr",
+   "run": "play:matpick"
   },
   {
-   "name": "the tracer stays shown in the new mode",
+   "name": "no toast for a pick",
    "file": "index.html",
-   "find": "for(const id of ['tcSets','tcFig','tcStep','tcRead','tcGoalPanel']) document.getElementById(id).style.display=match?'none':'';",
-   "replace": "",
-   "run": "play:slopematch"
-  },
-  {
-   "name": "the graphs run in one column",
-   "file": "index.html",
-   "find": "<div id=\"smPick\" style=\"display:grid;grid-template-columns:repeat(3,1fr)",
-   "replace": "<div id=\"smPick\" style=\"display:grid;grid-template-columns:1fr",
-   "run": "play:slopematch"
-  },
-  {
-   "name": "no toast for a read",
-   "file": "index.html",
-   "find": "      else UI.toast(`✓ Graph ${'ABC'[i]} is f′",
-   "replace": "      else (()=>{})(`✓ Graph ${'ABC'[i]} is f′",
-   "run": "play:slopematch"
+   "find": "      else UI.toast(`✓ Matrix",
+   "replace": "      else (()=>{})(`✓ Matrix",
+   "run": "play:matpick"
   },
   {
    "name": "the Tome forgets the new mode",
    "file": "index.html",
-   "find": "Then turn it round: see f, and pick which of three graphs is f′.",
+   "find": " Then turn it round: see a shape, and pick which of four matrices makes it.",
    "replace": "",
-   "run": "play:slopematch"
+   "run": "play:matpick"
   },
   {
-   "name": "a read is saved",
+   "name": "the four matrices stay after leaving",
    "file": "index.html",
-   "find": "      this.last={F:r.F, i};\n      this.newRound();",
-   "replace": "      this.last={F:r.F, i}; Game.s.sm=this.matched;\n      this.newRound();",
-   "run": "play:slopematch"
+   "find": "document.getElementById('wsPick').innerHTML=pick ? (MatPick.start(), MatPick.html()) : '';",
+   "replace": "if(pick) document.getElementById('wsPick').innerHTML=(MatPick.start(), MatPick.html());",
+   "run": "play:matpick"
+  },
+  {
+   "name": "a pick is saved",
+   "file": "index.html",
+   "find": "      this.last={A:r.A};\n      this.newRound();",
+   "replace": "      this.last={A:r.A}; Game.s.mp=this.matched;\n      this.newRound();",
+   "run": "play:matpick"
   }
  ]
 }
