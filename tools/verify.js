@@ -68,6 +68,7 @@ function loadGame() {
     ';const Bend={' + script.slice(script.indexOf("  SETS:[\n    {id:'s', btn:'S-curve'"), script.indexOf("  open(){ UI.go('s-bend'); },")) + '};exports.Bend=Bend;' +
     ';const Avg={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl'"), script.indexOf("  open(){ UI.go('s-avg'); },")) + '};exports.Avg=Avg;' +
     ';const Tail={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'1/x²'"), script.indexOf("  open(){ UI.go('s-tail'); },")) + '};exports.Tail=Tail;' +
+    ';const Lathe={' + script.slice(script.indexOf("  SETS:[\n    {id:'cone', btn:'Cone'"), script.indexOf("  open(){ UI.go('s-lathe'); },")) + '};exports.Lathe=Lathe;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -86,7 +87,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2681,6 +2682,93 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The lathe workshop: every solid cut into every number of disks. Each
+   radius squared is worked here from its own polynomial, the disks summed in
+   exact fractions, the exact volume from the antiderivative at the two ends
+   and again by Simpson's rule, every sentence rebuilt from those, the disks
+   in the drawing read back, and every goal rebuilt here. */
+const latheNotes = (() => {
+  const L = Lathe;
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = (v, d = 4) => { const p = 10 ** d, q = Math.round(v * p) / p; return ng(Object.is(q, -0) ? 0 : q); };
+  const ex = v => Math.abs(Math.round(v * 1e4) / 1e4 - v) < 1e-10;
+  const about = v => (ex(v) ? '' : 'about ') + num(v);
+  const gd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gd(n, d); n /= g; d /= g; return d === 1 ? ng(n) : `${ng(n)}/${d}`; };
+  // f(x)² as polynomial coefficients, the interval, and the exact volume over π as a fraction
+  const K = {
+    cone: { g: [0, 0, 1], a: 0, b: 3, V: [9, 1], Vs: '9π', fs: 'x', gs: 'x²', Gs: 'x³/3', sub: '₀', sup: '³', at: 8 },
+    bowl: { g: [0, 1], a: 0, b: 4, V: [8, 1], Vs: '8π', fs: '√x', gs: 'x', Gs: 'x²/2', sub: '₀', sup: '⁴', at: 1 },
+    ball: { g: [4, 0, -1], a: -2, b: 2, V: [32, 3], Vs: '32π/3', fs: '√(4 − x²)', gs: '(4 − x²)', Gs: '4x − x³/3', sub: '₋₂', sup: '²', at: 8 },
+    horn: { g: [0, 0, 0, 0, 1 / 4], a: 0, b: 2, V: [8, 5], Vs: '8π/5', fs: 'x²/2', gs: 'x⁴/4', Gs: 'x⁵/20', sub: '₀', sup: '²', at: 16 }
+  };
+  const ev = (c, x) => c.reduce((t, a, i) => t + a * x ** i, 0);
+  const prim = (c, x) => c.reduce((t, a, i) => t + a * x ** (i + 1) / (i + 1), 0);
+  const simpson = (c, lo, hi) => { const m = 400, h = (hi - lo) / m; let t = ev(c, lo) + ev(c, hi);
+    for (let i = 1; i < m; i++) t += (i % 2 ? 4 : 2) * ev(c, lo + i * h); return t * h / 3; };
+  const fact = {
+    cone: 'That is the cone formula, (1/3)πr²h = (1/3)π × 3² × 3 = 9π.',
+    bowl: 'That is exactly half the cylinder around it, π × 2² × 4 = 16π.',
+    ball: 'That is the sphere formula, (4/3)πr³ = (4/3)π × 2³ = 32π/3.',
+    horn: 'The horn is thin near 0, so most of its volume sits out near x = 2.'
+  };
+  if (L.SETS.map(S => S.id).join() !== 'cone,bowl,ball,horn') fail('lathe', 'sets', L.SETS.map(S => S.id).join());
+  if (L.NS.join() !== '1,2,4,8,16,32,64') fail('lathe', 'disks', L.NS.join());
+  L.touched = false; L.si = 0; L.k = L.START;
+  for (const g of L.GOALS) if (g.ok(L)) fail('lathe', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {}, first = {};
+  L.SETS.forEach((S, si) => {
+    const k = K[S.id], V = k.V[0] / k.V[1];
+    if (S.a !== k.a || S.b !== k.b || S.fs !== k.fs || S.gs !== k.gs || S.Gs !== k.Gs || S.V !== k.Vs) fail('lathe', S.id, 'the interval or formulas it shows are not this solid\'s');
+    if (Math.abs(prim(k.g, k.b) - prim(k.g, k.a) - V) > 1e-12 || Math.abs(simpson(k.g, k.a, k.b) - V) > 1e-9) fail('lathe', S.id, 'the exact volume is not π∫f²');
+    if (Math.abs(S.v - V) > 1e-12) fail('lathe', S.id, `reads the volume as ${S.v}π, worked here ${fr(...k.V)}π`);
+    for (let x = k.a; x <= k.b; x += 0.125) if (Math.abs(S.f(x) ** 2 - ev(k.g, x)) > 1e-9 || S.f(x) < 0) fail('lathe', S.id, `f is wrong at x = ${x}`);
+    if (S.fact !== fact[S.id]) fail('lathe', S.id, 'its closing line is not the one checked here');
+    L.si = si;
+    L.NS.forEach((N, j) => {
+      L.k = j; n++;
+      const key = `${S.id} n=${N}`, w = (k.b - k.a) / N;
+      let sum = 0; for (let i = 0; i < N; i++) sum += ev(k.g, k.a + (i + 0.5) * w) * w;
+      if (Math.abs(L.sum() - sum) > 1e-9) fail('lathe', key, `the disks read ${L.sum()}π, worked here ${sum}π`);
+      const off = Math.abs(sum - V) / V;
+      const want = [
+        `Spin f(x) = ${k.fs} around the x-axis over [${ng(k.a)}, ${k.b}]. Each slice of width Δx spins into a disk whose radius is f at the slice's middle, so it holds π f(x)² Δx.`,
+        `With ${N} slice${N > 1 ? 's' : ''} of width ${fr(k.b - k.a, N)}, the disk${N > 1 ? 's add up' : ' comes'} to ${about(sum)} times π, which is ${about(Math.PI * sum)}.`,
+        `The exact volume is π∫${k.sub}${k.sup} ${k.gs} dx = π[${k.Gs}]${k.sub}${k.sup} = ${k.Vs} ${ex(Math.PI * V) ? '=' : '≈'} ${num(Math.PI * V)}.`
+      ];
+      if (off < 1e-12) {
+        // the midpoint rule is exact only where f² is a straight line
+        if (k.g.length !== 2) fail('lathe', key, 'exact disks on a solid whose f² bends');
+        want.push(`The disks are exactly right${N === 1 ? ', even with just one' : ''}: the graph of f(x)² = ${k.gs} is a straight line, so on each slice the part above the middle's height exactly makes up for the part below it.`);
+      } else want.push(`The disks are off by ${about(Math.PI * Math.abs(sum - V))}, ${num(off * 100, 2)}% of the volume` + (off <= 0.01 ? ', within 1%.' : '. Cut thinner slices to come closer.'));
+      want.push(fact[S.id]);
+      const got = L.working();
+      if (got.length !== want.length) fail('lathe', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('lathe', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      // the drawing: one disk per slice, as wide as its slice and as tall as 2f at its middle
+      const svg = L.svg(), R = S.id === 'cone' ? 3 : 2;
+      const rs = [...svg.matchAll(/data-k="disk" data-n="(\d+)" x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)].map(q => q.slice(1).map(Number));
+      if (rs.length !== N) fail('lathe', key, `${rs.length} disks drawn for ${N} slices`);
+      rs.forEach(([i, x, y, wd, h]) => {
+        const x0 = k.a + (i - 1) * w, r = Math.sqrt(ev(k.g, x0 + w / 2));
+        if (Math.abs((x - 20) / 320 * (k.b - k.a) + k.a - x0) > 0.01 || Math.abs(wd / 320 * (k.b - k.a) - w) > 0.01 || Math.abs(h / 168 * R - r) > 0.01 || Math.abs((100 - y) / 84 * R - r) > 0.01) fail('lathe', key, `disk ${i} is not as wide as its slice and as tall as the solid at its middle`);
+      });
+      if (!/data-k="top"/.test(svg) || !/data-k="bottom"/.test(svg)) fail('lathe', key, 'the curve or its mirror is missing');
+      L.touched = true;
+      const meant = { cone: si === 0 && off <= 0.01, ball: si === 2 && off <= 0.01, horn: si === 3 && off <= 0.01, one: si === 1 && N === 1 };
+      for (const gl of L.GOALS) {
+        if (!!gl.ok(L) !== meant[gl.id]) fail('lathe', key, `goal ${gl.id} is ${gl.ok(L) ? 'met' : 'not met'}, worked here otherwise`);
+        if (gl.ok(L)) { found[gl.id] = found[gl.id] || key; if (!(gl.id in first)) first[gl.id] = N; }
+      }
+    });
+  });
+  const at = { cone: 8, ball: 8, horn: 16, one: 1 };
+  for (const g of L.GOALS) { if (!found[g.id]) fail('lathe', g.id, 'this goal cannot be found'); else if (first[g.id] !== at[g.id]) fail('lathe', g.id, `first met with ${first[g.id]} disks, not ${at[g.id]}`); }
+  L.si = 0; L.k = L.START; L.touched = false; L.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* The endless area workshop: every curve out to every b. Each area is worked
    here twice, from the power rule and by Simpson's rule on the curve itself
    (with x = eᵘ, so the long stretch out to 1024 is sampled evenly), every
@@ -3732,6 +3820,7 @@ console.log(`  geometric series sums   ${pad(geoNotes.n.toLocaleString(), 10)}  
 console.log(`  bend points             ${pad(bendNotes.n.toLocaleString(), 10)}  (f′ and f″ from each curve's own coefficients, the slope either side moving as f″ says, the curve on the side of its tangent the readout names, the drawing read back, ${bendNotes.goals} goals findable)`);
 console.log(`  water levels            ${pad(avgNotes.n.toLocaleString(), 10)}  (each area from the curve's own coefficients, the level against it in exact fractions, above and under the level by Simpson's rule, the shading read back, ${avgNotes.goals} goals findable)`);
 console.log(`  endless areas           ${pad(tailNotes.n.toLocaleString(), 10)}  (each area by the power rule and again by Simpson's rule, each doubling's share against the last, the bars read back, ${tailNotes.goals} goals findable)`);
+console.log(`  lathe cuts              ${pad(latheNotes.n.toLocaleString(), 10)}  (each solid's disks summed from its own f², the exact volume by antiderivative and by Simpson's rule, the disks read back, ${latheNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
