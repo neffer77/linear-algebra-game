@@ -59,6 +59,7 @@ function loadGame() {
     ';const Chain={' + script.slice(script.indexOf("  PAIRS:[\n    {f:'u²',"), script.indexOf("  open(){ UI.go('s-chain'); },")) + '};exports.Chain=Chain;' +
     ';const Castles={' + script.slice(script.indexOf("  RULES:[\n    {btn:'Drift'"), script.indexOf("  open(){ UI.go('s-castles'); },")) + '};exports.Castles=Castles;' +
     ';const Cistern={' + script.slice(script.indexOf("  SETS:[\n    {id:'fade', btn:'Fading spring'"), script.indexOf("  open(){ UI.go('s-cistern'); },")) + '};exports.Cistern=Cistern;' +
+    ';const Hopital={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'Square'"), script.indexOf("  open(){ UI.go('s-hopital'); },")) + '};exports.Hopital=Hopital;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -77,7 +78,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2582,6 +2583,77 @@ const cisternNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The L'Hôpital workshop: every ratio is checked against its own formula, the
+   rule's answer against the slopes found by a nudge, the limit against the
+   ratio very close to the point, and every sentence rebuilt here. On the 0/0
+   ratios the gap must shrink as h closes in; on the one that is not 0/0 the
+   ratio must head for the plain value and stay well away from the rule's. */
+const hopitalNotes = (() => {
+  const K = Hopital;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const show = (v, d = 4) => { const p = 10 ** d, r = Math.round(v * p) / p; return neg(Object.is(r, -0) ? 0 : r); };
+  const sure = (v, d) => Math.abs(Math.round(v * 10 ** d) / 10 ** d - v) < 1e-12;
+  const TOP = { sq: x => x * x - 1, cube: x => x ** 3 - 8, sin: Math.sin, trap: x => x * x + 2 };
+  const BOT = { sq: x => x - 1, cube: x => x * x - 4, sin: x => x, trap: x => x + 1 };
+  if (K.SETS.map(S => S.id).join() !== 'sq,cube,sin,trap') fail('hopital', 'sets', K.SETS.map(S => S.id).join());
+  if (K.H.some(h => h === 0) || K.H.join() !== [...K.H].reverse().map(h => -h).join()) fail('hopital', 'steps', 'h must never be 0 and must step the same way on both sides');
+  if (!(K.H[K.START] > 0.1)) fail('hopital', 'start', `h starts at ${K.H[K.START]}, which is already close`);
+  K.touched = false; K.si = 0; K.k = K.START;
+  for (const g of K.GOALS) if (g.ok(K)) fail('hopital', g.id, 'met where the workshop opens');
+  let n = 0;
+  const found = {};
+  K.SETS.forEach((S, si) => {
+    const T = TOP[S.id], B = BOT[S.id], a = S.a, zero = S.id !== 'trap';
+    for (const x of [a - 1.4, a - 0.7, a - 0.2, a + 0.3, a + 1.1])
+      if (Math.abs(figEval(S.f, x) - T(x)) > 1e-12 || Math.abs(figEval(S.g, x) - B(x)) > 1e-12) fail('hopital', S.id, `the figure's curves disagree with ${S.top} and ${S.bot} at x = ${x}`);
+    if (zero !== (T(a) === 0 && B(a) === 0)) fail('hopital', S.id, `top and bottom at x = ${a} are ${T(a)} and ${B(a)}`);
+    const d = (F) => (F(a + 1e-6) - F(a - 1e-6)) / 2e-6;
+    if (Math.abs(d(T) - S.fpa) > 1e-6 || Math.abs(d(B) - S.gpa) > 1e-6) fail('hopital', S.id, `the slopes at x = ${a} are ${d(T)} and ${d(B)}, the readout says ${S.fpa} and ${S.gpa}`);
+    const L = zero ? S.fpa / S.gpa : T(a) / B(a);
+    const near = T(a + 1e-7) / B(a + 1e-7);
+    if (Math.abs(near - L) > 1e-5) fail('hopital', S.id, `very close to x = ${a} the ratio is ${near}, the readout heads for ${L}`);
+    if (!zero && Math.abs(L - S.fpa / S.gpa) < 0.5) fail('hopital', S.id, "the rule's wrong answer is too close to the right one to catch");
+    let lastGap = { neg: Infinity, pos: Infinity };
+    const order = [...K.H.keys()].sort((i, j) => Math.abs(K.H[j]) - Math.abs(K.H[i]));
+    for (const k of order) {
+      K.si = si; K.k = k; n++;
+      const h = K.H[k], x = a + h, X = show(x), f = T(x), g = B(x), r = f / g, key = `${S.id} h=${h}`;
+      if (Math.abs(K.ratio() - r) > 1e-12) fail('hopital', key, `the ratio is ${K.ratio()}, the formula gives ${r}`);
+      if (Math.abs(K.lim() - L) > 1e-12) fail('hopital', key, `the limit is ${K.lim()}, it should be ${L}`);
+      const G = Math.round(Math.abs(r - L) * 1e4) / 1e4;
+      if (K.gap() !== G) fail('hopital', key, `the gap is ${K.gap()}, expected ${G}`);
+      const side = h < 0 ? 'neg' : 'pos';
+      if (zero && G > lastGap[side]) fail('hopital', key, 'the ratio moves away from its limit as h closes in');
+      lastGap[side] = G;
+      if (!zero && Math.abs(h) <= 0.01 && Math.abs(r - S.fpa / S.gpa) < 0.9) fail('hopital', key, "the ratio is near the rule's wrong answer");
+      const is = (v, dd) => `${sure(v, dd) ? '=' : '≈'} ${show(v, dd)}`;
+      const want = zero ? [
+        `Put x = ${a} into ${S.q} and you get 0/0: top and bottom are both 0 there, so the formula says nothing about where the ratio is heading.`,
+        `Near x = ${a} each curve is almost its tangent line. The top's slope is f′(x) = ${S.dtop}, so f′(${a}) = ${S.fpaw}; the bottom's is g′(x) = ${S.dbot}, so g′(${a}) = ${S.gpaw}. So the ratio heads for f′(${a})/g′(${a}) = ${S.fpa}/${S.gpa} = ${show(L)}: that is L'Hôpital's rule.`
+      ] : [
+        `Put x = ${a} into ${S.q} and you get ${show(T(a))}/${show(B(a))} = ${show(L)}: not 0/0. Nothing is broken here, so the limit is just that value, ${show(L)}.`,
+        `Differentiating anyway gives f′(${a})/g′(${a}) = ${S.fpa}/${S.gpa} = ${show(S.fpa / S.gpa)}, and that is wrong: L'Hôpital's rule is only for 0/0, where top and bottom both head to 0 together.`
+      ];
+      want.push(`With h = ${show(h)}, x = ${a} ${h < 0 ? '−' : '+'} ${show(Math.abs(h))} = ${X}: the top is f(${X}) ${is(f, 6)} and the bottom is g(${X}) ${is(g, 6)}, so their ratio is ${sure(r, 4) ? '' : 'about '}${show(r)}.`);
+      if (!zero) want.push(`The ratio heads for ${show(L)}, the value at x = ${a}, not for ${show(S.fpa / S.gpa)}: it is ${show(G)} from ${show(L)} and ${show(Math.abs(r - S.fpa / S.gpa))} from ${show(S.fpa / S.gpa)}.`);
+      else if (G <= 0.01) want.push(`${G === 0 ? `To four places that is ${show(L)} itself` : `That is ${show(G)} from ${show(L)}`}: this close to x = ${a}, top and bottom are as good as their tangents, so their ratio is all but the ratio of the slopes.`);
+      else want.push(`That is ${show(G)} from ${show(L)}: this far from x = ${a} the curves bend away from their tangents. Bring h closer to 0.`);
+      const got = K.working();
+      if (got.length !== want.length) fail('hopital', key, `${got.length} lines, expected ${want.length}`);
+      want.forEach((l, i) => { if (got[i] !== l) fail('hopital', key, `line ${i + 1} reads: ${got[i]}\n      expected: ${l}`); });
+      const meant = { right: si === 0 && h > 0 && G <= 0.01, left: si === 0 && h < 0 && G <= 0.01, cube: si === 1 && G <= 0.01,
+        sin: si === 2 && G <= 0.01, trap: si === 3 && Math.abs(h) <= 0.01 };
+      for (const gl of K.GOALS) {
+        if (!!gl.ok(K) !== meant[gl.id]) fail('hopital', key, `goal ${gl.id} is ${gl.ok(K) ? 'met' : 'not met'}, its sentence says otherwise`);
+        if (gl.ok(K)) found[gl.id] = found[gl.id] || key;
+      }
+    }
+  });
+  for (const g of K.GOALS) if (!found[g.id]) fail('hopital', g.id, 'this goal cannot be found');
+  K.si = 0; K.k = K.START; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
 /* Every state of the biggest build workshop: each build and every x. What
    each holds is worked here from its own lengths (two sides, or a base and a
    depth), its slope by a nudge either way, and the figure's polynomial is
@@ -2910,6 +2982,7 @@ console.log(`  chain rule states          ${pad(chainNotes.n.toLocaleString(), 1
 console.log(`  two castles states         ${pad(castlesNotes.n.toLocaleString(), 10)}  (each night by the matrix, the steady split and the other eigenvalue, ${castlesNotes.goals} goals findable)`);
 console.log(`  biggest build states       ${pad(optimNotes.n.toLocaleString(), 10)}  (what each holds from its lengths, the slope by a nudge, the best found by trying every x, ${optimNotes.goals} goals findable)`);
 console.log(`  cistern states           ${pad(cisternNotes.n.toLocaleString(), 10)}  (each total against the area under the flow added up in strips, F′ = f by a nudge, every turn checked, ${cisternNotes.goals} goals findable)`);
+console.log(`  l'hôpital states         ${pad(hopitalNotes.n.toLocaleString(), 10)}  (each ratio against its formula, the slopes by a nudge, the limit read right at the point, every gap shrinking, the rule caught wrong off 0/0, ${hopitalNotes.goals} goals findable)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);

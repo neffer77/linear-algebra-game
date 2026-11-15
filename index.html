@@ -1204,7 +1204,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
-  <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
+  <!-- ============ L'HÔPITAL WORKSHOP ============ -->
+  <div class="screen" id="s-hopital">
+    <div class="panel"><h2>🔬 L'Hôpital Workshop</h2><div class="sub">When a ratio gives 0/0 at a point, look closer: near that point the top and bottom are each almost a straight line, so their ratio heads for the ratio of their slopes. Move x in and watch, and find the ratio the rule gets wrong.</div></div>
+    <div class="panel">
+      <div id="hpSets" class="wsModes" role="group" aria-label="Which ratio"></div>
+      <div id="hpFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="hpHLo" onclick="Hopital.moveH(-1)" aria-label="Move h down a step">−</button>
+          <b id="hpH" style="font-size:17px;min-width:0"></b>
+          <button id="hpHHi" onclick="Hopital.moveH(1)" aria-label="Move h up a step">+</button></div>
+      </div>
+      <div id="hpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="hpGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
     <div class="panel">
@@ -1223,6 +1242,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
   <div class="screen" id="s-optim">
     <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
     <div class="panel">
@@ -12517,6 +12537,7 @@ const UI = {
     if(id==='s-castles') Castles.render();
     if(id==='s-optim') Optim.render();
     if(id==='s-cistern') Cistern.render();
+    if(id==='s-hopital') Hopital.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13180,6 +13201,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading.</div>
          <button class="btn sm" id="tomeLimit" style="width:auto;margin-top:8px" onclick="Limit.open()">Open the limit workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔬 L'Hôpital Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer.</div>
+         <button class="btn sm" id="tomeHopital" style="width:auto;margin-top:8px" onclick="Hopital.open()">Open the L'Hôpital workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -15788,11 +15814,105 @@ const Chain = {
   }
 };
 
-/* ============ BIGGEST BUILD WORKSHOP ============
-   Optimisation by hand: change one length, watch what it builds and the slope
-   of that, and find where the slope is 0. The steps are half a unit so every
-   number is exact; one setting shows a flat tangent that marks the least, so
-   the player learns to check which way the curve goes on either side. */
+/* ---------- The L'Hôpital workshop: ratios that give 0/0 ----------
+   At x = a both top and bottom are 0, so the ratio says nothing there. Step h
+   toward 0 from either side and read the top, the bottom and their ratio:
+   near a each curve is almost its tangent line, so the ratio heads for the
+   ratio of the slopes, f′(a)/g′(a). The last ratio is not 0/0 at all, and the
+   rule's answer is wrong there, so the player learns when the rule applies.
+   Nothing here is saved. */
+const Hopital = {
+  SETS:[
+    {id:'sq', btn:'Square', a:1, q:'(x² − 1)/(x − 1)', top:'x² − 1', bot:'x − 1', dtop:'2x', dbot:'1', fpaw:'2', gpaw:'1', fpa:2, gpa:1,
+     f:{poly:[[1,2],[-1,0]]}, g:{poly:[[1,1],[-1,0]]}, ylim:[-2,5.5]},
+    {id:'cube', btn:'Cube', a:2, q:'(x³ − 8)/(x² − 4)', top:'x³ − 8', bot:'x² − 4', dtop:'3x²', dbot:'2x', fpaw:'3 × 2² = 12', gpaw:'2 × 2 = 4', fpa:12, gpa:4,
+     f:{poly:[[1,3],[-8,0]]}, g:{poly:[[1,2],[-4,0]]}, ylim:[-9,36]},
+    {id:'sin', btn:'Sine', a:0, q:'sin x / x', top:'sin x', bot:'x', dtop:'cos x', dbot:'1', fpaw:'cos 0 = 1', gpaw:'1', fpa:1, gpa:1,
+     f:{fn:'sin'}, g:{poly:[[1,1]]}, ylim:[-1.7,1.7]},
+    {id:'trap', btn:'Plus two', a:2, q:'(x² + 2)/(x + 1)', top:'x² + 2', bot:'x + 1', dtop:'2x', dbot:'1', fpaw:'2 × 2 = 4', gpaw:'1', fpa:4, gpa:1,
+     f:{poly:[[1,2],[2,0]]}, g:{poly:[[1,1],[1,0]]}, ylim:[-1,15]}
+  ],
+  H:[-1,-0.5,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.5,1],
+  START:8,
+  si:0, k:8, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'right', t:'On the square, close in on x = 1 from the right until the ratio is within 0.01 of its limit.', toast:'Closed in from the right',
+     ok:K=>K.si===0 && K.h()>0 && K.gap()<=0.01},
+    {id:'left',  t:'On the square, close in from the left as well.', toast:'Closed in from the left',
+     ok:K=>K.si===0 && K.h()<0 && K.gap()<=0.01},
+    {id:'cube',  t:'On the cube, close in until the ratio is within 0.01 of its limit.', toast:'Ran the cube down',
+     ok:K=>K.si===1 && K.gap()<=0.01},
+    {id:'sin',   t:'On the sine, close in until the ratio is within 0.01 of its limit.', toast:'Ran sin x / x down',
+     ok:K=>K.si===2 && K.gap()<=0.01},
+    {id:'trap',  t:'On plus two, close in and catch the rule giving the wrong answer.', toast:'Caught the rule where it does not belong',
+     ok:K=>K.si===3 && Math.abs(K.h())<=0.01}
+  ],
+  set(){ return this.SETS[this.si]; },
+  h(){ return this.H[this.k]; },
+  x(){ return this.set().a+this.h(); },
+  top(x=this.x()){ return figEval(this.set().f,x); },
+  bot(x=this.x()){ return figEval(this.set().g,x); },
+  ratio(){ return this.top()/this.bot(); },
+  /* where the ratio is really heading: the slopes' ratio for 0/0, the plain value otherwise */
+  zero(){ const S=this.set(); return this.top(S.a)===0 && this.bot(S.a)===0; },
+  lim(){ const S=this.set(); return this.zero() ? S.fpa/S.gpa : this.top(S.a)/this.bot(S.a); },
+  gap(){ return Math.round(Math.abs(this.ratio()-this.lim())*1e4)/1e4; },
+  num(v,d=4){ const p=10**d, r=Math.round(v*p)/p; return neg(Object.is(r,-0)?0:r); },
+  exact(v,d){ const p=10**d; return Math.abs(Math.round(v*p)/p-v)<1e-12; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), a=S.a, h=this.h(), x=this.x(), X=this.num(x), f=this.top(), g=this.bot(), r=this.ratio(), L=this.lim();
+    const is=(v,d)=>(this.exact(v,d)?'= ':'≈ ')+this.num(v,d);
+    const out=[];
+    if(this.zero()){
+      out.push(`Put x = ${a} into ${S.q} and you get 0/0: top and bottom are both 0 there, so the formula says nothing about where the ratio is heading.`);
+      out.push(`Near x = ${a} each curve is almost its tangent line. The top's slope is f′(x) = ${S.dtop}, so f′(${a}) = ${S.fpaw}; the bottom's is g′(x) = ${S.dbot}, so g′(${a}) = ${S.gpaw}. So the ratio heads for f′(${a})/g′(${a}) = ${S.fpa}/${S.gpa} = ${this.num(L)}: that is L'Hôpital's rule.`);
+    } else {
+      out.push(`Put x = ${a} into ${S.q} and you get ${this.num(this.top(a))}/${this.num(this.bot(a))} = ${this.num(L)}: not 0/0. Nothing is broken here, so the limit is just that value, ${this.num(L)}.`);
+      out.push(`Differentiating anyway gives f′(${a})/g′(${a}) = ${S.fpa}/${S.gpa} = ${this.num(S.fpa/S.gpa)}, and that is wrong: L'Hôpital's rule is only for 0/0, where top and bottom both head to 0 together.`);
+    }
+    out.push(`With h = ${this.num(h)}, x = ${a} ${h<0?'−':'+'} ${this.num(Math.abs(h))} = ${X}: the top is f(${X}) ${is(f,6)} and the bottom is g(${X}) ${is(g,6)}, so their ratio is ${this.exact(r,4)?'':'about '}${this.num(r)}.`);
+    const G=this.gap();
+    if(!this.zero()){
+      const W=this.num(Math.abs(r-S.fpa/S.gpa));
+      out.push(`The ratio heads for ${this.num(L)}, the value at x = ${a}, not for ${this.num(S.fpa/S.gpa)}: it is ${this.num(G)} from ${this.num(L)} and ${W} from ${this.num(S.fpa/S.gpa)}.`);
+    } else if(G<=0.01){
+      out.push(`${G===0 ? `To four places that is ${this.num(L)} itself` : `That is ${this.num(G)} from ${this.num(L)}`}: this close to x = ${a}, top and bottom are as good as their tangents, so their ratio is all but the ratio of the slopes.`);
+    } else {
+      out.push(`That is ${this.num(G)} from ${this.num(L)}: this far from x = ${a} the curves bend away from their tangents. Bring h closer to 0.`);
+    }
+    return out;
+  },
+  open(){ UI.go('s-hopital'); },
+  pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
+  moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },
+  render(){
+    const S=this.set(), x=this.x(), X=this.num(x);
+    document.getElementById('hpSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Hopital.pick(${i})" aria-label="${s.btn}: ${s.q}">${s.btn}</button>`).join('');
+    document.getElementById('hpH').textContent=`h = ${this.num(this.h())}`;
+    document.getElementById('hpHLo').disabled=this.k<=0;
+    document.getElementById('hpHHi').disabled=this.k>=this.H.length-1;
+    Figure.render({kind:'curve', f:S.f, also:{f:S.g, col:FIG_COL.a}, lo:S.a-1.5, hi:S.a+1.5, ylim:S.ylim,
+      pts:[[x,this.top(),FIG_COL.d],[x,this.bot(),FIG_COL.a]],
+      caption:`The gold curve is the top, ${S.top}, and the blue curve the bottom, ${S.bot}. ${this.zero() ? `Both cross 0 at x = ${S.a}.` : `Neither is 0 at x = ${S.a}.`} The red and blue points are their heights at x = ${X}, and the ratio is red over blue.`},
+      document.getElementById('hpFig'));
+    document.getElementById('hpRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('hpGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The cistern workshop: what an integral adds up ----------
    A spring fills a cistern at a rate f(t) that the player cannot change;
    the total F(t) is the area under f from 0 to t. Step t in half hours and
@@ -15892,6 +16012,11 @@ const Cistern = {
   }
 };
 
+/* ============ BIGGEST BUILD WORKSHOP ============
+   Optimisation by hand: change one length, watch what it builds and the slope
+   of that, and find where the slope is 0. The steps are half a unit so every
+   number is exact; one setting shows a flat tangent that marks the least, so
+   the player learns to check which way the curve goes on either side. */
 const Optim = {
   SETS:[
     {id:'wall', btn:'Wall paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
