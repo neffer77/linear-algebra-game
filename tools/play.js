@@ -95,6 +95,7 @@ const SUITES = [
   require('./play/logdiff'),    // x in the base and the power: take ln first
   require('./play/pathchain'),  // dz/dt along a path: an x part and a y part
   require('./play/expint'),  // ∫ e^(kx) dx: fit F to a slope field, divide by k
+  require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

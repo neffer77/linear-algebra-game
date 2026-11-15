@@ -2704,6 +2704,85 @@ const ladderNotes = (() => {
   return { n, goals: Object.keys(found).length };
 })();
 
+/* The workshop index at the top of the Tome: every workshop exactly once,
+   under the strand of the topic it was built for and in that strand's order,
+   opening the same module as its card further down, with a chip's colour read
+   off mastery as the index's own rule says and decided again here. */
+const wsIndexNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { s: null, eff: {} };
+  const { I, FOR, STR } = new Function('env', 'const Game = { get s(){ return env.s; } }; const Mastery = { eff: k => env.eff[k] || 0 };' +
+    cut('const STRANDS = [', '/* The hands-on workshop that shows') +
+    cut('const WORKSHOP_FOR = (() => {', '/* ------------------------------- mastery') + 'return { I: WorkshopIndex, FOR: WORKSHOP_FOR, STR: STRANDS };')(env);
+  const pos = {};
+  STR.forEach(([, ks], si) => ks.forEach((k, i) => { pos[k] = [si, i]; }));
+  /* the modules, each with the topics it was given in the order it lists them */
+  const mods = {};
+  for (const k of Object.keys(FOR)) (mods[FOR[k].mod] || (mods[FOR[k].mod] = { name: FOR[k].name, topics: [] })).topics.push(k);
+  const cards = [...html.matchAll(/onclick="(\w+)\.open\(\)">Open [^<]*<\/button>/g)].map(m => m[1]);
+  const gs = I.groups(), items = gs.flatMap(g => g.items);
+  if (items.length !== Object.keys(mods).length) fail('wsindex', 'count', `${items.length} chips for ${Object.keys(mods).length} workshops`);
+  const seen = new Set();
+  for (const w of items) {
+    if (seen.has(w.mod)) fail('wsindex', w.mod, 'listed twice');
+    seen.add(w.mod);
+    const m = mods[w.mod];
+    if (!m) { fail('wsindex', w.mod, 'is not a workshop'); continue; }
+    if (w.name !== m.name) fail('wsindex', w.mod, `named ${w.name}, not ${m.name}`);
+    if (w.topics.join() !== m.topics.join()) fail('wsindex', w.mod, `covers ${w.topics}, not ${m.topics}`);
+    const g = gs.find(G => G.items.includes(w));
+    if (g.strand !== STR[pos[m.topics[0]][0]][0]) fail('wsindex', w.mod, `is under ${g.strand}, but ${m.topics[0]} is in ${STR[pos[m.topics[0]][0]][0]}`);
+    const sp = m.name.indexOf(' ');
+    if (w.title !== m.name.slice(sp + 1) || w.emoji !== m.name.slice(0, sp) || w.short !== m.name.slice(sp + 1).replace(/ Workshop$/, '')) fail('wsindex', w.mod, `shows ${w.emoji} ${w.short}`);
+  }
+  for (const c of cards) if (c !== 'Opening' && !seen.has(c) && mods[c]) fail('wsindex', c, 'has a Tome card but no chip');
+  for (const c of Object.keys(mods)) if (!cards.includes(c)) fail('wsindex', c, 'has a chip but no Tome card');
+  if (gs.map(g => g.strand).join('|') !== STR.filter(([, ks]) => items.some(w => ks.includes(w.topics[0]))).map(([s]) => s).join('|')) fail('wsindex', 'strands', 'not in the order the strands are declared');
+  for (const g of gs) for (let i = 1; i < g.items.length; i++)
+    if (pos[g.items[i - 1].topics[0]][1] > pos[g.items[i].topics[0]][1]) fail('wsindex', g.strand, `${g.items[i - 1].mod} comes before ${g.items[i].mod} against the strand's order`);
+  /* states: no knight, an unseen topic, all solid, one slipped, on the edges */
+  const two = items.find(w => w.topics.length === 2), [a, b] = two.topics;
+  const set = (rec, eff) => { env.s = { topicStats: rec }; env.eff = eff; };
+  const cases = [
+    [null, {}, ''],
+    [{}, {}, ''],
+    [{ [a]: { seen: 3 } }, { [a]: 0.9 }, ''],
+    [{ [a]: { seen: 3 }, [b]: { seen: 2 } }, { [a]: 0.9, [b]: 0.85 }, 'solid'],
+    [{ [a]: { seen: 3 }, [b]: { seen: 2 } }, { [a]: 0.9, [b]: 0.84 }, ''],
+    [{ [a]: { seen: 3 }, [b]: { seen: 2 } }, { [a]: 0.9, [b]: 0.59 }, 'weak'],
+    [{ [a]: { seen: 3 } }, { [a]: 0.6 }, ''],
+    [{ [a]: { seen: 0 }, [b]: { seen: 1 } }, { [a]: 0.9, [b]: 0.9 }, ''],
+    [{ [a]: { seen: 1 } }, { [a]: 0.1 }, 'weak'],
+  ];
+  for (const [rec, eff, want] of cases) {
+    if (rec === null) env.s = null; else set(rec, eff);
+    const got = I.state(two);
+    if (got !== want) fail('wsindex', `${two.mod} ${JSON.stringify(rec)} ${JSON.stringify(eff)}`, `state ${got || 'plain'}, not ${want || 'plain'}`);
+    const c = I.chip(two);
+    if ((want === 'solid') !== / ✓<\/button>$/.test(c) || !c.includes(`data-state="${want}"`) || (want && !c.includes(`wiChip ${want}"`))) fail('wsindex', two.mod, `the chip does not show ${want || 'plain'}: ${c}`);
+    if ((want === 'solid') !== c.includes('every topic it covers solid') || (want === 'weak') !== c.includes('a topic it covers needs work')) fail('wsindex', two.mod, `the chip's name for a screen reader is wrong: ${c}`);
+  }
+  env.s = { topicStats: {} }; env.eff = {};
+  const h = I.html();
+  const chips = [...h.matchAll(/data-ws="(\w+)" data-state="" onclick="(\w+)\.open\(\)" aria-label="Open ([^"]+)">([^<]+)<\/button>/g)];
+  if (chips.length !== items.length) fail('wsindex', 'html', `${chips.length} chips drawn for ${items.length} workshops`);
+  for (const [, ws, op, label, text] of chips) {
+    const m = mods[ws];
+    if (op !== ws) fail('wsindex', ws, `its chip opens ${op}`);
+    if (!m) continue;
+    const sp = m.name.indexOf(' '), short = m.name.slice(sp + 1).replace(/ Workshop$/, '');
+    if (text !== `${m.name.slice(0, sp)} ${short}`) fail('wsindex', ws, `its chip reads ${text}`);
+    if (label !== m.name.slice(sp + 1)) fail('wsindex', ws, `its chip is named ${label}`);
+  }
+  if (!h.includes(`${items.length} hands-on workshops.`)) fail('wsindex', 'html', 'the count is wrong');
+  if ((h.match(/class="wiStrand"/g) || []).length !== gs.length) fail('wsindex', 'html', 'a strand heading is missing');
+  if (!/renderTome\(\)\{[\s\S]{0,700}?WorkshopIndex\.html\(\)/.test(script)) fail('wsindex', 'tome', 'the Tome does not show the index near its top');
+  env.s = null;
+  return { chips: items.length, strands: gs.length, cases: cases.length };
+})();
+
 /* The growth integral workshop: every curve, every number in front, every
    lift and both forms. Whether F fits is decided here by nudging F and
    comparing with Math's own e^(kx) at many x, never from c·k = 1; every
@@ -6216,6 +6295,7 @@ console.log(`  inverse slopes ${pad(invSlopeNotes.n.toLocaleString(), 17)}  (tru
 console.log(`  log slopes ${pad(logDiffNotes.n.toLocaleString(), 21)}  (true slopes found by nudging Math's own x to its power, never from ln x + 1; every number worked checked, every sentence, ${logDiffNotes.pts.toLocaleString()} curve points read back, ${logDiffNotes.goals} goals findable)`);
 console.log(`  path chain rates ${pad(pathChainNotes.n.toLocaleString(), 15)}  (true rates found by nudging z along Math's own path, each part by nudging the hill and the path; every number worked checked, every sentence, the bars read back, ${pathChainNotes.pts.toLocaleString()} curve points, ${pathChainNotes.goals} goals findable)`);
 console.log(`  growth integrals ${pad(expIntNotes.n.toLocaleString(), 15)}  (whether F fits decided by nudging F against Math's own e^(kx) at many x; every number worked checked, every sentence, ${expIntNotes.dashes.toLocaleString()} field dashes and ${expIntNotes.pts.toLocaleString()} curve points read back, ${expIntNotes.goals} goals findable)`);
+console.log(`  workshop index   ${pad(wsIndexNotes.chips.toLocaleString(), 15)}  (chips, each workshop once under the strand of the topic it was built for and in that strand's order, across ${wsIndexNotes.strands} strands; ${wsIndexNotes.cases} mastery states decided for its colour and its screen-reader name)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
