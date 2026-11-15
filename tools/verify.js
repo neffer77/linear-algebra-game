@@ -88,6 +88,7 @@ function loadGame() {
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
+    ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -106,7 +107,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2699,6 +2700,111 @@ const ladderNotes = (() => {
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
   return { n, goals: Object.keys(found).length };
+})();
+
+/* The log slope workshop: every slope is checked against a nudge on Math's
+   own x ** p(x), never against ln x + 1 or the other worked formulas. */
+const logDiffNotes = (() => {
+  const W = LogDiff;
+  const num = t => +t.replace(/−/g, '-');
+  const r3 = v => Math.round(v * 1000) / 1000;
+  const near3 = (t, v) => Math.abs(num(t) - r3(v)) < 1e-9;
+  const POW = { xx: x => x, x2x: x => 2 * x, root: x => 1 / x };
+  const Y = (id, x) => Math.pow(x, POW[id](x));
+  const sl = (h, x, e = 1e-6) => (h(x + e) - h(x - e)) / (2 * e);
+  const VAL = { '1/e': 1 / Math.E, e: Math.E };
+  if (W.SETS.map(S => S.id).join() !== 'xx,x2x,root') fail('logdiff', 'sets', W.SETS.map(S => S.id).join());
+  if (W.MODES.join() !== 'Take ln first,Power rule,Exponent rule,Both, added') fail('logdiff', 'modes', W.MODES.join());
+  const reset = () => { W.touched = false; W.si = 0; W.k = W.SETS[0].start; W.mode = 0; W.done.clear(); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('logdiff', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.mode = 2; W.k = 0; W.pick(si);
+    if (W.mode !== 0 || W.k !== S.start) fail('logdiff', S.id, 'picking a curve does not start x and the method again');
+    for (const g of W.GOALS) if (g.ok(W)) fail('logdiff', g.id, `met where ${S.id} starts, so picking it gives the goal away`);
+    W.k = S.X.length - 1; W.moveX(1); if (W.k !== S.X.length - 1) fail('logdiff', S.id, 'x does not stop at its last step');
+    W.k = 0; W.moveX(-1); if (W.k !== 0) fail('logdiff', S.id, 'x does not stop at its first step'); });
+  const truth = {
+    flat: (id, x, m, R) => id === 'xx' && m === 0 && x === 1 / Math.E,
+    two: (id, x, m, R) => id === 'x2x' && m === 0 && Math.abs(R - 2) < 1e-6,
+    peak: (id, x, m, R) => id === 'root' && m === 0 && Math.abs(R) < 1e-6,
+    power: (id, x, m, R, P, E) => m === 1 && Math.abs(P - R) > 1e-6,
+    expo: (id, x, m, R, P, E) => m === 2 && Math.abs(E - R) > 1e-6,
+    luck: (id, x, m, R, P, E) => m === 1 && Math.abs(P - R) < 1e-6,
+    sum: (id, x, m, R, P, E) => m === 3 && Math.abs(P) > 1e-6 && Math.abs(E) > 1e-6,
+  };
+  if (Object.keys(truth).join() !== W.GOALS.map(g => g.id).join()) fail('logdiff', 'goals', W.GOALS.map(g => g.id).join());
+  const found = {}; let n = 0, pts = 0;
+  W.SETS.forEach((S, si) => {
+    const xs = S.X.map(v => typeof v === 'string' ? VAL[v] : v);
+    if (xs.some((x, i) => i && x <= xs[i - 1]) || !S.X.includes(1)) fail('logdiff', S.id, `x should rise and pass through 1: ${S.X.join()}`);
+    if (!S.X.includes(S.id === 'root' ? 'e' : '1/e')) fail('logdiff', S.id, `the flat point is not a step: ${S.X.join()}`);
+    S.X.forEach((xv, k) => [0, 1, 2, 3].forEach(mode => {
+      reset(); W.si = si; W.k = k; W.mode = mode; W.touched = true; n++;
+      const x = typeof xv === 'string' ? VAL[xv] : xv, X = typeof xv === 'string' ? xv : (xv < 0 ? '−' + -xv : String(xv));
+      const key = `${S.id} x=${X} mode ${mode}`, got = W.working(), txt = got.join(' ');
+      const y = Y(S.id, x), R = sl(t => Y(S.id, t), x), p = POW[S.id](x), dp = sl(POW[S.id], x);
+      const P = p * Math.pow(x, p - 1), E = y * Math.log(x) * dp;
+      if (Math.abs(W.right() - R) > 1e-6) fail('logdiff', key, `the slope ${W.right()} is not the nudged ${R}`);
+      if (Math.abs(P + E - R) > 1e-6) fail('logdiff', key, 'the two parts do not add to the slope');
+      if (got[0] !== `y = ${S.y}: x is in the base and in the power, so neither the power rule (a fixed power) nor the exponent rule (a fixed base) fits on its own.`) fail('logdiff', key, got[0]);
+      const m1 = got[1].match(/^At x = (\S+?)(?: ≈ (\S+))?: y = (\S+) ([=≈]) (\S+), and ln (\S+) ([=≈]) (\S+)\.$/);
+      if (!m1) fail('logdiff', key, `the point is not worked: ${got[1]}`);
+      else {
+        if (m1[1] !== X || (typeof xv === 'string') !== !!m1[2] || (m1[2] && !near3(m1[2], x))) fail('logdiff', key, `x is not named: ${got[1]}`);
+        if (!near3(m1[5], y) || (m1[4] === '=') !== (Math.abs(r3(y) - y) < 1e-9)) fail('logdiff', key, `y is wrong: ${got[1]}`);
+        const base = m1[3].match(/^\(?(.+?)\)?\^\((.+)\)$/), ev = t => t === 'e' ? Math.E : t === '1/e' ? 1 / Math.E : t === '2/e' ? 2 / Math.E : /^1\//.test(t) ? 1 / num(t.slice(2)) : num(t);
+        if (!base || Math.abs(Math.pow(ev(base[1]), ev(base[2])) - y) > 1e-9 || ev(base[1]) !== x) fail('logdiff', key, `y is not x to its power: ${m1[3]}`);
+        if (m1[6] !== X || !near3(m1[8], Math.log(x)) || (m1[7] === '=') !== (Math.abs(r3(Math.log(x)) - Math.log(x)) < 1e-12)) fail('logdiff', key, `ln x is wrong: ${got[1]}`);
+      }
+      const nl = got[got.length - 2].match(/^Check with a nudge: from x = (\S+) to (\S+), y goes from about (\S+) to about (\S+), so Δy\/Δx ≈ (\S+)\.$/);
+      if (!nl || !near3(nl[5], R) || Math.abs(num(nl[1]) - (x - 0.001)) > 1e-4 || Math.abs(num(nl[3]) - Y(S.id, x - 0.001)) > 1e-6 || Math.abs(num(nl[4]) - Y(S.id, x + 0.001)) > 1e-6) fail('logdiff', key, `the nudge is wrong: ${got[got.length - 2]}`);
+      const last = got[got.length - 1], zero = Math.abs(R) < 1e-6;
+      if (mode === 0) {
+        if (got[2] !== `Take ln of both sides: ln y = ${S.lnY}. Differentiate both sides: y′/y = ${S.dl}.`) fail('logdiff', key, got[2]);
+        const m3 = got[3].match(/^Here y′\/y ([=≈]) (\S+), so multiply back by y: y′ = (\S+) × \(?(\S+?)\)? ([=≈]) (\S+)\.$/);
+        if (!m3 || !near3(m3[2], R / y) || !near3(m3[3], y) || !near3(m3[4], R / y) || !near3(m3[6], R)) fail('logdiff', key, `the multiply back is wrong: ${got[3]}`);
+        const top = S.id === 'root' && Math.abs(x - Math.E) < 1e-12;
+        if (top !== /this is the top of x\^\(1\/x\)/.test(last)) fail('logdiff', key, `the top sentence shows at the wrong time: ${last}`);
+        if ((zero && !top) !== /this is the lowest point of/.test(last) || (zero && !top && !last.includes(`lowest point of ${S.y},`))) fail('logdiff', key, `the bottom sentence is wrong: ${last}`);
+        if (!zero && last !== `That agrees with y′ ${Math.abs(r3(R) - R) < 1e-9 ? '=' : '≈'} ${W.num(R)}: y ${R > 0 ? 'rises' : 'falls'} as x rises here.`) fail('logdiff', key, `the verdict is wrong: ${last}`);
+      } else if (mode === 3) {
+        const m = got[2].match(/^Add the two: the power rule part .+ ([=≈]) (\S+), plus the exponent rule part .+ ([=≈]) (\S+), makes (\S+)\.$/);
+        if (!m || !near3(m[2], P) || !near3(m[4], E) || !near3(m[5], R)) fail('logdiff', key, `the sum is wrong: ${got[2]}`);
+        if (!/^That is y′ exactly\./.test(last)) fail('logdiff', key, `the sum verdict is wrong: ${last}`);
+      } else {
+        const v = mode === 1 ? P : E, m = got[2].match(/^The slip uses the (power|exponent) rule, .*: y′ = .+ ([=≈]) (\S+)\.$/);
+        if (!m || m[1] !== (mode === 1 ? 'power' : 'exponent') || !near3(m[3], v)) fail('logdiff', key, `the slip is wrong: ${got[2]}`);
+        const same = Math.abs(v - R) < 1e-6;
+        if (same !== /by luck/.test(last) || (same && Math.abs(Math.log(x)) > 1e-12)) fail('logdiff', key, `luck is said at the wrong time: ${last}`);
+        if (!same && (!last.startsWith(`So the ${mode === 1 ? 'power' : 'exponent'} rule is wrong`) || !last.endsWith(`The slope is ${W.num(R)}.`) || !near3(last.match(/ ([=≈]) (\S+)\. The slope/)?.[2] || 'NaN', mode === 1 ? E : P))) fail('logdiff', key, `the slip is not caught: ${last}`);
+      }
+      if (/(^|[^\w)])−[\d.]+²/.test(txt)) fail('logdiff', key, 'a negative number is squared without brackets');
+      /* the figure: the point on the curve, the tangent's slope, the slip's line only when it differs */
+      const svg = W.svg(), [a, b] = S.D, [c, d] = S.R;
+      const PX = v => W.L + (v - a) / (b - a) * W.W, PY = v => W.T + W.Hh - (v - c) / (d - c) * W.Hh;
+      const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+      if (!pt || Math.abs(+pt[1] - PX(x)) > 0.01 || Math.abs(+pt[2] - PY(y)) > 0.01) fail('logdiff', key, 'the gold point is not on the curve at x');
+      const line = k2 => { const m = svg.match(new RegExp(`data-k="${k2}" x1="([\\d.-]+)" y1="([\\d.-]+)" x2="([\\d.-]+)" y2="([\\d.-]+)"`)); return m && m.slice(1).map(Number); };
+      const slope = L => -((L[3] - L[1]) / (W.Hh / (d - c))) / ((L[2] - L[0]) / (W.W / (b - a)));
+      const T = line('tan'), wrongV = mode === 1 ? P : mode === 2 ? E : R, slipOn = mode > 0 && Math.abs(wrongV - R) > 1e-6, Sl = line('slip');
+      if (!T || Math.abs(slope(T) - R) > 0.02 * Math.max(1, Math.abs(R))) fail('logdiff', key, `the tangent is drawn with slope ${T && slope(T)}, not ${R}`);
+      if (slipOn !== !!Sl || (Sl && Math.abs(slope(Sl) - wrongV) > 0.02 * Math.max(1, Math.abs(wrongV)))) fail('logdiff', key, `the slip's line is wrong`);
+      for (const L of [T, Sl].filter(Boolean)) if (L.some((v, i) => i % 2 ? v < W.T - 0.5 || v > W.T + W.Hh + 0.5 : v < W.L - 0.5 || v > W.L + W.W + 0.5)) fail('logdiff', key, 'a line runs off the chart');
+      const poly = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!poly) fail('logdiff', key, 'no curve');
+      else for (const q of poly[1].split(' ')) { const [qx, qy] = q.split(',').map(Number), vx = a + (qx - W.L) / W.W * (b - a); pts++;
+        if (Math.abs(qy - PY(Y(S.id, vx))) > 0.05 || qy < W.T - 0.5) { fail('logdiff', key, `the curve leaves y = ${S.y} at ${q}`); break; } }
+      if (!/aria-label="[^"]+"/.test(svg)) fail('logdiff', key, 'the figure has no description');
+      for (const g of W.GOALS) {
+        const want = truth[g.id](S.id, x, mode, R, P, E);
+        if (!!g.ok(W) !== want) fail('logdiff', g.id, `${key}: goal ${g.id} is ${want ? 'not ' : ''}met`);
+        if (want) found[g.id] = 1;
+      }
+    }));
+  });
+  for (const g of W.GOALS) if (!found[g.id]) fail('logdiff', g.id, 'no step finds this goal');
+  reset();
+  return { n, pts, goals: Object.keys(found).length };
 })();
 
 /* The inverse slope workshop: every inverse, every u and every method.
@@ -5855,6 +5961,7 @@ console.log(`  diagonal workshop states ${pad(diagNotes.n.toLocaleString(), 10)}
 console.log(`  trig integral guesses ${pad(trigIntNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the chain rule; every wave written parsed back and checked against F, f and F′, every sentence, both curves read back, ${trigIntNotes.goals} goals findable)`);
 console.log(`  tangent planes ${pad(tanPlaneNotes.n.toLocaleString(), 17)}  (the height and slopes found by nudging the surface, never from 2ax; every plane written parsed back and evaluated, every number worked checked, every sentence, both slices read back, ${tanPlaneNotes.goals} goals findable)`);
 console.log(`  inverse slopes ${pad(invSlopeNotes.n.toLocaleString(), 17)}  (true slopes found by nudging Math's own arcsin, arccos and arctan, never from the identities; every number worked checked, every sentence, ${invSlopeNotes.pts.toLocaleString()} curve points read back, ${invSlopeNotes.goals} goals findable)`);
+console.log(`  log slopes ${pad(logDiffNotes.n.toLocaleString(), 21)}  (true slopes found by nudging Math's own x to its power, never from ln x + 1; every number worked checked, every sentence, ${logDiffNotes.pts.toLocaleString()} curve points read back, ${logDiffNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);
