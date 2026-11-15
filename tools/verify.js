@@ -84,6 +84,7 @@ function loadGame() {
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoSets')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
+    ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -102,7 +103,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -2694,6 +2695,115 @@ const ladderNotes = (() => {
   });
   for (const g of K.GOALS) if (!found[g.id]) fail('ladder', g.id, 'this goal cannot be found');
   K.si = 0; K.k = K.SETS[0].s; K.touched = false; K.done.clear();
+  return { n, goals: Object.keys(found).length };
+})();
+
+/* The diagonal workshop: every pair of columns on every matrix. Whether an
+   arrow is an eigenvector is decided here from A·p and p directly; P⁻¹AP is
+   worked here from the inverse formula in decimals, never from the
+   workshop's adj(P)·A·P; every number the readout writes, fractions
+   included, is parsed back and checked; each goal is decided independently;
+   and the figure's arrows are read back from its spec. */
+const diagNotes = (() => {
+  const W = Diag;
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => { t = t.trim().replace(/−/g, '-'); const m = t.match(/^(-?\d+)(?:\/(\d+))?$/); if (!m) return NaN;
+    if (m[2] !== undefined) { const a = Math.abs(+m[1]), b = +m[2]; let x = a, y = b; while (y) [x, y] = [y, x % y];
+      if (b < 2 || x !== 1) return NaN; }
+    return m[2] === undefined ? +m[1] : +m[1] / +m[2]; };
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  if (W.SETS.map(S => S.id).join() !== 'sym,skew,shear') fail('diag', 'sets', W.SETS.map(S => S.id).join());
+  const want = { sym: '2,1,1,2', skew: '4,1,2,3', shear: '1,1,0,1' };
+  W.SETS.forEach(S => { if (S.A.flat().join() !== want[S.id]) fail('diag', S.id, 'the matrix is not the one the workshop is built round'); });
+  const mul = (A, v) => [A[0][0] * v[0] + A[0][1] * v[1], A[1][0] * v[0] + A[1][1] * v[1]];
+  const isEig = (A, v) => { const w = mul(A, v); return Math.abs(w[0] * v[1] - w[1] * v[0]) < 1e-12; };
+  // which palette arrows are eigenvectors, decided here
+  const eigs = { sym: '1,1|1,-1|-1,1', skew: '1,1|1,-2', shear: '1,0' };
+  W.SETS.forEach(S => { const got = W.PAL.filter(v => isEig(S.A, v)).map(v => v.join()).join('|');
+    if (got !== eigs[S.id]) fail('diag', S.id, `the palette's eigenvectors are ${got}, not ${eigs[S.id]}`); });
+  if (new Set(W.PAL.map(v => v.join())).size !== W.PAL.length) fail('diag', 'palette', 'an arrow is offered twice');
+  const reset = () => { W.touched = false; W.si = 0; W.start(); W.done.clear(); W.seen.forEach(S => S.clear()); };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('diag', g.id, 'met where the workshop opens');
+  W.SETS.forEach((S, si) => { reset(); W.pick((si + 1) % 3); W.col(0, 2); W.pick(si);
+    if (W.si !== si || W.c.join() !== S.c.join()) fail('diag', S.id, 'picking a matrix does not start its columns afresh');
+    for (const g of W.GOALS) if (g.ok(W)) fail('diag', g.id, `met where ${S.id} starts, so picking it gives the goal away`); });
+  let n = 0; const found = {};
+  const check = (key) => {
+    n++;
+    const S = W.SETS[W.si], A = S.A, P = [W.PAL[W.c[0]], W.PAL[W.c[1]]], sub = ['₁', '₂'];
+    const e = P.map(v => isEig(A, v)), lam = P.map(v => { const w = mul(A, v); return (w[0] * v[0] + w[1] * v[1]) / (v[0] * v[0] + v[1] * v[1]); });
+    const det = P[0][0] * P[1][1] - P[1][0] * P[0][1];
+    let M = null;
+    if (det !== 0) { // P⁻¹ = [[d, −b], [−c, a]] / det with P = [[a, b], [c, d]], columns p₁ = (a, c), p₂ = (b, d)
+      const a = P[0][0], b = P[1][0], c = P[0][1], d = P[1][1];
+      const Pi = [[d / det, -b / det], [-c / det, a / det]], AP = [mul(A, P[0]), mul(A, P[1])];
+      M = [0, 1].map(i => [0, 1].map(j => Pi[i][0] * AP[j][0] + Pi[i][1] * AP[j][1])); }
+    const L = W.working(), all = L.join('\n');
+    if (!L[0].includes(`p₁ = (${neg(P[0][0])}, ${neg(P[0][1])}) and p₂ = (${neg(P[1][0])}, ${neg(P[1][1])})`)) fail('diag', key, `the columns are not named: ${L[0]}`);
+    if (!L[0].includes(`rows (${neg(A[0][0])}, ${neg(A[0][1])}) and (${neg(A[1][0])}, ${neg(A[1][1])})`)) fail('diag', key, `A is not named: ${L[0]}`);
+    for (const k of [0, 1]) { const line = L[1 + k], m = line.match(/^A·p[₁₂] = \((\S+), (\S+)\)/);
+      const w = mul(A, P[k]);
+      if (!m || num(m[1]) !== w[0] || num(m[2]) !== w[1]) fail('diag', key, `A·p${sub[k]} is wrong: ${line}`);
+      const says = / is an eigenvector, with eigenvalue (\S+)\.$/.exec(line);
+      if (!!says !== e[k] || / is not an eigenvector/.test(line) === e[k]) fail('diag', key, `p${sub[k]} is called the wrong thing: ${line}`);
+      if (says && !near(num(says[1]), lam[k])) fail('diag', key, `the eigenvalue is wrong: ${line}`);
+      if (says && !line.includes(`= ${says[1]}·p${sub[k]}`)) fail('diag', key, `A·p is not written as λ·p: ${line}`); }
+    const dm = L[3].match(/^det P = \((\S+)\)\((\S+)\) − \((\S+)\)\((\S+)\) = (\S+)\.$/);
+    if (!dm || num(dm[5]) !== det || num(dm[1]) !== P[0][0] || num(dm[2]) !== P[1][1] || num(dm[3]) !== P[1][0] || num(dm[4]) !== P[0][1]) fail('diag', key, `det P is wrong: ${L[3]}`);
+    if (det === 0) {
+      if (!/P has no inverse/.test(all) || /P⁻¹AP has rows/.test(all)) fail('diag', key, 'two columns on one line are not turned away');
+    } else {
+      const rm = all.match(/P⁻¹AP has rows \((\S+), (\S+)\) and \((\S+), (\S+)\)\./);
+      if (!rm || ![1, 2, 3, 4].every(t => near(num(rm[t]), M[(t - 1) >> 1][(t - 1) & 1]))) fail('diag', key, `P⁻¹AP is wrong: ${rm ? rm[0] : all}`);
+      const diagSays = /That is diagonal: D has (\S+) then (\S+) on its diagonal/.exec(all);
+      if (!!diagSays !== (e[0] && e[1])) fail('diag', key, 'diagonal is said at the wrong time');
+      if (diagSays && !(near(num(diagSays[1]), M[0][0]) && near(num(diagSays[2]), M[1][1]) && near(M[0][1], 0) && near(M[1][0], 0))) fail('diag', key, `D is wrong: ${diagSays[0]}`);
+      const half = /Only p([₁₂]) is an eigenvector, so only column (\d) of P⁻¹AP is cleared: (\S+) on the diagonal and 0 beside it\. Column (\d) still has (\S+) off the diagonal\./.exec(all);
+      if (!!half !== (e[0] !== e[1])) fail('diag', key, 'the one-column sentence shows at the wrong time');
+      if (half) { const k = e[0] ? 0 : 1, j = 1 - k;
+        if (half[1] !== sub[k] || +half[2] !== k + 1 || +half[4] !== j + 1 || !near(num(half[3]), M[k][k]) || !near(M[j][k], 0)
+          || !near(num(half[5]), M[k][j]) || near(M[k][j], 0)) fail('diag', key, `the cleared column is wrong: ${half[0]}`); }
+      if (/Neither column is an eigenvector/.test(all) !== (!e[0] && !e[1])) fail('diag', key, 'the neither sentence shows at the wrong time');
+      if (/meet at a right angle/.test(all) !== (W.si === 0 && e[0] && e[1])) fail('diag', key, 'the right-angle sentence shows at the wrong time');
+      if (/meet at a right angle/.test(all) && P[0][0] * P[1][0] + P[0][1] * P[1][1] !== 0) fail('diag', key, 'the eigenvectors said to meet at a right angle do not');
+    }
+    if (/not diagonalisable/.test(all) !== (W.si === 2 && det !== 0 && e[0] !== e[1])) fail('diag', key, 'the shear verdict shows at the wrong time');
+    if ((W.si === 2) !== /shear/i.test(all)) fail('diag', key, 'the shear note shows on the wrong matrix');
+    // the figure, read back from its spec
+    const F = W.spec(); checkFigure(F, 'diag', key);
+    const V = F.vecs.map(o => o.v.join()), wantV = [P[0], P[1], mul(A, P[0]), mul(A, P[1])].map(v => v.join());
+    if (V.join('|') !== wantV.join('|') || F.lines.map(v => v.join()).join('|') !== [P[0], P[1]].map(v => v.join()).join('|'))
+      fail('diag', key, 'the figure draws the wrong arrows');
+    if (new Set(F.vecs.map(o => o.col)).size !== 4) fail('diag', key, 'two arrows share a colour');
+    if (F.vecs.some(o => o.from && o.from.some(x => x !== 0))) fail('diag', key, 'an arrow is drawn from somewhere other than the origin');
+    // the goals, decided here
+    const truth = { diag: W.si === 0 && det !== 0 && e[0] && e[1], half: W.si !== 2 && det !== 0 && e[0] !== e[1], flat: det === 0,
+      skew: W.si === 1 && det !== 0 && e[0] && e[1], shear: W.si === 2 && det !== 0 && e[0] !== e[1] };
+    for (const g of W.GOALS) if (g.id in truth) { if (g.ok(W) !== truth[g.id]) fail('diag', g.id, `${key}: goal ${g.id} is ${g.ok(W) ? '' : 'not '}met`);
+      if (truth[g.id]) found[g.id] = 1; }
+  };
+  W.SETS.forEach((S, si) => {
+    for (let i = 0; i < W.PAL.length; i++) for (let j = 0; j < W.PAL.length; j++) {
+      reset(); W.pick(si); W.col(0, i); W.col(1, j); check(`${S.id} p₁=${W.PAL[i]} p₂=${W.PAL[j]}`); }
+  });
+  // D follows P: both orders on one matrix, tracked here
+  let seed = 11; const rnd = k => { seed = (seed * 1103515245 + 12345) % 2147483648; return Math.floor(seed / 2147483648 * k); };
+  for (let game = 0; game < 40; game++) {
+    reset(); const seen = W.SETS.map(() => new Set());
+    for (let step = 0; step < 60; step++) {
+      if (rnd(8) === 0) W.pick(rnd(3)); else W.col(rnd(2), rnd(W.PAL.length));
+      const A = W.SETS[W.si].A, P = [W.PAL[W.c[0]], W.PAL[W.c[1]]];
+      const det = P[0][0] * P[1][1] - P[1][0] * P[0][1];
+      if (det !== 0 && P.every(v => isEig(A, v))) seen[W.si].add(P.map(v => { const w = mul(A, v); return w[0] / v[0] || w[1] / v[1]; }).join());
+      const o = W.GOALS.find(g => g.id === 'order');
+      if (o.ok(W) !== seen.some(S => S.size >= 2)) fail('diag', 'order', `game ${game} step ${step}: goal order is ${o.ok(W) ? '' : 'not '}met`);
+      if (o.ok(W)) found.order = 1;
+      check(`game ${game} step ${step}`);
+    }
+  }
+  for (const g of W.GOALS) if (!found[g.id]) fail('diag', g.id, 'this goal cannot be found');
+  reset();
   return { n, goals: Object.keys(found).length };
 })();
 
@@ -5418,6 +5528,7 @@ console.log(`  cross products crossed  ${pad(crossNotes.n.toLocaleString(), 10)}
 console.log(`  quotients divided       ${pad(quotNotes.n.toLocaleString(), 10)}  (each slope found by a nudge on f/g, never by the rule; every product in every worked line evaluated with its values, both slips checked to give what they give, every sentence, the curve, gap, point and lines read back, ${quotNotes.goals} goals findable)`);
 console.log(`  antiderivatives guessed ${pad(antiNotes.n.toLocaleString(), 10)}  (each guess judged by a nudge on F, never by the power rule; every term written parsed back and checked against F and its slope, every sentence, both curves read back, ${antiNotes.goals} goals findable)`);
 console.log(`  transpose moves played ${pad(transposeNotes.n.toLocaleString(), 10)}  (where each entry belongs decided from (Aᵀ)ₚq = A_qp, never by the workshop; every entry tried in every slot and 900 games at random, every sentence parsed back, both grids read cell by cell, ${transposeNotes.goals} goals findable)`);
+console.log(`  diagonal workshop states ${pad(diagNotes.n.toLocaleString(), 10)}  (eigenvectors decided from A·p and p, P⁻¹AP from the inverse formula, never by the workshop; every pair of columns on every matrix and 40 games at random, every number parsed back, the figure read from its spec, ${diagNotes.goals} goals findable)`);
 console.log(`  hands-on links           ${pad(handsOnNotes.topics.toLocaleString(), 10)}  (topics a fight can point to a workshop for, across ${handsOnNotes.mods} workshops, each named as the Tome names it and opening)`);
 console.log(`  downhill walk states       ${pad(descentNotes.n.toLocaleString(), 10)}  (f, ∇f, each step and what it did, ${descentNotes.goals} goals findable)`);
 console.log(`  limit workshop states      ${pad(limitNotes.n.toLocaleString(), 10)}  (values, working, each side's trend, ${limitNotes.goals} goals findable)`);

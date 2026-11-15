@@ -1696,6 +1696,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ DIAGONAL WORKSHOP ============ -->
+  <div class="screen" id="s-diag">
+    <div class="panel"><h2>🔑 Diagonal Workshop</h2><div class="sub">To diagonalise A, build P from eigenvectors: then P⁻¹AP is a diagonal D. Choose P's two columns by hand and watch P⁻¹AP worked out, column by column.</div></div>
+    <div class="panel">
+      <div id="dgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
+      <div id="dgFig"></div>
+      <div id="dgCols"></div>
+      <div id="dgRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="dgGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3705,6 +3720,7 @@ const WORKSHOP_FOR = (() => {
     Quot:    ["➗ Quotient Rule Workshop", ['quotient']],
     Anti:    ["🪃 Antiderivative Workshop", ['indefPower']],
     Transpose:["🪞 Transpose Workshop", ['transpose']],
+    Diag:    ["🔑 Diagonal Workshop", ['diagonalisable']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13102,6 +13118,7 @@ const UI = {
     if(id==='s-quot') Quot.render();
     if(id==='s-anti') Anti.render();
     if(id==='s-transpose') Transpose.render();
+    if(id==='s-diag') Diag.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13885,6 +13902,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪞 Transpose Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose.</div>
          <button class="btn sm" id="tomeTranspose" style="width:auto;margin-top:8px" onclick="Transpose.open()">Open the transpose workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🔑 Diagonal Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise.</div>
+         <button class="btn sm" id="tomeDiag" style="width:auto;margin-top:8px" onclick="Diag.open()">Open the diagonal workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -19377,6 +19399,119 @@ const Transpose = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE TRANSPOSE','every row turned','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal ----------
+   Build P from two arrows by hand and watch P⁻¹AP worked out exactly. Each
+   column of P that is an eigenvector clears its own column of P⁻¹AP down to
+   its eigenvalue, so two independent eigenvectors leave a diagonal D, in the
+   order P's columns came in. Two arrows on one line give no inverse at all,
+   and the shear has only one line of eigenvectors, so nothing diagonalises
+   it. Nothing is saved. */
+const Diag = {
+  SETS:[
+    {id:'sym', btn:'Symmetric', A:[[2,1],[1,2]], c:[0,1]},
+    {id:'skew', btn:'Lopsided', A:[[4,1],[2,3]], c:[0,1]},
+    {id:'shear', btn:'Shear', A:[[1,1],[0,1]], c:[1,2]}
+  ],
+  /* the arrows a column of P can be */
+  PAL:[[1,0],[0,1],[1,1],[1,-1],[1,2],[1,-2],[2,1],[-1,1]],
+  si:0, c:null, touched:false,
+  seen:[new Set(), new Set(), new Set()],
+  done:new Set(),
+  GOALS:[
+    {id:'diag', t:'On the symmetric matrix, build a P that makes P⁻¹AP diagonal.', toast:'Diagonal at last',
+     ok:K=>K.si===0 && K.diag()},
+    {id:'half', t:'Make just one column of P an eigenvector, and see only its column of P⁻¹AP cleared.', toast:'Half cleared',
+     ok:K=>K.si!==2 && K.det()!==0 && K.eig(0)!==K.eig(1)},
+    {id:'flat', t:'Put two arrows on one line into P, and see why that fails.', toast:'No inverse',
+     ok:K=>K.det()===0},
+    {id:'order', t:'Make P⁻¹AP diagonal both ways round on one matrix, and see D follow P.', toast:'D follows P',
+     ok:K=>K.seen.some(S=>S.size>=2)},
+    {id:'skew', t:'Diagonalise the lopsided matrix too.', toast:'Diagonal again',
+     ok:K=>K.si===1 && K.diag()},
+    {id:'shear', t:'On the shear, find its one eigenvector, and see why it cannot be diagonalised.', toast:'Not diagonalisable',
+     ok:K=>K.si===2 && K.det()!==0 && K.eig(0)!==K.eig(1)}
+  ],
+  set(){ return this.SETS[this.si]; },
+  A(){ return this.set().A; },
+  start(){ this.c=this.set().c.slice(); },
+  p(k){ return this.PAL[this.c[k]]; },
+  Ap(k){ const A=this.A(), p=this.p(k); return [A[0][0]*p[0]+A[0][1]*p[1], A[1][0]*p[0]+A[1][1]*p[1]]; },
+  /* p is an eigenvector when A·p lies on p's own line: their cross term is 0 */
+  eig(k){ const p=this.p(k), q=this.Ap(k); return p[0]*q[1]-p[1]*q[0]===0; },
+  lam(k){ const p=this.p(k), q=this.Ap(k); return (p[0]*q[0]+p[1]*q[1])/(p[0]*p[0]+p[1]*p[1]); },
+  det(){ const a=this.p(0), b=this.p(1); return a[0]*b[1]-b[0]*a[1]; },
+  /* P⁻¹AP as whole numbers over det P: adj(P)·A·P */
+  top(){ const a=this.p(0), b=this.p(1), adj=[[b[1],-b[0]],[-a[1],a[0]]], AP=[this.Ap(0),this.Ap(1)];
+    return [0,1].map(i=>[0,1].map(j=>adj[i][0]*AP[j][0]+adj[i][1]*AP[j][1])); },
+  diag(){ return this.det()!==0 && this.eig(0) && this.eig(1); },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a; },
+  frac(n,d){ if(d<0){ n=-n; d=-d; } if(n===0) return '0'; const g=this.gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; },
+  vec(v){ return \`(\${neg(v[0])}, \${neg(v[1])})\`; },
+  /* what is in P⁻¹AP, row by row */
+  M(){ const N=this.top(), d=this.det(); return N.map(r=>r.map(x=>this.frac(x,d))); },
+  note(){ if(this.diag()) this.seen[this.si].add(this.lam(0)+','+this.lam(1)); },
+  working(){
+    const A=this.A(), out=[], P=[this.p(0),this.p(1)], sub=['₁','₂'];
+    out.push(\`A has rows \${this.vec(A[0])} and \${this.vec(A[1])}. P has columns p₁ = \${this.vec(P[0])} and p₂ = \${this.vec(P[1])}.\`);
+    for(const k of [0,1]) out.push(this.eig(k)
+      ? \`A·p\${sub[k]} = \${this.vec(this.Ap(k))} = \${neg(this.lam(k))}·p\${sub[k]}, so p\${sub[k]} is an eigenvector, with eigenvalue \${neg(this.lam(k))}.\`
+      : \`A·p\${sub[k]} = \${this.vec(this.Ap(k))}, which is not a multiple of p\${sub[k]} = \${this.vec(P[k])}, so p\${sub[k]} is not an eigenvector.\`);
+    const d=this.det();
+    out.push(\`det P = (\${neg(P[0][0])})(\${neg(P[1][1])}) − (\${neg(P[1][0])})(\${neg(P[0][1])}) = \${neg(d)}.\`);
+    if(d===0){
+      out.push('So p₁ and p₂ lie on one line, P has no inverse, and P⁻¹AP cannot be formed at all. P needs two independent columns.');
+    } else {
+      const M=this.M();
+      out.push(\`So P has an inverse, and P⁻¹AP has rows (\${M[0].join(', ')}) and (\${M[1].join(', ')}).\`);
+      if(this.diag()){
+        out.push(\`That is diagonal: D has \${neg(this.lam(0))} then \${neg(this.lam(1))} on its diagonal, the eigenvalues in the order of P's columns. So A = PDP⁻¹: along each eigenvector, A only stretches.\`);
+        if(this.si===0) out.push('A is symmetric, and its two eigenvectors meet at a right angle.');
+      } else if(this.eig(0)!==this.eig(1)){
+        const k=this.eig(0)?0:1, j=1-k;
+        out.push(\`Only p\${sub[k]} is an eigenvector, so only column \${k+1} of P⁻¹AP is cleared: \${neg(this.lam(k))} on the diagonal and 0 beside it. Column \${j+1} still has \${M[k][j]} off the diagonal.\`);
+      } else out.push('Neither column is an eigenvector, so neither column of P⁻¹AP is cleared.');
+    }
+    if(this.si===2) out.push(d!==0 && this.eig(0)!==this.eig(1)
+      ? 'There is no second eigenvector to find: the shear\\'s only eigenvalue is 1, and every eigenvector lies along (1, 0). With one line of eigenvectors, no P makes P⁻¹AP diagonal, so this shear is not diagonalisable.'
+      : 'A shear slides arrows sideways. Look for the arrows it leaves on their own line.');
+    return out;
+  },
+  spec(){
+    const P=[this.p(0),this.p(1)], Q=[this.Ap(0),this.Ap(1)];
+    return {kind:'plane', vecs:[
+        {v:P[0], col:FIG_COL.a, label:'p₁'}, {v:P[1], col:FIG_COL.c, label:'p₂'},
+        {v:Q[0], col:FIG_COL.b, label:'Ap₁'}, {v:Q[1], col:FIG_COL.d, label:'Ap₂'}],
+      lines:[P[0],P[1]],
+      caption:'p₁ in blue and p₂ in green, each on its dashed line; A·p₁ in gold and A·p₂ in red. An eigenvector\\'s A·p stays on its own dashed line.'};
+  },
+  open(){ UI.go('s-diag'); },
+  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
+  col(k,i){ this.c[k]=i; this.touched=true; this.note(); this.render(); },
+  render(){
+    if(!this.c) this.start();
+    document.getElementById('dgSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Diag.pick(\${i})" aria-label="\${s.btn}: A has rows \${this.vec(s.A[0])} and \${this.vec(s.A[1])}">\${s.btn}</button>\`).join('');
+    document.getElementById('dgCols').innerHTML=[0,1].map(k=>
+      \`<div class="small" style="margin:6px 0 2px">Column \${k+1} of P, p\${['₁','₂'][k]}</div>\`+
+      \`<div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Column \${k+1} of P">\`+
+      this.PAL.map((v,i)=>\`<button class="btn sm ghost" data-col="\${k},\${i}" aria-pressed="\${this.c[k]===i}" onclick="Diag.col(\${k},\${i})" aria-label="Make column \${k+1} of P \${this.vec(v)}">\${this.vec(v)}</button>\`).join('')+
+      \`</div>\`).join('');
+    Figure.render(this.spec(), document.getElementById('dgFig'));
+    document.getElementById('dgRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('dgGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE DIAGONAL','every matrix unlocked','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

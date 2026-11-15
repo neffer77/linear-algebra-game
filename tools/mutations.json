@@ -1,271 +1,285 @@
 {
- "change": "The Transpose Workshop: rows into columns, by hand",
+ "change": "The Diagonal Workshop: eigenvectors make P⁻¹AP diagonal",
  "mutations": [
   {
-   "name": "the wide matrix repeats an entry",
+   "name": "the symmetric matrix is lopsided",
    "file": "index.html",
-   "find": "{id:'wide', btn:'Wide', A:[[1,2,3],[4,5,6]]}",
-   "replace": "{id:'wide', btn:'Wide', A:[[1,2,3],[4,2,6]]}",
+   "find": "{id:'sym', btn:'Symmetric', A:[[2,1],[1,2]], c:[0,1]}",
+   "replace": "{id:'sym', btn:'Symmetric', A:[[2,1],[2,2]], c:[0,1]}",
    "run": "verify"
   },
   {
-   "name": "the symmetric matrix is not",
+   "name": "the shear starts on its eigenvector",
    "file": "index.html",
-   "find": "A:[[1,7,-2],[7,4,0],[-2,0,9]]}",
-   "replace": "A:[[1,7,-2],[7,4,0],[-2,1,9]]}",
+   "find": "{id:'shear', btn:'Shear', A:[[1,1],[0,1]], c:[1,2]}",
+   "replace": "{id:'shear', btn:'Shear', A:[[1,1],[0,1]], c:[0,2]}",
    "run": "verify"
   },
   {
-   "name": "a slot takes the entry from the same spot",
+   "name": "the palette loses (1, −2)",
    "file": "index.html",
-   "find": "  T(p,q){ return this.A()[q][p]; },",
-   "replace": "  T(p,q){ return this.A()[p]?.[q] ?? this.A()[q][p]; },",
+   "find": "  PAL:[[1,0],[0,1],[1,1],[1,-1],[1,2],[1,-2],[2,1],[-1,1]],",
+   "replace": "  PAL:[[1,0],[0,1],[1,1],[1,-1],[1,2],[2,-1],[2,1],[-1,1]],",
    "run": "verify"
   },
   {
-   "name": "Aᵀ keeps A's shape",
+   "name": "A·p multiplies by Aᵀ",
    "file": "index.html",
-   "find": "this.fill=Array.from({length:c},()=>Array(r).fill(null));",
-   "replace": "this.fill=Array.from({length:r},()=>Array(c).fill(null));",
+   "find": "return [A[0][0]*p[0]+A[0][1]*p[1], A[1][0]*p[0]+A[1][1]*p[1]]; },",
+   "replace": "return [A[0][0]*p[0]+A[1][0]*p[1], A[0][1]*p[0]+A[1][1]*p[1]]; },",
    "run": "verify"
   },
   {
-   "name": "a slot takes any number",
+   "name": "an eigenvector test that takes any arrow",
    "file": "index.html",
-   "find": "    if(x===this.T(p,q)){ this.fill[p][q]=x;",
-   "replace": "    if(true){ this.fill[p][q]=x;",
+   "find": "return p[0]*q[1]-p[1]*q[0]===0; },",
+   "replace": "return p[0]*q[1]-p[1]*q[0]===0 || p[0]===1; },",
    "run": "verify"
   },
   {
-   "name": "a placed entry can be used again",
+   "name": "the eigenvalue reads the first part only",
    "file": "index.html",
-   "find": "this.fill[p][q]=x; this.used[i][j]=true; this.sel=null;",
-   "replace": "this.fill[p][q]=x; this.sel=null;",
+   "find": "  lam(k){ const p=this.p(k), q=this.Ap(k); return (p[0]*q[0]+p[1]*q[1])/(p[0]*p[0]+p[1]*p[1]); },",
+   "replace": "  lam(k){ const p=this.p(k), q=this.Ap(k); return q[0]; },",
    "run": "verify"
   },
   {
-   "name": "a placed entry stays held",
+   "name": "det P is the wrong way round",
    "file": "index.html",
-   "find": "this.fill[p][q]=x; this.used[i][j]=true; this.sel=null;",
-   "replace": "this.fill[p][q]=x; this.used[i][j]=true;",
+   "find": "  det(){ const a=this.p(0), b=this.p(1); return a[0]*b[1]-b[0]*a[1]; },",
+   "replace": "  det(){ const a=this.p(0), b=this.p(1); return b[0]*a[1]-a[0]*b[1]; },",
    "run": "verify"
   },
   {
-   "name": "a full slot takes another entry",
+   "name": "adj(P) is not swapped",
    "file": "index.html",
-   "find": "  drop(p,q){ if(!this.sel || this.fill[p][q]!==null) return;",
-   "replace": "  drop(p,q){ if(!this.sel) return;",
+   "find": "adj=[[b[1],-b[0]],[-a[1],a[0]]]",
+   "replace": "adj=[[a[0],-b[0]],[-a[1],b[1]]]",
    "run": "verify"
   },
   {
-   "name": "a slot takes something with nothing held",
+   "name": "P⁻¹AP is AP",
    "file": "index.html",
-   "find": "  drop(p,q){ if(!this.sel || this.fill[p][q]!==null) return;",
-   "replace": "  drop(p,q){ if(!this.sel){ this.sel=[0,0]; } if(this.fill[p][q]!==null) return;",
+   "find": "return [0,1].map(i=>[0,1].map(j=>adj[i][0]*AP[j][0]+adj[i][1]*AP[j][1])); },",
+   "replace": "return [0,1].map(i=>[0,1].map(j=>AP[j][i]*this.det())); },",
    "run": "verify"
   },
   {
-   "name": "a used entry can be picked up",
+   "name": "diagonal needs only one eigenvector",
    "file": "index.html",
-   "find": "  take(i,j){ if(this.used[i][j]) return;",
-   "replace": "  take(i,j){",
+   "find": "  diag(){ return this.det()!==0 && this.eig(0) && this.eig(1); },",
+   "replace": "  diag(){ return this.det()!==0 && (this.eig(0) || this.eig(1)); },",
    "run": "verify"
   },
   {
-   "name": "a second tap does not put it back",
+   "name": "diagonal with no inverse",
    "file": "index.html",
-   "find": "this.sel = this.sel && this.sel[0]===i && this.sel[1]===j ? null : [i,j];",
-   "replace": "this.sel = [i,j];",
+   "find": "  diag(){ return this.det()!==0 && this.eig(0) && this.eig(1); },",
+   "replace": "  diag(){ return this.eig(0) && this.eig(1); },",
    "run": "verify"
   },
   {
-   "name": "picking a matrix keeps the old Aᵀ",
+   "name": "fractions are not reduced",
    "file": "index.html",
-   "find": "  pick(i){ this.si=i; this.start(); this.touched=true;",
-   "replace": "  pick(i){ this.si=i; this.touched=true;",
+   "find": "const g=this.gcd(n,d); n/=g; d/=g;",
+   "replace": "const g=1;",
    "run": "verify"
   },
   {
-   "name": "the column goal takes any set",
+   "name": "a fraction keeps its minus at the bottom",
    "file": "index.html",
-   "find": "ok:K=>K.si===0 && [0,1].some(q=>K.fill.every(row=>row[q]!==null))},",
-   "replace": "ok:K=>[0,1].some(q=>K.fill.every(row=>row[q]!==null))},",
+   "find": "  frac(n,d){ if(d<0){ n=-n; d=-d; }",
+   "replace": "  frac(n,d){",
    "run": "verify"
   },
   {
-   "name": "the diagonal goal takes any entry",
+   "name": "the eigenvalue is called 1",
    "file": "index.html",
-   "find": "ok:K=>!!K.last && K.last.kind==='good' && K.last.i===K.last.j && K.last.p===K.last.i",
-   "replace": "ok:K=>!!K.last && K.last.kind==='good' && K.last.p===K.last.i",
+   "find": "so p${sub[k]} is an eigenvector, with eigenvalue ${neg(this.lam(k))}.`",
+   "replace": "so p${sub[k]} is an eigenvector, with eigenvalue 1.`",
    "run": "verify"
   },
   {
-   "name": "the slip goal takes any miss",
+   "name": "A·p is not written as λ·p",
    "file": "index.html",
-   "find": "ok:K=>!!K.last && K.last.kind==='miss' && K.last.p===K.last.i && K.last.q===K.last.j},",
-   "replace": "ok:K=>!!K.last && K.last.kind==='miss'},",
+   "find": "= ${neg(this.lam(k))}·p${sub[k]}, so p${sub[k]}",
+   "replace": "= λ·p${sub[k]}, so p${sub[k]}",
    "run": "verify"
   },
   {
-   "name": "the square goal is met half full",
+   "name": "the det line multiplies the wrong pairs",
    "file": "index.html",
-   "find": "ok:K=>K.si===1 && K.full()},",
-   "replace": "ok:K=>K.si===1 && K.count()>=2},",
+   "find": "out.push(`det P = (${neg(P[0][0])})(${neg(P[1][1])}) − (${neg(P[1][0])})(${neg(P[0][1])}) = ${neg(d)}.`);",
+   "replace": "out.push(`det P = (${neg(P[0][0])})(${neg(P[0][1])}) − (${neg(P[1][0])})(${neg(P[1][1])}) = ${neg(d)}.`);",
    "run": "verify"
   },
   {
-   "name": "the symmetric goal takes any set",
+   "name": "the det line shows the wrong value",
    "file": "index.html",
-   "find": "ok:K=>K.si===2 && K.full()}",
-   "replace": "ok:K=>K.full()}",
+   "find": "(${neg(P[0][1])}) = ${neg(d)}.`);",
+   "replace": "(${neg(P[0][1])}) = ${neg(Math.abs(d))}.`);",
    "run": "verify"
   },
   {
-   "name": "the opening keeps A's shape",
+   "name": "no inverse is not said",
    "file": "index.html",
-   "find": "      : `A is ${r}×${c}, so Aᵀ is ${c}×${r}. Row 1",
-   "replace": "      : `A is ${r}×${c}, so Aᵀ is ${r}×${c}. Row 1",
+   "find": "      out.push('So p₁ and p₂ lie on one line, P has no inverse, and P⁻¹AP cannot be formed at all. P needs two independent columns.');",
+   "replace": "      out.push('So P⁻¹AP has rows (0, 0) and (0, 0).');",
    "run": "verify"
   },
   {
-   "name": "the flip sentence names the old spot",
+   "name": "P⁻¹AP is written by columns",
    "file": "index.html",
-   "find": "and now sits in ${this.at(L.j,L.i,'Aᵀ')}.`);",
-   "replace": "and now sits in ${this.at(L.i,L.j,'Aᵀ')}.`);",
+   "find": "out.push(`So P has an inverse, and P⁻¹AP has rows (${M[0].join(', ')}) and (${M[1].join(', ')}).`);",
+   "replace": "out.push(`So P has an inverse, and P⁻¹AP has rows (${M[0][0]}, ${M[1][0]}) and (${M[0][1]}, ${M[1][1]}).`);",
    "run": "verify"
   },
   {
-   "name": "a lucky fit is called a flip",
+   "name": "D is read in the wrong order",
    "file": "index.html",
-   "find": "        if(L.p===L.j && L.q===L.i) out.push(L.i===L.j",
-   "replace": "        if(true) out.push(L.i===L.j",
+   "find": "D has ${neg(this.lam(0))} then ${neg(this.lam(1))} on its diagonal",
+   "replace": "D has ${neg(this.lam(1))} then ${neg(this.lam(0))} on its diagonal",
    "run": "verify"
   },
   {
-   "name": "the turned-away sentence names the wrong owner",
+   "name": "the right angle is claimed everywhere",
    "file": "index.html",
-   "find": "takes the entry from ${this.at(L.q,L.p,'A')}, which is ${neg(this.T(L.p,L.q))}.`+",
-   "replace": "takes the entry from ${this.at(L.p,L.q,'A')}, which is ${neg(this.T(L.p,L.q))}.`+",
+   "find": "        if(this.si===0) out.push('A is symmetric, and its two eigenvectors meet at a right angle.');",
+   "replace": "        out.push('A is symmetric, and its two eigenvectors meet at a right angle.');",
    "run": "verify"
   },
   {
-   "name": "the slip is named on every miss",
+   "name": "the cleared column is the wrong one",
    "file": "index.html",
-   "find": "          (L.p===L.i && L.q===L.j ? ' That is the slip",
-   "replace": "          (true ? ' That is the slip",
+   "find": "const k=this.eig(0)?0:1, j=1-k;",
+   "replace": "const k=this.eig(0)?1:0, j=1-k;",
    "run": "verify"
   },
   {
-   "name": "the held entry is not named",
+   "name": "the leftover entry is read from the wrong place",
    "file": "index.html",
-   "find": "    if(this.sel){ const [i,j]=this.sel;\n      out.push(`You are holding",
-   "replace": "    if(false){ const [i,j]=this.sel;\n      out.push(`You are holding",
+   "find": "Column ${j+1} still has ${M[k][j]} off the diagonal.`);",
+   "replace": "Column ${j+1} still has ${M[j][k]} off the diagonal.`);",
    "run": "verify"
   },
   {
-   "name": "the count is off by one",
+   "name": "the neither sentence is dropped",
    "file": "index.html",
-   "find": "    out.push(`${k} of ${N} slots of Aᵀ filled.`);",
-   "replace": "    out.push(`${k+1} of ${N} slots of Aᵀ filled.`);",
+   "find": "      } else out.push('Neither column is an eigenvector, so neither column of P⁻¹AP is cleared.');",
+   "replace": "      }",
    "run": "verify"
   },
   {
-   "name": "the column sentence reads a column of A",
+   "name": "the figure draws A·p₂ from p₁",
    "file": "index.html",
-   "find": "      const v=A[q].map(neg).join(', ');",
-   "replace": "      const v=A.map(row=>row[q]).map(neg).join(', ');",
+   "find": "{v:Q[1], col:FIG_COL.d, label:'Ap₂'}",
+   "replace": "{v:Q[1], from:P[0], col:FIG_COL.d, label:'Ap₂'}",
    "run": "verify"
   },
   {
-   "name": "a symmetric A is not said to be its own transpose",
+   "name": "the figure draws p₁ twice",
    "file": "index.html",
-   "find": "      if(this.sym()) out.push('And Aᵀ = A:",
-   "replace": "      if(false) out.push('And Aᵀ = A:",
+   "find": "{v:P[1], col:FIG_COL.c, label:'p₂'},",
+   "replace": "{v:P[0], col:FIG_COL.c, label:'p₂'},",
    "run": "verify"
   },
   {
-   "name": "the square summary swaps the diagonal",
+   "name": "the dashed lines are dropped",
    "file": "index.html",
-   "find": "stayed put, while ${neg(A[0][1])} and ${neg(A[1][0])} swapped places.`);",
-   "replace": "stayed put, while ${neg(A[0][0])} and ${neg(A[1][1])} swapped places.`);",
+   "find": "      lines:[P[0],P[1]],",
+   "replace": "      lines:[],",
    "run": "verify"
   },
   {
-   "name": "Aᵀ is drawn with A's width",
+   "name": "two arrows share a colour",
    "file": "index.html",
-   "find": "grid('A',r,c,a)+`<div aria-hidden=\"true\" style=\"font-size:20px;color:var(--dim)\">→</div>`+grid('Aᵀ',c,r,t)",
-   "replace": "grid('A',r,c,a)+`<div aria-hidden=\"true\" style=\"font-size:20px;color:var(--dim)\">→</div>`+grid('Aᵀ',r,c,t)",
+   "find": "{v:Q[0], col:FIG_COL.b, label:'Ap₁'}",
+   "replace": "{v:Q[0], col:FIG_COL.a, label:'Ap₁'}",
    "run": "verify"
   },
   {
-   "name": "the slots stay on with nothing held",
+   "name": "picking a matrix keeps the columns",
    "file": "index.html",
-   "find": "{off:x!==null || !this.sel, diag:p===q, miss, empty:x===null}",
-   "replace": "{off:x!==null, diag:p===q, miss, empty:x===null}",
+   "find": "  pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },\n  col(k,i)",
+   "replace": "  pick(i){ this.si=i; this.touched=true; this.render(); },\n  col(k,i)",
    "run": "verify"
   },
   {
-   "name": "the held entry is not marked",
+   "name": "the half goal takes the shear",
    "file": "index.html",
-   "find": "      a+=cell(`data-a=\"${i},${j}\" onclick=\"Transpose.take(${i},${j})\"`, neg(A[i][j]),\n        `Row ${i+1}, column ${j+1} of A: ${neg(A[i][j])}${u?', already placed':''}`, {on,",
-   "replace": "      a+=cell(`data-a=\"${i},${j}\" onclick=\"Transpose.take(${i},${j})\"`, neg(A[i][j]),\n        `Row ${i+1}, column ${j+1} of A: ${neg(A[i][j])}${u?', already placed':''}`, {on:false,",
+   "find": "     ok:K=>K.si!==2 && K.det()!==0 && K.eig(0)!==K.eig(1)},",
+   "replace": "     ok:K=>K.det()!==0 && K.eig(0)!==K.eig(1)},",
    "run": "verify"
   },
   {
-   "name": "the diagonal is not edged in Aᵀ",
+   "name": "the order goal takes one order",
    "file": "index.html",
-   "find": "{off:x!==null || !this.sel, diag:p===q,",
-   "replace": "{off:x!==null || !this.sel, diag:false,",
+   "find": "     ok:K=>K.seen.some(S=>S.size>=2)},",
+   "replace": "     ok:K=>K.seen.some(S=>S.size>=1)},",
    "run": "verify"
   },
   {
-   "name": "the slot that turned it away is not marked",
+   "name": "D orders are not recorded",
    "file": "index.html",
-   "find": "miss=!!L && L.kind==='miss' && L.p===p && L.q===q;",
-   "replace": "miss=false;",
+   "find": "  note(){ if(this.diag()) this.seen[this.si].add(this.lam(0)+','+this.lam(1)); },",
+   "replace": "  note(){ },",
    "run": "verify"
   },
   {
-   "name": "each set button loses its shape",
+   "name": "the skew goal takes any matrix",
    "file": "index.html",
-   "find": "aria-label=\"${s.btn}: a ${s.A.length}×${s.A[0].length} matrix\">",
-   "replace": "aria-label=\"${s.btn}\">",
-   "run": "play:transpose"
+   "find": "     ok:K=>K.si===1 && K.diag()},",
+   "replace": "     ok:K=>K.diag()},",
+   "run": "verify"
+  },
+  {
+   "name": "the workshop saves its columns",
+   "file": "index.html",
+   "find": "  col(k,i){ this.c[k]=i; this.touched=true;",
+   "replace": "  col(k,i){ this.c[k]=i; Game.s.dgCol=i; this.touched=true;",
+   "run": "play:diag"
+  },
+  {
+   "name": "the caption is dropped",
+   "file": "index.html",
+   "find": "      caption:'p₁ in blue and p₂ in green,",
+   "replace": "      caption2:'p₁ in blue and p₂ in green,",
+   "run": "play:diag"
+  },
+  {
+   "name": "an arrow button loses its name",
+   "file": "index.html",
+   "find": "aria-label=\"Make column ${k+1} of P ${this.vec(v)}\"",
+   "replace": "aria-label=\"\"",
+   "run": "play:diag"
+  },
+  {
+   "name": "the arrow buttons run in one row",
+   "file": "index.html",
+   "find": "      `<div class=\"wsModes\" style=\"flex-wrap:wrap\" role=\"group\" aria-label=\"Column ${k+1} of P\">`+",
+   "replace": "      `<div class=\"wsModes\" style=\"flex-wrap:nowrap\" role=\"group\" aria-label=\"Column ${k+1} of P\">`+",
+   "run": "play:diag"
+  },
+  {
+   "name": "the columns picked do not show",
+   "file": "index.html",
+   "find": "aria-pressed=\"${this.c[k]===i}\" onclick=\"Diag.col(${k},${i})\"",
+   "replace": "aria-pressed=\"false\" onclick=\"Diag.col(${k},${i})\"",
+   "run": "play:diag"
   },
   {
    "name": "no toast for a goal found",
    "file": "index.html",
    "find": "      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
    "replace": "      else { Sfx.good(); }\n    }\n  }\n};\n\n/* ---------- The cistern",
-   "run": "play:transpose"
+   "run": "play:diag"
   },
   {
-   "name": "the Tome loses the transpose workshop",
+   "name": "the Tome loses the diagonal workshop",
    "file": "index.html",
-   "find": "id=\"tomeTranspose\" style=\"width:auto;margin-top:8px\" onclick=\"Transpose.open()\"",
-   "replace": "id=\"tomeTransposeX\" style=\"width:auto;margin-top:8px\" onclick=\"Transpose.open()\"",
-   "run": "play:transpose"
-  },
-  {
-   "name": "the workshop saves its moves",
-   "file": "index.html",
-   "find": "    else this.last={kind:'miss',i,j,p,q};",
-   "replace": "    else { this.last={kind:'miss',i,j,p,q}; Game.s.tpMiss=1; }",
-   "run": "play:transpose"
-  },
-  {
-   "name": "the caption is dropped",
-   "file": "index.html",
-   "find": "<div class=\"figcap\">Tap an entry of A, then the slot",
-   "replace": "<div class=\"figcapX\">Tap an entry of A, then the slot",
-   "run": "play:transpose"
-  },
-  {
-   "name": "the grids run off a phone",
-   "file": "index.html",
-   "find": "style=\"display:grid;grid-template-columns:repeat(${m},40px);gap:5px\"",
-   "replace": "style=\"display:grid;grid-template-columns:repeat(${m},160px);gap:5px\"",
-   "run": "play:transpose"
+   "find": "id=\"tomeDiag\"",
+   "replace": "id=\"tomeDiagX\"",
+   "run": "play:diag"
   }
  ]
 }

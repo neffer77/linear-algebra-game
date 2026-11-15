@@ -88,6 +88,7 @@ const SUITES = [
   require('./play/quot'),        // the slope of f/g
   require('./play/anti'),        // the power rule run backwards
   require('./play/transpose'),   // rows into columns, by hand
+  require('./play/diag'),        // eigenvectors make P⁻¹AP diagonal
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
