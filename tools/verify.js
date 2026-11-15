@@ -47,6 +47,8 @@ function loadGame() {
     // can show is checked here: the determinant, the directions it keeps, and
     // whether each goal can be made inside its range at all.
     ';const Slope={' + script.slice(script.indexOf('  CURVES:['), script.indexOf('  open(){ UI.go(\'s-slope\'); },')) + '};exports.Slope=Slope;' +
+    // The area workshop, lifted the same way: after Slope's, so its CURVES is found from Area on.
+    ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
   return out;
@@ -60,7 +62,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1566,6 +1568,53 @@ const slopeNotes = (() => {
   return { n, goals: S.GOALS.length };
 })();
 
+/* Every state the area workshop can be in: three curves, seven counts of
+   rectangles and three places to take the height. The sum must be the true
+   Riemann sum (worked here from the curve, not from its own rule), the gap
+   it reports the true distance to an exact area that is itself checked
+   against a fine sum, and the working it prints must be true of the numbers
+   it prints: Δx, each height where they are listed, their total, and a
+   printed = only where nothing was rounded. At 64 midpoint rectangles the
+   sum must be within 0.01 of the integral, or the sentence that it closes
+   in would be hollow; each goal must be findable, and none met before the
+   player has turned anything. */
+const areaNotes = (() => {
+  const A = Area, found = {}, unnum = t => +String(t).replace(/[()]/g, '').replace('−', '-');
+  let n = 0;
+  for (let ci = 0; ci < A.CURVES.length; ci++) {
+    const C = A.CURVES[ci], F = x => figEval(C.f, x);
+    let fine = 0; const N = 200000, d = (C.b - C.a) / N;
+    for (let i = 0; i < N; i++) fine += F(C.a + (i + 0.5) * d) * d;
+    if (Math.abs(fine - C.exact) > 1e-6) fail('area', C.name, `the exact area ${C.exact} is not the integral (${fine})`);
+    if (Math.abs(unnum(C.ex.split(/ [=≈] /).pop()) - C.exact) > 1e-4) fail('area', C.name, `it is printed as ${C.ex}`);
+    for (let ni = 0; ni < A.NS.length; ni++) for (let ri = 0; ri < A.RULES.length; ri++) {
+      Object.assign(A, { ci, ni, ri });
+      const k = A.n(), w = (C.b - C.a) / k, off = [0, 0.5, 1][ri], key = `${C.name} n=${k} ${A.rule()}`;
+      n++;
+      let s = 0; for (let i = 0; i < k; i++) s += F(C.a + (i + off) * w);
+      if (Math.abs(A.sum() - s * w) > 1e-9) fail('area', key, `the sum is ${A.sum()}, the rectangles give ${s * w}`);
+      if (Math.abs(A.err() - (s * w - C.exact)) > 1e-9) fail('area', key, 'the gap is not the distance to the exact area');
+      if (unnum(A.num(A.dx())) !== w || !A.exact(A.dx())) fail('area', key, `Δx is printed as ${A.num(A.dx())}`);
+      if (k <= 4) {
+        // the short working lists every height, so each must be printed whole
+        const hs = A.heights();
+        if (hs.some(h => !A.exact(h)) || !A.exact(A.total())) fail('area', key, 'a listed height is rounded');
+        const tot = hs.reduce((t, h) => t + unnum(A.num(h)), 0);
+        if (Math.abs(tot - unnum(A.num(A.total()))) > 1e-9) fail('area', key, 'the listed heights do not add to the total printed');
+      }
+      const printed = unnum(A.num(A.sum()));
+      if (Math.abs(unnum(A.num(A.dx())) * A.total() - printed) > (A.exact(A.sum()) ? 1e-9 : 6e-5)) fail('area', key, 'Δx × total is not the sum printed');
+      if (A.eq(A.sum()).startsWith('= ') && printed !== A.sum()) fail('area', key, 'a rounded sum is printed with =');
+      if (ni === A.NS.length - 1 && ri === 1 && !(Math.abs(A.err()) < 0.01)) fail('area', key, 'at 64 midpoint rectangles the sum is still far from the area');
+      for (const g of A.GOALS) if (g.ok(A)) found[g.id] = (found[g.id] || 0) + 1;
+    }
+  }
+  if (A.pn(-2) !== '(−2)' || A.pn(2) !== '2') fail('area', 'pn', 'a negative is not bracketed in the working');
+  for (const g of A.GOALS) if (!found[g.id]) fail('area', g.id, 'this goal cannot be found');
+  if (A.touched !== false) fail('area', 'start', 'the workshop opens as if already turned');
+  return { n, goals: A.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1609,6 +1658,7 @@ if (codeNotes) {
 console.log(`  workshop matrices checked  ${pad(workshopNotes.n.toLocaleString(), 10)}  (kept directions, eigenvalues, ${workshopNotes.goals} goals makeable)`);
 console.log(`    shapes to match drawn    ${pad(workshopNotes.targets.toLocaleString(), 12)}  (on the grid, never flat, never twice running)`);
 console.log(`  slope workshop states      ${pad(slopeNotes.n.toLocaleString(), 10)}  (derivative, secant, working, ${slopeNotes.goals} goals findable)`);
+console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10)}  (Riemann sums, working, gap, ${areaNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 

@@ -601,6 +601,19 @@ The game is built so that losing teaches you as much as winning.
   states: the derivative against the curve itself, the secant against its two points,
   the printed working against the printed numbers to the last digit, and that the
   closest h really is within 0.01 of the tangent everywhere it says so.
+- **🏺 Area Workshop** — the Tome's third workshop, and the integral's turn. Pick a curve
+  (x² from 0 to 3, 4 − x² from 0 to 2, or x³ from −1 to 2), choose where each rectangle
+  takes its height (its left edge, middle or right edge), and step from 1 rectangle to
+  64 by doubling. The rectangles are drawn under the curve, red where they hang below
+  the axis and count against the sum, and the sum is worked for the numbers on screen:
+  Δx = (3 − 0) / 4 = 0.75, then 0.75 × (0 + 0.5625 + 2.25 + 5.0625) = 5.90625, against
+  ∫₀³ x² dx = 9, short by 3.09375. Past four rectangles the heights are added rather than
+  listed, and a sum that needed rounding is shown with ≈ and "about", never with =.
+  Five things to find (within 0.1, within 0.01, a sum that overshoots, one that falls
+  short, a rectangle under the axis) count only once the player has turned something.
+  `npm test` checks all 63 states: each sum against a Riemann sum worked from the curve,
+  each exact area against a fine sum, the printed working against the printed numbers,
+  and that 64 midpoint rectangles really are within 0.01 of the integral.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -765,7 +778,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Thirty-six suites, 1,727 checks, about a minute:
+loop only exists once the page is running. Thirty-seven suites, 1,755 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -799,6 +812,7 @@ loop only exists once the page is running. Thirty-six suites, 1,727 checks, abou
 | `competency` | every topic sits on the rung its effective mastery puts it, with lessons on or off, and a faded topic drops; a strand is scored over all its topics; the map node counts what is fluent and is absent for a knight who has met nothing; the map shows all seventy topics once, in curriculum order, each labelled for a screen reader; prerequisites and arrows are drawn only where a strand really builds on another; it fits a 390-pixel phone with full-size targets and each rung on one line; a tap practises a topic; the Ledger leads there; nothing is saved |
 | `workshop` | the Tome opens the matrix workshop on the identity; each tap of a real button redraws the plane and the readout, where î and ĵ land, the determinant worked with negatives bracketed and the sign folded in, and the directions kept with their eigenvalues; a goal is ticked when, and only when, the matrix on screen makes it, and stays ticked through Start again; the numbers stop at −4 and 4; every button says which number it moves; Surprise me stays in range; it fits a phone; all nine goals can be made; Match the shape says how to read the dashed picture and never gives the target as numbers, numbers the axes and names the dashed arrows, sizes the view to the shapes, judges each column on its own, counts a match and sets a different, never-flat shape at once, and steps the goals aside until free play is back; nothing is saved |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; it fits a phone; nothing is saved |
+| `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
 | `keep` | every craft has a room that says what can be done in it, the forge is struck three times, the quarters sell nothing, and a potion is a mix that can always be made in exactly one way and teaches the mastery model nothing |
 | `ios` | the iPhone app's bridge carries the game's haptics and knight code to native code, and leaves the web version untouched |

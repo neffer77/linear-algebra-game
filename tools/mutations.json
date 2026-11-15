@@ -1,11 +1,68 @@
 {
-  "change": "Match the shape: numbered axes, named dashed arrows, a view sized to the shapes",
-  "mutations": [
-    {"name": "the axes lose their numbers", "file": "index.html",
-     "find": "    if(s.ticks){", "replace": "    if(false){", "run": "play:workshop"},
-    {"name": "the dashed î goes unnamed", "file": "index.html",
-     "find": "'rgba(90,169,230,.6)', 'î', 1.8", "replace": "'rgba(90,169,230,.6)', '', 1.8", "run": "play:workshop"},
-    {"name": "the view is fixed wide again", "file": "index.html",
-     "find": "ghost:this.goal, ticks:true,", "replace": "ghost:this.goal, span:5.2, ticks:true,", "run": "play:workshop"}
-  ]
+ "change": "Area Workshop: rectangles under a curve close in on the integral",
+ "mutations": [
+  {
+   "name": "sum takes heights at the wrong place",
+   "file": "index.html",
+   "find": "    return Array.from({length:this.n()}, (_,i)=>C.a+(i+off)*w);",
+   "replace": "    return Array.from({length:this.n()}, (_,i)=>C.a+(i+off*0.9)*w);",
+   "run": "verify"
+  },
+  {
+   "name": "exact area of 4 − x² wrong",
+   "file": "index.html",
+   "find": "a:0,  b:2, exact:16/3,",
+   "replace": "a:0,  b:2, exact:5.3,",
+   "run": "verify"
+  },
+  {
+   "name": "rounded sums printed whole",
+   "file": "index.html",
+   "find": "  eq(x){ return (this.exact(x)?'= ':'≈ ')+this.num(x); },",
+   "replace": "  eq(x){ return '= '+this.num(x); },",
+   "run": "verify"
+  },
+  {
+   "name": "below-axis goal unreachable",
+   "file": "index.html",
+   "find": "     ok:A=>A.heights().some(h=>h<0)}",
+   "replace": "     ok:A=>A.heights().some(h=>h<-9)}",
+   "run": "verify"
+  },
+  {
+   "name": "workshop opens already turned",
+   "file": "index.html",
+   "find": "  ci:0, ni:2, ri:0, touched:false,",
+   "replace": "  ci:0, ni:2, ri:0, touched:true,",
+   "run": "verify"
+  },
+  {
+   "name": "goals ticked before anything is turned",
+   "file": "index.html",
+   "find": "    if(this.touched) for(const g of this.GOALS)",
+   "replace": "    if(true) for(const g of this.GOALS)",
+   "run": "play:area"
+  },
+  {
+   "name": "one rectangle worked as a list",
+   "file": "index.html",
+   "find": "    lines.push(n===1\n",
+   "replace": "    lines.push(false\n",
+   "run": "play:area"
+  },
+  {
+   "name": "rounded gap without about",
+   "file": "index.html",
+   "find": "by ${this.exact(e)?'':'about '}",
+   "replace": "by ${''}",
+   "run": "play:area"
+  },
+  {
+   "name": "area missing from the Tome",
+   "file": "index.html",
+   "find": "id=\"tomeArea\"",
+   "replace": "id=\"tomeAreaX\"",
+   "run": "play:area"
+  }
+ ]
 }

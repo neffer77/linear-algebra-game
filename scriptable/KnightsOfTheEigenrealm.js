@@ -952,6 +952,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ AREA WORKSHOP ============ -->
+  <div class="screen" id="s-area">
+    <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
+    <div class="panel">
+      <div id="arCurves" class="wsModes" role="group" aria-label="Curve"></div>
+      <div id="arFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="arNLo" onclick="Area.moveN(-1)" aria-label="Fewer rectangles">−</button>
+          <b id="arN" style="font-size:19px;min-width:0"></b>
+          <button id="arNHi" onclick="Area.moveN(1)" aria-label="More rectangles">+</button></div>
+      </div>
+      <div id="arRules" class="wsModes" role="group" aria-label="Height taken from"></div>
+      <div id="arRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="arGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
@@ -5864,11 +5884,13 @@ const Figure = {
     }
     // Riemann rectangles
     if(mode==='bars'){
-      const n=s.n||6, w=(hi-lo)/n;
-      g.fillStyle='rgba(90,169,230,.28)'; g.strokeStyle=FIG_COL.a; g.lineWidth=1.2;
+      const n=s.n||6, w=(hi-lo)/n, off={left:0, mid:0.5, right:1}[s.rule||'mid'];
+      g.lineWidth=1.2;
       for(let i=0;i<n;i++){
-        const xa=lo+i*w, ym=figEval(s.f, xa+w/2);
+        const xa=lo+i*w, ym=figEval(s.f, xa+off*w);
         const top=Y(ym), base=Y(0);
+        // a rectangle under the axis counts against the sum, so it is drawn red
+        g.fillStyle=ym<0?'rgba(229,72,77,.28)':'rgba(90,169,230,.28)'; g.strokeStyle=ym<0?FIG_COL.d:FIG_COL.a;
         g.fillRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
         g.strokeRect(X(xa), Math.min(top,base), X(xa+w)-X(xa), Math.abs(base-top));
       }
@@ -12109,6 +12131,7 @@ const UI = {
     if(id==='s-train') Train.renderPick();
     if(id==='s-workshop') Workshop.render();
     if(id==='s-slope') Slope.render();
+    if(id==='s-area') Area.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12723,6 +12746,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative.</div>
          <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral.</div>
+         <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
        </div>\` +
       TOME.map(p=>\`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">\${p.t}</h2>
         <div class="sub" style="margin-top:6px;font-size:14px">\${p.b}</div></div>\`).join('');
@@ -13677,6 +13705,96 @@ const Slope = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('SLOPE READER','every slope found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:].*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+const Area = {
+  CURVES:[
+    {id:'sq',   name:'x²',     f:{poly:[[1,2]]},        a:0,  b:3, exact:9,    ex:'9'},
+    {id:'cap',  name:'4 − x²', f:{poly:[[4,0],[-1,2]]}, a:0,  b:2, exact:16/3, ex:'16/3 ≈ 5.3333'},
+    {id:'cube', name:'x³',     f:{poly:[[1,3]]},        a:-1, b:2, exact:15/4, ex:'15/4 = 3.75'}
+  ],
+  NS:[1, 2, 4, 8, 16, 32, 64],
+  RULES:[['left','left edge'], ['mid','middle'], ['right','right edge']],
+  ci:0, ni:2, ri:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'tenth',  t:'Bring the sum within 0.1 of the exact area.',
+     ok:A=>Math.abs(A.err())<0.1},
+    {id:'hundth', t:'Closer still: within 0.01 of it.',
+     ok:A=>Math.abs(A.err())<0.01},
+    {id:'over',   t:'Make a sum that overshoots the area.',
+     ok:A=>A.err()>1e-9},
+    {id:'under',  t:'Make a sum that falls short of it.',
+     ok:A=>A.err()<-1e-9},
+    {id:'below',  t:'Find a rectangle under the axis, which counts against the sum.',
+     ok:A=>A.heights().some(h=>h<0)}
+  ],
+  curve(){ return this.CURVES[this.ci]; },
+  n(){ return this.NS[this.ni]; },
+  rule(){ return this.RULES[this.ri][0]; },
+  dx(){ const C=this.curve(); return (C.b-C.a)/this.n(); },
+  // where each rectangle takes its height: its left edge, middle or right edge
+  xs(){
+    const C=this.curve(), w=this.dx(), off={left:0, mid:0.5, right:1}[this.rule()];
+    return Array.from({length:this.n()}, (_,i)=>C.a+(i+off)*w);
+  },
+  heights(){ return this.xs().map(x=>figEval(this.curve().f, x)); },
+  total(){ return this.heights().reduce((s,h)=>s+h, 0); },
+  sum(){ return this.dx()*this.total(); },
+  err(){ return this.sum()-this.curve().exact; },
+  /* A number that ends within nine places is printed whole with =; any other
+     (the thin rectangles under x³) is shown to four places with ≈. */
+  exact(x){ return Math.abs(+x.toFixed(9)-x)<1e-12; },
+  num(x){
+    const r=this.exact(x) ? +x.toFixed(9) : +x.toFixed(4);
+    return neg(Object.is(r,-0)?0:r);
+  },
+  eq(x){ return (this.exact(x)?'= ':'≈ ')+this.num(x); },
+  pn(x){ const t=this.num(x); return t.startsWith('−')?'('+t+')':t; },
+  open(){ UI.go('s-area'); },
+  // Nothing is found until the player has turned something: the sum it opens
+  // on falls short, and that is no discovery.
+  pick(i){ this.ci=i; this.touched=true; this.render(); },
+  moveN(by){ const v=this.ni+by; if(v<0||v>=this.NS.length) return; this.ni=v; this.touched=true; this.render(); },
+  setRule(i){ this.ri=i; this.touched=true; this.render(); },
+  render(){
+    const C=this.curve(), n=this.n(), w=this.dx(), xs=this.xs(), hs=this.heights(), S=this.sum(), e=this.err();
+    const edge=this.RULES[this.ri][1];
+    document.getElementById('arCurves').innerHTML=this.CURVES.map((c,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.ci}" onclick="Area.pick(\${i})">\${c.name} from \${neg(c.a)} to \${neg(c.b)}</button>\`).join('');
+    document.getElementById('arRules').innerHTML=this.RULES.map(([id,nm],i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.ri}" onclick="Area.setRule(\${i})">\${nm[0].toUpperCase()+nm.slice(1)}</button>\`).join('');
+    document.getElementById('arN').textContent=\`\${n} rectangle\${n>1?'s':''}\`;
+    document.getElementById('arNLo').disabled=this.ni===0;
+    document.getElementById('arNHi').disabled=this.ni===this.NS.length-1;
+    Figure.render({kind:'bars', f:C.f, lo:C.a, hi:C.b, n, rule:this.rule(),
+      caption:\`\${n} rectangle\${n>1?'s':''}, each as tall as the curve at its \${edge}.\`},
+      document.getElementById('arFig'));
+    const lines=[\`<div>Each rectangle is Δx = (b − a) / n = (\${neg(C.b)} − \${this.pn(C.a)}) / \${n} \${this.eq(w)} wide, as tall as f at its \${edge}.</div>\`];
+    lines.push(n===1
+      ? \`<div>Sum = Δx × f(\${this.num(xs[0])}) = \${this.num(w)} × \${this.pn(hs[0])} \${this.eq(S)}</div>\`
+      : n<=4
+      ? \`<div>Sum = Δx × (\${xs.map(x=>\`f(\${this.num(x)})\`).join(' + ')})
+           = \${this.num(w)} × (\${hs.map(h=>this.pn(h)).join(' + ')})
+           = \${this.num(w)} × \${this.pn(this.total())} \${this.eq(S)}</div>\`
+      : \`<div>Sum = Δx × (the \${n} heights added) = \${this.num(w)} × \${this.exact(this.total())?'':'about '}\${this.pn(this.total())} <b>\${this.eq(S)}</b></div>\`);
+    const gap=Math.abs(e)<1e-9 ? 'This sum is the exact area.'
+      : \`This sum is \${e>0?'over':'short'} by \${this.exact(e)?'':'about '}\${this.num(Math.abs(e))}.\`;
+    lines.push(\`<div>The exact area is ∫<sub>\${neg(C.a)}</sub><sup>\${neg(C.b)}</sup> \${C.name} dx = \${C.ex}. \${gap}\${
+      this.ni===this.NS.length-1 ? ' As the rectangles thin towards nothing, the sum closes in on the integral.' : ' Add rectangles and watch the gap.'}</div>\`);
+    document.getElementById('arRead').innerHTML=lines.join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('arGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('AREA READER','every area found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };

@@ -48,6 +48,7 @@ const SUITES = [
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung
   require('./play/workshop'),    // a matrix turned by hand, the plane redrawn on each tap
   require('./play/slope'),       // a secant becomes a tangent as h closes in
+  require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/lesson'),      // S14
   require('./play/keep'),        // S15
   require('./play/ios'),         // the iOS app's bridge
