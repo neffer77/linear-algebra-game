@@ -807,7 +807,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Forty-two topics link to twenty-eight workshops,
+  back button returns to the summary. Forty-three topics link to twenty-nine workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -902,6 +902,13 @@ The game is built so that losing teaches you as much as winning.
   shows the tangent meeting it at a right angle; where the formula divides by
   0 the tangent stands straight up. Four things to find, and a fight where
   implicit differentiation falls now offers it.
+- **✂️ Parts Workshop** — integration by parts as a split. Four integrals,
+  two or three ways to split each into u and dv. Try one and the readout
+  works out du and v and writes uv − ∫ v du, then either finishes the
+  integral left, puts it together and checks it by the product rule, or says
+  why the split made things worse or, with a dv nobody can integrate, never
+  got started. ∫ ln x dx shows the hidden dv = dx. Six things to find, and a
+  fight where integration by parts falls now offers it.
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1066,7 +1073,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Sixty-five suites, about 2,950 checks, about a minute:
+loop only exists once the page is running. Sixty-six suites, about 3,000 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1126,6 +1133,7 @@ loop only exists once the page is running. Sixty-five suites, about 2,950 checks
 | `lathe` | the Tome opens the lathe workshop on the cone x over [0, 3] cut into 4 disks, adding up to about 8.8594 times π against the exact 9π, 1.56% short, with the cone formula named; 8 disks bring it within 1%; the bowl √x is exactly 8π with 4 disks and with 1, because x is a straight line, and is half its cylinder; the ball needs 8 disks and lands on (4/3)πr³; the horn x²/2 is 1.3% off with 8 and within 1% with 16, which finishes the hunt; one disk is drawn per slice, the stepper stops at 1 and 64, every button and the drawing are named, it fits a phone and saves nothing |
 | `swap` | the Tome opens the swap workshop on ∫ 2x cos(x²) dx with no u picked, no answer drawn and nothing found; taking u to be the whole integrand works out its du and says why it fails, which finds the goal for a u that does not help; u = x² gives du = 2x dx, swaps the integral into ∫ cos u du, puts x back as sin(x²) + C and checks by differentiating, with the answer drawn in gold; a new integral clears the u; u = x changes nothing; u = x³ + 1, u = x² with a constant divided out, and u = ln x after u = 1/x brings the problem back, each finish their integral, the last finishing the hunt; every button is named and the pressed ones say so, it fits a phone and saves nothing |
 | `implicit` | the Tome opens the implicit slope workshop on the circle at (4, 3) with nothing found; the readout differentiates both sides, solves y′ = −x/y, works y′ = −4/3, checks it with a nudge and shows the tangent meeting the radius at a right angle; two steps on, (0, 5) has a flat tangent and no radius line; back at (5, 0) the formula divides by 0 and the tangent stands straight up; the point wraps round the curve; the ellipse is flat at its top; the tilted curve takes the product rule and climbs at (−2, 3), finishing the hunt; every button is named and the pressed one says so, it fits a phone and saves nothing |
+| `parts` | the Tome opens the parts workshop on ∫ x eˣ dx with no split picked, no answer drawn and nothing found; u = eˣ works du and v, writes uv − ∫ v du and says the power of x went up, finding the goal for a split that makes things worse; u = x leaves ∫ eˣ dx, puts it together as x eˣ − eˣ + C and checks it by the product rule, with the answer drawn in gold; a new integral clears the split; a dv that is the whole integrand never starts; ∫ x cos x dx, ∫ ln x dx with its hidden dv = dx, and ∫ x ln x dx each take their right split, the last finishing the hunt; every button is named and the pressed one says so, it fits a phone and saves nothing |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |

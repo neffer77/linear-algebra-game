@@ -1443,6 +1443,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ PARTS WORKSHOP ============ -->
+  <div class="screen" id="s-parts">
+    <div class="panel"><h2>✂️ Parts Workshop</h2><div class="sub">Integration by parts undoes the product rule: split the integrand into u, to differentiate, and dv, to integrate, and ∫ u dv = uv − ∫ v du. Pick a split and see what it leaves. A good one leaves an integral simpler than the one you started with.</div></div>
+    <div class="panel">
+      <div id="bpSets" class="wsModes" role="group" aria-label="Which integral"></div>
+      <div id="bpFig"></div>
+      <div id="bpOpts" class="wsModes" role="group" aria-label="Which split to try"></div>
+      <div id="bpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="bpGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
@@ -3440,6 +3455,7 @@ const WORKSHOP_FOR = (() => {
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Parts:   ["✂️ Parts Workshop", ['byParts']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -12823,6 +12839,7 @@ const UI = {
     if(id==='s-lathe') Lathe.render();
     if(id==='s-swap') Swap.render();
     if(id==='s-implicit') Implicit.render();
+    if(id==='s-parts') Parts.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -13546,6 +13563,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">⛓️ Chain Rule Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">One function inside another: see why their slopes multiply, check it with a nudge, and catch out the slip everybody makes once.</div>
          <button class="btn sm" id="tomeChain" style="width:auto;margin-top:8px" onclick="Chain.open()">Open the chain rule workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">✂️ Parts Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started.</div>
+         <button class="btn sm" id="tomeParts" style="width:auto;margin-top:8px" onclick="Parts.open()">Open the parts workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -17416,6 +17438,134 @@ const Implicit = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE HIDDEN SLOPE','every tangent found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The parts workshop: integration by parts ----------
+   Split an integrand into u, to differentiate, and dv, to integrate; then
+   ∫ u dv = uv − ∫ v du. A good split leaves an integral simpler than the one
+   you started with: u should get simpler when differentiated, and dv must be
+   something you can integrate. Try each split and see what it leaves.
+   Nothing is saved. */
+const Parts = {
+  SETS:[
+    {id:'xe', btn:'x eˣ', I:'∫ x eˣ dx', f:x=>x*Math.exp(x), D:[-3,1.5],
+     opts:[
+      {u:'eˣ', dv:'x dx', du:'eˣ dx', v:'x²/2', uf:x=>Math.exp(x), duf:x=>Math.exp(x), dvf:x=>x, vf:x=>x*x/2,
+       parts:'(x²/2) eˣ − ∫ (x²/2) eˣ dx',
+       left:'The integral left has x² where you started with x: differentiating eˣ never simplifies it, and integrating x pushed the power up.'},
+      {u:'x', dv:'eˣ dx', du:'dx', v:'eˣ', uf:x=>x, duf:()=>1, dvf:x=>Math.exp(x), vf:x=>Math.exp(x),
+       parts:'x eˣ − ∫ eˣ dx', rest:'Differentiating x left just 1, so the integral left is ∫ eˣ dx = eˣ, one you know.',
+       back:'x eˣ − eˣ + C', F:x=>(x-1)*Math.exp(x),
+       check:'d/dx (x eˣ − eˣ) = (eˣ + x eˣ) − eˣ = x eˣ, the product rule undoing the split.'},
+      {u:'x eˣ', dv:'dx', du:'(eˣ + x eˣ) dx', v:'x', uf:x=>x*Math.exp(x), duf:x=>(1+x)*Math.exp(x), dvf:()=>1, vf:x=>x,
+       parts:'x² eˣ − ∫ x(eˣ + x eˣ) dx',
+       left:'The integral left contains ∫ x² eˣ dx, worse than the one you started with: taking the whole integrand as u only makes du messier.'}]},
+    {id:'xcos', btn:'x cos x', I:'∫ x cos x dx', f:x=>x*Math.cos(x), D:[-3,3],
+     opts:[
+      {u:'x', dv:'cos x dx', du:'dx', v:'sin x', uf:x=>x, duf:()=>1, dvf:x=>Math.cos(x), vf:x=>Math.sin(x),
+       parts:'x sin x − ∫ sin x dx', rest:'Differentiating x left just 1, so the integral left is ∫ sin x dx = −cos x, one you know.',
+       back:'x sin x + cos x + C', F:x=>x*Math.sin(x)+Math.cos(x),
+       check:'d/dx (x sin x + cos x) = (sin x + x cos x) − sin x = x cos x, the product rule undoing the split.'},
+      {u:'cos x', dv:'x dx', du:'−sin x dx', v:'x²/2', uf:x=>Math.cos(x), duf:x=>-Math.sin(x), dvf:x=>x, vf:x=>x*x/2,
+       parts:'(x²/2) cos x + ∫ (x²/2) sin x dx',
+       left:'The integral left has x² where you started with x: cos x only turns into sin x, and integrating x pushed the power up.'},
+      {u:'1', dv:'x cos x dx', uf:()=>1, dvf:x=>x*Math.cos(x),
+       left:'Then v would be ∫ x cos x dx, the very integral you are trying to find. dv must be something you can already integrate.'}]},
+    {id:'ln', btn:'ln x', I:'∫ ln x dx', f:x=>Math.log(x), D:[0.2,4],
+     opts:[
+      {u:'1', dv:'ln x dx', uf:()=>1, dvf:x=>Math.log(x),
+       left:'Then v would be ∫ ln x dx, the very integral you are trying to find. dv must be something you can already integrate.'},
+      {u:'ln x', dv:'dx', du:'(1/x) dx', v:'x', uf:x=>Math.log(x), duf:x=>1/x, dvf:()=>1, vf:x=>x,
+       parts:'x ln x − ∫ x · (1/x) dx', rest:'The x and the 1/x cancel, so the integral left is ∫ 1 dx = x. The trick is a hidden dv = dx.',
+       back:'x ln x − x + C', F:x=>x*Math.log(x)-x,
+       check:'d/dx (x ln x − x) = (ln x + x · 1/x) − 1 = ln x, the product rule undoing the split.'}]},
+    {id:'xln', btn:'x ln x', I:'∫ x ln x dx', f:x=>x*Math.log(x), D:[0.2,3],
+     opts:[
+      {u:'x', dv:'ln x dx', du:'dx', v:'x ln x − x', uf:x=>x, duf:()=>1, dvf:x=>Math.log(x), vf:x=>x*Math.log(x)-x,
+       parts:'x(x ln x − x) − ∫ (x ln x − x) dx',
+       left:'The integral left brings back ∫ x ln x dx, the very one you started with. ln x is the part to differentiate, since its derivative 1/x is simpler.'},
+      {u:'ln x', dv:'x dx', du:'(1/x) dx', v:'x²/2', uf:x=>Math.log(x), duf:x=>1/x, dvf:x=>x, vf:x=>x*x/2,
+       parts:'(x²/2) ln x − ∫ (x²/2)(1/x) dx', rest:'(x²/2)(1/x) is x/2, so the integral left is ∫ (x/2) dx = x²/4, one you know.',
+       back:'(x²/2) ln x − x²/4 + C', F:x=>x*x/2*Math.log(x)-x*x/4,
+       check:'d/dx ((x²/2) ln x − x²/4) = (x ln x + x/2) − x/2 = x ln x, the product rule undoing the split.'}]}
+  ],
+  si:0, oi:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'xe', t:'Find the split that solves ∫ x eˣ dx.', toast:'Solved: x eˣ − eˣ + C', ok:K=>K.si===0 && K.works()},
+    {id:'xcos', t:'Do the same for ∫ x cos x dx.', toast:'Solved: x sin x + cos x + C', ok:K=>K.si===1 && K.works()},
+    {id:'ln', t:'Solve ∫ ln x dx, which looks like it has nothing to split.', toast:'Solved: x ln x − x + C', ok:K=>K.si===2 && K.works()},
+    {id:'xln', t:'And ∫ x ln x dx.', toast:'Solved: (x²/2) ln x − x²/4 + C', ok:K=>K.si===3 && K.works()},
+    {id:'worse', t:'Pick a split that leaves a harder integral than you started with.', toast:'That split makes it worse', ok:K=>{ const o=K.opt(); return !!(o && o.vf && !o.F); }},
+    {id:'stuck', t:'Pick a dv you cannot integrate, and see why that split never starts.', toast:'That split never starts', ok:K=>{ const o=K.opt(); return !!(o && !o.vf); }}
+  ],
+  set(){ return this.SETS[this.si]; },
+  opt(){ return this.oi===null ? null : this.set().opts[this.oi]; },
+  works(){ const o=this.opt(); return !!(o && o.F); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), o=this.opt(), out=[];
+    out.push(\`\${S.I}: split the integrand into u, to differentiate, and dv, to integrate. Then ∫ u dv = uv − ∫ v du, and the aim is an integral left that is simpler than the one you started with.\`);
+    if(!o){ out.push('Pick a split below.'); return out; }
+    if(!o.vf){
+      out.push(\`Try u = \${o.u} and dv = \${o.dv}.\`);
+      out.push(o.left);
+      out.push('This split never gets started. Try another.');
+      return out;
+    }
+    out.push(\`Try u = \${o.u} and dv = \${o.dv}. Then du = \${o.du} and v = \${o.v}.\`);
+    out.push(\`So \${S.I} = \${o.parts}.\`);
+    if(o.F){
+      out.push(o.rest);
+      out.push(\`Put it together: \${o.back}\`);
+      out.push(\`Check by differentiating: \${o.check}\`);
+    } else {
+      out.push(o.left);
+      out.push('This split makes it no simpler. Try another.');
+    }
+    return out;
+  },
+  /* the integrand in blue; once solved, the answer F (with C = 0) in gold,
+     whose slope at every x is the blue height there */
+  svg(){
+    const S=this.set(), o=this.opt(), [a,b]=S.D, xs=[];
+    for(let i=0;i<=90;i++) xs.push(a+(b-a)*i/90);
+    let lo=0, hi=0;
+    for(const x of xs){ lo=Math.min(lo,S.f(x)); hi=Math.max(hi,S.f(x)); if(o&&o.F){ lo=Math.min(lo,o.F(x)); hi=Math.max(hi,o.F(x)); } }
+    const pad=(hi-lo)*0.06; lo-=pad; hi+=pad;
+    const PX=x=>20+(x-a)/(b-a)*320, PY=y=>188-(y-lo)/(hi-lo)*176;
+    const line=(fn,k,col)=>\`<polyline data-k="\${k}" points="\${xs.map(x=>\`\${PX(x).toFixed(2)},\${PY(fn(x)).toFixed(2)}\`).join(' ')}" fill="none" stroke="\${col}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="The integrand of \${S.I} in blue\${o&&o.F?\`, and the answer \${o.back.replace(' + C','')} in gold\`:''}">\`;
+    out+=\`<line x1="20" y1="\${PY(0).toFixed(2)}" x2="340" y2="\${PY(0).toFixed(2)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(a<0 && b>0) out+=\`<line x1="\${PX(0).toFixed(2)}" y1="8" x2="\${PX(0).toFixed(2)}" y2="192" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=line(S.f,'f',FIG_COL.a);
+    if(o&&o.F) out+=line(o.F,'F',FIG_COL.b);
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-parts'); },
+  pick(i){ this.si=i; this.oi=null; this.render(); },
+  trySplit(j){ this.oi=j; this.touched=true; this.render(); },
+  render(){
+    const S=this.set();
+    document.getElementById('bpSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Parts.pick(\${i})" aria-label="\${s.I}">\${s.btn}</button>\`).join('');
+    document.getElementById('bpOpts').innerHTML=S.opts.map((o,j)=>
+      \`<button class="btn sm ghost" aria-pressed="\${j===this.oi}" onclick="Parts.trySplit(\${j})" aria-label="Try u = \${o.u} and dv = \${o.dv}">u = \${o.u}<br>dv = \${o.dv}</button>\`).join('');
+    document.getElementById('bpFig').innerHTML=this.svg()+
+      \`<div class="figcap">The blue curve is the integrand.\${this.works()?' The gold curve is the answer with C = 0: its slope at every x is the height of the blue curve there.':' Find the right split and the answer appears in gold.'}</div>\`;
+    document.getElementById('bpRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('bpGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE PARTS','every integral split','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
