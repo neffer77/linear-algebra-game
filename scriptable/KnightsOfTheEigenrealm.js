@@ -737,6 +737,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
    coloured as it is drawn: u blue, v green. */
 .dtVecs{grid-template-columns:auto 1fr 1fr;align-items:center}
 .dtName{font-size:20px;font-style:italic} .dtName.c0{color:#5aa9e6} .dtName.c1{color:#57cc7a}
+/* The hunt's matrices are buttons that show themselves, in brackets. */
+.egM{display:inline-block;border-left:2px solid currentColor;border-right:2px solid currentColor;border-radius:5px;
+  padding:0 6px;line-height:1.3;font-variant-numeric:tabular-nums}
 .wsCell button{width:40px;height:40px;border-radius:10px;border:1px solid var(--edge);
   background:var(--panel2);color:var(--ink);font-size:20px;font-weight:800;cursor:pointer}
 .wsCell button:disabled{opacity:.35}
@@ -987,6 +990,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     </div>
     <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="dtGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ EIGENVECTOR HUNT ============ -->
+  <div class="screen" id="s-eig">
+    <div class="panel"><h2>👑 Eigenvector Hunt</h2><div class="sub">A matrix knocks almost every arrow off its line. Pick a matrix, point v anywhere, and hunt for the directions that only get stretched: the eigenvectors.</div></div>
+    <div class="panel">
+      <div id="egMats" class="wsModes" role="group" aria-label="Matrix"></div>
+      <div id="egVec" class="wsMat dtVecs" role="group" aria-label="The arrow v"></div>
+      <div id="egFig"></div>
+      <div id="egRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="egGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
   </div>
@@ -5767,6 +5785,13 @@ const Figure = {
       g.lineTo(X(p2[0]),Y(p2[1]));
       g.stroke();
     }
+    // dashed lines through the origin, along each direction given
+    (s.lines||[]).forEach(d=>{
+      const r=2*span/(Math.hypot(d[0],d[1])||1);
+      g.setLineDash([5,4]); g.strokeStyle=FIG_COL.dim; g.lineWidth=1.4;
+      g.beginPath(); g.moveTo(X(-d[0]*r),Y(-d[1]*r)); g.lineTo(X(d[0]*r),Y(d[1]*r)); g.stroke();
+      g.setLineDash([]);
+    });
     // the angle between the first two vectors, the short way round
     if(s.arc && s.vecs && s.vecs.length>=2){
       const [u,v]=[s.vecs[0].v, s.vecs[1].v];
@@ -12165,6 +12190,7 @@ const UI = {
     if(id==='s-slope') Slope.render();
     if(id==='s-area') Area.render();
     if(id==='s-dot') Dot.render();
+    if(id==='s-eig') Eigen.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12779,6 +12805,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🎯 Dot Product Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other.</div>
          <button class="btn sm" id="tomeDot" style="width:auto;margin-top:8px" onclick="Dot.open()">Open the dot product workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">👑 Eigenvector Hunt</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Point an arrow anywhere and see where a matrix sends it. Hunt for the rare directions that stay on their own line.</div>
+         <button class="btn sm" id="tomeEig" style="width:auto;margin-top:8px" onclick="Eigen.open()">Open the eigenvector hunt</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -13934,6 +13965,113 @@ const Dot = {
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ANGLE READER','every dot product found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/[.:,].*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ EIGENVECTOR HUNT ============
+   A matrix acts on an arrow the player sets, and the readout says whether
+   the arrow stayed on its own line. The few that do are the eigenvectors,
+   and how much they were stretched is the eigenvalue. */
+const Eigen = {
+  MATS:[
+    {id:'sym',  m:[[2,1],[1,2]]},
+    {id:'tri',  m:[[3,1],[0,2]]},
+    {id:'flip', m:[[1,2],[2,1]]},
+    {id:'turn', m:[[0,-1],[1,0]]}
+  ],
+  VLO:-2, VHI:2,
+  mi:0, v:[1,0], touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'sym3', t:'On the first matrix, find a direction it only stretches, by 3.',
+     ok:E=>E.mi===0 && E.lambda()===3},
+    {id:'sym1', t:'On the first matrix, find a direction it leaves exactly as it was.',
+     ok:E=>E.mi===0 && E.lambda()===1},
+    {id:'tri3', t:'On the second matrix, find the direction stretched by 3.',
+     ok:E=>E.mi===1 && E.lambda()===3},
+    {id:'tri2', t:'On the second matrix, find the direction stretched by 2.',
+     ok:E=>E.mi===1 && E.lambda()===2},
+    {id:'flip', t:'On the third matrix, find a direction turned right round, λ = −1.',
+     ok:E=>E.mi===2 && E.lambda()===-1},
+    {id:'long', t:'Find an eigenvector that is not the shortest on its line, like ⟨2, 2⟩.',
+     ok:E=>E.lambda()!==null && E.gcd(...E.v)>1}
+  ],
+  M(){ return this.MATS[this.mi].m; },
+  Av(){ const [[a,b],[c,d]]=this.M(), [x,y]=this.v; return [a*x+b*y, c*x+d*y]; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a; },
+  zero(){ return !this.v[0] && !this.v[1]; },
+  // λ when Av lies on v's line, null when it does not (or v is 0)
+  lambda(){
+    if(this.zero()) return null;
+    const [x,y]=this.v, [p,q]=this.Av();
+    if(x*q-y*p) return null;
+    return x ? p/x : q/y;
+  },
+  // the angle between v's line and Av's line, 0° to 90°
+  off(){
+    const [x,y]=this.v, [p,q]=this.Av();
+    const t=Math.abs(Math.atan2(x*q-y*p, x*p+y*q))*180/Math.PI;
+    return Math.min(t, 180-t);
+  },
+  vec(w){ return \`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`; },
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const [[a,b],[c,d]]=this.M(), [x,y]=this.v, [p,q]=this.Av();
+    const pn=n=>n<0?'('+neg(n)+')':String(n);
+    const sum=(s,t)=>\`\${neg(s)} \${t<0?'−':'+'} \${Math.abs(t)}\`;
+    const out=[\`Av = ⟨\${pn(a)}·\${pn(x)} + \${pn(b)}·\${pn(y)}, \${pn(c)}·\${pn(x)} + \${pn(d)}·\${pn(y)}⟩ = ⟨\${sum(a*x,b*y)}, \${sum(c*x,d*y)}⟩ = \${this.vec([p,q])}.\`];
+    if(this.zero()){
+      out.push('v = ⟨0, 0⟩ is never counted as an eigenvector: every matrix sends it to ⟨0, 0⟩, so it says nothing about the matrix.');
+      return out;
+    }
+    const L=this.lambda();
+    if(L!==null){
+      out.push(L===1 ? \`Av = v: the matrix leaves this arrow exactly where it was, so v is an eigenvector with λ = 1.\`
+        : \`Av = \${this.vec([p,q])} = \${neg(L)} × \${this.vec(this.v)}: v stays on its own line\${L<0?', flipped to the other side':''}, so it is an eigenvector with λ = \${neg(L)}.\`);
+      out.push('Every arrow along this line is one too, at any length and either way along it.');
+    } else {
+      const o=this.off(), r=Math.round(o);
+      out.push(\`Av is knocked \${Math.abs(o-r)<1e-9?'':'about '}\${r}° off v's line, so v is not an eigenvector of this matrix.\`);
+      if(this.mi===3) out.push('This matrix turns every arrow a quarter-turn, so no direction stays on its line: it has no real eigenvectors at all.');
+    }
+    return out;
+  },
+  open(){ UI.go('s-eig'); },
+  pick(i){ this.mi=i; this.touched=true; this.render(); },
+  step(i, by){
+    const x=this.v[i]+by;
+    if(x<this.VLO||x>this.VHI) return;
+    this.v[i]=x; this.touched=true; this.render();
+  },
+  render(){
+    const names=['first','second'];
+    document.getElementById('egMats').innerHTML=this.MATS.map((o,i)=>
+      \`<button class="btn sm ghost egMat" aria-pressed="\${i===this.mi}" onclick="Eigen.pick(\${i})"
+        aria-label="Matrix \${i+1}: rows \${neg(o.m[0][0])}, \${neg(o.m[0][1])} and \${neg(o.m[1][0])}, \${neg(o.m[1][1])}"><span class="egM">\${neg(o.m[0][0])}&nbsp;\${neg(o.m[0][1])}<br>\${neg(o.m[1][0])}&nbsp;\${neg(o.m[1][1])}</span></button>\`).join('');
+    document.getElementById('egVec').innerHTML=\`<b class="dtName c1">v</b>\`+[0,1].map(i=>\`<div class="wsCell c1">
+        <button onclick="Eigen.step(\${i},-1)" aria-label="Lower v's \${names[i]} number"\${this.v[i]<=this.VLO?' disabled':''}>−</button>
+        <b aria-label="v's \${names[i]} number: \${neg(this.v[i])}">\${neg(this.v[i])}</b>
+        <button onclick="Eigen.step(\${i},1)" aria-label="Raise v's \${names[i]} number"\${this.v[i]>=this.VHI?' disabled':''}>+</button></div>\`).join('');
+    const L=this.lambda(), Av=this.Av();
+    Figure.render({kind:'plane',
+      vecs:[{v:Av, col:FIG_COL.b, label:'Av'}, {v:this.v, col:'#57cc7a', label:'v'}],
+      lines: this.zero() ? [] : [this.v],
+      caption: this.zero() ? 'An arrow of length 0 has no line to stay on.'
+        : L!==null ? \`Av, in gold, lies on v's dashed line: v is an eigenvector.\`
+        : \`Av, in gold, has left v's dashed line.\`},
+      document.getElementById('egFig'));
+    document.getElementById('egRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('egGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('EIGEN HUNTER','every kept direction found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/^On the \\w+ matrix, (\\w)/,(m,c)=>c.toUpperCase()).replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
 };

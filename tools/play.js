@@ -48,6 +48,7 @@ const SUITES = [
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung
   require('./play/workshop'),    // a matrix turned by hand, the plane redrawn on each tap
   require('./play/dot'),         // two arrows set by hand, their dot product, angle and shadow
+  require('./play/eig'),         // one arrow, four matrices: hunt the directions each only stretches
   require('./play/slope'),       // a secant becomes a tangent as h closes in
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/lesson'),      // S14

@@ -49,6 +49,7 @@ function loadGame() {
     ';const Slope={' + script.slice(script.indexOf('  CURVES:['), script.indexOf('  open(){ UI.go(\'s-slope\'); },')) + '};exports.Slope=Slope;' +
     // The area workshop, lifted the same way: after Slope's, so its CURVES is found from Area on.
     ';const Dot={' + script.slice(script.indexOf('  LO:-4, HI:4,\n  START:'), script.indexOf('  open(){ UI.go(\'s-dot\'); },')) + '};exports.Dot=Dot;' +
+    ';const Eigen={' + script.slice(script.indexOf('  MATS:[\n    {id:\'sym\''), script.indexOf('  open(){ UI.go(\'s-eig\'); },')) + '};exports.Eigen=Eigen;' +
     ';const Area={' + script.slice(script.indexOf('  CURVES:[', script.indexOf('const Area = {')), script.indexOf('  open(){ UI.go(\'s-area\'); },')) + '};exports.Area=Area;' +
     ';const Workshop={' + script.slice(script.indexOf('  LO:-4, HI:4,'), script.indexOf('  open(){ UI.go(\'s-workshop\'); },')) + '};' +
     'exports.Figure=Figure;exports.figEval=figEval;exports.Build=Build;exports.Slip=Slip;exports.Workshop=Workshop;')(out);
@@ -63,7 +64,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -1676,6 +1677,61 @@ const dotNotes = (() => {
   return { n, goals: D.GOALS.length };
 })();
 
+/* Every arrow the eigenvector hunt can point, on each of its four matrices.
+   Each line the player reads is read back and checked against mathematics
+   worked here: Av from the matrix, its two sums, whether v stays on its line
+   (by the cross product), λ, the flip, and how far Av is knocked off (from
+   acos, where the page uses atan2). Each goal must be findable, and none met
+   where the hunt opens. */
+const eigNotes = (() => {
+  const E = Eigen, found = {};
+  const evalExpr = e => Function(`return (${e.replace(/−/g, '-').replace(/·/g, '*')})`)();
+  const num = s => +String(s).trim().replace(/−/g, '-');
+  let n = 0;
+  E.MATS.forEach((M, mi) => {
+    const [[a, b], [c, d]] = M.m;
+    for (let x = E.VLO; x <= E.VHI; x++) for (let y = E.VLO; y <= E.VHI; y++) {
+      E.mi = mi; E.v = [x, y]; n++;
+      const key = `${M.id} v=⟨${x},${y}⟩`, p = a * x + b * y, q = c * x + d * y, L = E.working();
+      if (L.some(l => /[+−] −/.test(l))) fail('eigen', key, 'a sum is written with a sign after a sign');
+      const m0 = L[0].match(/^Av = ⟨(.*), (.*)⟩ = ⟨(.*), (.*)⟩ = ⟨(.*), (.*)⟩\.$/);
+      if (!m0 || evalExpr(m0[1]) !== p || evalExpr(m0[2]) !== q || evalExpr(m0[3]) !== p || evalExpr(m0[4]) !== q
+          || num(m0[5]) !== p || num(m0[6]) !== q) { fail('eigen', key, `Av is worked wrongly: ${L[0]}`); continue; }
+      if (!x && !y) {
+        if (L.length !== 2 || !/never counted/.test(L[1]) || E.lambda() !== null) fail('eigen', key, 'the zero arrow is counted');
+        continue;
+      }
+      const on = x * q - y * p === 0, lam = on ? (x ? p / x : q / y) : null;
+      if (E.lambda() !== lam) fail('eigen', key, `λ is ${E.lambda()}, not ${lam}`);
+      if (on) {
+        const lm = L[1].match(/λ = (−?\d+)\.$/);
+        if (!lm || num(lm[1]) !== lam) fail('eigen', key, `λ is printed wrongly: ${L[1]}`);
+        if (/^Av = v:/.test(L[1]) !== (lam === 1)) fail('eigen', key, 'Av = v is claimed where it is not, or missed');
+        if (/flipped/.test(L[1]) !== (lam < 0)) fail('eigen', key, 'the flip is named wrongly');
+        if (L.length !== 3 || !/^Every arrow along this line/.test(L[2])) fail('eigen', key, 'the whole line is not named');
+      } else {
+        const om = L[1].match(/^Av is knocked (about )?(\d+)° off v's line, so v is not an eigenvector/);
+        const cos = Math.abs(x * p + y * q) / (Math.hypot(x, y) * Math.hypot(p, q));
+        const ang = Math.acos(Math.min(1, cos)) * 180 / Math.PI;
+        if (!om) { fail('eigen', key, `the miss does not read: ${L[1]}`); continue; }
+        if (Math.abs(+om[2] - ang) > 0.5) fail('eigen', key, `Av is ${ang}° off, printed ${om[2]}°`);
+        if (!om[1] !== (Math.abs(ang - Math.round(ang)) < 1e-6)) fail('eigen', key, `"about" is wrong for ${ang}°`);
+        if ((L.length === 3 && /quarter-turn/.test(L[2])) !== (mi === 3)) fail('eigen', key, 'the quarter-turn note is on the wrong matrix');
+      }
+      for (const g of E.GOALS) if (g.ok(E)) found[g.id] = (found[g.id] || 0) + 1;
+      const gcd = (u, w) => w ? gcd(w, u % w) : Math.abs(u);
+      if (E.GOALS.find(g => g.id === 'long').ok(E) !== (on && gcd(Math.abs(x), Math.abs(y)) > 1)) fail('eigen', key, 'a longer eigenvector is judged wrongly');
+    }
+  });
+  for (const g of E.GOALS) if (!found[g.id]) fail('eigen', g.id, 'this goal cannot be found');
+  if (E.MATS.slice(0, 3).some(M => { E.mi = E.MATS.indexOf(M); return ![...Array(25)].some((_, k) => { E.v = [k % 5 - 2, Math.floor(k / 5) - 2]; return E.lambda() !== null; }); }))
+    fail('eigen', 'matrices', 'a matrix offered for hunting has no eigenvector in reach');
+  E.mi = 0; E.v = [1, 0];
+  if (E.GOALS.some(g => g.ok(E))) fail('eigen', 'start', 'a goal is already met where the hunt opens');
+  if (E.touched !== false) fail('eigen', 'start', 'the hunt opens as if already turned');
+  return { n, goals: E.GOALS.length };
+})();
+
 /* ----------------------------------------------------------------- report */
 const total = Object.keys(GEN).length;
 const verified = covered.size + Object.keys(ALGEBRA).length;
@@ -1721,6 +1777,7 @@ console.log(`    shapes to match drawn    ${pad(workshopNotes.targets.toLocaleSt
 console.log(`  slope workshop states      ${pad(slopeNotes.n.toLocaleString(), 10)}  (derivative, secant, working, ${slopeNotes.goals} goals findable)`);
 console.log(`  dot product pairs          ${pad(dotNotes.n.toLocaleString(), 10)}  (products, lengths, angle, shadow, ${dotNotes.goals} goals findable)`);
 console.log(`  area workshop states       ${pad(areaNotes.n.toLocaleString(), 10)}  (Riemann sums, working, gap, ${areaNotes.goals} goals findable)`);
+console.log(`  eigenvector hunt states    ${pad(eigNotes.n.toLocaleString(), 10)}  (Av, λ, the flip, how far off, ${eigNotes.goals} goals findable)`);
 console.log(`  workflow actions checked   ${pad(workflowNotes.uses, 10)}  (${workflowNotes.files} workflows, all on Node 24)`);
 console.log('─'.repeat(58));
 
