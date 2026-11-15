@@ -1028,6 +1028,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ LIMIT WORKSHOP ============ -->
+  <div class="screen" id="s-limit">
+    <div class="panel"><h2>🌫️ Limit Workshop</h2><div class="sub">Some formulas give no number at one point. Close in on it from the left or the right, h at a time, and watch where f(x) is heading. A limit is what both sides agree on.</div></div>
+    <div class="panel">
+      <div id="lmFns" class="wsModes wrap" role="group" aria-label="Function"></div>
+      <div id="lmSide" class="wsModes" role="group" aria-label="Side"></div>
+      <div id="lmFig"></div>
+      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+        <div class="wsCell"><button id="lmHLo" onclick="Limit.moveH(1)" aria-label="Make h smaller, bringing x closer in">−</button>
+          <b id="lmH"></b>
+          <button id="lmHHi" onclick="Limit.moveH(-1)" aria-label="Make h larger, moving x further away">+</button></div>
+      </div>
+      <div id="lmRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="lmGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ TAYLOR WORKSHOP ============ -->
   <div class="screen" id="s-taylor">
     <div class="panel"><h2>🌀 Taylor Workshop</h2><div class="sub">eˣ, sin x and cos x can each be built from powers of x, one term at a time. Add terms, move x, and watch the polynomial close in on the curve, fast near 0 and slower far from it.</div></div>
@@ -5736,6 +5756,9 @@ function figEval(f, x){
     case 'cos': return Math.cos((f.k||1)*x);
     case 'exp': return Math.exp((f.k||1)*x);
     case 'inv': return 1/((f.k||1)*x);
+    // sin x / x and |x| / x, each with no value at 0 itself
+    case 'sinc': return x===0 ? NaN : Math.sin(x)/x;
+    case 'sgn': return x===0 ? NaN : Math.abs(x)/x;
     default: return 0;
   }
 }
@@ -5958,6 +5981,9 @@ const Figure = {
     if(!isFinite(ymin)||!isFinite(ymax)){ ymin=-1; ymax=1; }
     if(ymax-ymin < 1e-6){ ymax+=1; ymin-=1; }
     const yPad=(ymax-ymin)*0.18; ymin-=yPad; ymax+=yPad;
+    // a curve that runs off to infinity is given its window, not one sized
+    // by the samples nearest the blow-up
+    if(s.ylim){ [ymin,ymax]=s.ylim; }
     const X=x=>18+(x-x0)/(x1-x0)*(FIG_W-30);
     const Y=y=>FIG_H-16-(y-ymin)/(ymax-ymin)*(FIG_H-30);
 
@@ -5996,10 +6022,13 @@ const Figure = {
 
     g.strokeStyle=FIG_COL.b; g.lineWidth=2.4; g.lineJoin='round';
     g.beginPath();
+    // the pen lifts where the curve has no value, or leaves its window, so a
+    // jump or a blow-up is never bridged by a line that is not there
+    let pen=false;
     for(let i=0;i<=N;i++){
       const x=x0+(x1-x0)*i/N, y=ys[i];
-      if(!isFinite(y)) continue;
-      if(i===0) g.moveTo(X(x),Y(y)); else g.lineTo(X(x),Y(y));
+      if(!isFinite(y) || (s.ylim && (y<ymin || y>ymax))){ pen=false; continue; }
+      if(pen) g.lineTo(X(x),Y(y)); else { g.moveTo(X(x),Y(y)); pen=true; }
     }
     g.stroke();
 
@@ -6032,6 +6061,11 @@ const Figure = {
       g.strokeStyle=FIG_COL.a; g.lineWidth=2;
       g.beginPath(); g.moveTo(X(x0), Y(yp+m*(x0-p))); g.lineTo(X(x1), Y(yp+m*(x1-p))); g.stroke();
     }
+    // open circles: points the curve comes right up to but never reaches
+    (s.holes||[]).forEach(([x,y])=>{
+      g.fillStyle='#171129'; g.strokeStyle=FIG_COL.b; g.lineWidth=2.2;
+      g.beginPath(); g.arc(X(x),Y(y),5,0,7); g.fill(); g.stroke();
+    });
     (s.pts||[]).forEach(p=>{
       const x=p[0], y=p.length>1?p[1]:figEval(s.f,x);
       g.fillStyle=p[2]||FIG_COL.d;
@@ -12247,6 +12281,7 @@ const UI = {
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
+    if(id==='s-limit') Limit.render();
     Calc.syncButton();
     if(id==='s-prefs') this.renderPrefs();
   },
@@ -12871,6 +12906,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands.</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading.</div>
+         <button class="btn sm" id="tomeLimit" style="width:auto;margin-top:8px" onclick="Limit.open()">Open the limit workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
@@ -14228,6 +14268,126 @@ const Compose = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('ORDER KEEPER','every pair placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ============ LIMIT WORKSHOP ============
+   Where a function is headed, watched from each side. x closes in on a from
+   the left or the right, h at a time, and the readout works f(x) for the
+   numbers on screen; at a itself the formula gives no number at all. Only
+   once both sides have been watched up close does it say whether they agree,
+   because a limit is exactly that agreement. */
+const Limit = {
+  FNS:[
+    {id:'hole', at:'(x² − 1)/(x − 1)', a:1, f:{poly:[[1,1],[1,0]]}, lo:-1, hi:3, holes:[[1,2]],
+     at0:'At x = 1 itself the formula gives 0/0, which is no number at all: the graph has a hole there.',
+     side:{L:'heads for 2', R:'heads for 2'},
+     both:'From both sides f(x) closes in on 2, so the limit as x → 1 is 2, even though f(1) itself is no number.',
+     cap:'The open circle is the point the graph skips.'},
+    {id:'sinc', at:'sin x / x', a:0, f:{fn:'sinc'}, lo:-6, hi:6, holes:[[0,1]],
+     at0:'At x = 0 itself it gives 0/0, which is no number at all: the graph has a hole there.',
+     side:{L:'heads for 1', R:'heads for 1'},
+     both:'From both sides sin x / x closes in on 1, so the limit as x → 0 is 1. Near 0, sin x is almost exactly x.',
+     cap:'The open circle is the point the graph skips.'},
+    {id:'sgn', at:'|x| / x', a:0, f:{fn:'sgn'}, lo:-2, hi:2, ylim:[-2,2], holes:[[0,-1],[0,1]],
+     at0:'At x = 0 itself it gives 0/0, which is no number at all.',
+     side:{L:'stays at −1', R:'stays at 1'},
+     both:'From the left it stays at −1 and from the right at 1. The two sides disagree, so the limit as x → 0 does not exist.',
+     cap:'Open circles: each piece stops just short of x = 0.'},
+    {id:'inv', at:'1/x', a:0, f:{fn:'inv'}, lo:-2, hi:2, ylim:[-12,12], holes:[],
+     at0:'At x = 0 itself it is 1/0, which is no number at all.',
+     side:{L:'falls without end', R:'climbs without end'},
+     both:'From the right it climbs without end and from the left it falls without end, so there is no limit: the graph runs up and down the line x = 0.',
+     cap:'The graph runs off the top and bottom of the picture at x = 0.'}
+  ],
+  HS:[1, 0.5, 0.1, 0.01, 0.001],
+  fi:0, side:'R', hi:0, touched:false,
+  near:{},
+  done:new Set(),
+  GOALS:[
+    {id:'hole',  t:'Get within 0.01 of the value the hole hides.',
+     ok:L=>L.fn().id==='hole' && Math.abs(L.fx()-2)<=0.01+1e-9},
+    {id:'agree', t:'Close in on the hole from both sides and see them agree.',
+     ok:L=>L.seen('hole','L') && L.seen('hole','R')},
+    {id:'sinc',  t:'Show that sin x / x heads for 1, though at 0 it is 0/0.',
+     ok:L=>L.fn().id==='sinc' && L.h()===0.001},
+    {id:'jump',  t:'Find a limit that does not exist because the two sides disagree.',
+     ok:L=>L.seen('sgn','L') && L.seen('sgn','R')},
+    {id:'big',   t:'Make f(x) reach 1000.',
+     ok:L=>L.fn().id==='inv' && L.fx()>=1000-1e-9},
+    {id:'down',  t:'Find a side where f(x) falls without end.',
+     ok:L=>L.seen('inv','L')}
+  ],
+  fn(){ return this.FNS[this.fi]; },
+  h(){ return this.HS[this.hi]; },
+  x(){ const v=this.fn().a+(this.side==='L'?-1:1)*this.h(); return +v.toFixed(9); },
+  fx(){ return this.at(this.x()); },
+  // the formula itself, as the player reads it, not the curve drawn
+  at(x){
+    const id=this.fn().id;
+    if(id==='hole') return (x*x-1)/(x-1);
+    if(id==='sinc') return Math.sin(x)/x;
+    if(id==='sgn') return Math.abs(x)/x;
+    return 1/x;
+  },
+  closest(){ return this.hi===this.HS.length-1; },
+  seen(id, s){ return !!(this.near[id] && this.near[id].has(s)); },
+  n:v=>neg(+(+v).toFixed(9)),
+  b(v){ return v<0 ? \`(\${this.n(v)})\` : this.n(v); },
+  sig:v=>neg(+(+v).toPrecision(8)),
+  /* The readout as plain sentences, so the checks read what the player reads. */
+  working(){
+    const F=this.fn(), x=this.x(), X=this.n(x), h=this.h(), v=this.fx();
+    const sideW=this.side==='L'?'left':'right';
+    const out=[\`f(x) = \${F.at}, with x closing in on \${neg(F.a)} from the \${sideW}: h = \${this.n(h)}, so x = \${neg(F.a)} \${this.side==='L'?'−':'+'} \${this.n(h)} = \${X}.\`];
+    if(F.id==='hole'){
+      const sq=+(x*x).toFixed(9), top=+(sq-1).toFixed(9), bot=+(x-1).toFixed(9);
+      out.push(\`f(\${X}) = (\${this.b(x)}² − 1)/(\${X} − 1) = (\${this.n(sq)} − 1)/\${this.b(bot)} = \${this.b(top)}/\${this.b(bot)} = \${this.n(v)}.\`);
+    } else if(F.id==='sinc'){
+      const sv=+Math.sin(x).toPrecision(8);
+      out.push(\`f(\${X}) = sin(\${X})/\${this.b(x)} ≈ \${sv<0?\`(\${this.sig(sv)})\`:this.sig(sv)}/\${this.b(x)} ≈ \${this.sig(v)}.\`);
+    } else if(F.id==='sgn'){
+      out.push(\`f(\${X}) = |\${X}|/\${this.b(x)} = \${this.n(Math.abs(x))}/\${this.b(x)} = \${this.n(v)}.\`);
+    } else out.push(\`f(\${X}) = 1/\${this.b(x)} = \${this.n(v)}.\`);
+    out.push(F.at0);
+    const L=this.seen(F.id,'L'), R=this.seen(F.id,'R');
+    if(L && R) out.push(F.both);
+    else if(L || R){
+      const s=L?'L':'R', other=L?'right':'left';
+      out.push(\`From the \${s==='L'?'left':'right'}, f(x) \${F.side[s]}. A limit needs both sides to agree, so close in from the \${other} too.\`);
+    }
+    else out.push(\`Bring h down to \${this.n(this.HS[this.HS.length-1])} to see where f(x) is heading from the \${sideW}.\`);
+    return out;
+  },
+  open(){ UI.go('s-limit'); },
+  pick(i){ this.fi=i; this.touched=true; this.render(); },
+  setSide(s){ this.side=s; this.touched=true; this.render(); },
+  moveH(by){ const v=this.hi+by; if(v<0||v>=this.HS.length) return; this.hi=v; this.touched=true; this.render(); },
+  render(){
+    const F=this.fn(), x=this.x(), v=this.fx();
+    if(this.touched && this.closest()) (this.near[F.id]=this.near[F.id]||new Set()).add(this.side);
+    document.getElementById('lmFns').innerHTML=this.FNS.map((f,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.fi}" onclick="Limit.pick(\${i})">\${f.at}</button>\`).join('');
+    document.getElementById('lmSide').innerHTML=[['L','← From the left'],['R','From the right →']].map(([s,t])=>
+      \`<button class="btn sm ghost" aria-pressed="\${this.side===s}" onclick="Limit.setSide('\${s}')">\${t}</button>\`).join('');
+    document.getElementById('lmH').textContent=\`h = \${this.n(this.h())}\`;
+    document.getElementById('lmHLo').disabled=this.hi===this.HS.length-1;
+    document.getElementById('lmHHi').disabled=this.hi===0;
+    Figure.render({kind:'curve', f:F.f, lo:F.lo, hi:F.hi, ylim:F.ylim, holes:F.holes,
+      pts:[[x, v, FIG_COL.a]],
+      caption:\`\${F.cap} The blue dot is x = \${this.n(x)}.\`}, document.getElementById('lmFig'));
+    document.getElementById('lmRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('lmGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LIMIT SEEKER','every side watched','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
   }
