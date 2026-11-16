@@ -982,6 +982,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TURN IT ROUND, MIXED ============ -->
+  <div class="screen" id="s-mixpick">
+    <div class="panel"><h2>🎲 Turn It Round</h2><div class="sub">One question from a different workshop each time, with its rule stated first. Work it out, read why, then move on: mixing the kinds is what makes each one stick.</div></div>
+    <div class="panel"><div id="mxBox"></div></div>
+    <div class="center small" id="mxScore"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ AREA WORKSHOP ============ -->
   <div class="screen" id="s-area">
     <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
@@ -13408,6 +13417,7 @@ const UI = {
     if(id==='s-slice') Slice.render();
     if(id==='s-tracer') Tracer.render();
     if(id==='s-arrow') Arrow.render();
+    if(id==='s-mixpick') MixPick.enter();
     if(id==='s-horizon') Horizon.render();
     if(id==='s-cross') Cross.render();
     if(id==='s-quot') Quot.render();
@@ -14035,6 +14045,11 @@ const UI = {
          <button class="btn sm" style="width:auto;margin-top:8px" onclick="Opening.reread()">Read it again</button>
        </div>\` +
       WorkshopIndex.html() +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🎲 Turn It Round, Mixed</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">\${MixPick.LIST.length} workshops can each be turned round. Here they come mixed: one question from a different workshop each time, its rule stated first, and every workshop once before any comes back.</div>
+         <button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick.open()">Mix them up</button>
+       </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it.</div>
@@ -27670,6 +27685,118 @@ const Train = {
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
   quit(){ this.renderPick(); }
+};
+
+/* ---------- Turn It Round: every workshop's pick, mixed ----------
+   Each workshop can be turned round into a pick of four. This screen deals
+   them mixed: one question from a different workshop each time, never the
+   same one twice running, and every workshop once before any comes back.
+   Each comes with its own rule stated first, its own slips and its own
+   checks, so a wrong pick is explained just as it is in the workshop. Its
+   buttons are pointed here, and the workshop it belongs to is not redrawn
+   while it is away; its ids are prefixed so nothing on the page is named
+   twice. After a right pick the working is shown and the next workshop is
+   one tap away. The matrix workshop's pick needs its figure, so it stays in
+   its workshop. Nothing is saved. */
+const MixPick = {
+  LIST:[
+    ['SecantPick','Slope','📈 Slope Workshop'],
+    ['IntPick','Area','🏺 Area Workshop'],
+    ['DotPick','Dot','🎯 Dot Product Workshop'],
+    ['SpanPick','Span','🧭 Span Workshop'],
+    ['ElimPick','Elim','⚖️ Elimination Workshop'],
+    ['UndoPick','Undo','↩️ Undo Workshop'],
+    ['FitPick','Fit','📏 Best Fit Workshop'],
+    ['DescentPick','Descent','⛰️ Downhill Workshop'],
+    ['SplitPick','Castles','🏰 Two Castles Workshop'],
+    ['SeriesPick','Taylor','🌀 Taylor Workshop'],
+    ['NewtonPick','Newton','🔎 Newton\\'s Method Workshop'],
+    ['ChainPick','Chain','⛓️ Chain Rule Workshop'],
+    ['HopPick','Hopital','🔬 L\\'Hôpital Workshop'],
+    ['ProductPick','Product','🌾 Product Rule Workshop'],
+    ['LadPick','Ladder','🪜 Ladder Workshop'],
+    ['NullPick','Kernel','🕳️ Null Space Workshop'],
+    ['GramPick','Gram','📐 Gram–Schmidt Workshop'],
+    ['GeoPick','Geo','🧮 Geometric Series Workshop'],
+    ['FlipPick','Bend','〰️ Bend Workshop'],
+    ['AvgPick','Avg','🌊 Water Level Workshop'],
+    ['TailPick','Tail','♾️ Endless Area Workshop'],
+    ['LathePick','Lathe','🏺 Lathe Workshop'],
+    ['SwapPick','Swap','🔄 Swap Workshop'],
+    ['ImpPick','Implicit','⭕ Implicit Slope Workshop'],
+    ['PartsPick','Parts','✂️ Parts Workshop'],
+    ['LamPick','Detect','🔍 Eigenvalue Detective'],
+    ['HillPick','Hill','🗺️ Hillwalker Workshop'],
+    ['CofPick','Cofactor','♟️ Cofactor Workshop'],
+    ['CovPick','Cover','🙈 Cover-up Workshop'],
+    ['SlicePick','Slice','🍞 Slice Workshop'],
+    ['ArrowPick','Arrow','➡️ Arrow Workshop'],
+    ['HzPick','Horizon','🌅 Horizon Workshop'],
+    ['CrossPick','Cross','✖️ Cross Product Workshop'],
+    ['QuotPick','Quot','➗ Quotient Rule Workshop'],
+    ['AntiPick','Anti','🪃 Antiderivative Workshop'],
+    ['TransPick','Transpose','🪞 Transpose Workshop'],
+    ['PowPick','Diag','🔑 Diagonal Workshop'],
+    ['TrigPick','TrigInt','🎢 Trig Integral Workshop'],
+    ['TanPick','TanPlane','🪁 Tangent Plane Workshop'],
+    ['InvPick','InvSlope','🪩 Inverse Slope Workshop'],
+    ['PathPick','PathChain','🛤️ Path Chain Workshop'],
+    ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
+    ['CisternPick','Cistern','💧 Cistern Workshop'],
+    ['BuildPick','Optim','🏗️ Biggest Build Workshop']
+  ],
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
+  mod(){ return this.refs()[this.LIST[this.cur][0]]; },
+  host(){ return this.refs()[this.LIST[this.cur][1]]; },
+  open(){ UI.go('s-mixpick'); },
+  enter(){ if(this.cur<0) this.next(); else this.render(); },
+  // a workshop not yet dealt in this pass through all of them, and never the one just shown
+  next(){
+    const n=this.LIST.length, all=[...Array(n).keys()];
+    let pool=all.filter(i=>!this.seen.has(i));
+    if(!pool.length){ this.seen.clear(); pool=all.filter(i=>i!==this.cur); }
+    this.cur=pool[R.i(0,pool.length-1)]; this.seen.add(this.cur);
+    const P=this.mod(); P.newRound(); P.last=null;
+    this.base=P.matched; this.done=false; this.firstTry=false;
+    this.render();
+  },
+  pick(i){
+    const P=this.mod(), H=this.host(), real=H.render, m0=P.misses;
+    // the workshop behind it is off the page, so it is not redrawn
+    H.render=()=>{};
+    try { P.choose(i); } finally { H.render=real; }
+    if(P.matched>this.base){
+      this.done=true; this.firstTry=m0===0; this.solved++; if(this.firstTry) this.first++; this.from.add(this.cur);
+      if(this.solved===10||this.solved===25||this.solved===50)
+        Celebrate.banner('ROUND THE REALM', this.solved+' turned round, mixed','var(--gold)',()=>Sfx.milestone());
+    }
+    this.render();
+  },
+  // the pick's own page, its buttons pointed here and its ids prefixed; the readout loses its own count line
+  body(){
+    const name=this.LIST[this.cur][0];
+    const h=this.mod().html().replace(/ id="([^"]+)"/g,' id="mx-$1"').replace(/url\\(#/g,'url(#mx-')
+      .replace(new RegExp(\`onclick="\${name}\\\\.choose\\\\((\\\\d)\\\\)"\`,'g'),'onclick="MixPick.pick($1)"');
+    const at=h.lastIndexOf('<div>'), end=h.indexOf('</div>',at);
+    return {h:h.slice(0,at)+h.slice(end+6), read:h.slice(h.indexOf('>',h.indexOf('aria-live="polite"'))+1, at)};
+  },
+  html(){
+    const t=this.LIST[this.cur][2], B=this.body();
+    let out=\`<div class="small" id="mxFrom" style="margin-bottom:4px">From the \${t}</div>\`;
+    if(this.done){
+      out+=\`<div id="mxDone" aria-live="polite" style="font-size:14px;line-height:1.6"><div><b>✓ Solved\${this.firstTry?' on the first try':''}.</b></div>\${B.read}</div>\`;
+      out+=\`<button class="btn" id="mxNext" style="margin-top:8px" onclick="MixPick.next()">Next workshop →</button>\`;
+    } else {
+      out+=B.h+\`<button class="btn sm ghost" id="mxSkip" style="width:auto;margin-top:8px" onclick="MixPick.next()" aria-label="Skip this one and take a question from another workshop">Skip to another workshop</button>\`;
+    }
+    return out;
+  },
+  score(){ return \`\${this.solved} solved this visit, \${this.first} on the first try, from \${this.from.size} of \${this.LIST.length} workshops.\`; },
+  render(){
+    document.getElementById('mxBox').innerHTML=this.html();
+    document.getElementById('mxScore').textContent=this.score();
+  }
 };
 
 /* ------------------------------- calculator ------------------------------- */

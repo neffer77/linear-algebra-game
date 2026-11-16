@@ -8723,6 +8723,145 @@ const arrowPickNotes = (() => {
   return { rounds, misses, worked, ranks };
 })();
 
+/* Turn It Round, mixed. The list is read against the page: every pick of
+   four but the matrix one is in it once, with the workshop its choose
+   redraws and that workshop's own title in the Tome. Then it is dealt with
+   stand-in picks: no workshop twice running, every one once per pass, a
+   wrong pick shut and explained without the pick's count line, a right one
+   counted with the workshop behind it never redrawn, and the working shown
+   with the next workshop one tap away. Last, two real picks, the arrow's and
+   the chain rule's, are played through it: their buttons point here and
+   every id, and every url(#…) that names one, is prefixed. */
+const mixPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const mixSrc = cut('const MixPick = {', '/* ------------------------------- calculator');
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  // --- the list, read against the page ---
+  const M0 = new Function('R', 'env', mixSrc + 'return MixPick;')(R, env);
+  const tome = {};
+  for (const m of html.matchAll(/<h2 style="font-size:16px;color:var\(--gold\)">([^<]+)<\/h2>[\s\S]{0,1500}?onclick="(\w+)\.open\(\)"/g)) if (!(m[2] in tome)) tome[m[2]] = m[1];
+  const picks = [];
+  for (const m of script.matchAll(/const (\w+Pick) = \{/g)) {
+    const b = script.slice(m.index, script.indexOf('\n};', m.index));
+    picks.push({ name: m[1], host: (b.slice(b.indexOf('  choose(')).match(/(\w+)\.render\(\);/) || [])[1], body: b });
+  }
+  const inList = new Map(M0.LIST.map(r => [r[0], r]));
+  if (inList.size !== M0.LIST.length) fail('mixpick', 'list', 'a pick is in the mix twice');
+  for (const p of picks) {
+    if (p.name === 'MixPick') continue;
+    if (p.name === 'MatPick') { if (inList.has('MatPick')) fail('mixpick', 'list', 'the matrix pick, which needs its figure, is in the mix'); continue; }
+    const r = inList.get(p.name);
+    if (!r) { fail('mixpick', 'list', `${p.name} is not in the mix`); continue; }
+    if (r[1] !== p.host) fail('mixpick', 'list', `${p.name} is listed with ${r[1]}, but redraws ${p.host}`);
+    if (r[2] !== tome[p.host]) fail('mixpick', 'list', `${p.name} is listed as ${r[2]}, but the Tome calls it ${tome[p.host]}`);
+    // what the mix leans on: buttons that call its choose, and a readout whose last line is the count
+    if (!p.body.includes(`onclick="${p.name}.choose(`)) fail('mixpick', p.name, 'its buttons do not call its choose');
+    const ll = [...p.body.matchAll(/lines\.push\(/g)].pop();
+    if (!ll || !p.body.slice(ll.index).startsWith('lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);')) fail('mixpick', p.name, 'its readout does not end on the count line');
+  }
+  for (const r of M0.LIST) if (!picks.some(p => p.name === r[0])) fail('mixpick', 'list', `${r[0]} is in the mix but not on the page`);
+  const refs = mixSrc.match(/refs\(\)\{ return \{([^}]*)\}; \}/);
+  const named = refs ? refs[1].split(',').map(s => s.trim()) : [];
+  for (const r of M0.LIST) for (const n of [r[0], r[1]]) if (!named.includes(n)) fail('mixpick', 'refs', `${n} cannot be reached from the mix`);
+  if (!/<button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick\.open\(\)">Mix them up<\/button>/.test(script)) fail('mixpick', 'tome', 'the Tome has no way into the mix');
+  if (!script.includes("    if(id==='s-mixpick') MixPick.enter();\n")) fail('mixpick', 'go', 'opening the screen does not deal');
+  // --- dealt with stand-in picks ---
+  const N = 6, hostRenders = [];
+  const fake = j => ({ matched: 0, firstTry: 0, misses: 0, round: null, last: null, picked: null, dealt: 0,
+    newRound() { this.dealt++; this.round = { out: new Set(), right: (this.dealt + j) % 4 }; this.misses = 0; this.picked = null; },
+    choose(i) { const r = this.round; if (r.out.has(i)) return; this.picked = i;
+      if (i === r.right) { this.matched++; if (!this.misses) this.firstTry++; this.last = { j }; this.newRound(); } else { r.out.add(i); this.misses++; this.last = null; }
+      F[`H${j}`].render(); },
+    html() { const r = this.round, miss = this.picked !== null && r.out.has(this.picked);
+      return `<div class="small">${this.RULE}</div><div id="q${j}" style="x">Q${j}.${this.dealt}</div><div id="p${j}">` +
+        [0, 1, 2, 3].map(i => `<button ${r.out.has(i) ? 'disabled ' : ''}onclick="F${j}Pick.choose(${i})" aria-label="${'ABCD'[i]}">${'ABCD'[i]}</button>`).join('') +
+        `</div><svg><clipPath id="c${j}"></clipPath><g clip-path="url(#c${j})"></g></svg><div id="r${j}" aria-live="polite" style="y">` +
+        (miss ? `<div>slip ${this.picked}</div><div>check ${this.picked}</div>` : this.last ? `<div>That was it ${j}.</div>` : '') +
+        `<div>${this.matched} picked this visit, ${this.firstTry} on the first try.</div></div>`; },
+    RULE: `Rule ${j}.` });
+  const F = {};
+  for (let j = 0; j < N; j++) { F[`F${j}Pick`] = fake(j); F[`H${j}`] = { render() { hostRenders.push(j); } }; }
+  const X = new Function('R', 'env', 'F', "const UI = {go(){}}; const Sfx = {milestone(){}}; const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" + mixSrc + 'return MixPick;')(R, env, F);
+  X.LIST = [...Array(N).keys()].map(j => [`F${j}Pick`, `H${j}`, `🧪 Test Workshop ${j}`]);
+  X.refs = () => F; X.render = () => {};
+  env.seed = 4242;
+  X.enter(); if (X.cur < 0) fail('mixpick', 'enter', 'opening the mix does not deal');
+  { const c = X.cur, d = F[`F${c}Pick`].dealt; X.enter(); if (X.cur !== c || F[`F${c}Pick`].dealt !== d) fail('mixpick', 'enter', 'coming back deals a new question instead of keeping the one shown'); }
+  X.cur = -1; X.seen.clear();
+  const order = [];
+  for (let n = 0; n < N * 5; n++) { X.next(); order.push(X.cur); }
+  for (let n = 1; n < order.length; n++) if (order[n] === order[n - 1]) fail('mixpick', 'deal', 'the same workshop comes twice running');
+  for (let p = 0; p < 5; p++) if (new Set(order.slice(p * N, p * N + N)).size !== N) fail('mixpick', 'deal', `pass ${p + 1} does not take every workshop once: ${order.slice(p * N, p * N + N)}`);
+  const visit = new Set();
+  for (let n = 0; n < 24; n++) {
+    X.next(); const j = X.cur, P = F[`F${j}Pick`], key = `deal ${n}`;
+    if (P.last !== null || P.misses !== 0) fail('mixpick', key, 'the pick is not dealt fresh');
+    let h = X.html();
+    if (!h.startsWith(`<div class="small" id="mxFrom" style="margin-bottom:4px">From the 🧪 Test Workshop ${j}</div><div class="small">Rule ${j}.</div>`)) fail('mixpick', key, 'the workshop and its rule are not shown first');
+    if ((h.match(/onclick="MixPick\.pick\(\d\)"/g) || []).length !== 4 || h.includes('.choose(')) fail('mixpick', key, 'the buttons do not point at the mix');
+    if ([...h.matchAll(/ id="([^"]+)"/g)].some(m => !m[1].startsWith('mx'))) fail('mixpick', key, 'an id is not prefixed');
+    if (!h.includes(`clip-path="url(#mx-c${j})"`) || !h.includes(`<clipPath id="mx-c${j}">`)) fail('mixpick', key, 'a url(#…) no longer names its prefixed id');
+    if (h.includes('picked this visit')) fail('mixpick', key, 'the pick’s own count line is shown');
+    if (!h.endsWith('<button class="btn sm ghost" id="mxSkip" style="width:auto;margin-top:8px" onclick="MixPick.next()" aria-label="Skip this one and take a question from another workshop">Skip to another workshop</button>') || h.includes('id="mxNext"')) fail('mixpick', key, 'before a pick it does not offer a skip');
+    const misses = n % 3, r0 = hostRenders.length, s0 = X.solved, f0 = X.first;
+    const wrong = [0, 1, 2, 3].filter(i => i !== P.round.right);
+    for (let q = 0; q < misses; q++) {
+      X.pick(wrong[q]); h = X.html();
+      if (X.done || X.solved !== s0) fail('mixpick', key, 'a miss is counted as solved');
+      if (!txt(h).includes(`slip ${wrong[q]} check ${wrong[q]}`) || h.includes('picked this visit')) fail('mixpick', key, 'a miss is not explained as the pick explains it');
+      if ((h.match(/ disabled /g) || []).length !== q + 1) fail('mixpick', key, 'a missed button is not shut');
+    }
+    X.pick(P.round.right); h = X.html(); visit.add(j);
+    if (hostRenders.length !== r0) fail('mixpick', key, 'the workshop behind the pick is redrawn');
+    if (F[`H${j}`].render === undefined || hostRenders.length !== r0) fail('mixpick', key, 'the workshop’s own redraw is not put back');
+    F[`H${j}`].render(); if (hostRenders.length !== r0 + 1) fail('mixpick', key, 'the workshop’s own redraw is not put back');
+    hostRenders.pop();
+    if (!X.done || X.solved !== s0 + 1 || X.first !== f0 + (misses ? 0 : 1)) fail('mixpick', key, 'the right pick is not counted');
+    if (txt(h) !== `From the 🧪 Test Workshop ${j} ✓ Solved${misses ? '' : ' on the first try'}. That was it ${j}. Next workshop →`) fail('mixpick', key, `after a pick: ${txt(h)}`);
+    if (h.includes('id="mxSkip"') || !h.endsWith('<button class="btn" id="mxNext" style="margin-top:8px" onclick="MixPick.next()">Next workshop →</button>')) fail('mixpick', key, 'after a pick the next workshop is not one tap away');
+    if (X.score() !== `${X.solved} solved this visit, ${X.first} on the first try, from ${visit.size} of ${N} workshops.`) fail('mixpick', key, `the score reads ${X.score()}`);
+    if (X.solved === 10 && env.banners[env.banners.length - 1] !== 'ROUND THE REALM / 10 turned round, mixed') fail('mixpick', key, 'no banner at ten');
+  }
+  if (env.banners.length !== 1) fail('mixpick', 'banner', `${env.banners.length} banners in 24 solved, not 1`);
+  // --- two real picks through it ---
+  const env2 = { toasts: [], banners: [], renders: 0, seed: 99 };
+  const R2 = { _r: () => { env2.seed = (env2.seed * 1664525 + 1013904223) >>> 0; return env2.seed / 4294967296; } };
+  R2.i = (a, b) => Math.floor(R2._r() * (b - a + 1)) + a; R2.pick = a => a[Math.floor(R2._r() * a.length)];
+  const Y = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'}; const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m), go(){}}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Chain = {render(){ env.renders++; }}; const Arrow = {render(){ env.renders++; }};" +
+    cut('const ChainPick = {', "/* ---------- The L'Hôpital workshop") + cut('const ArrowPick = {', '/* ---------- The arrow workshop: adding') + mixSrc +
+    "MixPick.refs = () => ({ChainPick, ArrowPick, Chain, Arrow}); MixPick.render = () => {}; return MixPick;")(R2, env2);
+  Y.LIST = Y.LIST.filter(r => r[0] === 'ChainPick' || r[0] === 'ArrowPick');
+  let real = 0;
+  for (let n = 0; n < 40; n++) {
+    Y.next(); const name = Y.LIST[Y.cur][0], P = Y.mod(), key = `real ${name} ${n}`;
+    let h = Y.html();
+    const own = P.html();
+    const ids = [...own.matchAll(/ id="([^"]+)"/g)].map(m => m[1]);
+    if (!ids.length || ids.some(id => !h.includes(` id="mx-${id}"`)) || [...h.matchAll(/ id="([^"]+)"/g)].some(m => !m[1].startsWith('mx'))) fail('mixpick', key, 'an id is not prefixed');
+    for (const m of own.matchAll(/url\(#([^)]+)\)/g)) if (!h.includes(`url(#mx-${m[1]})`) || !ids.includes(m[1])) fail('mixpick', key, `url(#${m[1]}) does not follow its id`);
+    if ((h.match(/onclick="MixPick\.pick\(\d\)"/g) || []).length !== 4 || h.includes(`${name}.choose(`)) fail('mixpick', key, 'the real pick’s buttons do not point at the mix');
+    if (h.includes('picked this visit')) fail('mixpick', key, 'the real pick’s count line is shown');
+    const ri = P.round.opts.findIndex(o => o.k === 'right'), wi = (ri + 1) % 4, r0 = env2.renders;
+    Y.pick(wi); h = Y.html();
+    if (Y.done || !txt(h).includes(txt(P.slip(P.round.S || P.round.c, P.round.opts[wi].k, 'ABCD'[wi])).slice(0, 40))) fail('mixpick', key, 'a real miss is not explained by its slip');
+    Y.pick(ri); h = Y.html();
+    if (env2.renders !== r0) fail('mixpick', key, 'the real pick’s workshop is redrawn');
+    if (!Y.done || !/^From the \S+ (Chain Rule|Arrow) Workshop ✓ Solved\. That was it: .+ Here is a new \w+\. Next workshop →$/.test(txt(h))) fail('mixpick', key, `after a real pick: ${txt(h)}`);
+    real++;
+  }
+  return { listed: M0.LIST.length, dealt: order.length + 24, real };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13490,6 +13629,7 @@ console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-step in the downhill workshop, every number read back off its button and checked against the slip it is named as, the right one alone a step against the slope measured from f, ${descentPickNotes.misses.toLocaleString()} wrong picks checked by the slope their step would need, ${descentPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 12)}  (rounds of how-long in the arrow workshop, every length read back off its button and checked against the slip it is named as, the right one alone the length of k·u + v measured on the arrow built part by part, ${arrowPickNotes.misses.toLocaleString()} wrong picks checked by Pythagoras backwards, ${arrowPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
