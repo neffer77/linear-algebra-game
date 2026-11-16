@@ -1504,13 +1504,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ PARTS WORKSHOP ============ -->
   <div class="screen" id="s-parts">
     <div class="panel"><h2>✂️ Parts Workshop</h2><div class="sub">Integration by parts undoes the product rule: split the integrand into u, to differentiate, and dv, to integrate, and ∫ u dv = uv − ∫ v du. Pick a split and see what it leaves. A good one leaves an integral simpler than the one you started with.</div></div>
+    <div id="bpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a split by hand or pick the number alone"></div>
     <div class="panel">
+      <div id="bqBox"></div>
       <div id="bpSets" class="wsModes" role="group" aria-label="Which integral"></div>
       <div id="bpFig"></div>
       <div id="bpOpts" class="wsModes" role="group" aria-label="Which split to try"></div>
       <div id="bpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="bpGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="bpGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14149,7 +14151,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">✂️ Parts Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split an integral into u and dv and see what integration by parts leaves. The right split makes it simpler; the wrong one makes it worse, or never gets started. Then turn it round: see an integral to split, and pick which of four numbers stands alone in the answer.</div>
          <button class="btn sm" id="tomeParts" style="width:auto;margin-top:8px" onclick="Parts.open()">Open the parts workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21445,6 +21447,142 @@ const Implicit = {
   }
 };
 
+/* ---------- Which number alone? The parts workshop turned round ----------
+   An integral ∫ (ax + b)·eᵏˣ dx with whole a, b and k, and four numbers, one
+   of them the B in (Ax + B)·eᵏˣ + C, which is b/k − a/k². The x number
+   A = a/k is shown; the rule is stated first; the wrong numbers are the
+   slips people make with parts: ∫ v du added instead of taken away, divided
+   by k once where it is twice, multiplied by k where it divides, the b
+   dropped, the ∫ v du forgotten, the b divided by k twice, or du taken as
+   dx. A wrong pick
+   is checked by the product rule, which must give back the integrand.
+   Nothing is saved. */
+const PartsPick = {
+  SLIPS:['plus','once','multK','noB','bOnly','bSq','duOne'],
+  SUP:{'-':'⁻','0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'},
+  RULE:'Split it: u = ax + b, to differentiate, and dv = eᵏˣ dx, to integrate. Then du = a dx and v = eᵏˣ/k, and ∫ u dv = uv − ∫ v du = (ax + b)·eᵏˣ/k − ∫ (a/k)·eᵏˣ dx = (ax + b)·eᵏˣ/k − (a/k²)·eᵏˣ. Gather what multiplies eᵏˣ. Which number stands alone in the bracket?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,b,c}=S, K=c*c;
+    return k==='right' ? this.frac(b*c-a,K) : k==='plus' ? this.frac(b*c+a,K) : k==='once' ? this.frac(b-a,c)
+      : k==='multK' ? this.frac(b-a*c,c) : k==='noB' ? this.frac(-a,K) : k==='bOnly' ? this.frac(b,c) : k==='bSq' ? this.frac(b-a,K) : this.frac(b*c-1,K);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this integral can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const [p,q]=v[j], [r,s]=v[k], [x,y]=v[i];
+      if((p*s+r*q)*y===x*q*s) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,4)*(R.i(0,1)?1:-1), b:R.i(1,9)*(R.i(0,1)?1:-1), c:R.i(1,3)*(R.i(0,1)?1:-1)};
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      // the x number and the numbers the explanations name are never the answer, so none of them gives it away
+      if([this.frac(S.a,S.c),this.frac(S.a,S.c*S.c),[S.a,1],[S.b,1],[S.c,1]].some(v=>this.key(v)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, b:-3, c:-2};
+  },
+  ex(c){ return 'e'+(c===1 ? '' : c===-1 ? this.SUP['-'] : String(c).split('').map(d=>this.SUP[d]).join(''))+'ˣ'; },
+  lin(a,b){ return \`\${a===1?'':a===-1?'−':neg(a)}x \${b<0?'−':'+'} \${Math.abs(b)}\`; },
+  ax(S){ const A=this.frac(S.a,S.c); return A[1]===1 ? (A[0]===1?'x':A[0]===-1?'−x':\`\${neg(A[0])}x\`) : \`(\${this.fs(A)})x\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('PARTS MASTER', this.matched+' integrals split','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} stands alone, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Parts.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,b,c}=S, e=this.ex(c), vk=\`\${e}/\${this.pn(c)}\`;
+    if(k==='plus') return \`\${L} adds the ∫ v du where parts takes it away: ∫ u dv = uv − ∫ v du, so the \${this.fs(this.frac(a,c*c))} from it goes in with a minus.\`;
+    if(k==='once') return \`\${L} divides by \${neg(c)} only once in the ∫ v du. v is already \${vk}, so ∫ (\${this.fs(this.frac(a,c))})·\${e} dx divides by \${neg(c)} again, to \${this.fs(this.frac(a,c*c))}·\${e}.\`;
+    if(k==='multK') return \`\${L} multiplies by \${neg(c)} where it should divide. ∫ \${e} dx is \${vk}: integrating \${e} divides by \${neg(c)}, and only differentiating it multiplies.\`;
+    if(k==='noB') return \`\${L} drops the \${neg(b)}. It rides along in u = \${this.lin(a,b)}, so uv brings \${this.fs(this.frac(b,c))}·\${e}, and that stays in the bracket.\`;
+    if(k==='bOnly') return \`\${L} stops at uv and forgets the ∫ v du. Taking it away leaves \${this.fs(this.frac(a,c*c))}·\${e} less, and that belongs in the bracket too.\`;
+    if(k==='duOne') return \`\${L} takes du = dx, as if u = \${this.lin(a,b)} had slope 1. Its slope is \${neg(a)}, so du = \${neg(a)} dx, and the ∫ v du carries that \${neg(a)}.\`;
+    return \`\${L} divides the \${neg(b)} by \${neg(c)} twice. The \${neg(b)} is in u, and only v = \${vk} divides it, once; the second ÷ \${neg(c)} belongs to the ∫ v du alone.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,b,c}=S, A=this.frac(a,c), e=this.ex(c), X=this.frac(A[0]*v[1]+c*v[0]*A[1],A[1]*v[1]);
+    return \`Check \${L}: by the product rule the slope of (\${this.ax(S)} + B)·\${e} is (\${this.fs(A)} + \${this.pn(c)} × (\${this.ax(S)} + B))·\${e}, which must be the integrand (\${this.lin(a,b)})·\${e}, so the number on its own, \${this.fs(A)} + \${this.pn(c)} × B, must be \${neg(b)}. With B = \${this.fs(v)} that is \${this.fs(A)} + \${this.pn(c)} × \${this.pf(v)} = \${this.fs(X)}, not \${neg(b)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="bqQ" style="text-align:center;font-size:16px;margin-bottom:2px">∫ (\${this.lin(S.a,S.b)})·\${this.ex(S.c)} dx = (\${this.ax(S)} + B)·\${this.ex(S.c)} + C</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which number is B?</div>\`;
+    out+=\`<div id="bqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="PartsPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the number alone':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), A=this.frac(B.a,B.c), e=this.ex(B.c);
+      lines.push(\`That was it: u = \${this.lin(B.a,B.b)} and v = \${e}/\${this.pn(B.c)}, so B = \${neg(B.b)}/\${this.pn(B.c)} − \${this.pn(B.a)}/\${B.c*B.c} = \${this.fs(v)}, and \${this.fs(A)} + \${this.pn(B.c)} × \${this.pf(v)} = \${neg(B.b)}, so the product rule gives back the integrand. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="bqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The parts workshop: integration by parts ----------
    Split an integrand into u, to differentiate, and dv, to integrate; then
    ∫ u dv = uv − ∫ v du. A good split leaves an integral simpler than the one
@@ -21550,7 +21688,15 @@ const Parts = {
   open(){ UI.go('s-parts'); },
   pick(i){ this.si=i; this.oi=null; this.render(); },
   trySplit(j){ this.oi=j; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('bpTab').innerHTML=[['hand','✂️ Pick a split by hand','Pick a split by hand and see what parts leaves'],['pick','🎯 Which number alone?','See an integral to split, and pick which of four numbers stands alone in the answer']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Parts.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['bpSets','bpFig','bpOpts','bpRead','bpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('bqBox').innerHTML=pick ? PartsPick.html() : '';
+    if(pick) return;
     const S=this.set();
     document.getElementById('bpSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Parts.pick(\${i})" aria-label="\${s.I}">\${s.btn}</button>\`).join('');

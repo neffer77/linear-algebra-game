@@ -8091,6 +8091,170 @@ const splitPickNotes = (() => {
   if (fives !== 30) fail('splitpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked };
 })();
+/* Which number alone? The parts workshop turned round. Every number is read
+   back off its button and checked against the slip it is named as, worked
+   from the integral here; the right one alone is the number alone, found
+   without the rule: (Ax + B)·eᵏˣ is nudged, and only the right B has the
+   integrand as its slope. Each wrong number's check is worked again, the
+   number on its own measured as the nudged slope at 0. */
+const partsPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Parts = {render(){ env.renders++; }};" +
+    cut('const PartsPick = {', '/* ---------- The parts workshop: integration by parts') + 'return PartsPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const ex = c => 'e' + (c === 1 ? '' : c === -1 ? '⁻' : String(c).replace('-', '⁻').replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d])) + 'ˣ';
+  const lin = (a, b) => `${a === 1 ? '' : a === -1 ? '−' : ng(a)}x ${b < 0 ? '−' : '+'} ${Math.abs(b)}`;
+  const ax = Q => { const A = red(Q.a, Q.c); return A[1] === 1 ? (A[0] === 1 ? 'x' : A[0] === -1 ? '−x' : `${ng(A[0])}x`) : `(${fr(A)})x`; };
+  const g = (Q, x) => (Q.a * x + Q.b) * Math.exp(Q.c * x);
+  // every number, worked from the slip it stands for: b/k − a/k² the right one
+  const want = (k, Q) => { const { a, b, c } = Q, K = c * c;
+    return k === 'right' ? red(b * c - a, K) : k === 'plus' ? red(b * c + a, K) : k === 'once' ? red(b - a, c)
+      : k === 'multK' ? red(b - a * c, c) : k === 'noB' ? red(-a, K) : k === 'bOnly' ? red(b, c) : k === 'bSq' ? red(b - a, K) : k === 'duOne' ? red(b * c - 1, K) : null; };
+  // the slope of (Ax + B)·eᵏˣ at x, measured by a nudge
+  const nudge = (v, Q, x) => { const F = s => (Q.a / Q.c * s + v[0] / v[1]) * Math.exp(Q.c * s), h = 1e-5; return (F(x + h) - F(x - h)) / (2 * h); };
+  const fits = (v, Q) => [-0.4, 0.3, 0.7].every(x => Math.abs(nudge(v, Q, x) - g(Q, x)) <= 1e-5 * Math.max(1, Math.abs(g(Q, x))));
+  const slipOf = (k, L, Q) => { const { a, b, c } = Q, e = ex(c), vk = `${e}/${pn(c)}`;
+    if (k === 'plus') return `${L} adds the ∫ v du where parts takes it away: ∫ u dv = uv − ∫ v du, so the ${fr(red(a, c * c))} from it goes in with a minus.`;
+    if (k === 'once') return `${L} divides by ${ng(c)} only once in the ∫ v du. v is already ${vk}, so ∫ (${fr(red(a, c))})·${e} dx divides by ${ng(c)} again, to ${fr(red(a, c * c))}·${e}.`;
+    if (k === 'multK') return `${L} multiplies by ${ng(c)} where it should divide. ∫ ${e} dx is ${vk}: integrating ${e} divides by ${ng(c)}, and only differentiating it multiplies.`;
+    if (k === 'noB') return `${L} drops the ${ng(b)}. It rides along in u = ${lin(a, b)}, so uv brings ${fr(red(b, c))}·${e}, and that stays in the bracket.`;
+    if (k === 'bOnly') return `${L} stops at uv and forgets the ∫ v du. Taking it away leaves ${fr(red(a, c * c))}·${e} less, and that belongs in the bracket too.`;
+    if (k === 'duOne') return `${L} takes du = dx, as if u = ${lin(a, b)} had slope 1. Its slope is ${ng(a)}, so du = ${ng(a)} dx, and the ∫ v du carries that ${ng(a)}.`;
+    return `${L} divides the ${ng(b)} by ${ng(c)} twice. The ${ng(b)} is in u, and only v = ${vk} divides it, once; the second ÷ ${ng(c)} belongs to the ∫ v du alone.`; };
+  const RULE = 'Split it: u = ax + b, to differentiate, and dv = eᵏˣ dx, to integrate. Then du = a dx and v = eᵏˣ/k, and ∫ u dv = uv − ∫ v du = (ax + b)·eᵏˣ/k − ∫ (a/k)·eᵏˣ dx = (ax + b)·eᵏˣ/k − (a/k²)·eᵏˣ. Gather what multiplies eᵏˣ. Which number stands alone in the bracket?';
+  if (S.RULE !== RULE) fail('partspick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('partspick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['plus', 'once', 'multK', 'noB', 'bOnly', 'bSq', 'duOne'];
+  // whether one of the four is the sum of two others
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const [p, q] = vs[j], [r, t] = vs[k], [x, y] = vs[i]; if ((p * t + r * q) * y === x * q * t) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Bs = new Set(), Cs = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c);
+      if (!(Math.abs(Q.a) >= 1 && Math.abs(Q.a) <= 4) || !(Math.abs(Q.b) >= 1 && Math.abs(Q.b) <= 9) || ![1, 2, 3].includes(Math.abs(Q.c)) || ![Q.a, Q.b, Q.c].every(Number.isInteger)) fail('partspick', key, `${sig} is not a whole integral of the kind dealt`);
+      if (prev && prev === sig) fail('partspick', key, 'the same integral comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('partspick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} ∫ (${lin(Q.a, Q.b)})·${ex(Q.c)} dx = (${ax(Q)} + B)·${ex(Q.c)} + C Which number is B? A `)) fail('partspick', key, 'the rule and the integral are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="PartsPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('partspick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('partspick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('partspick', key, 'a number is 0');
+      if (new Set(vals.map(String)).size !== 4) fail('partspick', key, 'two numbers are the same');
+      if (sums(vals)) fail('partspick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      // the x number, and the numbers the explanations name, are never the answer
+      if ([red(Q.a, Q.c), red(Q.a, Q.c * Q.c), [Q.a, 1], [Q.b, 1], [Q.c, 1]].some(v => String(v) === String(vals[ri]))) fail('partspick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('partspick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('partspick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), seen = new Set([String(W)]), can = [];
+        for (const kk of SL) { const v = want(kk, Q); if (v[0] === 0 || seen.has(String(v))) continue; seen.add(String(v)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1)) && tr.some(x => want(x, Q)[0] * W[0] > 0) && !sums([W, ...tr.map(x => want(x, Q))])) T.push(tr); }
+        // the right one's place is chosen first, so look only at the sets that give it the place it has
+        const rk = tr => tr.filter(x => { const v = want(x, Q); return v[0] * W[1] < W[0] * v[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('partspick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('partspick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== fits(vals[i], Q)) fail('partspick', key, `(${ax(Q)} + ${btns[i][6]})·${ex(Q.c)} ${o.k === 'right' ? 'does not have' : 'has'} the integrand as its slope`);
+      });
+      if (k === 0 && txt(S.html().split('id="bqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('partspick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, A = red(Q.a, Q.c);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('partspick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="bqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('partspick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): by the product rule the slope of \((.+?) \+ B\)·(\S+) is \((\S+) \+ (\S+) × \((.+?) \+ B\)\)·(\S+), which must be the integrand \((.+?)\)·(\S+), so the number on its own, (\S+) \+ (\S+) × B, must be (\S+)\. With B = (\S+) that is (\S+) \+ (\S+) × (\S+) = (\S+), not (\S+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('partspick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const e = ex(Q.c);
+        if (cm[2] !== ax(Q) || cm[3] !== e || cm[4] !== fr(A) || cm[5] !== pn(Q.c) || cm[6] !== ax(Q) || cm[7] !== e || cm[8] !== lin(Q.a, Q.b) || cm[9] !== e
+          || cm[10] !== fr(A) || cm[11] !== pn(Q.c) || cm[12] !== ng(Q.b) || cm[13] !== fr(vals[i]) || cm[14] !== fr(A) || cm[15] !== pn(Q.c) || cm[16] !== pf(vals[i]) || cm[18] !== ng(Q.b)) fail('partspick', key, `the check of ${o.k} is not worked for this integral: ${lines[1]}`);
+        // the number on its own, measured: at x = 0 the slope of (Ax + B)·eᵏˣ is A + k × B
+        const X = rdv(cm[17]);
+        if (!X || String(X) !== String(red(A[0] * vals[i][1] + Q.c * vals[i][0] * A[1], A[1] * vals[i][1]))) fail('partspick', key, `the check of ${o.k} gives ${cm[17]}`);
+        else if (Math.abs(nudge(vals[i], Q, 0) - X[0] / X[1]) > 1e-4 * Math.max(1, Math.abs(X[0] / X[1]))) fail('partspick', key, `${cm[17]} is not the slope of ${o.k} at 0`);
+        if (X && X[1] === 1 && X[0] === Q.b) fail('partspick', key, 'a wrong number passes its check');
+        if (lines[1].includes(`B = ${fr(want('right', Q))} `) || lines[0].includes(` is ${fr(want('right', Q))},`)) fail('partspick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="PartsPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the number alone"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('partspick', key, 'the missed numbers are not shut and told as not the number alone');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('partspick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('partspick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('partspick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('partspick', key, 'no fresh integral after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'PARTS MASTER / 5 integrals split') fail('partspick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} stands alone, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('partspick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="bqRead"')[1].replace(/^[^>]*>/, ''));
+      const W = want('right', Q);
+      const wantLine = `That was it: u = ${lin(Q.a, Q.b)} and v = ${ex(Q.c)}/${pn(Q.c)}, so B = ${ng(Q.b)}/${pn(Q.c)} − ${pn(Q.a)}/${Q.c * Q.c} = ${fr(W)}, and ${fr(A)} + ${pn(Q.c)} × ${pf(W)} = ${ng(Q.b)}, so the product rule gives back the integrand. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('partspick', key, `after a pick: ${got}`);
+      if ((A[0] * W[1] + Q.c * W[0] * A[1]) !== Q.b * A[1] * W[1]) fail('partspick', key, `${fr(A)} + ${Q.c} × ${fr(W)} is not ${Q.b}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same integral dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, b: -3, c: -2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"b":-3,"c":-2}') fail('partspick', 'repeat', 'the same integral is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of integrals: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++; if (W[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('partspick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('partspick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('partspick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 8 || Bs.size < 16 || Cs.size !== 6) fail('partspick', 'deal', `a ${[...As]}, b ${Bs.size} values, k ${[...Cs]} is not the whole deal`);
+  if (slots.size !== 4) fail('partspick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (![0, 1, 2, 3].every(i => ranks[i] > rounds * 0.2 && ranks[i] < rounds * 0.29)) fail('partspick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('partspick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('partspick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('partspick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('partspick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12854,6 +13018,7 @@ console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
