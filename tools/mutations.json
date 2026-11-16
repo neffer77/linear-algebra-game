@@ -1,340 +1,305 @@
 {
-  "change": "Which det A? The cofactor workshop turned round: see a 3×3 matrix, and pick which of four numbers is its determinant.",
+  "change": "Which k? The elimination workshop turned round: see two rows, and pick which of four numbers k clears x.",
   "mutations": [
     {
-      "name": "the rule drops the take-away in a minor",
+      "name": "the rule drops the minus",
       "file": "index.html",
-      "find": "  RULE:'Expand along any row or column: each entry times its minor, the 2×2 determinant ad − bc",
-      "replace": "  RULE:'Expand along any row or column: each entry times its minor, the 2×2 determinant ad + bc",
+      "find": "  RULE:'To clear x out of row 2, add k times row 1 to it. Each copy of row 1 adds its x coefficient to row 2\\'s, so x is gone when row 2\\'s x coefficient + k × row 1\\'s comes to 0: k = −(row 2",
+      "replace": "  RULE:'To clear x out of row 2, add k times row 1 to it. Each copy of row 1 adds its x coefficient to row 2\\'s, so x is gone when row 2\\'s x coefficient + k × row 1\\'s comes to 0: k = (row 2",
       "run": "verify"
     },
     {
-      "name": "the checkerboard starts with a minus",
+      "name": "k forgets the minus",
       "file": "index.html",
-      "find": "  sign:(i,j)=>(i+j)%2 ? -1 : 1,",
-      "replace": "  sign:(i,j)=>(i+j)%2 ? 1 : -1,",
+      "find": "return this.frac(...(k==='right' ? [-d,a] :",
+      "replace": "return this.frac(...(k==='right' ? [d,a] :",
       "run": "verify"
     },
     {
-      "name": "a minor strikes the wrong column",
+      "name": "the sign slip is k",
       "file": "index.html",
-      "find": "  minor(A,i,j){ return A.filter((_,r)=>r!==i).map(Q=>Q.filter((_,c)=>c!==j)); },",
-      "replace": "  minor(A,i,j){ return A.filter((_,r)=>r!==i).map(Q=>Q.filter((_,c)=>c!==(j+1)%3)); },",
+      "find": "k==='sign' ? [d,a] :",
+      "replace": "k==='sign' ? [-d,a] :",
       "run": "verify"
     },
     {
-      "name": "a 2×2 minor adds",
+      "name": "the upside-down slip keeps its sign off",
       "file": "index.html",
-      "find": "  m2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],",
-      "replace": "  m2:M=>M[0][0]*M[1][1]+M[0][1]*M[1][0],",
+      "find": "k==='flip' ? [-a,d] :",
+      "replace": "k==='flip' ? [a,d] :",
       "run": "verify"
     },
     {
-      "name": "columns are read as rows",
+      "name": "the undivided slip divides",
       "file": "index.html",
-      "find": "  cells:li=>[0,1,2].map(t=>li<3 ? [li,t] : [t,li-3]),",
-      "replace": "  cells:li=>[0,1,2].map(t=>li<3 ? [li,t] : [li-3,t]),",
+      "find": "k==='nodiv' ? [-d,1] :",
+      "replace": "k==='nodiv' ? [-d,a] :",
       "run": "verify"
     },
     {
-      "name": "a column is named one off",
+      "name": "the clear-y slip clears x",
       "file": "index.html",
-      "find": "  name:li=>li<3 ? `row ${li+1}` : `column ${li-2}`,",
-      "replace": "  name:li=>li<3 ? `row ${li+1}` : `column ${li-3}`,",
+      "find": "k==='nodiv' ? [-d,1] : [-e,b]));",
+      "replace": "k==='nodiv' ? [-d,1] : [-d*2,b]));",
       "run": "verify"
     },
     {
-      "name": "the no-sign slip is det A",
+      "name": "a fraction is not cut down",
       "file": "index.html",
-      "find": "    if(k==='nosign') return [0,1,2].reduce((s,j)=>s+A[0][j]*this.m2(this.minor(A,0,j)),0);",
-      "replace": "    if(k==='nosign') return [0,1,2].reduce((s,j)=>s+this.sign(0,j)*A[0][j]*this.m2(this.minor(A,0,j)),0);",
+      "find": "frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  // the number each option stands for, as a fraction\n  val(S,k){",
+      "replace": "frac(p,q){ if(q<0){ p=-p; q=-q; } const g=1; return [p/g,q/g]; },\n  // the number each option stands for, as a fraction\n  val(S,k){",
       "run": "verify"
     },
     {
-      "name": "the ad + bc slip takes away",
+      "name": "a fraction keeps its sign underneath",
       "file": "index.html",
-      "find": "s+this.sign(0,j)*A[0][j]*(M[0][0]*M[1][1]+M[0][1]*M[1][0]); },0);",
-      "replace": "s+this.sign(0,j)*A[0][j]*(M[0][0]*M[1][1]-2*M[0][1]*M[1][0]); },0);",
+      "find": "frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  // the number each option stands for, as a fraction\n  val(S,k){",
+      "replace": "frac(p,q){ if(q<0&&p<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  // the number each option stands for, as a fraction\n  val(S,k){",
       "run": "verify"
     },
     {
-      "name": "the diagonal slip takes the other diagonal",
+      "name": "a k of 0 may be offered",
       "file": "index.html",
-      "find": "    if(k==='diag') return A[0][0]*A[1][1]*A[2][2];",
-      "replace": "    if(k==='diag') return A[0][2]*A[1][1]*A[2][0];",
+      "find": "    const seen=new Set([this.key(this.val(S,'right')),'0/1']), keep=[];",
+      "replace": "    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];",
       "run": "verify"
     },
     {
-      "name": "the half-Sarrus slip drops a diagonal",
+      "name": "the clear-y slip is offered with no y",
       "file": "index.html",
-      "find": "    if(k==='half') return A[0][0]*A[1][1]*A[2][2]+A[0][1]*A[1][2]*A[2][0]+A[0][2]*A[1][0]*A[2][1];",
-      "replace": "    if(k==='half') return A[0][0]*A[1][1]*A[2][2]+A[0][1]*A[1][2]*A[2][0];",
+      "find": "      if(k==='y' && !S.rows[0][1]) continue;   // row 1 has no y to clear with\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "the flipped slip keeps its sign",
+      "name": "a slip equal to k is kept",
       "file": "index.html",
-      "find": "    return -this.det(A);\n  },",
-      "replace": "    return -this.det(A)*2;\n  },",
+      "find": "      const f=this.val(S,k);\n      if(seen.has(this.key(f))) continue;\n      seen.add(this.key(f)); keep.push(k); }",
+      "replace": "      const f=this.val(S,k);\n      seen.add(this.key(f)); keep.push(k); }",
       "run": "verify"
     },
     {
-      "name": "a slip equal to det A is kept",
+      "name": "row 1's x may be 3",
       "file": "index.html",
-      "find": "      if(seen.has(v)) continue;\n      seen.add(v); keep.push(k); }",
-      "replace": "      seen.add(v); keep.push(k); }",
+      "find": "a=(whole ? R.i(1,2) : R.i(2,3))",
+      "replace": "a=(whole ? R.i(1,3) : R.i(2,3))",
       "run": "verify"
     },
     {
-      "name": "a 0 may be offered",
+      "name": "k is never negative",
       "file": "index.html",
-      "find": "    const seen=new Set([this.det(A),0]), keep=[];",
-      "replace": "    const seen=new Set([this.det(A)]), keep=[];",
+      "find": "d=whole ? -R.i(1,3)*(R.i(0,1) ? 1 : -1)*a :",
+      "replace": "d=whole ? -R.i(1,3)*(R.i(0,1) ? 1 : 1)*a :",
       "run": "verify"
     },
     {
-      "name": "entries may run past three",
+      "name": "the rows may never cross",
       "file": "index.html",
-      "find": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : -1)));",
-      "replace": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,4)*(R.i(0,1) ? 1 : -1)));",
+      "find": "      if(a*e===b*d) continue;   // no single crossing",
+      "replace": "      if(false) continue;   // no single crossing",
       "run": "verify"
     },
     {
-      "name": "entries are never negative",
+      "name": "k is never a fraction",
       "file": "index.html",
-      "find": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : -1)));",
-      "replace": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : 1)));",
+      "find": "      if(!whole && d%a===0) continue;",
+      "replace": "      if(!whole) continue;",
       "run": "verify"
     },
     {
-      "name": "A may have one zero",
+      "name": "a fraction k can be a whole number",
       "file": "index.html",
-      "find": "      if(z<2) continue;   // a 0 or two",
-      "replace": "      if(z<1) continue;   // a 0 or two",
+      "find": "      if(!whole && d%a===0) continue;\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "A always has three zeros",
+      "name": "the crossing misses row 2",
       "file": "index.html",
-      "find": "      for(let n=R.i(2,3);n>0;n--) A[R.i(0,2)][R.i(0,2)]=0;",
-      "replace": "      for(let n=R.i(2,3);n>0;n--) A[R.i(0,2)][R.i(0,2)]=0;\n      if(A.flat().filter(x=>x===0).length<3) continue;",
+      "find": "const S={rows:[[a,b,a*x+b*y],[d,e,d*x+e*y]], x, y};",
+      "replace": "const S={rows:[[a,b,a*x+b*y],[d,e,d*x+e*y+1]], x, y};",
       "run": "verify"
     },
     {
-      "name": "det A may be 0",
+      "name": "rows with too few slips are dealt",
       "file": "index.html",
-      "find": "      if(!d || Math.abs(d)>60) continue;",
-      "replace": "      if(Math.abs(d)>60) continue;",
+      "find": "      if(this.slips(S).length<3) continue;\n      return S;",
+      "replace": "      if(this.slips(S).length<2) continue;\n      return S;",
       "run": "verify"
     },
     {
-      "name": "det A may be big",
+      "name": "the same rows may come twice",
       "file": "index.html",
-      "find": "      if(!d || Math.abs(d)>60) continue;",
-      "replace": "      if(!d || Math.abs(d)>99) continue;",
-      "run": "verify"
-    },
-    {
-      "name": "an A with too few slips is dealt",
-      "file": "index.html",
-      "find": "      if(this.slips(A).length<3) continue;\n      return A;\n    }\n    return [[2,0,1],[3,0,4],[1,5,2]];",
-      "replace": "      if(this.slips(A).length<2) continue;\n      return A;\n    }\n    return [[2,0,1],[3,0,4],[1,5,2]];",
-      "run": "verify"
-    },
-    {
-      "name": "the quickest line is the last of a tie",
-      "file": "index.html",
-      "find": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>this.zeros(A,b)) b=li; return b; },",
-      "replace": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>=this.zeros(A,b)) b=li; return b; },",
-      "run": "verify"
-    },
-    {
-      "name": "the quickest line is always row 1",
-      "file": "index.html",
-      "find": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>this.zeros(A,b)) b=li; return b; },",
-      "replace": "  best(A){ return 0; },",
-      "run": "verify"
-    },
-    {
-      "name": "the same A may come twice",
-      "file": "index.html",
-      "find": "if(!prev||A.join(';')!==prev.join(';')) break; }",
+      "find": "if(!prev||S.rows.flat().join()!==prev.rows.flat().join()) break; }",
       "replace": "if(!prev||true) break; }",
       "run": "verify"
     },
     {
       "name": "the slips always come in one order",
       "file": "index.html",
-      "find": "prev.join(';')) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }",
-      "replace": "prev.join(';')) break; }\n    const rest=this.slips(A);",
+      "find": "prev.rows.flat().join()) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }",
+      "replace": "prev.rows.flat().join()) break; }\n    const rest=this.slips(S);",
       "run": "verify"
     },
     {
-      "name": "det A always sits first",
+      "name": "k always sits first",
       "file": "index.html",
-      "find": "    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
-      "replace": "    opts.sort((x,y)=>(y.k==='right')-(x.k==='right'));\n    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
+      "find": "    this.round={S,opts,out:new Set()};",
+      "replace": "    opts.sort((x,y)=>(y.k==='right')-(x.k==='right'));\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "one option is dropped",
       "file": "index.html",
-      "find": "prev.join(';')) break; }\n    const rest=this.slips(A);",
-      "replace": "prev.join(';')) break; }\n    const rest=this.slips(A).slice(0,2);",
+      "find": "prev.rows.flat().join()) break; }\n    const rest=this.slips(S);",
+      "replace": "prev.rows.flat().join()) break; }\n    const rest=this.slips(S).slice(0,2);",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT READER'",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT READER'",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('ROW CLEARER'",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('ROW CLEARER'",
       "run": "verify"
     },
     {
       "name": "the toast counts the wrong tries",
       "file": "index.html",
-      "find": "else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}.",
-      "replace": "else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}.",
+      "find": "else UI.toast(`✓ ${'PQRS'[i]} clears x, picked ${tries===1?'on the first try':'in '+tries+' tries'}.",
+      "replace": "else UI.toast(`✓ ${'PQRS'[i]} clears x, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}.",
       "run": "verify"
     },
     {
-      "name": "A stays after the right pick",
+      "name": "the rows stay after the right pick",
       "file": "index.html",
-      "find": "      else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};\n      this.newRound();",
-      "replace": "      else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};",
+      "find": "      this.last={S:r.S};\n      this.newRound();",
+      "replace": "      this.last={S:r.S};",
       "run": "verify"
     },
     {
       "name": "a miss is not crossed off",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
-      "replace": "      this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Elim.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Elim.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "a miss still counts as first try",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
-      "replace": "      r.out.add(i); this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Elim.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "replace": "      r.out.add(i); this.last=null;\n    }\n    Elim.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "the workshop is not redrawn",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Elim.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "a crossed-off number can be picked again",
       "file": "index.html",
-      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
-      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('ROW CLEARER",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('ROW CLEARER",
       "run": "verify"
     },
     {
-      "name": "a worked minor swaps its corners",
+      "name": "a fraction k loses its brackets",
       "file": "index.html",
-      "find": "  m2w(M){ return `${neg(M[0][0])} × ${this.pn(M[1][1])} − ${this.pn(M[0][1])} × ${this.pn(M[1][0])}",
-      "replace": "  m2w(M){ return `${neg(M[0][0])} × ${this.pn(M[1][0])} − ${this.pn(M[0][1])} × ${this.pn(M[1][1])}",
+      "find": "  ct(f){ return f[1]===1 ? this.pn(f[0]) : `(${this.fs(f)})`; },\n  slip(k,L){\n    if(k==='sign') return `${L} leaves",
+      "replace": "  ct(f){ return f[1]===1 ? this.pn(f[0]) : this.fs(f); },\n  slip(k,L){\n    if(k==='sign') return `${L} leaves",
       "run": "verify"
     },
     {
-      "name": "the no-sign slip names the wrong term",
+      "name": "x is worked with k's top alone",
       "file": "index.html",
-      "find": "so the middle term, ${this.pn(A[0][1])} × ${this.pn(this.m2(M(1)))} = ${neg(A[0][1]*this.m2(M(1)))}",
-      "replace": "so the middle term, ${this.pn(A[0][1])} × ${this.pn(this.m2(M(2)))} = ${neg(A[0][1]*this.m2(M(2)))}",
+      "find": "  xco(S,f){ const [[a],[d]]=S.rows; return this.frac(d*f[1]+f[0]*a, f[1]); },",
+      "replace": "  xco(S,f){ const [[a],[d]]=S.rows; return this.frac(d+f[0]*a, f[1]); },",
       "run": "verify"
     },
     {
-      "name": "the ad + bc slip works a minor with nothing to add",
+      "name": "the sign slip is told as another",
       "file": "index.html",
-      "find": "const j=[0,1,2].find(j=>A[0][j]!==0 && M(j)[0][1]*M(j)[1][0]!==0), N=M(j);",
-      "replace": "const j=[0,1,2].find(j=>A[0][j]!==0), N=M(j);",
+      "find": "    if(k==='sign') return `${L} leaves the minus sign off.",
+      "replace": "    if(k==='flip') return `${L} leaves the minus sign off.",
       "run": "verify"
     },
     {
-      "name": "the diagonal slip is told as another",
+      "name": "a miss is not checked",
       "file": "index.html",
-      "find": "    if(k==='diag') return `${L} multiplies just the diagonal,",
-      "replace": "    if(k==='half') return `${L} multiplies just the diagonal,",
+      "find": "if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]), this.check(S,r.opts[m].k,'PQRS'[m]));",
+      "replace": "if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]));",
       "run": "verify"
     },
     {
-      "name": "the hint counts the minors wrong",
+      "name": "the new y coefficient forgets k",
       "file": "index.html",
-      "find": "expand along it and ${z===1?'only two minors need':'only one minor needs'} working out.`; },",
-      "replace": "expand along it and ${z===2?'only two minors need':'only one minor needs'} working out.`; },",
+      "find": "n1=this.frac(e*k[1]+k[0]*b,k[1])",
+      "replace": "n1=this.frac(e*k[1]+b,k[1])",
       "run": "verify"
     },
     {
-      "name": "a miss gives no hint",
+      "name": "row 2's new y is not over its fraction",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(r.opts[m].k,A,'PQRS'[m]), this.hint(A));",
-      "replace": "if(m!==null) lines.push(this.slip(r.opts[m].k,A,'PQRS'[m]));",
+      "find": "`(${this.fs(n1)})y = ${this.fs(n2)}`",
+      "replace": "`${this.fs(n1)}y = ${this.fs(n2)}`",
       "run": "verify"
     },
     {
-      "name": "a term loses its sign",
+      "name": "x is put back with the wrong sign",
       "file": "index.html",
-      "find": "return (n===0 ? (s<0?'−':'') : (s<0?' − ':' + '))+`${this.pn(A[i][j])} × ${this.pn(m)}`; }).join('');",
-      "replace": "return (n===0 ? '' : ' + ')+`${this.pn(A[i][j])} × ${this.pn(m)}`; }).join('');",
+      "find": "= ${neg(c)} − ${this.pn(b)} × ${this.pn(S.y)} = ${neg(c-b*S.y)}, so x =",
+      "replace": "= ${neg(c)} − ${this.pn(b)} × ${this.pn(S.y)} = ${neg(c+b*S.y)}, so x =",
       "run": "verify"
     },
     {
-      "name": "the zeros on the line are worked too",
+      "name": "an equation drops its y",
       "file": "index.html",
-      "find": "const b=this.best(A), z=this.zeros(A,b), C=this.cells(b).filter(([i,j])=>A[i][j]!==0);",
-      "replace": "const b=this.best(A), z=this.zeros(A,b), C=this.cells(b);",
+      "find": "  eq(r){ const x=this.term(r[0],'x',true), y=this.term(r[1],'y',!x); return `${(x+y)||'0'} = ${neg(r[2])}`; },",
+      "replace": "  eq(r){ const x=this.term(r[0],'x',true), y=''; return `${(x+y)||'0'} = ${neg(r[2])}`; },",
       "run": "verify"
     },
     {
-      "name": "the right pick shows no minors",
+      "name": "a coefficient of 1 is written",
       "file": "index.html",
-      "find": "      C.map(([i,j])=>`The minor of entry (${i+1}, ${j+1}) is ${this.m2w(this.minor(A,i,j))}.`).join(' ')+' Here is a new A.'];",
-      "replace": "      'Here is a new A.'];",
+      "find": "    const m=Math.abs(n), body=(m===1?'':m)+v;\n    return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body;\n  },\n  eq(r){ const x=",
+      "replace": "    const m=Math.abs(n), body=m+v;\n    return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body;\n  },\n  eq(r){ const x=",
       "run": "verify"
     },
     {
       "name": "a number is named by another",
       "file": "index.html",
-      "find": "aria-label=\"${L}: det A = ${neg(v)}${gone?'. Not det A':''}\"",
-      "replace": "aria-label=\"${L}: det A = ${neg(this.det(A))}${gone?'. Not det A':''}\"",
+      "find": "aria-label=\"${L}: k = ${this.fs(f)}${gone?'. Does not clear x':''}\"",
+      "replace": "aria-label=\"${L}: k = ${this.fs(this.val(S,'right'))}${gone?'. Does not clear x':''}\"",
       "run": "verify"
     },
     {
       "name": "a crossed-off number is not shut",
       "file": "index.html",
-      "find": "data-opt=\"${L}\" ${gone?'disabled ':''}onclick=\"CofPick.choose(${i})\"",
-      "replace": "data-opt=\"${L}\" onclick=\"CofPick.choose(${i})\"",
+      "find": "data-opt=\"${L}\" ${gone?'disabled ':''}onclick=\"ElimPick.choose(${i})\"",
+      "replace": "data-opt=\"${L}\" onclick=\"ElimPick.choose(${i})\"",
       "run": "verify"
     },
     {
-      "name": "A is named by its first two rows",
+      "name": "row 2 is not shown",
       "file": "index.html",
-      "find": "<div id=\"cfpA\" role=\"img\" aria-label=\"A has rows ${this.rows(A)}\"",
-      "replace": "<div id=\"cfpA\" role=\"img\" aria-label=\"A has rows ${this.rows(A.slice(0,2))}\"",
+      "find": "<div>row 1: ${this.eq(S.rows[0])}</div><div>row 2: ${this.eq(S.rows[1])}</div></div>",
+      "replace": "<div>row 1: ${this.eq(S.rows[0])}</div></div>",
       "run": "verify"
     },
     {
       "name": "the count is not shown",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"cfpRead\"",
-      "replace": "    out+=`<div id=\"cfpRead\"",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"epRead\"",
+      "replace": "    out+=`<div id=\"epRead\"",
       "run": "verify"
     },
     {
       "name": "the tab leaves the hand workshop showing",
       "file": "index.html",
-      "find": "['cfSets','cfFig','cfLines','cfRead','cfGoalPanel']",
-      "replace": "['cfSets','cfFig','cfRead','cfGoalPanel']",
-      "run": "play"
-    },
-    {
-      "name": "A is laid out in one row",
-      "file": "index.html",
-      "find": "grid-template-columns:repeat(3,2.2em);gap:2px 4px;vertical-align:middle",
-      "replace": "grid-template-columns:repeat(9,2.2em);gap:2px 4px;vertical-align:middle",
+      "find": "['elSys','elRows','elK','elOps','elFig','elRead','elGoalPanel']",
+      "replace": "['elSys','elRows','elK','elFig','elRead','elGoalPanel']",
       "run": "play"
     }
   ]
