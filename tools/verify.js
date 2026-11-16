@@ -4683,6 +4683,154 @@ const avgPickNotes = (() => {
   return { rounds, misses, worked, fracR };
 })();
 
+/* Which sum? The pick-the-sum round in the geometric series workshop. Every
+   number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from a and r
+   alone. The right number alone must be where the running total of two
+   hundred terms has landed, and every a + r × v and a/(1 − r) in the readout
+   is worked again from the numbers it shows. */
+const geoPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Geo = {render(){ env.renders++; }};" +
+    cut('const GeoPick = {', 'const Geo = {') + 'return GeoPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const add = (f, g) => fr(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const mul = (f, g) => fr(f[0] * g[0], f[1] * g[1]);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const rr = Q => fr(Q.p, Q.q);
+  const one = [1, 1], A = Q => [Q.a, 1];
+  const want = {
+    right: Q => mul(A(Q), fr(1 * Q.q, Q.q - Q.p)),
+    plus: Q => mul(A(Q), fr(Q.q, Q.q + Q.p)),
+    noA: Q => fr(Q.q, Q.q - Q.p),
+    skip: Q => mul(mul(A(Q), rr(Q)), fr(Q.q, Q.q - Q.p)),
+    times: Q => mul(A(Q), add(one, fr(-Q.p, Q.q)))
+  };
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "a + r × v = w" and "a/(1 − r) = v" in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`(−?\\d+) \\+ \\(?${V}\\)? × \\(?${V}\\)? = ${V}`, 'g'))) { n++;
+      if (!eq(add([+m[1].replace('−', '-'), 1], mul(rd(m[2]), rd(m[3]))), rd(m[4]))) fail('geopick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(new RegExp(`(−?\\d+)\\/\\(1 − \\(?${V}\\)?\\) = ${V}`, 'g'))) { n++;
+      const d = add(one, mul([-1, 1], rd(m[2]))); if (!eq(mul([+m[1].replace('−', '-'), 1], fr(d[1], d[0])), rd(m[3]))) fail('geopick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="gqRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => ({
+    plus: `${L} is a/(1 + r), the sign in the bottom flipped. Taking rS from S leaves S(1 − r) = a, so the bottom is 1 − r.`,
+    noA: `${L} is 1/(1 − r), the sum with a left out. That series starts from 1; this one starts from a = ${ng(Q.a)}, so every term, and the sum, is ${ng(Q.a)} times as big.`,
+    skip: `${L} is ar/(1 − r), the sum from the second term on. The first term, a = ${ng(Q.a)}, counts too.`,
+    times: `${L} is a × (1 − r), multiplied by 1 − r where it should be divided. S(1 − r) = a, so S = a ÷ (1 − r).` }[k]);
+  const again = (Q, v) => add(A(Q), mul(rr(Q), v));
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: if the sum were ${fst(v)}, then a + r × ${fst(v)} = ${ng(Q.a)} + ${pf(rr(Q))} × ${pf(v)} = ${fst(again(Q, v))}, not ${fst(v)}, so S = a + rS does not hold.`; };
+  const termsOf = Q => [0, 1, 2, 3].map(k => { const t = fst(fr(Q.a * Q.p ** k, Q.q ** k)); return k === 0 ? t : (t[0] === '−' ? ' − ' + t.slice(1) : ' + ' + t); }).join('');
+  if (S.RULE !== 'An endless geometric series a + ar + ar² + ⋯ with r between −1 and 1 adds up to a/(1 − r): take the first term off and what is left is r times the whole, so S = a + rS, and S(1 − r) = a. Which number is the sum?') fail('geopick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('geopick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracR = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), as = new Set(), qs = new Set(), wholes = new Set(); let negR = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; as.add(Q.a); qs.add(Q.q); if (Q.p < 0) negR++;
+      if ([Q.a, Q.p, Q.q].some(x => !Number.isInteger(x)) || Math.abs(Q.a) < 2 || Math.abs(Q.a) > 6 || Q.a < -4 || Q.q < 2 || Q.q > 5 || !Q.p || Math.abs(Q.p) >= Q.q || gcd(Q.p, Q.q) !== 1) fail('geopick', key, `a = ${Q.a}, r = ${Q.p}/${Q.q} is not small, whole and in lowest terms with |r| < 1`);
+      const L = want.right(Q);
+      { // the running total of two hundred terms, added one at a time
+        let s = 0, t = Q.a; for (let n = 0; n < 200; n++) { s += t; t *= Q.p / Q.q; }
+        if (Math.abs(s - L[0] / L[1]) > 1e-9) fail('geopick', key, `the running total heads for ${s}, not ${fst(L)}`); }
+      if (L[0] === 0) fail('geopick', key, 'the sum is 0, and 0 is never offered as a wrong number, so it would give itself away');
+      if (L[1] === 1) wholes.add(L[0]); else fracR++;
+      if (prev && prev === sig) fail('geopick', key, 'the same series comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('geopick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ${termsOf(Q)} + ⋯ The first term is a = ${ng(Q.a)}, and each term is r = ${fst(rr(Q))} times the one before. A`)) fail('geopick', key, 'the rule, the series, a and r are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="GeoPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('geopick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('geopick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('geopick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('geopick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('geopick', key, `the sum is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('geopick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('geopick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('geopick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the sum`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of ['plus', 'noA', 'skip', 'times']) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('geopick', key, 'a series with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('geopick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('geopick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('geopick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (sums(rt, key) !== 1) fail('geopick', key, 'a miss does not work a + r × v');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="GeoPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the sum"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('geopick', key, 'the missed numbers are not shut and told as not the sum');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('geopick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('geopick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('geopick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('geopick', key, 'no fresh series after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TAIL TAMER / 5 endless sums found') fail('geopick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the sum, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('geopick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read();
+      const after = `That was it: a/(1 − r) = ${ng(Q.a)}/(1 − ${pf(rr(Q))}) = ${fst(L)}, and a + r × ${fst(L)} = ${ng(Q.a)} + ${pf(rr(Q))} × ${pf(L)} = ${fst(L)}, the sum again. Here is a new series. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('geopick', key, `after a pick: ${rt} | want ${after}`);
+      if (sums(rt, key) !== 2) fail('geopick', key, 'the right pick does not work a/(1 − r) and a + r × S');
+      worked += 2;
+      prev = sig;
+    }
+  }
+  { // the same curve and interval dealt again are turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 2, p: 1, q: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"p":1,"q":2}') fail('geopick', 'repeat', 'the same series is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['plus', 'noA', 'skip', 'times']) if (!kinds[k]) fail('geopick', 'slips', `the slip ${k} is never offered`);
+  if (as.size !== 8) fail('geopick', 'deal', `the first term is only ever ${[...as].sort((x, y) => x - y).join(', ')}`);
+  if (qs.size !== 4) fail('geopick', 'deal', `the bottom of r is only ever ${[...qs].sort().join(', ')}`);
+  if (negR < rounds * 0.3) fail('geopick', 'deal', `r is negative in only ${negR} of ${rounds} rounds`);
+  if (wholes.size < 8 || ![...wholes].some(w => w < 0)) fail('geopick', 'deal', `the whole sums are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (fracR < rounds * 0.45 || fracR > rounds * 0.53) fail('geopick', 'deal', `the sum is a fraction in ${fracR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left4.size !== 4) fail('geopick', 'deal', `when a curve has four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('geopick', 'deal', `the sum only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('geopick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9424,6 +9572,7 @@ console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 
 console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-limit in the L'Hôpital workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the ratio a hair from the point; ${hopPickNotes.misses.toLocaleString()} wrong picks checked, ${hopPickNotes.worked.toLocaleString()} slopes and fractions worked again from their own numbers, ${hopPickNotes.fracR.toLocaleString()} rounds whose limit is a fraction)`);
 console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
+console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
