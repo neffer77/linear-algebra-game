@@ -40,7 +40,7 @@ module.exports = {
     t.ok('the ratios, drawing, h, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('hkBox').innerText)).startsWith(
       'Top and bottom are both 0 at the point x heads for'));
-    t.ok('the ratio is shown as a limit', /^lim x→−?\d .+ .+$/.test(await t.ev(() => document.getElementById('hkQ').innerText.replace(/\s+/g, ' ').trim())));
+    t.ok('the ratio is shown as a limit', /^lim ?x→−?\d .+ .+$/.test(await t.ev(() => document.getElementById('hkQ').innerText.replace(/\s+/g, ' ').trim())));
     t.ok('and its 0/0 is pointed out', /^At x = −?\d the top is 0 and the bottom is 0\.$/.test(await t.ev(() => document.getElementById('hkZero').innerText.trim())));
     const labels = await t.ev(() => [...document.querySelectorAll('#hkPick button')].map(b => b.getAttribute('aria-label')));
     t.eq('four numbers are offered', labels.length, 4);
