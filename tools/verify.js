@@ -6878,6 +6878,162 @@ const tanPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which total? The cistern workshop turned round. Every number is read back
+   off its button and checked against the slip it is named as, worked from
+   f(t) = ct² + at + b here; the right one alone is the area under the flow
+   found without the rule, by Simpson's sum, which is exact for a flow this
+   shape. Each wrong total's check is worked again: its G is differentiated
+   here and shown not to be the flow at the hour it names. */
+const cisternPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cistern = {render(){ env.renders++; }};" +
+    cut('const CisternPick = {', '/* ---------- The cistern workshop: what an integral adds up') + 'return CisternPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fs6 = n => { const [p, q] = red(n, 6); return q === 1 ? ng(p) : `${ng(p)}/${q}`; };
+  // a number off a button: a whole number, or a fraction in lowest terms
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const fl = (Q, t) => Q.c * t * t + Q.a * t + Q.b;
+  // every total as a polynomial in t, [t³, t², t, 1], counted in sixths
+  const G = {
+    right: Q => [2 * Q.c, 3 * Q.a, 6 * Q.b, 0],
+    rate: Q => [0, 6 * Q.c, 6 * Q.a, 6 * Q.b],
+    rect: Q => [6 * Q.c, 6 * Q.a, 6 * Q.b, 0],
+    start: Q => [0, 0, 6 * Q.b, 0],
+    noHalf: Q => [2 * Q.c, 6 * Q.a, 6 * Q.b, 0],
+    noThird: Q => [6 * Q.c, 3 * Q.a, 6 * Q.b, 0],
+    noB: Q => [2 * Q.c, 3 * Q.a, 0, 0]
+  };
+  const at = (P, t) => P[0] * t ** 3 + P[1] * t * t + P[2] * t + P[3];
+  const want = (k, Q) => red(at(G[k](Q), Q.T), 6);
+  // the area under the flow, found without the rule: Simpson's sum, exact for a flow of degree 2
+  const area = Q => (Q.T / 6) * (fl(Q, 0) + 4 * fl(Q, Q.T / 2) + fl(Q, Q.T));
+  const poly = (P, v) => { const pw = ['³', '²', '', ''], out = [];
+    P.forEach((n, i) => { if (!n) return;
+      const [p, q] = red(n, 6), m = Math.abs(p), x = i < 3 ? v + pw[i] : '';
+      const body = i === 3 ? `${m}${q > 1 ? '/' + q : ''}` : q > 1 ? `${m === 1 ? '' : m}${x}/${q}` : `${m === 1 ? '' : m}${x}`;
+      out.push((out.length ? (p < 0 ? ' − ' : ' + ') : (p < 0 ? '−' : '')) + body); });
+    return out.length ? out.join('') : '0'; };
+  const flow = Q => poly([0, 6 * Q.c, 6 * Q.a, 6 * Q.b], 't');
+  const slipOf = (k, L, Q) => { const { a, b, c, T } = Q, fT = fl(Q, T);
+    if (k === 'rate') return `${L} is the flow at hour ${T}, f(${T}) = ${ng(fT)} barrels an hour, not the total. The flow says how fast water comes in; the total is the area under it.`;
+    if (k === 'rect') return `${L} holds the flow at its hour-${T} value all along, ${T} × f(${T}) = ${T} × ${pn(fT)}. The flow changes over the hours, so the area under it is not that rectangle.`;
+    if (k === 'start') return `${L} holds the flow at its starting value all along, ${b} × ${T}. The flow changes over the hours, so the area under it is not that rectangle.`;
+    if (k === 'noHalf') return `${L} forgets to divide by 2: ${poly([0, 0, 6 * a, 0], 't')} becomes ${poly([0, 3 * a, 0, 0], 't')}, not ${poly([0, 6 * a, 0, 0], 't')}.`;
+    if (k === 'noB') return `${L} drops the ${b}: a steady ${b} barrel${b === 1 ? '' : 's'} an hour adds up to ${poly([0, 0, 6 * b, 0], 't')} over t hours, not 0.`;
+    return `${L} forgets to divide by 3: ${poly([0, 6 * c, 0, 0], 't')} becomes ${poly([2 * c, 0, 0, 0], 't')}, not ${poly([6 * c, 0, 0, 0], 't')}.`; };
+  // a wrong total's check, worked again: G′ found here, and the first hour where it is not the flow
+  const checkOf = (k, L, Q) => {
+    const P = G[k](Q), D = [0, 3 * P[0], 2 * P[1], P[2]], F6 = [0, 6 * Q.c, 6 * Q.a, 6 * Q.b];
+    let t = null; for (const u of [Q.T, 0, 1, 2, 3, 4]) if (at(D, u) !== at(F6, u)) { t = u; break; }
+    return { t, gd: at(D, t), line: `Check ${L}: ${L} is G(${Q.T}) for G(t) = ${poly(P, 't')}. A total climbs exactly as fast as the water flows, so G′(t) must be the flow f(t) = ${flow(Q)}. Here G′(t) = ${poly(D, 't')}, and at t = ${t} that is ${fs6(at(D, t))}, not f(${t}) = ${ng(fl(Q, t))}.` }; };
+  if (S.RULE !== 'The total after T hours is the area under the flow from 0 to T: F(T) = ∫₀ᵀ f(t) dt, with flow below 0 counted as water running out. Integrate term by term, raising each power of t by one and dividing by the new power, so b becomes bt, at becomes at²/2 and ct² becomes ct³/3. Then put in T. Which is the total?') fail('cisternpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('cisternpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, curved = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Cs = new Set(), As = new Set(), Bs = new Set(), Ts = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Cs.add(Q.c); As.add(Q.a); Bs.add(Q.b); Ts.add(Q.T); if (Q.c) curved++;
+      { // where more than three slips would do, any three may be dealt, not always the first three
+        const seen = new Set([String(want('right', Q))]), can = [];
+        for (const k of ['rate', 'rect', 'start', 'noHalf', 'noThird', 'noB']) { const v = want(k, Q);
+          if (v[0] <= 0 || seen.has(String(v))) continue; seen.add(String(v)); can.push(k); }
+        if (can.length > 3) { choice++; const got = r.opts.map(o => o.k).filter(x => x !== 'right');
+          if (got.some(x => !can.slice(0, 3).includes(x))) later++; } }
+      if (![0, 3, -3].includes(Q.c) || !Number.isInteger(Q.a) || Q.a === 0 || Math.abs(Q.a) > 4 || !Number.isInteger(Q.b) || Q.b < 1 || Q.b > 9 || !Number.isInteger(Q.T) || Q.T < 1 || Q.T > 4) fail('cisternpick', key, `${sig} is not c 0 or ±3, whole a up to 4 and not 0, b from 1 to 9, T from 1 to 4`);
+      if (prev && prev === sig) fail('cisternpick', key, 'the same spring comes twice in a row');
+      for (let i = 1; i <= 400; i++) { const u = Q.T * i / 400; if (Q.c * u ** 3 / 3 + Q.a * u * u / 2 + Q.b * u < -1e-9) { fail('cisternpick', key, `the cistern runs below empty at t = ${u}`); break; } }
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('cisternpick', key, 'there are not four totals, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` An empty cistern fills at f(t) = ${flow(Q)} barrels an hour. Which is the total after ${Q.T} hour${Q.T === 1 ? '' : 's'}? A`)) fail('cisternpick', key, 'the rule and the flow are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="CisternPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('cisternpick', key, 'the four totals are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('cisternpick', key, `a total is not a number in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] <= 0 || v[0] / v[1] > 200)) fail('cisternpick', key, 'a total is 0, below 0, or past 200');
+      if (new Set(vals.map(String)).size !== 4) fail('cisternpick', key, 'two totals are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals.filter((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1)).length < 1) fail('cisternpick', key, 'no wrong total is of the right one’s form, whole or fraction');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!G[o.k]) { fail('cisternpick', key, `a total is the unknown ${o.k}`); return; }
+        if (o.k === 'noThird' && Q.c === 0) fail('cisternpick', key, 'the divide-by-3 slip is offered with no t² in the flow');
+        if (String(vals[i]) !== String(want(o.k, Q))) fail('cisternpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(vals[i][0] / vals[i][1] - area(Q)) < 1e-9)) fail('cisternpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the area under the flow`);
+      });
+      if (k === 0 && txt(S.html().split('id="cwRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('cisternpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('cisternpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="cwRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ch = checkOf(o.k, Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('cisternpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        if (ch.t === null || lines[1] !== ch.line) fail('cisternpick', key, `the check of ${o.k} is: ${lines[1]} | want ${ch.line}`);
+        if (ch.t !== null && ch.gd === 6 * fl(Q, ch.t)) fail('cisternpick', key, 'a wrong total passes its check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="CisternPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the total"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('cisternpick', key, 'the missed totals are not shut and told as not the total');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('cisternpick', key, 'tapping a missed total again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('cisternpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('cisternpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('cisternpick', key, 'no fresh spring after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'CISTERN KEEPER / 5 totals read') fail('cisternpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the total, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('cisternpick', key, `the toast is ${env.toasts[nt]}`); }
+      const P = G.right(Q), terms = [[P[0], 3], [P[1], 2], [P[2], 1]].filter(([n]) => n).map(([n, e]) => fs6(n * Q.T ** e));
+      const sum = terms.reduce((s, t) => { const v = rdv(t); return s + v[0] / v[1]; }, 0);
+      if (Math.abs(sum - area(Q)) > 1e-9) fail('cisternpick', key, 'the terms of F(T) do not add up to the area');
+      const after = `That was it: F(t) = ${poly(P, 't')}, so F(${Q.T}) = ${terms.join(' + ').replace(/\+ −/g, '− ')} = ${fs6(at(P, Q.T))} barrels. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (txt(S.html().split('id="cwRead"')[1].replace(/^[^>]*>/, '')) !== after) fail('cisternpick', key, `after a pick: ${txt(S.html().split('id="cwRead"')[1])} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same spring dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { c: -3, a: 4, b: 5, T: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"c":-3,"a":4,"b":5,"T":2}') fail('cisternpick', 'repeat', 'the same spring is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['rate', 'rect', 'start', 'noHalf', 'noThird', 'noB']) if (!kinds[k]) fail('cisternpick', 'slips', `the slip ${k} is never offered`);
+  if (Cs.size !== 3 || As.size !== 8 || Bs.size !== 9 || Ts.size !== 4) fail('cisternpick', 'deal', `c ${[...Cs]}, a ${[...As]}, b ${[...Bs]}, T ${[...Ts]} is not the whole deal`);
+  if (slots.size !== 4) fail('cisternpick', 'deal', `the total only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (curved < rounds * 0.35 || curved > rounds * 0.65) fail('cisternpick', 'deal', `${curved} of ${rounds} flows have a t², not about half`);
+  if (later < choice * 0.65) fail('cisternpick', 'deal', `of ${choice} rounds with more than three slips to choose from, only ${later} deal any but the first three`);
+  { // a wide sweep of springs: every total above 0, the cistern never below empty
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q);
+      if (W[0] <= 0) { fail('cisternpick', 'sweep', `${JSON.stringify(Q)} has a total of ${W[0]}/${W[1]}`); break; } } }
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('cisternpick', 'deal', `${whole} of ${rounds} totals are whole, not about half`);
+  if (fives !== 30) fail('cisternpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -11633,6 +11789,7 @@ console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 1
 console.log(`  path rates         ${pad(pathPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the path chain workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching z nudged along the path; ${pathPickNotes.misses.toLocaleString()} wrong picks checked by a nudge in t, ${pathPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  eigen powers       ${pad(powPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-Aⁿv in the diagonal workshop, every vector read back off its button and checked against the slip it is named as, the right one alone matching A multiplied into v n times; ${powPickNotes.misses.toLocaleString()} wrong picks checked by their eigenvector parts, ${powPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  touching planes    ${pad(tanPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-plane in the tangent plane workshop, every plane read back off its button and checked against the slip it is named as, the right one alone matching f and f nudged a hair along x and along y; ${tanPickNotes.misses.toLocaleString()} wrong picks checked at the point or by a step of 1, ${tanPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  cistern totals     ${pad(cisternPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-total in the cistern workshop, every total read back off its button and checked against the slip it is named as, the right one alone matching the area under the flow by Simpson's sum; ${cisternPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their G, ${cisternPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

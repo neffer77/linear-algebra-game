@@ -1905,17 +1905,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
+    <div id="ciTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a spring by hand or pick its total"></div>
     <div class="panel">
+      <div id="cwBox"></div>
       <div id="ciSets" class="wsModes" role="group" aria-label="Which spring"></div>
       <div id="ciFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="ciStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="ciTLo" onclick="Cistern.moveT(-1)" aria-label="Go back half an hour">−</button>
           <b id="ciT" style="font-size:17px;min-width:0"></b>
           <button id="ciTHi" onclick="Cistern.moveT(1)" aria-label="Go on half an hour">+</button></div>
       </div>
       <div id="ciRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="ciGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="ciGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14089,7 +14091,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">💧 Cistern Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away. Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours.</div>
          <button class="btn sm" id="tomeCistern" style="width:auto;margin-top:8px" onclick="Cistern.open()">Open the cistern workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -25551,6 +25553,139 @@ const ExpInt = {
   }
 };
 
+/* ---------- Which total? The cistern workshop turned round ----------
+   A spring fills an empty cistern at f(t) = ct² + at + b barrels an hour,
+   with c 0 or ±3 and whole a and b, and four numbers, one of them the total
+   after T hours, F(T) = ∫₀ᵀ f = (c/3)T³ + (a/2)T² + bT. The rule is stated
+   first; the wrong numbers are the slips people make with it. Each slip is a
+   formula G in T, so a wrong pick is checked the way the workshop teaches: a
+   total climbs exactly as fast as the water flows, so G′ must be f, and it
+   is not. Nothing is saved. */
+const CisternPick = {
+  SLIPS:['rate','rect','start','noHalf','noThird','noB'],
+  RULE:'The total after T hours is the area under the flow from 0 to T: F(T) = ∫₀ᵀ f(t) dt, with flow below 0 counted as water running out. Integrate term by term, raising each power of t by one and dividing by the new power, so b becomes bt, at becomes at²/2 and ct² becomes ct³/3. Then put in T. Which is the total?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  f(S,t){ return S.c*t*t+S.a*t+S.b; },
+  // each slip as a polynomial in t, [t³, t², t, 1] counted in sixths, so F and every slip stay exact
+  G(S,k){
+    const {a,b,c}=S;
+    return k==='right' ? [2*c,3*a,6*b,0] : k==='rate' ? [0,6*c,6*a,6*b] : k==='rect' ? [6*c,6*a,6*b,0]
+      : k==='start' ? [0,0,6*b,0] : k==='noHalf' ? [2*c,6*a,6*b,0] : k==='noThird' ? [6*c,3*a,6*b,0] : [2*c,3*a,0,0];
+  },
+  at(P,t){ return P[0]*t**3+P[1]*t*t+P[2]*t+P[3]; },
+  val(S,k){ return this.frac(this.at(this.G(S,k),S.T),6); },
+  key(v){ return this.fs(v); },
+  // the slips this spring can offer: each a number above 0, as a cistern's total is, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ if(k==='noThird' && S.c===0) continue;
+      const v=this.val(S,k);
+      if(v[0]<=0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1, wantC=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={c:wantC ? 3*(R.i(0,1)?1:-1) : 0, a:R.i(1,4)*(R.i(0,1)?1:-1), b:R.i(1,9), T:R.i(1,4)};
+      const W=this.val(S,'right');
+      if(W[0]<=0 || this.whole(W)!==wantWhole) continue;
+      // the cistern never runs below empty on the way
+      let dry=false; for(let i=1;i<=40;i++) if(this.at(this.G(S,'right'),S.T*i/40)<0) dry=true;
+      if(dry) continue;
+      if(['right',...this.SLIPS].some(k=>Math.abs(this.val(S,k)[0]/this.val(S,k)[1])>200)) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {c:-3, a:4, b:5, T:2};
+  },
+  // a polynomial in t written out, from its coefficients in sixths
+  poly(P,v){
+    const pw=['³','²','',''], out=[];
+    P.forEach((n,i)=>{ if(!n) return;
+      const [p,q]=this.frac(n,6), m=Math.abs(p), x=i<3 ? v+pw[i] : '';
+      const body=i===3 ? `${m}${q>1?'/'+q:''}` : q>1 ? `${m===1?'':m}${x}/${q}` : `${m===1?'':m}${x}`;
+      out.push((out.length ? (p<0?' − ':' + ') : (p<0?'−':''))+body); });
+    return out.length ? out.join('') : '0';
+  },
+  // the slope of a polynomial in sixths, as a polynomial in sixths
+  d(P){ return [0,3*P[0],2*P[1],P[2]]; },
+  flow(S){ return this.poly([0,6*S.c,6*S.a,6*S.b],'t'); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CISTERN KEEPER', this.matched+' totals read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the total, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Cistern.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,b,c,T}=S, fT=this.f(S,T);
+    if(k==='rate') return `${L} is the flow at hour ${T}, f(${T}) = ${neg(fT)} barrels an hour, not the total. The flow says how fast water comes in; the total is the area under it.`;
+    if(k==='rect') return `${L} holds the flow at its hour-${T} value all along, ${T} × f(${T}) = ${T} × ${this.pn(fT)}. The flow changes over the hours, so the area under it is not that rectangle.`;
+    if(k==='start') return `${L} holds the flow at its starting value all along, ${b} × ${T}. The flow changes over the hours, so the area under it is not that rectangle.`;
+    if(k==='noHalf') return `${L} forgets to divide by 2: ${this.poly([0,0,6*a,0],'t')} becomes ${this.poly([0,3*a,0,0],'t')}, not ${this.poly([0,6*a,0,0],'t')}.`;
+    if(k==='noB') return `${L} drops the ${b}: a steady ${b} barrel${b===1?'':'s'} an hour adds up to ${this.poly([0,0,6*b,0],'t')} over t hours, not 0.`;
+    return `${L} forgets to divide by 3: ${this.poly([0,6*c,0,0],'t')} becomes ${this.poly([2*c,0,0,0],'t')}, not ${this.poly([6*c,0,0,0],'t')}.`;
+  },
+  check(S,k,L){
+    const P=this.G(S,k), D=this.d(P), fl=[0,6*S.c,6*S.a,6*S.b], v=this.val(S,k);
+    let t=S.T; for(const u of [S.T,0,1,2,3,4]) if(this.at(D,u)!==this.at(fl,u)){ t=u; break; }
+    return `Check ${L}: ${L} is G(${S.T}) for G(t) = ${this.poly(P,'t')}. A total climbs exactly as fast as the water flows, so G′(t) must be the flow f(t) = ${this.flow(S)}. Here G′(t) = ${this.poly(D,'t')}, and at t = ${t} that is ${this.fs(this.frac(this.at(D,t),6))}, not f(${t}) = ${neg(this.f(S,t))}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="cwQ" style="text-align:center;font-size:16px;margin-bottom:2px">An empty cistern fills at f(t) = ${this.flow(S)} barrels an hour.</div>`;
+    out+=`<div class="small" style="text-align:center">Which is the total after ${S.T} hour${S.T===1?'':'s'}?</div>`;
+    out+=`<div id="cwPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="CisternPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the total':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, P=this.G(B,'right');
+      const terms=[[P[0],'³'],[P[1],'²'],[P[2],'']].filter(([n])=>n).map(([n,e])=>this.fs(this.frac(n*B.T**(e==='³'?3:e==='²'?2:1),6)));
+      lines.push(`That was it: F(t) = ${this.poly(P,'t')}, so F(${B.T}) = ${terms.join(' + ').replace(/\+ −/g,'− ')} = ${this.fs(this.val(B,'right'))} barrels. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="cwRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The cistern workshop: what an integral adds up ----------
    A spring fills a cistern at a rate f(t) that the player cannot change;
    the total F(t) is the area under f from 0 to t. Step t in half hours and
@@ -25624,7 +25759,15 @@ const Cistern = {
   open(){ UI.go('s-cistern'); },
   pick(i){ this.si=i; this.th=this.SETS[i].start; this.touched=true; this.render(); },
   moveT(by){ const S=this.set(), v=this.th+by; if(v<S.lo || v>S.hi) return; this.th=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('ciTab').innerHTML=[['hand','💧 Step it by hand','Step a spring through the hours by hand'],['pick','🎯 Which total?','See a spring’s flow, and pick which of four numbers is the total after so many hours']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cistern.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['ciSets','ciFig','ciStep','ciRead','ciGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('cwBox').innerHTML=pick ? CisternPick.html() : '';
+    if(pick) return;
     const S=this.set(), t=this.t(), f=this.f();
     document.getElementById('ciSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Cistern.pick(${i})" aria-label="${s.btn}: f(t) = ${s.fform}">${s.btn}</button>`).join('');
