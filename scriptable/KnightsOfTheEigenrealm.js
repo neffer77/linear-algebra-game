@@ -1951,17 +1951,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
   <div class="screen" id="s-optim">
     <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
+    <div id="opTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand or pick the width that holds the most"></div>
     <div class="panel">
+      <div id="bbBox"></div>
       <div id="opSets" class="wsModes" role="group" aria-label="What to build"></div>
       <div id="opFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="opStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="opXLo" onclick="Optim.moveX(-1)" aria-label="Make x half a unit smaller">−</button>
           <b id="opX" style="font-size:17px;min-width:0"></b>
           <button id="opXHi" onclick="Optim.moveX(1)" aria-label="Make x half a unit bigger">+</button></div>
       </div>
       <div id="opRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="opGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="opGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14256,7 +14258,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏗️ Biggest Build Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing. Then turn it round: see a fence and a paddock count and pick which of four widths holds the most.</div>
          <button class="btn sm" id="tomeOptim" style="width:auto;margin-top:8px" onclick="Optim.open()">Open the biggest build workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -26243,6 +26245,132 @@ const Cistern = {
   }
 };
 
+/* ---------- Which width? The biggest build workshop turned round ----------
+   F metres of fence and m paddocks against the castle wall, split by inner
+   fences that all run out from the wall, so n = m + 1 fences are x long and
+   the front takes the rest, F − nx. Four numbers, one of them the width x
+   that holds the most. The rule is stated first: A(x) = x(F − nx), and the
+   most is held where A′(x) = F − 2nx is 0. The wrong numbers are the slips
+   people make: the width where the front runs out, every fence the same
+   length, the front's length instead of the width, one fence too few, or the
+   wall counted as a fence. A wrong pick is checked the way the workshop
+   teaches: at the best width the slope is 0, and at the picked width it is
+   not. Nothing is saved. */
+const BuildPick = {
+  SLIPS:['zero','even','front','fewer','more','pairs'],
+  RULE:'The pen holds its width times its front. With n fences of length x running out from the wall, the front is what is left, F − nx, so A(x) = x(F − nx) = Fx − nx². More x helps while the slope A′(x) is above 0 and hurts once it is below, so the most is held where A′(x) = F − 2nx is 0. Differentiate, set it to 0, and solve for x. Which width holds the most?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  n(S){ return S.m+1; },
+  val(S,k){
+    const {F}=S, n=this.n(S);
+    if(k==='right') return this.frac(F,2*n);
+    if(k==='zero') return this.frac(F,n);
+    if(k==='even') return this.frac(F,n+1);
+    if(k==='front') return this.frac(F,2);
+    if(k==='fewer') return this.frac(F,2*(n-1));
+    if(k==='more') return this.frac(F,2*(n+1));
+    return this.frac(F,4*S.m);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this pen can offer: each different from the answer and from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that hold a number of the right one's form, whole or fraction, so the form gives nothing away
+  trios(S){
+    const rest=this.slips(S), out=[], form=this.whole(this.val(S,'right'));
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form)) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const m=R.i(1,4), n=m+1;
+      const F=wantWhole ? 2*n*R.i(Math.ceil(12/(2*n)),Math.floor(72/(2*n))) : R.i(12,72);
+      const S={F,m};
+      if(this.whole(this.val(S,'right'))!==wantWhole) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {F:36,m:2};
+  },
+  ask(S){ const n=this.n(S); return \`\${n} fences run out from the wall, each x m long, and the front takes the rest, \${S.F} − \${n}x m.\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('PADDOCK PLANNER', this.matched+' best pens fenced','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} holds the most, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Optim.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {F,m}=S, n=this.n(S), v=this.fs(this.val(S,k));
+    if(k==='zero') return \`\${L} is where the fences out from the wall use up all \${F} m: \${n} × \${v} = \${F}, so the front is 0 m long and the pen holds nothing. Forgetting the 2 in the slope of \${n}x² lands here too.\`;
+    if(k==='even') return \`\${L} makes every fence the same length, the front too: \${n + 1} pieces of \${v} m. The front is worth more than a fence out from the wall, since it only has to be paid for once.\`;
+    if(k==='front') return \`\${L} is how long the front is at its best, \${F} ÷ 2, not the width x of each fence out from the wall.\`;
+    if(k==='fewer') return \`\${L} counts \${n - 1} fences out from the wall, one for each paddock. \${m} paddocks side by side need \${n}, one more than there are paddocks.\`;
+    if(k==='more') return \`\${L} counts the wall as a fence too, \${n + 1} lengths of x. The wall is already there and costs no fence.\`;
+    return \`\${L} gives each paddock its own two fences out from the wall, \${2*m} lengths of x. Paddocks side by side share the fence between them, so there are \${n}.\`;
+  },
+  check(S,k,L){
+    const {F}=S, n=this.n(S), v=this.val(S,k), K=this.frac(F*v[1]-2*n*v[0],v[1]);
+    return \`Check \${L}: at the best width the slope A′(x) = \${F} − \${2*n}x is 0. At x = \${this.fs(v)} it is \${F} − \${2*n} × \${this.fs(v)} = \${this.fs(K)}, not 0, so a \${K[0]>0?'wider':'narrower'} pen holds more.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="bbQ" style="text-align:center;font-size:16px;margin-bottom:2px">\${S.F} m of fence, \${S.m} paddock\${S.m===1?'':'s'} against the castle wall.</div>\`;
+    out+=\`<div class="small" style="text-align:center">\${this.ask(S)} Which width x holds the most?</div>\`;
+    out+=\`<div id="bbPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="BuildPick.choose(\${i})" aria-label="\${L}: \${v} m\${gone?'. Does not hold the most':''}" style="margin:0"><b>\${L}</b> \${v} m</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, n=this.n(B), v=this.val(B,'right'), A=this.frac(B.F*B.F,4*n);
+      lines.push(\`That was it: A(x) = x(\${B.F} − \${n}x) = \${B.F}x − \${n}x², so A′(x) = \${B.F} − \${2*n}x, which is 0 at x = \${B.F} ÷ \${2*n} = \${this.fs(v)} m. The front is then \${this.fs(this.frac(B.F,2))} m, and the pen holds \${this.fs(A)} m². Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="bbRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ============ BIGGEST BUILD WORKSHOP ============
    Optimisation by hand: change one length, watch what it builds and the slope
    of that, and find where the slope is 0. The steps are half a unit so every
@@ -26308,7 +26436,15 @@ const Optim = {
   open(){ UI.go('s-optim'); },
   pick(i){ this.si=i; this.xh=this.SETS[i].start; this.touched=true; this.render(); },
   moveX(by){ const S=this.set(), v=this.xh+by; if(v<S.lo || v>S.hi) return; this.xh=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('opTab').innerHTML=[['hand','🏗️ Step it by hand','Step x by hand and watch what the build holds'],['pick','🎯 Which width holds most?','See a fence and a paddock count and pick which of four widths holds the most']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Optim.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['opSets','opFig','opStep','opRead','opGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('bbBox').innerHTML=pick ? BuildPick.html() : '';
+    if(pick) return;
     const S=this.set(), x=this.x(), d=this.d();
     document.getElementById('opSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Optim.pick(\${i})" aria-label="\${s.btn}: \${s.form}">\${s.btn}</button>\`).join('');
