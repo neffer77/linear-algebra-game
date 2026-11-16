@@ -7469,6 +7469,150 @@ const fitPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which width holds the most? The biggest build workshop turned round. Every
+   width is read back off its button and checked against the slip it is
+   named as, worked from the fence and the paddock count here; the right one
+   alone holds the most, found without the rule: the pen it makes holds more
+   than the pen a hair wider or narrower. Each wrong width's check is worked
+   again from the slope of the area. */
+const buildPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Optim = {render(){ env.renders++; }};" +
+    cut('const BuildPick = {', '/* ============ BIGGEST BUILD WORKSHOP ============') + 'return BuildPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // every width, worked from the slip it stands for: n fences out from the wall for m paddocks
+  const want = (k, Q) => { const F = Q.F, m = Q.m, n = m + 1;
+    return k === 'right' ? red(F, 2 * n) : k === 'zero' ? red(F, n) : k === 'even' ? red(F, n + 1) : k === 'front' ? red(F, 2)
+      : k === 'fewer' ? red(F, 2 * m) : k === 'more' ? red(F, 2 * n + 2) : k === 'pairs' ? red(F, 4 * m) : null; };
+  // what the pen holds at width x, measured: the fences out from the wall take m + 1 lengths of x, the front the rest
+  const area = (Q, x) => x * (Q.F - (Q.m + 1) * x);
+  const most = (Q, x) => { const h = 1e-4; return area(Q, x) > area(Q, x + h) && area(Q, x) > area(Q, x - h); };
+  const slipOf = (k, L, Q, v) => { const F = Q.F, m = Q.m, n = m + 1;
+    if (k === 'zero') return `${L} is where the fences out from the wall use up all ${F} m: ${n} × ${v} = ${F}, so the front is 0 m long and the pen holds nothing. Forgetting the 2 in the slope of ${n}x² lands here too.`;
+    if (k === 'even') return `${L} makes every fence the same length, the front too: ${n + 1} pieces of ${v} m. The front is worth more than a fence out from the wall, since it only has to be paid for once.`;
+    if (k === 'front') return `${L} is how long the front is at its best, ${F} ÷ 2, not the width x of each fence out from the wall.`;
+    if (k === 'fewer') return `${L} counts ${m} fences out from the wall, one for each paddock. ${m} paddocks side by side need ${n}, one more than there are paddocks.`;
+    if (k === 'more') return `${L} counts the wall as a fence too, ${n + 1} lengths of x. The wall is already there and costs no fence.`;
+    return `${L} gives each paddock its own two fences out from the wall, ${2 * m} lengths of x. Paddocks side by side share the fence between them, so there are ${n}.`; };
+  const checkOf = (v, L, Q) => { const F = Q.F, n = Q.m + 1, K = red(F * v[1] - 2 * n * v[0], v[1]);
+    return { K, line: `Check ${L}: at the best width the slope A′(x) = ${F} − ${2 * n}x is 0. At x = ${fr(v)} it is ${F} − ${2 * n} × ${fr(v)} = ${fr(K)}, not 0, so a ${K[0] > 0 ? 'wider' : 'narrower'} pen holds more.` }; };
+  if (S.RULE !== 'The pen holds its width times its front. With n fences of length x running out from the wall, the front is what is left, F − nx, so A(x) = x(F − nx) = Fx − nx². More x helps while the slope A′(x) is above 0 and hurts once it is below, so the most is held where A′(x) = F − 2nx is 0. Differentiate, set it to 0, and solve for x. Which width holds the most?') fail('buildpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('buildpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Fs = new Set(), Ms = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Fs.add(Q.F); Ms.add(Q.m);
+      if (!Number.isInteger(Q.F) || Q.F < 12 || Q.F > 72 || ![1, 2, 3, 4].includes(Q.m)) fail('buildpick', key, `${sig} is not a whole fence from 12 to 72 m and 1 to 4 paddocks`);
+      if (prev && prev === sig) fail('buildpick', key, 'the same pen comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('buildpick', key, 'there are not four widths, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ${Q.F} m of fence, ${Q.m} paddock${Q.m === 1 ? '' : 's'} against the castle wall. ${Q.m + 1} fences run out from the wall, each x m long, and the front takes the rest, ${Q.F} − ${Q.m + 1}x m. Which width x holds the most? A`)) fail('buildpick', key, 'the rule, the fence and the paddocks are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="BuildPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+) m" style="margin:0"><b>([ABCD])<\/b> ([^<]+) m<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('buildpick', key, 'the four widths are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('buildpick', key, `a width is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] <= 0 || v[0] / v[1] > 36)) fail('buildpick', key, 'a width is 0 or less, or past 36');
+      if (new Set(vals.map(String)).size !== 4) fail('buildpick', key, 'two widths are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('buildpick', key, 'no wrong width is of the right one’s form, whole or fraction');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), seen = new Set([String(W)]), can = [];
+        for (const kk of ['zero', 'even', 'front', 'fewer', 'more', 'pairs']) { const v = want(kk, Q); if (seen.has(String(v))) continue; seen.add(String(v)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1))) T.push(tr); }
+        // the right one's place is chosen first, so look only at the sets that give it the place it has
+        const rk = tr => tr.filter(x => { const v = want(x, Q); return v[0] * W[1] < W[0] * v[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('buildpick', key, `a width is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('buildpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== most(Q, vals[i][0] / vals[i][1])) fail('buildpick', key, `${btns[i][6]} ${o.k === 'right' ? 'does not hold' : 'holds'} the most`);
+      });
+      if (k === 0 && txt(S.html().split('id="bbRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('buildpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('buildpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="bbRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ch = checkOf(vals[i], Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q, fr(vals[i])) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('buildpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q, fr(vals[i]))}`);
+        if (lines[1] !== ch.line) fail('buildpick', key, `the check of ${o.k} is: ${lines[1]} | want ${ch.line}`);
+        if (ch.K[0] === 0) fail('buildpick', key, 'a wrong width passes its check');
+        { // the check's slope, measured: A at a hair either side of the picked width
+          const L = vals[i][0] / vals[i][1], h = 1e-6, slope = (area(Q, L + h) - area(Q, L - h)) / (2 * h);
+          if (Math.abs(slope - ch.K[0] / ch.K[1]) > 1e-4) fail('buildpick', key, `the slope at ${fr(vals[i])} is ${slope}, not ${fr(ch.K)}`);
+          if ((slope > 0) !== (ch.K[0] > 0)) fail('buildpick', key, `the check of ${o.k} points the wrong way`); }
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="BuildPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+ m\\. Does not hold the most"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('buildpick', key, 'the missed widths are not shut and told as not holding the most');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('buildpick', key, 'tapping a missed width again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('buildpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('buildpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('buildpick', key, 'no fresh pen after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'PADDOCK PLANNER / 5 best pens fenced') fail('buildpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} holds the most, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('buildpick', key, `the toast is ${env.toasts[nt]}`); }
+      const n = Q.m + 1, W = want('right', Q), A = red(Q.F * Q.F, 4 * n);
+      if (Math.abs(A[0] / A[1] - area(Q, W[0] / W[1])) > 1e-9) fail('buildpick', key, `the pen holds ${area(Q, W[0] / W[1])}, not ${fr(A)}`);
+      const after = `That was it: A(x) = x(${Q.F} − ${n}x) = ${Q.F}x − ${n}x², so A′(x) = ${Q.F} − ${2 * n}x, which is 0 at x = ${Q.F} ÷ ${2 * n} = ${fr(W)} m. The front is then ${fr(red(Q.F, 2))} m, and the pen holds ${fr(A)} m². Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      const got = txt(S.html().split('id="bbRead"')[1].replace(/^[^>]*>/, ''));
+      if (got !== after) fail('buildpick', key, `after a pick: ${got} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same pen dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { F: 36, m: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"F":36,"m":2}') fail('buildpick', 'repeat', 'the same pen is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of pens: every fence whole from 12 to 72, the answer's form even, and three wrong widths always there
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++;
+      if (Q.F < 12 || Q.F > 72) { fail('buildpick', 'sweep', `${JSON.stringify(Q)} has a fence out of range`); break; } }
+    if (sw < 9000 || sw > 11000) fail('buildpick', 'sweep', `${sw} of 20000 answers are whole, not about half`); }
+  for (const k of ['zero', 'even', 'front', 'fewer', 'more', 'pairs']) if (!kinds[k]) fail('buildpick', 'slips', `the slip ${k} is never offered`);
+  if (Ms.size !== 4 || Fs.size < 50) fail('buildpick', 'deal', `paddocks ${[...Ms]} and ${Fs.size} fences is not the whole deal`);
+  if (slots.size !== 4) fail('buildpick', 'deal', `the width only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.2 && ranks[1] > rounds * 0.3 && ranks[2] > rounds * 0.1)) fail('buildpick', 'deal', `the right width sits lowest ${ranks[0]}, second ${ranks[1]} and third ${ranks[2]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('buildpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('buildpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (fives !== 30) fail('buildpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12228,6 +12372,7 @@ console.log(`  cistern totals     ${pad(cisternPickNotes.rounds.toLocaleString()
 console.log(`  flipped slopes     ${pad(invPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the inverse slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching the inverse solved for a hair either side; ${invPickNotes.misses.toLocaleString()} wrong picks checked against g′(u) × f′(p) = 1, ${invPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-head in the horizon workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching f at ten million; ${hzPickNotes.misses.toLocaleString()} wrong picks checked by the biggest-power part of the gap, ${hzPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-fits-best in the best fit workshop, every number read back off its button and checked against the slip it is named as, the right one alone the bottom of the squared misses; ${fitPickNotes.misses.toLocaleString()} wrong picks checked by the misses times their x gaps, ${fitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
