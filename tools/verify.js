@@ -4531,6 +4531,158 @@ const newtonPickNotes = (() => {
   return { rounds, misses, worked, fracR };
 })();
 
+/* Which level? The pick-the-average round in the water level workshop. Every
+   number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from the curve
+   alone. The area shown is checked against the curve itself, summed in a
+   thousand thin strips, and the right number alone must be that area spread
+   across the width. Every product and quotient in the readout is worked again
+   from the numbers it shows. */
+const avgPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Avg = {render(){ env.renders++; }};" +
+    cut('const AvgPick = {', 'const Avg = {') + 'return AvgPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const tm = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), b = (m === 1 && v ? '' : m) + v; return first ? (n < 0 ? '−' : '') + b : (n < 0 ? ' − ' : ' + ') + b; };
+  const poly = ([p, q, r]) => { const a = tm(p, 'x²', true), b = tm(q, 'x', !a), c = tm(r, '', !a && !b); return (a + b + c) || '0'; };
+  const at = (F, x) => F[0] * x * x + F[1] * x + F[2];
+  // the area, as an exact fraction, from the antiderivative worked here
+  const area = Q => fr(2 * Q.f[0] * (Q.b ** 3 - Q.a ** 3) + 3 * Q.f[1] * (Q.b ** 2 - Q.a ** 2) + 6 * Q.f[2] * (Q.b - Q.a), 6);
+  const mul = (v, n) => fr(v[0] * n, v[1]);
+  const want = {
+    right: Q => fr(area(Q)[0], area(Q)[1] * (Q.b - Q.a)),
+    area: Q => area(Q),
+    half: Q => fr(area(Q)[0], area(Q)[1] * 2),
+    ends: Q => fr(at(Q.f, Q.a) + at(Q.f, Q.b), 2),
+    mid: Q => { const m = (Q.a + Q.b) / 2; return fr(Math.round(at(Q.f, m) * 4), 4); }
+  };
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "v × w = h", "A ÷ w = v" and "(p + q)/2" in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`${V} × (\\d) = ${V}`, 'g'))) { n++;
+      if (!eq(mul(rd(m[1]), +m[2]), rd(m[3]))) fail('avgpick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(new RegExp(`${V} ÷ the width (\\d) = ${V}`, 'g'))) { n++;
+      const v = rd(m[1]); if (!eq(fr(v[0], v[1] * +m[2]), rd(m[3]))) fail('avgpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="agRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => { const w = Q.b - Q.a; return {
+    area: `${L} is the area itself, not yet spread out. Poured into a tank ${w} wide, it stands the area ÷ ${w} high.`,
+    half: `${L} is the area ÷ 2, as if it were the average of two numbers. The area is spread over the width, b − a = ${w}, so it is divided by ${w}.`,
+    ends: `${L} is the average of the two ends, (f(${ng(Q.a)}) + f(${ng(Q.b)}))/2 = (${ng(at(Q.f, Q.a))} + ${pn(at(Q.f, Q.b))})/2. That works for a straight line, but this curve bends, so the ends miss.`,
+    mid: `${L} is f at the middle, f(${fst(fr(Q.a + Q.b, 2))}). That works for a straight line, but this curve bends, so the middle misses.` }[k]; };
+  const checkOf = (k, L, Q) => { const v = want[k](Q), w = Q.b - Q.a; return `Check ${L}: a level of ${fst(v)} across the width ${w} holds ${fst(v)} × ${w} = ${fst(mul(v, w))}, not the area ${fst(area(Q))}.`; };
+  if (S.RULE !== 'Pour the area under a curve into a flat tank of the same width and it settles at one height, the average value: the area divided by the width, (1/(b − a)) × ∫ f dx. Which number is the average value?') fail('avgpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('avgpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracR = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), spans = new Set(), wholes = new Set(), leads = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), w = Q.b - Q.a;
+      rounds++; spans.add(Q.a + '..' + Q.b); leads.add(Q.f[0]);
+      if ([Q.a, Q.b, ...Q.f].some(x => !Number.isInteger(x)) || Q.a < -2 || Q.b > 3 || w < 1 || w > 3 || !Q.f[0] || Math.abs(Q.f[1]) > 3 || Math.abs(Q.f[2]) > 3) fail('avgpick', key, `${poly(Q.f)} on [${Q.a}, ${Q.b}] is not small and whole`);
+      const A = area(Q), L = want.right(Q);
+      { // the area, summed in a thousand thin strips at their middles (exact for a quadratic but for the bend, which a thousand strips all but remove)
+        let s = 0; const n = 1000, h = w / n; for (let i = 0; i < n; i++) s += at(Q.f, Q.a + (i + 0.5) * h) * h;
+        if (Math.abs(s - A[0] / A[1]) > 1e-4) fail('avgpick', key, `the area under ${poly(Q.f)} on [${Q.a}, ${Q.b}] is ${s}, not ${fst(A)}`);
+        if (Math.abs(s / w - L[0] / L[1]) > 1e-4) fail('avgpick', key, `the average is ${s / w}, not ${fst(L)}`); }
+      if (L[0] === 0) fail('avgpick', key, 'the average is 0, and 0 is never offered as a wrong number, so it would give itself away');
+      if (L[1] === 1) wholes.add(L[0]); else fracR++;
+      if (prev && prev === sig) fail('avgpick', key, 'the same curve and interval come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('avgpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` f(x) = ${poly(Q.f)} on [${ng(Q.a)}, ${ng(Q.b)}] The area, ∫ f dx from x = ${ng(Q.a)} to x = ${ng(Q.b)}, is ${fst(A)}, and the width is ${w}. A`)) fail('avgpick', key, 'the rule, the curve, its interval and its area are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="AvgPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('avgpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('avgpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('avgpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('avgpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('avgpick', key, `the average is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('avgpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('avgpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('avgpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the average`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of ['area', 'half', 'ends', 'mid']) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('avgpick', key, 'a curve with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('avgpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('avgpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('avgpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (sums(rt, key) !== 1) fail('avgpick', key, 'a miss does not work what its level holds');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="AvgPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the average"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('avgpick', key, 'the missed numbers are not shut and told as not the average');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('avgpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('avgpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('avgpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('avgpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LEVEL KEEPER / 5 tanks levelled') fail('avgpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the average, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('avgpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read();
+      const after = `That was it: the area ${fst(A)} ÷ the width ${w} = ${fst(L)}, and a level of ${fst(L)} holds ${fst(L)} × ${w} = ${fst(A)}, the area exactly. Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('avgpick', key, `after a pick: ${rt} | want ${after}`);
+      if (sums(rt, key) !== 2) fail('avgpick', key, 'the right pick does not work the division and what the level holds');
+      worked += 2;
+      prev = sig;
+    }
+  }
+  { // many more deals, straight from the dealer: the average is never 0
+    let zero = 0; env.seed = 4242;
+    for (let n = 0; n < 20000; n++) { const Q = S.build(); if (want.right(Q)[0] === 0) zero++; }
+    if (zero) fail('avgpick', 'deal', `the average is 0 in ${zero} of 20,000 deals, and 0 is never offered as a wrong number, so it would give itself away`); }
+  { // the same curve and interval dealt again are turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { f: [1, 0, 0], a: 0, b: 3 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"f":[1,0,0],"a":0,"b":3}') fail('avgpick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['area', 'half', 'ends', 'mid']) if (!kinds[k]) fail('avgpick', 'slips', `the slip ${k} is never offered`);
+  if (leads.size !== 4) fail('avgpick', 'deal', `the x² coefficient is only ever ${[...leads].sort().join(', ')}`);
+  if (spans.size !== 11) fail('avgpick', 'deal', `the intervals are only ever ${[...spans].sort().join(', ')}`);
+  if (wholes.size < 8 || ![...wholes].some(w => w < 0)) fail('avgpick', 'deal', `the whole averages are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (fracR < rounds * 0.45 || fracR > rounds * 0.55) fail('avgpick', 'deal', `the average is a fraction in ${fracR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left4.size !== 4) fail('avgpick', 'deal', `when a curve has four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('avgpick', 'deal', `the average only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('avgpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9271,6 +9423,7 @@ console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 1
 console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-k in the elimination workshop, every k read back off its button as an exact fraction and checked against the slip it is named as, the right one alone clearing x from row 2; ${elimPickNotes.misses.toLocaleString()} wrong picks checked, ${elimPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${elimPickNotes.fracK.toLocaleString()} rounds whose right k is a fraction)`);
 console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-limit in the L'Hôpital workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the ratio a hair from the point; ${hopPickNotes.misses.toLocaleString()} wrong picks checked, ${hopPickNotes.worked.toLocaleString()} slopes and fractions worked again from their own numbers, ${hopPickNotes.fracR.toLocaleString()} rounds whose limit is a fraction)`);
 console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
+console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

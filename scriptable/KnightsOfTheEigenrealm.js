@@ -1391,17 +1391,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ WATER LEVEL WORKSHOP ============ -->
   <div class="screen" id="s-avg">
     <div class="panel"><h2>🌊 Water Level Workshop</h2><div class="sub">Pour the area under a curve into a flat tank of the same width and it settles at one height: the curve's average value. Raise or lower the level until the part of the curve sticking up above it exactly fills the gaps beneath it.</div></div>
+    <div id="avTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Level the tank by hand or pick the average"></div>
     <div class="panel">
+      <div id="agBox"></div>
       <div id="avSets" class="wsModes" role="group" aria-label="Which curve"></div>
       <div id="avFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="avStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="avCLo" onclick="Avg.moveC(-1)" aria-label="Lower the level one step">−</button>
           <b id="avC" style="font-size:17px;min-width:0"></b>
           <button id="avCHi" onclick="Avg.moveC(1)" aria-label="Raise the level one step">+</button></div>
       </div>
       <div id="avRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="avGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="avGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14208,7 +14210,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌊 Water Level Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line. Then turn it round: see a curve and its area, and pick which of four numbers is its average value.</div>
          <button class="btn sm" id="tomeAvg" style="width:auto;margin-top:8px" onclick="Avg.open()">Open the water level workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -19437,6 +19439,129 @@ const Bend = {
    compare the part of the curve sticking up above it with the gaps under it.
    They match exactly when c × width equals the area, c = (1/(b − a))∫f.
    Only for a straight line is that the average of the two ends. Nothing is saved. */
+/* ---------- Which level? The water level workshop turned round ----------
+ * A quadratic f on a whole-number interval [a, b], its area there worked
+ * out, and four numbers. The average value is the area spread across the
+ * width, area/(b − a). The wrong numbers are the slips people make with it:
+ * the area itself, not spread at all; the area over 2, as if it were the
+ * average of two numbers; the average of the two ends, (f(a) + f(b))/2; and
+ * f at the middle. The last two are right for a straight line and miss for a
+ * curve that bends, which is the point of the workshop. A 0 is never offered,
+ * and the right number is a fraction about half the time, with another number
+ * of its form always beside it.
+ */
+const AvgPick = {
+  SLIPS:['area','half','ends','mid'],
+  RULE:'Pour the area under a curve into a flat tank of the same width and it settles at one height, the average value: the area divided by the width, (1/(b − a)) × ∫ f dx. Which number is the average value?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  // the polynomial px² + qx + r as the workshop writes it
+  poly([p,q,r]){
+    const t=(n,v,first)=>{ if(!n) return ''; const m=Math.abs(n), b=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };
+    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);
+    return (a+b+c)||'0';
+  },
+  at(S,x){ const [p,q,r]=S.f; return p*x*x+q*x+r; },
+  // the area from a to b, as a fraction: p(b³ − a³)/3 + q(b² − a²)/2 + r(b − a)
+  area(S){ const [p,q,r]=S.f, a=S.a, b=S.b; return this.frac(2*p*(b**3-a**3)+3*q*(b*b-a*a)+6*r*(b-a), 6); },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const [p,q,r]=S.f, a=S.a, b=S.b, A=this.area(S);
+    return k==='right' ? this.frac(A[0],A[1]*(b-a)) : k==='area' ? A : k==='half' ? this.frac(A[0],A[1]*2)
+      : k==='ends' ? this.frac(this.at(S,a)+this.at(S,b),2) : this.frac(p*(a+b)**2+2*q*(a+b)+4*r,4);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this curve can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantFrac=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const a=R.i(-2,1), S={f:[R.pick([1,1,2,3,-1]), R.i(-3,3), R.i(-3,3)], a, b:a+R.i(1,3)};
+      if(S.b>3) continue;
+      const L=this.val(S,'right');
+      if(!L[0] || this.whole(L)===wantFrac) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(L))) continue;
+      return S;
+    }
+    return {f:[1,0,0], a:0, b:3};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,...S.f].join()!==[prev.a,prev.b,...prev.f].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('LEVEL KEEPER', this.matched+' tanks levelled','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the average, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Avg.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // what a flat level v holds across the width: v × w
+  holds(S,v){ const w=S.b-S.a; return \`\${this.fs(v)} × \${w} = \${this.fs(this.frac(v[0]*w,v[1]))}\`; },
+  slip(S,k,L){
+    const w=S.b-S.a;
+    if(k==='area') return \`\${L} is the area itself, not yet spread out. Poured into a tank \${w} wide, it stands the area ÷ \${w} high.\`;
+    if(k==='half') return \`\${L} is the area ÷ 2, as if it were the average of two numbers. The area is spread over the width, b − a = \${w}, so it is divided by \${w}.\`;
+    if(k==='ends') return \`\${L} is the average of the two ends, (f(\${neg(S.a)}) + f(\${neg(S.b)}))/2 = (\${neg(this.at(S,S.a))} + \${this.pn(this.at(S,S.b))})/2. That works for a straight line, but this curve bends, so the ends miss.\`;
+    return \`\${L} is f at the middle, f(\${this.fs(this.frac(S.a+S.b,2))}). That works for a straight line, but this curve bends, so the middle misses.\`;
+  },
+  check(S,k,L){
+    return \`Check \${L}: a level of \${this.fs(this.val(S,k))} across the width \${S.b-S.a} holds \${this.holds(S,this.val(S,k))}, not the area \${this.fs(this.area(S))}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="agQ" style="text-align:center;font-size:18px;margin-bottom:2px">f(x) = \${this.poly(S.f)} on [\${neg(S.a)}, \${neg(S.b)}]</div>\`;
+    out+=\`<div id="agArea" class="small" style="text-align:center">The area, ∫ f dx from x = \${neg(S.a)} to x = \${neg(S.b)}, is \${this.fs(this.area(S))}, and the width is \${S.b-S.a}.</div>\`;
+    out+=\`<div id="agPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="AvgPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the average':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right');
+      lines.push(\`That was it: the area \${this.fs(this.area(B))} ÷ the width \${B.b-B.a} = \${this.fs(v)}, and a level of \${this.fs(v)} holds \${this.holds(B,v)}, the area exactly. Here is a new curve.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="agRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Avg = {
   SETS:[
     {id:'bowl', btn:'Bowl', fs:'x²', Fs:'x³/3', a:0, b:3, f:x=>x*x, F:x=>x**3/3, inv:c=>Math.sqrt(c), area:[9,1], sn:1, sd:2, top:18},
@@ -19522,7 +19647,15 @@ const Avg = {
   open(){ UI.go('s-avg'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveC(by){ const v=this.k+by; if(v<0 || v>this.set().top) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('avTab').innerHTML=[['hand','🌊 Level it by hand','Raise and lower the level by hand until it holds the area'],['pick','🎯 Which level?','See a curve and its area, and pick which of four numbers is its average value']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Avg.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['avSets','avFig','avStep','avRead','avGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('agBox').innerHTML=pick ? AvgPick.html() : '';
+    if(pick) return;
     const S=this.set();
     document.getElementById('avSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Avg.pick(\${i})" aria-label="\${s.btn}: f(x) = \${s.fs} on [\${s.a}, \${s.b}]">\${s.btn}</button>\`).join('');
