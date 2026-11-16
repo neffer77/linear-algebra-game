@@ -735,6 +735,7 @@ function workedSum(key, ex, a) {
   }
 }
 let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
+let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -1152,6 +1153,43 @@ Object.assign(ANALYSIS, {
   // slope from f(a) and f(b), then every c strictly between a and b where a
   // numeric f′ meets it, found by bisection. There must be exactly one, and it
   // is the answer; the working names the chord's slope.
+  // Linear approximation, worked again here in floating point: f and its
+  // tangent line at a read off the question, f′(a) by a central difference,
+  // and L(x) = f(a) + f′(a)(x − a) at the x asked about. The answer is L(x),
+  // not the exact f(x); the working names the tangent line and ends on it.
+  linApprox: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), N = '(-?\\d+(?:/\\d+)?)';
+    const m = t.match(new RegExp(`^f\\(x\\) = (√x|∛x|x²|x³)\\. Use its tangent line at x = ${N} to estimate (?:([√∛])\\(?${N}\\)?|\\(?${N}\\)?([²³]))\\.$`));
+    if (!m) { fail('analysis', 'linApprox', `the question does not read as a linear approximation: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const f = { '√x': Math.sqrt, '∛x': Math.cbrt, 'x²': x => x * x, 'x³': x => x * x * x }[m[1]];
+    const shape = m[3] ? m[3] + 'x' : 'x' + m[6];
+    if (shape !== m[1]) { fail('analysis', 'linApprox', `the estimate asked for is not of f: ${t}`); return; }
+    const a = val(m[2]), x = val(m[4] || m[5]);
+    if (x === a) { fail('analysis', 'linApprox', `the estimate is asked at a itself: ${t}`); return; }
+    if (x === 0) fail('analysis', 'linApprox', `the estimate is asked at 0, where f is known outright: ${t}`);
+    const d = (f(a + 1e-6) - f(a - 1e-6)) / 2e-6, L = f(a) + d * (x - a);
+    valueCheck('linApprox', L, p.a, 1e-5);
+    if (Math.abs(f(x) - L) < 1e-9) fail('analysis', 'linApprox', `the tangent's estimate is f(x) itself, so there is nothing to approximate: ${t}`);
+    const w = fl(p.ex);
+    if (!/The tangent line is L\(x\) = /.test(w) || !w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'linApprox', `the working does not give the tangent line and end on ${p.a}: ${w}`);
+    // each wrong answer is the slip its reason names, worked again here
+    const k = { '√x': 1 / 2, '∛x': 1 / 3, 'x²': 2, 'x³': 3 }[m[1]];
+    const slip = [[/^that is only the step along the tangent/, d * (x - a)], [/^that multiplies the slope by x = /, f(a) + d * x],
+      [/^that adds x − a = .+ with no slope/, f(a) + (x - a)], [/^that steps the wrong way/, f(a) - d * (x - a)],
+      [/^that takes the slope /, f(a) + d / k * (x - a)], [/^that is the exact value of /, f(x)]];
+    for (const [v, why] of p.d) {
+      const s = slip.find(([re]) => re.test(why));
+      if (!s) { fail('analysis', 'linApprox', `a wrong answer's reason is not one of the slips: ${why}`); continue; }
+      if (Math.abs(val(fl(v)) - s[1]) > 1e-6 * Math.max(1, Math.abs(s[1]))) fail('analysis', 'linApprox', `${fl(v)} is not the slip it is named as (${s[1]}): ${why}`);
+    }
+    // the bare step f′(a)(x − a), with f(a) left off, is the first slip people make
+    if (p.d.some(z => Math.abs(val(fl(z[0])) - d * (x - a)) < 1e-6)) laStepOffered++;
+    if (p.d.some(z => /^that is the exact value of /.test(z[1]))) laExact++;
+    covered.add('linApprox');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1273,7 +1311,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 73, sig: 0xa208 };
+  const PINNED = { count: 74, sig: 0xb127 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -14948,6 +14986,31 @@ for (let d = 1; d <= 3; d++) {
     ANALYSIS.meanValue(p);
   }
   if (mvChordOffered < REPS / 4) fail('analysis', 'meanValue', `depth ${d} offers the chord's slope as a slip in only ${mvChordOffered} of ${REPS} questions`);
+}
+
+// Linear approximation at every depth: the answer and its four slips are five
+// different exact numbers, none of them 0, each slip with its reason; any
+// three of the four shown beside the answer hold one of its form, whole or
+// fraction, and one of its sign; and whole and fractional answers come up
+// about equally.
+for (let d = 1; d <= 3; d++) {
+  const LA = 3000;   // the form and sign rules bind seldom, so many questions
+  laStepOffered = 0; laWhole = 0; laExact = 0;
+  for (let i = 0; i < LA; i++) {
+    const p = GEN.linApprox(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'linApprox', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v) || /^−?0/.test(v))) fail('analysis', 'linApprox', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'linApprox', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/'), neg = v => v.startsWith('−');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'linApprox', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => neg(v) === neg(vals[0])).length < 2) fail('analysis', 'linApprox', `fewer than two wrong answers have the answer's sign: ${vals.join(', ')}`);
+    if (whole(vals[0])) laWhole++;
+    ANALYSIS.linApprox(p);
+  }
+  if (laStepOffered < LA / 5) fail('analysis', 'linApprox', `depth ${d} offers the bare step as a slip in only ${laStepOffered} of ${LA} questions`);
+  if (d === 2 && laExact < LA * 0.4) fail('analysis', 'linApprox', `depth 2 offers the exact value as a slip in only ${laExact} of ${LA} questions`);
+  if (laWhole < LA * 0.35 || laWhole > LA * 0.65) fail('analysis', 'linApprox', `depth ${d} gives a whole answer ${laWhole} times in ${LA}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

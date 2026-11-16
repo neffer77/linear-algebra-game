@@ -4047,6 +4047,69 @@ meanValue(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`The chord from (\${show(a)}, \${show(fa)}) to (\${show(b)}, \${show(fb)}) has slope (\${show(fb)} − \${inB(fa)})/(\${show(b)} − \${inB(a)}) = \${show(div(rise,add(b,mul(a,F(-1)))))}. \`+why};
   }
+},
+/* Linear approximation: near a, f(x) ≈ f(a) + f′(a)(x − a), the tangent line
+   at a standing in for the curve. √x near a perfect square at depth 1; x² or
+   x³ a small step from a whole number at depth 2; ∛x near a perfect cube at
+   depth 3. Whole and fractional answers come up about equally. The wrong
+   answers are the slips people make: leaving off f(a) and giving the step
+   alone, multiplying the slope by x instead of by x − a, adding the step
+   x − a with no slope, stepping the wrong way, a slope missing its ½, its ⅓
+   or its power, and, where it is a fraction, the exact value f(x), which is
+   not what the tangent line gives. */
+linApprox(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):\`(\${show(u)})\`;
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    let fs, fname, a, h, fa, sl, slipSl, why, exact=null;
+    if(d===1){
+      const n=R.i(2,9); a=F(n*n); fa=F(n); sl=F(1,2*n); slipSl=F(1,n);
+      h=whole ? F(R.pick([1,-1])*2*n*R.pick([1,1,2])) : F(R.pick([1,2,3,-1,-2,-3]));
+      if(n*n+h[0]<=0) continue;
+      fs='√x'; fname=x=>\`√\${inB(x)}\`;
+      why=\`f(\${show(a)}) = √\${show(a)} = \${show(fa)} and f′(x) = 1/(2√x), so f′(\${show(a)}) = 1/\${2*n}\`;
+    } else if(d===2){
+      const k=R.pick([2,3]), A=R.pick([1,2,3,4,-1,-2,-3]); a=F(A);
+      fa=F(A**k); sl=F(k*A**(k-1)); slipSl=F(A**(k-1));
+      h=whole ? F(R.pick([1,-1])) : F(R.pick([1,-1]),R.pick([2,3,4,5,10]));
+      fs=k===2?'x²':'x³'; fname=x=>\`\${inB(x)}\${k===2?'²':'³'}\`;
+      exact=F(1); const x=add(a,h); for(let i=0;i<k;i++) exact=mul(exact,x);
+      why=\`f(\${show(a)}) = \${inB(a)}\${k===2?'²':'³'} = \${show(fa)} and f′(x) = \${k}x\${k===3?'²':''}, so f′(\${show(a)}) = \${show(sl)}\`;
+    } else {
+      const m=R.pick([1,2,3,-2]); a=F(m**3); fa=F(m); sl=F(1,3*m*m); slipSl=F(1,m*m);
+      h=whole ? F(R.pick([1,-1])*3*m*m) : F(R.pick([1,2,3,4,-1,-2,-3,-4]));
+      fs='∛x'; fname=x=>\`∛\${inB(x)}\`;
+      why=\`f(\${show(a)}) = ∛\${inB(a)} = \${show(fa)} and f′(x) = 1/(3∛x²), so f′(\${show(a)}) = \${show(sl)}\`;
+    }
+    const x=add(a,h), step=mul(sl,h), ans=add(fa,step);
+    if(x[0]===0) continue;   // f(0) is known outright, so there is nothing to estimate
+    if((ans[1]===1)!==whole && g<400) continue;
+    const slips=[
+      [step,\`that is only the step along the tangent, f′(a)(x − a); the estimate starts from f(\${show(a)}) = \${show(fa)} and adds it\`],
+      [add(fa,mul(sl,x)),\`that multiplies the slope by x = \${show(x)} itself; the tangent steps from a, so the slope multiplies x − a = \${show(h)}\`],
+      [add(fa,h),\`that adds x − a = \${show(h)} with no slope, as if the curve rose one for one; it rises at f′(a) = \${show(sl)}\`],
+      [add(fa,mul(sl,F(-h[0],h[1]))),\`that steps the wrong way along the tangent: x − a is \${show(h)}\`],
+      [add(fa,mul(slipSl,h)),d===2?\`that takes the slope of \${fs} as \${show(slipSl)}, forgetting the power \${fs==='x²'?2:3} that comes down in front\`
+        :\`that takes the slope as \${show(slipSl)}, forgetting the \${d===1?'½':'⅓'} that \${fs} brings down\`]
+    ];
+    if(exact) slips.push([exact,\`that is the exact value of \${fname(x)}, worked out in full; the tangent line gives \${show(fa)} plus the step, a little \${exact[0]*ans[1]>ans[0]*exact[1]?'under':'over'} it\`]);
+    const ok=v=>v[0]!==0 && Math.abs(v[0]/v[1])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form and one of its sign
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;
+    if((dist.length<4 || ans[0]===0 || same<2 || sign<2) && g<400) continue;
+    return {topic:'Linear Approximation',
+      codex:{rule:'Near a, f(x) ≈ f(a) + f′(a)(x − a): the tangent line at a stands in for the curve. Pick a where f and f′ are easy, then step from f(a) along the slope.',
+             eg:'√x near 4: f(4) = 2 and f′(4) = 1/4, so √5 ≈ 2 + (1/4)(1) = 9/4.'},
+      q:\`f(x) = \${fs}. Use its tangent line at x = \${show(a)} to estimate \${fname(x)}.\`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}. The tangent line is L(x) = \${show(fa)} + \${inB(sl)}(x − \${inB(a)}), and x − a = \${show(x)} − \${inB(a)} = \${show(h)}, so \${fname(x)} ≈ \${show(fa)} + \${inB(sl)} × \${inB(h)} = \${show(ans)}.\`};
+  }
 }
 };
 
@@ -4160,7 +4223,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4173,7 +4236,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4759,7 +4822,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
