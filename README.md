@@ -595,7 +595,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: forty-seven
+  question from a different workshop's turned-round mode each time: forty-eight
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1880,6 +1880,20 @@ The game is built so that losing teaches you as much as winning.
   runs below zero at hour 6 where y is still 4. Six things to find, and a
   fight on exponential growth now offers it.
 
+  **🎯 Which y?** turns the workshop round: y(0) and y one stretch on are
+  shown, a time some whole or half stretches later is asked, and four numbers
+  offered, one of them y then. The rule comes first: read r off the two
+  values, multiply by r for every whole stretch and by √r for half of one. The
+  wrong numbers are the slips people make: a straight line through the two
+  values, the factor multiplied by the number of stretches, t itself put in
+  the exponent, counting on from y(T) instead of y(0), half way between the
+  whole stretches either side, and the factor turned upside down. A wrong pick
+  is shut and checked against the factor; the right one is worked as a power.
+  No check ever names y itself, the answer is whole as often as it is a
+  fraction, and nothing is saved. `npm test` checks every number against the
+  slip it is named as, and the right one alone against y(0) × r^(t/T) taken
+  again in floating point.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -2044,7 +2058,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirty-nine suites, about 5,570 checks, about a minute:
+loop only exists once the page is running. A hundred and forty suites, about 5,600 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2126,6 +2140,7 @@ loop only exists once the page is running. A hundred and thirty-nine suites, abo
 | `expint` | the Tome opens the growth integral workshop on e^(2x) with F = e^(2x), twice too steep and drawn blue across 88 slope dashes; a 2 in front is caught as the multiply slip; a 1/2 in front fits, turns green and names ∫ e^(2x) dx = (1/2)·e^(2x) + C; a lift of 1/2 keeps every slope and passes through (0, 1); raising the exponent as the power rule would is caught; e^(−2x) needs −1/2 and e^(x/2) needs 2; all seven goals; both steppers stop at their ends; every button named; fits a phone; nothing saved |
 | `eulerwalk` | the Tome opens the Euler step workshop on y′ = y with h = 1 and one dot; one step works 1 + 1 × 1 = 2 and sets it short of e by 0.7183; halving the step works 9/4 and lays both misses side by side; steps of 1/8 reach 2.5658 with the early steps left to the figure; on y′ = −2y a step of 1 jumps to −1 and swings back, 1/2 lands on 0 and stays, 1/4 keeps half of y each step; y′ = x falls short of 2 by exactly h; all seven goals, starting over, the ends, every button named, a phone's width, and nothing saved |
 | `doubling` | the Tome opens the doubling workshop on ×2 every 2 days with one dot; a whole stretch works 6 and meets the straight line; half a stretch works 3 × 2^(1/2) ≈ 4.2426 under the line's 9/2 with the note that √2 is not 1.5, and a second half lands on 6; walked to day 8 the curve is at 48 against the line's 15 with the early moves left to the figure; the halving reaches the line's 0 at hour 6 with y still 4 and runs past it below zero; half of ×4 is ×2; all six goals, starting over, the edge of the figure, every button named, a phone's width, and nothing saved |
+| `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 50 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |

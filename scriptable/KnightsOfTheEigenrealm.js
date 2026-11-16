@@ -1930,17 +1930,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOUBLING WORKSHOP ============ -->
   <div class="screen" id="s-double">
     <div class="panel"><h2>⏳ Doubling Workshop</h2><div class="sub">y′ = ky says y grows at a rate in step with itself, and that makes the same length of time always multiply y by the same factor. Pick a story, walk it a whole stretch or half a stretch at a time, and watch the curve against the straight line through its first two points.</div></div>
+    <div id="dbTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a story by hand or pick which number is y"></div>
     <div class="panel">
+      <div id="ypBox"></div>
       <div id="dbSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which story"></div>
       <div id="dbFig"></div>
-      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk">
+      <div class="wsModes" id="dbWalkRow" style="flex-wrap:wrap" role="group" aria-label="Walk">
         <button class="btn sm" id="dbFull" onclick="Doubling.full()" aria-label="Walk one whole stretch">⏩ A whole stretch</button>
         <button class="btn sm ghost" id="dbHalf" onclick="Doubling.halfStep()" aria-label="Walk half a stretch">Half a stretch</button>
         <button class="btn sm ghost" id="dbAgain" onclick="Doubling.again()" aria-label="Go back to the start">Start over</button>
       </div>
       <div id="dbRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="dbGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="dbGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14420,7 +14422,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">y′ = ky multiplies y by the same factor over every stretch of the same length. Walk a doubling, a halving and a quadrupling a whole or half stretch at a time: see half of ×2 come out as ×√2, and a straight line run below zero where the decay never does.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">y′ = ky multiplies y by the same factor over every stretch of the same length. Walk a doubling, a halving and a quadrupling a whole or half stretch at a time: see half of ×2 come out as ×√2, and a straight line run below zero where the decay never does. Then turn it round: see y(0) and y one stretch on, and pick which of four numbers is y later.</div>
          <button class="btn sm" id="tomeDoubling" style="width:auto;margin-top:8px" onclick="Doubling.open()">Open the doubling workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -27265,6 +27267,183 @@ const PathChain = {
   }
 };
 
+/* ---------- Which y? The doubling workshop turned round ----------
+   y′ = ky with y(0) and y(T) given, a time t some whole or half stretches
+   on, and four numbers, one of them y(t). The rule is stated first; the wrong
+   numbers are the slips people make with it: going in a straight line,
+   multiplying the factor by the number of stretches, putting t itself in the
+   exponent, starting from y(T) instead of y(0), taking half way between two
+   whole stretches, or turning the factor upside down. A wrong pick is
+   checked against the factor, and a check never names y(t) itself. Nothing
+   is saved. */
+const StretchPick = {
+  SLIPS:['line','scale','powT','from1','mean','flip'],
+  RULE:'y′ = ky multiplies y by the same factor r over every stretch of time of the same length. Read r off the two values given; then each whole stretch multiplies by r again, and half a stretch multiplies by √r. Which is y at the time asked?',
+  RS:[[2,1],[3,1],[4,1],[9,1],[3,2],[9,4],[1,2],[1,3],[1,4],[1,9],[2,3],[4,9]],
+  Y0:[1,2,3,4,5,6,8,9,12,16,18,24,27,32,36,48,54,64,81],
+  WORD:['','one','two','three','four'],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  mul(f,g){ return this.frac(f[0]*g[0],f[1]*g[1]); },
+  isq(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? s : null; },
+  // √ of a fraction, when both halves are squares
+  root(f){ const a=this.isq(f[0]), b=this.isq(f[1]); return a!==null && b!==null ? [a,b] : null; },
+  // f to the power n/2, or null where that is not a fraction
+  pw(f,n){
+    let base=f, e=n;
+    if(e<0){ base=[f[1],f[0]]; e=-e; }
+    if(e%2){ base=this.root(base); if(!base) return null; } else e/=2;
+    let out=[1,1]; for(let j=0;j<e;j++) out=this.mul(out,base);
+    return out;
+  },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  y1(S){ return this.mul([S.y0,1],S.r); },
+  t(S){ return this.frac(S.n2*S.T,2); },
+  // y as each option works it: n2 is the number of half stretches from the start
+  val(S,k){
+    const y0=[S.y0,1], r=S.r, n=S.n2, d=this.add(this.y1(S),[-S.y0,1]);
+    if(k==='right') return this.mul(y0,this.pw(r,n));
+    if(k==='line') return this.add(y0,this.mul(d,[n,2]));
+    if(k==='scale') return this.mul(y0,this.mul(r,[n,2]));
+    if(k==='powT'){ const p=this.pw(r,n*S.T); return p && this.mul(y0,p); }
+    if(k==='from1') return this.mul(y0,this.pw(r,n+2));
+    if(k==='mean'){ if(n%2===0) return null; const m=n-1;
+      return this.mul(this.add(this.mul(y0,this.pw(r,m)),this.mul(y0,this.pw(r,m+2))),[1,2]); }
+    return this.mul(y0,this.pw(r,-n));
+  },
+  ok(v){ return !!v && v[0]!==0 && Math.abs(v[0])<=99999 && v[1]<=99999; },
+  // the slips this question can offer: each a number other than 0, not absurdly long, and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!this.ok(v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page names, a check included: y(0), y(T), T, t, r, √r, the stretches, t + T, y(T) − y(0), and y at the whole stretches either side
+  named(S){
+    const out=[[S.y0,1],this.y1(S),[S.T,1],this.t(S),S.r,this.frac(S.n2,2),this.add(this.t(S),[S.T,1]),this.add(this.y1(S),[-S.y0,1])];
+    const s=this.root(S.r); if(s) out.push(s);
+    if(S.n2%2){ const m=S.n2-1; out.push(this.mul([S.y0,1],this.pw(S.r,m)),this.mul([S.y0,1],this.pw(S.r,m+2))); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<3000;g++){
+      const r=this.RS[R.i(0,this.RS.length-1)], y0=this.Y0[R.i(0,this.Y0.length-1)], T=R.i(2,3), n2=[1,3,4,5,6,7,8][R.i(0,6)];
+      const S={y0,r,T,n2};
+      if(!this.whole(this.y1(S)) || (n2%2 && !this.root(r))) continue;
+      const W=this.val(S,'right');
+      if(!W || this.whole(W)!==wantWhole || Math.abs(W[0]/W[1])>3000 || W[1]>729) continue;
+      // a check names y(0), y(T), r, √r and y at the whole stretches either side, so none of them may be y(t)
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {y0:4,r:[9,4],T:2,n2:3};
+  },
+  // how far t is from the start, in stretches
+  far(n){ const w=Math.floor(n/2), h=n%2;
+    return !w ? 'half a stretch' : w===1 ? (h?'a stretch and a half':'one stretch') : \`\${this.WORD[w]}\${h?' and a half':''} stretches\`; },
+  // r to the power n/2, written out as a power
+  powStr(S,n){ const sup='⁰¹²³⁴⁵⁶⁷⁸'; return \`\${this.pf(S.r)}\${n%2 ? \`^(\${n}/2)\` : sup[n/2]}\`; },
+  // r to the power n/2, written out as factors: r × r × √r
+  factors(S,n){ const w=Math.floor(n/2), out=Array(w).fill(this.fs(S.r)); if(n%2) out.push(\`√\${this.pf(S.r)}\`); return out.join(' × '); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('STRETCH READER', this.matched+' growths read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is y, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Doubling.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    if(k==='line') return \`\${L} adds the same amount every stretch, as a straight line does. y′ = ky multiplies by the same factor every stretch instead.\`;
+    if(k==='scale') return \`\${L} multiplies the factor by the number of stretches. Each stretch multiplies by r again, so the factors multiply together; they are not scaled.\`;
+    if(k==='powT') return \`\${L} puts t itself in the exponent, as if every single unit were a stretch. The exponent counts stretches: t ÷ \${S.T}.\`;
+    if(k==='from1') return \`\${L} starts from y(\${S.T}) instead of y(0), so it lands one stretch too far on.\`;
+    if(k==='mean') return \`\${L} takes half way between the two whole stretches either side. Between them the curve does not run in a straight line: half a stretch multiplies by √r.\`;
+    return \`\${L} turns the factor upside down. The factor is y(\${S.T}) ÷ y(0), the later value over the earlier one.\`;
+  },
+  check(S,k,L){
+    const r=this.fs(S.r), t=this.fs(this.t(S)), y1=this.fs(this.y1(S)), n=S.n2;
+    if(k==='line') return \`Check \${L}: it adds y(\${S.T}) − y(0) = \${this.fs(this.add(this.y1(S),[-S.y0,1]))} every stretch. From y(0) = \${S.y0} to y(\${S.T}) = \${y1}, y is multiplied by \${y1} ÷ \${S.y0} = \${r}, and every stretch of \${S.T} does the same.\`;
+    if(k==='scale') return n===1
+      ? \`Check \${L}: it multiplies y(0) by \${r} × 1/2. Two halves must make ×\${r}, and the number that makes \${r} when multiplied by itself is √\${this.pf(S.r)}, not \${r} ÷ 2.\`
+      : \`Check \${L}: it multiplies y(0) by \${r} × \${this.fs(this.frac(n,2))}. \${this.far(n)[0].toUpperCase()+this.far(n).slice(1)} multipl\${n<4?'ies':'y'} y(0) by \${this.factors(S,n)}.\`;
+    if(k==='powT') return \`Check \${L}: it takes \${this.pf(S.r)} to the power t = \${t}. A stretch here is \${S.T}, so t = \${t} is t ÷ \${S.T} = \${this.fs(this.frac(n,2))} stretches, and that is the exponent.\`;
+    if(k==='from1') return \`Check \${L}: it multiplies y(\${S.T}) = \${y1} by \${this.factors(S,n)}, which reaches t = \${this.fs(this.add(this.t(S),[S.T,1]))}. Count \${this.far(n)} from t = 0, where y = \${S.y0}.\`;
+    if(k==='mean'){ const m=n-1, a=this.mul([S.y0,1],this.pw(S.r,m)), b=this.mul([S.y0,1],this.pw(S.r,m+2)), s=this.root(S.r);
+      return \`Check \${L}: it is half way between y(\${this.fs(this.frac(m*S.T,2))}) = \${this.fs(a)} and y(\${this.fs(this.frac((m+2)*S.T,2))}) = \${this.fs(b)}. Half a stretch from y(\${this.fs(this.frac(m*S.T,2))}) multiplies it by √\${this.pf(S.r)} = \${this.fs(s)}, since \${this.fs(s)} × \${this.fs(s)} = \${r}.\`; }
+    return \`Check \${L}: it divides by \${r} where it should multiply. From y(0) = \${S.y0} to y(\${S.T}) = \${y1}, y is multiplied by \${y1} ÷ \${S.y0} = \${r}, so every stretch multiplies by \${r}.\`;
+  },
+  // the right answer, worked
+  work(S){ return \`t = \${this.fs(this.t(S))} is \${this.far(S.n2)} of \${S.T}, and r = \${this.fs(this.y1(S))} ÷ \${S.y0} = \${this.fs(S.r)}, so y(\${this.fs(this.t(S))}) = \${S.y0} × \${this.powStr(S,S.n2)} = \${this.fs(this.val(S,'right'))}\`; },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), t=this.fs(this.t(S));
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="ypQ" style="text-align:center;font-size:16px;margin-bottom:2px">y′ = ky, y(0) = \${S.y0}, y(\${S.T}) = \${this.fs(this.y1(S))}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which is y(\${t})?</div>\`;
+    out+=\`<div id="ypPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="StretchPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not y('+t+')':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(\`That was it: \${this.work(this.last.S)}. Here is a new one.\`);
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="ypRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 /* ---------- The doubling workshop: y′ = ky one stretch at a time ----------
    y′ = ky multiplies y by the same factor over every stretch of time of the
    same length. Pick a story (doubles every 2 days, halves every 3 hours,
@@ -27357,11 +27536,19 @@ const Doubling = {
     return out+\`</svg>\`;
   },
   open(){ UI.go('s-double'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.moves=[]; this.touched=true; this.render(); },
   full(){ if(!this.canFull()) return; this.moves.push(1); this.touched=true; this.render(); },
   halfStep(){ if(!this.canHalf()) return; this.moves.push(0.5); this.touched=true; this.render(); },
   again(){ this.moves=[]; this.touched=true; this.render(); },
   render(){
+    document.getElementById('dbTab').innerHTML=[['hand','⏩ Walk it by hand','Pick a story and walk it a whole or half stretch at a time'],['pick','🎯 Which y?','See y(0) and y one stretch on, and pick which of four numbers is y at a later time']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Doubling.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['dbSets','dbFig','dbWalkRow','dbRead','dbGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('ypBox').innerHTML=pick ? StretchPick.html() : '';
+    if(pick) return;
     document.getElementById('dbSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Doubling.pick(\${i})" aria-label="y \${s.name}">\${s.btn}</button>\`).join('');
     document.getElementById('dbFull').disabled=!this.canFull();
@@ -28619,12 +28806,13 @@ const MixPick = {
     ['InvPick','InvSlope','🪩 Inverse Slope Workshop'],
     ['LnPick','LogDiff','🪵 Log Slope Workshop'],
     ['PathPick','PathChain','🛤️ Path Chain Workshop'],
+    ['StretchPick','Doubling','⏳ Doubling Workshop'],
     ['EulerPick','EulerWalk','👣 Euler Step Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },
