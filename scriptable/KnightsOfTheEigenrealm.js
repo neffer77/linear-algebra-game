@@ -1837,10 +1837,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ INVERSE SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-invslope">
     <div class="panel"><h2>🪩 Inverse Slope Workshop</h2><div class="sub">Arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x. A mirror swaps rise and run, so the slope flips. Step along, watch a point land on its mirror image, then try the two slips everyone makes and catch them out.</div></div>
+    <div id="ivTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mirror a curve by hand or pick the slope of an inverse"></div>
     <div class="panel">
+      <div id="vpBox"></div>
       <div id="ivSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which inverse"></div>
       <div id="ivFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="ivStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="ivULo" onclick="InvSlope.moveU(-1)" aria-label="Move u one step smaller">−</button>
           <b id="ivU" style="font-size:17px;min-width:0"></b>
           <button id="ivUHi" onclick="InvSlope.moveU(1)" aria-label="Move u one step bigger">+</button></div>
@@ -1848,7 +1850,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="ivModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
       <div id="ivRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="ivGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="ivGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14200,7 +14202,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪩 Inverse Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge. Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there.</div>
          <button class="btn sm" id="tomeInvSlope" style="width:auto;margin-top:8px" onclick="InvSlope.open()">Open the inverse slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -24711,6 +24713,132 @@ const TanPlane = {
   }
 };
 
+/* ---------- Which slope? The inverse slope workshop turned round ----------
+   A rising curve f(x) = (x³ + bx + c)/d, a whole point x = p that f sends to
+   a whole u, and four numbers, one of them the slope of the inverse g at u.
+   The rule is stated first: g′(u) = 1/f′(x), the slope of f flipped, taken at
+   the x that f sends to u. The wrong numbers are the slips people make with
+   it. A wrong pick is checked the way the workshop teaches: g undoes f, so
+   g(f(x)) = x has slope 1, and by the chain rule g′(u) × f′(p) must be 1.
+   Nothing is saved. */
+const InvPick = {
+  SLIPS:['noFlip','atU','noD','noThree','noB'],
+  P:[-2,-1,1,2],
+  RULE:'g is the inverse of f: it sends u back to the x that f sends to u. A mirror in y = x swaps rise and run, so the slope flips: g′(u) = 1/f′(x), with f′ taken at that x, not at u. Differentiate f, put in x, and flip. Which number is g′(u)?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  f(S,x){ return (x**3+S.b*x+S.c)/S.d; },
+  u(S){ return this.f(S,S.p); },
+  // the slope of f at x is (3x² + b)/d; each number below is a fraction [top, bottom]
+  val(S,k){
+    const {b,d,p}=S, n=3*p*p+b, u=this.u(S);
+    return k==='right' ? this.frac(d,n) : k==='noFlip' ? this.frac(n,d) : k==='atU' ? this.frac(d,3*u*u+b)
+      : k==='noD' ? this.frac(1,n) : k==='noThree' ? this.frac(d,p*p+b) : this.frac(d,3*p*p);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this curve can offer: each above 0, as a rising curve's slope is, and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ if(k==='noD' && S.d===1) continue;
+      const v=this.val(S,k);
+      if(v[0]<=0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const p=this.P[R.i(0,3)], b=R.i(1,6), n=3*p*p+b;
+      const d=wantWhole ? n*R.i(1,2) : R.i(1,9);
+      if(d>18) continue;
+      // c is picked so that f sends p to a whole u
+      const r=((p**3+b*p)%d+d)%d, c=(R.i(0,1) ? -r : d-r)%d + d*R.i(-1,1);
+      const S={b,c,d,p};
+      if(Math.abs(c)>12 || (c===0 && R.i(0,1))) continue;
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole || this.u(S)===p || (this.u(S)===0 && R.i(0,2))) continue;
+      if(['right',...this.SLIPS].some(k=>this.val(S,k)[0]/this.val(S,k)[1]>40)) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {b:5,c:-6,d:8,p:2};
+  },
+  // f written out, over d when d is more than 1
+  fx(S){
+    const top=\`x³ \${S.b===1?'+ x':'+ '+S.b+'x'}\${S.c ? (S.c<0?' − ':' + ')+Math.abs(S.c) : ''}\`;
+    return S.d===1 ? top : \`(\${top})/\${S.d}\`;
+  },
+  fp(S){ const t=\`3x² + \${S.b}\`; return S.d===1 ? t : \`(\${t})/\${S.d}\`; },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SLOPE FLIPPER', this.matched+' slopes flipped','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is g′(u), picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    InvSlope.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {b,d,p}=S, u=this.u(S), n=3*p*p+b;
+    if(k==='noFlip') return \`\${L} is f′(\${neg(p)}) = \${this.fs(this.frac(n,d))} itself, the slope of f. The mirror swaps rise and run, so g’s slope is that flipped over.\`;
+    if(k==='atU') return \`\${L} takes f′ at u = \${neg(u)}, not at x = \${neg(p)}. g′(u) flips the slope of f at the x that f sends to u, and that is x = \${neg(p)}.\`;
+    if(k==='noD') return \`\${L} forgets the /\${d}: f′(x) is (3x² + \${b})/\${d}, not 3x² + \${b}.\`;
+    if(k==='noThree') return \`\${L} forgets the 3 that x³ brings down: its slope is 3x², not x².\`;
+    return \`\${L} forgets the \${b === 1 ? 'x' : b+'x'}: its slope \${b} counts in f′ too.\`;
+  },
+  check(S,k,L){
+    const {b,d,p}=S, n=3*p*p+b, v=this.val(S,k), pr=this.frac(v[0]*n,v[1]*d);
+    return \`Check \${L}: g undoes f, so g(f(x)) = x, whose slope is 1. By the chain rule g′(\${neg(this.u(S))}) × f′(\${neg(p)}) must be 1. f′(x) = \${this.fp(S)}, so f′(\${neg(p)}) = \${this.fs(this.frac(n,d))}, and \${this.fs(v)} × \${this.fs(this.frac(n,d))} = \${this.fs(pr)}, not 1.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss(), u=this.u(S);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="vpQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.fx(S)} is always rising, and f(\${neg(S.p)}) = \${neg(u)}.</div>\`;
+    out+=\`<div class="small" style="text-align:center">g is its inverse. Which is g′(\${neg(u)})?</div>\`;
+    out+=\`<div id="vpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="InvPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not g′(u)':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, n=3*B.p*B.p+B.b;
+      lines.push(\`That was it: f′(x) = \${this.fp(B)}, so at x = \${neg(B.p)}, the x that f sends to \${neg(this.u(B))}, f′(\${neg(B.p)}) = \${this.fs(this.frac(n,B.d))}. Flipped, g′(\${neg(this.u(B))}) = \${this.fs(this.val(B,'right'))}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="vpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 /* ---------- The inverse slope workshop: mirror the curve, flip the slope ----------
    arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x.
    Step u along and see the point (x, u) on f land at (u, x) on g. Mirroring
@@ -24852,7 +24980,15 @@ const InvSlope = {
   pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
   moveU(by){ const v=this.k+by; if(v<0 || v>=this.set().U.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('ivTab').innerHTML=[['hand','🪩 Mirror it by hand','Step along a curve and its mirror by hand'],['pick','🎯 Which slope?','See a rising curve and a point, and pick which of four numbers is the slope of its inverse there']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="InvSlope.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['ivSets','ivFig','ivStep','ivModes','ivRead','ivGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('vpBox').innerHTML=pick ? InvPick.html() : '';
+    if(pick) return;
     document.getElementById('ivSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="InvSlope.pick(\${i})" aria-label="g(u) = \${s.g} u, the mirror of \${s.f} x">\${s.btn}</button>\`).join('');
     document.getElementById('ivModes').innerHTML=this.MODES.map((m,i)=>
