@@ -1,432 +1,418 @@
 {
-  "change": "Which volume? The slice workshop turned round: see a plane over a rectangle, and pick which of four numbers is the volume under it.",
+  "change": "Which number in front? The swap workshop turned round: see an integral to swap, and pick which of four numbers goes in front of the answer.",
   "mutations": [
     {
-      "name": "the rule drops a ÷ 2",
+      "name": "the rule forgets to divide by the new power",
       "file": "index.html",
-      "find": "so ax and by each pick up a ÷ 2,",
-      "replace": "so ax picks up a ÷ 2,",
+      "find": "then divide by the new one. Put the bracket",
+      "replace": "then divide by the old one. Put the bracket",
       "run": "verify"
     },
     {
-      "name": "the right volume forgets a ÷ 2 in x",
+      "name": "the right number forgets the new power",
       "file": "index.html",
-      "find": "return k==='right' ? [a*q, b*q*q+2*c*q]",
-      "replace": "return k==='right' ? [2*a*q, b*q*q+2*c*q]",
+      "find": "return k==='right' ? this.frac(c,m*a*(n+1))",
+      "replace": "return k==='right' ? this.frac(c,m*a)",
       "run": "verify"
     },
     {
-      "name": "the right volume forgets a ÷ 2 in y",
+      "name": "the right number drops the a",
       "file": "index.html",
-      "find": "return k==='right' ? [a*q, b*q*q+2*c*q]",
-      "replace": "return k==='right' ? [a*q, 2*b*q*q+2*c*q]",
+      "find": "return k==='right' ? this.frac(c,m*a*(n+1))",
+      "replace": "return k==='right' ? this.frac(c,m*(n+1))",
       "run": "verify"
     },
     {
-      "name": "the right volume drops c",
+      "name": "the right number is upside down",
       "file": "index.html",
-      "find": "return k==='right' ? [a*q, b*q*q+2*c*q]",
-      "replace": "return k==='right' ? [a*q, b*q*q]",
+      "find": "return k==='right' ? this.frac(c,m*a*(n+1))",
+      "replace": "return k==='right' ? this.frac(m*a*(n+1),c)",
       "run": "verify"
     },
     {
-      "name": "the x slip is the right one",
+      "name": "the dx slip keeps du",
       "file": "index.html",
-      "find": "k==='noHalfX' ? [2*a*q, b*q*q+2*c*q]",
-      "replace": "k==='noHalfX' ? [a*q, b*q*q+2*c*q]",
+      "find": "k==='noDu' ? this.frac(c,n+1)",
+      "replace": "k==='noDu' ? this.frac(c,m*a*(n+1))",
       "run": "verify"
     },
     {
-      "name": "the y slip doubles the wrong term",
+      "name": "the multiply slip divides",
       "file": "index.html",
-      "find": "k==='noHalfY' ? [a*q, 2*b*q*q+2*c*q]",
-      "replace": "k==='noHalfY' ? [a*q, 2*b*q*q+4*c*q]",
+      "find": "k==='multDu' ? this.frac(c*m*a,n+1)",
+      "replace": "k==='multDu' ? this.frac(c,m*a*(n+1)*2)",
       "run": "verify"
     },
     {
-      "name": "the both slip only doubles x",
+      "name": "the old power slip uses the new",
       "file": "index.html",
-      "find": "k==='noHalf' ? [2*a*q, 2*b*q*q+2*c*q]",
-      "replace": "k==='noHalf' ? [2*a*q, b*q*q+2*c*q]",
+      "find": "k==='old' ? this.frac(c,m*a*n)",
+      "replace": "k==='old' ? this.frac(c,m*a*(n+2))",
       "run": "verify"
     },
     {
-      "name": "the swap slip keeps a and b",
+      "name": "the a slip keeps the a",
       "file": "index.html",
-      "find": "k==='swap' ? [b*q, a*q*q+2*c*q]",
-      "replace": "k==='swap' ? [a*q, b*q*q+2*c*q]",
+      "find": "k==='noA' ? this.frac(c,m*(n+1))",
+      "replace": "k==='noA' ? this.frac(c,m*(n+1)*2)",
       "run": "verify"
     },
     {
-      "name": "the one-slice slip takes a whole q",
+      "name": "the m slip keeps the m",
       "file": "index.html",
-      "find": "k==='oneSlice' ? [a, 2*c]",
-      "replace": "k==='oneSlice' ? [a*q, 2*c]",
+      "find": "k==='noM' ? this.frac(c,a*(n+1))",
+      "replace": "k==='noM' ? this.frac(c,a*(n+1)*3)",
       "run": "verify"
     },
     {
-      "name": "the steady slip counts c twice",
+      "name": "the x-too slip divides by m once",
       "file": "index.html",
-      "find": "[a*q, b*q*q+2*c];",
-      "replace": "[a*q, b*q*q+4*c];",
+      "find": "k==='xToo' ? this.frac(c,m*m*a*(n+1))",
+      "replace": "k==='xToo' ? this.frac(c,m*a*(n+1)*4)",
       "run": "verify"
     },
     {
-      "name": "a slope is not doubled",
+      "name": "the flip slip is the right side up",
       "file": "index.html",
-      "find": "dat(C,t){ return 2*C[0]*t+C[1]; },",
-      "replace": "dat(C,t){ return C[0]*t+C[1]; },",
-      "run": "verify"
-    },
-    {
-      "name": "a volume is read at the near edge",
-      "file": "index.html",
-      "find": "val(S,k){ return this.frac(this.at(this.co(S,k),S.p),2); },",
-      "replace": "val(S,k){ return this.frac(this.at(this.co(S,k),S.q),2); },",
-      "run": "verify"
-    },
-    {
-      "name": "a check is made only at the far edge",
-      "file": "index.html",
-      "find": "return [S.p,0].find(t=>",
-      "replace": "return [S.p].find(t=>",
+      "find": ": this.frac(m*a*(n+1),c);",
+      "replace": ": this.frac(2*m*a*(n+1),c);",
       "run": "verify"
     },
     {
       "name": "a fraction is not cut down",
       "file": "index.html",
-      "find": "  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  f(S,x",
-      "replace": "  frac(p,q){ if(q<0){ p=-p; q=-q; } return [p,q]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  f(S,x",
+      "find": "  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
+      "replace": "  frac(p,q){ if(q<0){ p=-p; q=-q; } return [p,q]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
+      "run": "verify"
+    },
+    {
+      "name": "a negative bottom is left below",
+      "file": "index.html",
+      "find": "  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
+      "replace": "  frac(p,q){ if(q<-9){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
       "run": "verify"
     },
     {
       "name": "a whole number is written over 1",
       "file": "index.html",
-      "find": "  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  f(S,x",
-      "replace": "  fs:f=>f[1]===0 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  f(S,x",
-      "run": "verify"
-    },
-    {
-      "name": "a volume of 0 or less is let through",
-      "file": "index.html",
-      "find": "      if(v[0]<=0 || seen.has(this.key(v)) || this.miss(S,k)===undefined) continue;",
-      "replace": "      if(seen.has(this.key(v)) || this.miss(S,k)===undefined) continue;",
+      "find": "  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
+      "replace": "  fs:f=>f[1]===0 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  // the number each option stands for, as a fraction\n  val(S,k){\n    const {a,b,",
       "run": "verify"
     },
     {
       "name": "a slip the same as the answer is let through",
       "file": "index.html",
-      "find": "      if(v[0]<=0 || seen.has(this.key(v)) || this.miss(S,k)===undefined) continue;",
-      "replace": "      if(v[0]<=0 || this.miss(S,k)===undefined) continue;",
+      "find": "      if(seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // the sets of three slips that m",
+      "replace": "      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // the sets of three slips that m",
       "run": "verify"
     },
     {
-      "name": "a same-form volume is not needed",
+      "name": "a same-form number is not needed",
       "file": "index.html",
-      "find": "      if(t.some(x=>this.whole(this.val(S,x))===form)) out.push(t); }\n    return out;\n  },\n  build(){\n    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S",
-      "replace": "      out.push(t); }\n    return out;\n  },\n  build(){\n    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S",
+      "find": "      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(",
+      "replace": "      if(true && t.some(",
       "run": "verify"
     },
     {
       "name": "the answers are nearly always whole",
       "file": "index.html",
-      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,3",
-      "replace": "const wantWhole=R.i(0,4)>0;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,3",
+      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9),",
+      "replace": "const wantWhole=R.i(0,4)>0;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9),",
       "run": "verify"
     },
     {
       "name": "the form is not matched",
       "file": "index.html",
-      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if([",
-      "replace": "      if([",
+      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(['right',...this.SLIPS].some(k=>{ const v=this.val(S,k); return Math.abs(v[0]/v[1])>200; })) continue;\n      if(this.slips(S).length<3 || !this.trios(S).length) continue;\n      return S;\n    }\n    return {a:2, b:5",
+      "replace": "      if(['right',...this.SLIPS].some(k=>{ const v=this.val(S,k); return Math.abs(v[0]/v[1])>200; })) continue;\n      if(this.slips(S).length<3 || !this.trios(S).length) continue;\n      return S;\n    }\n    return {a:2, b:5",
       "run": "verify"
     },
     {
       "name": "a is never negative",
       "file": "index.html",
-      "find": "const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,3",
-      "replace": "const S={a:R.i(1,3), b:R.i(1,3",
+      "find": "const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9),",
+      "replace": "const S={a:R.i(1,3), b:R.i(1,9),",
       "run": "verify"
     },
     {
-      "name": "b is never 3",
+      "name": "a is nearly always negative",
       "file": "index.html",
-      "find": "b:R.i(1,3)*(R.i(0,1)?1:-1), c:R.i(1,9",
-      "replace": "b:R.i(1,2)*(R.i(0,1)?1:-1), c:R.i(1,9",
+      "find": "const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9),",
+      "replace": "const S={a:R.i(1,3)*(R.i(0,5)?-1:1), b:R.i(1,9),",
       "run": "verify"
     },
     {
-      "name": "c never passes 5",
+      "name": "a is never 3",
       "file": "index.html",
-      "find": "c:R.i(1,9), p:",
-      "replace": "c:R.i(1,5), p:",
+      "find": "const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9),",
+      "replace": "const S={a:R.i(1,2)*(R.i(0,1)?1:-1), b:R.i(1,9),",
       "run": "verify"
     },
     {
-      "name": "p is never 4",
+      "name": "b is never past 5",
       "file": "index.html",
-      "find": "p:R.i(1,4), q:",
-      "replace": "p:R.i(1,3), q:",
+      "find": "b:R.i(1,9), c:R.i(1,36)",
+      "replace": "b:R.i(1,5), c:R.i(1,36)",
       "run": "verify"
     },
     {
-      "name": "q is always p",
+      "name": "c is never past 12",
       "file": "index.html",
-      "find": "q:R.i(1,4)};",
-      "replace": "q:0}; S.q=S.p;",
+      "find": "c:R.i(1,36), m:",
+      "replace": "c:R.i(1,12), m:",
       "run": "verify"
     },
     {
-      "name": "the plane may dip below the floor",
+      "name": "m is always 2",
       "file": "index.html",
-      "find": "      if([[0,0],[S.p,0],[0,S.q],[S.p,S.q]].some(([x,y])=>this.f(S,x,y)<1)) continue;\n",
-      "replace": "",
+      "find": "m:R.i(2,3), n:",
+      "replace": "m:2, n:",
       "run": "verify"
     },
     {
-      "name": "one corner is not looked at",
+      "name": "n is never 5",
       "file": "index.html",
-      "find": "[[0,0],[S.p,0],[0,S.q],[S.p,S.q]].some(",
-      "replace": "[[0,0],[S.p,0],[0,S.q]].some(",
+      "find": "n:R.i(2,5)};",
+      "replace": "n:R.i(2,4)};",
       "run": "verify"
     },
     {
-      "name": "a volume may run past 200",
+      "name": "the same integral may come twice",
       "file": "index.html",
-      "find": "return Math.abs(v[0]/v[1])>200; })) continue;",
-      "replace": "return Math.abs(v[0]/v[1])>2000; })) continue;",
-      "run": "verify"
-    },
-    {
-      "name": "the same solid may come twice",
-      "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||true) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||true) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "the slips are always the first trio",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "the right volume sits wherever the slips put it",
+      "name": "the right number sits wherever the slips put it",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], fit=T, take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], fit=T, take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "the right volume tends to sit low",
+      "name": "the right number tends to sit low",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=Math.min(...ranks), fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=Math.min(...ranks), fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "the answer always sits first",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a volume of the right one's form always stands beside it, so the form gives nothing away\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sl",
-      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Sl",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sw",
+      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Sw",
       "run": "verify"
     },
     {
       "name": "a miss is not shut",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sl",
-      "replace": "      this.misses++; this.last=null;\n    }\n    Sl",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sw",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Sw",
       "run": "verify"
     },
     {
-      "name": "a shut volume can be picked again",
+      "name": "a shut number can be picked again",
       "file": "index.html",
-      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
-      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
       "run": "verify"
     },
     {
       "name": "a first try is counted after a miss",
       "file": "index.html",
-      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
-      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
+      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
+      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
       "run": "verify"
     },
     {
       "name": "the toast miscounts tries",
       "file": "index.html",
-      "find": "      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
-      "replace": "      const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MASTER S",
+      "find": "      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
+      "replace": "      const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('BR",
       "run": "verify"
     },
     {
-      "name": "a right pick keeps the old solid",
+      "name": "a right pick keeps the old integral",
       "file": "index.html",
-      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    S",
-      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    S",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sw",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Sw",
       "run": "verify"
     },
     {
       "name": "a pick does not redraw",
       "file": "index.html",
-      "find": "    Slice.render();\n  },\n  missed(){",
+      "find": "    Swap.render();\n  },\n  missed(){",
       "replace": "  },\n  missed(){",
       "run": "verify"
     },
     {
-      "name": "the x slip halves the wrong letter",
+      "name": "the dx slip gives du the wrong number",
       "file": "index.html",
-      "find": "is ${this.half(a,'x')}, not ${this.lin([[a,'x²']])}.`;\n    if(k==='noHalfY')",
-      "replace": "is ${this.half(a,'y')}, not ${this.lin([[a,'x²']])}.`;\n    if(k==='noHalfY')",
+      "find": "so ${xo} dx is du/${this.pn(ma)}, and that",
+      "replace": "so ${xo} dx is du/${this.pn(a)}, and that",
       "run": "verify"
     },
     {
-      "name": "a half is not cut down",
+      "name": "the multiply slip names the wrong number",
       "file": "index.html",
-      "find": "(n%2===0 ? ` = ${this.lin([[n/2,v+'²']])}` : '')",
-      "replace": "(n%3===0 ? ` = ${this.lin([[n/2,v+'²']])}` : '')",
+      "find": "${L} multiplies by ${neg(ma)} where it should divide.",
+      "replace": "${L} multiplies by ${neg(m)} where it should divide.",
       "run": "verify"
     },
     {
-      "name": "the swap slip names the sides the same",
+      "name": "the old power slip names the new power",
       "file": "index.html",
-      "find": "the rectangle turned on its side. Here x runs to ${p} and y to ${q}.",
-      "replace": "the rectangle turned on its side. Here x runs to ${q} and y to ${p}.",
+      "find": "${L} divides by ${n}, the power before it is raised.",
+      "replace": "${L} divides by ${n+1}, the power before it is raised.",
       "run": "verify"
     },
     {
-      "name": "the one-slice slip gives the wrong edge",
+      "name": "the a slip names the wrong slope",
       "file": "index.html",
-      "find": "∫₀${'⁰¹²³⁴'[p]} f(x, 0) dx.",
-      "replace": "∫₀${'⁰¹²³⁴'[q]} f(x, 0) dx.",
+      "find": "the ${neg(a)} included.`;",
+      "replace": "the ${neg(m)} included.`;",
       "run": "verify"
     },
     {
-      "name": "the steady slip miscounts",
+      "name": "the x-too slip names the wrong power",
       "file": "index.html",
-      "find": "fills ${c} × ${p} × ${q} = ${c*p*q}, not",
-      "replace": "fills ${c} × ${p} × ${q} = ${c*p+q}, not",
+      "find": "on its own as well, to ${this.xp(m)}/${m}",
+      "replace": "on its own as well, to ${this.xp(m+1)}/${m}",
       "run": "verify"
     },
     {
-      "name": "the check's slice area is the slip's",
+      "name": "the flip slip says the wrong number goes on top",
       "file": "index.html",
-      "find": "const D=[0,2*C[0],C[1]], A=[0,2*R0[0],R0[1]];",
-      "replace": "const D=[0,2*C[0],C[1]], A=[0,2*C[0],C[1]];",
+      "find": "so ${c} goes on top.`;",
+      "replace": "so ${m} goes on top.`;",
       "run": "verify"
     },
     {
-      "name": "the check's slope forgets the 2",
+      "name": "the m slip gives the wrong slope",
       "file": "index.html",
-      "find": "const D=[0,2*C[0],C[1]], A=",
-      "replace": "const D=[0,C[0],C[1]], A=",
+      "find": "= ${neg(ma)}${xo}, not ${neg(a)}${xo}.`;",
+      "replace": "= ${neg(ma)}${xo}, not ${neg(m)}${xo}.`;",
       "run": "verify"
     },
     {
-      "name": "the check names the wrong edge",
+      "name": "the check forgets the new power",
       "file": "index.html",
-      "find": "for G(t) = ${this.gs(C,'t')}. Push",
-      "replace": "for G(t) = ${this.gs(R0,'t')}. Push",
+      "find": "const v=this.val(S,k), {a,c,m,n}=S, N=m*a*(n+1);",
+      "replace": "const v=this.val(S,k), {a,c,m,n}=S, N=m*a*n;",
       "run": "verify"
     },
     {
-      "name": "the check gives the slip's slope as the area",
+      "name": "the check is made for the slip's own c",
       "file": "index.html",
-      "find": "not A(${t}) = ${this.fs(this.frac(this.dat(R0,t),2))}.",
-      "replace": "not A(${t}) = ${this.fs(this.frac(this.dat(C,t),2))}.",
+      "find": "must be ${c}. With k = ${this.fs(v)}",
+      "replace": "must be ${this.fs(v)}. With k = ${this.fs(v)}",
       "run": "verify"
     },
     {
-      "name": "the check's area runs to the wrong side",
+      "name": "the check works the product with the right k",
       "file": "index.html",
-      "find": "A(t) = ∫₀${'⁰¹²³⁴'[S.q]} f(t, y) dy",
-      "replace": "A(t) = ∫₀${'⁰¹²³⁴'[S.p]} f(t, y) dy",
+      "find": "that is ${this.pf(v)} × ${this.pn(N)} = ${this.fs(this.frac(v[0]*N,v[1]))}, not",
+      "replace": "that is ${this.pf(v)} × ${this.pn(N)} = ${this.fs(this.frac(c,1))}, not",
+      "run": "verify"
+    },
+    {
+      "name": "the check names the old bracket power",
+      "file": "index.html",
+      "find": "is k × ${n+1} × ${this.br(S)}${this.SUP[n]} ×",
+      "replace": "is k × ${n+1} × ${this.br(S)}${this.SUP[n+1]} ×",
       "run": "verify"
     },
     {
       "name": "a miss is not checked",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, R",
-      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, R",
+      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N=B",
+      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N=B",
       "run": "verify"
     },
     {
-      "name": "the right line sweeps the wrong way",
+      "name": "the right line divides by the old power",
       "file": "index.html",
-      "find": "= [${this.gs(R0,'x')}]₀${'⁰¹²³⁴'[B.p]} =",
-      "replace": "= [${this.gs(R0,'x')}]₀${'⁰¹²³⁴'[B.q]} =",
+      "find": "÷ ${this.pn(B.m*B.a)} ÷ ${B.n+1} =",
+      "replace": "÷ ${this.pn(B.m*B.a)} ÷ ${B.n} =",
       "run": "verify"
     },
     {
-      "name": "the right line's slice is the slip's",
+      "name": "the right line forgets du",
       "file": "index.html",
-      "find": "lines.push(`That was it: hold x still and A(x) = ∫₀${'⁰¹²³⁴'[B.q]} (${this.plane(B)}) dy = ${this.ds(A,'x')}.",
-      "replace": "lines.push(`That was it: hold x still and A(x) = ∫₀${'⁰¹²³⁴'[B.q]} (${this.plane(B)}) dy = ${this.ds([0,R0[0],R0[1]],'x')}.",
+      "find": "and du = ${this.du(B)}, so k",
+      "replace": "and du = dx, so k",
       "run": "verify"
     },
     {
       "name": "the count line is lost",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"dqRead\"",
-      "replace": "    out+=`<div id=\"dqRead\"",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"usRead\"",
+      "replace": "    out+=`<div id=\"usRead\"",
       "run": "verify"
     },
     {
       "name": "the rule is not shown",
       "file": "index.html",
-      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"dqQ\"",
-      "replace": "    let out=``;\n    out+=`<div id=\"dqQ\"",
+      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"usQ\"",
+      "replace": "    let out=``;\n    out+=`<div id=\"usQ\"",
       "run": "verify"
     },
     {
-      "name": "the plane loses its c",
+      "name": "the answer's power is not raised",
       "file": "index.html",
-      "find": "plane(S){ return this.lin([[S.a,'x'],[S.b,'y'],[S.c,'']]); },",
-      "replace": "plane(S){ return this.lin([[S.a,'x'],[S.b,'y']]); },",
+      "find": "dx = k·${this.br(S)}${this.SUP[S.n+1]} + C</div>",
+      "replace": "dx = k·${this.br(S)}${this.SUP[S.n]} + C</div>",
       "run": "verify"
     },
     {
-      "name": "a minus sign is dropped",
+      "name": "the integrand drops its outside x",
       "file": "index.html",
-      "find": "out.push((out.length ? (n<0?' − ':' + ') : (n<0?'−':''))+body); }\n",
-      "replace": "out.push((out.length ? ' + ' : '')+body); }\n",
+      "find": "  integrand(S){ return `${S.c===1?'':S.c}${this.xp(S.m-1)}${this.br(S)}",
+      "replace": "  integrand(S){ return `${S.c===1?'':S.c}${this.br(S)}",
       "run": "verify"
     },
     {
-      "name": "the rectangle is written the wrong way round",
+      "name": "a minus a is written as 1",
       "file": "index.html",
-      "find": "over 0 ≤ x ≤ ${S.p}, 0 ≤ y ≤ ${S.q}</div>",
-      "replace": "over 0 ≤ x ≤ ${S.q}, 0 ≤ y ≤ ${S.p}</div>",
+      "find": "  cx(a){ return a===1 ? '' : a===-1 ? '−' : neg(a); },\n  x",
+      "replace": "  cx(a){ return a===1 ? '' : a===-1 ? '' : neg(a); },\n  x",
       "run": "verify"
     },
     {
-      "name": "a shut volume keeps its name",
+      "name": "a shut number keeps its name",
       "file": "index.html",
-      "find": "${gone?'. Not the volume':''}\" style=\"margin:0\"><b>${L}</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, R",
-      "replace": "\" style=\"margin:0\"><b>${L}</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, R",
+      "find": "${gone?'. Not the number in front':''}\" style=\"margin:0\"><b>${L}</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N",
+      "replace": "\" style=\"margin:0\"><b>${L}</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N",
       "run": "verify"
     },
     {
       "name": "the hand workshop does not step aside",
       "file": "index.html",
-      "find": "    for(const id of ['scSets','scHold','scFig','scStep','scRead','scGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "replace": "    for(const id of ['scSets','scHold','scRead','scGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "run": "play:slicepick"
+      "find": "    for(const id of ['swSets','swFig','swOpts','swRead','swGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "    for(const id of ['swSets','swRead']) document.getElementById(id).style.display=pick?'none':'';",
+      "run": "play:swappick"
     }
   ]
 }
