@@ -4347,6 +4347,86 @@ logistic(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`\${why}.\`};
   }
+},
+/* The trapezoid rule: cut [a, b] into n strips of width h = (b − a)/n, join
+   the curve's heights with straight lines, and add up the trapezoids:
+   T = h/2 × (f(x₀) + 2f(x₁) + … + 2f(xₙ₋₁) + f(xₙ)). At depth 1 the estimate
+   with two strips, at depth 2 with four, and at depth 3 how far the estimate
+   overshoots the true integral, T − ∫f, which for a quadratic or a cubic is
+   h²/12 × (f′(b) − f′(a)). Whole and fractional answers come up about equally.
+   The wrong answers are the slips people make: the inside heights not doubled,
+   the left-hand or right-hand or midpoint sum, the whole interval taken as one
+   trapezoid, the exact integral given for the estimate, and at depth 3 the
+   estimate or the integral given for the gap, h left unsquared, f used where
+   the gap needs f′, or one strip's gap for all of them. The left and right
+   sums never come together, since the estimate is their average. */
+trapezoid(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], sum=a=>a.reduce(add,F(0)), eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const cube=d>1 && R.chance(0.3), c=cube?1:R.pick([1,1,2,3]), k=cube?R.pick([0,1,2]):R.pick([0,1,2,3,4]);
+    const n=d===1?2:d===2?4:R.pick([2,4]), h=d===3?R.pick([F(1,2),F(2)]):R.pick([F(1,2),F(1),F(1),F(2)]), a=R.i(0,2), b=add(F(a),mul(F(n),h));
+    const p=cube?3:2, fx=x=>{ let v=F(1); for(let i=0;i<p;i++) v=mul(v,x); return add(mul(F(c),v),F(k)); };
+    const fs=\`\${c===1?'':c}x\${p===2?'²':'³'}\${k?\` + \${k}\`:''}\`, fw=k?\`(\${fs})\`:fs;
+    const xs=[...Array(n+1)].map((_,i)=>add(F(a),mul(F(i),h))), ys=xs.map(fx), half=mul(h,F(1,2));
+    const T=mul(half,sum(ys.map((y,i)=>i===0||i===n?y:mul(F(2),y))));
+    // the exact integral, from the antiderivative c·x^(p+1)/(p+1) + kx
+    const Fa=x=>{ let v=F(1); for(let i=0;i<=p;i++) v=mul(v,x); return add(mul(F(c,p+1),v),mul(F(k),x)); };
+    const I=sub(Fa(b),Fa(F(a)));
+    const L=mul(h,sum(ys.slice(0,n))), Rt=mul(h,sum(ys.slice(1))), M=mul(h,sum(xs.slice(0,n).map(x=>fx(add(x,half)))));
+    const nd=mul(half,sum(ys)), one=mul(mul(sub(b,F(a)),F(1,2)),add(ys[0],ys[n]));
+    const dfx=x=>{ let v=F(p*c); for(let i=0;i<p-1;i++) v=mul(v,x); return v; };
+    const dd=sub(dfx(b),dfx(F(a))), E=sub(T,I), hs=show(h), as=String(a), bs=show(b);
+    const S=\`∫<sub>\${as}</sub><sup>\${bs}</sup> \${fw} dx\`;
+    const heights=ys.map(show).join(', '), at=xs.map(show).join(', ');
+    const inside=ys.map((y,i)=>i===0||i===n?show(y):\`2 × \${y[1]===1?show(y):\`(\${show(y)})\`}\`).join(' + ');
+    const est=\`h = (\${bs} − \${as})/\${n} = \${hs}, and at x = \${at} the heights are \${heights}, so T = \${show(half)} × (\${inside}) = \${show(T)}\`;
+    let q, ans, why, slips;
+    if(d<3){
+      ans=T;
+      q=\`Use the trapezoid rule with n = \${n} strips to estimate \${S}.\`;
+      why=est;
+      slips=[
+        [nd,'that does not double the inside heights: each inside point is the edge of two trapezoids, so its height counts twice'],
+        [L,'that is the left-hand sum, a rectangle at each strip\\'s left height; a trapezoid averages the heights at both ends'],
+        [Rt,'that is the right-hand sum, a rectangle at each strip\\'s right height; a trapezoid averages the heights at both ends'],
+        [M,'that is the midpoint sum, a rectangle at each strip\\'s middle height; a trapezoid uses the heights at the ends'],
+        [I,'that is the exact integral; the trapezoid rule gives an estimate, which comes out over it because the curve bends up'],
+        [one,\`that takes the whole interval as one trapezoid; n = \${n} cuts it into \${n} strips of width \${hs}\`]
+      ];
+    } else {
+      ans=E;
+      q=\`The trapezoid rule with n = \${n} strips overshoots \${S}. By how much?\`;
+      why=\`The estimate: \${est}. The exact integral is \${show(I)}, so the trapezoid overshoots by \${show(T)} − \${show(I)} = \${show(E)}. As a check, h²/12 × (f′(\${bs}) − f′(\${as})) = \${h[1]===1?hs:\`(\${hs})\`}²/12 × \${show(dd)} = \${show(E)}\`;
+      slips=[
+        [T,'that is the estimate itself; the overshoot is the estimate minus the exact integral'],
+        [I,'that is the exact integral; the overshoot is the estimate minus it'],
+        [mul(mul(h,F(1,12)),dd),\`that leaves h unsquared: the overshoot is h²/12 × (f′(b) − f′(a)), and h² = \${show(mul(h,h))}\`],
+        [mul(mul(mul(h,h),F(1,12)),sub(fx(b),fx(F(a)))),'that uses f(b) − f(a) where the gap needs the slopes f′(b) − f′(a)'],
+        ...(cube ? [] : [[mul(E,F(1,n)),\`that is one strip's overshoot; each of the \${n} strips overshoots by as much, so the gaps add up\`]])
+      ];
+    }
+    const big=v=>v[0]>999 || v[1]>99;
+    const ok=v=>v[0]>0 && !big(v) && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      // the estimate is the average of the left and right sums, so the two never stand together
+      if((s[0]===L && dist.some(x=>x[0]===Rt)) || (s[0]===Rt && dist.some(x=>x[0]===L))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || ans[0]<=0 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<600) continue;
+    return {topic:'Trapezoid Rule',
+      codex:{rule:'h = (b − a)/n. T = h/2 × (f(x₀) + 2f(x₁) + … + 2f(xₙ₋₁) + f(xₙ)): ends once, inside heights twice. Where f bends up T overshoots, by h²/12 × (f′(b) − f′(a)) for a quadratic or cubic.',
+             eg:'∫₀² x² dx with n = 2: h = 1, heights 0, 1, 4, so T = 1/2 × (0 + 2 × 1 + 4) = 3, over the exact 8/3 by 1/3.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
 }
 };
 
@@ -4460,7 +4540,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4472,7 +4552,7 @@ const STRANDS = [
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
-  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
+  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
@@ -5062,7 +5142,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},

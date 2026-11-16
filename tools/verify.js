@@ -740,6 +740,7 @@ function workedSum(key, ex, a) {
 let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
 let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
+let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
@@ -1286,6 +1287,55 @@ Object.assign(ANALYSIS, {
     }
     covered.add('logistic');
   },
+  // The trapezoid rule, worked again here in floating point: n, the interval
+  // and the curve read off the question; the estimate added up strip by strip
+  // as trapezoids, the true integral by Simpson's rule on ten thousand strips,
+  // and each wrong answer worked again as the slip its reason names.
+  trapezoid: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^(?:Use the trapezoid rule with n = (\d) strips to estimate|The trapezoid rule with n = (\d) strips overshoots) ∫ (\d+) (\d+) \(?(\d*)x([²³])(?: \+ (\d))?\)? dx(\.|\. By how much\?)$/);
+    if (!m) { fail('analysis', 'trapezoid', `the question does not read as the trapezoid rule: ${t}`); return; }
+    const gap = m[2] !== undefined, n = +(m[1] || m[2]), a = +m[3], b = +m[4], c = m[5] ? +m[5] : 1, pw = m[6] === '²' ? 2 : 3, k = m[7] ? +m[7] : 0;
+    if (gap !== (m[8] !== '.')) fail('analysis', 'trapezoid', `the question asks one thing and ends on another: ${t}`);
+    if (!(b > a) || ![2, 4].includes(n) || (pw === 3 && c !== 1)) fail('analysis', 'trapezoid', `the interval, n or the curve is out of range: ${t}`);
+    const f = x => c * x ** pw + k, df = x => c * pw * x ** (pw - 1), h = (b - a) / n;
+    let T = 0; for (let i = 0; i < n; i++) T += h * (f(a + i * h) + f(a + (i + 1) * h)) / 2;
+    const N = 10000, s = (b - a) / N; let I = f(a) + f(b);
+    for (let i = 1; i < N; i++) I += (i % 2 ? 4 : 2) * f(a + i * s); I *= s / 3;
+    let L = 0, Rr = 0, M = 0, nd = 0;
+    for (let i = 0; i < n; i++) { L += h * f(a + i * h); Rr += h * f(a + (i + 1) * h); M += h * f(a + (i + 0.5) * h); }
+    for (let i = 0; i <= n; i++) nd += h / 2 * f(a + i * h);
+    const truth = gap ? T - I : T;
+    if (gap && Math.abs(T - I - h * h / 12 * (df(b) - df(a))) > 1e-6) fail('analysis', 'trapezoid', `the overshoot is not h²/12 × (f′(b) − f′(a)): ${t}`);
+    const slip = gap
+      ? [[/^that is the estimate itself/, T], [/^that is the exact integral; the overshoot/, I], [/^that leaves h unsquared/, h / 12 * (df(b) - df(a))],
+        [/^that uses f\(b\) - f\(a\)/, h * h / 12 * (f(b) - f(a))], [/^that is one strip's overshoot/, (T - I) / n]]
+      : [[/^that does not double the inside heights/, nd], [/^that is the left-hand sum/, L], [/^that is the right-hand sum/, Rr],
+        [/^that is the midpoint sum/, M], [/^that is the exact integral; the trapezoid rule/, I], [/^that takes the whole interval as one trapezoid/, (b - a) / 2 * (f(a) + f(b))]];
+    valueCheck('trapezoid', truth, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'trapezoid', `the working does not end on ${p.a}: ${w}`);
+    // the overshoot's check squares h and times it by the change in slope, and comes out on the same number
+    if (gap) {
+      const cm = w.match(/As a check, h²\/12 × \(f′\((\S+)\) - f′\((\S+)\)\) = \(?(\d+(?:\/\d+)?)\)?²\/12 × (\d+(?:\/\d+)?) = (\d+(?:\/\d+)?)\.$/);
+      if (!cm) fail('analysis', 'trapezoid', `the overshoot is not checked as h²/12 × (f′(b) − f′(a)): ${w}`);
+      else if (Math.abs(val(cm[3]) - h) > 1e-9 || Math.abs(val(cm[4]) - (df(b) - df(a))) > 1e-9 || Math.abs(val(cm[3]) ** 2 / 12 * val(cm[4]) - val(cm[5])) > 1e-9)
+        fail('analysis', 'trapezoid', `the overshoot's check is worked wrong: ${w}`);
+    }
+    const named = p.d.map(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'trapezoid', `a wrong answer's reason is not one of the slips: ${why}`); return null; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'trapezoid', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      if (/^that (is the exact integral|does not double)/.test(fl(why))) tzKey++;
+      tzSeen.add(String(sl[0]));
+      return sl[0];
+    });
+    // the estimate is the average of the left and right sums, so the two never stand together
+    if (named.includes(slip[1][0]) && named.includes(slip[2][0]) && !gap) fail('analysis', 'trapezoid', `the left and right sums are both offered: ${t}`);
+    covered.add('trapezoid');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1407,7 +1457,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 76, sig: 0xa1b7 };
+  const PINNED = { count: 77, sig: 0xecef };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16213,6 +16263,32 @@ for (let d = 1; d <= 3; d++) {
   }
   if (lgKey < LG * 0.5) fail('analysis', 'logistic', `depth ${d} offers its commonest slip in only ${lgKey} of ${LG} questions`);
   if (lgWhole < LG * 0.35 || lgWhole > LG * 0.65) fail('analysis', 'logistic', `depth ${d} gives a whole answer ${lgWhole} times in ${LG}, not about half`);
+}
+
+// The trapezoid rule at every depth: the answer and its four slips are five
+// different exact numbers above 0, each slip with its reason; two of the four
+// share the answer's form; the commonest slips (the exact integral, or the
+// inside heights not doubled; at depth 3 the estimate or the integral for the
+// gap) are offered often; and whole and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const TZ = 3000;
+  tzKey = 0; tzWhole = 0; tzSeen = new Set();
+  for (let i = 0; i < TZ; i++) {
+    const p = GEN.trapezoid(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'trapezoid', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^\d+(\/\d+)?$/.test(v) || /^0/.test(v))) fail('analysis', 'trapezoid', `a number is not exact, is 0 or is below 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'trapezoid', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'trapezoid', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'trapezoid', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) tzWhole++;
+    ANALYSIS.trapezoid(p);
+  }
+  // every slip turns up at its depth: six for an estimate, five for an overshoot
+  if (tzSeen.size !== (d < 3 ? 6 : 5)) fail('analysis', 'trapezoid', `depth ${d} offers only ${tzSeen.size} of its slips`);
+  if (tzKey < TZ * 0.8) fail('analysis', 'trapezoid', `depth ${d} offers its commonest slips in only ${tzKey} of ${TZ} questions`);
+  if (tzWhole < TZ * 0.35 || tzWhole > TZ * 0.65) fail('analysis', 'trapezoid', `depth ${d} gives a whole answer ${tzWhole} times in ${TZ}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

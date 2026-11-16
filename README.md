@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-six topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-seven topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy-six in the game, drawing from all of them would build a run
+have actually met — with seventy-seven in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,10 +277,10 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**76 problem generators** in total, each producing randomised problems at three difficulty
+**77 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -336,7 +336,7 @@ instead of put through Pythagoras, the square root forgotten, and at the second 
 the antiderivative's 2/3 dropped or turned upside down, or its lower end left off. It
 joins the Applications strand and the Infinite Expanse.
 
-**Logistic growth**, the newest, is growth with a ceiling: dP/dt = rP(1 − P/K) grows like
+**Logistic growth** is growth with a ceiling: dP/dt = rP(1 − P/K) grows like
 rP while P is small and slows to nothing as P nears K. The first depth asks how fast it
 grows at a given P, the second how fast at its fastest, rK/4 at P = K/2, and the third
 where P stands once e^(rt) reaches a given number, from P(t) = K/(1 + A·e^(−rt)) with
@@ -345,6 +345,18 @@ are the slips people make: rP with no ceiling, the share filled P/K where the ro
 1 − P/K belongs, the P or the r or the ÷ K dropped, the population K/2 given for the
 rate, A turned upside down or taken as K/P(0), and e^(rt) where the solution has e^(−rt).
 It joins the Applications strand and the Infinite Expanse.
+
+**The trapezoid rule**, the newest, estimates an integral by cutting [a, b] into n strips of
+width h and joining the curve's heights with straight lines: T = h/2 × (f(x₀) + 2f(x₁) + … +
+f(xₙ)), the end heights once and the inside ones twice. The first depth asks for the estimate
+with two strips, the second with four, and the third how far it overshoots the true integral,
+which for a quadratic or a cubic is h²/12 × (f′(b) − f′(a)). Whole and fractional answers come
+up about equally. The wrong answers are the slips people make: the inside heights not doubled,
+the left, right or midpoint sum, the whole interval as one trapezoid, the exact integral given
+for the estimate, and for the gap the estimate or the integral itself, h left unsquared, f used
+where the slopes belong, or one strip's gap for all of them. The left and right sums never
+stand together, since the estimate is their average. It joins the Integrals strand and the
+Infinite Expanse.
 
 ---
 
@@ -610,7 +622,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy-three of the seventy-six topics
+  where every answer would echo is asked the plain way. Seventy-three of the seventy-seven topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -2070,10 +2082,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy-six bars.
+  reading seventy-seven bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy-six topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Seventy-seven topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all

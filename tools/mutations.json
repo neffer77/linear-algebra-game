@@ -1,46 +1,130 @@
 {
-  "change": "Close the gaps the breaks found in the logistic and tangent line picks.",
+  "change": "The trapezoid rule as a fight topic: estimate an integral with n strips, or say how far the estimate overshoots.",
   "mutations": [
     {
-      "name": "the slips are always the first trio",
+      "name": "the inside heights are not doubled",
       "file": "index.html",
-      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
-      "replace": "fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
+      "find": "i===0||i===n?y:mul(F(2),y)",
+      "replace": "i===0||i===n?y:y",
       "run": "verify"
     },
     {
-      "name": "the root slip uses the right slope",
+      "name": "the estimate is not halved",
       "file": "index.html",
-      "find": "h:[d,1], x:[n*n+d,1], m2:[1,n]}",
-      "replace": "h:[d,1], x:[n*n+d,1], m2:[1,2*n]}",
+      "find": "const T=mul(half,sum(",
+      "replace": "const T=mul(h,sum(",
       "run": "verify"
     },
     {
-      "name": "√x always steps forward",
+      "name": "the integral divides by the old power",
       "file": "index.html",
-      "find": "d=wantWhole ? 2*n*[-1,1,2][R.i(0,2)] : R.i(-2*n,2*n); }",
-      "replace": "d=wantWhole ? 2*n*[1,2][R.i(0,1)] : R.i(1,2*n); }",
+      "find": "add(mul(F(c,p+1),v),mul(F(k),x))",
+      "replace": "add(mul(F(c,p),v),mul(F(k),x))",
       "run": "verify"
     },
     {
-      "name": "√x may step 0",
+      "name": "the integral forgets the constant",
       "file": "index.html",
-      "find": "if(d===0 || this.A(S)+d<1) continue;",
-      "replace": "if(this.A(S)+d<1) continue;",
+      "find": "add(mul(F(c,p+1),v),mul(F(k),x)); };",
+      "replace": "mul(F(c,p+1),v); };",
       "run": "verify"
     },
     {
-      "name": "the form asked for is not kept",
+      "name": "the left sum takes the right heights",
       "file": "index.html",
-      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
-      "replace": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "find": "const L=mul(h,sum(ys.slice(0,n)))",
+      "replace": "const L=mul(h,sum(ys.slice(1)))",
       "run": "verify"
     },
     {
-      "name": "a curve with no trio may be dealt",
+      "name": "the midpoint sum takes the left ends",
       "file": "index.html",
-      "find": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
-      "replace": "      return S;\n    }\n    return {k",
+      "find": "map(x=>fx(add(x,half)))",
+      "replace": "map(x=>fx(x))",
+      "run": "verify"
+    },
+    {
+      "name": "the one trapezoid is not halved",
+      "file": "index.html",
+      "find": "const nd=mul(half,sum(ys)), one=mul(mul(sub(b,F(a)),F(1,2)),",
+      "replace": "const nd=mul(half,sum(ys)), one=mul(sub(b,F(a)),",
+      "run": "verify"
+    },
+    {
+      "name": "the overshoot is the integral minus the estimate",
+      "file": "index.html",
+      "find": "E=sub(T,I)",
+      "replace": "E=sub(I,T)",
+      "run": "verify"
+    },
+    {
+      "name": "the unsquared slip squares h",
+      "file": "index.html",
+      "find": "[mul(mul(h,F(1,12)),dd),",
+      "replace": "[mul(mul(mul(h,h),F(1,12)),dd),",
+      "run": "verify"
+    },
+    {
+      "name": "the one-strip slip multiplies",
+      "file": "index.html",
+      "find": "[[mul(E,F(1,n)),",
+      "replace": "[[mul(E,F(n)),",
+      "run": "verify"
+    },
+    {
+      "name": "the left and right slips are named the other way round",
+      "file": "index.html",
+      "find": "[L,'that is the left-hand sum",
+      "replace": "[Rt,'that is the left-hand sum",
+      "run": "verify"
+    },
+    {
+      "name": "the left and right sums may stand together",
+      "file": "index.html",
+      "find": "if((s[0]===L && dist.some(x=>x[0]===Rt)) || (s[0]===Rt && dist.some(x=>x[0]===L))) continue;",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the answer's form need not be shared",
+      "file": "index.html",
+      "find": "same<2 || (ans[1]===1)!==whole) && g<6",
+      "replace": "(ans[1]===1)!==whole) && g<6",
+      "run": "verify"
+    },
+    {
+      "name": "whole and fraction are not balanced",
+      "file": "index.html",
+      "find": "|| (ans[1]===1)!==whole) && g<600",
+      "replace": "|| false) && g<600",
+      "run": "verify"
+    },
+    {
+      "name": "the retries stop at once",
+      "file": "index.html",
+      "find": "&& g<600) continue;",
+      "replace": "&& g<0) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "the working does not reach the estimate",
+      "file": "index.html",
+      "find": "so T = ${show(half)} × (${inside}) = ${show(T)}`",
+      "replace": "so T = ${show(half)} × (${inside})`",
+      "run": "verify"
+    },
+    {
+      "name": "the gap question says undershoots",
+      "file": "index.html",
+      "find": "strips overshoots ${S}. By how much?",
+      "replace": "strips undershoots ${S}. By how much?",
+      "run": "verify"
+    },
+    {
+      "name": "the gap's check squares nothing",
+      "file": "index.html",
+      "find": "${h[1]===1?hs:`(${hs})`}²/12 × ${show(dd)}",
+      "replace": "${hs}/12 × ${show(dd)}",
       "run": "verify"
     }
   ]
