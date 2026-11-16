@@ -1563,10 +1563,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ COVER-UP WORKSHOP ============ -->
   <div class="screen" id="s-cover">
     <div class="panel"><h2>🙈 Cover-up Workshop</h2><div class="sub">Split a fraction into simpler pieces. Clear the fractions and the equation left holds for every x, so choose x to suit you: where one factor is 0, every term but one vanishes and its unknown drops straight out. Keep the equations you want to use.</div></div>
+    <div id="cvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cover up by hand or pick A"></div>
     <div class="panel">
+      <div id="cqBox"></div>
       <div id="cvSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
       <div id="cvFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="cvStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="cvXLo" onclick="Cover.moveX(-1)" aria-label="Lower x by 1">−</button>
           <b id="cvX" style="font-size:17px;min-width:0"></b>
           <button id="cvXHi" onclick="Cover.moveX(1)" aria-label="Raise x by 1">+</button></div>
@@ -1574,7 +1576,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <button class="btn sm" id="cvKeep" style="margin:6px 0" onclick="Cover.keep()"></button>
       <div id="cvRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="cvGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="cvGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14116,7 +14118,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🙈 Cover-up Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor. Then turn it round: see a fraction split in two, and pick which of four numbers is A.</div>
          <button class="btn sm" id="tomeCover" style="width:auto;margin-top:8px" onclick="Cover.open()">Open the cover-up workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21254,6 +21256,128 @@ const Cofactor = {
    suit: at the x where one factor is 0, every term but one vanishes and its
    unknown drops straight out. Any other x works too, it just needs solving
    together. A repeated factor can only be covered up once. Nothing is saved. */
+/* ---------- Which A? The cover-up workshop turned round ----------
+ * A fraction (px + q)/((x − r)(x − s)) with whole numbers, split as
+ * A/(x − r) + B/(x − s), and four numbers. Covering up x − r and putting
+ * x = r into what is left gives A = (pr + q)/(r − s). The wrong numbers are
+ * the slips people make with it: B in A's place; the subtraction left the
+ * wrong way round, (pr + q)/(s − r); the other root put into the top; the top
+ * at r left undivided; and x = −r, the sign of the factor misread. A wrong
+ * pick is checked by the line the rule comes from: cleared of fractions,
+ * px + q = A(x − s) + B(x − r) for every x, and at x = r that is
+ * pr + q = A(r − s), which it fails. A 0 is never offered, and A is a whole
+ * number about half the time, with another number of its form beside it.
+ */
+const CovPick = {
+  SLIPS:['B','sub','root','noDiv','sign'],
+  RULE:'Cover-up: clear the fractions and px + q = A(x − s) + B(x − r) holds for every x. At x = r the B term vanishes, so A is the top at x = r divided by what is left of the bottom there: cover up A\\'s own factor x − r, and put x = r into everything left. Which number is A?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // the top at x
+  top(S,x){ return S.p*x+S.q; },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {r,s}=S;
+    return k==='right' ? this.frac(this.top(S,r),r-s) : k==='B' ? this.frac(this.top(S,s),s-r) : k==='sub' ? this.frac(this.top(S,r),s-r)
+      : k==='root' ? this.frac(this.top(S,s),r-s) : k==='noDiv' ? this.frac(this.top(S,r),1) : this.frac(this.top(S,-r),-r-s);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this fraction can offer: each a number other than 0, with a bottom, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[1]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={p:R.i(1,5)*(R.i(0,1)?1:-1), q:R.i(-6,6), r:R.i(-4,4), s:R.i(-4,4)};
+      if(S.r===S.s || this.top(S,S.r)===0 || this.top(S,S.s)===0) continue;
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole || Math.abs(W[0])>30) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {p:3, q:1, r:1, s:-2};
+  },
+  fac(r){ return r===0 ? 'x' : r>0 ? \`x − \${r}\` : \`x + \${-r}\`; },
+  br(r){ return r===0 ? 'x' : \`(\${this.fac(r)})\`; },
+  poly(S){ const {p,q}=S; return \`\${p===1?'':p===-1?'−':neg(p)}x\`+(q===0 ? '' : \` \${q<0?'−':'+'} \${Math.abs(q)}\`); },
+  shown(S){ return \`f(x) = (\${this.poly(S)})/(\${this.br(S.r)}\${this.br(S.s)}) = A/\${this.br(S.r)} + B/\${this.br(S.s)}\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.p,S.q,S.r,S.s].join()!==[prev.p,prev.q,prev.r,prev.s].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('COVER-UP ARTIST', this.matched+' fractions split','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is A, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Cover.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // A(r − s), worked as a fraction
+  hold(S,w){ return this.frac((S.r-S.s)*w[0], w[1]); },
+  slip(S,k,L){
+    const {r,s}=S;
+    if(k==='B') return \`\${L} is B, the other piece: the top at x = \${neg(s)} over what is left of the bottom there, \${neg(s)} − \${this.pn(r)}.\`;
+    if(k==='sub') return \`\${L} takes the leftover factor the wrong way round. What is left of the bottom is \${this.fac(s)}, and at x = \${neg(r)} that is \${neg(r)} − \${this.pn(s)} = \${neg(r-s)}, not \${neg(s-r)}.\`;
+    if(k==='root') return \`\${L} puts x = \${neg(s)} into the top, B's root. A's factor is \${this.fac(r)}, so A wants x = \${neg(r)} everywhere.\`;
+    if(k==='noDiv') return \`\${L} is the top at x = \${neg(r)}, \${neg(this.top(S,r))}, left undivided. What is left of the bottom, \${this.fac(s)}, is \${neg(r-s)} there, and it divides the top.\`;
+    return \`\${L} puts x = \${neg(-r)} into it, the sign of \${this.fac(r)} misread. That factor is 0 at x = \${neg(r)}.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), w=this.hold(S,v);
+    return \`Check \${L}: at x = \${neg(S.r)} the cleared equation reads \${neg(this.top(S,S.r))} = A × \${this.pn(S.r-S.s)}. If A were \${this.fs(v)}, that is \${this.pf(v)} × \${this.pn(S.r-S.s)} = \${this.fs(w)}, not \${neg(this.top(S,S.r))}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="cqQ" style="text-align:center;font-size:16px;margin-bottom:2px">\${this.shown(S)}</div>\`;
+    out+=\`<div id="cqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="CovPick.choose(\${i})" aria-label="\${L}: A = \${v}\${gone?'. Not A':''}" style="margin:0"><b>\${L}</b> A = \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), T=this.top(B,B.r);
+      lines.push(\`That was it: cover up \${this.fac(B.r)} and put x = \${neg(B.r)} into the rest: the top is \${this.pn(B.p)} × \${this.pn(B.r)} + \${this.pn(B.q)} = \${neg(T)}, what is left of the bottom is \${neg(B.r)} − \${this.pn(B.s)} = \${neg(B.r-B.s)}, so A = \${neg(T)}/\${this.pn(B.r-B.s)}\${\`\${neg(T)}/\${this.pn(B.r-B.s)}\`===this.fs(v)?'':' = '+this.fs(v)}, and \${this.pf(v)} × \${this.pn(B.r-B.s)} = \${this.fs(this.hold(B,v))}, the top. Here is a new fraction.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="cqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const Cover = {
   SETS:[
     {id:'two', btn:'Two factors', N:[5,1], den:[1,-2], P:[{L:'A', r:[1]},{L:'B', r:[-2]}]},
@@ -21365,7 +21489,15 @@ const Cover = {
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
   keep(){ this.used[this.si].add(this.x()); this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('cvTab').innerHTML=[['hand','🙈 Cover it by hand','Try x values and keep the equations by hand'],['pick','🎯 Which A?','See a fraction split in two, and pick which of four numbers is A']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Cover.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['cvSets','cvFig','cvStep','cvKeep','cvRead','cvGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('cqBox').innerHTML=pick ? CovPick.html() : '';
+    if(pick) return;
     const S=this.set();
     document.getElementById('cvSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Cover.pick(\${i})" aria-label="\${s.btn}: f(x) = (\${this.poly(s.N)})/\${this.bot(s)}">\${s.btn}</button>\`).join('');

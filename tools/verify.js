@@ -5132,6 +5132,156 @@ const impPickNotes = (() => {
   if (fives !== 30) fail('imppick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Which A? The pick-A round in the cover-up workshop. Every number on screen
+   is read back off its button as an exact fraction and checked against the
+   slip it is named as, worked out here from p, q, r and s alone. The right
+   number alone must make the two pieces add back to f at a spread of x, and
+   every A(r − s) in the readout is worked again from the numbers it shows. */
+const covPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cover = {render(){ env.renders++; }};" +
+    cut('const CovPick = {', 'const Cover = {') + 'return CovPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const mul = (f, g) => fr(f[0] * g[0], f[1] * g[1]);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const tp = (Q, x) => Q.p * x + Q.q;
+  const want = {
+    right: Q => fr(tp(Q, Q.r), Q.r - Q.s),
+    B: Q => fr(tp(Q, Q.s), Q.s - Q.r),
+    sub: Q => fr(tp(Q, Q.r), Q.s - Q.r),
+    root: Q => fr(tp(Q, Q.s), Q.r - Q.s),
+    noDiv: Q => [tp(Q, Q.r), 1],
+    sign: Q => fr(tp(Q, -Q.r), -Q.r - Q.s)
+  };
+  const SL = ['B', 'sub', 'root', 'noDiv', 'sign'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "(a) × (d) = w" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`(?:that is|and) \\(?${V}\\)? × \\(?(−?\\d+)\\)? = ${V}`, 'g'))) { n++;
+      if (!eq(mul(rd(m[1]), rd(m[2])), rd(m[3]))) fail('covpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="cqRead"')[1].replace(/^[^>]*>/, ''));
+  const fac = r => (r === 0 ? 'x' : r > 0 ? `x − ${r}` : `x + ${-r}`);
+  const br = r => (r === 0 ? 'x' : `(${fac(r)})`);
+  const poly = Q => `${Q.p === 1 ? '' : Q.p === -1 ? '−' : ng(Q.p)}x` + (Q.q === 0 ? '' : ` ${Q.q < 0 ? '−' : '+'} ${Math.abs(Q.q)}`);
+  const slipOf = (k, L, Q) => ({
+    B: `${L} is B, the other piece: the top at x = ${ng(Q.s)} over what is left of the bottom there, ${ng(Q.s)} − ${pn(Q.r)}.`,
+    sub: `${L} takes the leftover factor the wrong way round. What is left of the bottom is ${fac(Q.s)}, and at x = ${ng(Q.r)} that is ${ng(Q.r)} − ${pn(Q.s)} = ${ng(Q.r - Q.s)}, not ${ng(Q.s - Q.r)}.`,
+    root: `${L} puts x = ${ng(Q.s)} into the top, B's root. A's factor is ${fac(Q.r)}, so A wants x = ${ng(Q.r)} everywhere.`,
+    noDiv: `${L} is the top at x = ${ng(Q.r)}, ${ng(tp(Q, Q.r))}, left undivided. What is left of the bottom, ${fac(Q.s)}, is ${ng(Q.r - Q.s)} there, and it divides the top.`,
+    sign: `${L} puts x = ${ng(-Q.r)} into it, the sign of ${fac(Q.r)} misread. That factor is 0 at x = ${ng(Q.r)}.` }[k]);
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: at x = ${ng(Q.r)} the cleared equation reads ${ng(tp(Q, Q.r))} = A × ${pn(Q.r - Q.s)}. If A were ${fst(v)}, that is ${pf(v)} × ${pn(Q.r - Q.s)} = ${fst(mul(v, [Q.r - Q.s, 1]))}, not ${ng(tp(Q, Q.r))}.`; };
+  if (S.RULE !== 'Cover-up: clear the fractions and px + q = A(x − s) + B(x − r) holds for every x. At x = r the B term vanishes, so A is the top at x = r divided by what is left of the bottom there: cover up A\'s own factor x − r, and put x = r into everything left. Which number is A?') fail('covpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('covpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negP = 0, zeroR = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), Ps = new Set(), Qs = new Set(), RSs = new Set(), Rs = new Set(), Ss = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Ps.add(Q.p); Qs.add(Q.q); RSs.add(Q.r + ',' + Q.s); Rs.add(Q.r); Ss.add(Q.s); if (Q.p < 0) negP++; if (Q.r === 0 || Q.s === 0) zeroR++;
+      if (![Q.p, Q.q, Q.r, Q.s].every(Number.isInteger) || Q.p === 0 || Math.abs(Q.p) > 5 || Math.abs(Q.q) > 6 || Math.abs(Q.r) > 4 || Math.abs(Q.s) > 4 || Q.r === Q.s) fail('covpick', key, `${JSON.stringify(Q)} is not a whole-number fraction with two factors`);
+      const L = want.right(Q), Bv = fr(tp(Q, Q.s), Q.s - Q.r);
+      if (L[0] === 0 || Bv[0] === 0) fail('covpick', key, 'a piece is 0, so the fraction does not split in two');
+      for (const x of [-7.5, -3.3, 0.7, 2.9, 6.1]) { // the two pieces add back to f
+        const f = tp(Q, x) / ((x - Q.r) * (x - Q.s)), g = L[0] / L[1] / (x - Q.r) + Bv[0] / Bv[1] / (x - Q.s);
+        if (Math.abs(f - g) > 1e-9) fail('covpick', key, `at x = ${x} the pieces add to ${g}, not ${f}`); }
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('covpick', key, 'the same fraction comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('covpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` f(x) = (${poly(Q)})/(${br(Q.r)}${br(Q.s)}) = A/${br(Q.r)} + B/${br(Q.s)} A`)) fail('covpick', key, 'the rule and the fraction are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="CovPick\.choose\((\d)\)" aria-label="([ABCD]): A = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> A = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('covpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('covpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('covpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('covpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('covpick', key, `A is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('covpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('covpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('covpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} A`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const w = want[s](Q); if (w[1] === 0) continue; const v = fst(w); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('covpick', key, 'a fraction with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('covpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('covpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('covpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('covpick', key, 'a miss does not work A(r − s)');
+        if (eq(mul(vals[i], [Q.r - Q.s, 1]), [tp(Q, Q.r), 1])) fail('covpick', key, 'a wrong A passes the check');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="CovPick\\.choose\\(${i}\\)" aria-label="${Lt}: A = [^"]+\\. Not A"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('covpick', key, 'the missed numbers are not shut and told as not A');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('covpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('covpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('covpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('covpick', key, 'no fresh fraction after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'COVER-UP ARTIST / 5 fractions split') fail('covpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is A, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('covpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), T = tp(Q, Q.r), D = Q.r - Q.s, raw = `${ng(T)}/${pn(D)}`;
+      const after = `That was it: cover up ${fac(Q.r)} and put x = ${ng(Q.r)} into the rest: the top is ${pn(Q.p)} × ${pn(Q.r)} + ${pn(Q.q)} = ${ng(T)}, what is left of the bottom is ${ng(Q.r)} − ${pn(Q.s)} = ${ng(D)}, so A = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and ${pf(L)} × ${pn(D)} = ${ng(T)}, the top. Here is a new fraction. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('covpick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('covpick', key, 'the right pick does not work A(r − s)');
+      if (Q.p * Q.r + Q.q !== T || !eq(fr(T, D), L)) fail('covpick', key, `${T}/${D} is not ${fst(L)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same fraction dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { p: 3, q: 1, r: 1, s: -2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"p":3,"q":1,"r":1,"s":-2}') fail('covpick', 'repeat', 'the same fraction is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('covpick', 'slips', `the slip ${k} is never offered`);
+  if (Ps.size !== 10 || Qs.size !== 13) fail('covpick', 'deal', `p is only ever ${[...Ps]}, q ${[...Qs]}`);
+  if (RSs.size < 60) fail('covpick', 'deal', `only ${RSs.size} pairs of factors are ever dealt`);
+  if (Rs.size !== 9 || Ss.size !== 9) fail('covpick', 'deal', `r is only ever ${[...Rs]}, s ${[...Ss]}`);
+  if (!zeroR) fail('covpick', 'deal', 'x itself is never a factor');
+  if (negP < rounds * 0.3 || negP > rounds * 0.7) fail('covpick', 'deal', `p is negative in ${negP} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('covpick', 'deal', `the whole values of A are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('covpick', 'deal', `A is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('covpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('covpick', 'deal', `A only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('covpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9876,6 +10026,7 @@ console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
+console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
