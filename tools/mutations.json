@@ -1,54 +1,446 @@
 {
-  "change": "A wrong pick in which-slope-fits-best is checked one point at a time, without writing the two sums that give the slope away.",
+  "change": "The chord workshop, turned round: see a curve on an interval with its chord, and pick which of four numbers is c, where the tangent runs parallel to the chord.",
   "mutations": [
     {
-      "name": "the check writes both sums, which hands over the slope",
+      "name": "the parabola's slope forgets the 2",
       "file": "index.html",
-      "find": "they give ${this.terms(S,v)} = ${this.fs(K)}",
-      "replace": "they add to Σ(x − x̄)(y − ȳ) − ${this.pf(v)} × Σ(x − x̄)² = ${this.fs(M.sxy)} − ${this.pf(v)} × ${this.fs(M.sxx)} = ${this.fs(K)}",
+      "find": "if(S.t==='par') return this.add(this.mul([2*S.p,1],x),[S.q,1]);",
+      "replace": "if(S.t==='par') return this.add(this.mul([S.p,1],x),[S.q,1]);",
       "run": "verify"
     },
     {
-      "name": "a point's miss leaves out the slope",
+      "name": "√x's slope forgets the half",
       "file": "index.html",
-      "find": "m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);",
-      "replace": "m=this.frac((T.n*y-T.sy)*v[1],T.n*v[1]);",
+      "find": "return s && s[0] ? this.div([S.k,1],this.mul([2,1],s)) : null; }",
+      "replace": "return s && s[0] ? this.div([S.k,1],s) : null; }",
       "run": "verify"
     },
     {
-      "name": "a point's miss is taken from (0, 0), not the middle point",
+      "name": "n/x's slope keeps its sign",
       "file": "index.html",
-      "find": "m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);",
-      "replace": "m=this.frac(T.n*y*v[1]-v[0]*T.n*x,T.n*v[1]);",
+      "find": "if(S.t==='recip') return this.div([-S.n,1],this.mul(x,x));",
+      "replace": "if(S.t==='recip') return this.div([S.n,1],this.mul(x,x));",
       "run": "verify"
     },
     {
-      "name": "the x gap is x, not x − x̄",
+      "name": "the cubic's slope forgets the 3",
       "file": "index.html",
-      "find": "const dx=this.frac(T.n*x-T.sx,T.n),",
-      "replace": "const dx=this.frac(T.n*x,T.n),",
+      "find": "return this.add(this.mul([3,1],this.mul(x,x)),[S.p,1]);\n  },",
+      "replace": "return this.add(this.mul(x,x),[S.p,1]);\n  },",
       "run": "verify"
     },
     {
-      "name": "a fraction is not bracketed in a product",
+      "name": "the float slope of n/x keeps its sign",
       "file": "index.html",
-      "find": "pb(f){ return f[1]===1 && f[0]>=0 ? this.fs(f) : `(${this.fs(f)})`; },",
-      "replace": "pb(f){ return f[0]>=0 ? this.fs(f) : `(${this.fs(f)})`; },",
+      "find": "S.t==='recip' ? -S.n/(x*x) : 3*x*x+S.p; },",
+      "replace": "S.t==='recip' ? S.n/(x*x) : 3*x*x+S.p; },",
       "run": "verify"
     },
     {
-      "name": "the terms are joined by times",
+      "name": "the cubic loses its x term",
       "file": "index.html",
-      "find": "return `${this.pb(m)} × ${this.pb(dx)}`; }).join(' + ');",
-      "replace": "return `${this.pb(m)} × ${this.pb(dx)}`; }).join(' × ');",
+      "find": "if(S.t==='par') return this.add(this.add(this.mul([S.p,1],this.mul(x,x)),this.mul([S.q,1],x)),[S.r,1]);",
+      "replace": "if(S.t==='par') return this.add(this.mul([S.p,1],this.mul(x,x)),[S.r,1]);",
       "run": "verify"
     },
     {
-      "name": "the check is played with the sums written",
+      "name": "the slope is written without its 2",
       "file": "index.html",
-      "find": "they give ${this.terms(S,v)} = ${this.fs(K)}",
-      "replace": "they give ${this.terms(S,v)}, which is Σ(x − x̄)(y − ȳ) − ${this.pf(v)} × Σ(x − x̄)², = ${this.fs(K)}",
-      "run": "play:fitpick"
+      "find": "if(S.t==='par') return this.poly([[2*S.p,'x'],[S.q,'']]);",
+      "replace": "if(S.t==='par') return this.poly([[S.p,'x'],[S.q,'']]);",
+      "run": "verify"
+    },
+    {
+      "name": "√x's slope is written halved twice",
+      "file": "index.html",
+      "find": "S.k%2 ? `${S.k}/(2√x)` : `${S.k/2}/√x`;\n    if(S.t==='recip') return `−${S.n}/x²`;",
+      "replace": "S.k%2 ? `${S.k}/(2√x)` : `${S.k/4}/√x`;\n    if(S.t==='recip') return `−${S.n}/x²`;",
+      "run": "verify"
+    },
+    {
+      "name": "a 1 is written before x",
+      "file": "index.html",
+      "find": "const a=Math.abs(c), s=(a===1 && x) ? x : `${a}${x}`;",
+      "replace": "const a=Math.abs(c), s=`${a}${x}`;",
+      "run": "verify"
+    },
+    {
+      "name": "the chord's slope is run over rise",
+      "file": "index.html",
+      "find": "return this.div(this.sub(this.f(S,b),this.f(S,a)),this.sub(b,a)); },",
+      "replace": "return this.div(this.sub(b,a),this.sub(this.f(S,b),this.f(S,a))); },",
+      "run": "verify"
+    },
+    {
+      "name": "the √x interval runs from a to b, not a² to b²",
+      "file": "index.html",
+      "find": "if(S.t==='root') return [this.mul(S.a,S.a),this.mul(S.b,S.b)];",
+      "replace": "if(S.t==='root') return [S.a,S.b];",
+      "run": "verify"
+    },
+    {
+      "name": "the cubic's interval forgets to scale",
+      "file": "index.html",
+      "find": "return [this.frac(S.A,S.h),this.frac(S.B,S.h)];",
+      "replace": "return [[S.A,1],[S.B,1]];",
+      "run": "verify"
+    },
+    {
+      "name": "the parabola's c sits at the start",
+      "file": "index.html",
+      "find": "if(S.t==='par') return this.frac(S.A+S.B,2);",
+      "replace": "if(S.t==='par') return this.frac(2*S.A+1,2);",
+      "run": "verify"
+    },
+    {
+      "name": "on √x c is the middle of √a and √b",
+      "file": "index.html",
+      "find": "const h=this.mul(this.add(S.a,S.b),[1,2]); return this.mul(h,h); }",
+      "replace": "return this.mul(this.add(S.a,S.b),[1,2]); }",
+      "run": "verify"
+    },
+    {
+      "name": "on the cubic c forgets to scale",
+      "file": "index.html",
+      "find": "      return this.frac(S.C,S.h); }",
+      "replace": "      return [S.C,1]; }",
+      "run": "verify"
+    },
+    {
+      "name": "the middle slip is a quarter of the way",
+      "file": "index.html",
+      "find": "if(k==='mid') return this.mul(this.add(a,b),[1,2]);",
+      "replace": "if(k==='mid') return this.mul(this.add(a,b),[1,4]);",
+      "run": "verify"
+    },
+    {
+      "name": "the forgotten-2 slip keeps the 2",
+      "file": "index.html",
+      "find": "S.t==='par' ? this.frac(S.A+S.B,1) :",
+      "replace": "S.t==='par' ? this.frac(S.A+S.B,2) :",
+      "run": "verify"
+    },
+    {
+      "name": "the flat slip forgets the 2",
+      "file": "index.html",
+      "find": "if(k==='flat') return S.t==='par' ? this.frac(-S.q,2*S.p) : null;",
+      "replace": "if(k==='flat') return S.t==='par' ? this.frac(-S.q,S.p) : null;",
+      "run": "verify"
+    },
+    {
+      "name": "the c² slip is offered on the parabola",
+      "file": "index.html",
+      "find": "if(k==='sq') return S.t==='recip'||S.t==='cube' ? this.mul(c,c) : null;",
+      "replace": "if(k==='sq') return this.mul(c,c);",
+      "run": "verify"
+    },
+    {
+      "name": "the end slip keeps its sign",
+      "file": "index.html",
+      "find": "if(k==='end') return S.t==='cube' ? [-c[0],c[1]] : null;",
+      "replace": "if(k==='end') return S.t==='cube' ? [c[0],2*c[1]] : null;",
+      "run": "verify"
+    },
+    {
+      "name": "the height slip is f at the middle",
+      "file": "index.html",
+      "find": "if(k==='fc') return this.f(S,c);",
+      "replace": "if(k==='fc') return this.f(S,this.mul(this.add(a,b),[1,2]));",
+      "run": "verify"
+    },
+    {
+      "name": "the average slip forgets to halve",
+      "file": "index.html",
+      "find": "    return this.mul(this.add(this.f(S,a),this.f(S,b)),[1,2]);\n  },",
+      "replace": "    return this.add(this.f(S,a),this.f(S,b));\n  },",
+      "run": "verify"
+    },
+    {
+      "name": "a slip may be 0",
+      "file": "index.html",
+      "find": "ok(v){ return !!v && v[0]!==0 && Math.abs(v[0])<=999 ",
+      "replace": "ok(v){ return !!v && Math.abs(v[0])<=999 ",
+      "run": "verify"
+    },
+    {
+      "name": "the four may hold a sum",
+      "file": "index.html",
+      "find": "&& !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "replace": ") out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "run": "verify"
+    },
+    {
+      "name": "the form may give it away",
+      "file": "index.html",
+      "find": "if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "replace": "if(t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "run": "verify"
+    },
+    {
+      "name": "the sign may give it away",
+      "file": "index.html",
+      "find": "t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "replace": "!this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page a",
+      "run": "verify"
+    },
+    {
+      "name": "a number on the page may be the answer",
+      "file": "index.html",
+      "find": "      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;\n      if(this.slips(S).length<3 || !this.trios(S).length) continue;\n      return S;\n    }\n    return {.",
+      "replace": "      if(this.slips(S).length<3 || !this.trios(S).length) continue;\n      return S;\n    }\n    return {.",
+      "run": "verify"
+    },
+    {
+      "name": "f′ at a slip may be the answer",
+      "file": "index.html",
+      "find": "    for(const k of this.SLIPS){ const v=this.val(S,k); if(this.ok(v)){ const d=this.df(S,v); if(d) out.push(d); } }\n",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the answers are seldom fractions",
+      "file": "index.html",
+      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<3000;g++){\n      const t",
+      "replace": "const wantWhole=R.i(0,3)>0;\n    for(let g=0;g<3000;g++){\n      const t",
+      "run": "verify"
+    },
+    {
+      "name": "the parabola is never dealt",
+      "file": "index.html",
+      "find": "const t=['par','root','recip','cube'][R.i(0,3)];",
+      "replace": "const t=['root','root','recip','cube'][R.i(0,3)];",
+      "run": "verify"
+    },
+    {
+      "name": "the stand-by question every time",
+      "file": "index.html",
+      "find": "for(let g=0;g<3000;g++){\n      const t=",
+      "replace": "for(let g=0;g<0;g++){\n      const t=",
+      "run": "verify"
+    },
+    {
+      "name": "the answer always sits first",
+      "file": "index.html",
+      "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CH",
+      "replace": "    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CH",
+      "run": "verify"
+    },
+    {
+      "name": "the answer sits second whenever it can",
+      "file": "index.html",
+      "find": "want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('C",
+      "replace": "want=ranks.includes(1)?1:ranks[0], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('C",
+      "run": "verify"
+    },
+    {
+      "name": "the same question can come twice",
+      "file": "index.html",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, a",
+      "replace": "break; }\n    // a number of the right one's form and sign always stands beside it, a",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is counted",
+      "file": "index.html",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    M",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    M",
+      "run": "verify"
+    },
+    {
+      "name": "every pick counts as a first try",
+      "file": "index.html",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHO",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHO",
+      "run": "verify"
+    },
+    {
+      "name": "the banner is worded wrong",
+      "file": "index.html",
+      "find": "this.matched+' tangents matched'",
+      "replace": "this.matched+' tangents'",
+      "run": "verify"
+    },
+    {
+      "name": "the toast names the wrong letter",
+      "file": "index.html",
+      "find": "✓ ${'ABCD'[i]} is c, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    M",
+      "replace": "✓ ${'PQRS'[i]} is c, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    M",
+      "run": "verify"
+    },
+    {
+      "name": "a missed number can be tapped again",
+      "file": "index.html",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHO",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CHO",
+      "run": "verify"
+    },
+    {
+      "name": "the check says an end is inside",
+      "file": "index.html",
+      "find": "the chord's slope, but ${V} is ${this.key(v)===this.key(a)?'a':'b'}, an end of",
+      "replace": "the chord's slope, and ${V} is ${this.key(v)===this.key(a)?'a':'b'}, an end of",
+      "run": "verify"
+    },
+    {
+      "name": "the check works f′ at the middle",
+      "file": "index.html",
+      "find": "so f′(${V}) ${d ? '= '+this.fs(d) :",
+      "replace": "so f′(${V}) ${d ? '= '+this.fs(this.df(S,this.val(S,'mid'))||d) :",
+      "run": "verify"
+    },
+    {
+      "name": "the check forgets a pick outside [a, b]",
+      "file": "index.html",
+      "find": "const inside=this.fl(v)>this.fl(a) && this.fl(v)<this.fl(b);",
+      "replace": "const inside=true;",
+      "run": "verify"
+    },
+    {
+      "name": "the check rounds to two places",
+      "file": "index.html",
+      "find": "approx(x){ return (x<0?'−':'')+Math.abs(x).toFixed(4); },",
+      "replace": "approx(x){ return (x<0?'−':'')+Math.abs(x).toFixed(2); },",
+      "run": "verify"
+    },
+    {
+      "name": "the chord slip is told as the middle",
+      "file": "index.html",
+      "find": "    if(k==='chord') return `${L} is the chord's slope itself,",
+      "replace": "    if(k==='chord') return `${L} is the middle of [a, b],",
+      "run": "verify"
+    },
+    {
+      "name": "the end slip is told as c²",
+      "file": "index.html",
+      "find": "    if(k==='end') return `${L} does give a tangent parallel",
+      "replace": "    if(k==='end') return `${L} stops at c²: it does give a tangent parallel",
+      "run": "verify"
+    },
+    {
+      "name": "the working hands over √c as c",
+      "file": "index.html",
+      "find": "gives √c = ${this.fs(this.val(S,'half'))} and c = ${this.fs(c)}`;",
+      "replace": "gives √c = ${this.fs(c)} and c = ${this.fs(c)}`;",
+      "run": "verify"
+    },
+    {
+      "name": "the working drops the end root",
+      "file": "index.html",
+      "find": "so c is ${this.fs(c)} or ${this.fs(e)}; ${this.fs(e)} is an end of the interval, so c = ${this.fs(c)}`; }",
+      "replace": "so c = ${this.fs(c)}`; }",
+      "run": "verify"
+    },
+    {
+      "name": "the rule forgets strictly between",
+      "file": "index.html",
+      "find": "somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Work",
+      "replace": "somewhere on [a, b], a tangent parallel to the chord joining its ends. Work",
+      "run": "verify"
+    },
+    {
+      "name": "the question shows a² for b",
+      "file": "index.html",
+      "find": "f(x) = ${this.fstr(S)} on [${this.fs(a)}, ${this.fs(b)}]</div>",
+      "replace": "f(x) = ${this.fstr(S)} on [${this.fs(a)}, ${this.fs(this.mul(b,b))}]</div>",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number is not told as wrong",
+      "file": "index.html",
+      "find": "${gone?'. Not c':''}\" style=\"margin:0\"><b>${L}</b> $",
+      "replace": "\" style=\"margin:0\"><b>${L}</b> $",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number can still be pressed",
+      "file": "index.html",
+      "find": "${gone?'disabled ':''}onclick=\"ChordPick",
+      "replace": "onclick=\"ChordPick",
+      "run": "verify"
+    },
+    {
+      "name": "the count line is dropped",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"mvpRead\"",
+      "replace": "    out+=`<div id=\"mvpRead\"",
+      "run": "verify"
+    },
+    {
+      "name": "the chord joins a to f(b) at a",
+      "file": "index.html",
+      "find": "<line class=\"mvpChord\" x1=\"${this.px(S,this.fl(a))}\" y1=\"${this.py(S,this.fl(fa))}\"",
+      "replace": "<line class=\"mvpChord\" x1=\"${this.px(S,this.fl(a))}\" y1=\"${this.py(S,this.fl(fb))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "the missed tangent is drawn with the chord's slope",
+      "file": "index.html",
+      "find": "const y=this.ff(S,x), s=this.dff(S,x), h=",
+      "replace": "const y=this.ff(S,x), s=this.fl(this.slope(S)), h=",
+      "run": "verify"
+    },
+    {
+      "name": "the missed tangent is drawn off the curve",
+      "file": "index.html",
+      "find": "const y=this.ff(S,x), s=",
+      "replace": "const y=this.ff(S,x)+1, s=",
+      "run": "verify"
+    },
+    {
+      "name": "a missed pick's tangent is never drawn",
+      "file": "index.html",
+      "find": "    for(const v of out){ const x=this.fl(v);\n      if(x<=w[0] || x>=w[1]) continue;",
+      "replace": "    for(const v of []){ const x=this.fl(v);\n      if(x<=w[0] || x>=w[1]) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "every missed tangent is drawn, even off the figure",
+      "file": "index.html",
+      "find": "      if(x<=w[0] || x>=w[1]) continue;\n",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the figure is not named for the chord",
+      "file": "index.html",
+      "find": "with the chord dashed from (${this.fs(a)}, ${this.fs(fa)}) to (${this.fs(b)}, ${this.fs(fb)})${said}\">",
+      "replace": "${said}\">",
+      "run": "verify"
+    },
+    {
+      "name": "the goals stay up while the pick shows",
+      "file": "index.html",
+      "find": "'mvtRead','mvtGoalPanel']",
+      "replace": "'mvtRead']",
+      "run": "verify"
+    },
+    {
+      "name": "the hand-worked walk is drawn under the pick",
+      "file": "index.html",
+      "find": "    document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';\n    if(pick) return;\n",
+      "replace": "    document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';\n",
+      "run": "verify"
+    },
+    {
+      "name": "the workshop opens on the pick",
+      "file": "index.html",
+      "find": "  open(){ UI.go('s-mvt'); },\n  tab:'hand',",
+      "replace": "  open(){ UI.go('s-mvt'); },\n  tab:'pick',",
+      "run": "play:chordpick"
+    },
+    {
+      "name": "the Tome does not tell of the pick",
+      "file": "index.html",
+      "find": " Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>",
+      "replace": "</div>",
+      "run": "verify"
+    },
+    {
+      "name": "the pick is left out of the mix",
+      "file": "index.html",
+      "find": "    ['ChordPick','MeanValue',",
+      "replace": "    ['ChordPicked','MeanValue',",
+      "run": "verify"
     }
   ]
 }

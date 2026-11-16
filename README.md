@@ -607,7 +607,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: forty-eight
+  question from a different workshop's turned-round mode each time: forty-nine
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1916,6 +1916,23 @@ The game is built so that losing teaches you as much as winning.
   c = √3 ≈ 1.7321; on 4/x c is √(1 × 4) = 2, short of the middle. Six things
   to find, and a fight on the mean value theorem now offers it.
 
+  **🎯 Which c?** turns the workshop round: a curve on an interval is drawn
+  with its chord, and four numbers offered, one of them the c strictly between
+  a and b where the tangent runs parallel to the chord. The curves are a
+  parabola, k√x, n/x and x³ + px + q, on intervals with whole or fractional
+  ends. The rule comes first: work the chord's slope from the two ends, then
+  solve f′(c) = it. The wrong numbers are the slips people make: the chord's
+  slope itself, the middle of the interval where f is not a parabola, a
+  forgotten doubling or halving, where the tangent is flat, stopping at c² or
+  at √c, the cubic's other root on an end of the interval, and a height, f(c)
+  or the average of f(a) and f(b), instead of a place. A wrong pick is shut,
+  checked by putting it into f′, and its tangent drawn dashed beside the
+  chord; the right one is worked from the chord's slope. No check ever names c
+  itself, the answer is whole as often as it is a fraction, and nothing is
+  saved. `npm test` works every number again from the curve and the interval
+  alone, and checks the right one alone gives, in floating point, a tangent as
+  steep as the chord strictly inside [a, b].
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -2080,7 +2097,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-one suites, about 5,640 checks, about a minute:
+loop only exists once the page is running. A hundred and forty-two suites, about 5,670 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2163,6 +2180,7 @@ loop only exists once the page is running. A hundred and forty-one suites, about
 | `eulerwalk` | the Tome opens the Euler step workshop on y′ = y with h = 1 and one dot; one step works 1 + 1 × 1 = 2 and sets it short of e by 0.7183; halving the step works 9/4 and lays both misses side by side; steps of 1/8 reach 2.5658 with the early steps left to the figure; on y′ = −2y a step of 1 jumps to −1 and swings back, 1/2 lands on 0 and stays, 1/4 keeps half of y each step; y′ = x falls short of 2 by exactly h; all seven goals, starting over, the ends, every button named, a phone's width, and nothing saved |
 | `doubling` | the Tome opens the doubling workshop on ×2 every 2 days with one dot; a whole stretch works 6 and meets the straight line; half a stretch works 3 × 2^(1/2) ≈ 4.2426 under the line's 9/2 with the note that √2 is not 1.5, and a second half lands on 6; walked to day 8 the curve is at 48 against the line's 15 with the early moves left to the figure; the halving reaches the line's 0 at hour 6 with y still 4 and runs past it below zero; half of ×4 is ×2; all six goals, starting over, the edge of the figure, every button named, a phone's width, and nothing saved |
 | `meanvalue` | the Tome opens the chord workshop on x² at x = 1, with the chord's slope (16 − 0)/(4 − 0) = 4 worked and the tangent's 2 too shallow, so c lies to the right; at 2 the tangent matches, half way as on every parabola, and at 2.05 it is steeper; a quarter step stops short of the end; on x³ the middle 1.5 gives 6.75, short of 9, and a step from 1.7 to 1.75 crosses c = √3 ≈ 1.7321; on 4/x the chord runs downhill at −1 and c is 2, short of the middle; all six goals, starting over, the ends, every button and the drawing named, a phone's width, and nothing saved |
+| `chordpick` | the Tome says the chord workshop can be turned round; the mode is pressed and the curves, the figure, the move buttons, the readout and the goals step aside; the rule comes first; a curve on an interval is shown with its chord drawn and no tangent, and four numbers offered, each named; a wrong pick is named as its slip, checked by putting it into f′, shut and told as not c, and not counted; the right pick is worked from the chord's slope, counted but not as a first try, toasted, and deals a new question; a missed pick between a and b has its tangent drawn, and it goes with the question; a first try is counted as one; the fifth brings CHORD FINDER; every button and the figure are named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 51 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |

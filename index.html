@@ -1932,10 +1932,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ CHORD WORKSHOP ============ -->
   <div class="screen" id="s-mvt">
     <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
+    <div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand or pick which number is c"></div>
     <div class="panel">
+      <div id="mvpBox"></div>
       <div id="mvtSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="mvtFig"></div>
-      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move the point">
+      <div class="wsModes" id="mvtMoveRow" style="flex-wrap:wrap" role="group" aria-label="Move the point">
         <button class="btn sm ghost" id="mvtL" onclick="MeanValue.move(-5)" aria-label="Move the point a quarter left">◀ ¼</button>
         <button class="btn sm ghost" id="mvtl" onclick="MeanValue.move(-1)" aria-label="Move the point a twentieth left">◀ 0.05</button>
         <button class="btn sm ghost" id="mvtr" onclick="MeanValue.move(1)" aria-label="Move the point a twentieth right">0.05 ▶</button>
@@ -1944,7 +1946,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="mvtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="mvtGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="mvtGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14505,7 +14507,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>
          <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -27669,6 +27671,268 @@ const Doubling = {
   }
 };
 
+/* ---------- Which c? The chord workshop turned round ----------
+   A curve f on [a, b] is drawn with its chord, and four numbers offered, one
+   of them the c strictly between a and b where the tangent runs parallel to
+   the chord. The rule is stated first: work the chord's slope from the two
+   ends, then solve f′(c) = it. The curves are a parabola, k√x, n/x and
+   x³ + px + q. The wrong numbers are the slips people make: the chord's
+   slope itself, the middle of the interval where f is not a parabola, a
+   forgotten doubling or halving, where the tangent is flat, stopping at c² or at √c, the root
+   at an end of the interval, and a height, f(c) or the average of f(a) and
+   f(b), instead of a place. A wrong pick is checked by putting it into f′,
+   and its tangent is drawn beside the chord; a check never names c itself.
+   Nothing is saved. */
+const ChordPick = {
+  SLIPS:['chord','mid','nodbl','flat','sq','half','end','fc','avg'],
+  RULE:'A smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Work the chord\'s slope, (f(b) − f(a))/(b − a), then solve f′(c) = it. Which number is c?',
+  CUBES:[[-8,4,-4],[-6,3,-3],[-4,2,-2],[-4,8,4],[-3,6,3],[-2,1,-1],[-2,4,2],[-1,2,1]],
+  RECIPS:[[[1,1],[4,1],[2,1]],[[1,1],[9,1],[3,1]],[[4,1],[9,1],[6,1]],[[2,1],[8,1],[4,1]],[[1,1],[16,1],[4,1]],[[3,1],[12,1],[6,1]],[[2,1],[18,1],[6,1]],[[9,1],[16,1],[12,1]],
+    [[1,4],[1,1],[1,2]],[[1,9],[1,1],[1,3]],[[1,4],[9,1],[3,2]],[[1,9],[4,1],[2,3]],[[4,9],[1,1],[2,3]],[[1,4],[4,9],[1,3]],[[9,4],[4,1],[3,1]],[[1,4],[25,1],[5,2]]],
+  // k√x runs from a² to b², with a from RA and b = a plus a gap from RD, so b is never past 6
+  RA:[[0,1],[1,2],[1,1],[3,2],[2,1],[3,1]], RD:[[1,2],[1,1],[3,2],[2,1],[3,1]],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  sub(f,g){ return this.add(f,[-g[0],g[1]]); },
+  mul(f,g){ return this.frac(f[0]*g[0],f[1]*g[1]); },
+  div(f,g){ return this.frac(f[0]*g[1],f[1]*g[0]); },
+  isq(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? s : null; },
+  root(f){ const a=this.isq(f[0]), b=this.isq(f[1]); return f[0]>=0 && a!==null && b!==null ? [a,b] : null; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0 ? `(${this.fs(f)})` : this.fs(f); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  fl(v){ return v[0]/v[1]; },
+  // a sum of terms, each a whole number and what it multiplies, written as it is read
+  poly(T){
+    let out='';
+    for(const [c,x] of T){ if(!c) continue;
+      const a=Math.abs(c), s=(a===1 && x) ? x : `${a}${x}`;
+      out+= out ? ` ${c<0?'−':'+'} ${s}` : `${c<0?'−':''}${s}`; }
+    return out||'0';
+  },
+  ends(S){
+    if(S.t==='par') return [[S.A,1],[S.B,1]];
+    if(S.t==='root') return [this.mul(S.a,S.a),this.mul(S.b,S.b)];
+    if(S.t==='recip') return [S.A,S.B];
+    return [this.frac(S.A,S.h),this.frac(S.B,S.h)];
+  },
+  // f at x exactly, or null where k√x is not a fraction
+  f(S,x){
+    if(S.t==='par') return this.add(this.add(this.mul([S.p,1],this.mul(x,x)),this.mul([S.q,1],x)),[S.r,1]);
+    if(S.t==='root'){ const s=this.root(x); return s && this.mul([S.k,1],s); }
+    if(S.t==='recip') return this.div([S.n,1],x);
+    return this.add(this.add(this.mul(x,this.mul(x,x)),this.mul([S.p,1],x)),[S.q,1]);
+  },
+  ff(S,x){ return S.t==='par' ? S.p*x*x+S.q*x+S.r : S.t==='root' ? S.k*Math.sqrt(x) : S.t==='recip' ? S.n/x : x*x*x+S.p*x+S.q; },
+  // f′ at x exactly, or null where it is not a fraction
+  df(S,x){
+    if(S.t==='par') return this.add(this.mul([2*S.p,1],x),[S.q,1]);
+    if(S.t==='root'){ const s=this.root(x); return s && s[0] ? this.div([S.k,1],this.mul([2,1],s)) : null; }
+    if(S.t==='recip') return this.div([-S.n,1],this.mul(x,x));
+    return this.add(this.mul([3,1],this.mul(x,x)),[S.p,1]);
+  },
+  dff(S,x){ return S.t==='par' ? 2*S.p*x+S.q : S.t==='root' ? S.k/(2*Math.sqrt(x)) : S.t==='recip' ? -S.n/(x*x) : 3*x*x+S.p; },
+  fstr(S){
+    if(S.t==='par') return this.poly([[S.p,'x²'],[S.q,'x'],[S.r,'']]);
+    if(S.t==='root') return S.k===1 ? '√x' : `${S.k}√x`;
+    if(S.t==='recip') return `${S.n}/x`;
+    return this.poly([[1,'x³'],[S.p,'x'],[S.q,'']]);
+  },
+  dstr(S){
+    if(S.t==='par') return this.poly([[2*S.p,'x'],[S.q,'']]);
+    if(S.t==='root') return S.k%2 ? `${S.k}/(2√x)` : `${S.k/2}/√x`;
+    if(S.t==='recip') return `−${S.n}/x²`;
+    return this.poly([[3,'x²'],[S.p,'']]);
+  },
+  slope(S){ const [a,b]=this.ends(S); return this.div(this.sub(this.f(S,b),this.f(S,a)),this.sub(b,a)); },
+  // each number as the option named k works it out
+  val(S,k){
+    const [a,b]=this.ends(S);
+    if(k==='right'){
+      if(S.t==='par') return this.frac(S.A+S.B,2);
+      if(S.t==='root'){ const h=this.mul(this.add(S.a,S.b),[1,2]); return this.mul(h,h); }
+      if(S.t==='recip') return S.C;
+      return this.frac(S.C,S.h); }
+    const c=this.val(S,'right');
+    if(k==='chord') return this.slope(S);
+    if(k==='mid') return this.mul(this.add(a,b),[1,2]);
+    if(k==='nodbl') return S.t==='par' ? this.frac(S.A+S.B,1) : S.t==='root' ? this.mul(this.add(S.a,S.b),this.add(S.a,S.b)) : null;
+    if(k==='flat') return S.t==='par' ? this.frac(-S.q,2*S.p) : null;
+    if(k==='sq') return S.t==='recip'||S.t==='cube' ? this.mul(c,c) : null;
+    if(k==='half') return S.t==='root' ? this.mul(this.add(S.a,S.b),[1,2]) : null;
+    if(k==='end') return S.t==='cube' ? [-c[0],c[1]] : null;
+    if(k==='fc') return this.f(S,c);
+    return this.mul(this.add(this.f(S,a),this.f(S,b)),[1,2]);
+  },
+  ok(v){ return !!v && v[0]!==0 && Math.abs(v[0])<=999 && v[1]<=999; },
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!this.ok(v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page and the checks name: the ends, f at the ends, the chord's slope, the numbers in f and f′, and f′ at every number a check may test
+  named(S){
+    const [a,b]=this.ends(S), out=[a,b,this.f(S,a),this.f(S,b),this.slope(S)];
+    const co=S.t==='par' ? [S.p,2*S.p,S.q,S.r] : S.t==='root' ? [S.k,S.k/2] : S.t==='recip' ? [S.n] : [3,S.p,S.q];
+    for(const n of co) if(Number.isInteger(n)) out.push([n,1],[-n,1]);
+    for(const k of this.SLIPS){ const v=this.val(S,k); if(this.ok(v)){ const d=this.df(S,v); if(d) out.push(d); } }
+    return out;
+  },
+  STANDBY:{t:'cube',p:1,q:2,h:2,A:-2,B:4,C:2},
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<3000;g++){
+      const t=['par','root','recip','cube'][R.i(0,3)];
+      let S;
+      if(t==='par'){ const A=R.i(-4,3); S={t,p:[1,-1,2,-2,3][R.i(0,4)],q:R.i(-6,6),r:R.i(-5,5),A,B:A+R.i(1,5)}; }
+      else if(t==='root'){ const a=this.RA[R.i(0,this.RA.length-1)], b=this.add(a,this.RD[R.i(0,this.RD.length-1)]);
+        S={t,k:[1,2,3,4,6][R.i(0,4)],a,b}; }
+      else if(t==='recip'){ const [A,B,C]=this.RECIPS[R.i(0,this.RECIPS.length-1)]; S={t,n:[1,2,3,4,6,12][R.i(0,5)],A,B,C}; }
+      else { const [A,B,C]=this.CUBES[R.i(0,this.CUBES.length-1)]; S={t,p:R.i(-3,3),q:R.i(-5,5),h:R.i(1,2),A,B,C}; }
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole || Math.abs(W[0])>999 || W[1]>99) continue;
+      // a check names the ends, f there, the chord's slope and f′ at the numbers it tests, so none of them may be c
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {...this.STANDBY};
+  },
+  // the right answer, worked
+  work(S){
+    const [a,b]=this.ends(S), m=this.slope(S), c=this.val(S,'right'), M=this.fs(m);
+    let solve;
+    if(S.t==='par') solve=`${this.poly([[2*S.p,'c'],[S.q,'']])} = ${M} gives c = ${this.fs(c)}, half way between ${this.fs(a)} and ${this.fs(b)}, as on every parabola`;
+    else if(S.t==='root') solve=`${S.k%2 ? `${S.k}/(2√c)` : `${S.k/2}/√c`} = ${M} gives √c = ${this.fs(this.val(S,'half'))} and c = ${this.fs(c)}`;
+    else if(S.t==='recip') solve=`−${S.n}/c² = ${M} gives c² = ${this.fs(this.mul(c,c))} and c = ${this.fs(c)}, the root between ${this.fs(a)} and ${this.fs(b)}`;
+    else { const e=this.val(S,'end');
+      solve=`${this.poly([[3,'c²'],[S.p,'']])} = ${M} gives c² = ${this.fs(this.mul(c,c))}, so c is ${this.fs(c)} or ${this.fs(e)}; ${this.fs(e)} is an end of the interval, so c = ${this.fs(c)}`; }
+    return `the chord's slope is (${this.fs(this.f(S,b))} − ${this.pf(this.f(S,a))})/(${this.fs(b)} − ${this.pf(a)}) = ${M}, and f′(x) = ${this.dstr(S)}, so ${solve}`;
+  },
+  slip(S,k,L){
+    if(k==='chord') return `${L} is the chord's slope itself, (f(b) − f(a))/(b − a). c is not that number but the place where the tangent has that slope.`;
+    if(k==='mid') return `${L} is the middle of [a, b]. c falls half way only on a parabola, and ${this.fstr(S)} is not one.`;
+    if(k==='nodbl') return S.t==='par' ? `${L} takes f′(x) as ${this.poly([[S.p,'x'],[S.q,'']])}, forgetting that x² comes down doubled.`
+      : `${L} takes the slope of ${this.fstr(S)} as ${S.k}/√x, forgetting that √x comes down halved: its slope is ${this.dstr(S)}.`;
+    if(k==='flat') return `${L} is where the tangent is flat, f′(x) = 0. The tangent has to run parallel to the chord, and this chord is not level.`;
+    if(k==='sq') return `${L} stops at c²: solving f′(c) = the chord's slope gives c² first, and c is its square root.`;
+    if(k==='half') return `${L} stops at √c: solving f′(c) = the chord's slope gives √c first, and c is its square.`;
+    if(k==='end') return `${L} does give a tangent parallel to the chord, but it is an end of the interval, and the theorem's c lies strictly between a and b.`;
+    if(k==='fc') return `${L} is a height on the curve: f where the tangent is parallel. The question asks for the place itself, c, along the x-axis.`;
+    return `${L} is the average of f(a) and f(b), a height half way along the chord, not a place between a and b.`;
+  },
+  // four places, with = when the value is exact and ≈ when it is not
+  approx(x){ return (x<0?'−':'')+Math.abs(x).toFixed(4); },
+  check(S,k,L){
+    const [a,b]=this.ends(S), m=this.slope(S), v=this.val(S,k), d=this.df(S,v), V=this.fs(v);
+    if(d && this.key(d)===this.key(m)) return `Check ${L}: f′(${V}) = ${this.fs(m)}, the chord's slope, but ${V} is ${this.key(v)===this.key(a)?'a':'b'}, an end of [${this.fs(a)}, ${this.fs(b)}], not strictly between.`;
+    const inside=this.fl(v)>this.fl(a) && this.fl(v)<this.fl(b);
+    return `Check ${L}: f′(x) = ${this.dstr(S)}, so f′(${V}) ${d ? '= '+this.fs(d) : '≈ '+this.approx(this.dff(S,this.fl(v)))}, but the chord's slope is ${this.fs(m)}, so the tangent there is not parallel to the chord.`
+      +(inside ? '' : ` ${V} is not even between ${this.fs(a)} and ${this.fs(b)}.`);
+  },
+  // the window the figure shows: a little either side of [a, b], and never x ≤ 0 where k√x or n/x stop
+  win(S){
+    const [a,b]=this.ends(S).map(v=>this.fl(v)), w=b-a;
+    let x0=a-0.08*w; const x1=b+0.08*w;
+    if(S.t==='root') x0=Math.max(0,x0);
+    if(S.t==='recip') x0=Math.max(x0,0.9*a);
+    let y0=Infinity, y1=-Infinity;
+    for(let i=0;i<=80;i++){ const y=this.ff(S,x0+(x1-x0)*i/80); y0=Math.min(y0,y); y1=Math.max(y1,y); }
+    const pad=(y1-y0)*0.1||1;
+    return [x0,x1,y0-pad,y1+pad];
+  },
+  L:30, TOP:10, W:300, H:200,
+  px(S,x){ const w=this.win(S); return Math.round((this.L+(x-w[0])/(w[1]-w[0])*this.W)*10)/10; },
+  py(S,y){ const w=this.win(S); return Math.round((this.TOP+this.H-(y-w[2])/(w[3]-w[2])*this.H)*10)/10; },
+  svg(S,out){
+    const [a,b]=this.ends(S), w=this.win(S), fa=this.f(S,a), fb=this.f(S,b), P=(x,y)=>`${this.px(S,x)},${this.py(S,y)}`;
+    const pts=[]; for(let i=0;i<=80;i++){ const x=w[0]+(w[1]-w[0])*i/80; pts.push(P(x,this.ff(S,x))); }
+    let tan='', said='';
+    for(const v of out){ const x=this.fl(v);
+      if(x<=w[0] || x>=w[1]) continue;
+      const y=this.ff(S,x), s=this.dff(S,x), h=(w[1]-w[0])*0.22;
+      tan+=`<line class="mvpTan" data-x="${this.fs(v)}" x1="${this.px(S,x-h)}" y1="${this.py(S,y-s*h)}" x2="${this.px(S,x+h)}" y2="${this.py(S,y+s*h)}" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 3"/>`
+        +`<circle cx="${this.px(S,x)}" cy="${this.py(S,y)}" r="3.5" fill="var(--red)"/>`;
+      said+=`; the tangent at x = ${this.fs(v)}, a missed pick, is drawn dashed in red and is not parallel to it`; }
+    const axis=w[2]<0 && w[3]>0 ? `<line x1="${this.L}" y1="${this.py(S,0)}" x2="${this.L+this.W}" y2="${this.py(S,0)}" stroke="var(--dim)" stroke-width="1"/>` : '';
+    return `<svg viewBox="0 0 340 236" width="100%" role="img" aria-label="f(x) = ${this.fstr(S)} from ${this.fs(a)} to ${this.fs(b)}, with the chord dashed from (${this.fs(a)}, ${this.fs(fa)}) to (${this.fs(b)}, ${this.fs(fb)})${said}">`
+      +`<defs><clipPath id="mvpClip"><rect x="${this.L}" y="${this.TOP}" width="${this.W}" height="${this.H}"/></clipPath></defs>`
+      +`<g clip-path="url(#mvpClip)">${axis}<polyline points="${pts.join(' ')}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>`
+      +`<line class="mvpChord" x1="${this.px(S,this.fl(a))}" y1="${this.py(S,this.fl(fa))}" x2="${this.px(S,this.fl(b))}" y2="${this.py(S,this.fl(fb))}" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="6 4"/>${tan}</g>`
+      +`<circle cx="${this.px(S,this.fl(a))}" cy="${this.py(S,this.fl(fa))}" r="4" fill="var(--ink)"/><circle cx="${this.px(S,this.fl(b))}" cy="${this.py(S,this.fl(fb))}" r="4" fill="var(--ink)"/>`
+      +`<text x="${this.px(S,this.fl(a))}" y="228" text-anchor="middle" font-size="12" fill="var(--dim)">a = ${this.fs(a)}</text><text x="${this.px(S,this.fl(b))}" y="228" text-anchor="middle" font-size="12" fill="var(--dim)">b = ${this.fs(b)}</text></svg>`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, and it sits low, high or between as often as these slips allow
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CHORD FINDER', this.matched+' tangents matched','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is c, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    MeanValue.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), [a,b]=this.ends(S);
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="mvpQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = ${this.fstr(S)} on [${this.fs(a)}, ${this.fs(b)}]</div>`;
+    out+=`<div class="small" style="text-align:center">Where is the tangent parallel to the chord? Which is c?</div>`;
+    out+=`<div id="mvpFig">${this.svg(S,[...r.out].sort().map(i=>this.val(S,r.opts[i].k)))}</div>`;
+    out+=`<div id="mvpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="ChordPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not c':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(`That was it: ${this.work(this.last.S)}. Here is a new one.`);
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="mvpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 /* ---------- The chord workshop: the mean value theorem by hand ----------
    Somewhere strictly between a and b the tangent runs parallel to the chord.
    Pick a curve (x² on [0, 4], x³ on [0, 3], 4/x on [1, 4]) and walk a point
@@ -27747,10 +28011,18 @@ const MeanValue = {
     return out+`</svg>`;
   },
   open(){ UI.go('s-mvt'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null; this.touched=true; this.render(); },
   move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.touched=true; this.render(); },
   again(){ this.k=this.set().k0; this.prev=null; this.touched=true; this.render(); },
   render(){
+    document.getElementById('mvtTab').innerHTML=[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="MeanValue.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['mvtSets','mvtFig','mvtMoveRow','mvtRead','mvtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';
+    if(pick) return;
     document.getElementById('mvtSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="MeanValue.pick(${i})" aria-label="f(x) = ${s.name}">${s.btn}</button>`).join('');
     for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);
@@ -29008,12 +29280,13 @@ const MixPick = {
     ['LnPick','LogDiff','🪵 Log Slope Workshop'],
     ['PathPick','PathChain','🛤️ Path Chain Workshop'],
     ['StretchPick','Doubling','⏳ Doubling Workshop'],
+    ['ChordPick','MeanValue','📐 Chord Workshop'],
     ['EulerPick','EulerWalk','👣 Euler Step Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },

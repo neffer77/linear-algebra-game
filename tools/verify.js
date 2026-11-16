@@ -91,7 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
-    ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtSets')")) + 'render(){}};exports.MeanValue=MeanValue;' +
+    ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
@@ -9486,6 +9486,256 @@ const eulerPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which c? The chord workshop turned round. Every number is read back off
+   its button and checked against the slip it is named as, worked again here
+   from the curve and the interval alone: the chord's slope from the two ends,
+   then f′(c) = it solved afresh for each kind of curve. The right one alone
+   gives, in floating point, a tangent as steep as the chord at a place
+   strictly between a and b. Each miss is explained and checked, worked again
+   here, and no check names c itself. */
+const chordPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const MeanValue = {render(){ env.renders++; }};" +
+    cut('const ChordPick = {', '/* ---------- The chord workshop: the mean value theorem by hand') + 'return ChordPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const MeanValue = {', '\n};\n');
+  if (!html.includes('<div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand or pick which number is c"></div>\n    <div class="panel">\n      <div id="mvpBox"></div>')) fail('chordpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['mvtMoveRow', 'mvtGoalPanel', 'mvpBox', 'mvtTab']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('chordpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('chordpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="MeanValue.setTab(\'${t}\')"')) fail('chordpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['mvtSets','mvtFig','mvtMoveRow','mvtRead','mvtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('chordpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';\n    if(pick) return;")) fail('chordpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>')) fail('chordpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const minus = (f, g) => plus(f, [-g[0], g[1]]);
+  const times = (f, g) => red(f[0] * g[0], f[1] * g[1]);
+  const over = (f, g) => red(f[0] * g[1], f[1] * g[0]);
+  const W = n => [n, 1];
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const nb = v => (v[0] < 0 ? `(${fr(v)})` : fr(v));
+  const fl = v => v[0] / v[1];
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // √ of a fraction, found by trying every whole number, or null when it is not a fraction
+  const sq = v => { if (v[0] < 0) return null; const a = [...Array(1000).keys()].find(n => n * n === v[0]), b = [...Array(1000).keys()].find(n => n * n === v[1]); return a === undefined || b === undefined ? null : [a, b]; };
+  // a sum of terms written as read: 1x² is x², −1x is −x, a 0 term left out
+  const poly = T => { let o = ''; for (const [c, x] of T) { if (!c) continue; const s = Math.abs(c) === 1 && x ? x : `${Math.abs(c)}${x}`; o += o ? ` ${c < 0 ? '−' : '+'} ${s}` : `${c < 0 ? '−' : ''}${s}`; } return o || '0'; };
+  // each curve worked here from what it is: its ends, f and f′ exactly and in floats
+  const ends = Q => Q.t === 'par' ? [W(Q.A), W(Q.B)] : Q.t === 'root' ? [times(Q.a, Q.a), times(Q.b, Q.b)] : Q.t === 'recip' ? [Q.A, Q.B] : [red(Q.A, Q.h), red(Q.B, Q.h)];
+  const f = (Q, x) => Q.t === 'par' ? plus(plus(times(W(Q.p), times(x, x)), times(W(Q.q), x)), W(Q.r))
+    : Q.t === 'root' ? (sq(x) && times(W(Q.k), sq(x))) : Q.t === 'recip' ? over(W(Q.n), x) : plus(plus(times(x, times(x, x)), times(W(Q.p), x)), W(Q.q));
+  const ff = (Q, x) => Q.t === 'par' ? Q.p * x * x + Q.q * x + Q.r : Q.t === 'root' ? Q.k * Math.sqrt(x) : Q.t === 'recip' ? Q.n / x : x * x * x + Q.p * x + Q.q;
+  const df = (Q, x) => Q.t === 'par' ? plus(times(W(2 * Q.p), x), W(Q.q)) : Q.t === 'root' ? (sq(x) && sq(x)[0] ? over(W(Q.k), times(W(2), sq(x))) : null)
+    : Q.t === 'recip' ? over(W(-Q.n), times(x, x)) : plus(times(W(3), times(x, x)), W(Q.p));
+  const dff = (Q, x) => Q.t === 'par' ? 2 * Q.p * x + Q.q : Q.t === 'root' ? Q.k / (2 * Math.sqrt(x)) : Q.t === 'recip' ? -Q.n / (x * x) : 3 * x * x + Q.p;
+  const fstr = Q => Q.t === 'par' ? poly([[Q.p, 'x²'], [Q.q, 'x'], [Q.r, '']]) : Q.t === 'root' ? (Q.k === 1 ? '√x' : `${Q.k}√x`) : Q.t === 'recip' ? `${Q.n}/x` : poly([[1, 'x³'], [Q.p, 'x'], [Q.q, '']]);
+  const dstr = Q => Q.t === 'par' ? poly([[2 * Q.p, 'x'], [Q.q, '']]) : Q.t === 'root' ? (Q.k % 2 ? `${Q.k}/(2√x)` : `${Q.k / 2}/√x`) : Q.t === 'recip' ? `−${Q.n}/x²` : poly([[3, 'x²'], [Q.p, '']]);
+  const chord = Q => { const [a, b] = ends(Q); return over(minus(f(Q, b), f(Q, a)), minus(b, a)); };
+  // c solved afresh from f′(c) = the chord's slope: 2pc + q = m, k/(2√c) = m, −n/c² = m, 3c² + p = m
+  const solve = Q => { const [a, b] = ends(Q), m = chord(Q);
+    if (Q.t === 'par') return [over(minus(m, W(Q.q)), W(2 * Q.p))];
+    if (Q.t === 'root') { const s = over(W(Q.k), times(W(2), m)); return [times(s, s)]; }
+    const c2 = Q.t === 'recip' ? over(W(-Q.n), m) : over(minus(m, W(Q.p)), W(3)), s = sq(c2);
+    return s ? [s, [-s[0], s[1]]] : []; };
+  const inside = (Q, v) => { const [a, b] = ends(Q); return fl(v) > fl(a) && fl(v) < fl(b); };
+  const want = (k, Q) => {
+    const [a, b] = ends(Q), m = chord(Q), roots = solve(Q), c = roots.find(v => inside(Q, v));
+    if (!c) return null;
+    if (k === 'right') return c;
+    if (k === 'chord') return m;                                                         // the chord's slope given as the place
+    if (k === 'mid') return times(plus(a, b), [1, 2]);                                  // the middle, right only on a parabola
+    if (k === 'nodbl') return Q.t === 'par' ? over(minus(m, W(Q.q)), W(Q.p))            // pc + q = m: the 2 left off
+      : Q.t === 'root' ? times(over(W(Q.k), m), over(W(Q.k), m)) : null;                 // k/√c = m: the half left off
+    if (k === 'flat') return Q.t === 'par' ? red(-Q.q, 2 * Q.p) : null;                 // where f′ = 0
+    if (k === 'sq') return Q.t === 'recip' || Q.t === 'cube' ? times(c, c) : null;      // stopped at c²
+    if (k === 'half') return Q.t === 'root' ? sq(c) : null;                             // stopped at √c
+    if (k === 'end') return Q.t === 'cube' ? roots.find(v => !inside(Q, v)) : null;     // the other root, on an end
+    if (k === 'fc') return f(Q, c);                                                     // a height, f(c)
+    if (k === 'avg') return times(plus(f(Q, a), f(Q, b)), [1, 2]);                      // a height, half way along the chord
+    return null; };
+  const slipOf = (k, L, Q) => ({
+    chord: `${L} is the chord's slope itself, (f(b) − f(a))/(b − a). c is not that number but the place where the tangent has that slope.`,
+    mid: `${L} is the middle of [a, b]. c falls half way only on a parabola, and ${fstr(Q)} is not one.`,
+    nodbl: Q.t === 'par' ? `${L} takes f′(x) as ${poly([[Q.p, 'x'], [Q.q, '']])}, forgetting that x² comes down doubled.`
+      : `${L} takes the slope of ${fstr(Q)} as ${Q.k}/√x, forgetting that √x comes down halved: its slope is ${dstr(Q)}.`,
+    flat: `${L} is where the tangent is flat, f′(x) = 0. The tangent has to run parallel to the chord, and this chord is not level.`,
+    sq: `${L} stops at c²: solving f′(c) = the chord's slope gives c² first, and c is its square root.`,
+    half: `${L} stops at √c: solving f′(c) = the chord's slope gives √c first, and c is its square.`,
+    end: `${L} does give a tangent parallel to the chord, but it is an end of the interval, and the theorem's c lies strictly between a and b.`,
+    fc: `${L} is a height on the curve: f where the tangent is parallel. The question asks for the place itself, c, along the x-axis.`,
+    avg: `${L} is the average of f(a) and f(b), a height half way along the chord, not a place between a and b.` }[k]);
+  const checkOf = (k, L, Q) => {
+    const [a, b] = ends(Q), m = chord(Q), v = want(k, Q), d = df(Q, v), V = fr(v);
+    if (d && fr(d) === fr(m)) return `Check ${L}: f′(${V}) = ${fr(m)}, the chord's slope, but ${V} is ${fr(v) === fr(a) ? 'a' : 'b'}, an end of [${fr(a)}, ${fr(b)}], not strictly between.`;
+    const x = dff(Q, fl(v)), e = d ? `= ${fr(d)}` : `≈ ${x < 0 ? '−' : ''}${Math.abs(x).toFixed(4)}`;
+    return `Check ${L}: f′(x) = ${dstr(Q)}, so f′(${V}) ${e}, but the chord's slope is ${fr(m)}, so the tangent there is not parallel to the chord.` + (inside(Q, v) ? '' : ` ${V} is not even between ${fr(a)} and ${fr(b)}.`); };
+  const workOf = Q => {
+    const [a, b] = ends(Q), m = chord(Q), M = fr(m), c = want('right', Q), C = fr(c);
+    const how = Q.t === 'par' ? `${poly([[2 * Q.p, 'c'], [Q.q, '']])} = ${M} gives c = ${C}, half way between ${fr(a)} and ${fr(b)}, as on every parabola`
+      : Q.t === 'root' ? `${Q.k % 2 ? `${Q.k}/(2√c)` : `${Q.k / 2}/√c`} = ${M} gives √c = ${fr(sq(c))} and c = ${C}`
+      : Q.t === 'recip' ? `−${Q.n}/c² = ${M} gives c² = ${fr(times(c, c))} and c = ${C}, the root between ${fr(a)} and ${fr(b)}`
+      : `${poly([[3, 'c²'], [Q.p, '']])} = ${M} gives c² = ${fr(times(c, c))}, so c is ${C} or ${fr(want('end', Q))}; ${fr(want('end', Q))} is an end of the interval, so c = ${C}`;
+    return `the chord's slope is (${fr(f(Q, b))} − ${nb(f(Q, a))})/(${fr(b)} − ${nb(a)}) = ${M}, and f′(x) = ${dstr(Q)}, so ${how}`; };
+  const RULE = 'A smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Work the chord\'s slope, (f(b) − f(a))/(b − a), then solve f′(c) = it. Which number is c?';
+  if (S.RULE !== RULE) fail('chordpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('chordpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['chord', 'mid', 'nodbl', 'flat', 'sq', 'half', 'end', 'fc', 'avg'];
+  const OWN = { par: ['chord', 'nodbl', 'flat', 'fc', 'avg'], root: ['chord', 'mid', 'nodbl', 'half', 'fc'], recip: ['chord', 'mid', 'sq', 'fc', 'avg'], cube: ['chord', 'mid', 'sq', 'end', 'fc', 'avg'] };
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  const okQ = Q => {
+    if (Q.t === 'par') return [1, -1, 2, -2, 3].includes(Q.p) && Q.q >= -6 && Q.q <= 6 && Q.r >= -5 && Q.r <= 5 && Q.A >= -4 && Q.A <= 3 && Q.B - Q.A >= 1 && Q.B - Q.A <= 5 && Object.keys(Q).length === 6;
+    if (Q.t === 'root') return [1, 2, 3, 4, 6].includes(Q.k) && Q.a[0] >= 0 && fl(Q.b) > fl(Q.a) && fl(Q.b) <= 6 && [1, 2].includes(Q.a[1]) && [1, 2].includes(Q.b[1]) && Object.keys(Q).length === 4;
+    if (Q.t === 'recip') return [1, 2, 3, 4, 6, 12].includes(Q.n) && fl(Q.A) > 0 && fl(Q.B) > fl(Q.A) && Object.keys(Q).length === 5;
+    return Q.t === 'cube' && Q.p >= -3 && Q.p <= 3 && Q.q >= -5 && Q.q <= 5 && [1, 2].includes(Q.h) && Q.A < Q.B && Object.keys(Q).length === 7; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, tans = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, fams = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; fams[Q.t] = (fams[Q.t] || 0) + 1;
+      if (!okQ(Q)) { fail('chordpick', key, `${sig} is not a question of the kind dealt`); continue; }
+      const [a, b] = ends(Q), m = chord(Q), c = want('right', Q);
+      if (!c) { fail('chordpick', key, `${sig} has no c strictly between its ends`); continue; }
+      if (prev && prev === sig) fail('chordpick', key, 'the same question comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('chordpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = ${fstr(Q)} on [${fr(a)}, ${fr(b)}] Where is the tangent parallel to the chord? Which is c? a = ${fr(a)} b = ${fr(b)} A `)) fail('chordpick', key, `the rule and the question are not shown first: ${head.slice(RULE.length, RULE.length + 120)}`);
+      // the figure: the curve, the chord dashed between the right two points, and no tangent before a miss
+      const fig = h0.split('id="mvpFig"')[1].split('</svg>')[0];
+      if (!fig.includes(`aria-label="f(x) = ${fstr(Q)} from ${fr(a)} to ${fr(b)}, with the chord dashed from (${fr(a)}, ${fr(f(Q, a))}) to (${fr(b)}, ${fr(f(Q, b))})">`)) fail('chordpick', key, 'the figure is not named for the curve and its chord');
+      if ((fig.match(/class="mvpChord"/g) || []).length !== 1 || /class="mvpTan"/.test(fig)) fail('chordpick', key, 'the figure does not draw the chord alone before a pick');
+      { const cm = fig.match(/class="mvpChord" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!cm || !(+cm[1] < +cm[3]) || Math.abs((+cm[4] - +cm[2]) / (+cm[3] - +cm[1])) === Infinity) fail('chordpick', key, 'the chord is not drawn from a to b');
+        else { const sy = (+cm[2] - +cm[4]) * fl(m) >= 0 || Math.abs(fl(m)) < 1e-9; if (!sy) fail('chordpick', key, 'the chord is drawn sloping the wrong way');
+          // each end of the chord sits on the curve: (a, f(a)) and (b, f(b)), placed by the figure's own scale
+          const at = [[a, f(Q, a)], [b, f(Q, b)]].map(([x, y]) => [+S.px(Q, fl(x)), +S.py(Q, fl(y))]);
+          if (Math.abs(+cm[1] - at[0][0]) > 0.06 || Math.abs(+cm[2] - at[0][1]) > 0.06 || Math.abs(+cm[3] - at[1][0]) > 0.06 || Math.abs(+cm[4] - at[1][1]) > 0.06)
+            fail('chordpick', key, `the chord's ends are not on the curve at a and b: ${cm.slice(1).join(', ')} want ${at.flat().map(v => v.toFixed(1)).join(', ')}`); } }
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="ChordPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('chordpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('chordpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('chordpick', key, 'a number is 0');
+      if (vals.some(v => Math.abs(v[0]) > 999 || v[1] > 999)) fail('chordpick', key, `a number runs past three digits: ${btns.map(x => x[6]).join(' | ')}`);
+      if (new Set(vals.map(String)).size !== 4) fail('chordpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('chordpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      // the page and the checks name the ends, f there, the chord's slope, the numbers in f and f′, and f′ at every number offered, so none of those is c
+      const co = Q.t === 'par' ? [Q.p, 2 * Q.p, Q.q, Q.r] : Q.t === 'root' ? [Q.k, Q.k / 2] : Q.t === 'recip' ? [Q.n] : [3, Q.p, Q.q];
+      const named = [a, b, f(Q, a), f(Q, b), m, ...co.filter(Number.isInteger).flatMap(n => [W(n), W(-n)])];
+      for (const v of vals) { const d = df(Q, v); if (d) named.push(d); }
+      if (named.some(n => n && String(n) === String(vals[ri]))) fail('chordpick', key, `c = ${fr(vals[ri])} is named elsewhere on the page or in a check`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('chordpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('chordpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        kinds[Q.t + ':' + o.k] = (kinds[Q.t + ':' + o.k] || 0) + 1;
+        if (Math.abs(vals[i][0]) > 999 || vals[i][1] > 999) fail('chordpick', key, `${btns[i][6]} runs past three digits`);
+        if (o.k !== 'right' && !OWN[Q.t].includes(o.k)) { fail('chordpick', key, `${o.k} is offered on a ${Q.t}, where it is not a slip`); return; }
+        if (String(vals[i]) !== String(want(o.k, Q))) fail('chordpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        // in floats: the tangent at the right one alone is as steep as the chord, strictly inside [a, b]
+        const x = fl(vals[i]), hit = x > fl(a) && x < fl(b) && Math.abs(dff(Q, x) - fl(m)) < 1e-9 * Math.max(1, Math.abs(fl(m)));
+        if ((o.k === 'right') !== hit) fail('chordpick', key, `${btns[i][6]} ${o.k === 'right' ? 'does not' : 'does'} give a tangent parallel to the chord inside [a, b], taken in floats`);
+      });
+      if (k === 0 && txt(S.html().split('id="mvpRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('chordpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('chordpick', key, 'a miss is counted, or not crossed off');
+        const hh = S.html(), lines = hh.split('id="mvpRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ck = checkOf(o.k, Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('chordpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        // a check works f′ at the pick, but never lands on c (a decimal such as 1.4142 is one number, not 1)
+        if (lines.slice(0, 2).join(' ').split(/[\s,;:()×÷=\[\]]+|\.(?!\d)/).includes(fr(c))) fail('chordpick', key, `the check of ${o.k} names c = ${fr(c)}`);
+        worked++;
+        // every missed pick inside the window gets its tangent drawn, and nothing else does
+        const fg = hh.split('id="mvpFig"')[1].split('</svg>')[0], drawn = [...fg.matchAll(/class="mvpTan" data-x="([^"]+)"/g)].map(x => x[1]).sort();
+        let lo = fl(a) - 0.08 * (fl(b) - fl(a)); const hi = fl(b) + 0.08 * (fl(b) - fl(a));
+        if (Q.t === 'root') lo = Math.max(0, lo);
+        if (Q.t === 'recip') lo = Math.max(lo, 0.9 * fl(a));
+        const owed = wrong.slice(0, q + 1).map(j => vals[j]).filter(v => fl(v) > lo && fl(v) < hi).map(fr).sort();
+        if (drawn.join() !== owed.join()) fail('chordpick', key, `the tangents drawn are at ${drawn.join(', ') || 'none'}, not ${owed.join(', ') || 'none'}`);
+        tans += drawn.length;
+        { // each tangent passes through its point on the curve with f′ there as its slope, read back off the drawing
+          const w = S.win(Q), sx = S.W / (w[1] - w[0]), sy = S.H / (w[3] - w[2]);
+          for (const tl of fg.matchAll(/class="mvpTan" data-x="([^"]+)" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/g)) {
+            const x = fl(rdv(tl[1])), X = [+tl[2], +tl[4]], Y = [+tl[3], +tl[5]];
+            const mx = (X[0] + X[1]) / 2, my = (Y[0] + Y[1]) / 2, ps = -(Y[1] - Y[0]) / (X[1] - X[0]) / sy * sx;
+            if (Math.abs(mx - (S.L + (x - w[0]) * sx)) > 0.2 || Math.abs(my - (S.TOP + S.H - (ff(Q, x) - w[2]) * sy)) > 0.2) fail('chordpick', key, `the tangent at ${tl[1]} does not pass through the curve there`);
+            const want = dff(Q, x), tol = 0.2 * (1 + Math.abs(want)) * 0.08;
+            if (Math.abs(ps - want) > Math.max(tol, Math.abs(want) * 0.03)) fail('chordpick', key, `the tangent at ${tl[1]} is drawn with slope ${ps.toFixed(3)}, not f′ = ${want.toFixed(3)}`); } }
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="ChordPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not c"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('chordpick', key, 'the missed numbers are not shut and told as not c');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('chordpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nbn = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('chordpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('chordpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('chordpick', key, 'no fresh question after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nbn + 1 || env.banners[nbn] !== 'CHORD FINDER / 5 tangents matched') fail('chordpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is c, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nbn) fail('chordpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="mvpRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ${workOf(Q)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('chordpick', key, `after a pick: ${got} | want ${wantLine}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same question dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { t: 'cube', p: 1, q: 2, h: 2, A: -2, B: 4, C: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"t":"cube","p":1,"q":2,"h":2,"A":-2,"B":4,"C":2}') fail('chordpick', 'repeat', 'the same question is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of questions: the answer's form even, and the stand-by question seldom needed
+    let sw2 = 0, stand = 0;
+    let shown = 0, odd = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); const c = want('right', Q); if (c && c[1] === 1) sw2++; if (JSON.stringify(Q) === JSON.stringify(S.STANDBY)) stand++;
+      // c is never one of the numbers the question itself shows: an end, f at an end, or the chord's slope
+      if (!okQ(Q)) odd++;
+      if (c) { const [a, b] = ends(Q); if ([a, b, f(Q, a), f(Q, b), chord(Q)].some(n => String(n) === String(c))) shown++; } }
+    if (odd) fail('chordpick', 'sweep', `${odd} of 20000 questions are not of the kind dealt`);
+    if (shown) fail('chordpick', 'sweep', `${shown} of 20000 questions show c on the page`);
+    if (sw2 < 9000 || sw2 > 11000) fail('chordpick', 'sweep', `${sw2} of 20000 answers are whole, not about half`);
+    if (stand > 200) fail('chordpick', 'sweep', `the stand-by question is dealt ${stand} times in 20000`); }
+  for (const t of ['par', 'root', 'recip', 'cube']) if (!(fams[t] > rounds * 0.12)) fail('chordpick', 'deal', `the ${t} curve is dealt too seldom: ${fams[t] || 0} of ${rounds}`);
+  const seldom = { flat: 0.04, end: 0.04, half: 0.05, nodbl: 0.1, sq: 0.1 };
+  for (const k of SL) if (!(kinds[k] > rounds * (seldom[k] || 0.2))) fail('chordpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  // and each curve offers every slip of its own: a slip that comes out equal to c is never offered.
+  // (On k√x the average height is k(√a + √b)/2, which is f(c) itself, so that one is told as f(c).)
+  for (const t in OWN) for (const k of OWN[t]) if (!(kinds[t + ':' + k] > (fams[t] || 0) * 0.02)) fail('chordpick', 'slips', `on the ${t} curve the slip ${k} is offered ${kinds[t + ':' + k] || 0} times in ${fams[t] || 0}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('chordpick', 'deal', `c sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.03 && ranks[1] > rounds * 0.12 && ranks[2] > rounds * 0.12 && ranks[3] > rounds * 0.03)) fail('chordpick', 'deal', `c sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('chordpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (tans < misses * 0.3) fail('chordpick', 'figure', `only ${tans} tangents are drawn over ${misses} misses`);
+  if (fives !== 30) fail('chordpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which y? The doubling workshop turned round. Every number is read back off
    its button and checked against the slip it is named as, worked again here
    from y(0), y(T) and t alone; the right one alone is y(0) × (y(T)/y(0))^(t/T)
@@ -14817,6 +15067,7 @@ console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString()
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
+console.log(`  chord picks       ${pad(chordPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the chord workshop, every number worked again from the curve and the interval alone and checked against the slip it is named as, the right one alone giving a tangent as steep as the chord strictly inside [a, b] in floats; ${chordPickNotes.misses.toLocaleString()} wrong picks explained and checked by putting them into f′, and no check ever naming c)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
