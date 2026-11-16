@@ -4831,6 +4831,153 @@ const geoPickNotes = (() => {
   return { rounds, misses, worked, fracR };
 })();
 
+/* Which speed? The pick-the-speed round in the ladder workshop. Every number
+   on screen is read back off its button as an exact fraction and checked
+   against the slip it is named as, worked out here from x, y, L and x′ alone.
+   The right number alone must be how fast the top really falls, measured by
+   moving the foot a hair and working y again from the length, and every
+   x·x′ + y·y′ in the readout is worked again from the numbers it shows. */
+const ladPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Ladder = {render(){ env.renders++; }};" +
+    cut('const LadPick = {', 'const Ladder = {') + 'return LadPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const add = (f, g) => fr(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const mul = (f, g) => fr(f[0] * g[0], f[1] * g[1]);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const want = {
+    right: Q => fr(-Q.x * Q.v, Q.y),
+    sign: Q => fr(Q.x * Q.v, Q.y),
+    flip: Q => fr(-Q.y * Q.v, Q.x),
+    noV: Q => fr(-Q.x, Q.y),
+    foot: Q => [-Q.v, 1],
+    len: Q => fr(-Q.x * Q.v, Q.L)
+  };
+  const SL = ['sign', 'flip', 'noV', 'foot', 'len'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "a × b + c × d = w" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`(\\d+) × (\\d+) \\+ (\\d+) × \\(?${V}\\)? = ${V}`, 'g'))) { n++;
+      if (!eq(add([+m[1] * +m[2], 1], mul([+m[3], 1], rd(m[4]))), rd(m[5]))) fail('ladpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="lzRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => ({
+    sign: `${L} is x·x′/y with the minus left off. As the foot slides out the top falls, so y′ is negative.`,
+    flip: `${L} is −y·x′/x, with x and y swapped. The top moves x/y times as fast as the foot, and here x/y = ${fst(fr(Q.x, Q.y))}.`,
+    noV: `${L} is −x/y, with the foot's speed left out. That is the top's speed for each 1 m/s of the foot; the foot moves at x′ = ${Q.v} m/s.`,
+    foot: `${L} is −x′, as if the top fell exactly as fast as the foot slides. That only happens where x = y; here x = ${Q.x} and y = ${Q.y}.`,
+    len: `${L} is −x·x′/L, with the ladder's length L = ${Q.L} where the top's height y = ${Q.y} belongs.` }[k]);
+  const hold = (Q, v) => add([Q.x * Q.v, 1], mul([Q.y, 1], v));
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: if y′ were ${fst(v)}, then x·x′ + y·y′ = ${Q.x} × ${Q.v} + ${Q.y} × ${pf(v)} = ${fst(hold(Q, v))}, not 0, so the ladder would be changing length.`; };
+  if (S.RULE !== 'The ladder never changes length, so x² + y² = L² at every moment. Differentiate in time: 2x·x′ + 2y·y′ = 0, so y′ = −x·x′/y, negative because the top falls. Which number is y′, the top\'s speed in m/s?') fail('ladpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('ladpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, upR = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), Ls = new Set(), vs = new Set(), wholes = new Set(), xys = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Ls.add(Q.L); vs.add(Q.v); xys.add(Q.x + ',' + Q.y); if (Q.x > Q.y) upR++;
+      if ([Q.x, Q.y, Q.L, Q.v].some(n => !Number.isInteger(n) || n < 1) || Q.x * Q.x + Q.y * Q.y !== Q.L * Q.L || Q.v > 8 || Q.x === Q.y) fail('ladpick', key, `x = ${Q.x}, y = ${Q.y}, L = ${Q.L}, x′ = ${Q.v} is not a whole-number ladder`);
+      const L = want.right(Q);
+      { // move the foot a hair and work the top's height again from the length
+        const h = 1e-6, y2 = Math.sqrt(Q.L * Q.L - (Q.x + Q.v * h) ** 2), sp = (y2 - Q.y) / h;
+        if (Math.abs(sp - L[0] / L[1]) > 1e-3) fail('ladpick', key, `the top really falls at ${sp}, not ${fst(L)}`); }
+      if (L[0] === 0 || L[0] > 0) fail('ladpick', key, 'the top is not falling');
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('ladpick', key, 'the same ladder comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('ladpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` A ${Q.L} m ladder: its foot is x = ${Q.x} m out, sliding away at x′ = ${Q.v} m/s, and its top is y = ${Q.y} m up. A`)) fail('ladpick', key, 'the rule and the ladder are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="LadPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?) m\/s" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?) m\/s<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('ladpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('ladpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('ladpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('ladpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('ladpick', key, `the speed is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('ladpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('ladpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('ladpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the top's speed`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('ladpick', key, 'a ladder with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('ladpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('ladpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('ladpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('ladpick', key, 'a miss does not work x·x′ + y·y′');
+        if (/= 0, not 0/.test(rt)) fail('ladpick', key, 'a wrong speed keeps the length');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LadPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+ m/s\\. Not the top's speed"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('ladpick', key, 'the missed numbers are not shut and told as not the speed');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('ladpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('ladpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('ladpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('ladpick', key, 'no fresh ladder after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LADDER READER / 5 falling tops timed') fail('ladpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the top's speed, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('ladpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read();
+      const after = `That was it: y′ = −x·x′/y = −${Q.x} × ${Q.v}/${Q.y} = ${fst(L)} m/s, and x·x′ + y·y′ = ${Q.x} × ${Q.v} + ${Q.y} × ${pf(L)} = 0: the ladder keeps its length. Here is a new ladder. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('ladpick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('ladpick', key, 'the right pick does not work x·x′ + y·y′');
+      if (!eq(fr(-Q.x * Q.v, Q.y), L)) fail('ladpick', key, `−${Q.x} × ${Q.v}/${Q.y} is not ${fst(L)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same ladder dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { x: 3, y: 4, L: 5, v: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"x":3,"y":4,"L":5,"v":1}') fail('ladpick', 'repeat', 'the same ladder is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('ladpick', 'slips', `the slip ${k} is never offered`);
+  if (Ls.size !== 7) fail('ladpick', 'deal', `the ladder is only ever ${[...Ls].sort((x, y) => x - y).join(', ')} m long`);
+  if (xys.size !== 16) fail('ladpick', 'deal', `only ${xys.size} of the 16 ladders, each either way up, are ever dealt`);
+  if (vs.size !== 8) fail('ladpick', 'deal', `the foot's speed is only ever ${[...vs].sort((x, y) => x - y).join(', ')}`);
+  if (upR < rounds * 0.3 || upR > rounds * 0.7) fail('ladpick', 'deal', `the foot is further out than the top is high in ${upR} of ${rounds} rounds`);
+  if (wholes.size < 6) fail('ladpick', 'deal', `the whole speeds are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('ladpick', 'deal', `the speed is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('ladpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('ladpick', 'deal', `the speed only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('ladpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9573,6 +9720,7 @@ console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 1
 console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
+console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
