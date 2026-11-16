@@ -3942,6 +3942,144 @@ const spanPickNotes = (() => {
   if (fives !== 30) fail('spanpick', 'banner', `five mixes were picked ${fives} times, not 30`);
   return { rounds, misses, walks };
 })();
+/* Which u·v? The pick-a-number round in the dot product workshop. Every
+   number on screen is checked against the sum it stands for: the right one is
+   u₁v₁ + u₂v₂ and each slip is exactly the slip it is named as, worked out
+   in the readout from the numbers the player sees. The picture is read back
+   off its own ticks: u and v must sit where the numbers say, and after a miss
+   the gold shadow must be u dropped square onto v's line, pointing the way
+   the sign of u·v says. */
+const dotPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Dot = {render(){ env.renders++; }};" +
+    cut('const DotPick = {', '/* ============ DOT PRODUCT WORKSHOP') + 'return DotPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => +t.replace('−', '-');
+  const V = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : String(n));
+  // two products joined with a sign, worked as the readout should show them
+  const sum = (x, y, s, X, Y) => `${x} ${s} ${y} = ${ng(X)} ${(s === '+') === (Y >= 0) ? '+' : '−'} ${Math.abs(Y)} = ${ng(s === '+' ? X + Y : X - Y)}`;
+  const want = {
+    right: ([a, b], [p, q]) => a * p + b * q, cross: ([a, b], [p, q]) => a * q + b * p,
+    minus: ([a, b], [p, q]) => a * p - b * q, first: ([a, b], [p, q]) => a * p, det: ([a, b], [p, q]) => a * q - b * p
+  };
+  const read = () => txt(S.html().split('id="dpRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'u·v = u₁v₁ + u₂v₂: multiply first with first, second with second, and add. Its sign says how the arrows lean: together gives a positive number, apart a negative one, square to each other 0. Which number is u·v?') fail('dotpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('dotpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, shadows = 0;
+  const slots = new Set(), kinds = {}, signs = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = r.c, key = `seed ${seed} round ${k}`, d = want.right(c.u, c.v);
+      rounds++;
+      if ([...c.u, ...c.v].some(x => !Number.isInteger(x) || !x || Math.abs(x) > 3)) fail('dotpick', key, `u = ${V(c.u)} or v = ${V(c.v)} is not made of whole numbers from −3 to 3 without a 0`);
+      if (c.u.join() === c.v.join()) fail('dotpick', key, 'u and v are the same arrow');
+      if (prev && JSON.stringify(prev) === JSON.stringify(c)) fail('dotpick', key, 'the same pair comes twice in a row');
+      signs.add(Math.sign(d));
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('dotpick', key, 'there are not four numbers, one of them right');
+      const vals = r.opts.map(o => S.value(c, o.k));
+      if (new Set(vals).size !== 4) fail('dotpick', key, 'two options are the same number');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('dotpick', key, `an option is the unknown ${o.k}`);
+        else if (vals[i] !== want[o.k](c.u, c.v)) fail('dotpick', key, `${o.k} is ${vals[i]}, which is not that slip`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const h0 = S.html();
+      if (!txt(h0).startsWith(`${S.RULE} u = ${V(c.u)}, v = ${V(c.v)}`)) fail('dotpick', key, 'the rule and the arrows are not shown first');
+      const lab = `A grid from −5 to 5 with u = ${V(c.u)} in blue and v = ${V(c.v)} in green`;
+      if (!h0.includes(`role="img" aria-label="${lab}">`)) fail('dotpick', key, 'the picture is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="DotPick\.choose\((\d)\)" aria-label="([ABCD]): u·v = ([^".]+)(\. Not u·v)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || num(m[5]) !== vals[i] || m[6] || m[7] !== 'ABCD'[i] || num(m[8]) !== vals[i])) fail('dotpick', key, 'the four numbers are not offered as they are, A to D');
+      // the picture, read back off its own ticks
+      const pic = h => h.split('id="dpFig"')[1].split('</svg>')[0];
+      const svg = pic(h0);
+      const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9" fill="[^"]+" text-anchor="middle">([^<]+)<\/text>/g)].map(m => [+m[1], num(m[2])]);
+      const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9" fill="[^"]+" text-anchor="end">([^<]+)<\/text>/g)].map(m => [+m[1] - 3, num(m[2])]);
+      if (JSON.stringify(xt.map(p => p[1])) !== '[-4,-2,2,4]' || JSON.stringify(yt.map(p => p[1])) !== '[-4,-2,2,4]') { fail('dotpick', key, 'the axes are not marked at −4, −2, 2 and 4'); continue; }
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('dotpick', key, 'a y label runs off the left edge of the picture');
+      const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      if (!(kx > 0 && ky < 0) || Math.abs(kx + ky) > 0.01) fail('dotpick', key, 'the grid is drawn back to front, upside down or squashed');
+      const P = (x, y) => [xt[0][1] + (+x - xt[0][0]) / kx, yt[0][1] + (+y - yt[0][0]) / ky];
+      const close = (p, q, e = 0.02) => Math.abs(p[0] - q[0]) < e && Math.abs(p[1] - q[1]) < e;
+      const line = (s, name) => { const m = s.match(new RegExp(`<line data-k="${name}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)" stroke="([^"]+)" stroke-width="([\\d.]+)"( stroke-dasharray="[^"]+")?`)); return m && { from: P(m[1], m[2]), to: P(m[3], m[4]), col: m[5], w: +m[6], dash: !!m[7] }; };
+      const au = line(svg, 'u'), av = line(svg, 'v');
+      if (!au || !close(au.from, [0, 0]) || !close(au.to, c.u) || au.col !== '#5aa9e6' || au.dash) fail('dotpick', key, 'u is not drawn in blue from ⟨0, 0⟩ to where its numbers say');
+      if (!av || !close(av.from, [0, 0]) || !close(av.to, c.v) || av.col !== '#57cc7a' || av.dash) fail('dotpick', key, 'v is not drawn in green from ⟨0, 0⟩ to where its numbers say');
+      if (!/<text[^>]*fill="#5aa9e6"[^>]*>u<\/text>/.test(svg) || !/<text[^>]*fill="#57cc7a"[^>]*>v<\/text>/.test(svg)) fail('dotpick', key, 'u and v are not named on the picture');
+      if (/data-k="(shadow|drop|vline)"/.test(svg)) fail('dotpick', key, 'the shadow is drawn before any miss, giving the sign away');
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: ')) fail('dotpick', key, `before a pick the readout says ${read()}`);
+      const work = `u·v = ${sum(pn(c.u[0]) + '·' + pn(c.v[0]), pn(c.u[1]) + '·' + pn(c.v[1]), '+', c.u[0] * c.v[0], c.u[1] * c.v[1])}`;
+      const n2 = c.v[0] ** 2 + c.v[1] ** 2, rt = Math.round(Math.sqrt(n2)), lv = rt * rt === n2 ? String(rt) : '√' + n2;
+      const lean = d === 0 ? 'u·v is 0: the arrows stand square to each other, and u casts no shadow on v\'s line.'
+        : `${d > 0 ? 'Positive: the arrows lean together' : 'Negative: the arrows lean apart'}, and the gold shadow of u on v's line ${d > 0 ? 'points along v' : 'points back against v'}. It is u·v / ‖v‖ = ${ng(d)} / ${lv} long${d < 0 ? ', the minus meaning backwards' : ''}.`;
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('dotpick', key, 'a miss is counted, or not crossed off');
+        const [a, b] = c.u, [p, qq] = c.v;
+        const slip = {
+          cross: `${L} pairs the wrong parts: u₁v₂ + u₂v₁ = ${sum(pn(a) + '·' + pn(qq), pn(b) + '·' + pn(p), '+', a * qq, b * p)}. A dot product multiplies matching parts, first with first and second with second.`,
+          minus: `${L} takes the second product away: u₁v₁ − u₂v₂ = ${sum(pn(a) + '·' + pn(p), pn(b) + '·' + pn(qq), '−', a * p, b * qq)}. Both products are added, whatever their signs.`,
+          first: `${L} stops after the first product: u₁v₁ = ${pn(a)}·${pn(p)} = ${ng(a * p)}. The second parts count just as much: u₂v₂ = ${pn(b)}·${pn(qq)} = ${ng(b * qq)} still has to be added.`,
+          det: `${L} is the determinant, u₁v₂ − u₂v₁ = ${sum(pn(a) + '·' + pn(qq), pn(b) + '·' + pn(p), '−', a * qq, b * p)}. That measures the area the arrows span, not how far they agree.`
+        }[o.k];
+        // each worked sum must come out at the number on the button
+        const tail = slip.match(/= (−?\d+)\. /);
+        if (!tail || num(tail[1]) !== vals[i]) fail('dotpick', key, `the slip ${o.k} is worked to ${tail && tail[1]}, not ${vals[i]}`);
+        if (!work.endsWith('= ' + ng(d))) fail('dotpick', key, 'the right sum does not come out at u·v');
+        const want2 = `${slip} ${L} is ${ng(vals[i])}, but ${work}. ${lean} ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want2) fail('dotpick', key, `the miss is explained as: ${read()} | want ${want2}`);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="DotPick\\.choose\\(${i}\\)" aria-label="${L}: u·v = [^"]+\\. Not u·v"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('dotpick', key, 'the missed numbers are not shut and told as not u·v');
+        const lab2 = lab + (d ? `; u's shadow on v's line in gold, pointing ${d > 0 ? 'along' : 'back against'} v` : '; u stands square to v and casts no shadow');
+        if (!h.includes(`aria-label="${lab2}">`)) fail('dotpick', key, 'the shadow is not read out');
+        // the shadow: u dropped square onto v's line, as long and as signed as u·v says
+        const sv = pic(h), foot = [d * c.v[0] / n2, d * c.v[1] / n2];
+        shadows++;
+        const vl = line(sv, 'vline'), dr = line(sv, 'drop'), sh = line(sv, 'shadow');
+        if (!vl || Math.abs((vl.to[0] - vl.from[0]) * c.v[1] - (vl.to[1] - vl.from[1]) * c.v[0]) > 0.05 || Math.abs(vl.from[0] * c.v[1] - vl.from[1] * c.v[0]) > 0.05) fail('dotpick', key, 'v\'s line is not drawn through ⟨0, 0⟩ along v');
+        if (!dr || !close(dr.from, c.u) || !close(dr.to, foot)) fail('dotpick', key, 'the drop does not run from u\'s tip to its foot on v\'s line');
+        else if (Math.abs((dr.to[0] - dr.from[0]) * c.v[0] + (dr.to[1] - dr.from[1]) * c.v[1]) > 0.05) fail('dotpick', key, 'the drop does not meet v\'s line square');
+        if (d === 0 ? !!sh : (!sh || !close(sh.from, [0, 0]) || !close(sh.to, foot) || sh.col !== '#f2c14e' || sh.dash)) fail('dotpick', key, 'the gold shadow is not u\'s foot on v\'s line');
+        else if (d && Math.sign(sh.to[0] * c.v[0] + sh.to[1] * c.v[1]) !== Math.sign(d)) fail('dotpick', key, 'the shadow points the wrong way along v');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('dotpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('dotpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('dotpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('dotpick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'DOT READER / 5 dot products picked') fail('dotpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is u·v, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('dotpick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${work}. Here is a new pair. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('dotpick', key, `after a pick: ${read()}`);
+      prev = c;
+    }
+  }
+  for (const k of ['cross', 'minus', 'first', 'det']) if (!kinds[k]) fail('dotpick', 'slips', `the slip ${k} is never offered`);
+  if (!signs.has(1) || !signs.has(-1) || !signs.has(0)) fail('dotpick', 'deal', `u·v only ever has the signs ${[...signs].join(' ')}`);
+  if (slots.size !== 4) fail('dotpick', 'deal', `the right number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('dotpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, shadows };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -7680,6 +7818,7 @@ console.log(`  integrals picked  ${pad(intPickNotes.rounds.toLocaleString(), 15)
 console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${chainPickNotes.misses.toLocaleString()} wrong picks explained; ${chainPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
+console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);

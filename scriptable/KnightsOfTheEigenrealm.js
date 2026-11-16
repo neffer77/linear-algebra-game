@@ -1007,13 +1007,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOT PRODUCT WORKSHOP ============ -->
   <div class="screen" id="s-dot">
     <div class="panel"><h2>🎯 Dot Product Workshop</h2><div class="sub">The dot product of two arrows is one number that says how far they agree. Set u and v, and watch it, the angle between them, and the shadow u casts on v.</div></div>
+    <div id="dtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the arrows or pick u·v"></div>
     <div class="panel">
+      <div id="dtPick"></div>
       <div id="dtVecs" class="wsMat dtVecs" role="group" aria-label="The two arrows"></div>
       <div id="dtFig"></div>
       <div id="dtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
-      <button class="btn sm ghost" onclick="Dot.reset()">Start again</button>
+      <button class="btn sm ghost" id="dtReset" onclick="Dot.reset()">Start again</button>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="dtGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="dtGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13966,7 +13968,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🎯 Dot Product Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set two arrows by hand and watch their dot product, the angle between them and the shadow one casts on the other. Then turn it round: see two arrows, and pick which of four numbers is u·v.</div>
          <button class="btn sm" id="tomeDot" style="width:auto;margin-top:8px" onclick="Dot.open()">Open the dot product workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15549,6 +15551,153 @@ const IntPick = {
   }
 };
 
+/* ------------------- which u·v? (dot product workshop) ------------------ */
+/* The workshop turned round: two arrows u and v on a grid, their numbers
+   written beside them, and four numbers, one of them u·v. The others are the
+   slips people make with a dot product: pairing the wrong parts, u₁v₂ + u₂v₁;
+   taking the second product away instead of adding it; stopping after the
+   first product; or the determinant u₁v₂ − u₂v₁, which belongs to area, not
+   agreement. Its sign can be read off the picture before any sum is done:
+   arrows that lean together give a positive dot product, arrows that lean
+   apart a negative one. A wrong pick is worked out beside the right sum, and
+   u's shadow on v's line is drawn in gold, the length the dot product
+   measures. Every number is whole. Nothing is saved. */
+const DotPick = {
+  LO:-3, HI:3,
+  L:5,
+  SLIPS:['cross','minus','first','det'],
+  RULE:'u·v = u₁v₁ + u₂v₂: multiply first with first, second with second, and add. Its sign says how the arrows lean: together gives a positive number, apart a negative one, square to each other 0. Which number is u·v?',
+  // the number each option stands for
+  value(c,k){
+    const [a,b]=c.u, [p,q]=c.v;
+    return k==='right' ? a*p+b*q : k==='cross' ? a*q+b*p : k==='minus' ? a*p-b*q : k==='first' ? a*p : a*q-b*p;
+  },
+  // the slips this pair can offer: each a number different from u·v and from every one kept before it
+  slips(c){
+    const seen=new Set([this.value(c,'right')]), keep=[];
+    for(const k of this.SLIPS){ const x=this.value(c,k); if(seen.has(x)) continue; seen.add(x); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const w=()=>[R.i(this.LO,this.HI),R.i(this.LO,this.HI)];
+      const u=w(), v=w();
+      if(!u[0]&&!u[1] || !v[0]&&!v[1]) continue;
+      if(u[0]===v[0] && u[1]===v[1]) continue;
+      if(!u[0]||!u[1]||!v[0]||!v[1]) continue;      // a 0 in any slot lets a slip land on the answer by luck
+      const c={u,v};
+      if(this.slips(c).length<3) continue;
+      return c;
+    }
+    return {u:[3,1],v:[1,2]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(c);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('DOT READER', this.matched+' dot products picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is u·v, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Dot.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>\`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`,
+  pn:n=>n<0?'('+neg(n)+')':String(n),
+  // two products joined, worked: 3·1 + 1·2 = 3 + 2 = 5
+  sum(x,y,s,X,Y){
+    const v=s==='+' ? X+Y : X-Y;
+    return \`\${x} \${s==='+'?'+':'−'} \${y} = \${neg(X)} \${(s==='+')===(Y>=0)?'+':'−'} \${Math.abs(Y)} = \${neg(v)}\`;
+  },
+  work(c){
+    const [a,b]=c.u, [p,q]=c.v, P=this.pn;
+    return \`u·v = \${this.sum(P(a)+'·'+P(p), P(b)+'·'+P(q), '+', a*p, b*q)}\`;
+  },
+  slip(c,k,L){
+    const [a,b]=c.u, [p,q]=c.v, P=this.pn;
+    if(k==='cross') return \`\${L} pairs the wrong parts: u₁v₂ + u₂v₁ = \${this.sum(P(a)+'·'+P(q), P(b)+'·'+P(p), '+', a*q, b*p)}. A dot product multiplies matching parts, first with first and second with second.\`;
+    if(k==='minus') return \`\${L} takes the second product away: u₁v₁ − u₂v₂ = \${this.sum(P(a)+'·'+P(p), P(b)+'·'+P(q), '−', a*p, b*q)}. Both products are added, whatever their signs.\`;
+    if(k==='first') return \`\${L} stops after the first product: u₁v₁ = \${P(a)}·\${P(p)} = \${neg(a*p)}. The second parts count just as much: u₂v₂ = \${P(b)}·\${P(q)} = \${neg(b*q)} still has to be added.\`;
+    return \`\${L} is the determinant, u₁v₂ − u₂v₁ = \${this.sum(P(a)+'·'+P(q), P(b)+'·'+P(p), '−', a*q, b*p)}. That measures the area the arrows span, not how far they agree.\`;
+  },
+  // what u·v says about the picture: the lean, and the gold shadow
+  lean(c){
+    const d=this.value(c,'right');
+    if(d===0) return 'u·v is 0: the arrows stand square to each other, and u casts no shadow on v\\'s line.';
+    const n2=c.v[0]*c.v[0]+c.v[1]*c.v[1], r=Math.round(Math.sqrt(n2)), lv=r*r===n2 ? String(r) : '√'+n2;
+    return \`\${d>0?'Positive: the arrows lean together':'Negative: the arrows lean apart'}, and the gold shadow of u on v's line \${d>0?'points along v':'points back against v'}. It is u·v / ‖v‖ = \${neg(d)} / \${lv} long\${d<0?', the minus meaning backwards':''}.\`;
+  },
+  check(c,k,L){
+    return \`\${L} is \${neg(this.value(c,k))}, but \${this.work(c)}. \${this.lean(c)}\`;
+  },
+  // the grid from −L to L, u and v, and after a miss u's shadow on v's line
+  panel(c,W){
+    const L=this.L, k=(W-24)/(2*L), o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o-y*k).toFixed(1);
+    let s='';
+    for(let i=-L;i<=L;i++) s+=\`<line x1="\${X(i)}" y1="\${Y(-L)}" x2="\${X(i)}" y2="\${Y(L)}" stroke="\${i?FIG_COL.grid:FIG_COL.axis}" stroke-width="\${i?1:1.4}"/><line x1="\${X(-L)}" y1="\${Y(i)}" x2="\${X(L)}" y2="\${Y(i)}" stroke="\${i?FIG_COL.grid:FIG_COL.axis}" stroke-width="\${i?1:1.4}"/>\`;
+    for(let i=-L+1;i<=L-1;i+=2) if(i){
+      s+=\`<text x="\${X(i)}" y="\${(+Y(0)+12).toFixed(1)}" font-size="9" fill="\${FIG_COL.dim}" text-anchor="middle">\${neg(i)}</text>\`;
+      s+=\`<text x="\${(+X(0)-4).toFixed(1)}" y="\${(+Y(i)+3).toFixed(1)}" font-size="9" fill="\${FIG_COL.dim}" text-anchor="end">\${neg(i)}</text>\`;
+    }
+    const arrow=(p,q,col,dash,key,wd=2.6)=>{
+      const x1=+X(p[0]), y1=+Y(p[1]), x2=+X(q[0]), y2=+Y(q[1]), a=Math.atan2(y2-y1,x2-x1), h=8;
+      return \`<line data-k="\${key}" x1="\${x1}" y1="\${y1}" x2="\${x2}" y2="\${y2}" stroke="\${col}" stroke-width="\${wd}"\${dash?' stroke-dasharray="5 4"':''}/>\`+
+        \`<polygon points="\${x2},\${y2} \${(x2-h*Math.cos(a-0.45)).toFixed(1)},\${(y2-h*Math.sin(a-0.45)).toFixed(1)} \${(x2-h*Math.cos(a+0.45)).toFixed(1)},\${(y2-h*Math.sin(a+0.45)).toFixed(1)}" fill="\${col}"/>\`;
+    };
+    if(this.miss()!==null){
+      // v's whole line, faint, so the shadow has somewhere to fall
+      const n2=c.v[0]*c.v[0]+c.v[1]*c.v[1], t=L/Math.max(Math.abs(c.v[0]),Math.abs(c.v[1]));
+      s+=\`<line data-k="vline" x1="\${X(-t*c.v[0])}" y1="\${Y(-t*c.v[1])}" x2="\${X(t*c.v[0])}" y2="\${Y(t*c.v[1])}" stroke="\${FIG_COL.c}" stroke-width="1" stroke-dasharray="2 4" opacity="0.7"/>\`;
+      const d=this.value(c,'right'), f=[d*c.v[0]/n2, d*c.v[1]/n2];
+      s+=\`<line data-k="drop" x1="\${X(c.u[0])}" y1="\${Y(c.u[1])}" x2="\${X(f[0])}" y2="\${Y(f[1])}" stroke="\${FIG_COL.dim}" stroke-width="1.2" stroke-dasharray="3 3"/>\`;
+      if(d) s+=arrow([0,0],f,FIG_COL.b,false,'shadow',4);
+    }
+    s+=arrow([0,0],c.u,FIG_COL.a,false,'u')+arrow([0,0],c.v,FIG_COL.c,false,'v');
+    s+=\`<text x="\${(+X(c.u[0])+(c.u[0]<0?-8:6)).toFixed(1)}" y="\${(+Y(c.u[1])+(c.u[1]<0?12:-5)).toFixed(1)}" font-size="13" font-weight="bold" fill="\${FIG_COL.a}" text-anchor="\${c.u[0]<0?'end':'start'}">u</text>\`;
+    s+=\`<text x="\${(+X(c.v[0])+(c.v[0]<0?-8:6)).toFixed(1)}" y="\${(+Y(c.v[1])+(c.v[1]<0?12:-5)).toFixed(1)}" font-size="13" font-weight="bold" fill="\${FIG_COL.c}" text-anchor="\${c.v[0]<0?'end':'start'}">v</text>\`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div style="text-align:center;font-size:16px;margin-bottom:4px">u = \${this.vec(c.u)}, v = \${this.vec(c.v)}</div>\`;
+    const d=this.value(c,'right');
+    out+=\`<svg id="dpFig" viewBox="0 0 300 300" style="width:100%;max-width:340px;height:auto;display:block;margin:0 auto" role="img" aria-label="A grid from −5 to 5 with u = \${this.vec(c.u)} in blue and v = \${this.vec(c.v)} in green\${m===null?'':d?\`; u's shadow on v's line in gold, pointing \${d>0?'along':'back against'} v\`:'; u stands square to v and casts no shadow'}">\${this.panel(c,300)}</svg>\`;
+    out+=\`<div id="dpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), x=neg(this.value(c,o.k));
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="DotPick.choose(\${i})" aria-label="\${'ABCD'[i]}: u·v = \${x}\${gone?'. Not u·v':''}" style="margin:0"><b>\${'ABCD'[i]}</b> \${x}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(\`That was it: \${this.work(this.last.c)}. Here is a new pair.\`);
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="dpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ============ DOT PRODUCT WORKSHOP ============
    Two arrows set by hand, and what their dot product says about them: the
    sum of matching products, the angle it gives through cos θ, and the shadow
@@ -15614,6 +15763,8 @@ const Dot = {
           D<0 ? 'and it points back against v: that is where the minus sign comes from.' : 'pointing along v.'}\`);
     return out;
   },
+  tab:'set',
+  setTab(t){ this.tab=t; this.render(); },
   open(){ UI.go('s-dot'); },
   step(w, i, by){
     const arr=this[w], x=arr[i]+by;
@@ -15622,6 +15773,12 @@ const Dot = {
   },
   reset(){ this.u=[...this.START.u]; this.v=[...this.START.v]; this.render(); },
   render(){
+    document.getElementById('dtTab').innerHTML=[['set','🎚️ Set the arrows','Set two arrows by hand and watch their dot product and the angle between them'],['pick','🎯 Which u·v?','See two arrows, and pick which of four numbers is their dot product']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Dot.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['dtVecs','dtFig','dtRead','dtReset','dtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dtPick').innerHTML=pick ? DotPick.html() : '';
+    if(pick) return;
     const names=['first','second'];
     document.getElementById('dtVecs').innerHTML=['u','v'].map((w,r)=>
       \`<b class="dtName c\${r}">\${w}</b>\`+[0,1].map(i=>\`<div class="wsCell c\${r}">
