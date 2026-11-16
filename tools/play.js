@@ -97,6 +97,7 @@ const SUITES = [
   require('./play/expint'),  // ∫ e^(kx) dx: fit F to a slope field, divide by k
   require('./play/eulerwalk'), // walk y′ = f(x, y) in Euler's steps by hand
   require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
+  require('./play/meanvalue'), // match a tangent to the chord by hand
   require('./play/stretchpick'), // see y(0) and y one stretch on, pick which of four numbers is y later
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′

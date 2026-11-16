@@ -1929,6 +1929,27 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ CHORD WORKSHOP ============ -->
+  <div class="screen" id="s-mvt">
+    <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
+    <div class="panel">
+      <div id="mvtSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="mvtFig"></div>
+      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move the point">
+        <button class="btn sm ghost" id="mvtL" onclick="MeanValue.move(-5)" aria-label="Move the point a quarter left">◀ ¼</button>
+        <button class="btn sm ghost" id="mvtl" onclick="MeanValue.move(-1)" aria-label="Move the point a twentieth left">◀ 0.05</button>
+        <button class="btn sm ghost" id="mvtr" onclick="MeanValue.move(1)" aria-label="Move the point a twentieth right">0.05 ▶</button>
+        <button class="btn sm" id="mvtR" onclick="MeanValue.move(5)" aria-label="Move the point a quarter right">¼ ▶</button>
+        <button class="btn sm ghost" id="mvtAgain" onclick="MeanValue.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="mvtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="mvtGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ EULER STEP WORKSHOP ============ -->
   <div class="screen" id="s-eulerwalk">
     <div class="panel"><h2>👣 Euler Step Workshop</h2><div class="sub">A differential equation gives the slope at every point but not the curve. Euler’s method walks it in straight steps: read the slope where you stand, move h along and h × slope up, and repeat. Pick an equation and a step size, take the steps by hand, and see where the walk lands against the true curve.</div></div>
@@ -4182,6 +4203,7 @@ const WORKSHOP_FOR = (() => {
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
     EulerWalk: ["👣 Euler Step Workshop", ['euler']],
     Doubling: ["⏳ Doubling Workshop", ['growth']],
+    MeanValue: ["📐 Chord Workshop", ['meanValue']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13650,6 +13672,7 @@ const UI = {
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-double') Doubling.render();
+    if(id==='s-mvt') MeanValue.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14479,6 +14502,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">👣 Euler Step Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>
          <button class="btn sm" id="tomeEulerWalk" style="width:auto;margin-top:8px" onclick="EulerWalk.open()">Open the Euler step workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not.</div>
+         <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -27626,6 +27654,109 @@ const Doubling = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF GROWTH','every stretch walked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The chord workshop: the mean value theorem by hand ----------
+   Somewhere strictly between a and b the tangent runs parallel to the chord.
+   Pick a curve (x² on [0, 4], x³ on [0, 3], 4/x on [1, 4]) and walk a point
+   along it a quarter or a twentieth at a time. The figure draws the chord
+   and the tangent at the point, and the readout sets the tangent's slope
+   beside the chord's and says which way c lies, so nothing is held in the
+   head: on x² c falls half way, on x³ it is √3 ≈ 1.7321, past the middle,
+   and on 4/x it is √(ab) = 2, short of it. Nothing is saved. */
+const MeanValue = {
+  SETS:[
+    {id:'sq', btn:'x² on [0, 4]', name:'x squared on 0 to 4', fs:'x²', dfs:'2x', a:0, b:4, f:x=>x*x, df:x=>2*x, solve:'2c = 4 gives c = 2', k0:20, R:[-2,17]},
+    {id:'cube', btn:'x³ on [0, 3]', name:'x cubed on 0 to 3', fs:'x³', dfs:'3x²', a:0, b:3, f:x=>x*x*x, df:x=>3*x*x, solve:'3c² = 9 gives c = √3 ≈ 1.7321', k0:20, R:[-3,28]},
+    {id:'recip', btn:'4/x on [1, 4]', name:'4 over x on 1 to 4', fs:'4/x', dfs:'−4/x²', a:1, b:4, f:x=>4/x, df:x=>-4/(x*x), solve:'−4/c² = −1 gives c² = 4 and c = 2', k0:30, R:[0,4.6]}
+  ],
+  si:0, k:20, prev:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'parallel', t:'On x², find the point where the tangent runs parallel to the chord.', toast:'Parallel to the chord',
+     ok:K=>K.si===0 && K.k===40},
+    {id:'steep', t:'On x², walk past c and see the tangent turn steeper than the chord.', toast:'Past c, steeper',
+     ok:K=>K.si===0 && K.k>40},
+    {id:'middle', t:'On x³, stop at the middle, 1.5, and see that c is not there.', toast:'Half way is for parabolas',
+     ok:K=>K.si===1 && K.k===30},
+    {id:'cross', t:'On x³, step across c: too shallow at one stop, too steep at the next.', toast:'c is between them',
+     ok:K=>K.si===1 && K.prev!==null && (K.prev<=34) !== (K.k<=34)},
+    {id:'close', t:'On x³, bring the tangent\'s slope within 0.2 of the chord\'s.', toast:'1.75 is close to √3',
+     ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<0.2},
+    {id:'recip', t:'On 4/x, find c, short of the middle, 2.5.', toast:'√(1 × 4) = 2',
+     ok:K=>K.si===2 && K.k===40}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(k=this.k){ return k/20; },
+  lo(){ return this.set().a*20+1; }, hi(){ return this.set().b*20-1; },
+  can(dk){ const k=this.k+dk; return k>=this.lo() && k<=this.hi(); },
+  slope(){ const S=this.set(); return (S.f(S.b)-S.f(S.a))/(S.b-S.a); },
+  /* which side of c a point is on: −1 shallower than the chord, 0 parallel, 1 steeper */
+  side(k){ const S=this.set(), d=S.df(this.x(k))-this.slope(); return Math.abs(d)<1e-9 ? 0 : d<0 ? -1 : 1; },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? `(${s})` : s; },
+  working(){
+    const S=this.set(), m=this.slope(), x=this.x(), d=S.df(x), xs=this.num(x), out=[];
+    out.push(`f(x) = ${S.fs} on [${S.a}, ${S.b}]. The chord from (${S.a}, ${this.num(S.f(S.a))}) to (${S.b}, ${this.num(S.f(S.b))}) has slope (${this.num(S.f(S.b))} − ${this.pf(S.f(S.a))})/(${S.b} − ${S.a}) = ${this.num(m)}.`);
+    out.push(`At x = ${xs}: f′(x) = ${S.dfs}, so f′(${xs}) ${this.is(d)}.`);
+    const sd=this.side(this.k);
+    out.push(sd===0 ? `That is the chord's slope, ${this.num(m)}: the tangent here is parallel to the chord. This x is the c the mean value theorem promises.`
+      : `That is ${sd<0?'less':'more'} than the chord's slope, ${this.num(m)}, and f′ grows as x moves right, so c lies to the ${sd<0?'right':'left'} of ${xs}.`);
+    const mid=(S.a+S.b)*10;
+    if(this.k===mid) out.push(S.id==='sq' ? `For a parabola c always falls half way: (${S.a} + ${S.b})/2 = ${this.num(x)}.`
+      : `${xs} is the middle of [${S.a}, ${S.b}], but c is not: c falls half way only on a parabola.`);
+    if(this.prev!==null && this.side(this.prev)*sd<0)
+      out.push(`Between x = ${this.num(this.x(this.prev))} and x = ${xs} the tangent's slope passes ${this.num(m)}, so c lies between them: solving ${S.solve}.`);
+    if(S.id==='recip' && sd===0) out.push(`On 4/x, c = √(${S.a} × ${S.b}) = 2, short of the middle, 2.5.`);
+    return out;
+  },
+  /* the curve, the chord, and the tangent at the point */
+  L:30, TOP:12, W:310, Hh:230,
+  PX(t){ const S=this.set(); return this.L+(t-S.a)/(S.b-S.a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=S.df(x), par=this.side(this.k)===0;
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.fs} on ${S.a} to ${S.b} in gold, the chord between its ends dashed, and in blue the tangent at x = ${this.num(x)}, slope ${this.is(s)} against the chord's ${this.num(this.slope())}${par?', parallel to the chord':''}">`;
+    const y0=Math.min(Math.max(0,c),d);
+    out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(this.PY(y0))}" x2="${this.L+this.W}" y2="${f(this.PY(y0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let t=S.a;t<=S.b;t++) out+=`<text data-k="tick" x="${f(this.PX(t))}" y="${f(Math.min(this.TOP+this.Hh+10,this.PY(y0)+12))}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${t}</text>`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=S.a+(S.b-S.a)*i/120; pts.push(`${f(this.PX(t))},${f(this.PY(S.f(t)))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+    out+=`<line data-k="chord" x1="${f(this.PX(S.a))}" y1="${f(this.PY(S.f(S.a)))}" x2="${f(this.PX(S.b))}" y2="${f(this.PY(S.f(S.b)))}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    /* the tangent, a quarter of the interval each way: on these three curves it never leaves the figure */
+    const h=(S.b-S.a)/4, Tl=t=>y+s*(t-x);
+    const t1=Math.max(x-h,S.a), t2=Math.min(x+h,S.b);
+    out+=`<line data-k="tangent" x1="${f(this.PX(t1))}" y1="${f(this.PY(Tl(t1)))}" x2="${f(this.PX(t2))}" y2="${f(this.PY(Tl(t2)))}" stroke="${FIG_COL.a}" stroke-width="2"/>`;
+    for(const t of [S.a,S.b]) out+=`<circle data-k="end" cx="${f(this.PX(t))}" cy="${f(this.PY(S.f(t)))}" r="3.5" fill="${FIG_COL.dim}"/>`;
+    out+=`<circle data-k="pt" cx="${f(this.PX(x))}" cy="${f(this.PY(y))}" r="5" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-mvt'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null; this.touched=true; this.render(); },
+  move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.touched=true; this.render(); },
+  again(){ this.k=this.set().k0; this.prev=null; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('mvtSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="MeanValue.pick(${i})" aria-label="f(x) = ${s.name}">${s.btn}</button>`).join('');
+    for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);
+    document.getElementById('mvtAgain').disabled=this.k===this.set().k0 && this.prev===null;
+    document.getElementById('mvtFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold curve is f; the dashed line is the chord between its ends. The blue line is the tangent at your point, and the numbers along the bottom mark x.</div>`;
+    document.getElementById('mvtRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('mvtGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE CHORD','every tangent matched','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

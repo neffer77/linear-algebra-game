@@ -91,6 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtSets')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
@@ -111,7 +112,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -11001,6 +11002,94 @@ const doublingNotes = (() => {
   return { n, moves, points, goals: Object.keys(found).length };
 })();
 
+/* The chord workshop: every curve, every stop the point can take, and every
+   move from each stop. Each curve is worked again here from its own formula,
+   in plain floats, never from the workshop's numbers: the chord's slope, the
+   slope of the tangent at the stop, which side of c the stop lies on, the
+   middle and crossing notes, and each goal; the curve, the chord, the
+   tangent and the point are read back off the drawing. */
+const meanValueNotes = (() => {
+  const M = MeanValue;
+  const val = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const near = (t, v) => Math.abs(val(t) - v) < 6e-5;
+  const exact4 = v => Math.abs(Math.round(v * 1e4) - v * 1e4) < 1e-6;
+  const CURVE = {
+    sq: [0, 4, x => x * x, x => 2 * x, Math.sqrt(4), 'x²', '2x'],
+    cube: [0, 3, x => x ** 3, x => 3 * x ** 2, Math.sqrt(3), 'x³', '3x²'],
+    recip: [1, 4, x => 4 / x, x => -4 / x ** 2, Math.sqrt(4), '4/x', '−4/x²'],
+  };
+  if (M.SETS.map(S => S.id).join() !== 'sq,cube,recip') fail('chord', 'sets', M.SETS.map(S => S.id).join());
+  if (M.si !== 0 || M.k !== 20 || M.prev !== null) fail('chord', 'open', 'the workshop does not open on x² at x = 1');
+  const reset = () => { M.touched = false; M.si = 0; M.k = 20; M.prev = null; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('chord', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, stops = 0, points = 0;
+  M.SETS.forEach((S, si) => {
+    const [a, b, f, df, c, fs, dfs] = CURVE[S.id], m = (f(b) - f(a)) / (b - a), lo = a * 20 + 1, hi = b * 20 - 1;
+    // c really is where the tangent matches the chord, strictly inside
+    if (!(c > a && c < b) || Math.abs(df(c) - m) > 1e-9) fail('chord', S.id, 'c does not match the chord');
+    reset(); M.move(1); M.pick(si);
+    if (M.prev !== null || M.k !== S.k0) fail('chord', S.id, 'picking a curve does not start it again');
+    for (let k0 = lo; k0 <= hi; k0++) {
+      stops++;
+      for (const dk of [-5, -1, 1, 5]) {
+        reset(); M.pick(si); M.k = k0; M.prev = null; M.touched = false;
+        const ok = k0 + dk >= lo && k0 + dk <= hi;
+        if (M.can(dk) !== ok) fail('chord', `${S.id} ${k0}`, `a move of ${dk} is ${ok ? 'not ' : ''}offered`);
+        M.move(dk);
+        if (!ok) { if (M.k !== k0) fail('chord', `${S.id} ${k0}`, 'a move is taken past the edge'); continue; }
+        n++;
+        const k = k0 + dk, x = k / 20, d = df(x), key = `${S.id} ${k0}→${k}`, got = M.working();
+        const side = q => { const e = df(q / 20) - m; return Math.abs(e) < 1e-9 ? 0 : e < 0 ? -1 : 1; }, sd = side(k);
+        const ch = got[0].match(/^f\(x\) = (\S+) on \[(\S+), (\S+)\]\. The chord from \((\S+), (\S+)\) to \((\S+), (\S+)\) has slope \((\S+) − (\S+)\)\/\((\S+) − (\S+)\) = (\S+)\.$/);
+        if (!ch || ch[1] !== fs || +ch[2] !== a || +ch[3] !== b || +ch[4] !== a || !near(ch[5], f(a)) || +ch[6] !== b || !near(ch[7], f(b)) || ch[8] !== ch[7] || !near(ch[9], f(a)) || +ch[10] !== b || +ch[11] !== a || !near(ch[12], m)) fail('chord', key, `the chord is worked wrong: ${got[0]}`);
+        const tg = (got[1] || '').match(/^At x = (\S+): f′\(x\) = (\S+), so f′\((\S+)\) ([=≈]) (\S+)\.$/);
+        if (!tg || !near(tg[1], x) || tg[3] !== tg[1] || tg[2] !== dfs || !near(tg[5], d) || (tg[4] === '=') !== exact4(d)) fail('chord', key, `the tangent's slope is wrong: ${got[1]}`);
+        const wantS = sd === 0 ? `That is the chord's slope, ${M.num(m)}: the tangent here is parallel to the chord. This x is the c the mean value theorem promises.`
+          : `That is ${sd < 0 ? 'less' : 'more'} than the chord's slope, ${M.num(m)}, and f′ grows as x moves right, so c lies to the ${sd < 0 ? 'right' : 'left'} of ${M.num(x)}.`;
+        if (got[2] !== wantS || (sd < 0) !== (x < c - 1e-9) || (sd > 0) !== (x > c + 1e-9)) fail('chord', key, `the side of c is told wrong: ${got[2]}`);
+        // f′ really does grow left to right here, as the readout says
+        if (!(df(x + 0.01) > df(x))) fail('chord', key, 'f′ does not grow as x moves right');
+        const notes = got.slice(3), want = [];
+        if (k * 2 === (a + b) * 20) want.push(S.id === 'sq' ? `For a parabola c always falls half way: (${a} + ${b})/2 = ${M.num(x)}.` : `${M.num(x)} is the middle of [${a}, ${b}], but c is not: c falls half way only on a parabola.`);
+        if (side(k0) * sd < 0) {
+          want.push(`Between x = ${M.num(k0 / 20)} and x = ${M.num(x)} the tangent's slope passes ${M.num(m)}, so c lies between them: solving ${S.solve}.`);
+          if (!((k0 / 20 - c) * (x - c) < 0)) fail('chord', key, 'a crossing is told where c does not lie between');
+          const cv = S.solve.match(/c = (?:√\d+ ≈ )?(\S+)$/);
+          if (!cv || Math.abs(+cv[1] - c) > 6e-5) fail('chord', key, `the solved c is wrong: ${S.solve}`);
+        }
+        if (S.id === 'recip' && sd === 0) want.push(`On 4/x, c = √(${a} × ${b}) = 2, short of the middle, 2.5.`);
+        if (notes.join('|') !== want.join('|')) fail('chord', key, `the notes are wrong: ${notes.join(' ')}`);
+        // the drawing
+        const [r0, r1] = S.R, svg = M.svg(), PX = t => M.L + (t - a) / (b - a) * M.W, PY = v => M.TOP + M.Hh - (v - r0) / (r1 - r0) * M.Hh;
+        const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+        if (!pt || Math.abs(+pt[1] - PX(x)) > 0.01 || Math.abs(+pt[2] - PY(f(x))) > 0.01) fail('chord', key, 'the point is not on the curve at x');
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || cv[1].split(' ').some(q => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qy - PY(f(a + (qx - M.L) / M.W * (b - a)))) > 0.05; })) fail('chord', key, 'the curve leaves f');
+        const cd = svg.match(/data-k="chord" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!cd || Math.abs(+cd[1] - PX(a)) > 0.01 || Math.abs(+cd[2] - PY(f(a))) > 0.01 || Math.abs(+cd[3] - PX(b)) > 0.01 || Math.abs(+cd[4] - PY(f(b))) > 0.01) fail('chord', key, 'the chord does not join the ends');
+        const tl = svg.match(/data-k="tangent" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!tl || [[tl[1], tl[2]], [tl[3], tl[4]]].some(([X, Y]) => { const t = a + (+X - M.L) / M.W * (b - a); return Math.abs(+Y - PY(f(x) + d * (t - x))) > 0.03 || +Y < M.TOP - 0.01 || +Y > M.TOP + M.Hh + 0.01 || t < a - 1e-6 || t > b + 1e-6; }) || !(+tl[1] <= PX(x) + 0.01 && +tl[3] >= PX(x) - 0.01)) fail('chord', key, 'the tangent is not drawn through the point with its slope');
+        points += 2;
+        // every goal, decided here
+        const truth = {
+          parallel: S.id === 'sq' && x === 2, steep: S.id === 'sq' && x > 2, middle: S.id === 'cube' && x === 1.5,
+          cross: S.id === 'cube' && (k0 / 20 - c) * (x - c) < 0, close: S.id === 'cube' && Math.abs(df(x) - m) < 0.2, recip: S.id === 'recip' && x === 2,
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('chord', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('chord', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.k !== S.k0 || M.prev !== null) fail('chord', key, 'starting over does not go back to the start');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('chord', g.id, 'can never be found');
+  reset();
+  return { n, stops, points, goals: Object.keys(found).length };
+})();
+
 /* The Euler step workshop: every equation, every step size, every step. Each
    walk is taken again here in plain floats from the equation itself, never
    from the workshop's own walk; every point the readout names is checked
@@ -14698,6 +14787,7 @@ console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 1
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (every equation at every step size, step by step: ${eulerWalkNotes.steps.toLocaleString()} worked steps checked against Euler's points taken again in floats, each landing and each note against Math's own solution, ${eulerWalkNotes.dashes.toLocaleString()} slope dashes read back, ${eulerWalkNotes.goals} goals findable)`);
 console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
+console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (every move from every stop the point can take on x², x³ and 4/x, ${meanValueNotes.stops.toLocaleString()} stops: the chord's slope and the tangent's worked again in floats, which side of c, every note, the point, chord and tangent read back off the drawing, ${meanValueNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
