@@ -93,7 +93,7 @@ function loadGame() {
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
     ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  tab:'hand', // step by hand, or which rate")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
     ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  tab:'hand', // chords by hand")) + 'render(){}};exports.ArcLen=ArcLen;' +
-    ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
+    ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  tab:'hand', // step x by hand, or which estimate")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
@@ -8051,6 +8051,174 @@ const slicePickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which estimate? The tangent line workshop turned round. Every number is
+   read back off its button and worked again here from the slip it is named
+   as; the right one alone is the tangent's estimate, found without the rule
+   by nudging the curve either side of a for its slope. No number's form,
+   sign or place gives it away, none is 0, and no wrong one is two others
+   added. Each wrong pick's check is worked again where its formula must
+   fail, at x = a or one step across, and the right pick's readout gives the
+   true value and which way the tangent misses. */
+const estPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  R.shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R._r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const P = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TanLine = {render(){ env.renders++; }};" +
+    cut('const EstPick = {', '/* ---------- The tangent line workshop: linear approximation') + 'return EstPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const ad = (a, b) => fr(a[0] * b[1] + b[0] * a[1], a[1] * b[1]), mu = (a, b) => fr(a[0] * b[0], a[1] * b[1]);
+  const show = f => (f[0] < 0 ? '−' : '') + Math.abs(f[0]) + (f[1] === 1 ? '' : '/' + f[1]);
+  const read = s => { const m = s.match(/^(−?)(\d+)(?:\/(\d+))?$/); if (!m) return null; const q = m[3] ? +m[3] : 1; if (m[3] && (q === 1 || gcd(+m[2], q) !== 1)) return null; return [(m[1] ? -1 : 1) * +m[2], q]; };
+  const pr = f => (f[0] < 0 || f[1] !== 1 ? `(${show(f)})` : show(f));
+  // a curve and where it is touched, worked from scratch
+  const curve = Q => { const { kind, n, d } = Q;
+    const a = kind === 'root' ? n * n : kind === 'cube' ? n * n * n : n;
+    const f = kind === 'root' ? Math.sqrt : kind === 'cube' ? Math.cbrt : x => 1 / x;
+    const fa = kind === 'recip' ? [1, n] : [n, 1];
+    const sl = kind === 'root' ? [1, 2 * n] : kind === 'cube' ? [1, 3 * n * n] : [-1, n * n];
+    const h = kind === 'recip' ? fr(d, 10) : [d, 1];
+    return { a, f, fa, sl, h, x: ad([a, 1], h), xs: kind === 'recip' ? ((10 * n + d) / 10).toFixed(1) : String(a + d),
+      lab: x => (kind === 'root' ? `√${x}` : kind === 'cube' ? `∛${x}` : `1/${x}`) }; };
+  // every number, worked from the slip it stands for
+  const want = (k, Q) => { const C = curve(Q), rise = mu(C.sl, C.h);
+    return k === 'right' ? ad(C.fa, rise) : k === 'noBase' ? rise : k === 'startA' ? ad([C.a, 1], rise) : k === 'noSlope' ? ad(C.fa, C.h)
+      : k === 'flip' ? ad(C.fa, mu([-1, 1], rise))
+      : k === 'slope' ? ad(C.fa, mu(Q.kind === 'root' ? [1, Q.n] : Q.kind === 'cube' ? [1, Q.n * Q.n] : [-1, Q.n], C.h))
+      : k === 'noRoot' ? (Q.kind === 'recip' ? null : ad(C.fa, mu([1, (Q.kind === 'root' ? 2 : 3) * C.a], C.h)))
+      : k === 'useX' ? ad(C.fa, mu(C.sl, C.x)) : null; };
+  // the estimate found without the rule: the curve's slope at a by a nudge either side, then along the tangent to x
+  const isEst = (v, Q) => { const C = curve(Q), s = (C.f(C.a + 1e-6) - C.f(C.a - 1e-6)) / 2e-6, L = C.f(C.a) + s * (C.x[0] / C.x[1] - C.a);
+    return Math.abs(v[0] / v[1] - L) <= 1e-6 * Math.max(1, Math.abs(L)); };
+  const FORM = (k, Q) => ({ noBase: 'f′(a)(x − a)', startA: 'a + f′(a)(x − a)', noSlope: 'f(a) + (x − a)', flip: 'f(a) − f′(a)(x − a)', useX: 'f(a) + f′(a) · x',
+    slope: Q.kind === 'root' ? 'f(a) + (x − a)/√a' : Q.kind === 'cube' ? 'f(a) + (x − a)/∛a²' : 'f(a) − (x − a)/a',
+    noRoot: Q.kind === 'root' ? 'f(a) + (x − a)/(2a)' : 'f(a) + (x − a)/(3a)' })[k];
+  const slipOf = (k, L, Q) => { const C = curve(Q), A = C.a, fa = show(C.fa), m = show(C.sl), n = Q.n, hs = show(C.h);
+    if (k === 'noBase') return `${L} leaves off the start: f′(a)(x − a) is only how far the tangent rises from a to x. The estimate starts at the height f(${A}) = ${fa} and adds that rise.`;
+    if (k === 'startA') return `${L} starts at a = ${A}, where the tangent touches, not at the height there, f(${A}) = ${fa}. The estimate is the height f(a) plus the rise f′(a)(x − a).`;
+    if (k === 'noSlope') return `${L} goes x − a = ${Q.kind === 'recip' ? (Q.d < 0 ? '−' : '') + Math.abs(Q.d / 10) : show([Q.d, 1])} across but forgets the slope, so it climbs 1 for each 1 across. The rise is f′(a) times the step, and here f′(${A}) = ${m}.`;
+    if (k === 'flip') return `${L} takes the rise the wrong way, f(a) − f′(a)(x − a). Going x − a across at the slope f′(a) changes the height by f′(a)(x − a), and that is added to f(a) whichever side of a x is.`;
+    if (k === 'useX') return `${L} multiplies the slope by x = ${C.xs} where the step x − a = ${Q.kind === 'recip' ? (Q.d < 0 ? '−' : '') + Math.abs(Q.d / 10) : show([Q.d, 1])} belongs. The tangent starts at a, so it rises f′(a)(x − a) on the way to x.`;
+    if (k === 'noRoot' && Q.kind === 'root') return `${L} takes the slope of √x as 1/(2x) and loses the root. The slope of √x is 1/(2√x), so at ${A} it is 1/(2 × ${n}) = ${m}, not 1/(2 × ${A}).`;
+    if (k === 'noRoot') return `${L} takes the slope of ∛x as 1/(3x), with x where ∛x² belongs. The slope of ∛x is 1/(3∛x²), so at ${A} it is 1/(3 × ${n * n}) = ${m}, not 1/(3 × ${A}).`;
+    if (Q.kind === 'root') return `${L} takes the slope of √x as 1/√x and drops the 2. The slope of √x is 1/(2√x), so at ${A} it is 1/(2 × ${n}) = ${m}.`;
+    if (Q.kind === 'cube') return `${L} takes the slope of ∛x as 1/∛x² and drops the 3. The slope of ∛x is 1/(3∛x²), so at ${A} it is 1/(3 × ${n * n}) = ${m}.`;
+    return `${L} takes the slope of 1/x as −1/x. The slope of 1/x is −1/x², so at ${A} it is −1/${n * n} = ${m}.`; };
+  const RULE = 'Near a, a curve and its tangent line are almost the same, so f(x) ≈ L(x) = f(a) + f′(a)(x − a): start at the height f(a), then go x − a across at the slope f′(a). √x has slope 1/(2√x), ∛x has 1/(3∛x²) and 1/x has −1/x². Which number is the tangent\'s estimate?';
+  if (P.RULE !== RULE) fail('estpick', 'rule', 'the rule is not stated as it should be');
+  if (P.round !== null || P.matched !== 0) fail('estpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noBase', 'startA', 'noSlope', 'flip', 'slope', 'noRoot', 'useX'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0;
+  const slots = new Set(), kinds = {}, curves = { root: 0, cube: 0, recip: 0 }, places = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
+    P.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), C = curve(Q);
+      rounds++; curves[Q.kind]++;
+      const okQ = Q.kind === 'root' ? Q.n >= 2 && Q.n <= 10 && Math.abs(Q.d) <= 4 * Q.n : Q.kind === 'cube' ? Q.n >= 2 && Q.n <= 5 && Math.abs(Q.d) <= 3 * Q.n * Q.n : Q.kind === 'recip' && Q.n >= 2 && Q.n <= 10 && Math.abs(Q.d) <= 9;
+      if (!okQ || Q.d === 0 || C.x[0] / C.x[1] < 1 || !Number.isInteger(Q.d)) fail('estpick', key, `${sig} is not a curve and a step of the kind dealt`);
+      if (prev && prev === sig) fail('estpick', key, 'the same curve and step come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('estpick', key, 'there are not four numbers, one of them right');
+      const h0 = P.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} Estimate ${C.lab(C.xs)} with the tangent at a = ${C.a} Which number is L(${C.xs})? A `)) fail('estpick', key, `the rule and the curve are not shown first: ${head.slice(RULE.length, RULE.length + 80)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="EstPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('estpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const V = btns.map(x => read(x[6]));
+      if (V.some(v => !v)) { fail('estpick', key, `a number cannot be read in its lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (new Set(btns.map(x => x[6])).size !== 4) fail('estpick', key, 'two numbers are the same');
+      if (V.some(v => v[0] === 0)) fail('estpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      V.forEach((v, i) => {
+        const o = r.opts[i], w = want(o.k, Q);
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!w) { fail('estpick', key, `a number is the unknown ${o.k}`); return; }
+        if (v[0] !== w[0] || v[1] !== w[1]) fail('estpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((i === ri) !== isEst(v, Q)) fail('estpick', key, `${btns[i][6]} ${i === ri ? 'is not' : 'is'} the tangent's estimate`);
+      });
+      { // nothing in its look: two of its form, two of its sign, no wrong one two others added, its place among them shuffled
+        const W = V[ri], wr = V.filter((v, i) => i !== ri), num = v => v[0] / v[1];
+        if (W[1] === 1) wholes++;
+        if (wr.filter(v => (v[1] === 1) === (W[1] === 1)).length < 2) fail('estpick', key, 'fewer than two wrong numbers share the estimate\'s form');
+        if (wr.filter(v => v[0] * W[0] > 0).length < 2) fail('estpick', key, 'fewer than two wrong numbers share the estimate\'s sign');
+        V.forEach((v, i) => { if (i === ri) return; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) if (a !== i && b !== i && Math.abs(num(V[a]) + num(V[b]) - num(v)) < 1e-12) fail('estpick', key, `${btns[i][6]} is ${btns[a][6]} and ${btns[b][6]} added`); });
+        places[wr.filter(v => num(v) < num(W)).length]++; }
+      if (k === 0 && txt(P.html().split('id="tlqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('estpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, fa = show(C.fa), m = show(C.sl);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = P.matched, nt = env.toasts.length;
+        P.choose(i); misses++;
+        if (P.matched !== m0 || !P.round.out.has(i) || P.round !== r || env.toasts.length !== nt) fail('estpick', key, 'a miss is counted, or not crossed off');
+        const lines = P.html().split('id="tlqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${P.matched} picked this visit, ${P.firstTry} on the first try.`) fail('estpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        // the check, worked again: at x = a the slip's formula must miss f(a); one step across it must move by other than f′(a)
+        const atA = ['noBase', 'useX', 'startA'].includes(o.k);
+        let wantCheck;
+        if (atA) {
+          const got = want(o.k, { ...Q, d: 0 }), e = o.k === 'noBase' ? `${pr(C.sl)} × 0 = 0` : o.k === 'startA' ? `${C.a} + ${pr(C.sl)} × 0 = ${C.a}` : `${fa} + ${pr(C.sl)} × ${C.a} = ${show(got)}`;
+          if (o.k === 'useX' && (got[0] !== ad(C.fa, mu(C.sl, [C.a, 1]))[0] || got[1] !== ad(C.fa, mu(C.sl, [C.a, 1]))[1])) fail('estpick', key, 'the slip that uses x is not worked right at a');
+          if (got[0] === C.fa[0] && got[1] === C.fa[1]) fail('estpick', key, `${o.k} does not fail at x = a, so its check shows nothing`);
+          if (show(got) !== e.split(' = ').pop()) fail('estpick', key, `the check of ${o.k} says ${e}, but its formula gives ${show(got)} at a`);
+          wantCheck = `Check ${Lt} at x = a = ${C.a}: there the tangent touches the curve, so it must give f(${C.a}) = ${fa}. ${Lt}'s formula, ${FORM(o.k, Q)}, gives ${e} there, not ${fa}.`;
+        } else {
+          const step = Q.kind === 'recip' ? 10 : 1, a0 = want(o.k, Q), a1 = want(o.k, { ...Q, d: Q.d + step }), mv = ad(a1, mu([-1, 1], a0));
+          if (mv[0] === C.sl[0] && mv[1] === C.sl[1]) fail('estpick', key, `${o.k} moves at the tangent's slope, so its check shows nothing`);
+          wantCheck = `Check ${Lt} one step across: the tangent's slope is f′(${C.a}) = ${m}, so each 1 that x moves must move it by ${m}. ${Lt}'s formula, ${FORM(o.k, Q)}, moves by ${show(mv)}, not ${m}.`;
+        }
+        if (lines[1] !== wantCheck) fail('estpick', key, `the check of ${o.k} is: ${lines[1]} | want ${wantCheck}`);
+        // what the check works out is never the estimate itself (a given, like a or x, may be the same number by chance)
+        const ans = show(V[ri]), worked1 = (lines[1].match(/(?:gives .+ = |moves by )(−?\d+(?:\/\d+)?)(?: there)?, not /) || [])[1];
+        if (!worked1 || worked1 === ans) fail('estpick', key, `the check of ${o.k} hands over the answer ${ans}: ${lines[1]}`);
+        worked++;
+        const hh = P.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="EstPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the estimate"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('estpick', key, 'the missed numbers are not shut and told as not the estimate');
+        const r0 = env.renders; P.choose(i);
+        if (P.misses !== q + 1 || env.renders !== r0) fail('estpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = P.matched, ft = P.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      P.choose(ri);
+      if (env.renders !== r0 + 1) fail('estpick', key, 'a pick does not redraw the workshop');
+      if (P.matched !== m0 + 1 || P.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('estpick', key, 'the right pick is not counted');
+      if (P.round === r || P.misses !== 0 || P.picked !== null) fail('estpick', key, 'no fresh curve after the right pick');
+      if (P.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TANGENT TRACKER / 5 estimates made') fail('estpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the tangent's estimate, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('estpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(P.html().split('id="tlqRead"')[1].replace(/^[^>]*>/, ''));
+      const W = V[ri], rise = mu(C.sl, C.h), truth = C.f(C.x[0] / C.x[1]), miss = W[0] / W[1] - truth;
+      // a root bends down under its tangent, so the tangent overshoots; 1/x bends up over it, so it falls short
+      if ((miss > 0) !== (Q.kind !== 'recip')) fail('estpick', key, `the tangent misses ${Q.kind} the wrong way`);
+      const wantLine = `That was it: L(${C.xs}) = ${fa} + ${pr(C.sl)} × ${pr(C.h)} = ${fa} ${rise[0] < 0 ? '−' : '+'} ${show([Math.abs(rise[0]), rise[1]])} = ${show(W)}. The true ${C.lab(C.xs)} ≈ ${truth.toFixed(4)}, so the tangent ${miss > 0 ? 'overshoots' : 'falls short'} by about ${Math.abs(miss).toFixed(4)}. Here is a new one. ${P.matched} picked this visit, ${P.firstTry} on the first try.`;
+      if (got !== wantLine) fail('estpick', key, `after a pick: ${got} | want ${wantLine}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = P.build; let c = 0;
+    P.build = () => (c++ < 3 ? { kind: 'root', n: 5, d: 4 } : real.call(P));
+    P.round = null; P.newRound(); P.newRound();
+    if (JSON.stringify(P.round.S) === '{"kind":"root","n":5,"d":4}') fail('estpick', 'repeat', 'the same curve is dealt twice in a row');
+    P.build = real;
+  }
+  for (const k of SL) if (!kinds[k] || kinds[k] < rounds * 0.04) fail('estpick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
+  for (const c in curves) if (curves[c] < rounds * 0.15) fail('estpick', 'deal', `${c} is dealt in only ${curves[c]} of ${rounds} rounds`);
+  if (wholes < rounds * 0.4 || wholes > rounds * 0.6) fail('estpick', 'deal', `the estimate is whole in ${wholes} of ${rounds} rounds, not about half`);
+  if (slots.size !== 4) fail('estpick', 'deal', `the estimate only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  places.forEach((c, i) => { if (c < 0.15 * rounds) fail('estpick', 'deal', `the estimate stands ${i} from the bottom in only ${c} of ${rounds} rounds`); });
+  if (fives !== 30) fail('estpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
 /* Which rate? The logistic workshop turned round. Every number is read back
    off its button and worked again here from the slip it is named as; the
    right one alone is the rate, found without the rule by nudging t either
@@ -15949,6 +16117,7 @@ console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  lengths set up     ${pad(arcPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-integral in the arc length workshop, every integral read back off its button, taken apart and checked against the slip it is named as, the right one alone √(1 + f′²) with f′ nudged and adding up to what fine chords measure, no look giving it away; ${arcPickNotes.misses.toLocaleString()} wrong picks checked at one x, ${arcPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  rates worked       ${pad(logiPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the logistic workshop, every number read back off its button and worked again from the slip it is named as, the right one alone the rate found by stepping the equation, none given away by its form, sign or place; ${logiPickNotes.misses.toLocaleString()} wrong picks checked where their formula fails, ${logiPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
+console.log(`  estimates made     ${pad(estPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the tangent line workshop, every number read back off its button and worked again from the slip it is named as, the right one alone the tangent's estimate found by nudging the curve for its slope, none given away by its form, sign or place; ${estPickNotes.misses.toLocaleString()} wrong picks checked at x = a or one step across, ${estPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);

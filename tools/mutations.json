@@ -1,410 +1,522 @@
 {
-  "change": "Which rate? The logistic workshop turned round: see r, K and P, and pick which of four numbers is dP/dt.",
+  "change": "Which estimate? The tangent line workshop turned round: see a curve and an x near a, and pick which of four numbers is the tangent's estimate.",
   "mutations": [
     {
-      "name": "the rate leaves off the ÷ K",
+      "name": "√x has the slope 1/√x",
       "file": "index.html",
-      "find": "return k==='right' ? this.frac(rn*P*(K-P),rd*K)",
-      "replace": "return k==='right' ? this.frac(rn*P*(K-P),rd)",
+      "find": "return kind==='root' ? {fa:[n,1], m:[1,2*n],",
+      "replace": "return kind==='root' ? {fa:[n,1], m:[1,n],",
       "run": "verify"
     },
     {
-      "name": "the rate uses the share filled",
+      "name": "√x starts at a",
       "file": "index.html",
-      "find": "return k==='right' ? this.frac(rn*P*(K-P),rd*K)",
-      "replace": "return k==='right' ? this.frac(rn*P*P,rd*K)",
+      "find": "return kind==='root' ? {fa:[n,1], m:[1,2*n],",
+      "replace": "return kind==='root' ? {fa:[n*n,1], m:[1,2*n],",
       "run": "verify"
     },
     {
-      "name": "the rate drops the r",
+      "name": "∛x has the slope 1/(3∛x)",
       "file": "index.html",
-      "find": "return k==='right' ? this.frac(rn*P*(K-P),rd*K)",
-      "replace": "return k==='right' ? this.frac(P*(K-P),K)",
+      "find": ": kind==='cube' ? {fa:[n,1], m:[1,3*n*n],",
+      "replace": ": kind==='cube' ? {fa:[n,1], m:[1,3*n],",
       "run": "verify"
     },
     {
-      "name": "the no-ceiling slip keeps the room",
+      "name": "1/x has a rising slope",
       "file": "index.html",
-      "find": "k==='noCeil' ? this.frac(rn*P,rd)",
-      "replace": "k==='noCeil' ? this.frac(rn*P*(K-P),rd*K)",
+      "find": ": {fa:[1,n], m:[-1,n*n],",
+      "replace": ": {fa:[1,n], m:[1,n*n],",
       "run": "verify"
     },
     {
-      "name": "the filled slip uses P/K once too few",
+      "name": "1/x has the slope −1/x",
       "file": "index.html",
-      "find": "k==='filled' ? this.frac(rn*P*P,rd*K)",
-      "replace": "k==='filled' ? this.frac(rn*P,rd*K)",
+      "find": ": {fa:[1,n], m:[-1,n*n],",
+      "replace": ": {fa:[1,n], m:[-1,n],",
       "run": "verify"
     },
     {
-      "name": "the P slip keeps the P",
+      "name": "1/x steps a whole number across",
       "file": "index.html",
-      "find": "k==='noP' ? this.frac(rn*(K-P),rd*K)",
-      "replace": "k==='noP' ? this.frac(rn*(K-P),rd)",
+      "find": "h:this.frac(d,10), x:this.frac(10*n+d,10), m2:[-1,n]}; },",
+      "replace": "h:[d,1], x:this.frac(10*n+d,10), m2:[-1,n]}; },",
       "run": "verify"
     },
     {
-      "name": "the r slip keeps the r",
+      "name": "the root slip uses the right slope",
       "file": "index.html",
-      "find": "k==='noR' ? this.frac(P*(K-P),K)",
-      "replace": "k==='noR' ? this.frac(P*(K-P),rd*K)",
+      "find": "h:[d,1], x:[n*n+d,1], m2:[1,n]}",
+      "replace": "h:[d,1], x:[n*n+d,1], m2:[1,2*n]}",
       "run": "verify"
     },
     {
-      "name": "the ÷ K slip divides by K",
+      "name": "x for 1/x is shown as a step",
       "file": "index.html",
-      "find": "k==='noK' ? this.frac(rn*P*(K-P),rd)",
-      "replace": "k==='noK' ? this.frac(rn*P*(K-P),rd*2)",
+      "find": "return S.kind==='recip' ? ((10*S.n+S.d)/10).toFixed(1) : String(this.A(S)+S.d); },",
+      "replace": "return S.kind==='recip' ? (S.d/10).toFixed(1) : String(this.A(S)+S.d); },",
       "run": "verify"
     },
     {
-      "name": "the flipped share has the wrong sign",
+      "name": "a for ∛x is n²",
       "file": "index.html",
-      "find": "k==='flip' ? this.frac(rn*(P-K),rd)",
-      "replace": "k==='flip' ? this.frac(rn*(K-P),rd)",
+      "find": "S.kind==='cube' ? S.n**3 : S.n; },",
+      "replace": "S.kind==='cube' ? S.n**2 : S.n; },",
       "run": "verify"
     },
     {
-      "name": "the peak slip halves K",
+      "name": "the estimate leaves off f(a)",
       "file": "index.html",
-      "find": "this.frac(rn*K,4*rd);",
-      "replace": "this.frac(rn*K,2*rd);",
+      "find": "return k==='right' ? this.add(p.fa,mh)",
+      "replace": "return k==='right' ? mh",
       "run": "verify"
     },
     {
-      "name": "a fraction is not cut to its lowest terms",
+      "name": "the estimate goes the wrong way",
       "file": "index.html",
-      "find": "const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  rs",
-      "replace": "const g=1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  rs",
+      "find": "return k==='right' ? this.add(p.fa,mh)",
+      "replace": "return k==='right' ? this.add(p.fa,[-mh[0],mh[1]])",
       "run": "verify"
     },
     {
-      "name": "a minus is shown as a hyphen",
+      "name": "the start slip keeps f(a)",
       "file": "index.html",
-      "find": "fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  rs",
-      "replace": "fs:f=>f[1]===1 ? String(f[0]) : `${f[0]}/${f[1]}`,\n  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },\n  rs",
+      "find": "k==='noBase' ? mh :",
+      "replace": "k==='noBase' ? this.add(p.fa,mh) :",
       "run": "verify"
     },
     {
-      "name": "huge numbers may be offered",
+      "name": "the slope slip keeps the slope",
       "file": "index.html",
-      "find": "if(this.big(v) || seen.has(this.key(v))) continue;",
-      "replace": "if(seen.has(this.key(v))) continue;",
+      "find": "k==='noSlope' ? this.add(p.fa,p.h)",
+      "replace": "k==='noSlope' ? this.add(p.fa,mh)",
       "run": "verify"
     },
     {
-      "name": "a number the same as the rate is let through",
+      "name": "the flip slip adds",
       "file": "index.html",
-      "find": "const seen=new Set([this.key(this.val(S,'right'))]), keep=[];\n    /",
-      "replace": "const seen=new Set(), keep=[];\n    /",
+      "find": "k==='flip' ? this.add(p.fa,[-mh[0],mh[1]])",
+      "replace": "k==='flip' ? this.add(p.fa,mh)",
       "run": "verify"
     },
     {
-      "name": "one number of the rate's form is enough",
+      "name": "the slope-rule slip uses the right slope",
       "file": "index.html",
-      "find": "if(V.filter(v=>this.whole(v)===form).length<2 ||",
-      "replace": "if(V.filter(v=>this.whole(v)===form).length<1 ||",
+      "find": "k==='slope' ? this.add(p.fa,this.mul(p.m2,p.h))",
+      "replace": "k==='slope' ? this.add(p.fa,this.mul(p.m,p.h))",
       "run": "verify"
     },
     {
-      "name": "one number of the rate's sign is enough",
+      "name": "the start-at-a slip starts at f(a)",
       "file": "index.html",
-      "find": "V.filter(v=>v[0]*W[0]>0).length<2) continue;",
-      "replace": "V.filter(v=>v[0]*W[0]>0).length<1) continue;",
+      "find": "k==='startA' ? this.add([this.A(S),1],mh)",
+      "replace": "k==='startA' ? this.add(p.fa,mh)",
+      "run": "verify"
+    },
+    {
+      "name": "the root slip keeps the root",
+      "file": "index.html",
+      "find": "this.add(p.fa,this.mul([1,(S.kind==='root'?2:3)*this.A(S)],p.h))",
+      "replace": "this.add(p.fa,this.mul(p.m,p.h))",
+      "run": "verify"
+    },
+    {
+      "name": "the x slip multiplies by the step",
+      "file": "index.html",
+      "find": ": this.add(p.fa,this.mul(p.m,p.x));\n",
+      "replace": ": this.add(p.fa,this.mul(p.m,p.h));\n",
+      "run": "verify"
+    },
+    {
+      "name": "1/x may lose a root it has not got",
+      "file": "index.html",
+      "find": "if(k==='noRoot' && S.kind==='recip') continue;",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "0 may be offered",
+      "file": "index.html",
+      "find": "if(v[0]===0 || seen.has(this.key(v)) ",
+      "replace": "if(seen.has(this.key(v)) ",
+      "run": "verify"
+    },
+    {
+      "name": "two slips may show the same number",
+      "file": "index.html",
+      "find": "if(v[0]===0 || seen.has(this.key(v)) ||",
+      "replace": "if(v[0]===0 ||",
+      "run": "verify"
+    },
+    {
+      "name": "a check may work out the estimate",
+      "file": "index.html",
+      "find": "|| this.key(this.worked(S,k))===this.key(W)) continue;",
+      "replace": ") continue;",
+      "run": "verify"
+    },
+    {
+      "name": "one wrong number of its form is enough",
+      "file": "index.html",
+      "find": "V.filter(v=>this.whole(v)===form).length<2 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
+      "replace": "V.filter(v=>this.whole(v)===form).length<1 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
+      "run": "verify"
+    },
+    {
+      "name": "one wrong number of its sign is enough",
+      "file": "index.html",
+      "find": "V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
+      "replace": "V.filter(v=>v[0]*W[0]>0).length<1) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
       "run": "verify"
     },
     {
       "name": "a wrong number may be two others added",
       "file": "index.html",
-      "find": "      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,add(x,y)))))) continue;\n",
+      "find": "      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the rate is always whole",
+      "name": "the estimate is always whole",
       "file": "index.html",
-      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const [r",
-      "replace": "const wantWhole=true;\n    for(let g=0;g<500;g++){\n      const [r",
+      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const k",
+      "replace": "const wantWhole=true;\n    for(let g=0;g<500;g++){\n      const k",
       "run": "verify"
     },
     {
-      "name": "the rate is always a fraction",
+      "name": "the estimate is never whole",
       "file": "index.html",
-      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const [r",
-      "replace": "const wantWhole=false;\n    for(let g=0;g<500;g++){\n      const [r",
+      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const k",
+      "replace": "const wantWhole=false;\n    for(let g=0;g<500;g++){\n      const k",
       "run": "verify"
     },
     {
-      "name": "P never starts above the ceiling",
+      "name": "1/x comes up as often as each other curve",
       "file": "index.html",
-      "find": "j=R.i(1,29);",
-      "replace": "j=R.i(1,19);",
+      "find": "['root','cube','recip','recip'][R.i(0,3)];",
+      "replace": "['root','cube','recip'][R.i(0,2)];",
       "run": "verify"
     },
     {
-      "name": "K is never 1000",
+      "name": "∛x never gives a whole estimate",
       "file": "index.html",
-      "find": "KS:[100,200,300,400,500,600,800,1000],",
-      "replace": "KS:[100,200,300,400,500,600,800],",
+      "find": "const kind=wantWhole ? ['root','cube'][R.i(0,1)]",
+      "replace": "const kind=wantWhole ? 'root'",
       "run": "verify"
     },
     {
-      "name": "r is never 3/5",
+      "name": "√x always steps forward",
       "file": "index.html",
-      "find": "RS:[[1,2],[1,4],[1,5],[1,10],[3,10],[2,5],[3,4],[3,5]],",
-      "replace": "RS:[[1,2],[1,4],[1,5],[1,10],[3,10],[2,5],[3,4]],",
+      "find": "d=wantWhole ? 2*n*[-1,1,2][R.i(0,2)] : R.i(-2*n,2*n); }",
+      "replace": "d=wantWhole ? 2*n*[1,2][R.i(0,1)] : R.i(1,2*n); }",
       "run": "verify"
     },
     {
-      "name": "the same population may come twice",
+      "name": "√x may step 0",
       "file": "index.html",
-      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // t",
-      "replace": "break; }\n    // t",
+      "find": "if(d===0 || this.A(S)+d<1) continue;",
+      "replace": "if(this.A(S)+d<1) continue;",
       "run": "verify"
     },
     {
-      "name": "the place is chosen without its weights",
+      "name": "x may fall below 1",
       "file": "index.html",
-      "find": "wt=ranks.map(x=>this.PLACE[x])",
-      "replace": "wt=ranks.map(x=>1)",
+      "find": "if(d===0 || this.A(S)+d<1) continue;",
+      "replace": "if(d===0) continue;",
       "run": "verify"
     },
     {
-      "name": "the low place is not favoured",
+      "name": "the form asked for is not kept",
       "file": "index.html",
-      "find": "PLACE:[8,1,3,10],",
-      "replace": "PLACE:[1,1,3,10],",
+      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!",
+      "replace": "      if(!",
       "run": "verify"
     },
     {
-      "name": "the high place is not favoured",
+      "name": "a curve with no trio may be dealt",
       "file": "index.html",
-      "find": "PLACE:[8,1,3,10],",
-      "replace": "PLACE:[8,1,3,1],",
+      "find": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "replace": "      return S;\n    }\n    return {k",
       "run": "verify"
     },
     {
-      "name": "the rate always sits lowest",
+      "name": "the same curve may come twice",
       "file": "index.html",
-      "find": "want=ranks[this.pickW(wt)]",
-      "replace": "want=Math.min(...ranks)",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // the e",
+      "replace": "break; }\n    // the e",
       "run": "verify"
     },
     {
-      "name": "the slips are always the first trio",
+      "name": "the place never favours the top",
       "file": "index.html",
-      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R",
-      "replace": "fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=R",
+      "find": "PLACE:[1,1,1,3],",
+      "replace": "PLACE:[1,1,1,1],",
       "run": "verify"
     },
     {
-      "name": "the rate always sits first",
+      "name": "the estimate always sits lowest",
       "file": "index.html",
-      "find": "const opts=R.shuffle(['right',...take]).map(k=>({k}));",
-      "replace": "const opts=['right',...take].map(k=>({k}));",
+      "find": "want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "replace": "want=Math.min(...ranks), fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "run": "verify"
+    },
+    {
+      "name": "the place counts the numbers above",
+      "file": "index.html",
+      "find": "return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], wt=ranks.map(x=>this.PLACE[x]), want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "replace": "return v[0]*W[1]>W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], wt=ranks.map(x=>this.PLACE[x]), want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "run": "verify"
+    },
+    {
+      "name": "the trio ignores the place",
+      "file": "index.html",
+      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "replace": "fit=T, take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "run": "verify"
+    },
+    {
+      "name": "the slips are always the first that fit",
+      "file": "index.html",
+      "find": "take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "replace": "take=fit[0];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "run": "verify"
+    },
+    {
+      "name": "the estimate always sits first",
+      "file": "index.html",
+      "find": "const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "replace": "const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
       "run": "verify"
     },
     {
       "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Logi",
-      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Logi",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    TanL",
       "run": "verify"
     },
     {
       "name": "a miss is not shut",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Logi",
-      "replace": "this.misses++; this.last=null;\n    }\n    Logi",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
+      "replace": "this.misses++; this.last=null;\n    }\n    TanL",
       "run": "verify"
     },
     {
       "name": "a shut number can be picked again",
       "file": "index.html",
-      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
-      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
       "run": "verify"
     },
     {
       "name": "a first try is counted after a miss",
       "file": "index.html",
-      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
-      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
       "run": "verify"
     },
     {
       "name": "the toast miscounts tries",
       "file": "index.html",
-      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
-      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('RA",
+      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
       "run": "verify"
     },
     {
-      "name": "a right pick keeps the old population",
+      "name": "a right pick keeps the old curve",
       "file": "index.html",
-      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Logi",
-      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Logi",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
       "run": "verify"
     },
     {
       "name": "a pick does not redraw",
       "file": "index.html",
-      "find": "    LogiGrow.render();\n  },\n  missed()",
+      "find": "    TanLine.render();\n  },\n  missed()",
       "replace": "  },\n  missed()",
-      "run": "verify"
-    },
-    {
-      "name": "the P slip names the wrong P",
-      "file": "index.html",
-      "find": "Multiply it by the P = ${S.P} heads there are.",
-      "replace": "Multiply it by the P = ${S.K} heads there are.",
-      "run": "verify"
-    },
-    {
-      "name": "the peak slip names the wrong peak",
-      "file": "index.html",
-      "find": "which it does at P = K/2 = ${S.K/2}.",
-      "replace": "which it does at P = K/2 = ${S.K}.",
       "run": "verify"
     },
     {
       "name": "the slips are told the wrong way round",
       "file": "index.html",
-      "find": "if(k==='filled') return",
-      "replace": "if(k==='noCeil') return",
+      "find": "if(k==='noBase') return `${L} leaves off the start",
+      "replace": "if(k==='noSlope') return `${L} leaves off the start",
+      "run": "verify"
+    },
+    {
+      "name": "the slope slip names the wrong slope",
+      "file": "index.html",
+      "find": "and here f′(${A}) = ${m}.`;",
+      "replace": "and here f′(${A}) = ${this.fs(p.m2)}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "the x slip names the step as x",
+      "file": "index.html",
+      "find": "${L} multiplies the slope by x = ${this.xs(S)}",
+      "replace": "${L} multiplies the slope by x = ${this.hs(S)}",
+      "run": "verify"
+    },
+    {
+      "name": "the √x slope is worked at a",
+      "file": "index.html",
+      "find": "so at ${A} it is 1/(2 × ${n}) = ${m}.`;",
+      "replace": "so at ${A} it is 1/(2 × ${A}) = ${m}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "the root slip's formula forgets the 2",
+      "file": "index.html",
+      "find": "(S.kind==='root' ? 'f(a) + (x − a)/(2a)'",
+      "replace": "(S.kind==='root' ? 'f(a) + (x − a)/a'",
       "run": "verify"
     },
     {
       "name": "a miss is not explained",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W=this.val(B,'right'),",
-      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W=this.val(B,'right'),",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
+      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
       "run": "verify"
     },
     {
       "name": "a miss is not checked",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W=this.val(B,'right'),",
-      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W=this.val(B,'right'),",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
+      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
       "run": "verify"
     },
     {
-      "name": "the P slip is checked at the ceiling",
+      "name": "the check at a skips the x slip",
       "file": "index.html",
-      "find": "at(k){ return k==='noP'||k==='peak' ? 0",
-      "replace": "at(k){ return k==='peak' ? 0",
+      "find": "if(k==='noBase'||k==='useX'||k==='startA'){",
+      "replace": "if(k==='noBase'||k==='startA'){",
       "run": "verify"
     },
     {
-      "name": "the no-ceiling slip is checked at P = 0",
+      "name": "the x slip is checked at x = 0",
       "file": "index.html",
-      "find": "k==='noCeil'||k==='filled' ? 'K' : 1; },",
-      "replace": "k==='filled' ? 'K' : 1; },",
+      "find": "k==='useX' ? this.add(p.fa,this.mul(p.m,[A,1]))",
+      "replace": "k==='useX' ? p.fa",
       "run": "verify"
     },
     {
-      "name": "the check at the ceiling is worked at P = 1",
+      "name": "the flip slip is said to move the right way",
       "file": "index.html",
-      "find": "x=h==='K' ? K : h, T={...S,P:x}",
-      "replace": "x=h==='K' ? 1 : h, T={...S,P:x}",
+      "find": "k==='flip' ? [-p.m[0],p.m[1]]",
+      "replace": "k==='flip' ? p.m",
       "run": "verify"
     },
     {
-      "name": "the check works the slip at the dealt P",
+      "name": "the slope slip is said to move by 1",
       "file": "index.html",
-      "find": "T={...S,P:x}, v=this.fs(this.val(T,k));",
-      "replace": "T={...S,P:x}, v=this.fs(this.val(S,k));",
+      "find": "k==='noSlope' ? [1,1]",
+      "replace": "k==='noSlope' ? p.m",
       "run": "verify"
     },
     {
-      "name": "the check at P = 1 leaves off the ÷ K",
+      "name": "the root slip is said to move by f′(a)",
       "file": "index.html",
-      "find": "const w=this.fs(this.frac(rn*(K-1),rd*K));",
-      "replace": "const w=this.fs(this.frac(rn*(K-1),rd));",
+      "find": ": k==='noRoot' ? [1,(S.kind==='root'?2:3)*A] : p.m2;",
+      "replace": ": k==='noRoot' ? p.m : p.m2;",
       "run": "verify"
     },
     {
-      "name": "the check names the wrong formula",
+      "name": "the start slip is said to give 0 at a",
       "file": "index.html",
-      "find": "noCeil:'rP', filled:'rP · P/K'",
-      "replace": "noCeil:'rP · P/K', filled:'rP'",
+      "find": "k==='startA' ? [A,1] :",
+      "replace": "k==='startA' ? [0,1] :",
       "run": "verify"
     },
     {
-      "name": "the r slip's working keeps an r",
+      "name": "the check at a wants a",
       "file": "index.html",
-      "find": "k==='noR' ? `${x} × (1 − ${x}/${K})`",
-      "replace": "k==='noR' ? `${r} × ${x} × (1 − ${x}/${K})`",
+      "find": "so it must give f(${A}) = ${fa}. ${L}'s formula",
+      "replace": "so it must give ${A}. ${L}'s formula",
       "run": "verify"
     },
     {
-      "name": "the right line leaves out the room left",
+      "name": "the right line drops the start",
       "file": "index.html",
-      "find": "= ${this.rs(B)} × ${B.P} × ${this.pf(room)} =",
-      "replace": "= ${this.rs(B)} × ${B.P} × ${this.pf(this.frac(B.P,B.K))} =",
+      "find": "That was it: L(${this.xs(B)}) = ${this.fs(p.fa)} + ",
+      "replace": "That was it: L(${this.xs(B)}) = ",
       "run": "verify"
     },
     {
-      "name": "above the ceiling is not explained",
+      "name": "the true value is worked as √ for every curve",
       "file": "index.html",
-      "find": "${W[0]<0?`. P is above the ceiling, so the room left is below 0 and P shrinks back toward ${B.K}`:''}",
-      "replace": "",
+      "find": "const truth=B.kind==='root' ? Math.sqrt(x) : B.kind==='cube' ? Math.cbrt(x) : 1/x,",
+      "replace": "const truth=Math.sqrt(x),",
+      "run": "verify"
+    },
+    {
+      "name": "the miss is told the wrong way",
+      "file": "index.html",
+      "find": "${miss>0?'overshoots':'falls short'}",
+      "replace": "${miss<0?'overshoots':'falls short'}",
+      "run": "verify"
+    },
+    {
+      "name": "the right line keeps the sign of the rise",
+      "file": "index.html",
+      "find": "${mh[0]<0?'−':'+'} ${this.fs([Math.abs(mh[0]),mh[1]])}",
+      "replace": "+ ${this.fs(mh)}",
       "run": "verify"
     },
     {
       "name": "the count line is lost",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"lg",
-      "replace": "    out+=`<div id=\"lg",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tl",
+      "replace": "    out+=`<div id=\"tl",
       "run": "verify"
     },
     {
       "name": "the rule is not shown",
       "file": "index.html",
-      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"lg",
-      "replace": "let out='';\n    out+=`<div id=\"lg",
+      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tl",
+      "replace": "let out='';\n    out+=`<div id=\"tl",
       "run": "verify"
     },
     {
-      "name": "the rule forgets the room left",
+      "name": "the rule forgets the start",
       "file": "index.html",
-      "find": "r per head, times the P heads there are, times the room left, 1 − P/K.",
-      "replace": "r per head, times the P heads there are.",
+      "find": "so f(x) ≈ L(x) = f(a) + f′(a)(x − a):",
+      "replace": "so f(x) ≈ L(x) = f′(a)(x − a):",
       "run": "verify"
     },
     {
       "name": "a shut number keeps its name",
       "file": "index.html",
-      "find": "${gone?'. Not dP/dt':''}",
+      "find": "${gone?'. Not the estimate':''}",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "K is not shown",
+      "name": "a is not shown",
       "file": "index.html",
-      "find": "r = ${this.fs([S.rn,S.rd])}, K = ${S.K}, P = ${S.P}</div>",
-      "replace": "r = ${this.fs([S.rn,S.rd])}, P = ${S.P}</div>",
+      "find": "with the tangent at a = ${this.A(S)}</div>",
+      "replace": "with the tangent</div>",
       "run": "verify"
     },
     {
       "name": "the hand workshop does not step aside",
       "file": "index.html",
-      "find": "for(const id of ['lgwSets','lgwFig','lgwMoveRow','lgwRead','lgwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "find": "for(const id of ['tlwSets','tlwFig','tlwMoveRow','tlwRead','tlwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
       "replace": "",
-      "run": "play:logipick"
+      "run": "play:estpick"
     },
     {
-      "name": "the mix leaves the logistic workshop out",
+      "name": "the mix leaves the tangent line workshop out",
       "file": "index.html",
-      "find": "    ['ArcPick','ArcLen','🧵 Arc Length Workshop'],\n    ['LogiPick','LogiGrow','🐇 Logistic Workshop']\n",
-      "replace": "    ['ArcPick','ArcLen','🧵 Arc Length Workshop']\n",
+      "find": "    ['LogiPick','LogiGrow','🐇 Logistic Workshop'],\n    ['EstPick','TanLine','🪡 Tangent Line Workshop']\n",
+      "replace": "    ['LogiPick','LogiGrow','🐇 Logistic Workshop']\n",
       "run": "verify"
     }
   ]

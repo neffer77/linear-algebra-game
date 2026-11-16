@@ -100,6 +100,7 @@ const SUITES = [
   require('./play/meanvalue'), // match a tangent to the chord by hand
   require('./play/chordpick'), // see a curve and its chord, pick which of four numbers is c
   require('./play/tanline'),   // estimate f(x) from the tangent at a and measure the miss
+  require('./play/estpick'),   // see a curve and an x near a, pick which of four numbers is the tangent's estimate
   require('./play/arclen'),    // lay chords along a curve and watch them close in on its length
   require('./play/arcpick'),  // see a curve, pick which of four integrals is its length
   require('./play/logistic'),  // step a population toward its ceiling and watch the rate rise and fall

@@ -636,7 +636,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: fifty-one
+  question from a different workshop's turned-round mode each time: fifty-two
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1972,6 +1972,23 @@ The game is built so that losing teaches you as much as winning.
   sin x, which does not bend at 0, to about an eighth. Six things to find, and a
   fight on linear approximation now offers it.
 
+  **🎯 Which estimate?** turns the workshop round: √x near a square, ∛x near a cube
+  or 1/x near a whole number, an x near a, and four numbers, one of them the
+  tangent's estimate. The rule is stated first, with the three slopes to use. The
+  wrong numbers are the slips people make: the start f(a) left off, or a put where
+  f(a) belongs, the slope left off, the rise taken the wrong way, the slope rule
+  misremembered or its root lost, and x put where x − a belongs. Two wrong numbers
+  share the estimate's form, whole or fraction, and two its sign, none is 0, no
+  wrong one is two others added, the estimate is whole about half the time, and it
+  sits lowest, highest or between about as often. A wrong pick is shut and checked
+  where its formula must fail: at x = a, where the tangent touches the curve, or
+  one step across, where it must move by f′(a). The right pick works
+  f(a) + f′(a)(x − a) through and sets it beside the true value, with which way the
+  tangent misses. Nothing is saved, and there is no clock. `npm test` reads every
+  number back off its button, works it again from the slip it is named as, finds
+  the right one alone by nudging the curve for its slope, and works every check
+  again.
+
 - **🧵 Arc Length Workshop** — measuring a curve with chords. Pick a line, the cubic
   x³/6 + 1/(2x) or a quarter circle, and lay 1, 2, 4 and up to 32 straight chords along
   it. With four or fewer every chord is measured in the readout by Pythagoras,
@@ -2187,7 +2204,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-seven suites, about 5,850 checks, about a minute:
+loop only exists once the page is running. A hundred and forty-eight suites, about 5,881 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2272,6 +2289,7 @@ loop only exists once the page is running. A hundred and forty-seven suites, abo
 | `meanvalue` | the Tome opens the chord workshop on x² at x = 1, with the chord's slope (16 − 0)/(4 − 0) = 4 worked and the tangent's 2 too shallow, so c lies to the right; at 2 the tangent matches, half way as on every parabola, and at 2.05 it is steeper; a quarter step stops short of the end; on x³ the middle 1.5 gives 6.75, short of 9, and a step from 1.7 to 1.75 crosses c = √3 ≈ 1.7321; on 4/x the chord runs downhill at −1 and c is 2, short of the middle; all six goals, starting over, the ends, every button and the drawing named, a phone's width, and nothing saved |
 | `chordpick` | the Tome says the chord workshop can be turned round; the mode is pressed and the curves, the figure, the move buttons, the readout and the goals step aside; the rule comes first; a curve on an interval is shown with its chord drawn and no tangent, and four numbers offered, each named; a wrong pick is named as its slip, checked by putting it into f′, shut and told as not c, and not counted; the right pick is worked from the chord's slope, counted but not as a first try, toasted, and deals a new question; a missed pick between a and b has its tangent drawn, and it goes with the question; a first try is counted as one; the fifth brings CHORD FINDER; every button and the figure are named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `tanline` | the Tome opens the tangent line workshop on √x at a = 4, with L(x) = 2 + (1/4)(x − 4) worked and the two touching; at 4.1 the estimate 2.025 is too high by about 0.0002, within 0.001; from 6 halving to 5 cuts the miss from 0.0505 to 0.0139, about a quarter; at 8 it drifts past 0.1; left of 4 it still overshoots, and x stops at 1 and 9; on 1/x near 1 the tangent falls short; on sin x near 0 halving from 0.8 to 0.4 cuts the miss to about an eighth; all six goals and the banner, starting over, every button and the drawing named, a phone's width, and nothing saved |
+| `estpick` | the Tome says the tangent line workshop can be turned round; the workshop opens on stepping x by hand, and switching to which estimate puts away the curves, the figure, the step buttons, the readout and the goals and states the rule first; the curve, a and x are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked at x = a or one step across, shut and told as not the estimate, and not counted; the right pick works f(a) + f′(a)(x − a) through beside the true value, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings TANGENT TRACKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `arclen` | the Tome opens the arc length workshop on the line, one chord measured √(4² + 3²) = 5 beside the runs alone, 4; two chords still exactly 5; on the cubic one chord short of 17/12 by about 0.0601, four chords each worked, doubling from 2 to 4 cutting the gap from 0.01656 to 0.00421, about a quarter, and 16 chords within 0.001; the chords stop at 32, halving drops the note and starting over goes back to one; on the quarter circle 16 chords give 1.5685 and doubling cuts the gap only to about a third; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
 | `arcpick` | the Tome says the arc length workshop can be turned round; the workshop opens on laying chords by hand, and switching to which integral puts away the curves, the figure, the chord buttons, the readout and the goals and states the rule first; a curve and where it runs are shown and four integrals offered, each named by its integral; two wrong picks are each named as their slip and checked at one x, where the slope gives a tiny step's length, shut and told as not the length, and not counted; the right pick works 1 + f′² through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings CURVE MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `logistic` | the Tome opens the logistic workshop starting small at 20, A = 49 worked and the rate 0.5 × 20 × 0.98 = 9.8; one step grows P to 32.6, 1.6276 times as much, almost e^0.5, with the rate rising; P passes 500 at t = 8 with rK/4 = 125 told, and at t = 9 the rate falls from 124.6 to 114.1; by t = 17 P is within 1% of 1000; the steps stop at 20, stepping back drops the step note and starting over goes back to t = 0; half way the rate falls from 125; above the ceiling the rate is −480 and P falls to 1294.4; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
