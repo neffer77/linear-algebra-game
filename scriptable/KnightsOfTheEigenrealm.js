@@ -1418,17 +1418,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ENDLESS AREA WORKSHOP ============ -->
   <div class="screen" id="s-tail">
     <div class="panel"><h2>♾️ Endless Area Workshop</h2><div class="sub">Can a region that goes on forever have a finite area? Push the right end b out, doubling it each time, and watch what each doubling adds. If every doubling adds a fixed fraction of the one before, the area closes in on a number; if not, it runs away.</div></div>
+    <div id="tlTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Push b out by hand or pick where it closes in"></div>
     <div class="panel">
+      <div id="taBox"></div>
       <div id="tlSets" class="wsModes" role="group" aria-label="Which curve"></div>
       <div id="tlFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="tlStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="tlBLo" onclick="Tail.moveB(-1)" aria-label="Halve b">−</button>
           <b id="tlB" style="font-size:17px;min-width:0"></b>
           <button id="tlBHi" onclick="Tail.moveB(1)" aria-label="Double b">+</button></div>
       </div>
       <div id="tlRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="tlGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="tlGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14217,7 +14219,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">♾️ Endless Area Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Push the end of ∫₁^b dx/xᵖ out forever and see which areas stay finite. The borderline is p = 1: 1/x falls to 0 yet its area never stops growing.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Push the end of ∫₁^b dx/xᵖ out forever and see which areas stay finite. The borderline is p = 1: 1/x falls to 0 yet its area never stops growing. Then turn it round: see an endless area, and pick which of four numbers it closes in on.</div>
          <button class="btn sm" id="tomeTail" style="width:auto;margin-top:8px" onclick="Tail.open()">Open the endless area workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -20072,6 +20074,113 @@ const Avg = {
    closes in on 1/(p − 1); at p = 1 each adds the same ln 2 and the area runs
    away though the curve falls to 0; below that it runs away faster. Nothing
    is saved. */
+/* ---------- Where does it close in? The endless area workshop turned round ----------
+   A curve a/xᵖ with whole numbers, its integral from 1 out to ∞, and four
+   numbers, one of them a/(p − 1). The rule is stated first; the wrong numbers
+   are the slips people make with it. A wrong pick is checked by the slope of
+   the area out to b, which must be the curve itself. Nothing is saved. */
+const TailPick = {
+  SLIPS:['noMinus','up','sign','mult'],
+  RULE:'An endless area is a limit: integrate out to b, then let b run to ∞. Antidifferentiate a/xᵖ = a·x⁻ᵖ by raising the power by one, to a·x¹⁻ᵖ, and dividing by that new power, 1 − p. From 1 out to b that gives a/(p − 1) × (1 − 1/bᵖ⁻¹), and for p above 1 the 1/bᵖ⁻¹ falls to 0, leaving a/(p − 1). Which number does it close in on?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,p}=S;
+    return k==='right' ? this.frac(a,p-1) : k==='noMinus' ? this.frac(a,p) : k==='up' ? this.frac(a,p+1)
+      : k==='sign' ? this.frac(-a,p-1) : this.frac(a*(p-1),1);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this curve can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,12)*(R.i(0,1)?1:-1), p:R.i(2,7)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:6, p:4};
+  },
+  curve(S){ return \`\${neg(S.a)}/x\${sup(S.p)}\`; },
+  cx(a){ return a===1 ? '' : a===-1 ? '−' : neg(a); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TAIL TAMER', this.matched+' endless areas measured','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is where it closes in, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Tail.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,p}=S;
+    if(k==='noMinus') return \`\${L} divides by \${p}, the power before it is raised. \${this.curve(S)} is \${this.cx(a)}x\${sup(-p)}; raise the power by one to x\${sup(1-p)} and divide by that new power, \${neg(1-p)}.\`;
+    if(k==='up') return \`\${L} takes the power down instead of up: x\${sup(-p)} goes up by one to x\${sup(1-p)}, not down to x\${sup(-p-1)}, so it divides by \${neg(1-p)}, not \${neg(-p-1)}.\`;
+    if(k==='sign') return \`\${L} has the sign turned round. F(x) = \${this.cx(a)}x\${sup(1-p)}/(\${neg(1-p)}) falls to 0 out at ∞, so the area is 0 − F(1), and that minus turns the sign of F(1) round.\`;
+    return \`\${L} multiplies by \${p-1} where it should divide. Raising \${this.cx(a)}x\${sup(-p)} gives \${this.cx(a)}x\${sup(1-p)}, and you divide by the new power, \${neg(1-p)}.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,p}=S;
+    return \`Check \${L}: the area out to b is c·(1 − 1/b\${supP(p-1)}), and its slope in b is c × \${p-1}/b\${sup(p)}, which must be the curve itself, \${neg(a)}/b\${sup(p)}, so c × \${p-1} must be \${neg(a)}. With c = \${this.fs(v)} that is \${this.pf(v)} × \${p-1} = \${this.fs(this.frac(v[0]*(p-1),v[1]))}, not \${neg(a)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="taQ" style="text-align:center;font-size:16px;margin-bottom:2px">∫₁^∞ \${this.curve(S)} dx</div>\`;
+    out+=\`<div class="small" style="text-align:center">What does it close in on?</div>\`;
+    out+=\`<div id="taPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="TailPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not where it closes in':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), raw=B.p===2 ? neg(B.a) : \`\${neg(B.a)}/\${B.p-1}\`;
+      lines.push(\`That was it: c = \${raw}\${raw===this.fs(v)?'':' = '+this.fs(v)}, and \${this.pf(v)} × \${B.p-1} = \${neg(B.a)}, so the area out to b, c·(1 − 1/b\${supP(B.p-1)}), grows at the curve's own rate and closes in on c as b runs out forever. Here is a new curve.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="taRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const Tail = {
   SETS:[
     {id:'sq', btn:'1/x²', p:2, fs:'1/x²', Ft:'−1/x', At:'1 − 1/b', lim:'1', rr:'half'},
@@ -20153,7 +20262,15 @@ const Tail = {
   open(){ UI.go('s-tail'); },
   pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },
   moveB(by){ const v=this.n+by; if(v<0 || v>this.N) return; this.n=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('tlTab').innerHTML=[['hand','♾️ Push it out by hand','Push b out by hand and watch the area grow'],['pick','🎯 Where does it close in?','See an endless area, and pick which of four numbers it closes in on']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Tail.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['tlSets','tlFig','tlStep','tlRead','tlGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('taBox').innerHTML=pick ? TailPick.html() : '';
+    if(pick) return;
     document.getElementById('tlSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Tail.pick(\${i})" aria-label="f(x) = \${s.fs}, p = \${s.p}">\${s.btn}</button>\`).join('');
     document.getElementById('tlB').textContent=\`b = \${this.b()}\`;

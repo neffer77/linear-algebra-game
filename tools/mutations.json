@@ -1,334 +1,327 @@
 {
-  "change": "Where does it flip? The bend workshop turned round: see a cubic, and pick which of four numbers is where its bend flips.",
+  "change": "Where does it close in? The endless area workshop turned round: see an endless area, and pick which of four numbers it closes in on.",
   "mutations": [
     {
-      "name": "the rule puts the bend at −b/(2a)",
+      "name": "the rule divides by p",
       "file": "index.html",
-      "find": "which is 0 at x = −2b/(6a) = −b/(3a).",
-      "replace": "which is 0 at x = −2b/(6a) = −b/(2a).",
+      "find": "leaving a/(p − 1). Which number",
+      "replace": "leaving a/p. Which number",
       "run": "verify"
     },
     {
-      "name": "x is −b/(2a)",
+      "name": "the area is a/p",
       "file": "index.html",
-      "find": "return k==='right' ? this.frac(-b,3*a) :",
-      "replace": "return k==='right' ? this.frac(-b,2*a) :",
+      "find": "return k==='right' ? this.frac(a,p-1) :",
+      "replace": "return k==='right' ? this.frac(a,p) :",
       "run": "verify"
     },
     {
-      "name": "x keeps the sign of b",
+      "name": "the area keeps the minus",
       "file": "index.html",
-      "find": "return k==='right' ? this.frac(-b,3*a) :",
-      "replace": "return k==='right' ? this.frac(b,3*a) :",
+      "find": "return k==='right' ? this.frac(a,p-1) :",
+      "replace": "return k==='right' ? this.frac(-a,p-1) :",
       "run": "verify"
     },
     {
-      "name": "the sign slip keeps the minus",
+      "name": "the no-minus slip divides by p − 1",
       "file": "index.html",
-      "find": "k==='sign' ? this.frac(b,3*a) :",
-      "replace": "k==='sign' ? this.frac(-b,3*a+1) :",
+      "find": "k==='noMinus' ? this.frac(a,p) :",
+      "replace": "k==='noMinus' ? this.frac(a,p+2) :",
       "run": "verify"
     },
     {
-      "name": "the no-two slip keeps the 2",
+      "name": "the down slip divides by p − 1",
       "file": "index.html",
-      "find": "k==='noTwo' ? this.frac(-b,6*a)\n",
-      "replace": "k==='noTwo' ? this.frac(-b,6*a+1)\n",
+      "find": "k==='up' ? this.frac(a,p+1)",
+      "replace": "k==='up' ? this.frac(a,p+3)",
       "run": "verify"
     },
     {
-      "name": "the no-six slip keeps the 6",
+      "name": "the sign slip keeps the sign",
       "file": "index.html",
-      "find": ": k==='noSix' ? this.frac(-2*b,a) :",
-      "replace": ": k==='noSix' ? this.frac(-2*b,a+1) :",
+      "find": "      : k==='sign' ? this.frac(-a,p-1) :",
+      "replace": "      : k==='sign' ? this.frac(-a,p+4) :",
       "run": "verify"
     },
     {
-      "name": "the vertex slip is not −b/(2a)",
+      "name": "the multiply slip divides",
       "file": "index.html",
-      "find": " : this.frac(-b,2*a);\n  },",
-      "replace": "  : this.frac(-b,2*a+1);\n  },",
+      "find": "this.frac(a*(p-1),1);",
+      "replace": "this.frac(a*(p-1),2);",
       "run": "verify"
     },
     {
-      "name": "f″ is worked without the 6",
+      "name": "the form of the area is never chosen",
       "file": "index.html",
-      "find": "f2(S,v){ return this.frac(6*S.a*v[0]+2*S.b*v[1], v[1]); },",
-      "replace": "f2(S,v){ return this.frac(S.a*v[0]+2*S.b*v[1], v[1]); },",
+      "find": "      if(this.whole(W)!==wantWhole) continue;\n      const rest=this.slips(S);\n      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;\n      return S;\n    }\n    return {a:6",
+      "replace": "      if(false) continue;\n      const rest=this.slips(S);\n      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;\n      return S;\n    }\n    return {a:6",
       "run": "verify"
     },
     {
-      "name": "the form of x is never chosen",
+      "name": "the area is always a fraction",
       "file": "index.html",
-      "find": "      if(this.whole(W)!==wantWhole) continue;\n      const rest=this.slips(S);\n      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;\n      return S;\n    }\n    return {a",
-      "replace": "      if(false) continue;\n      const rest=this.slips(S);\n      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;\n      return S;\n    }\n    return {a",
-      "run": "verify"
-    },
-    {
-      "name": "x is always a fraction",
-      "file": "index.html",
-      "find": "    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a",
-      "replace": "    const wantWhole=false;\n    for(let g=0;g<500;g++){\n      const S={a",
+      "find": "    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,1",
+      "replace": "    const wantWhole=false;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,1",
       "run": "verify"
     },
     {
       "name": "a is never negative",
       "file": "index.html",
-      "find": "a:R.i(1,3)*(R.i(0,1)?1:-1),",
-      "replace": "a:R.i(1,3),",
+      "find": "a:R.i(1,12)*(R.i(0,1)?1:-1), p",
+      "replace": "a:R.i(1,12), p",
       "run": "verify"
     },
     {
-      "name": "b is never negative",
+      "name": "a never reaches 12",
       "file": "index.html",
-      "find": "b:R.i(1,9)*(R.i(0,1)?1:-1),",
-      "replace": "b:R.i(1,9),",
+      "find": "a:R.i(1,12)*(R.i(0,1)?1:-1), p",
+      "replace": "a:R.i(1,11)*(R.i(0,1)?1:-1), p",
       "run": "verify"
     },
     {
-      "name": "a never reaches 3",
+      "name": "p is never 7",
       "file": "index.html",
-      "find": "a:R.i(1,3)*",
-      "replace": "a:R.i(1,2)*",
+      "find": "p:R.i(2,7)};",
+      "replace": "p:R.i(2,6)};",
       "run": "verify"
     },
     {
-      "name": "b never reaches 9",
+      "name": "p may be 1",
       "file": "index.html",
-      "find": "b:R.i(1,9)*",
-      "replace": "b:R.i(1,8)*",
+      "find": "p:R.i(2,7)};",
+      "replace": "p:R.i(1,7)};",
       "run": "verify"
     },
     {
-      "name": "c is never negative",
+      "name": "two numbers may be the same",
       "file": "index.html",
-      "find": "c:R.i(-6,6),",
-      "replace": "c:R.i(0,6),",
+      "find": "      if(seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  whole(v){ return v[1]===1; },\n  build(){\n    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,1",
+      "replace": "      if(false) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  whole(v){ return v[1]===1; },\n  build(){\n    const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const S={a:R.i(1,1",
       "run": "verify"
     },
     {
-      "name": "d is never 0",
+      "name": "the curve drops its power",
       "file": "index.html",
-      "find": "d:R.i(-5,5)};",
-      "replace": "d:R.i(1,5)};",
+      "find": "return `${neg(S.a)}/x${sup(S.p)}`;",
+      "replace": "return `${neg(S.a)}/x`;",
       "run": "verify"
     },
     {
-      "name": "a 1 is written before x³",
+      "name": "the minus is dropped from a",
       "file": "index.html",
-      "find": "w=(m===1&&v?'':m)+v;",
-      "replace": "w=m+v;",
+      "find": "return `${neg(S.a)}/x${sup(S.p)}`;",
+      "replace": "return `${Math.abs(S.a)}/x${sup(S.p)}`;",
       "run": "verify"
     },
     {
-      "name": "a minus is written as + −",
+      "name": "a 1 is written in front of x",
       "file": "index.html",
-      "find": "(n<0?' − ':' + ')+w;",
-      "replace": "' + '+(n<0?'−':'')+w;",
-      "run": "verify"
-    },
-    {
-      "name": "c is never written",
-      "file": "index.html",
-      "find": "+t(S.c,'x',false)",
-      "replace": "",
+      "find": "  cx(a){ return a===1 ? '' :",
+      "replace": "  cx(a){ return a===1 ? '1' :",
       "run": "verify"
     },
     {
       "name": "the same curve may come twice",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||true) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "the slips always come in one order",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "x always sits first",
+      "name": "the area always sits first",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()};",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p].join()!==[prev.a,prev.p].join()) break; }\n    const rest=this.slips(S), form=this.whole(this.val(S,'right'));\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const take=rest.slice(0,3);\n    // a number of the right one's form always stands beside it, so the form gives nothing away\n    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);\n    const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
-      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    B",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
+      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Ta",
       "run": "verify"
     },
     {
       "name": "a miss is not shut",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
-      "replace": "      this.misses++; this.last=null;\n    }\n    B",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Ta",
       "run": "verify"
     },
     {
       "name": "a shut number can be picked again",
       "file": "index.html",
-      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('B",
-      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('B",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
       "run": "verify"
     },
     {
       "name": "a first try is counted after a miss",
       "file": "index.html",
-      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('B",
-      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('B",
+      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
+      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('B",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('B",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('TAIL TAMER', this.matched+' endless a",
       "run": "verify"
     },
     {
       "name": "the banner names the wrong thing",
       "file": "index.html",
-      "find": "' bends found'",
-      "replace": "' curves found'",
+      "find": "' endless areas measured'",
+      "replace": "' areas measured'",
       "run": "verify"
     },
     {
       "name": "the toast forgets the tries",
       "file": "index.html",
-      "find": "picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
-      "replace": "picked ${'on the first try'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
+      "find": "picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
+      "replace": "picked ${'on the first try'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
       "run": "verify"
     },
     {
       "name": "the workshop is not redrawn",
       "file": "index.html",
-      "find": "    Bend.render();\n  },",
+      "find": "    Tail.render();\n  },",
       "replace": "  },",
       "run": "verify"
     },
     {
       "name": "the right pick leaves the old curve",
       "file": "index.html",
-      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
-      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    B",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Ta",
       "run": "verify"
     },
     {
-      "name": "the sign slip is told as the 2",
+      "name": "the no-minus line divides by p",
       "file": "index.html",
-      "find": "return `${L} loses the sign of b.",
-      "replace": "return `${L} drops the 2 that bx² brings down.",
+      "find": "and divide by that new power, ${neg(1-p)}.`;",
+      "replace": "and divide by that new power, ${neg(p)}.`;",
       "run": "verify"
     },
     {
-      "name": "the no-two line drops the 2",
+      "name": "the down line says p + 1 is right",
       "file": "index.html",
-      "find": "The slope of ${neg(b)}x² is ${neg(2*b)}x",
-      "replace": "The slope of ${neg(b)}x² is ${neg(b)}x",
+      "find": "so it divides by ${neg(1-p)}, not ${neg(-p-1)}.`;",
+      "replace": "so it divides by ${neg(-p-1)}, not ${neg(1-p)}.`;",
       "run": "verify"
     },
     {
-      "name": "the no-six line says 3",
+      "name": "the sign line is told as the multiply",
       "file": "index.html",
-      "find": "so ${neg(a)}x³ gives ${neg(6*a)}x in f″",
-      "replace": "so ${neg(a)}x³ gives ${neg(3*a)}x in f″",
+      "find": "return `${L} has the sign turned round.",
+      "replace": "return `${L} multiplies where it should divide.",
       "run": "verify"
     },
     {
-      "name": "the vertex line is told as the sign",
+      "name": "the multiply line multiplies by p",
       "file": "index.html",
-      "find": "return `${L} is −b/(2a), the middle of a parabola.",
-      "replace": "return `${L} loses the sign of b.",
+      "find": "return `${L} multiplies by ${p-1} where it should divide.",
+      "replace": "return `${L} multiplies by ${p} where it should divide.",
       "run": "verify"
     },
     {
       "name": "a miss is not checked",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), ra",
-      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), ra",
+      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), raw=B",
+      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), raw=B",
       "run": "verify"
     },
     {
-      "name": "the check works f″ at the right x",
+      "name": "the check works the right number",
       "file": "index.html",
-      "find": "    const v=this.val(S,k);\n    return `Check ${L}:",
-      "replace": "    const v=this.val(S,'right');\n    return `Check ${L}:",
+      "find": "    const v=this.val(S,k), {a,p}=S;",
+      "replace": "    const v=this.val(S,'right'), {a,p}=S;",
       "run": "verify"
     },
     {
-      "name": "the check writes 6a as 3a",
+      "name": "the check multiplies by p",
       "file": "index.html",
-      "find": "return `Check ${L}: f″(x) = ${neg(6*S.a)}x",
-      "replace": "return `Check ${L}: f″(x) = ${neg(3*S.a)}x",
+      "find": "that is ${this.pf(v)} × ${p-1} = ${this.fs(this.frac(v[0]*(p-1),v[1]))}",
+      "replace": "that is ${this.pf(v)} × ${p-1} = ${this.fs(this.frac(v[0]*p,v[1]))}",
+      "run": "verify"
+    },
+    {
+      "name": "the check writes the slope with b to the p − 1",
+      "file": "index.html",
+      "find": "and its slope in b is c × ${p-1}/b${sup(p)}",
+      "replace": "and its slope in b is c × ${p-1}/b${sup(p-1)}",
       "run": "verify"
     },
     {
       "name": "the right line does not reduce",
       "file": "index.html",
-      "find": "${raw===this.fs(v)?'':' = '+this.fs(v)}, and $",
-      "replace": ", and $",
+      "find": "${raw===this.fs(v)?'':' = '+this.fs(v)}, and ${t",
+      "replace": ", and ${t",
       "run": "verify"
     },
     {
-      "name": "the right line puts 2b in place of −2b",
+      "name": "the right line writes a/1",
       "file": "index.html",
-      "find": "raw=`${neg(-2*B.b)}/${this.pn(6*B.a)}`",
-      "replace": "raw=`${neg(2*B.b)}/${this.pn(6*B.a)}`",
+      "find": "raw=B.p===2 ? neg(B.a) :",
+      "replace": "raw=false ? neg(B.a) :",
       "run": "verify"
     },
     {
-      "name": "the right line leaves out f″ = 0",
+      "name": "the right line multiplies by p",
       "file": "index.html",
-      "find": "+ ${this.pn(2*B.b)} = 0, so the bend flips there.",
-      "replace": "+ ${this.pn(2*B.b)}, so the bend flips there.",
+      "find": ", and ${this.pf(v)} × ${B.p-1} = ${neg(B.a)}, so the area",
+      "replace": ", and ${this.pf(v)} × ${B.p} = ${neg(B.a)}, so the area",
       "run": "verify"
     },
     {
       "name": "the count line is lost",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"b",
-      "replace": "\n    out+=`<div id=\"b",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"taRead\"",
+      "replace": "    out+=`<div id=\"taRead\"",
       "run": "verify"
     },
     {
       "name": "the rule is not shown",
       "file": "index.html",
-      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"b",
-      "replace": "    let out=``;\n    out+=`<div id=\"b",
+      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"taQ\"",
+      "replace": "    let out=``;\n    out+=`<div id=\"taQ\"",
       "run": "verify"
     },
     {
       "name": "a shut number keeps its name",
       "file": "index.html",
-      "find": "${gone?'. Not where it flips':''}",
+      "find": "${gone?'. Not where it closes in':''}",
       "replace": "",
       "run": "verify"
     },
     {
       "name": "the buttons are not named",
       "file": "index.html",
-      "find": "aria-label=\"${L}: x = ${v}${gone?'. Not where it flips':''}\" ",
+      "find": "aria-label=\"${L}: ${v}${gone?'. Not where it closes in':''}\" ",
       "replace": "",
       "run": "verify"
     },
     {
       "name": "a button shows the wrong letter",
       "file": "index.html",
-      "find": "<b>${L}</b> x = ${v}</button>",
-      "replace": "<b>A</b> x = ${v}</button>",
+      "find": "<b>${L}</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), ra",
+      "replace": "<b>A</b> ${v}</button>`;\n    }).join('')+`</div>`;\n    const lines=[];\n    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), ra",
       "run": "verify"
     },
     {
       "name": "the hand workshop does not step aside",
       "file": "index.html",
-      "find": "    for(const id of ['bdSets','bdFig','bdStep','bdRead','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "replace": "    for(const id of ['bdSets','bdFig','bdStep','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "run": "play:flippick"
+      "find": "    for(const id of ['tlSets','tlFig','tlStep','tlRead','tlGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "    for(const id of ['tlSets','tlFig','tlStep','tlGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "run": "play:tailpick"
     }
   ]
 }

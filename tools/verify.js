@@ -5575,6 +5575,154 @@ const flipPickNotes = (() => {
   if (fives !== 30) fail('flippick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Where does it close in? The pick-a-number round in the endless area
+   workshop. Every number on screen is read back off its button as an exact
+   fraction and checked against the slip it is named as, worked out here from
+   a and p alone. The right number alone must be the area: checked by adding
+   up a/xᵖ from 1 out a very long way. Every "c × (p − 1)" in the readout is
+   worked again from the numbers it shows. */
+const tailPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'};" +
+    "const sup = n => String(n).split('').map(c=>SUP[c]||c).join(''); const supP = n => n===1 ? '' : sup(n);" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Tail = {render(){ env.renders++; }};" +
+    cut('const TailPick = {', 'const Tail = {') + 'return TailPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const SP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const sp = n => String(n).replace('-', '⁻').replace(/\d/g, d => SP[d]);
+  const spP = n => (n === 1 ? '' : sp(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const cx = a => (a === 1 ? '' : a === -1 ? '−' : ng(a));
+  const want = {
+    right: Q => fr(Q.a, Q.p - 1),
+    noMinus: Q => fr(Q.a, Q.p),
+    up: Q => fr(Q.a, Q.p + 1),
+    sign: Q => fr(-Q.a, Q.p - 1),
+    mult: Q => fr(Q.a * (Q.p - 1), 1)
+  };
+  const SL = ['noMinus', 'up', 'sign', 'mult'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "w × n = z" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`\\(?${V}\\)? × (\\d+) = ${V}`, 'g'))) { n++;
+      const w = rd(m[1]), z = rd(m[3]);
+      if (!eq(fr(w[0] * +m[2], w[1]), z)) fail('tailpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="taRead"')[1].replace(/^[^>]*>/, ''));
+  // the area from 1 out to ∞, added up numerically with x = eᵗ
+  const area = Q => { const T = 60, n = 6000, h = T / n; let s = 0;
+    for (let i = 0; i <= n; i++) { const t = i * h, y = Q.a * Math.exp((1 - Q.p) * t); s += y * (i === 0 || i === n ? 1 : i % 2 ? 4 : 2); }
+    return s * h / 3; };
+  const slipOf = (k, L, Q) => { const { a, p } = Q, c = `${ng(a)}/x${sp(p)}`; return ({
+    noMinus: `${L} divides by ${p}, the power before it is raised. ${c} is ${cx(a)}x${sp(-p)}; raise the power by one to x${sp(1 - p)} and divide by that new power, ${ng(1 - p)}.`,
+    up: `${L} takes the power down instead of up: x${sp(-p)} goes up by one to x${sp(1 - p)}, not down to x${sp(-p - 1)}, so it divides by ${ng(1 - p)}, not ${ng(-p - 1)}.`,
+    sign: `${L} has the sign turned round. F(x) = ${cx(a)}x${sp(1 - p)}/(${ng(1 - p)}) falls to 0 out at ∞, so the area is 0 − F(1), and that minus turns the sign of F(1) round.`,
+    mult: `${L} multiplies by ${p - 1} where it should divide. Raising ${cx(a)}x${sp(-p)} gives ${cx(a)}x${sp(1 - p)}, and you divide by the new power, ${ng(1 - p)}.` })[k]; };
+  const checkOf = (k, L, Q) => { const v = want[k](Q), { a, p } = Q;
+    return `Check ${L}: the area out to b is c·(1 − 1/b${spP(p - 1)}), and its slope in b is c × ${p - 1}/b${sp(p)}, which must be the curve itself, ${ng(a)}/b${sp(p)}, so c × ${p - 1} must be ${ng(a)}. With c = ${fst(v)} that is ${pf(v)} × ${p - 1} = ${fst(fr(v[0] * (p - 1), v[1]))}, not ${ng(a)}.`; };
+  if (S.RULE !== 'An endless area is a limit: integrate out to b, then let b run to ∞. Antidifferentiate a/xᵖ = a·x⁻ᵖ by raising the power by one, to a·x¹⁻ᵖ, and dividing by that new power, 1 − p. From 1 out to b that gives a/(p − 1) × (1 − 1/bᵖ⁻¹), and for p above 1 the 1/bᵖ⁻¹ falls to 0, leaving a/(p − 1). Which number does it close in on?') fail('tailpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('tailpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negA = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Ps = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Ps.add(Q.p); if (Q.a < 0) negA++;
+      if (!Number.isInteger(Q.a) || !Number.isInteger(Q.p) || !Q.a || Math.abs(Q.a) > 12 || Q.p < 2 || Q.p > 7) fail('tailpick', key, `${sig} is not a whole a over x to a power above 1`);
+      const L = want.right(Q);
+      if (Math.abs(area(Q) - L[0] / L[1]) > 1e-6) fail('tailpick', key, `the area under ${sig} is ${area(Q)}, not ${fst(L)}`);
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('tailpick', key, 'the same curve comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('tailpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ∫₁^∞ ${ng(Q.a)}/x${sp(Q.p)} dx What does it close in on? A`)) fail('tailpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TailPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('tailpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('tailpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('tailpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('tailpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('tailpick', key, `the area is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('tailpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('tailpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('tailpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the area`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('tailpick', key, 'a curve with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('tailpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('tailpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('tailpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('tailpick', key, 'a miss does not work c × (p − 1) out');
+        if (vals[i][0] * (Q.p - 1) === Q.a * vals[i][1]) fail('tailpick', key, 'a wrong number passes the check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="TailPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not where it closes in"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('tailpick', key, 'the missed numbers are not shut and told as not where it closes in');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('tailpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('tailpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('tailpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('tailpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TAIL TAMER / 5 endless areas measured') fail('tailpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where it closes in, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('tailpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), raw = Q.p === 2 ? ng(Q.a) : `${ng(Q.a)}/${Q.p - 1}`;
+      const after = `That was it: c = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and ${pf(L)} × ${Q.p - 1} = ${ng(Q.a)}, so the area out to b, c·(1 − 1/b${spP(Q.p - 1)}), grows at the curve's own rate and closes in on c as b runs out forever. Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('tailpick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('tailpick', key, 'the right pick does not work c × (p − 1) out');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 6, p: 4 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":6,"p":4}') fail('tailpick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('tailpick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 24 || Ps.size !== 6) fail('tailpick', 'deal', `a is only ever ${[...As]}, p ${[...Ps]}`);
+  if (negA < rounds * 0.4 || negA > rounds * 0.6) fail('tailpick', 'deal', `a is negative in ${negA} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('tailpick', 'deal', `the whole areas are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('tailpick', 'deal', `the area is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 4) fail('tailpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('tailpick', 'deal', `the area only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('tailpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10322,6 +10470,7 @@ console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 1
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);
 console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the trig integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone making the slope of F land on the wave; ${trigPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their F back, ${trigPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${trigPickNotes.wholeR.toLocaleString()} rounds whose c is whole)`);
 console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
+console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
