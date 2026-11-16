@@ -16,7 +16,7 @@ const opt = (t, i) => t.ev(i => document.querySelectorAll('#kpPick button')[i].c
 const pressed = t => t.ev(() => [...document.querySelectorAll('#csTab button')].map(b => b.getAttribute('aria-pressed')).join());
 const toast = t => t.ev(() => [...document.querySelectorAll('.toast')].map(d => d.innerText).join(' | '));
 const hidden = (t, id) => t.ev(id => { const e = document.getElementById(id); return !e || e.offsetParent === null; }, id);
-const SV = '\\d+(/\\d+)?';
+const SV = '\\d+(?:/\\d+)?';
 const AWAY = ['csRules', 'csFig', 'csStep', 'csRead', 'csGoalPanel'];
 
 module.exports = {
