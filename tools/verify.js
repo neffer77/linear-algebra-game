@@ -733,6 +733,7 @@ function workedSum(key, ex, a) {
       fail('analysis', key, `the worked values ${vals} do not add up to ${a}`);
   }
 }
+let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -1146,6 +1147,49 @@ Object.assign(ANALYSIS, {
     if (!f || Math.abs(val(f[1]) - b / a) > 1e-12) fail('analysis', 'growth', `the working does not name the factor every ${T}: ${w}`);
     covered.add('growth');
   },
+  // The mean value theorem, worked again here in floating point: the chord's
+  // slope from f(a) and f(b), then every c strictly between a and b where a
+  // numeric f′ meets it, found by bisection. There must be exactly one, and it
+  // is the answer; the working names the chord's slope.
+  meanValue: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), N = '(-?\\d+(?:/\\d+)?)';
+    const m = t.match(new RegExp(`^f\\(x\\) = (.+?) on \\[${N}, ${N}\\]\\. Where between ${N} and ${N} is the tangent parallel to the chord\\? What is c\\?$`));
+    if (!m) { fail('analysis', 'meanValue', `the question does not read as the mean value theorem: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const a = val(m[2]), b = val(m[3]);
+    if (m[4] !== m[2] || m[5] !== m[3] || !(a < b)) { fail('analysis', 'meanValue', `the interval is not named the same twice: ${t}`); return; }
+    let f;
+    const rec = m[1].match(/^(\d+)\/x$/);
+    if (rec) f = x => +rec[1] / x;
+    else {
+      // a polynomial as written: terms like 3x², −x³, 4x, −5
+      const terms = m[1].replace(/ - /g, ' + -').split(' + ').map(z => { const q = z.match(/^(-?\d*)(x([²³])?)?$/);
+        if (!q) return null; const c = q[1] === '' ? 1 : q[1] === '-' ? -1 : +q[1]; return [c, q[2] ? (q[3] === '³' ? 3 : q[3] === '²' ? 2 : 1) : 0]; });
+      if (terms.some(z => !z)) { fail('analysis', 'meanValue', `f is not read: ${m[1]}`); return; }
+      f = x => terms.reduce((s, [c, k]) => s + c * x ** k, 0);
+    }
+    const slope = (f(b) - f(a)) / (b - a), g = x => (f(x + 1e-6) - f(x - 1e-6)) / 2e-6 - slope;
+    const roots = [], n = 4000, lo = a + (b - a) * 1e-4, hi = b - (b - a) * 1e-4;
+    for (let i = 0; i < n; i++) {
+      let x0 = lo + (hi - lo) * i / n, x1 = lo + (hi - lo) * (i + 1) / n, g0 = g(x0), g1 = g(x1);
+      if (g0 === 0) { roots.push(x0); continue; }
+      if (g0 * g1 < 0) { for (let k = 0; k < 60; k++) { const xm = (x0 + x1) / 2, gm = g(xm); if (g0 * gm <= 0) x1 = xm; else { x0 = xm; g0 = gm; } } roots.push((x0 + x1) / 2); }
+    }
+    if (roots.length !== 1) { fail('analysis', 'meanValue', `${roots.length} places between ${a} and ${b} have the chord's slope: ${t}`); return; }
+    valueCheck('meanValue', roots[0], p.a, 1e-5);
+    const w = fl(p.ex), s = w.match(/^The chord from \(\S+, \S+\) to \(\S+, \S+\) has slope \(.+?\)\/\(.+?\) = (-?\d+(?:\/\d+)?)\. /);
+    if (!s || Math.abs(val(s[1]) - slope) > 1e-9 * Math.max(1, Math.abs(slope))) fail('analysis', 'meanValue', `the working does not name the chord's slope, ${slope}: ${w}`);
+    const fc = w.match(/so f′\(c\) = (-?\d+(?:\/\d+)?) means/);
+    if (!fc || Math.abs(val(fc[1]) - slope) > 1e-9 * Math.max(1, Math.abs(slope))) fail('analysis', 'meanValue', `the working does not set f′(c) to the chord's slope, ${slope}: ${w}`);
+    // the working ends on the answer: the last c = … (or √… = …) it reaches is c
+    const fin = [...w.matchAll(/(?:\bc|√\S+) = (-?\d+(?:\/\d+)?)(?=[.,])/g)].pop();
+    if (!fin || fin[1] !== fl(p.a).replace(/−/g, '-')) fail('analysis', 'meanValue', `the working does not end on c = ${p.a}: ${w}`);
+    // the chord's slope is the first slip people make, so it is on offer
+    if (p.d.some(x => Math.abs(val(fl(x[0])) - slope) < 1e-9)) mvChordOffered++;
+    covered.add('meanValue');
+  },
   taylor: p => {
     const t = flat(p.q);
     const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
@@ -1228,7 +1272,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 72, sig: 0x624e };
+  const PINNED = { count: 73, sig: 0xa208 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -14543,6 +14587,22 @@ for (let d = 1; d <= 3; d++) {
   }
   // growth and decay come up about equally, so neither is the only kind a knight meets
   if (decays[d - 1] < REPS * 0.25 || decays[d - 1] > REPS * 0.75) fail('analysis', 'growth', `at depth ${d}, ${decays[d - 1]} of ${REPS} questions decay, not about half`);
+}
+
+// The mean value theorem at every depth: the answer and its four slips are
+// five different exact numbers, none of them 0, and only the answer lies
+// strictly between a and b with f′ there equal to the chord's slope.
+for (let d = 1; d <= 3; d++) {
+  mvChordOffered = 0;
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.meanValue(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'meanValue', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v) || /^−?0/.test(v))) fail('analysis', 'meanValue', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'meanValue', 'a wrong answer has no reason');
+    ANALYSIS.meanValue(p);
+  }
+  if (mvChordOffered < REPS / 4) fail('analysis', 'meanValue', `depth ${d} offers the chord's slope as a slip in only ${mvChordOffered} of ${REPS} questions`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

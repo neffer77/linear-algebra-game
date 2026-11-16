@@ -3945,6 +3945,85 @@ growth(d){
       ex:\`Every solution of y′ = ky is y = y(0)·eᵏᵗ, so each stretch of \${T} multiplies y by the same factor, y(\${T}) ÷ y(0) = \${show(b)} ÷ \${show(a)} = \${show(r)}. \`+
          \`t = \${t} is \${mWords} of those stretches\${mn%2===0?'':\` (\${mShow} of them)\`}. \${half}So y(\${t}) = \${show(a)} × \${pow}\${pow===inB(rm)?'':\` = \${show(a)} × \${inB(rm)}\`} = \${show(A)}.\`};
   }
+},
+/* The mean value theorem: a smooth f on [a, b] has, somewhere strictly
+   between a and b, a tangent parallel to the chord from (a, f(a)) to
+   (b, f(b)): a c with f′(c) = (f(b) − f(a))/(b − a). A parabola at depth 1,
+   where c always falls half way; x³ + px + q at depth 2, where c² is a third
+   of a² + ab + b² and the other root lands on an end of the interval, which
+   does not count; n/x at depth 3, where c is √(ab). The wrong answers are the
+   slips people make: giving the chord's slope instead of the point, taking
+   the middle of the interval where f is not a parabola, forgetting the 2 that
+   x² brings down, stopping at c² or at the end, giving where the tangent is
+   flat, and giving a height, f(c) or the average of f(a) and f(b), instead
+   of c. */
+meanValue(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), div=(u,v)=>F(u[0]*v[1],u[1]*v[0]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):\`(\${show(u)})\`;
+  for(let g=0;;g++){
+    let fs, dfs, f, a, b, c, why, slips;
+    if(d===1){
+      const p=R.pick([1,-1,2,-2,3]), q=R.i(-6,6), r=R.i(-5,5);
+      const A=R.i(-3,3), B=A+R.pick([1,2,3,4,5]); a=F(A); b=F(B);
+      f=x=>add(add(mul(F(p),mul(x,x)),mul(F(q),x)),F(r));
+      fs=poly([[p,2],[q,1],[r,0]]); dfs=poly([[2*p,1],[q,0]]);
+      const m=F(p*(A+B)+q,1); c=F(A+B,2);
+      why=\`f′(x) = \${dfs}, so f′(c) = \${show(m)} means \${2*p===1?'':2*p===-1?'−':neg(2*p)}c\${q?\` \${q<0?'−':'+'} \${Math.abs(q)}\`:''} = \${show(m)}, which gives c = \${show(c)}. For a parabola c is always half way between a and b.\`;
+      slips=[
+        [m,\`that is the chord's slope; c is the point where the tangent has that slope\`],
+        [F(A+B),\`that takes f′(x) as \${poly([[p,1],[q,0]])}, forgetting the 2 that x² brings down\`],
+        [F(-q,2*p),\`that is where the tangent is flat, f′(c) = 0; the tangent has to match the chord, whose slope is \${show(m)}\`],
+        [f(c),\`that is f(c), the height of the curve at c; the question asks for c itself\`],
+        [mul(add(f(a),f(b)),F(1,2)),\`that is the average of f(\${show(a)}) and f(\${show(b)}), a height on the curve, not a place between \${show(a)} and \${show(b)}\`]
+      ];
+    } else if(d===2){
+      const [A,B,C]=R.pick([[-8,4,-4],[-6,3,-3],[-4,2,-2],[-4,8,4],[-3,6,3],[-2,1,-1],[-2,4,2],[-1,2,1]]);
+      const h=R.pick([1,2]), p=R.i(-3,3), q=R.i(-5,5);
+      a=F(A,h); b=F(B,h); c=F(C,h);
+      f=x=>add(add(mul(x,mul(x,x)),mul(F(p),x)),F(q));
+      fs=poly([[1,3],[p,1],[q,0]]); dfs=poly([[3,2],[p,0]]);
+      const m=F(A*A+A*B+B*B+p*h*h,h*h), k2=F(C*C,h*h);
+      why=\`f′(x) = \${dfs}, so f′(c) = \${show(m)} means 3c²\${p?\` \${p<0?'−':'+'} \${Math.abs(p)}\`:''} = \${show(m)}, so c² = \${show(k2)} and c = \${show(F(Math.abs(C),h))} or \${show(F(-Math.abs(C),h))}. \${show(F(-C,h))} is an end of the interval, and the theorem promises a c strictly between \${show(a)} and \${show(b)}, so c = \${show(c)}.\`;
+      slips=[
+        [m,\`that is the chord's slope; c is the point where the tangent has that slope\`],
+        [F(A+B,2*h),\`that is the middle of the interval; c falls half way only when f is a parabola, and this f is a cubic\`],
+        [k2,\`that is c², not c: c is its square root\`],
+        [F(-C,h),\`that root is an end of the interval, and the theorem's c lies strictly between \${show(a)} and \${show(b)}\`],
+        [f(c),\`that is f(c), the height of the curve at c; the question asks for c itself\`],
+        [mul(add(f(a),f(b)),F(1,2)),\`that is the average of f(\${show(a)}) and f(\${show(b)}), a height on the curve, not a place between \${show(a)} and \${show(b)}\`]
+      ];
+    } else {
+      const [A,B,C]=R.chance(0.5)?R.pick([[[1,1],[4,1],[2,1]],[[1,1],[9,1],[3,1]],[[4,1],[9,1],[6,1]],[[2,1],[8,1],[4,1]],[[1,1],[16,1],[4,1]],[[3,1],[12,1],[6,1]],[[2,1],[18,1],[6,1]],[[9,1],[16,1],[12,1]],[[1,1],[25,1],[5,1]],[[4,1],[25,1],[10,1]]])
+        :R.pick([[[1,4],[1,1],[1,2]],[[1,9],[1,1],[1,3]],[[1,4],[9,1],[3,2]],[[1,9],[4,1],[2,3]],[[4,9],[1,1],[2,3]],[[1,4],[4,9],[1,3]],[[1,9],[1,4],[1,6]],[[1,4],[25,1],[5,2]],[[1,16],[1,1],[1,4]],[[9,4],[4,1],[3,1]]]), n=R.pick([1,2,3,4,6,12]);
+      a=A; b=B; c=C;
+      f=x=>div(F(n),x);
+      fs=\`\${n}/x\`; dfs=\`−\${n}/x²\`;
+      const ab=mul(a,b), m=div(F(-n),ab);
+      why=\`f′(x) = \${dfs}, so f′(c) = \${show(m)} means \${n}/c² = \${show(div(F(n),ab))}, so c² = \${inB(a)} × \${inB(b)} = \${show(ab)} and c = √\${inB(ab)} = \${show(c)}, the positive root, since c lies between \${show(a)} and \${show(b)}.\`;
+      slips=[
+        [m,\`that is the chord's slope; c is the point where the tangent has that slope\`],
+        [mul(add(a,b),F(1,2)),\`that is the middle of the interval; c falls half way only when f is a parabola, and \${n}/x is not one\`],
+        [ab,\`that is c², not c: c is its square root\`],
+        [f(c),\`that is f(c), the height of the curve at c; the question asks for c itself\`],
+        [mul(add(f(a),f(b)),F(1,2)),\`that is the average of f(\${show(a)}) and f(\${show(b)}), a height on the curve, not a place between \${show(a)} and \${show(b)}\`]
+      ];
+    }
+    // four different numbers beside the answer, none of them 0 and none wild
+    const ok=v=>v[0]!==0 && Math.abs(v[0]/v[1])<=600 && v[1]<=100 && key(v)!==key(c);
+    const dist=[], seen=new Set([key(c)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    if((dist.length<4 || c[0]===0) && g<300) continue;
+    const fa=f(a), fb=f(b), rise=add(fb,mul(fa,F(-1)));
+    return {topic:'Mean Value Theorem',
+      codex:{rule:'If f is smooth on [a, b], then somewhere strictly between a and b its tangent is parallel to the chord: f′(c) = (f(b) − f(a))/(b − a). Find the chord\\'s slope, then solve f′(c) = it.',
+             eg:'f(x) = x² on [1, 3]: the chord\\'s slope is (9 − 1)/(3 − 1) = 4, and f′(c) = 2c = 4 gives c = 2.'},
+      q:\`f(x) = \${fs} on [\${show(a)}, \${show(b)}].<br>Where between \${show(a)} and \${show(b)} is the tangent parallel to the chord? What is c?\`,
+      a:show(c),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`The chord from (\${show(a)}, \${show(fa)}) to (\${show(b)}, \${show(fb)}) has slope (\${show(fb)} − \${inB(fa)})/(\${show(b)} − \${inB(a)}) = \${show(div(rise,add(b,mul(a,F(-1)))))}. \`+why};
+  }
 }
 };
 
@@ -4058,7 +4137,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4071,7 +4150,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4656,7 +4735,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
