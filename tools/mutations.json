@@ -88,8 +88,8 @@
     {
       "name": "a pair with too few slips is dealt",
       "file": "index.html",
-      "find": "      if(this.arrow(c,'right').every(x=>!x)) continue;                         // parallel arrows have no cross product to find\n      if(this.slips(c).length<3) continue;",
-      "replace": "      if(this.arrow(c,'right').every(x=>!x)) continue;                         // parallel arrows have no cross product to find\n      if(this.slips(c).length<2) continue;",
+      "find": "      if(this.slips(c).length<3) continue;   // parallel arrows land here too: their u × v is 0, and the swap and the middle slip both fall on it\n      return c;\n    }\n    return {u:[1,2,0],v:[0,1,3]};",
+      "replace": "      if(this.slips(c).length<2) continue;   // parallel arrows land here too: their u × v is 0, and the swap and the middle slip both fall on it\n      return c;\n    }\n    return {u:[1,2,0],v:[0,1,3]};",
       "run": "verify"
     },
     {
@@ -193,8 +193,8 @@
     {
       "name": "the worked line swaps a product",
       "file": "index.html",
-      "find": "${P(e)}·${P(p)} − ${P(a)}·${P(s)}, ${P(a)}·${P(q)}",
-      "replace": "${P(a)}·${P(s)} − ${P(e)}·${P(p)}, ${P(a)}·${P(q)}",
+      "find": "P=this.pn, w=this.arrow(c,'right');\n    return `u × v = ⟨${P(b)}·${P(s)} − ${P(e)}·${P(q)}, ${P(e)}·${P(p)} − ${P(a)}·${P(s)}, ${P(a)}·${P(q)}",
+      "replace": "P=this.pn, w=this.arrow(c,'right');\n    return `u × v = ⟨${P(b)}·${P(s)} − ${P(e)}·${P(q)}, ${P(a)}·${P(s)} − ${P(e)}·${P(p)}, ${P(a)}·${P(q)}",
       "run": "verify"
     },
     {
