@@ -1,319 +1,158 @@
 {
-  "change": "The Euler step workshop, turned round: see an equation, a start and a step, and pick which of four numbers is Euler's estimate two steps on.",
+  "change": "Exponential growth as a fight topic: y at a new time from y(0) and y(T) on y′ = ky.",
   "mutations": [
     {
-      "name": "the right walk reads the slope at the far end",
+      "name": "the answer multiplies by the factor once too often",
       "file": "index.html",
-      "find": "at=k==='far'?this.frac(j+1,S.hd):x;",
-      "replace": "at=this.frac(j+1,S.hd);",
+      "find": "const rm=pw(q,j*mn/2), A=mul(a,rm);",
+      "replace": "const rm=pw(q,j*mn/2), A=mul(b,rm);",
       "run": "verify"
     },
     {
-      "name": "the right walk adds the whole slope",
+      "name": "the answer adds instead of multiplying",
       "file": "index.html",
-      "find": "const up=k==='noH' ? s : this.mul(h,s);",
-      "replace": "const up=s;",
+      "find": "const rm=pw(q,j*mn/2), A=mul(a,rm);",
+      "replace": "const rm=pw(q,j*mn/2), A=add(a,rm);",
       "run": "verify"
     },
     {
-      "name": "the right walk keeps the first slope",
+      "name": "a half stretch takes the factor itself",
       "file": "index.html",
-      "find": "const s=k==='same' ? this.slope(S,[0,1],[S.y0,1]) : this.slope(S,at,y);",
-      "replace": "const s=this.slope(S,[0,1],[S.y0,1]);",
+      "find": "const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,2]:[3,2];",
+      "replace": "const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,1]:[3,2];",
       "run": "verify"
     },
     {
-      "name": "the right walk stops a step short",
+      "name": "y(T) is the factor squared",
       "file": "index.html",
-      "find": "n=k==='short'?1:2",
-      "replace": "n=1",
+      "find": "r=pw(q,j), a=F(R.i(2,9)), b=mul(a,r);",
+      "replace": "r=pw(q,j), a=F(R.i(2,9)), b=mul(a,pw(r,2));",
       "run": "verify"
     },
     {
-      "name": "the slope swaps p and q",
+      "name": "the time asked is a stretch off",
       "file": "index.html",
-      "find": "slope(S,x,y){ return this.add(this.mul([S.p,1],x),this.mul([S.q,1],y)); }",
-      "replace": "slope(S,x,y){ return this.add(this.mul([S.q,1],x),this.mul([S.p,1],y)); }",
+      "find": "t=T*mn/2;",
+      "replace": "t=T*mn/2+T;",
       "run": "verify"
     },
     {
-      "name": "the no-add slip adds",
+      "name": "the stretch is read as 1",
       "file": "index.html",
-      "find": "y:k==='noAdd'?up:this.add(y,up)",
-      "replace": "y:this.add(y,up)",
+      "find": "const T=d===1?R.pick([1,2,3,5,10]):R.pick([2,4,6,10])",
+      "replace": "const T=1",
       "run": "verify"
     },
     {
-      "name": "the no-h slip multiplies by h",
+      "name": "decay inverts the factor wrongly",
       "file": "index.html",
-      "find": "const up=k==='noH' ? s : this.mul(h,s);",
-      "replace": "const up=this.mul(h,s);",
+      "find": "q=decay?F(q0[1],q0[0]):F(q0[0],q0[1]);",
+      "replace": "q=decay?F(-q0[1],q0[0]):F(q0[0],q0[1]);",
       "run": "verify"
     },
     {
-      "name": "a slip may be 0",
+      "name": "the wrong answers may coincide",
       "file": "index.html",
-      "find": "if(v[0]===0 || seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // whether one of the four numbers is the sum of two others, which would point at it\n  sums(S,ks){\n    const v=ks.map(k=>this.val(S,k));\n    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){\n      if(i===j||i===k) continue;\n      const s=this.add(v[j],v[k]);\n      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }\n    return false;\n  },\n  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums\n  trios(S){\n    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);\n    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){\n      const t=[rest[i],rest[j],rest[k]];\n      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
-      "replace": "if(seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // whether one of the four numbers is the sum of two others, which would point at it\n  sums(S,ks){\n    const v=ks.map(k=>this.val(S,k));\n    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){\n      if(i===j||i===k) continue;\n      const s=this.add(v[j],v[k]);\n      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }\n    return false;\n  },\n  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums\n  trios(S){\n    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);\n    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){\n      const t=[rest[i],rest[j],rest[k]];\n      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
+      "find": "!seen.has(key(s[0]))",
+      "replace": "true",
       "run": "verify"
     },
     {
-      "name": "the four may hold a sum",
+      "name": "a wrong answer may be 0 or below",
       "file": "index.html",
-      "find": "&& !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
-      "replace": ") out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
+      "find": "const ok=v=>v[0]>0 && ",
+      "replace": "const ok=v=>",
       "run": "verify"
     },
     {
-      "name": "the form may give it away",
+      "name": "only three wrong answers are kept",
       "file": "index.html",
-      "find": "t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
-      "replace": "t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the page names,",
+      "find": "if(dist.length<4 && ok(s[0])",
+      "replace": "if(dist.length<3 && ok(s[0])",
       "run": "verify"
     },
     {
-      "name": "a number on the page may be the estimate",
+      "name": "the question says the wrong start",
       "file": "index.html",
-      "find": "      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;\n      i",
-      "replace": "      i",
+      "find": "with y(0) = ${show(a)} and",
+      "replace": "with y(0) = ${show(b)} and",
       "run": "verify"
     },
     {
-      "name": "q is never 3",
+      "name": "the question asks for the wrong time",
       "file": "index.html",
-      "find": "Q=[-3,-1,1,2,3]",
-      "replace": "Q=[-3,-1,1,2,2]",
+      "find": "What is y(${t})?",
+      "replace": "What is y(${t+1})?",
       "run": "verify"
     },
     {
-      "name": "the step is always 1/2",
+      "name": "the question gives the wrong y(T)",
       "file": "index.html",
-      "find": "hd:R.i(1,2)};",
-      "replace": "hd:2};",
+      "find": "and y(${T}) = ${show(b)}.<br>",
+      "replace": "and y(${T}) = ${show(r)}.<br>",
       "run": "verify"
     },
     {
-      "name": "the stand-by equation every time",
+      "name": "the working names the wrong factor",
       "file": "index.html",
-      "find": "for(let g=0;g<2000;g++){\n      const S={p:",
-      "replace": "for(let g=0;g<0;g++){\n      const S={p:",
+      "find": "= ${show(b)} ÷ ${show(a)} = ${show(r)}. `",
+      "replace": "= ${show(b)} ÷ ${show(a)} = ${show(q)}. `",
       "run": "verify"
     },
     {
-      "name": "the estimate always sits first",
+      "name": "the half-stretch sentence is left out",
       "file": "index.html",
-      "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
+      "find": "const half=mn%2?`Half a stretch",
+      "replace": "const half=mn%2?``&&`Half a stretch",
       "run": "verify"
     },
     {
-      "name": "the slips are always the first trio",
+      "name": "the answer is shown as a decimal",
       "file": "index.html",
-      "find": "take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "take=fit[0];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
+      "find": "a:show(A),\n      d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
+      "replace": "a:String(A[0]/A[1]),\n      d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
       "run": "verify"
     },
     {
-      "name": "the estimate sits second whenever it can",
+      "name": "the codex has no example",
       "file": "index.html",
-      "find": "want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "want=ranks.includes(1)?1:ranks[0], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
+      "find": "eg:'y(0) = 3 and y(2) = 6: the factor every 2 is 6 ÷ 3 = 2, so y(6) = 3 × 2³ = 24.'",
+      "replace": "eg:''",
       "run": "verify"
     },
     {
-      "name": "the same equation can come twice",
+      "name": "the codex rule runs long",
       "file": "index.html",
-      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
+      "find": "rule:'y′ = ky multiplies y",
+      "replace": "rule:'Exponential growth and decay, the solutions of a differential equation of the form dy/dt = ky, where k is a constant: y′ = ky multiplies y",
       "run": "verify"
     },
     {
-      "name": "a miss is counted",
+      "name": "a wrong answer has no reason",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Eu",
-      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Eu",
+      "find": "d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
+      "replace": "d:dist.map(([v,why])=>[show(v),'']),\n      ex:`Ev",
       "run": "verify"
     },
     {
-      "name": "every pick counts as a first try",
+      "name": "exponential growth has no name",
       "file": "index.html",
-      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "run": "verify"
-    },
-    {
-      "name": "the banner is worded wrong",
-      "file": "index.html",
-      "find": "this.matched+' walks read'",
-      "replace": "this.matched+' walks'",
-      "run": "verify"
-    },
-    {
-      "name": "the toast names the wrong letter",
-      "file": "index.html",
-      "find": "✓ ${'ABCD'[i]} is Euler’s estimate",
-      "replace": "✓ ${'PQRS'[i]} is Euler’s estimate",
-      "run": "verify"
-    },
-    {
-      "name": "a missed number can be tapped again",
-      "file": "index.html",
-      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SU",
-      "run": "verify"
-    },
-    {
-      "name": "the short slip names the wrong end",
-      "file": "index.html",
-      "find": "and x = ${this.fs(this.frac(2,S.hd))} is two steps",
-      "replace": "and x = ${this.fs(this.h(S))} is two steps",
-      "run": "verify"
-    },
-    {
-      "name": "the no-h slip names the wrong h",
-      "file": "index.html",
-      "find": "and here h is ${h}.",
-      "replace": "and here h is 1.",
-      "run": "verify"
-    },
-    {
-      "name": "the far slip is told as the same slip",
-      "file": "index.html",
-      "find": "if(k==='far') return `${L} r",
-      "replace": "if(k==='same') return `${L} r",
-      "run": "verify"
-    },
-    {
-      "name": "the check takes the last wrong step",
-      "file": "index.html",
-      "find": "t=[0,1].find(j=>",
-      "replace": "t=[1,0].find(j=>",
-      "run": "verify"
-    },
-    {
-      "name": "the check misses a wrong landing",
-      "file": "index.html",
-      "find": " || this.key(K.pts[j+1].y)!==this.key(R0.pts[j+1].y));",
-      "replace": ");",
-      "run": "verify"
-    },
-    {
-      "name": "the check names the slip's slope as the true one",
-      "file": "index.html",
-      "find": "The slope at that point is ${this.slopeWork(S,a.x,a.y)}",
-      "replace": "The slope at that point is ${this.fs(K.used[t])}",
-      "run": "verify"
-    },
-    {
-      "name": "the check hands over the estimate",
-      "file": "index.html",
-      "find": "so y rises by ${this.fs(h)} × ${this.pf(s)}.`;",
-      "replace": "so y rises by ${this.fs(h)} × ${this.pf(s)} to ${this.fs(this.val(S,'right'))}.`;",
-      "run": "verify"
-    },
-    {
-      "name": "the far slip names the wrong x",
-      "file": "index.html",
-      "find": "far:`it reads the slope at x = ${this.fs(R0.pts[t+1].x)}",
-      "replace": "far:`it reads the slope at x = ${this.fs(R0.pts[t].x)}",
-      "run": "verify"
-    },
-    {
-      "name": "the slope is worked without q's brackets",
-      "file": "index.html",
-      "find": "+ ${this.pf([S.q,1])} × ${this.pf(y)}",
-      "replace": "+ ${neg(S.q)} × ${this.pf(y)}",
-      "run": "verify"
-    },
-    {
-      "name": "the equation writes 1x",
-      "file": "index.html",
-      "find": "${p===1?'':p===-1?'−':neg(p)}x ${q<0?'−':'+'} ${Math.abs(q)===1?'':Math.abs(q)}y`; ",
-      "replace": "${neg(p)}x ${q<0?'−':'+'} ${Math.abs(q)===1?'':Math.abs(q)}y`; ",
-      "run": "verify"
-    },
-    {
-      "name": "the equation drops q's size",
-      "file": "index.html",
-      "find": "${Math.abs(q)===1?'':Math.abs(q)}y`; }",
-      "replace": "y`; }",
-      "run": "verify"
-    },
-    {
-      "name": "the question asks for the wrong x",
-      "file": "index.html",
-      "find": "Which is Euler’s estimate of y(${this.fs(this.frac(2,S.hd))})?",
-      "replace": "Which is Euler’s estimate of y(${this.fs(this.h(S))})?",
-      "run": "verify"
-    },
-    {
-      "name": "a shut number is not told as wrong",
-      "file": "index.html",
-      "find": "${gone?'. Not Euler’s estimate':''}",
+      "find": ", growth:'Exponential Growth'",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "a shut number can still be pressed",
+      "name": "no realm asks exponential growth",
       "file": "index.html",
-      "find": "${gone?'disabled ':''}onclick=\"EulerPick",
-      "replace": "onclick=\"EulerPick",
+      "find": "'secondDeriv','euler','growth'],",
+      "replace": "'secondDeriv','euler'],",
       "run": "verify"
     },
     {
-      "name": "the working leaves out the second step",
+      "name": "exponential growth is in no strand",
       "file": "index.html",
-      "find": "That was it: ${this.stepWork(B,0)}; then ${this.stepWork(B,1)}.",
-      "replace": "That was it: ${this.stepWork(B,0)}.",
-      "run": "verify"
-    },
-    {
-      "name": "the count line is dropped",
-      "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"euRead\"",
-      "replace": "    out+=`<div id=\"euRead\"",
-      "run": "verify"
-    },
-    {
-      "name": "the rule moves h × y up",
-      "file": "index.html",
-      "find": "then move h along x and h × slope up. F",
-      "replace": "then move h along x and h × y up. F",
-      "run": "verify"
-    },
-    {
-      "name": "the goals stay up while the pick shows",
-      "file": "index.html",
-      "find": "'ewRead','ewGoalPanel']",
-      "replace": "'ewRead']",
-      "run": "verify"
-    },
-    {
-      "name": "the hand-worked walk is drawn under the pick",
-      "file": "index.html",
-      "find": "    document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n    if(pick) return;\n",
-      "replace": "    document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n",
-      "run": "verify"
-    },
-    {
-      "name": "the workshop opens on the pick",
-      "file": "index.html",
-      "find": "  open(){ UI.go('s-eulerwalk'); },\n  tab:'hand',",
-      "replace": "  open(){ UI.go('s-eulerwalk'); },\n  tab:'pick',",
-      "run": "play:eulerpick"
-    },
-    {
-      "name": "the Tome does not tell of the pick",
-      "file": "index.html",
-      "find": " Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>",
-      "replace": "</div>",
-      "run": "verify"
-    },
-    {
-      "name": "the pick is left out of the mix",
-      "file": "index.html",
-      "find": "    ['EulerPick','EulerWalk',",
-      "replace": "    ['EulerPicked','EulerWalk',",
+      "find": ",'euler','growth']]",
+      "replace": ",'euler']]",
       "run": "verify"
     }
   ]

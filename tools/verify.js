@@ -1130,6 +1130,21 @@ Object.assign(ANALYSIS, {
     if (got.length !== ys.length || got.some((v, k) => Math.abs(v - ys[k]) > 1e-9))
       fail('analysis', 'euler', `the working does not take each of the ${ys.length} steps: ${w}`);
   },
+  // Exponential growth, worked again here in floating point: y(t) is
+  // y(0) × (y(T)/y(0))^(t/T), and the working names that factor.
+  growth: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const t = fl(p.q);
+    const m = t.match(/^y′ = ky for some constant k, with y\(0\) = (\d+) and y\((\d+)\) = (\d+(?:\/\d+)?)\. What is y\((\d+)\)\?$/);
+    if (!m) { fail('analysis', 'growth', `the question does not read as exponential growth: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const a = +m[1], T = +m[2], b = val(m[3]), tt = +m[4];
+    valueCheck('growth', a * Math.pow(b / a, tt / T), p.a, 1e-9);
+    const w = fl(p.ex), f = w.match(/y\(\d+\) ÷ y\(0\) = [^=]* = (\d+(?:\/\d+)?)\./);
+    if (!f || Math.abs(val(f[1]) - b / a) > 1e-12) fail('analysis', 'growth', `the working does not name the factor every ${T}: ${w}`);
+    covered.add('growth');
+  },
   taylor: p => {
     const t = flat(p.q);
     const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
@@ -1212,7 +1227,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 71, sig: 0x6193 };
+  const PINNED = { count: 72, sig: 0x624e };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -14208,6 +14223,33 @@ const pad = (s, n) => String(s).padStart(n);
 
 console.log('Knights of the Eigenrealm — verification');
 console.log('─'.repeat(58));
+// Exponential growth at every depth: the answer and its four slips are five
+// different exact numbers, all of them above 0. y′ = ky starting above 0 never
+// reaches 0 or goes below it, so a 0 or a negative would be an answer anyone
+// could cross out unworked.
+const decays = [0, 0, 0];
+for (let d = 1; d <= 3; d++) {
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.growth(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'growth', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^\d+(\/\d+)?$/.test(v) || /^0/.test(v))) fail('analysis', 'growth', `a number is not exact and above 0: ${vals.join(', ')}`);
+    // half a stretch is worked as the number that twice over makes the factor
+    const q = plainT(String(p.q).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/\s+/g, ' ');
+    const w = plainT(String(p.ex).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/\s+/g, ' ');
+    const m = q.match(/y\(0\) = (\d+) and y\((\d+)\) = (\d+(?:\/\d+)?)\..*y\((\d+)\)\?/);
+    if (!m) continue;
+    const num = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v, r = num(m[3]) / +m[1];
+    if (r < 1) decays[d - 1]++;
+    if (+m[4] % +m[2]) {
+      const h = w.match(/Half a stretch multiplies y by (\S+), since \(?(\S+?)\)? × \(?(\S+?)\)? = (\S+?)\. /);
+      if (!h || h[1] !== h[2] || h[2] !== h[3] || Math.abs(num(h[1]) ** 2 - r) > 1e-12 || Math.abs(num(h[4]) - r) > 1e-12) fail('analysis', 'growth', `half a stretch is not worked as the number that twice over makes the factor: ${w}`);
+    }
+  }
+  // growth and decay come up about equally, so neither is the only kind a knight meets
+  if (decays[d - 1] < REPS * 0.25 || decays[d - 1] > REPS * 0.75) fail('analysis', 'growth', `at depth ${d}, ${decays[d - 1]} of ${REPS} questions decay, not about half`);
+}
+
 console.log(`  generators                 ${pad(total, 10)}`);
 console.log(`  problems generated         ${pad(generated.toLocaleString(), 10)}`);
 console.log(`  algebraic identities       ${pad(algebraChecks.toLocaleString(), 10)}`);

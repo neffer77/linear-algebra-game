@@ -3853,6 +3853,58 @@ euler(d){
       ex:`Each step reads the slope where it starts and moves ${show(h)} along x and ${show(h)} × slope up. `+work.join(' ')+
          ` So after ${n} steps Euler's method estimates y(${show(F(n,hd))}) ≈ ${show(A)}.`};
   }
+},
+/* Exponential growth: y′ = ky. Every solution is y = y(0)·eᵏᵗ, so equal
+   stretches of time multiply y by equal factors. Given y(0) and y(T), the
+   factor every T is r = y(T)/y(0), and y(t) = y(0) × r^(t/T). Two or three
+   stretches at depth 1, half of one at depth 2 and one and a half at depth 3,
+   where r is a perfect square so the root is exact. Decay as often as
+   growth. The wrong answers are the slips people make: adding the same
+   amount every T as a straight line would, multiplying r by the number of
+   stretches instead of raising it to that power, counting the stretches on
+   from y(T), dividing by the factor instead of multiplying, and raising y(T)
+   itself to the power instead of the factor. */
+growth(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]);
+  const pw=(u,n)=>n<0?F(u[1]**-n,u[0]**-n):F(u[0]**n,u[1]**n);
+  const show=u=>rat(u[0],u[1]), inB=u=>u[1]===1?show(u):`(${show(u)})`, key=u=>u[0]+'/'+u[1];
+  // m = mn/2 stretches of T; root q, so that r = q^j and r^m = q^(j·m)
+  const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,2]:[3,2];
+  const mShow=mn%2?(mn===1?'1/2':'3/2'):String(mn/2);
+  const mWords={1:'half of one',2:'one',3:'one and a half',4:'two',6:'three'}[mn];
+  for(let g=0;;g++){
+    const decay=R.chance(0.5);
+    const q0=d===1?R.pick([[2,1],[3,1],[4,1],[3,2]]):R.pick([[2,1],[3,1],[3,2]]), q=decay?F(q0[1],q0[0]):F(q0[0],q0[1]);
+    const r=pw(q,j), a=F(R.i(2,9)), b=mul(a,r);
+    const T=d===1?R.pick([1,2,3,5,10]):R.pick([2,4,6,10]), t=T*mn/2;
+    const rm=pw(q,j*mn/2), A=mul(a,rm);
+    const m=F(mn,2);
+    const slips=[
+      [add(a,mul(add(b,mul(a,F(-1))),m)),`that adds the same amount, ${show(add(b,mul(a,F(-1))))}, every ${T}, as a straight line would; y′ = ky multiplies by the same factor instead`],
+      [mul(mul(a,r),m),`that multiplies the factor ${show(r)} by the number of stretches, ${mShow}; it has to be raised to that power`],
+      [mul(b,rm),`that counts the stretches on from y(${T}) = ${show(b)}, but y(${T}) is already one stretch on from y(0)`],
+      [mul(a,pw(q,-j*mn/2)),`that divides by the factor ${show(r)} at every stretch instead of multiplying by it`],
+      ...(mn%2===0?[[pw(b,mn/2),`that raises y(${T}) itself to the power; it is the factor y(${T}) ÷ y(0) that is raised`]]:[])
+    ];
+    // four different positive numbers beside the answer, none of them wild
+    const ok=v=>v[0]>0 && v[0]/v[1]<=1500 && v[1]<=1000;
+    const dist=[], seen=new Set([key(A)]);
+    for(const s of slips) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    if((dist.length<4 || A[0]/A[1]>1500 || A[1]>1000) && g<300) continue;
+    // half a stretch multiplies by q, the number that twice over makes r
+    const half=mn%2?`Half a stretch multiplies y by ${show(q)}, since ${inB(q)} × ${inB(q)} = ${show(r)}. `:'';
+    const pow=mn===1?inB(q):mn===3?`${inB(r)} × ${inB(q)}`:`${inB(r)}${sup(mn/2)}`;
+    return {topic:'Exponential Growth',
+      codex:{rule:'y′ = ky multiplies y by the same factor over every stretch of time of the same length. So y(t) = y(0) × r^(t/T), where r = y(T) ÷ y(0) is the factor every T.',
+             eg:'y(0) = 3 and y(2) = 6: the factor every 2 is 6 ÷ 3 = 2, so y(6) = 3 × 2³ = 24.'},
+      q:`y′ = ky for some constant k, with y(0) = ${show(a)} and y(${T}) = ${show(b)}.<br>What is y(${t})?`,
+      a:show(A),
+      d:dist.map(([v,why])=>[show(v),why]),
+      ex:`Every solution of y′ = ky is y = y(0)·eᵏᵗ, so each stretch of ${T} multiplies y by the same factor, y(${T}) ÷ y(0) = ${show(b)} ÷ ${show(a)} = ${show(r)}. `+
+         `t = ${t} is ${mWords} of those stretches${mn%2===0?'':` (${mShow} of them)`}. ${half}So y(${t}) = ${show(a)} × ${pow}${pow===inB(rm)?'':` = ${show(a)} × ${inB(rm)}`} = ${show(A)}.`};
+  }
 }
 };
 
@@ -3966,7 +4018,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method"
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -3979,7 +4031,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4563,7 +4615,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
