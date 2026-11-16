@@ -86,7 +86,7 @@ function loadGame() {
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tpTab')")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itTab')")) + 'render(){}};exports.TrigInt=TrigInt;' +
-    ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
+    ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tqTab')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
@@ -6686,6 +6686,198 @@ const powPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which plane? The tangent plane workshop turned round. Every plane is read
+   back off its button and checked against the slip it is named as, worked
+   from f = ax² + cxy + by² here; the right one alone has the height of f at
+   the point and both slopes of f nudged a hair along x and along y. The four
+   planes are two heights times two pairs of slopes, so each shares its
+   height with one other and its slopes with another, and none stands out by
+   agreeing with the rest. Every check in the readout is worked again. */
+const tanPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TanPlane = {render(){ env.renders++; }};" +
+    cut('const TanPick = {', '/* ---------- The tangent plane workshop: a height and two slopes') + 'return TanPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const num = t => { const m = String(t).replace(/^\((.*)\)$/, '$1').match(/^(−?)(\d+)$/); return m ? (m[1] ? -1 : 1) * +m[2] : null; };
+  const co = n => (n === 1 ? '' : n === -1 ? '−' : ng(n));
+  const sg = n => (n < 0 ? '−' : '+');
+  const ab = n => (Math.abs(n) === 1 ? '' : String(Math.abs(n)));
+  const F = (Q, x, y) => Q.a * x * x + Q.c * x * y + Q.b * y * y;
+  // each plane, worked from the slip it stands for: [height, slope along x, slope along y]
+  const H = {
+    h: Q => F(Q, Q.x, Q.y),
+    noSq: Q => Q.a * Q.x + Q.c * Q.x * Q.y + Q.b * Q.y,
+    swapPt: Q => Q.a * Q.y * Q.y + Q.c * Q.x * Q.y + Q.b * Q.x * Q.x,
+    noC: Q => Q.a * Q.x * Q.x + Q.b * Q.y * Q.y
+  };
+  const X = {
+    slopes: Q => [2 * Q.a * Q.x + Q.c * Q.y, Q.c * Q.x + 2 * Q.b * Q.y],
+    swap: Q => [Q.c * Q.x + 2 * Q.b * Q.y, 2 * Q.a * Q.x + Q.c * Q.y],
+    noTwo: Q => [Q.a * Q.x + Q.c * Q.y, Q.c * Q.x + Q.b * Q.y],
+    noHold: Q => [2 * Q.a * Q.x, 2 * Q.b * Q.y]
+  };
+  const HS = ['noSq', 'swapPt', 'noC'], XS = ['swap', 'noTwo', 'noHold'];
+  const parts = k => (k === 'right' ? ['h', 'slopes'] : HS.includes(k) ? [k, 'slopes'] : XS.includes(k) ? ['h', k] : k.split('+'));
+  const want = (k, Q) => { const [h, x] = parts(k); return H[h] && X[x] ? [H[h](Q), ...X[x](Q)] : null; };
+  // the plane that touches, found without the rule: the height of f, and f nudged a hair either way along x and along y
+  const e = 1e-4;
+  const touches = (Q, v) => Math.abs(v[0] - F(Q, Q.x, Q.y)) < 1e-9 &&
+    Math.abs(v[1] - (F(Q, Q.x + e, Q.y) - F(Q, Q.x - e, Q.y)) / (2 * e)) < 1e-6 &&
+    Math.abs(v[2] - (F(Q, Q.x, Q.y + e) - F(Q, Q.x, Q.y - e)) / (2 * e)) < 1e-6;
+  const surf = Q => `${co(Q.a)}x² ${sg(Q.c)} ${ab(Q.c)}xy ${sg(Q.b)} ${ab(Q.b)}y²`;
+  const pt = Q => `(${ng(Q.x)}, ${ng(Q.y)})`;
+  const br = (v, at) => `(${v} ${at < 0 ? '+' : '−'} ${Math.abs(at)})`;
+  const plane = (Q, v) => `z = ${ng(v[0])} ${sg(v[1])} ${ab(v[1])}${br('x', Q.x)} ${sg(v[2])} ${ab(v[2])}${br('y', Q.y)}`;
+  // "z = −7 − 3(x + 2) + y(y − 1)" read back: the height, the two slopes, and the point in the brackets
+  const PL = /^z = (−?\d+) ([+−]) (\d*)\(x ([+−]) (\d+)\) ([+−]) (\d*)\(y ([+−]) (\d+)\)$/;
+  const rd = t => { const m = t.match(PL); if (!m) return null;
+    const s = (sign, d) => (sign === '−' ? -1 : 1) * (d === '' ? 1 : +d);
+    return { v: [num(m[1]), s(m[2], m[3]), s(m[6], m[7])], at: [m[4] === '−' ? +m[5] : -m[5], m[8] === '−' ? +m[9] : -m[9]], bare: m[3] === '1' || m[7] === '1' }; };
+  const read = () => txt(S.html().split('id="tnRead"')[1].replace(/^[^>]*>/, ''));
+  const slipH = (k, Sb, Q) => {
+    if (k === 'noSq') { const bits = [];
+      if (Q.x * Q.x !== Q.x) bits.push(`at x = ${ng(Q.x)}, x² is ${pn(Q.x)}² = ${Q.x * Q.x}, not ${ng(Q.x)}`);
+      if (Q.y * Q.y !== Q.y) bits.push(`at y = ${ng(Q.y)}, y² is ${pn(Q.y)}² = ${Q.y * Q.y}, not ${ng(Q.y)}`);
+      return `${Sb} puts the point into f without squaring: ${bits.join(', and ')}.`; }
+    if (k === 'swapPt') return `${Sb} puts the point in the wrong way round, x = ${ng(Q.y)} and y = ${ng(Q.x)}. The point is ${pt(Q)}, so x is ${ng(Q.x)} and y is ${ng(Q.y)}.`;
+    return `${Sb} leaves the ${co(Q.c)}xy term out of the height. At the point it is ${ng(Q.c)} × ${pn(Q.x)} × ${pn(Q.y)} = ${ng(Q.c * Q.x * Q.y)}, and it counts too.`; };
+  const slipX = (k, Sb, Q) => {
+    if (k === 'swap') return `${Sb} puts the slopes in each other’s places. f_x is the slope as x moves, so it goes with ${br('x', Q.x)}, and f_y with ${br('y', Q.y)}.`;
+    if (k === 'noTwo') return `${Sb} forgets the 2 that a square brings down: x² has slope 2x and y² has slope 2y.`;
+    return `${Sb} drops the ${co(Q.c)}xy term from the slopes. Held at y = ${ng(Q.y)}, it is ${co(Q.c * Q.y)}x, with slope ${ng(Q.c * Q.y)} along x, and held at x = ${ng(Q.x)} it is ${co(Q.c * Q.x)}y, with slope ${ng(Q.c * Q.x)} along y.`; };
+  const slipOf = (k, L, Q) => { const [h, x] = parts(k);
+    return h === 'h' ? slipX(x, L, Q) : x === 'slopes' ? slipH(h, L, Q) : `${slipH(h, L, Q)} ${slipX(x, 'It also', Q)}`; };
+  const N = '(−?\\d+)', P = '(\\(?−?\\d+\\)?)';
+  const CH = new RegExp(`^Check ([ABCD]): at \\(${N}, ${N}\\) both brackets are 0, so ([ABCD])’s plane has height ${N} there\\. The surface has f\\(${N}, ${N}\\) = ${N} × ${P}² \\+ ${P} × ${P} × ${P} \\+ ${P} × ${P}² = ${N}, so ([ABCD])’s plane passes (\\d+) (above|below) the point\\.$`);
+  const CS = new RegExp(`^Check ([ABCD]): step 1 along ([xy]), from \\(${N}, ${N}\\) to \\(${N}, ${N}\\)\\. ([ABCD])’s plane goes from ${N} to ${N} \\+ ${P} = ${N}\\. The surface goes to f\\(${N}, ${N}\\) = ${N}\\. Along ([xy]) a surface bends away from a plane that touches it by its ([xy])² part, ${N} × 1² = ${N}, so the surface minus the plane must be ${N}, but here it is ${N} − ${P} = ${N}\\.$`);
+  // a check, worked again: a wrong height is caught at the point; otherwise a step of 1 along the first wrong slope
+  const checkOk = (line, L, Q, v, key) => {
+    const h = F(Q, Q.x, Q.y), [p, q] = X.slopes(Q);
+    if (v[0] !== h) { const m = line.match(CH);
+      if (!m) { fail('tanpick', key, `the height check of ${L} is not worded as it should be: ${line}`); return; }
+      const [, L1, x0, y0, L2, h1, x1, y1, a, xa, c, xb, yb, b, yc, hh, L3, gap, side] = m;
+      if (L1 !== L || L2 !== L || L3 !== L) fail('tanpick', key, `the check of ${L} names another plane`);
+      if (num(x0) !== Q.x || num(y0) !== Q.y || num(x1) !== Q.x || num(y1) !== Q.y || num(xa) !== Q.x || num(xb) !== Q.x || num(yb) !== Q.y || num(yc) !== Q.y) fail('tanpick', key, `the check of ${L} does not put in the point`);
+      if (num(a) !== Q.a || num(c) !== Q.c || num(b) !== Q.b) fail('tanpick', key, `the check of ${L} does not use the numbers of f`);
+      if (num(h1) !== v[0]) fail('tanpick', key, `the check of ${L} does not use its own height`);
+      if (num(hh) !== h) fail('tanpick', key, `the check of ${L} gets f at the point wrong`);
+      if (+gap !== Math.abs(v[0] - h) || side !== (v[0] > h ? 'above' : 'below')) fail('tanpick', key, `the check of ${L} gets the miss at the point wrong`);
+      return; }
+    const m = line.match(CS);
+    if (!m) { fail('tanpick', key, `the step check of ${L} is not worded as it should be: ${line}`); return; }
+    const [, L1, dir, x0, y0, x1, y1, L2, h0, h2, sl, z, fx, fy, fz, dir2, dir3, bend, bend2, bend3, fz2, z2, gap] = m;
+    const alongX = v[1] !== p, X1 = alongX ? Q.x + 1 : Q.x, Y1 = alongX ? Q.y : Q.y + 1, sv = alongX ? v[1] : v[2], bb = alongX ? Q.a : Q.b, Z = v[0] + sv, FF = F(Q, X1, Y1);
+    if (!alongX && v[2] === q) fail('tanpick', key, `${L} is checked with nothing wrong in it`);
+    if (L1 !== L || L2 !== L) fail('tanpick', key, `the check of ${L} names another plane`);
+    if (dir !== (alongX ? 'x' : 'y') || dir2 !== dir || dir3 !== dir) fail('tanpick', key, `the check of ${L} steps the wrong way`);
+    if (num(x0) !== Q.x || num(y0) !== Q.y || num(x1) !== X1 || num(y1) !== Y1 || num(fx) !== X1 || num(fy) !== Y1) fail('tanpick', key, `the check of ${L} does not step 1 from the point`);
+    if (num(h0) !== v[0] || num(h2) !== v[0] || num(sl) !== sv || num(z) !== Z || num(z2) !== Z) fail('tanpick', key, `the check of ${L} does not follow its own plane`);
+    if (num(fz) !== FF || num(fz2) !== FF) fail('tanpick', key, `the check of ${L} gets f at the step wrong`);
+    if (num(bend) !== bb || num(bend2) !== bb || num(bend3) !== bb) fail('tanpick', key, `the bend in the check of ${L} is not the ${dir}² number`);
+    if (FF - (h + (alongX ? p : q)) !== bb) fail('tanpick', key, 'the surface does not sit the bend above the plane that touches');
+    if (num(gap) !== FF - Z) fail('tanpick', key, `${fz} − ${z2} is not ${gap}`);
+    if (FF - Z === bb) fail('tanpick', key, 'a wrong plane passes the check'); };
+  if (S.RULE !== 'The tangent plane at (x₀, y₀) is z = f(x₀, y₀) + f_x·(x − x₀) + f_y·(y − y₀). Find the height first, by putting the point into f. Then each slope: f_x by differentiating in x while y is held still, so cxy has slope cy along x, and f_y the same way in y. Put the point into both slopes. Which plane touches?') fail('tanpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('tanpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, heights = 0, steps = 0, hChoice = 0, hLater = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Bs = new Set(), Cs = new Set(), Xs = new Set(), Ys = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c); Xs.add(Q.x); Ys.add(Q.y);
+      if (![Q.a, Q.b, Q.c, Q.x, Q.y].every(Number.isInteger) || [Q.a, Q.b, Q.x, Q.y].some(n => n === 0 || Math.abs(n) > 2) || Q.c === 0 || Math.abs(Q.c) > 3) fail('tanpick', key, `${sig} is not whole a and b up to 2, c up to 3 and a point up to 2 out, none of them 0`);
+      if (prev && prev === sig) fail('tanpick', key, 'the same surface comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('tanpick', key, 'there are not four planes, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` Touch f(x, y) = ${surf(Q)} at ${pt(Q)}. Which plane touches it there? A`)) fail('tanpick', key, 'the rule and the surface are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TanPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('tanpick', key, 'the four planes are not offered as they are, A to D'); continue; }
+      const got = btns.map(x => rd(x[6]));
+      if (got.some(g => !g)) { fail('tanpick', key, `a plane is not written as z = h + p(x − x₀) + q(y − y₀): ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (got.some(g => g.bare || g.at[0] !== Q.x || g.at[1] !== Q.y)) fail('tanpick', key, 'a plane is not written about the point, or writes a 1 in front of a bracket');
+      const vals = got.map(g => g.v);
+      if (vals.some(v => v.some(n => n === 0 || Math.abs(n) > 24))) fail('tanpick', key, 'a plane has a 0 in it, or a number past 24');
+      if (new Set(vals.map(String)).size !== 4) fail('tanpick', key, 'two planes are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      // two heights times two pairs of slopes: every plane shares its height with one other and its slopes with another
+      vals.forEach((v, i) => {
+        const sh = vals.filter((w, j) => j !== i && w[0] === v[0]).length, ss = vals.filter((w, j) => j !== i && w[1] === v[1] && w[2] === v[2]).length;
+        if (sh !== 1 || ss !== 1) fail('tanpick', key, `${btns[i][1]} shares its height with ${sh} planes and its slopes with ${ss}, so a plane stands out by agreeing with the rest`); });
+      const ks = r.opts.map(o => o.k), hk = ks.find(k => HS.includes(k)), xk = ks.find(k => XS.includes(k));
+      if (!hk || !xk || !ks.includes(hk + '+' + xk)) fail('tanpick', key, `the planes are ${ks.join(', ')}, not one height slip, one slope slip and both`);
+      { // where more than one height slip would do, any of them may be dealt, not always the first
+        const can = HS.filter(h => H[h](Q) !== H.h(Q) && H[h](Q) !== 0 && Math.abs(H[h](Q)) <= 24);
+        if (can.length > 1) { hChoice++; if (hk !== can[0]) hLater++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('tanpick', key, `a plane is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('tanpick', key, `${o.k} is shown as ${plane(Q, vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== touches(Q, vals[i])) fail('tanpick', key, `${plane(Q, vals[i])} ${o.k === 'right' ? 'does not touch' : 'touches'}`);
+      });
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('tanpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('tanpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="tnRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('tanpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        if (vals[i][0] !== F(Q, Q.x, Q.y)) heights++; else steps++;
+        checkOk(lines[1] || '', Lt, Q, vals[i], key);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="TanPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the tangent plane"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('tanpick', key, 'the missed planes are not shut and told as not the tangent plane');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('tanpick', key, 'tapping a missed plane again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('tanpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('tanpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('tanpick', key, 'no fresh surface after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'PLANE TOUCHER / 5 planes touched') fail('tanpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the tangent plane, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('tanpick', key, `the toast is ${env.toasts[nt]}`); }
+      const W = want('right', Q);
+      const after = `That was it: f${pt(Q)} = ${ng(W[0])}, f_x = ${co(2 * Q.a)}x ${sg(Q.c)} ${ab(Q.c)}y = ${ng(W[1])} and f_y = ${co(Q.c)}x ${sg(Q.b)} ${ab(2 * Q.b)}y = ${ng(W[2])} at the point, so the plane is ${plane(Q, W)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('tanpick', key, `after a pick: ${read()} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same surface dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 1, b: 2, c: -3, x: 2, y: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":1,"b":2,"c":-3,"x":2,"y":1}') fail('tanpick', 'repeat', 'the same surface is dealt twice in a row');
+    S.build = real;
+  }
+  if (hLater < hChoice * 0.3) fail('tanpick', 'slips', `of ${hChoice} rounds with a choice of height slips, only ${hLater} deal one but the first`);
+  for (const k of [...HS, ...XS]) if (!kinds[k]) fail('tanpick', 'slips', `the slip ${k} is never offered`);
+  for (const h of HS) for (const x of XS) if (!kinds[h + '+' + x]) fail('tanpick', 'slips', `the slips ${h} and ${x} are never offered together`);
+  if (As.size !== 4 || Bs.size !== 4 || Cs.size !== 6 || Xs.size !== 4 || Ys.size !== 4) fail('tanpick', 'deal', `a ${[...As]}, b ${[...Bs]}, c ${[...Cs]}, x ${[...Xs]}, y ${[...Ys]} is not the whole deal`);
+  if (slots.size !== 4) fail('tanpick', 'deal', `the plane only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!heights || !steps) fail('tanpick', 'checks', `${heights} misses were checked at the point and ${steps} by a step`);
+  if (fives !== 30) fail('tanpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -11440,6 +11632,7 @@ console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  path rates         ${pad(pathPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the path chain workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching z nudged along the path; ${pathPickNotes.misses.toLocaleString()} wrong picks checked by a nudge in t, ${pathPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  eigen powers       ${pad(powPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-Aⁿv in the diagonal workshop, every vector read back off its button and checked against the slip it is named as, the right one alone matching A multiplied into v n times; ${powPickNotes.misses.toLocaleString()} wrong picks checked by their eigenvector parts, ${powPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  touching planes    ${pad(tanPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-plane in the tangent plane workshop, every plane read back off its button and checked against the slip it is named as, the right one alone matching f and f nudged a hair along x and along y; ${tanPickNotes.misses.toLocaleString()} wrong picks checked at the point or by a step of 1, ${tanPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
