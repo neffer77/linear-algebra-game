@@ -36,9 +36,9 @@ module.exports = {
       return r.top < innerHeight && r.bottom > 0;
     }));
     const ws = await chips(t);
-    t.eq('it lists forty-nine workshops', ws.length, 49);
-    t.eq('each one once', new Set(ws).size, 49);
-    t.eq('and says how many', await t.ev(() => /^49 hands-on workshops\./.test(document.querySelector('#wsIndex .sub').innerText)), true);
+    t.eq('it lists fifty workshops', ws.length, 50);
+    t.eq('each one once', new Set(ws).size, 50);
+    t.eq('and says how many', await t.ev(() => /^50 hands-on workshops\./.test(document.querySelector('#wsIndex .sub').innerText)), true);
     t.eq('under the seven strands, in order', await t.ev(() => [...document.querySelectorAll('#wsIndex .wiStrand')].map(d => d.textContent).join(' | ')),
       'Vectors | Matrices | Eigen & Subspaces | Limits & Derivatives | Integrals | Applications | Multivariable & Series');
     t.eq('every workshop with a card below has a chip', await t.ev(ws => {

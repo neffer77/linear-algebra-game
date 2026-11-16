@@ -90,6 +90,7 @@ function loadGame() {
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('ivTab')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
+    ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbSets')")) + 'render(){}};exports.Doubling=Doubling;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
@@ -110,7 +111,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -10662,6 +10663,112 @@ const slopeMatchNotes = (() => {
   return { n, rounds, misses };
 })();
 
+/* The doubling workshop: every story, every walk of whole and half stretches
+   that fits on its figure. Each walk is taken again here from y(0) and y(T)
+   alone, as y(0) × (y(T)/y(0))^(t/T) in plain floats, never from the
+   workshop's own numbers; every move the readout names, the landing, the
+   straight line through the first two points and each note are checked
+   against it, the curve, the line and the dots are read back from the
+   drawing, and every goal is decided independently. */
+const doublingNotes = (() => {
+  const D = Doubling;
+  const val = t => { const s = t.replace(/[()]/g, '').replace(/−/g, '-'), [a, b] = s.split('/'); return b === undefined ? +a : +a / +b; };
+  const tolOf = t => /\//.test(t) || !/\./.test(t) ? 1e-9 : 6e-5;   // an exact number is exact, a decimal is to four places
+  const near = (t, v) => Math.abs(val(t) - v) < tolOf(t);
+  const exactish = v => [1, 2, 4, 8, 16].some(d => Math.abs(Math.round(v * d) - v * d) < 1e-9);
+  const STORY = { dbl: [3, 6, 2, 'days', 4], half: [16, 8, 3, 'hours', 4], quad: [1, 4, 2, 'minutes', 3] };
+  if (D.SETS.map(S => S.id).join() !== 'dbl,half,quad') fail('doubling', 'sets', D.SETS.map(S => S.id).join());
+  if (D.si !== 0 || D.moves.length) fail('doubling', 'open', 'the workshop does not open on the doubling with no move taken');
+  const reset = () => { D.touched = false; D.si = 0; D.moves = []; D.done.clear(); };
+  reset();
+  for (const g of D.GOALS) if (g.ok(D)) fail('doubling', g.id, 'met where the workshop opens');
+  // every walk of whole and half stretches that ends by maxN
+  const walks = N => { const out = [[]]; for (let i = 0; i < out.length; i++) { const w = out[i], s = w.reduce((a, b) => a + b, 0); for (const m of [1, 0.5]) if (s + m <= N) out.push([...w, m]); } return out; };
+  const W = ['', 'one', 'two', 'three', 'four'];
+  const found = {}; let n = 0, moves = 0, points = 0;
+  D.SETS.forEach((S, si) => {
+    const [y0, y1, T, unit, N] = STORY[S.id], r = y1 / y0, Y = k => y0 * Math.pow(r, k), Line = k => y0 + (y1 - y0) * k;
+    if (S.y0 !== y0 || S.T !== T || S.unit !== unit || S.maxN !== N || Math.abs(S.y0 * S.r - y1) > 1e-12) fail('doubling', S.id, 'the story is not the one told');
+    for (const w of walks(N)) {
+      reset(); D.full(); D.pick(si);   // a walk already under way, so picking a story has something to clear
+      if (D.moves.length) fail('doubling', S.id, 'picking a story does not start the walk again');
+      for (const m of w) (m === 1 ? D.full() : D.halfStep());
+      n++;
+      const key = `${S.id} ${w.join(',') || 'start'}`, k = w.reduce((a, b) => a + b, 0), got = D.working();
+      if (D.moves.join() !== w.join()) { fail('doubling', key, 'a move was not taken'); continue; }
+      if (got[0] !== `y′ = ky multiplies y by the same factor over every stretch of time of the same length. Here y(0) = ${y0} and y(${T}) = ${y1}, so each stretch of ${T} ${unit} multiplies y by r = ${y1} ÷ ${y0} = ${r === 0.5 ? '1/2' : r}.`) fail('doubling', key, got[0]);
+      if (!w.length) { if (got.length !== 2 || got[1] !== `Take a whole stretch of ${T} ${unit}, or half of one.`) fail('doubling', key, got.join(' ')); continue; }
+      const lines = got.slice(1), from = Math.max(0, w.length - 3);
+      if (from > 0 && lines.shift() !== (from === 1 ? 'Move 1 is the first dot on the figure.' : from === 2 ? 'Moves 1 and 2 are the dots already on the figure.' : `Moves 1 to ${from} are the dots already on the figure.`)) fail('doubling', key, 'the moves off the readout are not pointed to the figure');
+      let at = 0;
+      w.forEach((m, j) => {
+        const a = at; at += m; if (j < from) return;
+        const l = lines.shift() || ''; moves++;
+        const mm = l.match(/^Move (\d+): (a whole stretch|half a stretch), from t = (\S+) to t = (\S+), multiplies y by (\S+): y\((\S+)\) ([=≈]) (\S+)\.$/);
+        if (!mm) { fail('doubling', key, `a move is not worked: ${l}`); return; }
+        const [, no, kind, ta, tb, fac, tc, eq, yv] = mm;
+        if (+no !== j + 1 || (kind === 'a whole stretch') !== (m === 1)) fail('doubling', key, `move ${j + 1} is misnamed: ${l}`);
+        if (!near(ta, a * T) || !near(tb, at * T) || tc !== tb) fail('doubling', key, `move ${j + 1} names the wrong times: ${l}`);
+        const f = m === 1 ? fac : (fac.match(/^√(.+)$/) || [])[1];
+        if (f === undefined || !near(f, r) || (m === 1 && /[()]/.test(fac))) fail('doubling', key, `move ${j + 1} multiplies by the wrong factor: ${l}`);
+        if (!near(yv, Y(at)) || (eq === '=') !== exactish(Y(at))) fail('doubling', key, `move ${j + 1} lands in the wrong place: ${l}`);
+      });
+      const st = Number.isInteger(k) ? `${W[k]} stretch${k === 1 ? '' : 'es'}` : Math.floor(k) ? `${W[Math.floor(k)]} and a half stretches` : 'half a stretch';
+      const sum = lines.shift() || '', ms = sum.match(/^At t = (\S+), (.+?) from the start: y\((\S+)\) = (\d+) × (\S+?)(⁰|¹|²|³|⁴|\^\((\d+)\/2\))? ([=≈]) (\S+)\.$/);
+      if (!ms) fail('doubling', key, `the landing is not said: ${sum}`);
+      else {
+        const pw = ms[6] === undefined ? 1 : ms[7] ? ms[7] / 2 : '⁰¹²³⁴'.indexOf(ms[6]);
+        if (!near(ms[1], k * T) || ms[3] !== ms[1] || ms[2] !== st || +ms[4] !== y0 || !near(ms[5], r) || pw !== k || (k > 1 && Number.isInteger(k) && ms[6] === undefined)) fail('doubling', key, `the landing is worked wrong: ${sum}`);
+        if (!near(ms[9], Y(k)) || (ms[8] === '=') !== exactish(Y(k))) fail('doubling', key, `the landing is wrong: ${sum}`);
+      }
+      const ln = lines.shift() || '', L = Line(k);
+      const wantL = k === 1 ? `The straight line through the first two points meets the curve here, at y = ${y1}.`
+        : `The straight line through the first two points gives ${D.fr(L)} at t = ${D.fr(k * T)}` + (k < 1 ? ', above the curve: between the two points the curve sags below the line.'
+        : L > 0 ? ', below the curve, which pulls further away every stretch.'
+        : L === 0 ? `: the line reaches 0 here, but y is still ${D.fr(Y(k))}.`
+        : ', below zero. A line takes away the same amount every stretch; y′ = ky takes away the same share, so y never reaches 0.');
+      if (ln !== wantL || !near(D.fr(L), L) || (k < 1) !== (L > Y(k) + 1e-9) || (k > 1) !== (L < Y(k) - 1e-9)) fail('doubling', key, `the straight line is told wrong: ${ln}`);
+      const note = lines.join(' ');
+      const wantN = !w.includes(0.5) ? ''
+        : S.id === 'dbl' ? 'Half a stretch multiplies by √2 ≈ 1.4142, not by 1.5: two half stretches must make ×2, and 1.5 × 1.5 = 2.25 is too much.'
+        : S.id === 'quad' ? 'Half a stretch multiplies by √4 = 2, since 2 × 2 = 4.'
+        : 'Half a stretch keeps √(1/2) ≈ 0.7071 of y, since 0.7071 × 0.7071 ≈ 1/2.';
+      if (note !== wantN) fail('doubling', key, `the half-stretch note is wrong: ${note}`);
+      if (w.includes(0.5) && Math.abs(Math.sqrt(r) - val((note.match(/√\S+ [=≈] (\S+?),? /) || [, 'x'])[1])) > 6e-5) fail('doubling', key, `the root is wrong: ${note}`);
+      // the drawing: the dots on the walk, the curve on y(0) × r^(t/T), the line through the first two points
+      const [c0, d0] = S.R, end = N * T, svg = D.svg();
+      const PX = t => D.L + t / end * D.W, PY = v => D.TOP + D.Hh - (v - c0) / (d0 - c0) * D.Hh;
+      const dots = [...svg.matchAll(/data-k="pt" data-i="(\d+)" cx="([\d.-]+)" cy="([\d.-]+)"/g)];
+      let p = 0; const P = [0, ...w.map(m => p += m)];
+      if (dots.length !== P.length || dots.some((d, i) => Math.abs(+d[2] - PX(P[i] * T)) > 0.01 || Math.abs(+d[3] - PY(Y(P[i]))) > 0.01)) fail('doubling', key, 'the dots are not on the walk');
+      points += dots.length;
+      const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!cv || cv[1].split(' ').some(q => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qy - PY(Y((qx - D.L) / D.W * end / T))) > 0.05; })) fail('doubling', key, 'the curve leaves y(0) × r^(t/T)');
+      const li = svg.match(/data-k="line" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+      if (!li || [[li[1], li[2]], [li[3], li[4]]].some(([X, Yp]) => Math.abs(+Yp - PY(Line((+X - D.L) / D.W * end / T))) > 0.02 || +Yp < D.TOP - 0.01 || +Yp > D.TOP + D.Hh + 0.01) || Math.abs(+li[1] - D.L) > 0.01) fail('doubling', key, 'the straight line is not drawn through the first two points');
+      // every goal, decided here from the walk taken
+      const truth = {
+        stretch: w.includes(1), root: S.id === 'dbl' && w.includes(0.5),
+        halves: w.length >= 2 && w[w.length - 1] === 0.5 && w[w.length - 2] === 0.5 && Number.isInteger(k),
+        exact: S.id === 'quad' && w.includes(0.5), never: S.id === 'half' && k * T > 6, leave: S.id === 'dbl' && k * T === 8,
+      };
+      for (const g of D.GOALS) {
+        if (!(g.id in truth)) { fail('doubling', g.id, 'a goal with no check'); continue; }
+        if (!!g.ok(D) !== truth[g.id]) fail('doubling', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+        if (truth[g.id]) found[g.id] = 1;
+      }
+      // the buttons stop at the edge of the figure, and starting over goes back to the start
+      if (D.canFull() !== (k + 1 <= N) || D.canHalf() !== (k + 0.5 <= N)) fail('doubling', key, 'a move is offered that runs off the figure, or one that fits is not');
+      const before = w.length; D.full(); D.halfStep();
+      if (k + 0.5 > N && D.moves.length !== before) fail('doubling', key, 'a move is taken past the edge');
+      D.again(); if (D.moves.length) fail('doubling', key, 'starting over does not go back to the start');
+    }
+  });
+  for (const g of D.GOALS) if (!found[g.id]) fail('doubling', g.id, 'can never be found');
+  reset();
+  return { n, moves, points, goals: Object.keys(found).length };
+})();
+
 /* The Euler step workshop: every equation, every step size, every step. Each
    walk is taken again here in plain floats from the equation itself, never
    from the workshop's own walk; every point the readout names is checked
@@ -14342,6 +14449,7 @@ console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 1
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (every equation at every step size, step by step: ${eulerWalkNotes.steps.toLocaleString()} worked steps checked against Euler's points taken again in floats, each landing and each note against Math's own solution, ${eulerWalkNotes.dashes.toLocaleString()} slope dashes read back, ${eulerWalkNotes.goals} goals findable)`);
+console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);

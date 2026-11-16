@@ -1,159 +1,229 @@
 {
-  "change": "Exponential growth as a fight topic: y at a new time from y(0) and y(T) on y′ = ky.",
+  "change": "The Doubling Workshop: walk y′ = ky a whole or half stretch at a time against the straight line through its first two points.",
   "mutations": [
     {
-      "name": "the answer multiplies by the factor once too often",
+      "name": "half a stretch multiplies by half the factor",
       "file": "index.html",
-      "find": "const rm=pw(q,j*mn/2), A=mul(a,rm);",
-      "replace": "const rm=pw(q,j*mn/2), A=mul(b,rm);",
+      "find": "y(n){ const S=this.set(); return S.y0*Math.pow(S.r,n); },",
+      "replace": "y(n){ const S=this.set(); return Number.isInteger(n) ? S.y0*Math.pow(S.r,n) : S.y0*Math.pow(S.r,Math.floor(n))*(1+(S.r-1)/2); },",
       "run": "verify"
     },
     {
-      "name": "the answer adds instead of multiplying",
+      "name": "the growth adds instead of multiplying",
       "file": "index.html",
-      "find": "const rm=pw(q,j*mn/2), A=mul(a,rm);",
-      "replace": "const rm=pw(q,j*mn/2), A=add(a,rm);",
+      "find": "return S.y0*Math.pow(S.r,n); },",
+      "replace": "return S.y0+(S.y0*S.r-S.y0)*n; },",
       "run": "verify"
     },
     {
-      "name": "a half stretch takes the factor itself",
+      "name": "the line runs through the wrong second point",
       "file": "index.html",
-      "find": "const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,2]:[3,2];",
-      "replace": "const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,1]:[3,2];",
+      "find": "return S.y0+(S.y0*S.r-S.y0)*n; },",
+      "replace": "return S.y0+(S.y0*S.r*S.r-S.y0)*n/2; },",
       "run": "verify"
     },
     {
-      "name": "y(T) is the factor squared",
+      "name": "the halving halves too slowly",
       "file": "index.html",
-      "find": "r=pw(q,j), a=F(R.i(2,9)), b=mul(a,r);",
-      "replace": "r=pw(q,j), a=F(R.i(2,9)), b=mul(a,pw(r,2));",
+      "find": "r:0.5, T:3,",
+      "replace": "r:0.6, T:3,",
       "run": "verify"
     },
     {
-      "name": "the time asked is a stretch off",
+      "name": "a stretch of the doubling is 3 days",
       "file": "index.html",
-      "find": "t=T*mn/2;",
-      "replace": "t=T*mn/2+T;",
+      "find": "r:2, T:2, unit:'days'",
+      "replace": "r:2, T:3, unit:'days'",
       "run": "verify"
     },
     {
-      "name": "the stretch is read as 1",
+      "name": "the walk may run off the figure",
       "file": "index.html",
-      "find": "const T=d===1?R.pick([1,2,3,5,10]):R.pick([2,4,6,10])",
-      "replace": "const T=1",
+      "find": "canFull(){ return this.n()+1<=this.set().maxN; },",
+      "replace": "canFull(){ return this.n()+1<=this.set().maxN+1; },",
       "run": "verify"
     },
     {
-      "name": "decay inverts the factor wrongly",
+      "name": "half a stretch is refused at the last half",
       "file": "index.html",
-      "find": "q=decay?F(q0[1],q0[0]):F(q0[0],q0[1]);",
-      "replace": "q=decay?F(-q0[1],q0[0]):F(q0[0],q0[1]);",
+      "find": "canHalf(){ return this.n()+0.5<=this.set().maxN; },",
+      "replace": "canHalf(){ return this.n()+0.5<this.set().maxN; },",
       "run": "verify"
     },
     {
-      "name": "the wrong answers may coincide",
+      "name": "a whole stretch is pushed as a half",
       "file": "index.html",
-      "find": "!seen.has(key(s[0]))",
-      "replace": "true",
+      "find": "this.moves.push(1); this.touched=true;",
+      "replace": "this.moves.push(0.5); this.touched=true;",
       "run": "verify"
     },
     {
-      "name": "a wrong answer may be 0 or below",
+      "name": "starting over keeps the walk",
       "file": "index.html",
-      "find": "const ok=v=>v[0]>0 && ",
-      "replace": "const ok=v=>",
+      "find": "again(){ this.moves=[]; this.touched=true;",
+      "replace": "again(){ this.touched=true;",
       "run": "verify"
     },
     {
-      "name": "only three wrong answers are kept",
+      "name": "a new story keeps the old walk",
       "file": "index.html",
-      "find": "if(dist.length<4 && ok(s[0])",
-      "replace": "if(dist.length<3 && ok(s[0])",
+      "find": "pick(i){ this.si=i; this.moves=[];",
+      "replace": "pick(i){ this.si=i;",
       "run": "verify"
     },
     {
-      "name": "the question says the wrong start",
+      "name": "a decimal is rounded to two places",
       "file": "index.html",
-      "find": "with y(0) = ${show(a)} and",
-      "replace": "with y(0) = ${show(b)} and",
+      "find": "num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },\n  fr",
+      "replace": "num(v,d=2){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },\n  fr",
       "run": "verify"
     },
     {
-      "name": "the question asks for the wrong time",
+      "name": "a rounded number is said with =",
       "file": "index.html",
-      "find": "What is y(${t})?",
-      "replace": "What is y(${t+1})?",
+      "find": "is(v){ return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v); },\n  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },\n  /* the f",
+      "replace": "is(v){ return '= '+this.fr(v); },\n  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },\n  /* the f",
       "run": "verify"
     },
     {
-      "name": "the question gives the wrong y(T)",
+      "name": "half a stretch is written as the factor",
       "file": "index.html",
-      "find": "and y(${T}) = ${show(b)}.<br>",
-      "replace": "and y(${T}) = ${show(r)}.<br>",
+      "find": "root(){ return `√${this.pf(this.set().r)}`; },",
+      "replace": "root(){ return this.pf(this.set().r); },",
       "run": "verify"
     },
     {
-      "name": "the working names the wrong factor",
+      "name": "the power is one too many",
       "file": "index.html",
-      "find": "= ${show(b)} ÷ ${show(a)} = ${show(r)}. `",
-      "replace": "= ${show(b)} ÷ ${show(a)} = ${show(q)}. `",
+      "find": "pow(n){ return Number.isInteger(n) ? (n===1 ? '' : '⁰¹²³⁴'[n])",
+      "replace": "pow(n){ return Number.isInteger(n) ? (n===1 ? '' : '⁰¹²³⁴⁵'[n+1])",
       "run": "verify"
     },
     {
-      "name": "the half-stretch sentence is left out",
+      "name": "half a stretch's power is doubled",
       "file": "index.html",
-      "find": "const half=mn%2?`Half a stretch",
-      "replace": "const half=mn%2?``&&`Half a stretch",
+      "find": "`^(${2*n}/2)`; },",
+      "replace": "`^(${4*n}/2)`; },",
       "run": "verify"
     },
     {
-      "name": "the answer is shown as a decimal",
+      "name": "the readout shows only the last two moves",
       "file": "index.html",
-      "find": "a:show(A),\n      d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
-      "replace": "a:String(A[0]/A[1]),\n      d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
+      "find": "const from=Math.max(0,this.moves.length-3);",
+      "replace": "const from=Math.max(0,this.moves.length-2);",
       "run": "verify"
     },
     {
-      "name": "the codex has no example",
+      "name": "a move names the old time as its landing",
       "file": "index.html",
-      "find": "eg:'y(0) = 3 and y(2) = 6: the factor every 2 is 6 ÷ 3 = 2, so y(6) = 3 × 2³ = 24.'",
-      "replace": "eg:''",
+      "find": "multiplies y by ${m===1?this.fr(S.r):this.root()}: y(${this.fr(n*S.T)})",
+      "replace": "multiplies y by ${m===1?this.fr(S.r):this.root()}: y(${this.fr(a*S.T)})",
       "run": "verify"
     },
     {
-      "name": "the codex rule runs long",
+      "name": "the factor is read upside down",
       "file": "index.html",
-      "find": "rule:'y′ = ky multiplies y",
-      "replace": "rule:'Exponential growth and decay, the solutions of a differential equation of the form dy/dt = ky, where k is a constant: y′ = ky multiplies y",
+      "find": "multiplies y by r = ${this.fr(y1)} ÷ ${S.y0} = ${this.fr(S.r)}.`",
+      "replace": "multiplies y by r = ${this.fr(y1)} ÷ ${S.y0} = ${this.fr(1/S.r)}.`",
       "run": "verify"
     },
     {
-      "name": "a wrong answer has no reason",
+      "name": "the line is said to stay above the curve",
       "file": "index.html",
-      "find": "d:dist.map(([v,why])=>[show(v),why]),\n      ex:`Ev",
-      "replace": "d:dist.map(([v,why])=>[show(v),'']),\n      ex:`Ev",
+      "find": "else if(n<1) out.push(",
+      "replace": "else if(n!==1) out.push(",
       "run": "verify"
     },
     {
-      "name": "exponential growth has no name",
+      "name": "the line's zero is told as below zero",
       "file": "index.html",
-      "find": ", growth:'Exponential Growth'",
+      "find": "else if(L===0) out.push(",
+      "replace": "else if(L===1e9) out.push(",
+      "run": "verify"
+    },
+    {
+      "name": "the √2 note is left out",
+      "file": "index.html",
+      "find": "if(this.moves.includes(0.5)) out.push(",
+      "replace": "if(this.moves.includes(0.25)) out.push(",
+      "run": "verify"
+    },
+    {
+      "name": "the curve is drawn as the line",
+      "file": "index.html",
+      "find": "pts.push(`${f(this.PX(t))},${f(this.PY(this.y(t/S.T)))}`); }",
+      "replace": "pts.push(`${f(this.PX(t))},${f(this.PY(this.line(t/S.T)))}`); }",
+      "run": "verify"
+    },
+    {
+      "name": "the dots are drawn a stretch late",
+      "file": "index.html",
+      "find": "cx=\"${f(this.PX(q*S.T))}\"",
+      "replace": "cx=\"${f(this.PX((q+1)*S.T))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "the line starts a stretch in",
+      "file": "index.html",
+      "find": "const lt=v=>(v-S.y0)/(S.y0*S.r-S.y0)*S.T, ts=[0,end,",
+      "replace": "const lt=v=>(v-S.y0)/(S.y0*S.r-S.y0)*S.T, ts=[S.T,end,",
+      "run": "verify"
+    },
+    {
+      "name": "the two halves goal takes one half",
+      "file": "index.html",
+      "find": "return L>=2 && m[L-1]===0.5 && m[L-2]===0.5 && Number.isInteger(K.n()); }},",
+      "replace": "return L>=1 && m[L-1]===0.5 && Number.isInteger(K.n()); }},",
+      "run": "verify"
+    },
+    {
+      "name": "the decay goal is met at the line's zero",
+      "file": "index.html",
+      "find": "ok:K=>K.si===1 && K.n()>2},",
+      "replace": "ok:K=>K.si===1 && K.n()>=2},",
+      "run": "verify"
+    },
+    {
+      "name": "the √2 goal is met on any story",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.moves.includes(0.5)},",
+      "replace": "ok:K=>K.moves.includes(0.5)},",
+      "run": "verify"
+    },
+    {
+      "name": "the half-stretch button does a whole one",
+      "file": "index.html",
+      "find": "onclick=\"Doubling.halfStep()\"",
+      "replace": "onclick=\"Doubling.full()\"",
+      "run": "play:doubling"
+    },
+    {
+      "name": "the Tome does not offer it",
+      "file": "index.html",
+      "find": "onclick=\"Doubling.open()\"",
+      "replace": "onclick=\"Doubling.render()\"",
+      "run": "play:doubling"
+    },
+    {
+      "name": "a fight on growth does not offer it",
+      "file": "index.html",
+      "find": "    Doubling: [\"⏳ Doubling Workshop\", ['growth']],\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "no realm asks exponential growth",
+      "name": "the screen is not drawn when opened",
       "file": "index.html",
-      "find": "'secondDeriv','euler','growth'],",
-      "replace": "'secondDeriv','euler'],",
-      "run": "verify"
+      "find": "    if(id==='s-double') Doubling.render();\n",
+      "replace": "",
+      "run": "play:doubling"
     },
     {
-      "name": "exponential growth is in no strand",
+      "name": "the goals never show as found",
       "file": "index.html",
-      "find": ",'euler','growth']]",
-      "replace": ",'euler']]",
-      "run": "verify"
+      "find": "this.GOALS.map(g=>`<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF GROWTH','every s",
+      "replace": "this.GOALS.map(g=>`<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF GROWTH','every s",
+      "run": "play:doubling"
     }
   ]
 }

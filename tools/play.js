@@ -96,6 +96,7 @@ const SUITES = [
   require('./play/pathchain'),  // dz/dt along a path: an x part and a y part
   require('./play/expint'),  // ∫ e^(kx) dx: fit F to a slope field, divide by k
   require('./play/eulerwalk'), // walk y′ = f(x, y) in Euler's steps by hand
+  require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′
   require('./play/matpick'), // see a shape, pick which of four matrices makes it

@@ -1908,6 +1908,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ DOUBLING WORKSHOP ============ -->
+  <div class="screen" id="s-double">
+    <div class="panel"><h2>⏳ Doubling Workshop</h2><div class="sub">y′ = ky says y grows at a rate in step with itself, and that makes the same length of time always multiply y by the same factor. Pick a story, walk it a whole stretch or half a stretch at a time, and watch the curve against the straight line through its first two points.</div></div>
+    <div class="panel">
+      <div id="dbSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which story"></div>
+      <div id="dbFig"></div>
+      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk">
+        <button class="btn sm" id="dbFull" onclick="Doubling.full()" aria-label="Walk one whole stretch">⏩ A whole stretch</button>
+        <button class="btn sm ghost" id="dbHalf" onclick="Doubling.halfStep()" aria-label="Walk half a stretch">Half a stretch</button>
+        <button class="btn sm ghost" id="dbAgain" onclick="Doubling.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="dbRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="dbGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ EULER STEP WORKSHOP ============ -->
   <div class="screen" id="s-eulerwalk">
     <div class="panel"><h2>👣 Euler Step Workshop</h2><div class="sub">A differential equation gives the slope at every point but not the curve. Euler’s method walks it in straight steps: read the slope where you stand, move h along and h × slope up, and repeat. Pick an equation and a step size, take the steps by hand, and see where the walk lands against the true curve.</div></div>
@@ -4081,6 +4100,7 @@ const WORKSHOP_FOR = (() => {
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
     EulerWalk: ["👣 Euler Step Workshop", ['euler']],
+    Doubling: ["⏳ Doubling Workshop", ['growth']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13548,6 +13568,7 @@ const UI = {
     if(id==='s-pathchain') PathChain.render();
     if(id==='s-expint') ExpInt.render();
     if(id==='s-eulerwalk') EulerWalk.render();
+    if(id==='s-double') Doubling.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14377,6 +14398,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">👣 Euler Step Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>
          <button class="btn sm" id="tomeEulerWalk" style="width:auto;margin-top:8px" onclick="EulerWalk.open()">Open the Euler step workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">y′ = ky multiplies y by the same factor over every stretch of the same length. Walk a doubling, a halving and a quadrupling a whole or half stretch at a time: see half of ×2 come out as ×√2, and a straight line run below zero where the decay never does.</div>
+         <button class="btn sm" id="tomeDoubling" style="width:auto;margin-top:8px" onclick="Doubling.open()">Open the doubling workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -27215,6 +27241,125 @@ const PathChain = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE PATH','both reasons counted','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The doubling workshop: y′ = ky one stretch at a time ----------
+   y′ = ky multiplies y by the same factor over every stretch of time of the
+   same length. Pick a story (doubles every 2 days, halves every 3 hours,
+   quadruples every 2 minutes) and walk it a whole stretch or half a stretch
+   at a time. The figure keeps every point against the curve and against the
+   straight line through the first two points, so nothing is held in the
+   head: half a stretch of ×2 is ×√2, not ×1.5, and the line runs below zero
+   where the decay never does. Nothing is saved. */
+const Doubling = {
+  SETS:[
+    {id:'dbl', btn:'×2 every 2 days', name:'doubles every 2 days, from 3', y0:3, r:2, T:2, unit:'days', maxN:4, R:[0,50]},
+    {id:'half', btn:'½ every 3 hours', name:'halves every 3 hours, from 16', y0:16, r:0.5, T:3, unit:'hours', maxN:4, R:[-18,18]},
+    {id:'quad', btn:'×4 every 2 minutes', name:'quadruples every 2 minutes, from 1', y0:1, r:4, T:2, unit:'minutes', maxN:3, R:[0,66]}
+  ],
+  si:0, moves:[], touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'stretch', t:'Take one whole stretch and see y multiply by the factor.', toast:'Same time, same factor',
+     ok:K=>K.moves.includes(1)},
+    {id:'root', t:'On ×2 every 2 days, take half a stretch: y grows by √2, not by 1.5.', toast:'Half of ×2 is ×√2',
+     ok:K=>K.si===0 && K.moves.includes(0.5)},
+    {id:'halves', t:'Land on a whole stretch with two half stretches in a row.', toast:'Half and half make one',
+     ok:K=>{ const m=K.moves, L=m.length; return L>=2 && m[L-1]===0.5 && m[L-2]===0.5 && Number.isInteger(K.n()); }},
+    {id:'exact', t:'On ×4 every 2 minutes, take half a stretch and land on a whole number.', toast:'√4 = 2',
+     ok:K=>K.si===2 && K.moves.includes(0.5)},
+    {id:'never', t:'On ½ every 3 hours, walk past the hour where the straight line hits 0.', toast:'A share, never the whole',
+     ok:K=>K.si===1 && K.n()>2},
+    {id:'leave', t:'On ×2 every 2 days, walk to day 8 and see the curve leave the straight line behind.', toast:'48 against 15',
+     ok:K=>K.si===0 && K.n()===4}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* how many stretches walked, and the time that makes */
+  n(){ return this.moves.reduce((a,b)=>a+b,0); },
+  y(n){ const S=this.set(); return S.y0*Math.pow(S.r,n); },
+  line(n){ const S=this.set(); return S.y0+(S.y0*S.r-S.y0)*n; },
+  canFull(){ return this.n()+1<=this.set().maxN; },
+  canHalf(){ return this.n()+0.5<=this.set().maxN; },
+  r9(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  /* a number is written exactly when it is a short fraction, otherwise to four places */
+  exact(v){ const q=this.r9(v); for(const d of [1,2,4,8,16]){ const n=Math.round(q*d); if(Math.abs(n/d-q)<1e-9) return d===1 ? neg(n) : (n<0?'−':'')+Math.abs(n)+'/'+d; } return null; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  fr(v){ const e=this.exact(v); return e!==null ? e : this.num(v); },
+  is(v){ return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v); },
+  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },
+  /* the factor for half a stretch, written as the root it is */
+  root(){ return `√${this.pf(this.set().r)}`; },
+  /* how many stretches, as a power: ² for whole ones, ^(3/2) for halves */
+  pow(n){ return Number.isInteger(n) ? (n===1 ? '' : '⁰¹²³⁴'[n]) : `^(${2*n}/2)`; },
+  working(){
+    const S=this.set(), y1=S.y0*S.r, out=[];
+    out.push(`y′ = ky multiplies y by the same factor over every stretch of time of the same length. Here y(0) = ${S.y0} and y(${S.T}) = ${this.fr(y1)}, so each stretch of ${S.T} ${S.unit} multiplies y by r = ${this.fr(y1)} ÷ ${S.y0} = ${this.fr(S.r)}.`);
+    if(!this.moves.length){ out.push(`Take a whole stretch of ${S.T} ${S.unit}, or half of one.`); return out; }
+    const from=Math.max(0,this.moves.length-3);
+    if(from>0) out.push(from===1 ? 'Move 1 is the first dot on the figure.' : from===2 ? 'Moves 1 and 2 are the dots already on the figure.' : `Moves 1 to ${from} are the dots already on the figure.`);
+    let n=0;
+    this.moves.forEach((m,j)=>{ const a=n; n+=m; if(j<from) return;
+      out.push(`Move ${j+1}: ${m===1?'a whole stretch':'half a stretch'}, from t = ${this.fr(a*S.T)} to t = ${this.fr(n*S.T)}, multiplies y by ${m===1?this.fr(S.r):this.root()}: y(${this.fr(n*S.T)}) ${this.is(this.y(n))}.`); });
+    const t=n*S.T, Y=this.y(n), L=this.line(n), w=['','one','two','three','four'], st=Number.isInteger(n) ? `${w[n]} stretch${n===1?'':'es'}` : Math.floor(n) ? `${w[Math.floor(n)]} and a half stretches` : 'half a stretch';
+    out.push(`At t = ${this.fr(t)}, ${st} from the start: y(${this.fr(t)}) = ${S.y0} × ${this.pf(S.r)}${this.pow(n)} ${this.is(Y)}.`);
+    const lead=`The straight line through the first two points gives ${this.fr(L)} at t = ${this.fr(t)}`;
+    if(n===1) out.push(`The straight line through the first two points meets the curve here, at y = ${this.fr(Y)}.`);
+    else if(n<1) out.push(`${lead}, above the curve: between the two points the curve sags below the line.`);
+    else if(L>0) out.push(`${lead}, below the curve, which pulls further away every stretch.`);
+    else if(L===0) out.push(`${lead}: the line reaches 0 here, but y is still ${this.fr(Y)}.`);
+    else out.push(`${lead}, below zero. A line takes away the same amount every stretch; y′ = ky takes away the same share, so y never reaches 0.`);
+    if(this.moves.includes(0.5)) out.push(
+      S.id==='dbl' ? 'Half a stretch multiplies by √2 ≈ 1.4142, not by 1.5: two half stretches must make ×2, and 1.5 × 1.5 = 2.25 is too much.'
+      : S.id==='quad' ? 'Half a stretch multiplies by √4 = 2, since 2 × 2 = 4.'
+      : 'Half a stretch keeps √(1/2) ≈ 0.7071 of y, since 0.7071 × 0.7071 ≈ 1/2.');
+    return out;
+  },
+  /* the curve, the straight line through the first two points, and the walk */
+  L:30, TOP:12, W:310, Hh:230,
+  PX(t){ const S=this.set(); return this.L+t/(S.maxN*S.T)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), end=S.maxN*S.T, n=this.n();
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="y ${S.name.replace(/, from \d+$/,'')}: the curve y = ${S.y0} × ${this.pf(S.r)}^(t/${S.T}) in gold, the straight line through its first two points dashed, and the walk in blue, now at t = ${this.fr(n*S.T)}, y ${this.is(this.y(n))}">`;
+    out+=`<line data-k="taxis" x1="${this.L}" y1="${f(this.PY(Math.max(c,0)))}" x2="${this.L+this.W}" y2="${f(this.PY(Math.max(c,0)))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${this.L}" y1="${this.TOP}" x2="${this.L}" y2="${this.TOP+this.Hh}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let k=1;k<=S.maxN;k++) out+=`<text data-k="tick" x="${f(this.PX(k*S.T))}" y="${f(Math.min(this.TOP+this.Hh,this.PY(Math.max(c,0))+12))}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${k*S.T}</text>`;
+    /* the straight line, cut where it leaves the figure */
+    const lt=v=>(v-S.y0)/(S.y0*S.r-S.y0)*S.T, ts=[0,end,lt(c),lt(d)].filter(t=>t>=0&&t<=end).sort((a,b)=>a-b);
+    const t1=ts[0], t2=ts.filter(t=>{ const v=this.line(t/S.T); return v>=c-1e-9 && v<=d+1e-9; }).pop();
+    out+=`<line data-k="line" x1="${f(this.PX(t1))}" y1="${f(this.PY(this.line(t1/S.T)))}" x2="${f(this.PX(t2))}" y2="${f(this.PY(this.line(t2/S.T)))}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=end*i/120; pts.push(`${f(this.PX(t))},${f(this.PY(this.y(t/S.T)))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+    let m=0; const P=[0,...this.moves.map(v=>m+=v)];
+    P.forEach((q,i)=>{ out+=`<circle data-k="pt" data-i="${i}" cx="${f(this.PX(q*S.T))}" cy="${f(this.PY(this.y(q)))}" r="${i===P.length-1?5:3.5}" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`; });
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-double'); },
+  pick(i){ this.si=i; this.moves=[]; this.touched=true; this.render(); },
+  full(){ if(!this.canFull()) return; this.moves.push(1); this.touched=true; this.render(); },
+  halfStep(){ if(!this.canHalf()) return; this.moves.push(0.5); this.touched=true; this.render(); },
+  again(){ this.moves=[]; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('dbSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Doubling.pick(${i})" aria-label="y ${s.name}">${s.btn}</button>`).join('');
+    document.getElementById('dbFull').disabled=!this.canFull();
+    document.getElementById('dbHalf').disabled=!this.canHalf();
+    document.getElementById('dbAgain').disabled=this.moves.length===0;
+    document.getElementById('dbFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold curve is y′ = ky; the dashed line runs straight through its first two points. The blue dots are your walk, one per move, and the numbers along the bottom mark each whole stretch.</div>`;
+    document.getElementById('dbRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('dbGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF GROWTH','every stretch walked','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
