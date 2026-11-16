@@ -636,7 +636,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: fifty
+  question from a different workshop's turned-round mode each time: fifty-one
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -2007,6 +2007,22 @@ The game is built so that losing teaches you as much as winning.
   500 the room left shrinks faster than P grows and the rate falls; from either side P
   settles on 1000. Six things to find, and a fight on logistic growth now offers it.
 
+  **🎯 Which rate?** turns the workshop round: r, K and P, with P below the ceiling
+  or above it, and four numbers, one of them dP/dt. The rule is stated first: r per
+  head, times the P heads there are, times the room left, 1 − P/K. The wrong numbers
+  are the slips people make: rP with no ceiling, the share already filled P/K where
+  the room left belongs, the P dropped, the r dropped, the ÷ K dropped, the share
+  turned upside down, and the peak rate rK/4 given whatever P is. Two wrong numbers
+  share the rate's form, whole or fraction, and two its sign, none is 0, no wrong
+  one is two others added, and the rate is whole about half the time. A wrong pick
+  is shut and checked where its formula must fail: at P = 0, where nobody breeds,
+  at the ceiling, where there is no room, or at P = 1, where one head grows at about
+  r. The right pick works rP(1 − P/K) through, and above the ceiling says why the
+  rate is below 0. Nothing is saved, and there is no clock. `npm test` reads every
+  number back off its button, works it again from the slip it is named as, finds
+  the right one alone by nudging the solution through P, and works every check
+  again.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -2171,7 +2187,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-six suites, about 5,820 checks, about a minute:
+loop only exists once the page is running. A hundred and forty-seven suites, about 5,850 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2259,6 +2275,7 @@ loop only exists once the page is running. A hundred and forty-six suites, about
 | `arclen` | the Tome opens the arc length workshop on the line, one chord measured √(4² + 3²) = 5 beside the runs alone, 4; two chords still exactly 5; on the cubic one chord short of 17/12 by about 0.0601, four chords each worked, doubling from 2 to 4 cutting the gap from 0.01656 to 0.00421, about a quarter, and 16 chords within 0.001; the chords stop at 32, halving drops the note and starting over goes back to one; on the quarter circle 16 chords give 1.5685 and doubling cuts the gap only to about a third; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
 | `arcpick` | the Tome says the arc length workshop can be turned round; the workshop opens on laying chords by hand, and switching to which integral puts away the curves, the figure, the chord buttons, the readout and the goals and states the rule first; a curve and where it runs are shown and four integrals offered, each named by its integral; two wrong picks are each named as their slip and checked at one x, where the slope gives a tiny step's length, shut and told as not the length, and not counted; the right pick works 1 + f′² through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings CURVE MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `logistic` | the Tome opens the logistic workshop starting small at 20, A = 49 worked and the rate 0.5 × 20 × 0.98 = 9.8; one step grows P to 32.6, 1.6276 times as much, almost e^0.5, with the rate rising; P passes 500 at t = 8 with rK/4 = 125 told, and at t = 9 the rate falls from 124.6 to 114.1; by t = 17 P is within 1% of 1000; the steps stop at 20, stepping back drops the step note and starting over goes back to t = 0; half way the rate falls from 125; above the ceiling the rate is −480 and P falls to 1294.4; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
+| `logipick` | the Tome says the logistic workshop can be turned round; the workshop opens on stepping by hand, and switching to which rate puts away the starts, the figure, the step buttons, the readout and the goals and states the rule first; r, K and P are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked where their formula must fail, shut and told as not dP/dt, and not counted; the right pick works rP(1 − P/K) through, counts (not as a first try after a miss), toasts and deals a new population; a first try counts as one, and the fifth brings RATE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 54 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |

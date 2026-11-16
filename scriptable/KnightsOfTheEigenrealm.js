@@ -1951,7 +1951,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LOGISTIC WORKSHOP ============ -->
   <div class="screen" id="s-logistic">
     <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
+    <div id="lgwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a population by hand or pick the rate"></div>
     <div class="panel">
+      <div id="lgqBox"></div>
       <div id="lgwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Where the population starts"></div>
       <div id="lgwFig"></div>
       <div id="lgwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step through time">
@@ -14841,7 +14843,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt.</div>
          <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -28267,6 +28269,145 @@ const ChordPick = {
     return out;
   }
 };
+/* ---------- Which rate? The logistic workshop turned round ----------
+   dP/dt = rP(1 − P/K) with r, K and P given, and four numbers, one of them
+   the rate. The rule is stated first; the wrong numbers are the slips people
+   make: rP with no ceiling, the share filled P/K where the room left belongs,
+   the P or the r dropped, the ÷ K dropped, the share turned upside down, or
+   the peak rate rK/4 given whatever P is. Two wrong numbers share the rate's
+   form, whole or fraction, and two its sign, and no wrong one is two others
+   added. A wrong pick is checked where its formula must fail: at P = 0, at
+   the ceiling, or at P = 1. Nothing is saved. */
+const LogiPick = {
+  SLIPS:['noCeil','filled','noP','noR','noK','flip','peak'],
+  RS:[[1,2],[1,4],[1,5],[1,10],[3,10],[2,5],[3,4],[3,5]],
+  KS:[100,200,300,400,500,600,800,1000],
+  RULE:'A population with room for K grows at dP/dt = rP(1 − P/K): r per head, times the P heads there are, times the room left, 1 − P/K. While P is small the room left is nearly 1 and it grows like rP; at K it stops; above K the room left is below 0 and P shrinks. Put r, K and P in. Which number is dP/dt?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  rs(S){ return this.pf([S.rn,S.rd]); },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {rn,rd,K,P}=S;
+    return k==='right' ? this.frac(rn*P*(K-P),rd*K) : k==='noCeil' ? this.frac(rn*P,rd) : k==='filled' ? this.frac(rn*P*P,rd*K)
+      : k==='noP' ? this.frac(rn*(K-P),rd*K) : k==='noR' ? this.frac(P*(K-P),K) : k==='noK' ? this.frac(rn*P*(K-P),rd)
+      : k==='flip' ? this.frac(rn*(P-K),rd) : this.frac(rn*K,4*rd);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  big(v){ return Math.abs(v[0]/v[1])>2000; },
+  // the slips this population can offer: each a number different from every one kept before it, none of them 0 or huge
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    // P is never 0 or K, so no slip is ever 0
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(this.big(v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the rate: two of its form and two of its sign, and no number two others added
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    const eq=(a,b)=>a[0]*b[1]===b[0]*a[1], add=(a,b)=>[a[0]*b[1]+b[0]*a[1],a[1]*b[1]];
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]], V=t.map(x=>this.val(S,x)), all=[W,...V];
+      if(V.filter(v=>this.whole(v)===form).length<2 || V.filter(v=>v[0]*W[0]>0).length<2) continue;
+      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,add(x,y)))))) continue;
+      out.push(t);
+    }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const [rn,rd]=this.RS[R.i(0,this.RS.length-1)], K=this.KS[R.i(0,this.KS.length-1)], j=R.i(1,29);
+      if(j===20) continue; // P = K: the rate is 0 (trios() would refuse it too, finding nothing of its sign)
+      const S={rn,rd,K,P:K*j/20};
+      if(this.whole(this.val(S,'right'))!==wantWhole || this.big(this.val(S,'right'))) continue;
+      if(!this.trios(S).length) continue;
+      return S;
+    }
+    return {rn:1,rd:4,K:400,P:300};
+  },
+  // how often the rate's place is chosen when it may go there: the low and high places come up least, so they are favoured
+  PLACE:[8,1,3,10],
+  pickW(w){ let x=R.i(1,w.reduce((a,b)=>a+b,0)); for(let i=0;i<w.length;i++){ x-=w[i]; if(x<=0) return i; } return w.length-1; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // the rate's place among the numbers is chosen from the places these slips allow, the rarer ones favoured, so it gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], wt=ranks.map(x=>this.PLACE[x]), want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=R.shuffle(['right',...take]).map(k=>({k}));
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('RATE READER', this.matched+' rates worked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is dP/dt, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    LogiGrow.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    if(k==='noCeil') return \`\${L} is rP alone, growth with no ceiling. The room left, 1 − P/K, has to multiply it, so that growth slows as P nears K.\`;
+    if(k==='filled') return \`\${L} multiplies by P/K, the share already filled, where the room left, 1 − P/K, belongs.\`;
+    if(k==='noP') return \`\${L} drops the P: r(1 − P/K) is the growth of one head. Multiply it by the P = \${S.P} heads there are.\`;
+    if(k==='noR') return \`\${L} drops the r, so it does not depend on how fast this population breeds. Every head adds r = \${this.fs([S.rn,S.rd])} heads a unit of time while there is room.\`;
+    if(k==='noK') return \`\${L} drops the ÷ K: rP(K − P) is K times too big. The room left is a share of the ceiling, 1 − P/K = (K − P)/K.\`;
+    if(k==='flip') return \`\${L} turns the share upside down, rP(1 − K/P). The room left is 1 − P/K: the part of K not yet filled.\`;
+    return \`\${L} is rK/4, the fastest this population ever grows, which it does at P = K/2 = \${S.K/2}. Here P = \${S.P}, so work rP(1 − P/K) at this P.\`;
+  },
+  // where each slip's formula must fail: 0 at P = 0, 0 at the ceiling, or about r a head at P = 1
+  at(k){ return k==='noP'||k==='peak' ? 0 : k==='noCeil'||k==='filled' ? 'K' : 1; },
+  form:{noCeil:'rP', filled:'rP · P/K', noP:'r(1 − P/K)', noR:'P(1 − P/K)', noK:'rP(K − P)', flip:'rP(1 − K/P)', peak:'rK/4'},
+  check(S,k,L){
+    const {rn,rd,K}=S, r=this.rs(S), h=this.at(k), x=h==='K' ? K : h, T={...S,P:x}, v=this.fs(this.val(T,k));
+    const e=k==='noCeil' ? \`\${r} × \${x}\` : k==='filled' ? \`\${r} × \${x} × \${x}/\${K}\` : k==='noP' ? \`\${r} × (1 − \${x}/\${K})\`
+      : k==='noR' ? \`\${x} × (1 − \${x}/\${K})\` : k==='noK' ? \`\${r} × \${x} × (\${K} − \${x})\` : k==='flip' ? \`\${r} × \${x} × (1 − \${K}/\${x})\` : \`\${r} × \${K}/4\`;
+    const said=\`\${L}'s formula, \${this.form[k]}, gives \${e} = \${v}\`;
+    if(h===0) return \`Check \${L} at P = 0: with nobody there to breed the population cannot grow, so dP/dt must be 0. \${said} there, not 0.\`;
+    if(h==='K') return \`Check \${L} at P = K = \${K}: with no room left the population stops, so dP/dt must be 0. \${said} there, not 0.\`;
+    const w=this.fs(this.frac(rn*(K-1),rd*K));
+    return \`Check \${L} at P = 1: one head with nearly all the room left grows at about r, and the rule gives \${r} × 1 × (1 − 1/\${K}) = \${w}. \${said}, not \${w}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="lgqQ" style="text-align:center;font-size:16px;margin-bottom:2px">r = \${this.fs([S.rn,S.rd])}, K = \${S.K}, P = \${S.P}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which number is dP/dt?</div>\`;
+    out+=\`<div id="lgqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="LogiPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not dP/dt':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, W=this.val(B,'right'), room=this.frac(B.K-B.P,B.K);
+      lines.push(\`That was it: dP/dt = \${this.rs(B)} × \${B.P} × (1 − \${B.P}/\${B.K}) = \${this.rs(B)} × \${B.P} × \${this.pf(room)} = \${this.fs(W)}\${W[0]<0?\`. P is above the ceiling, so the room left is below 0 and P shrinks back toward \${B.K}\`:''}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="lgqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The logistic workshop: growth with a ceiling, step by step ----------
    dP/dt = 0.5P(1 − P/1000), solved exactly: P(t) = 1000/(1 + A·e^(−0.5t)) with
    A = (1000 − P(0))/P(0). Start small at 20, start half way at 500, or start
@@ -28360,7 +28501,15 @@ const LogiGrow = {
   fwd(){ if(!this.can(1)) return; this.t++; this.stepped=true; this.touched=true; this.render(); },
   back(){ if(!this.can(-1)) return; this.t--; this.stepped=false; this.touched=true; this.render(); },
   again(){ this.t=0; this.stepped=false; this.touched=true; this.render(); },
+  tab:'hand', // step by hand, or which rate
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('lgwTab').innerHTML=[['hand','🐇 Step by hand','Step a population through time by hand'],['pick','🎯 Which rate?','See r, K and P, and pick which of four numbers is dP/dt']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="LogiGrow.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['lgwSets','lgwFig','lgwMoveRow','lgwRead','lgwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('lgqBox').innerHTML=pick ? LogiPick.html() : '';
+    if(pick) return;
     document.getElementById('lgwSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogiGrow.pick(\${i})" aria-label="Grow a population \${s.name}">\${s.btn}</button>\`).join('');
     document.getElementById('lgwBack').disabled=!this.can(-1);
@@ -30112,9 +30261,10 @@ const MixPick = {
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop'],
-    ['ArcPick','ArcLen','🧵 Arc Length Workshop']
+    ['ArcPick','ArcLen','🧵 Arc Length Workshop'],
+    ['LogiPick','LogiGrow','🐇 Logistic Workshop']
   ],
-  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, LogiGrow, LogiPick, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },

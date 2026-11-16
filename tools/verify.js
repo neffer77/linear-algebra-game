@@ -91,7 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
-    ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  render(){\n    document.getElementById('lgwSets')")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
+    ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  tab:'hand', // step by hand, or which rate")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
     ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  tab:'hand', // chords by hand")) + 'render(){}};exports.ArcLen=ArcLen;' +
     ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
@@ -8051,6 +8051,152 @@ const slicePickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which rate? The logistic workshop turned round. Every number is read back
+   off its button and worked again here from the slip it is named as; the
+   right one alone is the rate, found without the rule by nudging t either
+   side of 0 on the solution P(t) = K/(1 + A·e^(−rt)) that starts at P. No
+   number's form, sign or place gives it away, none is 0, and no wrong one is
+   two others added. Each wrong pick's check is worked again where its
+   formula must fail: at P = 0, at the ceiling, or at P = 1. */
+const logiPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  R.shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R._r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const P = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const LogiGrow = {render(){ env.renders++; }};" +
+    cut('const LogiPick = {', '/* ---------- The logistic workshop: growth') + 'return LogiPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const show = f => (f[0] < 0 ? '−' : '') + Math.abs(f[0]) + (f[1] === 1 ? '' : '/' + f[1]);
+  const read = s => { const m = s.match(/^(−?)(\d+)(?:\/(\d+))?$/); if (!m) return null; const q = m[3] ? +m[3] : 1; if (m[3] && (q === 1 || gcd(+m[2], q) !== 1)) return null; return [(m[1] ? -1 : 1) * +m[2], q]; };
+  const pr = f => (f[0] < 0 || f[1] !== 1 ? `(${show(f)})` : show(f));
+  // every number, worked from the slip it stands for
+  const want = (k, Q) => { const { rn, rd, K } = Q, p = Q.P;
+    return k === 'right' ? fr(rn * p * (K - p), rd * K) : k === 'noCeil' ? fr(rn * p, rd) : k === 'filled' ? fr(rn * p * p, rd * K)
+      : k === 'noP' ? fr(rn * (K - p), rd * K) : k === 'noR' ? fr(p * (K - p), K) : k === 'noK' ? fr(rn * p * (K - p), rd)
+      : k === 'flip' ? fr(rn * p * (p - K), rd * p) : k === 'peak' ? fr(rn * K, 4 * rd) : null; };
+  // the rate found without the rule: the solution through P at t = 0, nudged either side
+  const isRate = (v, Q) => { const r = Q.rn / Q.rd, A = (Q.K - Q.P) / Q.P, X = t => Q.K / (1 + A * Math.exp(-r * t)), s = (X(1e-5) - X(-1e-5)) / 2e-5;
+    return Math.abs(v[0] / v[1] - s) <= 1e-6 * Math.max(1, Math.abs(s)); };
+  const slipOf = (k, L, Q) => {
+    if (k === 'noCeil') return `${L} is rP alone, growth with no ceiling. The room left, 1 − P/K, has to multiply it, so that growth slows as P nears K.`;
+    if (k === 'filled') return `${L} multiplies by P/K, the share already filled, where the room left, 1 − P/K, belongs.`;
+    if (k === 'noP') return `${L} drops the P: r(1 − P/K) is the growth of one head. Multiply it by the P = ${Q.P} heads there are.`;
+    if (k === 'noR') return `${L} drops the r, so it does not depend on how fast this population breeds. Every head adds r = ${show(fr(Q.rn, Q.rd))} heads a unit of time while there is room.`;
+    if (k === 'noK') return `${L} drops the ÷ K: rP(K − P) is K times too big. The room left is a share of the ceiling, 1 − P/K = (K − P)/K.`;
+    if (k === 'flip') return `${L} turns the share upside down, rP(1 − K/P). The room left is 1 − P/K: the part of K not yet filled.`;
+    return `${L} is rK/4, the fastest this population ever grows, which it does at P = K/2 = ${Q.K / 2}. Here P = ${Q.P}, so work rP(1 − P/K) at this P.`; };
+  const FORM = { noCeil: 'rP', filled: 'rP · P/K', noP: 'r(1 − P/K)', noR: 'P(1 − P/K)', noK: 'rP(K − P)', flip: 'rP(1 − K/P)', peak: 'rK/4' };
+  const RULE = 'A population with room for K grows at dP/dt = rP(1 − P/K): r per head, times the P heads there are, times the room left, 1 − P/K. While P is small the room left is nearly 1 and it grows like rP; at K it stops; above K the room left is below 0 and P shrinks. Put r, K and P in. Which number is dP/dt?';
+  if (P.RULE !== RULE) fail('logipick', 'rule', 'the rule is not stated as it should be');
+  if (P.round !== null || P.matched !== 0) fail('logipick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noCeil', 'filled', 'noP', 'noR', 'noK', 'flip', 'peak'], RS = ['1/2', '1/4', '1/5', '1/10', '3/10', '2/5', '3/4', '3/5'], KS = [100, 200, 300, 400, 500, 600, 800, 1000];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0, above = 0;
+  const slots = new Set(), kinds = {}, rs = new Set(), ks = new Set(), places = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
+    P.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; rs.add(Q.rn + '/' + Q.rd); ks.add(Q.K); if (Q.P > Q.K) above++;
+      if (!RS.includes(Q.rn + '/' + Q.rd) || !KS.includes(Q.K) || !(Q.P > 0 && Q.P < 1.5 * Q.K && Q.P !== Q.K && (Q.P * 20) % Q.K === 0)) fail('logipick', key, `${sig} is not a population of the kind dealt`);
+      if (prev && prev === sig) fail('logipick', key, 'the same population comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('logipick', key, 'there are not four numbers, one of them right');
+      const h0 = P.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} r = ${show(fr(Q.rn, Q.rd))}, K = ${Q.K}, P = ${Q.P} Which number is dP/dt? A `)) fail('logipick', key, 'the rule and the population are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="LogiPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('logipick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const V = btns.map(x => read(x[6]));
+      if (V.some(v => !v)) { fail('logipick', key, `a number cannot be read in its lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (new Set(btns.map(x => x[6])).size !== 4) fail('logipick', key, 'two numbers are the same');
+      if (V.some(v => v[0] === 0)) fail('logipick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      V.forEach((v, i) => {
+        const o = r.opts[i], w = want(o.k, Q);
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!w) { fail('logipick', key, `a number is the unknown ${o.k}`); return; }
+        if (v[0] !== w[0] || v[1] !== w[1]) fail('logipick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((i === ri) !== isRate(v, Q)) fail('logipick', key, `${btns[i][6]} ${i === ri ? 'is not' : 'is'} the rate of P = ${Q.P}`);
+      });
+      { // nothing in its look: two of its form, two of its sign, no wrong one two others added, its place among them shuffled
+        const W = V[ri], wr = V.filter((v, i) => i !== ri), num = v => v[0] / v[1];
+        if (W[1] === 1) wholes++;
+        if (wr.filter(v => (v[1] === 1) === (W[1] === 1)).length < 2) fail('logipick', key, 'fewer than two wrong numbers share the rate\'s form');
+        if (wr.filter(v => v[0] * W[0] > 0).length < 2) fail('logipick', key, 'fewer than two wrong numbers share the rate\'s sign');
+        V.forEach((v, i) => { if (i === ri) return; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) if (a !== i && b !== i && Math.abs(num(V[a]) + num(V[b]) - num(v)) < 1e-12) fail('logipick', key, `${btns[i][6]} is ${btns[a][6]} and ${btns[b][6]} added`); });
+        places[wr.filter(v => num(v) < num(W)).length]++;
+        if (Math.abs(num(W)) > 2000 || wr.some(v => Math.abs(num(v)) > 2000)) fail('logipick', key, 'a number is too big to work'); }
+      if (k === 0 && txt(P.html().split('id="lgqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('logipick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, rr = pr(fr(Q.rn, Q.rd));
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = P.matched, nt = env.toasts.length;
+        P.choose(i); misses++;
+        if (P.matched !== m0 || !P.round.out.has(i) || P.round !== r || env.toasts.length !== nt) fail('logipick', key, 'a miss is counted, or not crossed off');
+        const lines = P.html().split('id="lgqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${P.matched} picked this visit, ${P.firstTry} on the first try.`) fail('logipick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        // the check, worked again: where the slip's formula must fail, and what it gives there
+        const T = x => ({ ...Q, P: x }), K = Q.K;
+        const at = o.k === 'noP' || o.k === 'peak' ? 0 : o.k === 'noCeil' || o.k === 'filled' ? K : 1;
+        const e = { noCeil: `${rr} × ${at}`, filled: `${rr} × ${at} × ${at}/${K}`, noP: `${rr} × (1 − ${at}/${K})`, noR: `${at} × (1 − ${at}/${K})`, noK: `${rr} × ${at} × (${K} − ${at})`, flip: `${rr} × ${at} × (1 − ${K}/${at})`, peak: `${rr} × ${K}/4` }[o.k];
+        const got = want(o.k, T(at)), truth = at === 1 ? fr(Q.rn * (K - 1), Q.rd * K) : [0, 1];
+        if (got[0] === truth[0] && got[1] === truth[1]) fail('logipick', key, `${o.k} does not fail at P = ${at}, so its check shows nothing`);
+        const said = `${Lt}'s formula, ${FORM[o.k]}, gives ${e} = ${show(got)}`;
+        const wantCheck = at === 0 ? `Check ${Lt} at P = 0: with nobody there to breed the population cannot grow, so dP/dt must be 0. ${said} there, not 0.`
+          : at === K ? `Check ${Lt} at P = K = ${K}: with no room left the population stops, so dP/dt must be 0. ${said} there, not 0.`
+          : `Check ${Lt} at P = 1: one head with nearly all the room left grows at about r, and the rule gives ${rr} × 1 × (1 − 1/${K}) = ${show(truth)}. ${said}, not ${show(truth)}.`;
+        if (lines[1] !== wantCheck) fail('logipick', key, `the check of ${o.k} is: ${lines[1]} | want ${wantCheck}`);
+        if (at === 1 && !isRate(truth, T(1))) fail('logipick', key, 'the rate at P = 1 is not worked right');
+        const ans = show(V[ri]);
+        if (lines.slice(0, 2).some(l => new RegExp(`(^|[ (])${ans}([ .,)]|$)`).test(l))) fail('logipick', key, `the explanation of ${o.k} hands over the answer ${ans}`);
+        worked++;
+        const hh = P.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LogiPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not dP/dt"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('logipick', key, 'the missed numbers are not shut and told as not dP/dt');
+        const r0 = env.renders; P.choose(i);
+        if (P.misses !== q + 1 || env.renders !== r0) fail('logipick', key, 'tapping a missed number again does something');
+      }
+      const m0 = P.matched, ft = P.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      P.choose(ri);
+      if (env.renders !== r0 + 1) fail('logipick', key, 'a pick does not redraw the workshop');
+      if (P.matched !== m0 + 1 || P.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('logipick', key, 'the right pick is not counted');
+      if (P.round === r || P.misses !== 0 || P.picked !== null) fail('logipick', key, 'no fresh population after the right pick');
+      if (P.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'RATE READER / 5 rates worked') fail('logipick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is dP/dt, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('logipick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(P.html().split('id="lgqRead"')[1].replace(/^[^>]*>/, ''));
+      const W = V[ri], room = fr(Q.K - Q.P, Q.K);
+      const wantLine = `That was it: dP/dt = ${rr} × ${Q.P} × (1 − ${Q.P}/${Q.K}) = ${rr} × ${Q.P} × ${pr(room)} = ${show(W)}${W[0] < 0 ? `. P is above the ceiling, so the room left is below 0 and P shrinks back toward ${Q.K}` : ''}. Here is a new one. ${P.matched} picked this visit, ${P.firstTry} on the first try.`;
+      if (got !== wantLine) fail('logipick', key, `after a pick: ${got}`);
+      if ((W[0] < 0) !== (Q.P > Q.K)) fail('logipick', key, 'the rate\'s sign does not follow which side of K P is on');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same population dealt again is turned away for a fresh one
+    const real = P.build; let c = 0;
+    P.build = () => (c++ < 3 ? { rn: 1, rd: 4, K: 400, P: 300 } : real.call(P));
+    P.round = null; P.newRound(); P.newRound();
+    if (JSON.stringify(P.round.S) === '{"rn":1,"rd":4,"K":400,"P":300}') fail('logipick', 'repeat', 'the same population is dealt twice in a row');
+    P.build = real;
+  }
+  for (const k of SL) if (!kinds[k] || kinds[k] < rounds * 0.04) fail('logipick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
+  if (rs.size !== RS.length || ks.size !== KS.length) fail('logipick', 'deal', `r ${[...rs]}, K ${[...ks]} is not the whole deal`);
+  if (wholes < rounds * 0.4 || wholes > rounds * 0.6) fail('logipick', 'deal', `the rate is whole in ${wholes} of ${rounds} rounds, not about half`);
+  if (above < rounds * 0.15) fail('logipick', 'deal', `P starts above the ceiling in only ${above} of ${rounds} rounds`);
+  if (slots.size !== 4) fail('logipick', 'deal', `the rate only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  places.forEach((c, i) => { if (c < 0.15 * rounds) fail('logipick', 'deal', `the rate stands ${i} from the bottom in only ${c} of ${rounds} rounds`); });
+  if (fives !== 30) fail('logipick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
 /* Which integral? The arc length workshop turned round. Every integral is
    read back off its button, taken apart, and checked against the slip it is
    named as, worked here from the curve; the right one alone is the length,
@@ -15802,6 +15948,7 @@ console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  lengths set up     ${pad(arcPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-integral in the arc length workshop, every integral read back off its button, taken apart and checked against the slip it is named as, the right one alone √(1 + f′²) with f′ nudged and adding up to what fine chords measure, no look giving it away; ${arcPickNotes.misses.toLocaleString()} wrong picks checked at one x, ${arcPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  rates worked       ${pad(logiPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the logistic workshop, every number read back off its button and worked again from the slip it is named as, the right one alone the rate found by stepping the equation, none given away by its form, sign or place; ${logiPickNotes.misses.toLocaleString()} wrong picks checked where their formula fails, ${logiPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
