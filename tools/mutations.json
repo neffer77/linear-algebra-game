@@ -326,8 +326,8 @@
   {
    "name": "the miss is not explained",
    "file": "index.html",
-   "find": "if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it:",
-   "replace": "if(m!==null) lines.push(this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it:",
+   "find": "if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.last.c,'right')}, right on the ring.",
+   "replace": "if(m!==null) lines.push(this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.last.c,'right')}, right on the ring.",
    "run": "verify"
   },
   {
