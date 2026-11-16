@@ -7945,6 +7945,152 @@ const swapPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which split? The two castles workshop turned round. Every number is read
+   back off its button and checked against the slip it is named as, worked
+   from the rule here; the right one alone is the steady split, found without
+   the rule: run four hundred nights from an even split and see where A
+   settles. Each wrong number's check is worked again, its night measured. */
+const splitPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Castles = {render(){ env.renders++; }};" +
+    cut('const SplitPick = {', '/* ============ TWO CASTLES WORKSHOP') + 'return SplitPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? String(v[0]) : `${v[0]}/${v[1]}`);
+  const rdv = t => { let m = t.match(/^(\d+)$/); if (m) return [+m[1], 1];
+    m = t.match(/^(\d+)\/(\d+)$/); if (!m || +m[2] < 2 || gcd(+m[1], +m[2]) !== 1) return null; return [+m[1], +m[2]]; };
+  const num = v => v[0] / v[1];
+  // every number, worked from the slip it stands for; P and Q are the percents riding each way
+  const want = (k, Q) => { const { P, Q: q } = Q, one = red(100 - P + q, 2);
+    return k === 'right' ? red(100 * q, P + q) : k === 'swap' ? red(100 * P, P + q) : k === 'keep' ? red(100 * (100 - q), 200 - P - q)
+      : k === 'keepB' ? red(100 * (100 - P), 200 - P - q) : k === 'noB' ? red(100 * q, P) : k === 'night' ? one
+      : k === 'night2' ? red(one[0] * (100 - P) * 2 + q * (200 * one[1] - 2 * one[0]), 200 * one[1]) : null; };
+  // a night, in numbers: A keeps 100 − P percent and gains Q percent of B
+  const night = (a, Q) => a * (100 - Q.P) / 100 + (100 - a) * Q.Q / 100;
+  const settle = Q => { let a = 50; for (let n = 0; n < 400; n++) a = night(a, Q); return a; };
+  const sum100 = vs => { let n = 0; for (let i = 0; i < vs.length; i++) for (let j = i + 1; j < vs.length; j++) if (vs[i][0] * vs[j][1] + vs[j][0] * vs[i][1] === 100 * vs[i][1] * vs[j][1]) n++; return n; };
+  const slipOf = (k, L, Q) => { const { P, Q: q } = Q;
+    if (k === 'swap') return `${L} balances it the wrong way round, ${P}% of B against ${q}% of A. The knights leaving A are ${P}% of A, and the ones arriving are ${q}% of B.`;
+    if (k === 'keep') return `${L} balances the knights who stay, ${100 - P}% of A against ${100 - q}% of B. What has to match is the riding: the ${P}% of A who leave against the ${q}% of B who arrive.`;
+    if (k === 'keepB') return `${L} balances the knights who stay, and the wrong way round too: ${100 - P}% of B against ${100 - q}% of A. What has to match is the riding: the ${P}% of A who leave against the ${q}% of B who arrive.`;
+    if (k === 'noB') return `${L} sets ${P}% of A against ${q}% of all 100 knights. Only the knights in B ride to A, and B is 100 − A.`;
+    if (k === 'night2') return `${L} is A after two nights from an even 50 and 50: one night takes A to ${fr(want('night', Q))}, and a second takes it to ${fr(want('night2', Q))}. Two nights still move the split only part of the way; the steady split is where it stops moving.`;
+    return `${L} is A after one night from an even 50 and 50: it keeps ${100 - P}% of 50 and gains ${q}% of 50. One night moves the split only part of the way; the steady split is where it stops moving.`; };
+  const RULE = 'At the steady split nothing changes, so each night as many knights ride out of A as ride in: P% of A = Q% of B. With A + B = 100 that is P × A = Q × (100 − A), so A = 100 × Q/(P + Q). That split is the eigenvector of the night\'s matrix with λ = 1. Which is A?';
+  if (S.RULE !== RULE) fail('splitpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('splitpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['swap', 'keep', 'keepB', 'noB', 'night', 'night2'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Ps = new Set(), Qs = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Ps.add(Q.P); Qs.add(Q.Q);
+      if (!(Q.P % 5 === 0 && Q.Q % 5 === 0 && Q.P >= 5 && Q.P <= 95 && Q.Q >= 5 && Q.Q <= 95) || Q.P === Q.Q) fail('splitpick', key, `${sig} is not a rule of the kind dealt`);
+      if (prev && prev === sig) fail('splitpick', key, 'the same rule comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('splitpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} Each night ${Q.P}% of the knights in Castle A ride to B, and ${Q.Q}% of those in B ride to A. Of the 100 knights, how many are in A at the steady split? A `)) fail('splitpick', key, 'the rule and the castles are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SplitPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('splitpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('splitpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] <= 0 || v[0] >= 100 * v[1])) fail('splitpick', key, 'a number is not a count between 0 and 100');
+      if (new Set(vals.map(String)).size !== 4) fail('splitpick', key, 'two numbers are the same');
+      if (sum100(vals) === 1) fail('splitpick', key, `one pair of numbers adds up to 100: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('splitpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), seen = new Set([String(W)]), can = [];
+        for (const kk of SL) { const v = want(kk, Q); if (v[0] <= 0 || v[0] >= 100 * v[1] || seen.has(String(v))) continue; seen.add(String(v)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1)) && sum100([W, ...tr.map(x => want(x, Q))]) !== 1) T.push(tr); }
+        // the right one's place is chosen first, so look only at the sets that give it the place it has
+        const rk = tr => tr.filter(x => { const v = want(x, Q); return v[0] * W[1] < W[0] * v[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('splitpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('splitpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(settle(Q) - num(vals[i])) < 1e-6)) fail('splitpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} where four hundred nights settle`);
+      });
+      if (k === 0 && txt(S.html().split('id="kpRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('splitpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('splitpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="kpRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('splitpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): with (\S+) in A and 100 − (\S+) in B, one night sends (\d+)% of (\S+) = (\S+) out of A and brings (\d+)% of \(100 − (\S+)\) = (\S+) in\. Those do not match, so A (gains|loses) (\S+) that night: the split still moves\.$/);
+        if (!cm || cm[1] !== Lt) { fail('splitpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const v = vals[i];
+        if ([cm[2], cm[3], cm[5], cm[8]].some(t => t !== fr(v)) || +cm[4] !== Q.P || +cm[7] !== Q.Q) fail('splitpick', key, `the check of ${o.k} is not worked for this split: ${lines[1]}`);
+        // the night, measured: riders out and in, and how far A moves, from the night itself
+        const out = rdv(cm[6]), inn = rdv(cm[9]), d = rdv(cm[11]), a = num(v), moved = night(a, Q) - a;
+        if (!out || !inn || !d || Math.abs(num(out) - a * Q.P / 100) > 1e-9 || Math.abs(num(inn) - (100 - a) * Q.Q / 100) > 1e-9) fail('splitpick', key, `the riders in the check of ${o.k} are not ${Q.P}% and ${Q.Q}%: ${lines[1]}`);
+        else if (Math.abs((cm[10] === 'gains' ? 1 : -1) * num(d) - moved) > 1e-9 || moved === 0) fail('splitpick', key, `A does not move by ${cm[10]} ${cm[11]} in a night from ${fr(v)}`);
+        if (new RegExp(`(^|\\s)${fr(want('right', Q))} in B`).test(lines[1]) || new RegExp(` is ${fr(want('right', Q))}(?![\\d/])`).test(lines[0])) fail('splitpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SplitPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the steady split"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('splitpick', key, 'the missed numbers are not shut and told as not the steady split');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('splitpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('splitpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('splitpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('splitpick', key, 'no fresh rule after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'KEEPER OF THE SPLIT / 5 steady splits found') fail('splitpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the steady split, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('splitpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="kpRead"')[1].replace(/^[^>]*>/, ''));
+      const W = want('right', Q), B = red(100 * W[1] - W[0], W[1]), O = red(Q.P * W[0], 100 * W[1]);
+      const wantLine = `That was it: ${Q.P} × A = ${Q.Q} × (100 − A), so A = 100 × ${Q.Q}/(${Q.P} + ${Q.Q}) = ${fr(W)}. Each night ${Q.P}% of ${fr(W)} = ${fr(O)} ride out of A and ${Q.Q}% of ${fr(B)} = ${fr(O)} ride in, so nothing changes. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('splitpick', key, `after a pick: ${got}`);
+      if (Math.abs(night(num(W), Q) - num(W)) > 1e-9 || Q.Q * B[0] * O[1] !== O[0] * 100 * B[1]) fail('splitpick', key, `a night from ${fr(W)} moves it`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same rule dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { P: 10, Q: 30 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"P":10,"Q":30}') fail('splitpick', 'repeat', 'the same rule is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of rules: the answer's form even
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++; }
+    if (sw < 9000 || sw > 11000) fail('splitpick', 'sweep', `${sw} of 20000 answers are whole, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('splitpick', 'slips', `the slip ${k} is never offered`);
+  if (Ps.size !== 19 || Qs.size !== 19) fail('splitpick', 'deal', `P ${Ps.size} values and Q ${Qs.size} values is not the whole deal`);
+  if (slots.size !== 4) fail('splitpick', 'deal', `the split only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.2 && ranks[1] > rounds * 0.12 && ranks[2] > rounds * 0.12 && ranks[3] > rounds * 0.18)) fail('splitpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('splitpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('splitpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (fives !== 30) fail('splitpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12707,6 +12853,7 @@ console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12
 console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
