@@ -3,7 +3,8 @@
  * These checks open the workshop from the Tome, switch to the mode, and play
  * it through its buttons: a few points shown and four numbers offered; a
  * wrong pick is shut, named as the slip it is and checked by the misses from
- * the middle point, each times its x gap, which do not add to 0; the right
+ * the middle point, each times its x gap, worked one point at a time without
+ * writing either sum, which do not add to 0; the right
  * pick counts, toasts, works the slope from the two sums and deals new
  * points, and a first try is counted apart. Every button is named, the
  * hands-on workshop steps aside and comes back, it fits a phone, and nothing
@@ -22,6 +23,9 @@ const PV = `(\\(−\\d+(/\\d+)?\\)|\\d+(/\\d+)?)`;
 const N = '−?\\d+';
 const PN = '(\\(−\\d+\\)|\\d+)';
 const PT = `\\(${N}, ${N}\\)`;
+// one point's miss times its x gap, each a whole number of at least 0 or bracketed
+const BV = '(\\d+|\\(−?\\d+(/\\d+)?\\))';
+const TM = `${BV} × ${BV}`;
 const AWAY = ['ftSets', 'ftAmts', 'ftFig', 'ftRead', 'ftGoalPanel'];
 
 module.exports = {
@@ -60,7 +64,8 @@ module.exports = {
       await opt(t, w);
       const r = await read(t), L = 'ABCD'[w];
       t.ok(`a wrong pick (${k[w]}) is named as its slip`, new RegExp(`^${L} (is the slope from the first point to the last, \\(${N} − ${PN}\\) / \\(${N} − ${PN}\\)\\. The points between count too|is the slope between the first two points alone|is Σxy / Σx², the best line forced through \\(0, 0\\)|is ȳ / x̄, the line from \\(0, 0\\) to the middle point|is Σ\\(y − ȳ\\)² / Σ\\(x − x̄\\)\\(y − ȳ\\), x fitted on y)`).test(r), r);
-      t.ok('and checked by the misses times their x gaps', new RegExp(`Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0\\. With slope ${SV} they add to Σ\\(x − x̄\\)\\(y − ȳ\\) − ${PV} × Σ\\(x − x̄\\)² = ${SV} − ${PV} × ${SV} = ${SV}, not 0, so a (bigger|smaller) slope fits better\\.`).test(r), r);
+      t.ok('and checked by the misses times their x gaps', new RegExp(`Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0\\. With slope ${SV} they give ${TM}( \\+ ${TM}){2,3} = ${SV}, not 0, so a (bigger|smaller) slope fits better\\.`).test(r), r);
+      t.ok('and the check writes neither sum, so it does not give the slope away', !/Σ/.test(r.split('Check ')[1].split(' fits better.')[0]), r);
       t.ok('and that number is shut and told as not the best slope', await t.ev(i => { const b = document.querySelectorAll('#fpPick button')[i];
         return b.disabled && /\. Not the best slope$/.test(b.getAttribute('aria-label')); }, w));
       t.ok('a miss is not counted as picked', /0 picked this visit, 0 on the first try\.$/.test(r), r);

@@ -7503,7 +7503,11 @@ const fitPickNotes = (() => {
     if (k === 'mean') return `${L} is ȳ / x̄, the line from (0, 0) to the middle point. The best line goes through the middle point, but not through (0, 0).`;
     return `${L} is Σ(y − ȳ)² / Σ(x − x̄)(y − ȳ), x fitted on y. That line makes the sideways misses least; the best line here makes the up-and-down misses least.`; };
   const checkOf = (v, L, Q) => { const W = work(Q), K = red(W.sxy[0] * W.sxx[1] * v[1] - v[0] * W.sxx[0] * W.sxy[1], W.sxy[1] * W.sxx[1] * v[1]);
-    return { K, line: `Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope ${fr(v)} they add to Σ(x − x̄)(y − ȳ) − ${pf(v)} × Σ(x − x̄)² = ${fr(W.sxy)} − ${pf(v)} × ${fr(W.sxx)} = ${fr(K)}, not 0, so a ${K[0] > 0 ? 'bigger' : 'smaller'} slope fits better.` }; };
+    // each point's miss from the line through the middle point, times its x gap, worked from the points themselves
+    const xb = W.xb, yb = W.yb, pb = f => (f[1] === 1 && f[0] >= 0 ? fr(f) : `(${fr(f)})`);
+    const terms = Q.p.map(([x, y]) => { const dx = red(x * xb[1] - xb[0], xb[1]), dy = red(y * yb[1] - yb[0], yb[1]);
+      const m = red(dy[0] * dx[1] * v[1] - v[0] * dx[0] * dy[1], dy[1] * dx[1] * v[1]); return `${pb(m)} × ${pb(dx)}`; }).join(' + ');
+    return { K, line: `Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope ${fr(v)} they give ${terms} = ${fr(K)}, not 0, so a ${K[0] > 0 ? 'bigger' : 'smaller'} slope fits better.` }; };
   if (S.RULE !== 'The best line, the one whose squared misses add up to the least, goes through the middle point (x̄, ȳ), and its slope is m = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². Find x̄ and ȳ, then for each point multiply its two gaps from them and add, and add the squares of the x gaps. Which slope does the best line have?') fail('fitpick', 'rule', 'the rule is not stated as it should be');
   if (S.round !== null || S.matched !== 0) fail('fitpick', 'open', 'a round is dealt before the mode is opened');
   let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, four = 0, choice = 0, later = 0;
@@ -7551,6 +7555,8 @@ const fitPickNotes = (() => {
         if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('fitpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
         if (lines[1] !== ch.line) fail('fitpick', key, `the check of ${o.k} is: ${lines[1]} | want ${ch.line}`);
         if (ch.K[0] === 0) fail('fitpick', key, 'a wrong number passes its check');
+        // the check must not hand over the slope: neither sum is written, so the right number cannot be read off as one over the other
+        if (/Σ/.test(lines[1])) fail('fitpick', key, `the check of ${o.k} writes out a sum, which gives the slope away: ${lines[1]}`);
         // the check's sum, worked straight from the points: each miss from the middle point times its x gap
         { const W = work(Q), xb = W.xb[0] / W.xb[1], yb = W.yb[0] / W.yb[1], L = vals[i][0] / vals[i][1];
           const direct = Q.p.reduce((s, [x, y]) => s + (x - xb) * ((y - yb) - L * (x - xb)), 0);

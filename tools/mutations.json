@@ -1,187 +1,54 @@
 {
-  "change": "The Chord Workshop: walk a point along x², x³ or 4/x until its tangent runs parallel to the chord.",
+  "change": "A wrong pick in which-slope-fits-best is checked one point at a time, without writing the two sums that give the slope away.",
   "mutations": [
     {
-      "name": "the chord's slope forgets to divide",
+      "name": "the check writes both sums, which hands over the slope",
       "file": "index.html",
-      "find": "return (S.f(S.b)-S.f(S.a))/(S.b-S.a); },",
-      "replace": "return (S.f(S.b)-S.f(S.a)); },",
+      "find": "they give ${this.terms(S,v)} = ${this.fs(K)}",
+      "replace": "they add to Σ(x − x̄)(y − ȳ) − ${this.pf(v)} × Σ(x − x̄)² = ${this.fs(M.sxy)} − ${this.pf(v)} × ${this.fs(M.sxx)} = ${this.fs(K)}",
       "run": "verify"
     },
     {
-      "name": "x³'s slope forgets the 3",
+      "name": "a point's miss leaves out the slope",
       "file": "index.html",
-      "find": "df:x=>3*x*x,",
-      "replace": "df:x=>x*x,",
+      "find": "m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);",
+      "replace": "m=this.frac((T.n*y-T.sy)*v[1],T.n*v[1]);",
       "run": "verify"
     },
     {
-      "name": "4/x's slope loses its sign",
+      "name": "a point's miss is taken from (0, 0), not the middle point",
       "file": "index.html",
-      "find": "df:x=>-4/(x*x),",
-      "replace": "df:x=>4/(x*x),",
+      "find": "m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);",
+      "replace": "m=this.frac(T.n*y*v[1]-v[0]*T.n*x,T.n*v[1]);",
       "run": "verify"
     },
     {
-      "name": "the point is a step off",
+      "name": "the x gap is x, not x − x̄",
       "file": "index.html",
-      "find": "x(k=this.k){ return k/20; },",
-      "replace": "x(k=this.k){ return (k+1)/20; },",
+      "find": "const dx=this.frac(T.n*x-T.sx,T.n),",
+      "replace": "const dx=this.frac(T.n*x,T.n),",
       "run": "verify"
     },
     {
-      "name": "the point may reach the end",
+      "name": "a fraction is not bracketed in a product",
       "file": "index.html",
-      "find": "hi(){ return this.set().b*20-1; },",
-      "replace": "hi(){ return this.set().b*20; },",
+      "find": "pb(f){ return f[1]===1 && f[0]>=0 ? this.fs(f) : `(${this.fs(f)})`; },",
+      "replace": "pb(f){ return f[0]>=0 ? this.fs(f) : `(${this.fs(f)})`; },",
       "run": "verify"
     },
     {
-      "name": "parallel is judged loosely",
+      "name": "the terms are joined by times",
       "file": "index.html",
-      "find": "return Math.abs(d)<1e-9 ? 0 : d<0 ? -1 : 1; },",
-      "replace": "return Math.abs(d)<0.2 ? 0 : d<0 ? -1 : 1; },",
+      "find": "return `${this.pb(m)} × ${this.pb(dx)}`; }).join(' + ');",
+      "replace": "return `${this.pb(m)} × ${this.pb(dx)}`; }).join(' × ');",
       "run": "verify"
     },
     {
-      "name": "c is said to lie the wrong way",
+      "name": "the check is played with the sums written",
       "file": "index.html",
-      "find": "so c lies to the ${sd<0?'right':'left'} of",
-      "replace": "so c lies to the ${sd<0?'left':'right'} of",
-      "run": "verify"
-    },
-    {
-      "name": "an approximate slope is written as exact",
-      "file": "index.html",
-      "find": "is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')",
-      "replace": "is(v){ return '= '",
-      "run": "verify"
-    },
-    {
-      "name": "the middle note is never said",
-      "file": "index.html",
-      "find": "    if(this.k===mid) out.push(",
-      "replace": "    if(false) out.push(",
-      "run": "verify"
-    },
-    {
-      "name": "a crossing is told without one",
-      "file": "index.html",
-      "find": "if(this.prev!==null && this.side(this.prev)*sd<0)",
-      "replace": "if(this.prev!==null && this.side(this.prev)*sd<=0)",
-      "run": "verify"
-    },
-    {
-      "name": "√3 is solved wrong",
-      "file": "index.html",
-      "find": "solve:'3c² = 9 gives c = √3 ≈ 1.7321'",
-      "replace": "solve:'3c² = 9 gives c = √3 ≈ 1.5'",
-      "run": "verify"
-    },
-    {
-      "name": "4/x's c is said to be the middle",
-      "file": "index.html",
-      "find": "On 4/x, c = √(${S.a} × ${S.b}) = 2, short of the middle, 2.5.",
-      "replace": "On 4/x, c = (${S.a} + ${S.b})/2 = 2.5.",
-      "run": "verify"
-    },
-    {
-      "name": "the chord joins the wrong ends",
-      "file": "index.html",
-      "find": "x2=\"${f(this.PX(S.b))}\" y2=\"${f(this.PY(S.f(S.b)))}\" stroke=\"${FIG_COL.dim}\"",
-      "replace": "x2=\"${f(this.PX(S.b))}\" y2=\"${f(this.PY(S.f(S.a)))}\" stroke=\"${FIG_COL.dim}\"",
-      "run": "verify"
-    },
-    {
-      "name": "the tangent is drawn with the chord's slope",
-      "file": "index.html",
-      "find": "const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=S.df(x),",
-      "replace": "const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=this.slope(),",
-      "run": "verify"
-    },
-    {
-      "name": "the point is drawn off the curve",
-      "file": "index.html",
-      "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\" r=\"5\" fill=\"${FIG_COL.a",
-      "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y+1))}\" r=\"5\" fill=\"${FIG_COL.a",
-      "run": "verify"
-    },
-    {
-      "name": "the crossing goal needs no crossing",
-      "file": "index.html",
-      "find": "ok:K=>K.si===1 && K.prev!==null && (K.prev<=34) !== (K.k<=34)},",
-      "replace": "ok:K=>K.si===1 && K.prev!==null},",
-      "run": "verify"
-    },
-    {
-      "name": "the close goal is met at the middle",
-      "file": "index.html",
-      "find": "ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<0.2},",
-      "replace": "ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<2.3},",
-      "run": "verify"
-    },
-    {
-      "name": "the steep goal is met at c",
-      "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.k>40},",
-      "replace": "ok:K=>K.si===0 && K.k>=40},",
-      "run": "verify"
-    },
-    {
-      "name": "picking a curve keeps the old point",
-      "file": "index.html",
-      "find": "pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null;",
-      "replace": "pick(i){ this.si=i; this.prev=null;",
-      "run": "verify"
-    },
-    {
-      "name": "starting over keeps the last step",
-      "file": "index.html",
-      "find": "again(){ this.k=this.set().k0; this.prev=null;",
-      "replace": "again(){ this.k=this.set().k0;",
-      "run": "verify"
-    },
-    {
-      "name": "the small step right goes left",
-      "file": "index.html",
-      "find": "onclick=\"MeanValue.move(1)\"",
-      "replace": "onclick=\"MeanValue.move(-1)\"",
-      "run": "play:meanvalue"
-    },
-    {
-      "name": "the Tome does not offer it",
-      "file": "index.html",
-      "find": "onclick=\"MeanValue.open()\"",
-      "replace": "onclick=\"MeanValue.render()\"",
-      "run": "play:meanvalue"
-    },
-    {
-      "name": "a fight on the mean value theorem does not offer it",
-      "file": "index.html",
-      "find": "    MeanValue: [\"📐 Chord Workshop\", ['meanValue']],\n",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the screen is not drawn when opened",
-      "file": "index.html",
-      "find": "    if(id==='s-mvt') MeanValue.render();\n",
-      "replace": "",
-      "run": "play:meanvalue"
-    },
-    {
-      "name": "the buttons never stop at the ends",
-      "file": "index.html",
-      "find": "for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);",
-      "replace": "",
-      "run": "play:meanvalue"
-    },
-    {
-      "name": "the goals never show as found",
-      "file": "index.html",
-      "find": "this.GOALS.map(g=>`<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE CHORD'",
-      "replace": "this.GOALS.map(g=>`<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE CHORD'",
-      "run": "play:meanvalue"
+      "find": "they give ${this.terms(S,v)} = ${this.fs(K)}",
+      "replace": "they give ${this.terms(S,v)}, which is Σ(x − x̄)(y − ȳ) − ${this.pf(v)} × Σ(x − x̄)², = ${this.fs(K)}",
+      "run": "play:fitpick"
     }
   ]
 }

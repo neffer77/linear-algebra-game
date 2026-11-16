@@ -17376,8 +17376,9 @@ const Undo = {
    line through the origin, the line from the origin to the middle point, or
    x fitted on y. A wrong slope L is checked by what makes the best line
    best: its misses from the middle point, each times its x − x̄, add to 0,
-   and with slope L they add to Σ(x − x̄)(y − ȳ) − L·Σ(x − x̄)², which is not
-   0. Nothing is saved. */
+   and with slope L they do not. The check works that sum one point at a
+   time and never writes the two sums, which would give the slope away.
+   Nothing is saved. */
 const FitPick = {
   SLIPS:['ends','first','origin','mean','flip'],
   RULE:'The best line, the one whose squared misses add up to the least, goes through the middle point (x̄, ȳ), and its slope is m = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². Find x̄ and ȳ, then for each point multiply its two gaps from them and add, and add the squares of the x gaps. Which slope does the best line have?',
@@ -17478,9 +17479,18 @@ const FitPick = {
     if(k==='mean') return \`\${L} is ȳ / x̄, the line from (0, 0) to the middle point. The best line goes through the middle point, but not through (0, 0).\`;
     return \`\${L} is Σ(y − ȳ)² / Σ(x − x̄)(y − ȳ), x fitted on y. That line makes the sideways misses least; the best line here makes the up-and-down misses least.\`;
   },
+  // a number in brackets unless it is a whole number of at least 0, so a product reads one way
+  pb(f){ return f[1]===1 && f[0]>=0 ? this.fs(f) : \`(\${this.fs(f)})\`; },
+  // each point's miss from the line with slope v through the middle point, times its x − x̄, worked one point at a time:
+  // the sums Σ(x − x̄)(y − ȳ) and Σ(x − x̄)² are never written, so a wrong pick's check does not hand over the slope
+  terms(S,v){
+    const T=this.sums(S);
+    return S.p.map(([x,y])=>{ const dx=this.frac(T.n*x-T.sx,T.n), m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);
+      return \`\${this.pb(m)} × \${this.pb(dx)}\`; }).join(' + ');
+  },
   check(S,k,L){
     const M=this.mid(S), v=this.val(S,k), K=this.frac(M.sxy[0]*M.sxx[1]*v[1]-v[0]*M.sxx[0]*M.sxy[1],M.sxy[1]*M.sxx[1]*v[1]);
-    return \`Check \${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope \${this.fs(v)} they add to Σ(x − x̄)(y − ȳ) − \${this.pf(v)} × Σ(x − x̄)² = \${this.fs(M.sxy)} − \${this.pf(v)} × \${this.fs(M.sxx)} = \${this.fs(K)}, not 0, so a \${K[0]>0?'bigger':'smaller'} slope fits better.\`;
+    return \`Check \${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope \${this.fs(v)} they give \${this.terms(S,v)} = \${this.fs(K)}, not 0, so a \${K[0]>0?'bigger':'smaller'} slope fits better.\`;
   },
   html(){
     this.start();
