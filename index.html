@@ -1422,17 +1422,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LATHE WORKSHOP ============ -->
   <div class="screen" id="s-lathe">
     <div class="panel"><h2>🏺 Lathe Workshop</h2><div class="sub">Spin a curve around the x-axis and it sweeps out a solid. Cut the solid into thin slices: each one spins into a disk, and the disks add up to the volume, closer and closer as the slices thin.</div></div>
+    <div id="lhTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Measure a solid by hand or pick its volume"></div>
     <div class="panel">
+      <div id="vlBox"></div>
       <div id="lhSets" class="wsModes" role="group" aria-label="Which curve"></div>
       <div id="lhFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="lhStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="lhNLo" onclick="Lathe.moveN(-1)" aria-label="Halve the number of disks">−</button>
           <b id="lhN" style="font-size:17px;min-width:0"></b>
           <button id="lhNHi" onclick="Lathe.moveN(1)" aria-label="Double the number of disks">+</button></div>
       </div>
       <div id="lhRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="lhGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="lhGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14199,7 +14201,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏺 Lathe Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Spin a curve into a solid and measure it with disks. Watch the cone and the ball land on their school formulas, and find the solid one disk measures exactly.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Spin a curve into a solid and measure it with disks. Watch the cone and the ball land on their school formulas, and find the solid one disk measures exactly. Then turn it round: see a curve spun into a solid, and pick which of four numbers is its volume.</div>
          <button class="btn sm" id="tomeLathe" style="width:auto;margin-top:8px" onclick="Lathe.open()">Open the lathe workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -20405,6 +20407,135 @@ const Tail = {
    and the disks add up to the volume, π∫f(x)² dx, more closely as the slices
    thin. The cone and the ball land on their school formulas; the bowl is half
    its cylinder, and so exact that one disk measures it. Nothing is saved. */
+/* ---------- Which volume? The lathe workshop turned round ----------
+   A curve y = a·xⁿ with a whole a, and n one of 1/2, 1, 2 and 3, spun around
+   the x-axis from 0 to a whole b (a square when n is 1/2), and four volumes, one of them
+   π∫ a²x²ⁿ dx = π·a²b²ⁿ⁺¹/(2n + 1). h below is 2n, so every power is whole.
+   The rule is stated first; the wrong volumes are the slips people make with
+   it. A wrong pick is checked by its slope in b, which must be the end disk,
+   π·y(b)², for every b. Nothing is saved. */
+const LathePick = {
+  SLIPS:['noSq','sqArea','noUp','noSqA','cyl'],
+  RULE:'Cut the solid into thin slices across the axis. Each spins into a disk whose radius is the height y of the curve, so it holds π y² Δx, and the disks add up to V = π∫ y² dx. Square y first: (a·xⁿ)² = a²·x²ⁿ. Then integrate from 0 to b: raise the power by one and divide by the new power. Which is the volume?',
+  MAX:300,
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  // b to the power e/2: b is a square whenever e can be odd
+  pw(S,e){ return e%2 ? Math.round(Math.sqrt(S.b))**e : S.b**(e/2); },
+  // the number each option puts in front of π, as a fraction
+  val(S,k){
+    const {a,h}=S, c=a*a*this.pw(S,2*h+2);
+    return k==='right' ? this.frac(c,h+1) : k==='noSq' ? this.frac(2*a*this.pw(S,h+2),h+2)
+      : k==='sqArea' ? this.frac(4*a*a*this.pw(S,2*h+4),(h+2)**2) : k==='noUp' ? this.frac(c,h)
+      : k==='noSqA' ? this.frac(a*this.pw(S,2*h+2),h+1) : this.frac(c,1);
+  },
+  // each option written for any end b, as K·b^(E/2), so its slope in b can be worked
+  form(S,k){
+    const {a,h}=S;
+    return k==='right' ? [this.frac(a*a,h+1),2*h+2] : k==='noSq' ? [this.frac(2*a,h+2),h+2]
+      : k==='sqArea' ? [this.frac(4*a*a,(h+2)**2),2*h+4] : k==='noUp' ? [this.frac(a*a,h),2*h+2]
+      : k==='noSqA' ? [this.frac(a,h+1),2*h+2] : [[a*a,1],2*h+2];
+  },
+  // the slope of that form in b, again as K·b^(E/2)
+  slope(S,k){ const [K,E]=this.form(S,k); return [this.frac(K[0]*E,K[1]*2),E-2]; },
+  fs:f=>f[1]===1 ? String(f[0]) : `${f[0]}/${f[1]}`,
+  vol:f=>(f[0]===1 ? 'π' : `${f[0]}π`)+(f[1]===1 ? '' : `/${f[1]}`),
+  key(v){ return this.fs(v); },
+  // the slips this curve can offer: each a volume different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  big(S){ return ['right',...this.SLIPS].some(k=>{ const v=this.val(S,k); return v[0]>this.MAX*v[1]; }); },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const h=[1,2,4,6][R.i(0,3)];
+      const S={a:R.i(1,4), h, b:h===1 ? [1,4][R.i(0,1)] : R.i(1,4)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole || this.big(S)) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:2, h:1, b:4};
+  },
+  xn(h){ return h===1 ? '√x' : h===2 ? 'x' : `x${sup(h/2)}`; },
+  xp(e){ return e===1 ? 'x' : `x${sup(e)}`; },
+  co(n){ return n===1 ? '' : String(n); },
+  curve(S){ return `${this.co(S.a)}${this.xn(S.h)}`; },
+  bp(E){ return E===1 ? '√b' : E===2 ? 'b' : E%2 ? `b^(${E}/2)` : `b${sup(E/2)}`; },
+  mono([K,E]){ return `${K[1]===1 ? this.co(K[0]) : `(${this.fs(K)})`}${this.bp(E)}`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.h,S.b].join()!==[prev.a,prev.h,prev.b].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a volume of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('MASTER TURNER', this.matched+' solids measured','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the volume, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Lathe.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,h,b}=S, sq=`${this.co(a*a)}${this.xp(h)}`, yb=a*this.pw(S,h);
+    if(k==='noSq') return `${L} integrates y itself, not y². That is the area under the curve, a flat shape. Each disk holds π y² Δx, so square ${this.curve(S)} to ${sq} first.`;
+    if(k==='sqArea') return `${L} integrates y first and squares the answer. The squaring belongs inside: each disk holds π y² Δx, and adding the slices up and then squaring is not the same as squaring each slice and adding.`;
+    if(k==='noUp') return `${L} divides by ${h}, the power of x in y² before it is raised. ∫ ${this.xp(h)} dx = ${this.xp(h+1)}/${h+1}: raise the power by one, then divide by the new power, ${h+1}.`;
+    if(k==='noSqA') return `${L} squares ${this.xn(h)} but not the ${a} in front. y² = ${a}² · ${this.xp(h)} = ${sq}, so ${a*a} goes in front, not ${a}.`;
+    return `${L} is the cylinder around the solid: radius y(${b}) = ${yb} and length ${b}, so π × ${yb}² × ${b}. The solid narrows to a point at 0, so it holds only 1/${h+1} of that cylinder.`;
+  },
+  check(S,k,L){
+    const {a,h}=S, Y=this.mono([[a*a,1],2*h]);
+    return `Check ${L}: push the end b out a little and the solid gains one more thin disk there, holding π·y(b)², so the volume worked out for any b must have the slope π·(${this.co(a)}${this.xn(h).replace('x','b')})² = ${Y}·π. ${L}, worked out for any b, is ${this.mono(this.form(S,k))}·π, whose slope in b is ${this.mono(this.slope(S,k))}·π, not ${Y}·π.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="vlQ" style="text-align:center;font-size:16px;margin-bottom:2px">Spin y = ${this.curve(S)} around the x-axis, from x = 0 to x = ${S.b}.</div>`;
+    out+=`<div class="small" style="text-align:center">Which is the volume of the solid?</div>`;
+    out+=`<div id="vlPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.vol(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="LathePick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the volume':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, c=B.a*B.a, t=c*this.pw(B,2*B.h+2), sq=`${this.co(c)}${this.xp(B.h)}`;
+      lines.push(`That was it: V = π∫₀${sup(B.b)} ${sq} dx = π[${this.co(c)}${this.xp(B.h+1)}/${B.h+1}]₀${sup(B.b)} = π × ${t}/${B.h+1} = ${this.vol(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="vlRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 const Lathe = {
   SETS:[
     {id:'cone', btn:'Cone', a:0, b:3, fs:'x', gs:'x²', Gs:'x³/3', f:x=>x, G:x=>x**3/3, V:'9π', v:9,
@@ -20470,7 +20601,15 @@ const Lathe = {
   open(){ UI.go('s-lathe'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveN(by){ const v=this.k+by; if(v<0 || v>=this.NS.length) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('lhTab').innerHTML=[['hand','🏺 Measure it by hand','Cut a solid into disks by hand'],['pick','🎯 Which volume?','See a curve spun into a solid, and pick which of four numbers is its volume']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Lathe.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['lhSets','lhFig','lhStep','lhRead','lhGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('vlBox').innerHTML=pick ? LathePick.html() : '';
+    if(pick) return;
     document.getElementById('lhSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Lathe.pick(${i})" aria-label="${s.btn}: spin f(x) = ${s.fs} over [${neg(s.a)}, ${s.b}]">${s.btn}</button>`).join('');
     document.getElementById('lhN').textContent=`${this.n()} disk${this.n()>1?'s':''}`;
