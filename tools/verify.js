@@ -80,7 +80,7 @@ function loadGame() {
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
-    ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
+    ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('crTab')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoTab')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adTab')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tpTab')")) + 'render(){}};exports.Transpose=Transpose;' +
@@ -4373,6 +4373,138 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which u × v? The pick-a-cross-product round in the cross product workshop.
+   Every arrow on screen is read back off its button and checked against the
+   slip it is named as, worked out here from u and v alone; the right one must
+   be u × v and no slip may be. Every product, difference and dot product in
+   the readout is worked again from the numbers it shows, and the square test
+   must catch every slip but the swap. */
+const crossPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cross = {render(){ env.renders++; }};" +
+    cut('const CrossPick = {', 'const Cross = {') + 'return CrossPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const num = t => +t.replace(/^\((.*)\)$/, '$1').replace('−', '-');
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = w => `⟨${w.map(ng).join(', ')}⟩`;
+  const X = (u, v) => [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  const D = (x, y) => x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
+  const want = {
+    right: (u, v) => X(u, v), swap: (u, v) => X(v, u),
+    plus: (u, v) => [u[1] * v[2] + u[2] * v[1], u[2] * v[0] + u[0] * v[2], u[0] * v[1] + u[1] * v[0]],
+    mid: (u, v) => [u[1] * v[2] - u[2] * v[1], u[0] * v[2] - u[2] * v[0], u[0] * v[1] - u[1] * v[0]],
+    parts: (u, v) => [u[0] * v[0], u[1] * v[1], u[2] * v[2]]
+  };
+  // every "a·b − c·d = n" and "a·b + c·d = n" in a line, worked again
+  const sums = (t, key) => { for (const m of t.matchAll(/(?<![+−] |[\d(−·])(\(?−?\d+\)?)·(\(?−?\d+\)?) ([+−]) (\(?−?\d+\)?)·(\(?−?\d+\)?) = (−?\d+)(?![·\d])/g)) {
+    const v = num(m[1]) * num(m[2]) + (m[3] === '+' ? 1 : -1) * num(m[4]) * num(m[5]);
+    if (v !== num(m[6])) fail('crosspick', key, `${m[0]} is worked wrong`); } };
+  // every dot product written out, worked again from its own numbers
+  const dots = (t, key) => { let n = 0; for (const m of t.matchAll(/= ((?:\(?−?\d+\)?·\(?−?\d+\)? \+ ){2}\(?−?\d+\)?·\(?−?\d+\)?) = (−?\d+(?: [+−] \d+){2}) = (−?\d+)/g)) {
+    n++; const ps = m[1].split(' + ').map(p => p.split('·').map(num)), terms = ps.map(([a, b]) => a * b);
+    const said = m[2].split(' ').reduce((acc, tk, i, arr) => (i === 0 ? [num(tk)] : /^[+−]$/.test(tk) ? acc : [...acc, (arr[i - 1] === '−' ? -1 : 1) * +tk]), []);
+    if (said.join() !== terms.join() || num(m[3]) !== terms.reduce((a, b) => a + b, 0)) fail('crosspick', key, `a dot product is worked wrong: ${m[0]}`); } return n; };
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : String(n));
+  // u × v and a dot product, written out the way the readout must write them
+  const workOf = (u, v) => { const [a, b, e] = u, [p, q, s] = v, P = pn;
+    return `u × v = ⟨${P(b)}·${P(s)} − ${P(e)}·${P(q)}, ${P(e)}·${P(p)} − ${P(a)}·${P(s)}, ${P(a)}·${P(q)} − ${P(b)}·${P(p)}⟩ = ${vec(X(u, v))}`; };
+  const dw = (w, x, L, N) => { const tm = w.map((y, i) => y * x[i]);
+    return `${L}·${N} = ${w.map((y, i) => pn(y) + '·' + pn(x[i])).join(' + ')} = ${ng(tm[0])}${tm.slice(1).map(t => ` ${t < 0 ? '−' : '+'} ${Math.abs(t)}`).join('')} = ${ng(D(w, x))}`; };
+  const read = () => txt(S.html().split('id="ckRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'u × v = ⟨u₂v₃ − u₃v₂, u₃v₁ − u₁v₃, u₁v₂ − u₂v₁⟩: each slot is worked from the other two, and each one takes away. The answer stands square to both u and v, so its dot product with each is 0, and swapping the order flips it. Which arrow is u × v?') fail('crosspick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('crosspick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, dotsWorked = 0, fives = 0;
+  const slots = new Set(), kinds = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, { u, v } = r.c, key = `seed ${seed} round ${k}`;
+      rounds++;
+      if ([...u, ...v].some(x => !Number.isInteger(x) || Math.abs(x) > 3) || u.filter(x => x).length < 2 || v.filter(x => x).length < 2) fail('crosspick', key, `u = ${u}, v = ${v} are not small whole arrows with at most one 0`);
+      if (X(u, v).every(x => !x)) fail('crosspick', key, 'u and v are parallel');
+      if (prev && JSON.stringify(prev) === JSON.stringify(r.c)) fail('crosspick', key, 'the same pair comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('crosspick', key, 'there are not four arrows, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(`${S.RULE} u = ${vec(u)}, v = ${vec(v)}`)) fail('crosspick', key, 'the rule, u and v are not shown first');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="CrossPick\.choose\((\d)\)" aria-label="([ABCD]): ⟨([^⟩]+)⟩(\. Not u × v)?"[^>]*><b>([ABCD])<\/b> ⟨([^⟩]+)⟩<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== m[8] || m[6] || m[7] !== 'ABCD'[i])) { fail('crosspick', key, 'the four arrows are not offered as they are, A to D'); continue; }
+      const arrows = btns.map(m => m[8].split(', ').map(num));
+      if (new Set(arrows.map(a => a.join())).size !== 4) fail('crosspick', key, 'two arrows are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('crosspick', key, `an option is the unknown ${o.k}`);
+        else if (arrows[i].join() !== want[o.k](u, v).join()) fail('crosspick', key, `${o.k} is shown as ${vec(arrows[i])}, which is not that slip`);
+        if ((o.k === 'right') !== (arrows[i].join() === X(u, v).join())) fail('crosspick', key, `${vec(arrows[i])} ${o.k === 'right' ? 'is not' : 'is'} u × v`);
+        if (o.k !== 'right' && o.k !== 'swap' && !D(arrows[i], u) && !D(arrows[i], v)) fail('crosspick', key, `${o.k} passes the square test`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('crosspick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], A = arrows[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('crosspick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const slip = { swap: `${L} is v × u, the order swapped.`, plus: `${L} adds where every slot should take away: its `, mid: `${L} works the middle slot the wrong way round, u₁v₃ − u₃v₁ = `, parts: `${L} multiplies matching parts, u₁v₁, u₂v₂ and u₃v₃` }[o.k];
+        if (!rt.startsWith(slip)) fail('crosspick', key, `${o.k} is explained as: ${rt}`);
+        if (o.k === 'plus') { const m = rt.match(/its (first|middle|last) slot is .+? = (−?\d+), where u × v has .+? = (−?\d+)\./);
+          const s = m && ['first', 'middle', 'last'].indexOf(m[1]);
+          if (!m || num(m[2]) !== A[s] || num(m[3]) !== X(u, v)[s] || m[2] === m[3]) fail('crosspick', key, `the added slot is not one that differs: ${rt}`); }
+        if (o.k === 'mid' && !rt.includes(`= ${ng(A[1])}. The middle slot is u₃v₁ − u₁v₃ = ${ng(X(u, v)[1])}:`)) fail('crosspick', key, `the middle slot is not shown: ${rt}`);
+        const dU = `${L}·u = `, dV = `${L}·v = `;
+        const ck = o.k === 'swap' ? `${L} passes the square test, ${dU}` : `Check ${L} by the square test: ${dU}`;
+        if (!rt.includes(ck) || !rt.includes(` and ${dV}`)) fail('crosspick', key, `the miss is not checked by its dot products: ${rt}`);
+        const said = [...rt.matchAll(new RegExp(`${L}·([uv]) = .+? = (−?\\d+)(?= and|\\. u × v|, because)`, 'g'))].map(m => [m[1], num(m[2])]);
+        if (said.length !== 2 || said[0][1] !== D(A, u) || said[1][1] !== D(A, v)) fail('crosspick', key, `the dot products are said to be ${JSON.stringify(said)}`);
+        if (!rt.includes(`${workOf(u, v)}.`)) fail('crosspick', key, `u × v is not worked beside the miss: ${rt}`);
+        if (!rt.includes(dw(A, u, L, 'u') + ' and ' + dw(A, v, L, 'v') + (o.k === 'swap' ? ', because' : '. u × v'))) fail('crosspick', key, `the square test is not worked with u and then v: ${rt}`);
+        sums(rt, key); dotsWorked += dots(rt, key);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="CrossPick\\.choose\\(${i}\\)" aria-label="${L}: ⟨[^⟩]+⟩\\. Not u × v"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('crosspick', key, 'the missed arrows are not shut and told as not u × v');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('crosspick', key, 'tapping a missed arrow again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('crosspick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('crosspick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('crosspick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'CROSS READER / 5 cross products picked') fail('crosspick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is u × v, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('crosspick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read();
+      const W = X(u, v);
+      if (!rt.startsWith(`That was it: ${workOf(u, v)}, and it is square to both: ${dw(W, u, '(u × v)', 'u')}, ${dw(W, v, '(u × v)', 'v')}. Here is a new pair.`) || !rt.includes(`= ${vec(X(u, v))}, and it is square to both: (u × v)·u = `) || !rt.endsWith(`= 0. Here is a new pair. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) || (rt.match(/ = 0[,.]/g) || []).length !== 2) fail('crosspick', key, `after a pick: ${rt}`);
+      sums(rt, key); if (dots(rt, key) !== 2) fail('crosspick', key, 'the right pick does not work both dot products');
+      prev = r.c;
+    }
+  }
+  { // the same pair dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { u: [1, 2, 0], v: [0, 1, 3] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.c) === '{"u":[1,2,0],"v":[0,1,3]}') fail('crosspick', 'repeat', 'the same pair is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['swap', 'plus', 'mid', 'parts']) if (!kinds[k]) fail('crosspick', 'slips', `the slip ${k} is never offered`);
+  if (slots.size !== 4) fail('crosspick', 'deal', `the right arrow only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('crosspick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, dotsWorked };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -8112,6 +8244,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
