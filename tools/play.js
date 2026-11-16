@@ -116,6 +116,7 @@ const SUITES = [
   require('./play/elimpick'), // see two rows, pick which of four numbers k clears x
   require('./play/hoppick'), // see a 0/0 ratio, pick which of four numbers is its limit
   require('./play/newtonpick'), // see a curve and a first guess, pick which of four numbers is the next guess
+  require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
