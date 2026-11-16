@@ -1854,10 +1854,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ PATH CHAIN WORKSHOP ============ -->
   <div class="screen" id="s-pathchain">
     <div class="panel"><h2>🛤️ Path Chain Workshop</h2><div class="sub">A point walks along a path over a hill z = f(x, y). As t moves, x and y both move, so z changes for two reasons: the x part (∂z/∂x)(dx/dt) and the y part (∂z/∂y)(dy/dt). Step along and watch the two parts add up, then drop one or forget the speeds and catch each slip.</div></div>
+    <div id="pcTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk the path by hand or pick its rate"></div>
     <div class="panel">
+      <div id="rtBox"></div>
       <div id="pcSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill and path"></div>
       <div id="pcFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="pcStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="pcTLo" onclick="PathChain.moveT(-1)" aria-label="Move t one step smaller">−</button>
           <b id="pcT" style="font-size:17px;min-width:0"></b>
           <button id="pcTHi" onclick="PathChain.moveT(1)" aria-label="Move t one step bigger">+</button></div>
@@ -1865,7 +1867,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="pcModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work dz/dt"></div>
       <div id="pcRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="pcGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="pcGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14183,7 +14185,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛤️ Path Chain Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Walk a point along a path over a hill and watch dz/dt come from two parts, one for x moving and one for y. Find where the parts cancel, the top of a path, and a tug of war, then drop a part or forget the speeds and catch each slip.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Walk a point along a path over a hill and watch dz/dt come from two parts, one for x moving and one for y. Find where the parts cancel, the top of a path, and a tug of war, then drop a part or forget the speeds and catch each slip. Then turn it round: see a hill, a path and a moment, and pick which of four numbers is dz/dt.</div>
          <button class="btn sm" id="tomePathChain" style="width:auto;margin-top:8px" onclick="PathChain.open()">Open the path chain workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -24732,6 +24734,122 @@ const LogDiff = {
   }
 };
 
+/* ---------- Which rate? The path chain workshop turned round ----------
+   A hill z = k·xᵐ·yⁿ, a path x = αt + β, y = γt² + δ, a whole t, and four
+   numbers, one of them dz/dt there, (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt). The rule
+   is stated first; the wrong numbers are the slips people make with it. A
+   wrong pick is checked by nudging t a hair either way and measuring how
+   fast z really changes. Nothing is saved. */
+const PathPick = {
+  SLIPS:['xOnly','yOnly','noSpeed','swap','noPow','noTwo'],
+  MN:[[1,1],[2,1],[1,2]],
+  RULE:'A point moving along a path moves both x and y, so z changes for two reasons. dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt): how steep z is along x times how fast x moves, plus the same for y. Find each partial by the power rule, holding the other letter still, find each speed by differentiating the path in t, and put in the point. Which is dz/dt?',
+  co(n){ return n===1 ? '' : n===-1 ? '−' : neg(n); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  xs:m=>m===2 ? 'x²' : 'x',
+  ys:n=>n===2 ? 'y²' : 'y',
+  at(S){ const X=S.al*S.t+S.be, Y=S.ga*S.t*S.t+S.de, dX=S.al, dY=2*S.ga*S.t, {k,m,n}=S;
+    return {X, Y, dX, dY, Zx:k*m*X**(m-1)*Y**n, Zy:k*n*X**m*Y**(n-1)}; },
+  // the number each option stands for
+  val(S,k){
+    const {X,Y,dX,dY,Zx,Zy}=this.at(S), {m,n}=S, K=S.k;
+    return k==='right' ? Zx*dX+Zy*dY : k==='xOnly' ? Zx*dX : k==='yOnly' ? Zy*dY : k==='noSpeed' ? Zx+Zy
+      : k==='swap' ? Zx*dY+Zy*dX : k==='noPow' ? K*X**(m-1)*Y**n*dX+K*X**m*Y**(n-1)*dY : Zx*dX+Zy*dY/2;
+  },
+  key:v=>String(v),
+  // the slips this hill and path can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const [m,n]=this.MN[R.i(0,2)], sg=()=>R.i(0,1)?1:-1;
+      const S={k:R.i(1,3), m, n, al:R.i(1,3)*sg(), be:R.i(-2,2), ga:R.i(1,2)*sg(), de:R.i(-2,2), t:[-2,-1,1,2][R.i(0,3)]};
+      const {X,Y}=this.at(S);
+      if(X===0 || Y===0) continue;
+      const W=this.val(S,'right');
+      if(W===0 || ['right',...this.SLIPS].some(k=>Math.abs(this.val(S,k))>300)) continue;
+      if(this.slips(S).length<3) continue;
+      return S;
+    }
+    return {k:2, m:2, n:1, al:3, be:-1, ga:1, de:2, t:1};
+  },
+  zs(S){ return `${this.co(S.k)}${this.xs(S.m)}${this.ys(S.n)}`; },
+  lin(a,b){ return `${this.co(a)}t${b ? (b<0?' − ':' + ')+Math.abs(b) : ''}`; },
+  quad(a,b){ return `${this.co(a)}t²${b ? (b<0?' − ':' + ')+Math.abs(b) : ''}`; },
+  zxs(S){ return `${this.co(S.k*S.m)}${S.m===2?'x':''}${this.ys(S.n)}`; },
+  zys(S){ return `${this.co(S.k*S.n)}${this.xs(S.m)}${S.n===2?'y':''}`; },
+  dys(S){ return `${this.co(2*S.ga)}t`; },
+  z(S,t){ const X=S.al*t+S.be, Y=S.ga*t*t+S.de; return S.k*X**S.m*Y**S.n; },
+  num(v,d){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(S);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('PATHFINDER', this.matched+' rates found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is dz/dt, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    PathChain.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {dX,dY,Zx,Zy}=this.at(S);
+    if(k==='xOnly') return `${L} keeps only the x part, (∂z/∂x)(dx/dt) = ${neg(Zx)} × ${this.pn(dX)}. y moves too, at dy/dt = ${neg(dY)}, so add the y part, (∂z/∂y)(dy/dt) = ${neg(Zy)} × ${this.pn(dY)}.`;
+    if(k==='yOnly') return `${L} keeps only the y part, (∂z/∂y)(dy/dt) = ${neg(Zy)} × ${this.pn(dY)}. x moves too, at dx/dt = ${neg(dX)}, so add the x part, (∂z/∂x)(dx/dt) = ${neg(Zx)} × ${this.pn(dX)}.`;
+    if(k==='noSpeed') return `${L} adds the two slopes, ∂z/∂x + ∂z/∂y = ${neg(Zx)} + ${this.pn(Zy)}, and forgets the speeds. Each slope counts only as fast as its letter moves, so multiply by dx/dt = ${neg(dX)} and dy/dt = ${neg(dY)}.`;
+    if(k==='swap') return `${L} multiplies each slope by the other letter's speed. ∂z/∂x goes with dx/dt = ${neg(dX)}, and ∂z/∂y with dy/dt = ${neg(dY)}.`;
+    if(k==='noPow') return `${L} forgets to bring the power down. ∂z/∂x of ${this.zs(S)} is ${this.zxs(S)} and ∂z/∂y is ${this.zys(S)}: the 2 on ${S.m===2?'x':'y'} comes down in front.`;
+    return `${L} forgets the 2 that t² brings down: y = ${this.quad(S.ga,S.de)} has dy/dt = ${this.dys(S)}, which is ${neg(dY)} at t = ${neg(S.t)}, not ${neg(dY/2)}.`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), h=0.001, a=this.z(S,S.t-h), b=this.z(S,S.t+h);
+    return `Check ${L}: nudge t from ${this.num(S.t-h,3)} to ${this.num(S.t+h,3)}, a change of 0.002. z goes from ${this.num(a,4)} to ${this.num(b,4)}, a rise of about ${this.num(b-a,4)}. If dz/dt were ${neg(v)}, z would rise about ${neg(v)} × 0.002 = ${this.num(v*2*h,4)}, not ${this.num(b-a,4)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="rtQ" style="text-align:center;font-size:16px;margin-bottom:2px">z = ${this.zs(S)}, along x = ${this.lin(S.al,S.be)}, y = ${this.quad(S.ga,S.de)}, at t = ${neg(S.t)}.</div>`;
+    out+=`<div class="small" style="text-align:center">Which is dz/dt there?</div>`;
+    out+=`<div id="rtPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=neg(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="PathPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not dz/dt':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, P=this.at(B);
+      lines.push(`That was it: at t = ${neg(B.t)} the point is (${neg(P.X)}, ${neg(P.Y)}), moving at dx/dt = ${neg(P.dX)} and dy/dt = ${this.dys(B)} = ${neg(P.dY)}. There ∂z/∂x = ${this.zxs(B)} = ${neg(P.Zx)} and ∂z/∂y = ${this.zys(B)} = ${neg(P.Zy)}, so dz/dt = ${neg(P.Zx)} × ${this.pn(P.dX)} + ${this.pn(P.Zy)} × ${this.pn(P.dY)} = ${neg(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="rtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 /* ---------- The path chain workshop: z changes for two reasons ----------
    A point walks along a path x(t), y(t) over a hill z = f(x, y). As t moves,
    x and y both move, so dz/dt has two parts: how steep the hill is along x
@@ -24870,7 +24988,15 @@ const PathChain = {
   pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
   moveT(by){ const v=this.k+by; if(v<0 || v>=this.set().T.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('pcTab').innerHTML=[['hand','🛤️ Walk it by hand','Walk a point along a path by hand and watch the two parts of dz/dt'],['pick','🎯 Which rate?','See a hill, a path and a moment, and pick which of four numbers is dz/dt']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="PathChain.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['pcSets','pcFig','pcStep','pcModes','pcRead','pcGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('rtBox').innerHTML=pick ? PathPick.html() : '';
+    if(pick) return;
     document.getElementById('pcSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="PathChain.pick(${i})" aria-label="${s.name}">${s.btn}</button>`).join('');
     document.getElementById('pcModes').innerHTML=this.MODES.map((m,i)=>
