@@ -4373,6 +4373,165 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which det A? The pick-a-determinant round in the cofactor workshop. Every
+   number on screen is read back off its button and checked against the slip
+   it is named as, worked out here from A alone (det A by Sarrus' rule, so it
+   is not the page's own expansion checking itself). Every 2×2 minor and every
+   sum of terms in the readout is worked again from the numbers it shows, and
+   the line it expands along must be one with the most zeros. */
+const cofPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cofactor = {render(){ env.renders++; }};" +
+    cut('const CofPick = {', 'const Cofactor = {') + 'return CofPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const num = t => +t.replace(/[()]/g, '').replace('−', '-');
+  const rowsOf = A => A.map(r => r.map(ng).join(', ')).join('; ').replace(/; ([^;]*)$/, ' and $1');
+  // det A by Sarrus' rule: three diagonals down to the right, less three down to the left
+  const down = A => A[0][0] * A[1][1] * A[2][2] + A[0][1] * A[1][2] * A[2][0] + A[0][2] * A[1][0] * A[2][1];
+  const up = A => A[0][2] * A[1][1] * A[2][0] + A[0][0] * A[1][2] * A[2][1] + A[0][1] * A[1][0] * A[2][2];
+  const sar = A => down(A) - up(A);
+  const mn = (A, i, j) => A.filter((_, r) => r !== i).map(r => r.filter((_, c) => c !== j));
+  const d2 = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+  const want = {
+    right: sar,
+    nosign: A => sar(A) + 2 * A[0][1] * d2(mn(A, 0, 1)),
+    cross: A => [0, 1, 2].reduce((s, j) => { const M = mn(A, 0, j); return s + (j === 1 ? -1 : 1) * A[0][j] * (M[0][0] * M[1][1] + M[0][1] * M[1][0]); }, 0),
+    diag: A => A[0][0] * A[1][1] * A[2][2],
+    half: down,
+    neg: A => -sar(A)
+  };
+  const lineCells = li => [0, 1, 2].map(t => (li < 3 ? [li, t] : [t, li - 3]));
+  const lineName = li => (li < 3 ? `row ${li + 1}` : `column ${li - 2}`);
+  const zOf = (A, li) => lineCells(li).filter(([i, j]) => !A[i][j]).length;
+  const most = A => Math.max(...[0, 1, 2, 3, 4, 5].map(li => zOf(A, li)));
+  const m2w = M => `${ng(M[0][0])} × ${pn(M[1][1])} − ${pn(M[0][1])} × ${pn(M[1][0])} = ${ng(d2(M))}`;
+  // every "a × d − b × c = m" in a line, worked again from its own numbers
+  const minors = (t, key) => { let n = 0;
+    for (const m of t.matchAll(/(−?\d+) × (\(?−?\d+\)?) − (\(?−?\d+\)?) × (\(?−?\d+\)?) = (−?\d+)/g)) { n++;
+      if (num(m[1]) * num(m[2]) - num(m[3]) * num(m[4]) !== num(m[5])) fail('cofpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="cfpRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, A, L) => {
+    if (k === 'nosign') return `${L} adds all three terms along row 1 with a + sign. The checkerboard makes row 1 go + − +, so the middle term, ${pn(A[0][1])} × ${pn(d2(mn(A, 0, 1)))} = ${ng(A[0][1] * d2(mn(A, 0, 1)))}, is taken away, not added.`;
+    if (k === 'cross') { const j = [0, 1, 2].find(j => A[0][j] && mn(A, 0, j)[0][1] * mn(A, 0, j)[1][0]), M = mn(A, 0, j);
+      return `${L} works each minor as ad + bc. A 2×2 determinant takes away, ad − bc, so the minor of entry (1, ${j + 1}) is ${m2w(M)}, not ${ng(M[0][0] * M[1][1] + M[0][1] * M[1][0])}.`; }
+    if (k === 'diag') return `${L} multiplies just the diagonal, ${ng(A[0][0])} × ${pn(A[1][1])} × ${pn(A[2][2])} = ${ng(want.diag(A))}. That is det A only when every entry below the diagonal, or every one above it, is 0, and this A is not like that.`;
+    if (k === 'half') return `${L} adds the three diagonals that run down to the right, as in Sarrus' rule, and stops there. Sarrus' rule takes away the three that run down to the left as well.`;
+    return `${L} is det A with its sign flipped, as if the checkerboard started with a minus. It starts with + in the top-left corner, so row 1 goes + − +.`;
+  };
+  if (S.RULE !== 'Expand along any row or column: each entry times its minor, the 2×2 determinant ad − bc left when the entry\'s row and column are struck out, with a sign from the checkerboard, + − + along row 1. Every line gives the same det A, and a 0 on the line saves working out its minor. Which number is det A?') fail('cofpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('cofpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, ones = 0, twos = 0, negs = 0;
+  const slots = new Set(), kinds = {}, left5 = new Set(), lines = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`, d = sar(A);
+      rounds++;
+      if (A.flat().some(x => x < 0)) negs++;
+      if (A.length !== 3 || A.some(q => q.length !== 3 || q.some(x => !Number.isInteger(x) || Math.abs(x) > 3))) fail('cofpick', key, `A = ${rowsOf(A)} is not a small whole 3×3`);
+      if (A.flat().filter(x => !x).length < 2) fail('cofpick', key, `A = ${rowsOf(A)} has fewer than two zeros to aim for`);
+      if (!d || Math.abs(d) > 60) fail('cofpick', key, `det A = ${d} is 0 or too big to work in your head`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(A)) fail('cofpick', key, 'the same A comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('cofpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` A = ${A.flat().map(ng).join(' ')} P`)) fail('cofpick', key, 'the rule and A are not shown first, row by row');
+      if (!h0.includes(`id="cfpA" role="img" aria-label="A has rows ${rowsOf(A)}"`)) fail('cofpick', key, 'A is not named row by row');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="CofPick\.choose\((\d)\)" aria-label="([PQRS]): det A = (−?\d+)" style="margin:0"><b>([PQRS])<\/b> det A = (−?\d+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'PQRS'[i] || +x[2] !== i || x[3] !== 'PQRS'[i] || x[5] !== 'PQRS'[i] || x[4] !== x[6])) { fail('cofpick', key, 'the four numbers are not offered as they are, P to S'); continue; }
+      const vals = btns.map(x => num(x[4]));
+      if (new Set(vals).size !== 4) fail('cofpick', key, 'two numbers are the same');
+      if (vals.includes(0)) fail('cofpick', key, 'a 0 is offered, which is never det A here');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('cofpick', key, `an option is the unknown ${o.k}`); return; }
+        if (vals[i] !== want[o.k](A)) fail('cofpick', key, `${o.k} is shown as ${ng(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== (vals[i] === d)) fail('cofpick', key, `${ng(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} det A`);
+      });
+      {
+        const can = [], seen = new Set([d, 0]);
+        for (const s of ['nosign', 'cross', 'diag', 'half', 'neg']) { const v = want[s](A); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 5) { const shown = r.opts.map(o => o.k); can.filter(s => !shown.includes(s)).forEach(s => left5.add(s)); }
+        if (can.length < 3) fail('cofpick', key, 'an A with fewer than three slips is dealt'); }
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('cofpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, z = most(A);
+      const bestLine = [0, 1, 2, 3, 4, 5].find(li => zOf(A, li) === z);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('cofpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const hint = `The quickest line here is ${lineName(bestLine)}, with ${z === 1 ? 'a 0' : 'two zeros'} on it: expand along it and ${z === 1 ? 'only two minors need' : 'only one minor needs'} working out.`;
+        if (rt !== `${slipOf(o.k, A, L)} ${hint} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('cofpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, A, L)} ${hint}`);
+        if (o.k === 'cross') { if (minors(rt, key) !== 1) fail('cofpick', key, 'the ad + bc slip does not work the minor again'); worked++; }
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="CofPick\\.choose\\(${i}\\)" aria-label="${L}: det A = [^"]+\\. Not det A"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('cofpick', key, 'the missed numbers are not shut and told as not det A');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('cofpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('cofpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('cofpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('cofpick', key, 'no fresh A after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'DETERMINANT READER / 5 determinants picked') fail('cofpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} is det A, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('cofpick', key, `the toast is ${env.toasts[nt]}`); }
+      // after the right pick: det A worked along a line with the most zeros, every term and minor checked
+      const rt = read(), m = rt.match(/^That was it: expand along (row|column) (\d), where (the 0 needs|the two zeros need) no minor, and det A = (.+?) = (−?\d+)\. (.+) Here is a new A\. (\d+) picked this visit, (\d+) on the first try\.$/);
+      if (!m) { fail('cofpick', key, `after a pick: ${rt}`); prev = A; continue; }
+      const li = m[1] === 'row' ? +m[2] - 1 : +m[2] + 2, cells = lineCells(li).filter(([i, j]) => A[i][j]);
+      lines.add(li); if (z === 1) ones++; else twos++;
+      if (zOf(A, li) !== z || li !== bestLine) fail('cofpick', key, `it expands along ${lineName(li)}, not the first line with the most zeros`);
+      if ((z === 1) !== (m[3] === 'the 0 needs')) fail('cofpick', key, 'the zeros on the line are miscounted');
+      if (num(m[5]) !== d) fail('cofpick', key, `det A is given as ${m[5]}, not ${ng(d)}`);
+      const terms = [...m[4].matchAll(/(^−|^| [−+] )(\(?−?\d+\)?) × (\(?−?\d+\)?)/g)];
+      if (terms.length !== cells.length || terms.map(t => t[0]).join('') !== m[4]) fail('cofpick', key, `the terms ${m[4]} are not one for each nonzero entry on the line`);
+      else { let sum = 0;
+        terms.forEach((t, n) => { const [i, j] = cells[n], s = /−/.test(t[1]) ? -1 : 1;
+          if (s !== ((i + j) % 2 ? -1 : 1) || num(t[2]) !== A[i][j] || num(t[3]) !== d2(mn(A, i, j))) fail('cofpick', key, `the term for entry (${i + 1}, ${j + 1}) is ${t[0]}`);
+          sum += s * num(t[2]) * num(t[3]); });
+        if (sum !== num(m[5])) fail('cofpick', key, `${m[4]} does not come to ${m[5]}`); }
+      const mins = cells.map(([i, j]) => `The minor of entry (${i + 1}, ${j + 1}) is ${m2w(mn(A, i, j))}.`).join(' ');
+      if (m[6] !== mins) fail('cofpick', key, `the minors read ${m[6]} | want ${mins}`);
+      if (minors(m[6], key) !== cells.length) fail('cofpick', key, 'a minor is not worked out');
+      if (+m[7] !== S.matched || +m[8] !== S.firstTry) fail('cofpick', key, 'the count is wrong');
+      worked += cells.length + 1;
+      prev = A;
+    }
+  }
+  { // the same A dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? [[2, 0, 1], [3, 0, 4], [1, 5, 2]] : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.A) === '[[2,0,1],[3,0,4],[1,5,2]]') fail('cofpick', 'repeat', 'the same A is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['nosign', 'cross', 'diag', 'half', 'neg']) if (!kinds[k]) fail('cofpick', 'slips', `the slip ${k} is never offered`);
+  if (left5.size !== 5) fail('cofpick', 'deal', `when an A has five slips, only ${[...left5].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('cofpick', 'deal', `det A only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
+  if (!ones || !twos) fail('cofpick', 'deal', 'the quickest line always has the same number of zeros');
+  if (lines.size < 6) fail('cofpick', 'deal', `the quickest line is only ever ${[...lines].sort().map(lineName).join(', ')}`);
+  if (negs < rounds / 2) fail('cofpick', 'entries', `only ${negs} of ${rounds} matrices have a negative entry, so the signs are never put to the test`);
+  if (fives !== 30) fail('cofpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which c? The pick-a-shadow round in the Gram–Schmidt workshop. Every
    number on screen is read back off its button and checked against the slip
    it is named as, worked out here from u₁ and u₂ alone as an exact fraction;
@@ -8655,6 +8814,7 @@ console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(),
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
 console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-c in the Gram–Schmidt workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone leaving w square to u₁, ${gramPickNotes.fracs.toLocaleString()} of them fractions; ${gramPickNotes.misses.toLocaleString()} wrong picks worked through w · u₁, ${gramPickNotes.worked.toLocaleString()} sums worked again from their own numbers)`);
+console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-det-A in the cofactor workshop, every number read back off its button and checked against the slip it is named as and against det A worked by Sarrus' rule; ${cofPickNotes.misses.toLocaleString()} wrong picks named and pointed to the quickest line, ${cofPickNotes.worked.toLocaleString()} minors and sums worked again from their own numbers)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

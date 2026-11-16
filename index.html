@@ -1513,13 +1513,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ COFACTOR WORKSHOP ============ -->
   <div class="screen" id="s-cof">
     <div class="panel"><h2>♟️ Cofactor Workshop</h2><div class="sub">A 3×3 determinant can be expanded along any row or any column: each entry times the 2×2 determinant left when its row and column are struck out, with signs from a checkerboard. Every line gives the same answer, so pick the one that saves the most work.</div></div>
+    <div id="cfTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Expand by hand or pick det A"></div>
     <div class="panel">
+      <div id="cfpBox"></div>
       <div id="cfSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
       <div id="cfFig"></div>
       <div id="cfLines" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which line to expand along"></div>
       <div id="cfRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="cfGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="cfGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13976,7 +13978,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">♟️ Cofactor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Expand a 3×3 determinant along any row or column you like and watch every line agree. Find the line with the most zeros, a triangular matrix that is just its diagonal, and a matrix that flattens space.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Expand a 3×3 determinant along any row or column you like and watch every line agree. Find the line with the most zeros, a triangular matrix that is just its diagonal, and a matrix that flattens space. Then turn it round: see a 3×3 matrix, and pick which of four numbers is its determinant.</div>
          <button class="btn sm" id="tomeCof" style="width:auto;margin-top:8px" onclick="Cofactor.open()">Open the cofactor workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -20073,6 +20075,130 @@ const Hill = {
    gives the same answer, so the clever choice is the line with the most
    zeros. A triangular matrix is just its diagonal multiplied, and a matrix
    whose rows lie in one plane has determinant 0. Nothing is saved. */
+/* ---------- Which det A? The cofactor workshop turned round ----------
+   A 3×3 matrix A is shown, and four numbers, one of them det A. The others
+   are the slips people make expanding it: every term along row 1 added with
+   a + sign; each 2×2 minor worked as ad + bc; just the diagonal multiplied;
+   only the three diagonals of Sarrus' rule that run down to the right; and
+   the checkerboard started with a minus. A wrong pick is shut, named as its
+   slip and worked on this A, and the line with the most zeros is pointed out.
+   Nothing is saved. */
+const CofPick = {
+  SLIPS:['nosign','cross','diag','half','neg'],
+  RULE:'Expand along any row or column: each entry times its minor, the 2×2 determinant ad − bc left when the entry\'s row and column are struck out, with a sign from the checkerboard, + − + along row 1. Every line gives the same det A, and a 0 on the line saves working out its minor. Which number is det A?',
+  sign:(i,j)=>(i+j)%2 ? -1 : 1,
+  minor(A,i,j){ return A.filter((_,r)=>r!==i).map(Q=>Q.filter((_,c)=>c!==j)); },
+  m2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],
+  cells:li=>[0,1,2].map(t=>li<3 ? [li,t] : [t,li-3]),
+  name:li=>li<3 ? `row ${li+1}` : `column ${li-2}`,
+  zeros(A,li){ return this.cells(li).filter(([i,j])=>A[i][j]===0).length; },
+  det(A){ return [0,1,2].reduce((s,j)=>s+this.sign(0,j)*A[0][j]*this.m2(this.minor(A,0,j)),0); },
+  // the number each option stands for
+  val(A,k){
+    if(k==='right') return this.det(A);
+    if(k==='nosign') return [0,1,2].reduce((s,j)=>s+A[0][j]*this.m2(this.minor(A,0,j)),0);
+    if(k==='cross') return [0,1,2].reduce((s,j)=>{ const M=this.minor(A,0,j); return s+this.sign(0,j)*A[0][j]*(M[0][0]*M[1][1]+M[0][1]*M[1][0]); },0);
+    if(k==='diag') return A[0][0]*A[1][1]*A[2][2];
+    if(k==='half') return A[0][0]*A[1][1]*A[2][2]+A[0][1]*A[1][2]*A[2][0]+A[0][2]*A[1][0]*A[2][1];
+    return -this.det(A);
+  },
+  // the slips this A can offer: each a number different from det A and from every one kept before it,
+  // and never 0, since det A is never 0 here and a 0 would always be wrong
+  slips(A){
+    const seen=new Set([this.det(A),0]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(A,k);
+      if(seen.has(v)) continue;
+      seen.add(v); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : -1)));
+      for(let n=R.i(2,3);n>0;n--) A[R.i(0,2)][R.i(0,2)]=0;
+      const z=A.flat().filter(x=>x===0).length;
+      if(z<2) continue;   // a 0 or two to aim for, so one line is quicker than the rest
+      const d=this.det(A);
+      if(!d || Math.abs(d)>60) continue;   // det A = 0 would make the flipped sign the same number
+      if(this.slips(A).length<3) continue;
+      return A;
+    }
+    return [[2,0,1],[3,0,4],[1,5,2]];
+  },
+  // the line with the most zeros, the first one found when two tie
+  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>this.zeros(A,b)) b=li; return b; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.A;
+    let A;
+    for(let g=0;g<50;g++){ A=this.build(); if(!prev||A.join(';')!==prev.join(';')) break; }
+    const rest=this.slips(A);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('DETERMINANT READER', this.matched+' determinants picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={A:r.A};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Cofactor.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  pn:n=>n<0 ? '('+neg(n)+')' : neg(n),
+  rows(M){ return M.map(Q=>Q.map(neg).join(', ')).join('; ').replace(/; ([^;]*)$/,' and $1'); },
+  // a 2×2 minor worked out: a × d − b × c = m
+  m2w(M){ return `${neg(M[0][0])} × ${this.pn(M[1][1])} − ${this.pn(M[0][1])} × ${this.pn(M[1][0])} = ${neg(this.m2(M))}`; },
+  slip(k,A,L){
+    const M=j=>this.minor(A,0,j);
+    if(k==='nosign') return `${L} adds all three terms along row 1 with a + sign. The checkerboard makes row 1 go + − +, so the middle term, ${this.pn(A[0][1])} × ${this.pn(this.m2(M(1)))} = ${neg(A[0][1]*this.m2(M(1)))}, is taken away, not added.`;
+    if(k==='cross'){ const j=[0,1,2].find(j=>A[0][j]!==0 && M(j)[0][1]*M(j)[1][0]!==0), N=M(j);
+      return `${L} works each minor as ad + bc. A 2×2 determinant takes away, ad − bc, so the minor of entry (1, ${j+1}) is ${this.m2w(N)}, not ${neg(N[0][0]*N[1][1]+N[0][1]*N[1][0])}.`; }
+    if(k==='diag') return `${L} multiplies just the diagonal, ${neg(A[0][0])} × ${this.pn(A[1][1])} × ${this.pn(A[2][2])} = ${neg(this.val(A,'diag'))}. That is det A only when every entry below the diagonal, or every one above it, is 0, and this A is not like that.`;
+    if(k==='half') return `${L} adds the three diagonals that run down to the right, as in Sarrus' rule, and stops there. Sarrus' rule takes away the three that run down to the left as well.`;
+    return `${L} is det A with its sign flipped, as if the checkerboard started with a minus. It starts with + in the top-left corner, so row 1 goes + − +.`;
+  },
+  hint(A){ const b=this.best(A), z=this.zeros(A,b);
+    return `The quickest line here is ${this.name(b)}, with ${z===1?'a 0':'two zeros'} on it: expand along it and ${z===1?'only two minors need':'only one minor needs'} working out.`; },
+  // det A worked along the quickest line: the terms, then each minor
+  worked(A){
+    const b=this.best(A), z=this.zeros(A,b), C=this.cells(b).filter(([i,j])=>A[i][j]!==0);
+    const T=C.map(([i,j],n)=>{ const s=this.sign(i,j), m=this.m2(this.minor(A,i,j));
+      return (n===0 ? (s<0?'−':'') : (s<0?' − ':' + '))+`${this.pn(A[i][j])} × ${this.pn(m)}`; }).join('');
+    return [`That was it: expand along ${this.name(b)}, where ${z===1?'the 0 needs':'the two zeros need'} no minor, and det A = ${T} = ${neg(this.det(A))}.`,
+      C.map(([i,j])=>`The minor of entry (${i+1}, ${j+1}) is ${this.m2w(this.minor(A,i,j))}.`).join(' ')+' Here is a new A.'];
+  },
+  html(){
+    this.start();
+    const r=this.round, A=r.A, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="cfpA" role="img" aria-label="A has rows ${this.rows(A)}" style="text-align:center;margin-bottom:4px;font-size:16px">A = <span style="display:inline-grid;grid-template-columns:repeat(3,2.2em);gap:2px 4px;vertical-align:middle;border-left:2px solid var(--gold);border-right:2px solid var(--gold);border-radius:6px;padding:2px 6px;font-size:18px;font-weight:700">${A.flat().map(x=>`<span>${neg(x)}</span>`).join('')}</span></div>`;
+    out+=`<div id="cfpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.val(A,o.k), L='PQRS'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="CofPick.choose(${i})" aria-label="${L}: det A = ${neg(v)}${gone?'. Not det A':''}" style="margin:0"><b>${L}</b> det A = ${neg(v)}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(r.opts[m].k,A,'PQRS'[m]), this.hint(A));
+    else if(this.last) lines.push(...this.worked(this.last.A));
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="cfpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 const Cofactor = {
   SETS:[
     {id:'gap', btn:'Two zeros', A:[[2,0,1],[3,0,4],[1,5,2]]},
@@ -20149,7 +20275,15 @@ const Cofactor = {
   open(){ UI.go('s-cof'); },
   pick(i){ this.si=i; this.li=null; this.render(); },
   expand(li){ this.li=li; this.tried[this.si].add(li); this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('cfTab').innerHTML=[['hand','♟️ Expand by hand','Expand a matrix along a row or column by hand'],['pick','🎯 Which det A?','See a 3×3 matrix, and pick which of four numbers is its determinant']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cofactor.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['cfSets','cfFig','cfLines','cfRead','cfGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('cfpBox').innerHTML=pick ? CofPick.html() : '';
+    if(pick) return;
     document.getElementById('cfSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Cofactor.pick(${i})" aria-label="${s.btn}: A has rows ${this.rows(s.A)}">${s.btn}</button>`).join('');
     document.getElementById('cfLines').innerHTML=[0,1,2,3,4,5].map(l=>

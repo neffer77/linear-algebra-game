@@ -1,284 +1,340 @@
 {
-  "change": "Which c? in the Gram–Schmidt workshop: see u₁ and u₂, pick which of four numbers is c",
+  "change": "Which det A? The cofactor workshop turned round: see a 3×3 matrix, and pick which of four numbers is its determinant.",
   "mutations": [
     {
-      "name": "the rule leaves out the division",
+      "name": "the rule drops the take-away in a minor",
       "file": "index.html",
-      "find": "  RULE:'Take c copies of u₁ away from u₂, and what is left is w = u₂ − c·u₁. Each copy taken away lowers w · u₁ by u₁ · u₁, so w is at a right angle to u₁ when c = (u₂ · u₁)/(u₁ · u₁)",
-      "replace": "  RULE:'Take c copies of u₁ away from u₂, and what is left is w = u₂ − c·u₁. Each copy taken away lowers w · u₁ by u₁ · u₁, so w is at a right angle to u₁ when c = u₂ · u₁",
+      "find": "  RULE:'Expand along any row or column: each entry times its minor, the 2×2 determinant ad − bc",
+      "replace": "  RULE:'Expand along any row or column: each entry times its minor, the 2×2 determinant ad + bc",
       "run": "verify"
     },
     {
-      "name": "c forgets the division",
+      "name": "the checkerboard starts with a minus",
       "file": "index.html",
-      "find": "return this.frac(...(k==='right' ? [dp,nn] :",
-      "replace": "return this.frac(...(k==='right' ? [dp,1] :",
+      "find": "  sign:(i,j)=>(i+j)%2 ? -1 : 1,",
+      "replace": "  sign:(i,j)=>(i+j)%2 ? 1 : -1,",
       "run": "verify"
     },
     {
-      "name": "the upside-down slip is c",
+      "name": "a minor strikes the wrong column",
       "file": "index.html",
-      "find": "k==='flip' ? [nn,dp] :",
-      "replace": "k==='flip' ? [dp,nn] :",
+      "find": "  minor(A,i,j){ return A.filter((_,r)=>r!==i).map(Q=>Q.filter((_,c)=>c!==j)); },",
+      "replace": "  minor(A,i,j){ return A.filter((_,r)=>r!==i).map(Q=>Q.filter((_,c)=>c!==(j+1)%3)); },",
       "run": "verify"
     },
     {
-      "name": "the undivided slip divides",
+      "name": "a 2×2 minor adds",
       "file": "index.html",
-      "find": "k==='nodiv' ? [dp,1] :",
-      "replace": "k==='nodiv' ? [dp,nn] :",
+      "find": "  m2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],",
+      "replace": "  m2:M=>M[0][0]*M[1][1]+M[0][1]*M[1][0],",
       "run": "verify"
     },
     {
-      "name": "the u₂ slip divides by u₁ · u₁",
+      "name": "columns are read as rows",
       "file": "index.html",
-      "find": "k==='u2' ? [dp,mm] :",
-      "replace": "k==='u2' ? [dp,mm*nn] :",
+      "find": "  cells:li=>[0,1,2].map(t=>li<3 ? [li,t] : [t,li-3]),",
+      "replace": "  cells:li=>[0,1,2].map(t=>li<3 ? [li,t] : [li-3,t]),",
       "run": "verify"
     },
     {
-      "name": "the sign slip keeps the sign",
+      "name": "a column is named one off",
       "file": "index.html",
-      "find": "k==='u2' ? [dp,mm] : [-dp,nn]));",
-      "replace": "k==='u2' ? [dp,mm] : [dp,-nn*2]));",
+      "find": "  name:li=>li<3 ? `row ${li+1}` : `column ${li-2}`,",
+      "replace": "  name:li=>li<3 ? `row ${li+1}` : `column ${li-3}`,",
       "run": "verify"
     },
     {
-      "name": "a fraction is not cut down",
+      "name": "the no-sign slip is det A",
       "file": "index.html",
-      "find": "const g=this.gcd(p,q)||1; return [p/g,q/g]; },",
-      "replace": "const g=1; return [p/g,q/g]; },",
+      "find": "    if(k==='nosign') return [0,1,2].reduce((s,j)=>s+A[0][j]*this.m2(this.minor(A,0,j)),0);",
+      "replace": "    if(k==='nosign') return [0,1,2].reduce((s,j)=>s+this.sign(0,j)*A[0][j]*this.m2(this.minor(A,0,j)),0);",
       "run": "verify"
     },
     {
-      "name": "a fraction keeps its sign underneath",
+      "name": "the ad + bc slip takes away",
       "file": "index.html",
-      "find": "frac(p,q){ if(q<0){ p=-p; q=-q; }",
-      "replace": "frac(p,q){ if(q<0&&p<0){ p=-p; q=-q; }",
+      "find": "s+this.sign(0,j)*A[0][j]*(M[0][0]*M[1][1]+M[0][1]*M[1][0]); },0);",
+      "replace": "s+this.sign(0,j)*A[0][j]*(M[0][0]*M[1][1]-2*M[0][1]*M[1][0]); },0);",
       "run": "verify"
     },
     {
-      "name": "a whole number is written over 1",
+      "name": "the diagonal slip takes the other diagonal",
       "file": "index.html",
-      "find": "fs:([p,q])=>q===1 ? neg(p) : `${neg(p)}/${q}`,",
-      "replace": "fs:([p,q])=>`${neg(p)}/${q}`,",
+      "find": "    if(k==='diag') return A[0][0]*A[1][1]*A[2][2];",
+      "replace": "    if(k==='diag') return A[0][2]*A[1][1]*A[2][0];",
       "run": "verify"
     },
     {
-      "name": "a slip equal to c is kept",
+      "name": "the half-Sarrus slip drops a diagonal",
       "file": "index.html",
-      "find": "      if(seen.has(this.key(f))) continue;\n      seen.add(this.key(f)); keep.push(k); }",
-      "replace": "      seen.add(this.key(f)); keep.push(k); }",
+      "find": "    if(k==='half') return A[0][0]*A[1][1]*A[2][2]+A[0][1]*A[1][2]*A[2][0]+A[0][2]*A[1][0]*A[2][1];",
+      "replace": "    if(k==='half') return A[0][0]*A[1][1]*A[2][2]+A[0][1]*A[1][2]*A[2][0];",
       "run": "verify"
     },
     {
-      "name": "u₂ may lie along u₁",
+      "name": "the flipped slip keeps its sign",
       "file": "index.html",
-      "find": "      if(u1[0]*u2[1]===u1[1]*u2[0]) continue;   // u₂ along u₁",
-      "replace": "      if(false) continue;   // u₂ along u₁",
+      "find": "    return -this.det(A);\n  },",
+      "replace": "    return -this.det(A)*2;\n  },",
       "run": "verify"
     },
     {
-      "name": "u₁ may run past two",
+      "name": "a slip equal to det A is kept",
       "file": "index.html",
-      "find": "const u1=[R.i(-2,2),R.i(-2,2)], u2=",
-      "replace": "const u1=[R.i(-2,3),R.i(-2,2)], u2=",
+      "find": "      if(seen.has(v)) continue;\n      seen.add(v); keep.push(k); }",
+      "replace": "      seen.add(v); keep.push(k); }",
       "run": "verify"
     },
     {
-      "name": "u₂ may run past three",
+      "name": "a 0 may be offered",
       "file": "index.html",
-      "find": "u2=[R.i(this.LO,this.HI),R.i(this.LO,this.HI)], P={u1,u2};",
-      "replace": "u2=[R.i(this.LO,this.HI+1),R.i(this.LO,this.HI)], P={u1,u2};",
+      "find": "    const seen=new Set([this.det(A),0]), keep=[];",
+      "replace": "    const seen=new Set([this.det(A)]), keep=[];",
       "run": "verify"
     },
     {
-      "name": "a pair with too few slips is dealt",
+      "name": "entries may run past three",
       "file": "index.html",
-      "find": "      if(this.slips(P).length<3) continue;   // c = ±1",
-      "replace": "      if(this.slips(P).length<2) continue;   // c = ±1",
+      "find": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : -1)));",
+      "replace": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,4)*(R.i(0,1) ? 1 : -1)));",
       "run": "verify"
     },
     {
-      "name": "the same pair may come twice",
+      "name": "entries are never negative",
       "file": "index.html",
-      "find": "if(!prev||[...P.u1,...P.u2].join()!==[...prev.u1,...prev.u2].join()) break; }",
+      "find": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : -1)));",
+      "replace": "const A=[0,1,2].map(()=>[0,1,2].map(()=>R.i(1,3)*(R.i(0,1) ? 1 : 1)));",
+      "run": "verify"
+    },
+    {
+      "name": "A may have one zero",
+      "file": "index.html",
+      "find": "      if(z<2) continue;   // a 0 or two",
+      "replace": "      if(z<1) continue;   // a 0 or two",
+      "run": "verify"
+    },
+    {
+      "name": "A always has three zeros",
+      "file": "index.html",
+      "find": "      for(let n=R.i(2,3);n>0;n--) A[R.i(0,2)][R.i(0,2)]=0;",
+      "replace": "      for(let n=R.i(2,3);n>0;n--) A[R.i(0,2)][R.i(0,2)]=0;\n      if(A.flat().filter(x=>x===0).length<3) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "det A may be 0",
+      "file": "index.html",
+      "find": "      if(!d || Math.abs(d)>60) continue;",
+      "replace": "      if(Math.abs(d)>60) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "det A may be big",
+      "file": "index.html",
+      "find": "      if(!d || Math.abs(d)>60) continue;",
+      "replace": "      if(!d || Math.abs(d)>99) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "an A with too few slips is dealt",
+      "file": "index.html",
+      "find": "      if(this.slips(A).length<3) continue;\n      return A;\n    }\n    return [[2,0,1],[3,0,4],[1,5,2]];",
+      "replace": "      if(this.slips(A).length<2) continue;\n      return A;\n    }\n    return [[2,0,1],[3,0,4],[1,5,2]];",
+      "run": "verify"
+    },
+    {
+      "name": "the quickest line is the last of a tie",
+      "file": "index.html",
+      "find": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>this.zeros(A,b)) b=li; return b; },",
+      "replace": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>=this.zeros(A,b)) b=li; return b; },",
+      "run": "verify"
+    },
+    {
+      "name": "the quickest line is always row 1",
+      "file": "index.html",
+      "find": "  best(A){ let b=0; for(let li=1;li<6;li++) if(this.zeros(A,li)>this.zeros(A,b)) b=li; return b; },",
+      "replace": "  best(A){ return 0; },",
+      "run": "verify"
+    },
+    {
+      "name": "the same A may come twice",
+      "file": "index.html",
+      "find": "if(!prev||A.join(';')!==prev.join(';')) break; }",
       "replace": "if(!prev||true) break; }",
       "run": "verify"
     },
     {
       "name": "the slips always come in one order",
       "file": "index.html",
-      "find": "[...prev.u1,...prev.u2].join()) break; }\n    const rest=this.slips(P);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }",
-      "replace": "[...prev.u1,...prev.u2].join()) break; }\n    const rest=this.slips(P);",
+      "find": "prev.join(';')) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }",
+      "replace": "prev.join(';')) break; }\n    const rest=this.slips(A);",
       "run": "verify"
     },
     {
-      "name": "the right number always sits first",
+      "name": "det A always sits first",
       "file": "index.html",
-      "find": "    this.round={P,opts,out:new Set()};",
-      "replace": "    opts.sort((x,y)=>(y.k==='right')-(x.k==='right'));\n    this.round={P,opts,out:new Set()};",
+      "find": "    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
+      "replace": "    opts.sort((x,y)=>(y.k==='right')-(x.k==='right'));\n    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
       "run": "verify"
     },
     {
       "name": "one option is dropped",
       "file": "index.html",
-      "find": "    const rest=this.slips(P);",
-      "replace": "    const rest=this.slips(P).slice(0,2);",
+      "find": "prev.join(';')) break; }\n    const rest=this.slips(A);",
+      "replace": "prev.join(';')) break; }\n    const rest=this.slips(A).slice(0,2);",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SHADOW READER'",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('SHADOW READER'",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT READER'",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT READER'",
       "run": "verify"
     },
     {
       "name": "the toast counts the wrong tries",
       "file": "index.html",
-      "find": "else UI.toast(`✓ ${'PQRS'[i]} is c, picked ${tries===1?'on the first try':'in '+tries+' tries'}.",
-      "replace": "else UI.toast(`✓ ${'PQRS'[i]} is c, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}.",
+      "find": "else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}.",
+      "replace": "else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}.",
       "run": "verify"
     },
     {
-      "name": "the pair stays after the right pick",
+      "name": "A stays after the right pick",
       "file": "index.html",
-      "find": "      this.last={P:r.P};\n      this.newRound();",
-      "replace": "      this.last={P:r.P};",
+      "find": "      else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};\n      this.newRound();",
+      "replace": "      else UI.toast(`✓ ${'PQRS'[i]} is det A, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};",
       "run": "verify"
     },
     {
       "name": "a miss is not crossed off",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Gram.render();",
-      "replace": "      this.misses++; this.last=null;\n    }\n    Gram.render();",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "a miss still counts as first try",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Gram.render();",
-      "replace": "      r.out.add(i); this.last=null;\n    }\n    Gram.render();",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "replace": "      r.out.add(i); this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "the workshop is not redrawn",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Gram.render();",
-      "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }\n",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Cofactor.render();\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
+      "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }\n  },\n  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },\n  pn:n=>",
       "run": "verify"
     },
     {
       "name": "a crossed-off number can be picked again",
       "file": "index.html",
-      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SHADOW",
-      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SHADOW",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('DETERMINANT",
       "run": "verify"
     },
     {
-      "name": "a dot product takes the wrong entry",
+      "name": "a worked minor swaps its corners",
       "file": "index.html",
-      "find": "const D=(p,q,a,b)=>`${a} · ${b} = ${neg(p[0])} × ${this.pn(q[0])} + ${this.pn(p[1])} × ${this.pn(q[1])}",
-      "replace": "const D=(p,q,a,b)=>`${a} · ${b} = ${neg(p[0])} × ${this.pn(q[1])} + ${this.pn(p[1])} × ${this.pn(q[0])}",
+      "find": "  m2w(M){ return `${neg(M[0][0])} × ${this.pn(M[1][1])} − ${this.pn(M[0][1])} × ${this.pn(M[1][0])}",
+      "replace": "  m2w(M){ return `${neg(M[0][0])} × ${this.pn(M[1][0])} − ${this.pn(M[0][1])} × ${this.pn(M[1][1])}",
       "run": "verify"
     },
     {
-      "name": "u₁ · u₁ is worked as u₂ · u₂",
+      "name": "the no-sign slip names the wrong term",
       "file": "index.html",
-      "find": "return `${D(P.u2,P.u1,'u₂','u₁')}, and ${D(P.u1,P.u1,'u₁','u₁')}`;",
-      "replace": "return `${D(P.u2,P.u1,'u₂','u₁')}, and ${D(P.u2,P.u2,'u₁','u₁')}`;",
+      "find": "so the middle term, ${this.pn(A[0][1])} × ${this.pn(this.m2(M(1)))} = ${neg(A[0][1]*this.m2(M(1)))}",
+      "replace": "so the middle term, ${this.pn(A[0][1])} × ${this.pn(this.m2(M(2)))} = ${neg(A[0][1]*this.m2(M(2)))}",
       "run": "verify"
     },
     {
-      "name": "w · u₁ adds the copies back",
+      "name": "the ad + bc slip works a minor with nothing to add",
       "file": "index.html",
-      "find": "left=this.frac(dp*cn[1]-cn[0],cn[1]);",
-      "replace": "left=this.frac(dp*cn[1]+cn[0],cn[1]);",
+      "find": "const j=[0,1,2].find(j=>A[0][j]!==0 && M(j)[0][1]*M(j)[1][0]!==0), N=M(j);",
+      "replace": "const j=[0,1,2].find(j=>A[0][j]!==0), N=M(j);",
       "run": "verify"
     },
     {
-      "name": "a fraction c loses its brackets",
+      "name": "the diagonal slip is told as another",
       "file": "index.html",
-      "find": "ct(f){ return f[1]===1 ? this.pn(f[0]) : `(${this.fs(f)})`; },",
-      "replace": "ct(f){ return f[1]===1 ? this.pn(f[0]) : this.fs(f); },",
+      "find": "    if(k==='diag') return `${L} multiplies just the diagonal,",
+      "replace": "    if(k==='half') return `${L} multiplies just the diagonal,",
       "run": "verify"
     },
     {
-      "name": "w is worked with c's top alone",
+      "name": "the hint counts the minors wrong",
       "file": "index.html",
-      "find": "w(P,f){ return [0,1].map(i=>this.frac(P.u2[i]*f[1]-f[0]*P.u1[i], f[1])); },",
-      "replace": "w(P,f){ return [0,1].map(i=>this.frac(P.u2[i]-f[0]*P.u1[i], 1)); },",
+      "find": "expand along it and ${z===1?'only two minors need':'only one minor needs'} working out.`; },",
+      "replace": "expand along it and ${z===2?'only two minors need':'only one minor needs'} working out.`; },",
       "run": "verify"
     },
     {
-      "name": "the lean is told the wrong way",
+      "name": "a miss gives no hint",
       "file": "index.html",
-      "find": "w ${left>0?'still leans along u₁':'leans back against u₁'}.",
-      "replace": "w ${left<0?'still leans along u₁':'leans back against u₁'}.",
+      "find": "if(m!==null) lines.push(this.slip(r.opts[m].k,A,'PQRS'[m]), this.hint(A));",
+      "replace": "if(m!==null) lines.push(this.slip(r.opts[m].k,A,'PQRS'[m]));",
       "run": "verify"
     },
     {
-      "name": "the upside-down slip is told as another",
+      "name": "a term loses its sign",
       "file": "index.html",
-      "find": "    if(k==='flip') return `${L} is (u₁ · u₁)/(u₂ · u₁)",
-      "replace": "    if(k==='nodiv') return `${L} is (u₁ · u₁)/(u₂ · u₁)",
+      "find": "return (n===0 ? (s<0?'−':'') : (s<0?' − ':' + '))+`${this.pn(A[i][j])} × ${this.pn(m)}`; }).join('');",
+      "replace": "return (n===0 ? '' : ' + ')+`${this.pn(A[i][j])} × ${this.pn(m)}`; }).join('');",
       "run": "verify"
     },
     {
-      "name": "a miss is not checked",
+      "name": "the zeros on the line are worked too",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]), this.check(P,r.opts[m].k,'PQRS'[m]));",
-      "replace": "if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]));",
+      "find": "const b=this.best(A), z=this.zeros(A,b), C=this.cells(b).filter(([i,j])=>A[i][j]!==0);",
+      "replace": "const b=this.best(A), z=this.zeros(A,b), C=this.cells(b);",
       "run": "verify"
     },
     {
-      "name": "the right pick hides the raw fraction",
+      "name": "the right pick shows no minors",
       "file": "index.html",
-      "find": "so c = ${neg(this.dot(B.u2,B.u1))}/${this.dot(B.u1,B.u1)}${this.fs(f)===",
-      "replace": "so c = ${this.fs(f)}${this.fs(f)===",
-      "run": "verify"
-    },
-    {
-      "name": "the right pick does not work w · u₁",
-      "file": "index.html",
-      "find": ". Then ${this.rest(B,f)}, and w = u₂",
-      "replace": "Then w · u₁ = 0, and w = u₂",
+      "find": "      C.map(([i,j])=>`The minor of entry (${i+1}, ${j+1}) is ${this.m2w(this.minor(A,i,j))}.`).join(' ')+' Here is a new A.'];",
+      "replace": "      'Here is a new A.'];",
       "run": "verify"
     },
     {
       "name": "a number is named by another",
       "file": "index.html",
-      "find": "aria-label=\"${L}: c = ${this.fs(f)}${gone?'. Not c':''}\"",
-      "replace": "aria-label=\"${L}: c = ${this.fs(this.val(P,'right'))}${gone?'. Not c':''}\"",
+      "find": "aria-label=\"${L}: det A = ${neg(v)}${gone?'. Not det A':''}\"",
+      "replace": "aria-label=\"${L}: det A = ${neg(this.det(A))}${gone?'. Not det A':''}\"",
       "run": "verify"
     },
     {
       "name": "a crossed-off number is not shut",
       "file": "index.html",
-      "find": "data-opt=\"${L}\" ${gone?'disabled ':''}onclick=\"GramPick.choose(${i})\"",
-      "replace": "data-opt=\"${L}\" onclick=\"GramPick.choose(${i})\"",
+      "find": "data-opt=\"${L}\" ${gone?'disabled ':''}onclick=\"CofPick.choose(${i})\"",
+      "replace": "data-opt=\"${L}\" onclick=\"CofPick.choose(${i})\"",
       "run": "verify"
     },
     {
-      "name": "the pair is not shown",
+      "name": "A is named by its first two rows",
       "file": "index.html",
-      "find": "<div id=\"gpU\" style=\"text-align:center;margin-bottom:4px;font-size:16px\">u₁ = ${this.vec(P.u1)}, u₂ = ${this.vec(P.u2)}</div>",
-      "replace": "<div id=\"gpU\" style=\"text-align:center;margin-bottom:4px;font-size:16px\">u₁ = ${this.vec(P.u1)}</div>",
+      "find": "<div id=\"cfpA\" role=\"img\" aria-label=\"A has rows ${this.rows(A)}\"",
+      "replace": "<div id=\"cfpA\" role=\"img\" aria-label=\"A has rows ${this.rows(A.slice(0,2))}\"",
       "run": "verify"
     },
     {
       "name": "the count is not shown",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"gpRead\"",
-      "replace": "    out+=`<div id=\"gpRead\"",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"cfpRead\"",
+      "replace": "    out+=`<div id=\"cfpRead\"",
       "run": "verify"
     },
     {
       "name": "the tab leaves the hand workshop showing",
       "file": "index.html",
-      "find": "['gsSets','gsFig','gsStep','gsRead','gsGoalPanel']",
-      "replace": "['gsSets','gsFig','gsRead','gsGoalPanel']",
+      "find": "['cfSets','cfFig','cfLines','cfRead','cfGoalPanel']",
+      "replace": "['cfSets','cfFig','cfRead','cfGoalPanel']",
+      "run": "play"
+    },
+    {
+      "name": "A is laid out in one row",
+      "file": "index.html",
+      "find": "grid-template-columns:repeat(3,2.2em);gap:2px 4px;vertical-align:middle",
+      "replace": "grid-template-columns:repeat(9,2.2em);gap:2px 4px;vertical-align:middle",
       "run": "play"
     }
   ]
