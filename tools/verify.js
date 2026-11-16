@@ -321,6 +321,8 @@ for (const key of Object.keys(GEN)) {
       }
       if (q.codex !== undefined && (!q.codex.rule || q.codex.rule.length > 200))
         fail('contract', key, 'codex needs a rule of at most 200 characters');
+      if (q.codex !== undefined && !String(q.codex.eg || '').trim())
+        fail('contract', key, 'codex needs a worked example');
       if (q.fig !== undefined) {
         figKeys.add(key); figKinds.add(q.fig.kind); figsChecked++;
         checkFigure(q.fig, key, 'fig');
@@ -1106,6 +1108,27 @@ Object.assign(ANALYSIS, {
     valueCheck('geoSeries', sum, p.a, 1e-6);
   },
 
+  // Euler's method, walked again here in floating point from the question's
+  // own numbers: from (0, y0), each step adds h × (px + qy) to y and h to x.
+  euler: p => {
+    const t = String(p.q).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const m = t.match(/h = (\d+(?:\/\d+)?) on y′ = (-?\d*)x ([+-]) (\d*)y, starting from y\(0\) = (-?\d+)\. What is its estimate of y\((\d+(?:\/\d+)?)\)\?/);
+    if (!m) { fail('analysis', 'euler', `the question does not read as Euler's method: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const h = val(m[1]), cx = m[2] === '' ? 1 : m[2] === '-' ? -1 : +m[2], cy = (m[3] === '-' ? -1 : 1) * (m[4] === '' ? 1 : +m[4]);
+    let x = 0, y = +m[5];
+    const end = val(m[6]);
+    const ys = [];
+    while (x < end - 1e-9) { y += h * (cx * x + cy * y); x += h; ys.push(y); }
+    valueCheck('euler', y, p.a, 1e-9);
+    // The working takes every step, each landing where the walk does.
+    const w = String(p.ex).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const got = [...w.matchAll(/the slope is [^,]* = (-?\d+(?:\/\d+)?), so y\([^)]*\) ≈ [^=]* = (-?\d+(?:\/\d+)?)\./g)].map(q => val(q[2]));
+    if (got.length !== ys.length || got.some((v, k) => Math.abs(v - ys[k]) > 1e-9))
+      fail('analysis', 'euler', `the working does not take each of the ${ys.length} steps: ${w}`);
+  },
   taylor: p => {
     const t = flat(p.q);
     const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
@@ -1127,6 +1150,20 @@ for (const [key, check] of Object.entries(ANALYSIS)) {
   for (let i = 0; i < REPS; i++) {
     const p = GEN[key](2);
     try { check(p); } catch (e) { fail('analysis', key, `threw: ${e.message} — q was ${p.q}`); break; }
+  }
+}
+
+// Euler's method at every depth, read straight off the generator: the answer
+// and its four slips are five different exact numbers, none of them 0. A slip
+// that matched the answer (adding the whole slope when h is 1 does) would be
+// a second right answer, and a decimal would give the answer away.
+for (let d = 1; d <= 3; d++) {
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.euler(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'euler', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => /^−?0$/.test(v))) fail('analysis', 'euler', `0 is offered: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v))) fail('analysis', 'euler', `a number is not exact: ${vals.join(', ')}`);
   }
 }
 
@@ -1157,15 +1194,16 @@ let codeNotes = null;
       // its own list precisely so that it can be lifted in here without the
       // eight tables of foe curves that SETTINGS itself drags along.
       arr('const SETTING_ORDER = [') + ';' +
+      arr('const STRANDS = [') + ';' +
       cut('const B32 =', 'const Profiles = {') +
       ';var Game={fresh:()=>({topicStats:{}})};' +
       'exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;' +
       'exports.CRESTS=CRESTS;exports.CREST_COLS=CREST_COLS;exports.REALMS=REALMS;' +
-      'exports.SETTING_ORDER=SETTING_ORDER;')(out);
+      'exports.SETTING_ORDER=SETTING_ORDER;exports.STRANDS=STRANDS;')(out);
   } catch (e) {
     return fail('codes', 'load', `could not load the codec: ${e.message}`);
   }
-  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS, SETTING_ORDER } = out;
+  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS, SETTING_ORDER, STRANDS } = out;
 
   /* 1. The topic list is what the mastery half of a code is indexed by, and a
         code carries a 16-bit fingerprint of it. Changing the list is allowed —
@@ -1173,7 +1211,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 70, sig: 0x502a };
+  const PINNED = { count: 71, sig: 0x6193 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -1181,6 +1219,15 @@ let codeNotes = null;
       `pinned at ${PINNED.count} and 0x${PINNED.sig.toString(16)}). Knight codes already in the ` +
       `wild will import without their topic history. If that is intended, update PINNED in tools/verify.js.`);
   }
+  // A new topic has to be fought somewhere and filed somewhere: one in no
+  // realm's pool is only ever met in Training, and one in no strand drops out
+  // of every screen that is grouped by strand.
+  const pooled = new Set(REALMS.flatMap(r => r.pool));
+  const unpooled = keys.filter(k => !pooled.has(k));
+  if (unpooled.length) fail('codes', 'realms', `no realm asks ${unpooled.join(', ')}`);
+  const filed = STRANDS.flatMap(([, ks]) => ks);
+  const misfiled = keys.filter(k => filed.filter(f => f === k).length !== 1);
+  if (misfiled.length) fail('codes', 'strands', `${misfiled.join(', ')} not in exactly one strand`);
 
   /* 2. base32 has to be exactly reversible, or a code is a coin toss.
         Every length mod 5 leaves a different number of bits over into the last
@@ -1267,6 +1314,17 @@ let codeNotes = null;
   if (!dv1.ok) fail('codes', 'compat', `a v1 code no longer decodes (${dv1.why})`);
   else if (dv1.g.rev !== 0) fail('codes', 'compat', `a v1 code decoded with rev ${dv1.g.rev}, expected 0`);
   else if (dv1.g.lvl !== 7) fail('codes', 'compat', `a v1 code decoded with lvl ${dv1.g.lvl}, expected 7`);
+
+  /* A code made when the list held seventy topics, before Euler's method was
+     added at its end. The list only grows at the end, so the old code still
+     names the same topics at the same places and must keep its history:
+     practice on the dot product, matrix multiplication and Taylor. */
+  const OLD70 = 'KE7-A5ICVDNUDUCUE63DEEBBW6ZDFCQJWQAXRCIGQQD2YAQEAIKMQAJIBEFQVAAQAAAAAKAAAAAAAACAEABAAIACAAQAEABAAIAGQAAAYPN4AAACGCBAAAAAAAAAAABGACL7QUAVIAB76AUASACEAAFASAAAAMAQAAAAAAAAAAAAAAAAAKLK';
+  const d70 = Codec.decode(OLD70);
+  if (!d70.ok) fail('codes', 'append', `a code from before the last topic was added no longer decodes (${d70.why})`);
+  else if (d70.lostTopics || Object.keys(d70.g.topicStats).sort().join() !== 'dot,matMul,taylor')
+    fail('codes', 'append', `a code from before the last topic was added lost its topic history: ${Object.keys(d70.g.topicStats).join(', ') || 'none'}`);
+  else if (d70.g.topicStats.dot.seen !== 12 || d70.g.gold !== 777) fail('codes', 'append', 'a code from before the last topic was added came back changed');
 
   /* 3. The QR encoder was checked module-for-module against an independent
         implementation across versions 1–25, at every mask. That cannot run

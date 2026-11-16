@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-one topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy in the game, drawing from all of them would build a run
+have actually met — with seventy-one in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,12 +277,22 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**70 problem generators** in total, each producing randomised problems at three difficulty
+**71 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
+
+**Euler's method**, the newest, is where calculus starts to compute. A differential
+equation y′ = px + qy and a starting value are given, with a step h of 1 or 1/2, and the
+question is what Euler's method estimates two or three steps on. Every step is worked in
+exact fractions, and the working shows each one: the slope read where the step starts,
+then h along and h × slope up. The wrong answers are the slips people make: stopping a
+step short, keeping the first slope for every step, reading each slope at the far end of
+its step, and adding the whole slope without multiplying by h. It joins the Applications
+strand and the Infinite Expanse. Knight codes now tolerate a topic added at the end of
+the list, so a code made before it arrived still carries every topic's history.
 
 ---
 
@@ -548,7 +558,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Sixty-seven of the seventy topics
+  where every answer would echo is asked the plain way. Sixty-eight of the seventy-one topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -1835,10 +1845,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy bars.
+  reading seventy-one bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Seventy-one topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
@@ -2299,7 +2309,8 @@ The generators were also checked by:
   while a genuinely fresh browser stays fresh rather than inventing a save.
 - **Save isolation on a shared browser** — two knights kept apart through switching back
   and forth, erasing one leaving the other intact, a pre-profiles save adopted without loss,
-  a knight carried to an empty browser by code, and a corrupted code refused rather than
+  a knight carried to an empty browser by code, a code made when the game held seventy
+  topics still read with its history, and a corrupted code refused rather than
   overwriting anything. Plus the shared-device footgun itself: cancelling the "start over"
   prompt has to leave the save untouched.
 - **Layout at six viewports** from a 320px iPhone SE to a 768px iPad and 844×390 landscape,

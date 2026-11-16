@@ -3781,6 +3781,56 @@ taylor(d){
       : fn==='cos' ? `f(0) = 1, f′ = −${k}sin(${kx}) so f′(0) = 0, and f″ = −${k*k}cos(${kx}) so f″(0) = −${k*k}.`
       : `f(0) = 0, f′ = ${k}/(1 + ${kx}) so f′(0) = ${k}, and f″ = −${k*k}/(1 + ${kx})² so f″(0) = −${k*k}.`
     } Then P₂(x) = f(0) + f′(0)x + f″(0)x²/2 = ${A}. The 2! underneath is what makes the second derivative come out right.`};
+},
+/* Euler's method: walk a differential equation forward in straight steps.
+   From (0, y₀) on y′ = px + qy, each step reads the slope where it stands and
+   moves h along x and h × slope up. Two steps of 1, two of 1/2, or three of
+   1/2, worked in exact fractions. The wrong answers are the slips people make:
+   stopping a step short, keeping the first slope for every step, adding the
+   slope without multiplying by h, and reading the slope at the far end of the
+   step instead of where it starts. */
+euler(d){
+  const n=d===3?3:2, hd=d===1?1:2;
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1], u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0], u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), inB=u=>u[0]<0?`(${show(u)})`:show(u), key=u=>u[0]+'/'+u[1];
+  const h=F(1,hd);
+  for(let g=0;;g++){
+    const p=R.pick([-2,-1,1,2,3]), q=R.pick([-2,-1,1,2]), y0=F(R.pick([-2,-1,1,2,3]));
+    const slope=(x,y)=>add(mul(F(p),x),mul(F(q),y));
+    // the walk, kept step by step for the working; how(k) varies the rule
+    const walk=(how)=>{
+      let y=y0; const out=[];
+      for(let k=0;k<n;k++){
+        const x=F(k,hd), at=how==='far'?F(k+1,hd):x;
+        const s=how==='same'?slope(F(0),y0):slope(at,y);
+        const y1=add(y, how==='noH'?s:mul(h,s));
+        out.push({x,y,s,y1}); y=y1;
+      }
+      return out;
+    };
+    const W=walk('right'), A=W[n-1].y1;
+    const dist=[[W[n-2].y1,`that is y(${show(F(n-1,hd))}), one step short: ${n} steps of ${show(h)} are needed to reach x = ${show(F(n,hd))}`],
+      [walk('same')[n-1].y1,'that keeps the first slope for every step; the slope has to be worked out again at each new point'],
+      [walk('far')[n-1].y1,'that reads each slope at the far end of its step; Euler\'s method uses the slope where the step starts']];
+    if(hd>1) dist.push([walk('noH')[n-1].y1,`that adds the whole slope at each step; it has to be multiplied by the step size h = ${show(h)} first`]);
+    else dist.push([add(A,F(n)),'that adds h as well as h × slope at each step; a step rises by h × slope alone']);
+    const keys=[key(A),...dist.map(x=>key(x[0]))];
+    // four different numbers, none of them 0, and no wild walks
+    if(new Set(keys).size!==5 || A[0]===0 || dist.some(x=>x[0][0]===0) || [A,...dist.map(x=>x[0])].some(u=>Math.abs(u[0]/u[1])>60)){ if(g<200) continue; }
+    const eq=`y′ = ${p===1?'':p===-1?'−':neg(p)}x ${q<0?'−':'+'} ${Math.abs(q)===1?'':Math.abs(q)}y`;
+    const work=W.map((st,k)=>
+      `At (${show(st.x)}, ${show(st.y)}) the slope is ${neg(p)} × ${inB(st.x)} + ${inB(F(q))} × ${inB(st.y)} = ${show(st.s)}, so y(${show(F(k+1,hd))}) ≈ ${show(st.y)} + ${show(h)} × ${inB(st.s)} = ${show(st.y1)}.`);
+    return {topic:'Euler\'s Method',
+      codex:{rule:'Euler\'s method walks y′ = f(x, y) forward in straight steps: read the slope where you stand, then move h along x and h × slope up. Repeat from the new point.',
+             eg:'y′ = y from y(0) = 1 with h = 1/2: 1 → 1 + 1/2 × 1 = 3/2 → 3/2 + 1/2 × 3/2 = 9/4.'},
+      q:`Use Euler's method with step h = ${show(h)} on ${eq}, starting from y(0) = ${show(y0)}.<br>What is its estimate of y(${show(F(n,hd))})?`,
+      a:show(A),
+      d:dist.map(([v,why])=>[show(v),why]),
+      ex:`Each step reads the slope where it starts and moves ${show(h)} along x and ${show(h)} × slope up. `+work.join(' ')+
+         ` So after ${n} steps Euler's method estimates y(${show(F(n,hd))}) ≈ ${show(A)}.`};
+  }
 }
 };
 
@@ -3894,7 +3944,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials'
+  taylor:'Taylor Polynomials', euler:"Euler's Method"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -3907,7 +3957,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4490,7 +4540,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
@@ -4591,8 +4641,13 @@ const Codec = {
       time, so two different topic sets can never claim the same one. */
   sig(){
     if(this._sig!=null) return this._sig;
-    return this._sig = this.hash(this.topics().join(',')) & 0xffff;
+    return this._sig = this.sigOf(this.topics().length);
   },
+  /* The fingerprint of the first n topics. The list only ever grows at its
+     end, so a code written before a topic was added still names the same
+     topics at the same places, and its fingerprint is that of the list as it
+     stood then. */
+  sigOf(n){ return this.hash(this.topics().slice(0,n).join(',')) & 0xffff; },
   hash(s){
     let h=0x811c9dc5;
     for(let i=0;i<s.length;i++){
@@ -4874,9 +4929,11 @@ const Codec = {
     const nTop=b.bits(16);
     g.topicStats={};
     let lostTopics=false;
-    if(sig!==this.sig()){
+    if(sig!==this.sig() && !(nTop<T.length && sig===this.sigOf(nTop))){
       // The topic list has changed shape, so the indices in this code no
-      // longer name the same things. Everything else still comes across.
+      // longer name the same things. Everything else still comes across. A
+      // code from before a topic was added at the end is not this: it is the
+      // same list, shorter, and keeps its history.
       lostTopics=true;
     }else{
       const has=[];
@@ -8470,7 +8527,7 @@ const Codex = {
  *   2. The explanation. Every generator writes `ex` as the arithmetic of THIS
  *      instance rather than a restated rule, and they are written sequentially:
  *      the rule, then the numbers, then what it means. Split on sentences, that
- *      is a genuine derivation, and all seventy split into two to five parts.
+ *      is a genuine derivation, and all seventy-one split into two to five parts.
  *
  * The codex rule rides on top as a heading where the topic has one, because a
  * derivation is easier to follow when you have been told what you are doing. */
@@ -8520,7 +8577,7 @@ const Working = {
   },
 
   // Every question can be worked. If this ever returns false the button must
-  // not be offered, and the suite checks it never does across all seventy.
+  // not be offered, and the suite checks it never does across all seventy-one.
   has(st){ const w=this.forStep(st); return !!(w && w.steps.length && w.answer!=null); },
 
   /* A nudge: the first step of the working, stopped short of the answer.
