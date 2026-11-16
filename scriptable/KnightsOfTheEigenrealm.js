@@ -1090,14 +1090,16 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ UNDO WORKSHOP ============ -->
   <div class="screen" id="s-undo">
     <div class="panel"><h2>↩️ Undo Workshop</h2><div class="sub">A matrix A moves the plane. Turn the four numbers of B until B puts everything back: follow î and ĵ through A, then through B, and bring both home. The B that does it is A⁻¹, the inverse of A.</div></div>
+    <div id="uvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build B by hand or pick A⁻¹"></div>
     <div class="panel">
+      <div id="uiBox"></div>
       <div id="uvMats" class="wsModes wrap" role="group" aria-label="The matrix A"></div>
-      <div class="small" style="margin:8px 0 2px;text-align:center">B</div>
+      <div id="uvBLabel" class="small" style="margin:8px 0 2px;text-align:center">B</div>
       <div id="uvB" class="wsMat" role="group" aria-label="The matrix B"></div>
       <div id="uvFig"></div>
       <div id="uvRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="uvGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="uvGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14009,7 +14011,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">↩️ Undo Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo. Then turn it round: see A, and pick which of four matrices is A⁻¹.</div>
          <button class="btn sm" id="tomeUndo" style="width:auto;margin-top:8px" onclick="Undo.open()">Open the undo workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -16511,6 +16513,122 @@ const Elim = {
    A and then B, one column at a time, so "BA = I" is seen as both arrows
    coming home rather than as a formula for the inverse. The last matrix
    squashes the plane onto a line, and the readout says why no B can undo it. */
+/* ---------- Which A⁻¹? The undo workshop turned round ----------
+   A 2×2 matrix A with determinant 1 or −1 is shown, and four matrices, one of
+   them A⁻¹. The others are the slips people make with (1/det A)·[d −b; −c a]:
+   a and d left where they were; b and c left with their signs; A turned on
+   its side, as if undoing were transposing; and, when det A = −1, the
+   division by det A forgotten. A wrong pick is shut and checked the way the
+   workshop checks B: follow Aî and Aĵ through it and see which does not come
+   home. Nothing is saved. */
+const UndoPick = {
+  LO:-3, HI:3,
+  SLIPS:['noswap','noneg','trans','nodiv'],
+  RULE:'For A with rows a, b and c, d, the undo is A⁻¹ = (1/det A)·[d −b; −c a]: swap a and d, change the signs of b and c, and divide by det A = ad − bc. Here det A is 1 or −1, so dividing by it keeps every sign or flips them all. A⁻¹ sends Aî back to ⟨1, 0⟩ and Aĵ back to ⟨0, 1⟩. Which matrix is A⁻¹?',
+  det:([[a,b],[c,d]])=>a*d-b*c,
+  // the matrix each option stands for; t is det A, which is 1 or −1, so 1/t = t
+  mat(A,k){
+    const [[a,b],[c,d]]=A, t=this.det(A);
+    return k==='right' ? [[t*d,-t*b],[-t*c,t*a]] : k==='noswap' ? [[t*a,-t*b],[-t*c,t*d]]
+      : k==='noneg' ? [[t*d,t*b],[t*c,t*a]] : k==='trans' ? [[a,c],[b,d]] : [[d,-b],[-c,a]];
+  },
+  key:M=>M.flat().join(),
+  same(M,N){ return this.key(M)===this.key(N); },
+  // M after A: where M sends Aî (j = 0) and Aĵ (j = 1)
+  col:(M,j)=>[M[0][j],M[1][j]],
+  app:([[a,b],[c,d]],[x,y])=>[a*x+b*y, c*x+d*y],
+  // the slips this A can offer: each a matrix different from A⁻¹ and from every one kept before it
+  slips(A){
+    const seen=new Set([this.key(this.mat(A,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const M=this.mat(A,k);
+      if(seen.has(this.key(M))) continue;
+      seen.add(this.key(M)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const r=()=>R.i(this.LO,this.HI), A=[[r(),r()],[r(),r()]];
+      if(Math.abs(this.det(A))!==1) continue;
+      if(this.slips(A).length<3) continue;   // det A = 0, and a matrix with two 0s, land here too: they have too few slips
+      return A;
+    }
+    return [[2,1],[1,1]];
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.A;
+    let A;
+    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }
+    const rest=this.slips(A);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('INVERSE READER', this.matched+' undos picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'PQRS'[i]} is A⁻¹, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={A:r.A};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Undo.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>\`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  rows:M=>\`rows \${neg(M[0][0])}, \${neg(M[0][1])} and \${neg(M[1][0])}, \${neg(M[1][1])}\`,
+  // M sends A's column j somewhere, worked out
+  send(M,A,j,L){
+    const v=this.col(A,j), e=this.app(M,v), P=this.pn, nm=j?'ĵ':'î';
+    return \`\${L} sends A\${nm} = \${this.vec(v)} to ⟨\${neg(M[0][0])}·\${P(v[0])} + \${P(M[0][1])}·\${P(v[1])}, \${neg(M[1][0])}·\${P(v[0])} + \${P(M[1][1])}·\${P(v[1])}⟩ = \${this.vec(e)}\`;
+  },
+  // A⁻¹ worked from the rule
+  work(A){
+    const [[a,b],[c,d]]=A, t=this.det(A), P=this.pn, W=this.mat(A,'right');
+    return \`det A = \${neg(a)}·\${P(d)} − \${P(b)}·\${P(c)} = \${neg(t)}, so A⁻¹ = (1/\${P(t)})·[\${neg(d)} \${neg(-b)}; \${neg(-c)} \${neg(a)}], with \${this.rows(W)}\`;
+  },
+  slip(A,k,L){
+    const [[a,b],[c,d]]=A;
+    if(k==='noswap') return \`\${L} leaves a and d where they were, \${neg(a)} top-left and \${neg(d)} bottom-right. The undo swaps them: d goes top-left.\`;
+    if(k==='noneg') return \`\${L} swaps a and d but leaves b and c with their signs. The undo changes the signs of b and c: −b top-right, −c bottom-left.\`;
+    if(k==='trans') return \`\${L} is A turned on its side, Aᵀ: its rows are A's columns. Turning a matrix over is not undoing it.\`;
+    return \`\${L} swaps a and d and changes the signs of b and c, but forgets to divide by det A = −1, which flips every sign.\`;
+  },
+  check(A,k,L){
+    const M=this.mat(A,k), e=this.app(M,this.col(A,0)), j=e[0]===1 && e[1]===0 ? 1 : 0, nm=j?'ĵ':'î';
+    return \`Check \${L} the way B is checked: \${this.send(M,A,j,L)}, but \${nm} has to come back to \${j?'⟨0, 1⟩':'⟨1, 0⟩'}. \${this.work(A)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, A=r.A, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="uiA" style="text-align:center;margin-bottom:4px" aria-label="A has \${this.rows(A)}">A = \${mat(A)}</div>\`;
+    out+=\`<div id="uiPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), M=this.mat(A,o.k), L='PQRS'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="UndoPick.choose(\${i})" aria-label="\${L}: \${this.rows(M)}\${gone?'. Not A⁻¹':''}" style="margin:0"><b>\${L}</b> \${mat(M)}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));
+    else if(this.last){ const B=this.last.A, W=this.mat(B,'right');
+      lines.push(\`That was it: \${this.work(B)}. \${this.send(W,B,0,'It')}, and \${this.send(W,B,1,'it')}: both come home. Here is a new A.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="uiRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Undo = {
   MATS:[
     {m:[[1,1],[0,1]],  btn:'Shear',  is:'a shear'},
@@ -16571,7 +16689,15 @@ const Undo = {
     if(x<this.LO || x>this.HI) return;
     this.B[i][j]=x; this.moved=true; this.touched=true; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('uvTab').innerHTML=[['hand','↩️ Build B by hand','Build B by hand and bring î and ĵ home'],['pick','🎯 Which A⁻¹?','See A, and pick which of four matrices is A⁻¹']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Undo.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['uvMats','uvBLabel','uvB','uvFig','uvRead','uvGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('uiBox').innerHTML=pick ? UndoPick.html() : '';
+    if(pick) return;
     const A=this.A(), B=this.B;
     document.getElementById('uvMats').innerHTML=this.MATS.map((o,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.mi}" onclick="Undo.pick(\${i})"
