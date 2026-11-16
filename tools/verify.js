@@ -91,6 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
@@ -112,7 +113,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -11296,6 +11297,128 @@ const doublingNotes = (() => {
   return { n, moves, points, goals: Object.keys(found).length };
 })();
 
+/* The tangent line workshop: every curve, every stop x can take, and every
+   move from each stop, halving included. Each curve is worked again here
+   from its own formula, in plain floats, never from the workshop's numbers:
+   f(a), f′(a), L(x), the curve's value, how far and which way the tangent
+   misses, the bend note and the halving note with its quarter or eighth,
+   and each goal; the curve, the tangent, the point, the estimate and the
+   gap are read back off the drawing. */
+const tanLineNotes = (() => {
+  const M = TanLine;
+  const val = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const near = (t, v) => Math.abs(val(t) - v) < 6e-5;
+  const exact4 = v => Math.abs(Math.round(v * 1e4) - v * 1e4) < 1e-6;
+  // a, f, f′, how f is written, how f′ is written, how L is written, how f at a number is written
+  const CURVE = {
+    root: [4, Math.sqrt, x => 1 / (2 * Math.sqrt(x)), '√x', '1/(2√x)', '2 + (1/4)(x − 4)', s => `√${s}`],
+    recip: [1, x => 1 / x, x => -1 / (x * x), '1/x', '−1/x²', '1 − (x − 1)', s => `1/${s}`],
+    sin: [0, Math.sin, Math.cos, 'sin x', 'cos x', '0 + 1(x − 0) = x', s => s.startsWith('−') ? `sin(${s})` : `sin ${s}`],
+  };
+  const BEND = {
+    root: '√x bends down, under its tangent, so the tangent overshoots on both sides of 4.',
+    recip: '1/x bends up, over its tangent, so the tangent falls short on both sides of 1.',
+    sin: 'Right of 0, sin x bends down under its tangent, so the tangent overshoots; left of 0 it bends up, so the tangent falls short.',
+  };
+  if (M.SETS.map(S => S.id).join() !== 'root,recip,sin') fail('tanline', 'sets', M.SETS.map(S => S.id).join());
+  if (M.si !== 0 || M.k !== 0 || M.prev !== null || M.halved) fail('tanline', 'open', 'the workshop does not open on √x at x = 4');
+  const reset = () => { M.touched = false; M.si = 0; M.k = 0; M.prev = null; M.halved = false; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('tanline', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, stops = 0, points = 0;
+  M.SETS.forEach((S, si) => {
+    const [a, f, df, fs, dfs, Ls, fx] = CURVE[S.id], fa = f(a), m = df(a), lo = S.lo, hi = S.hi;
+    const ms = Number.isInteger(m) ? (m < 0 ? '−' + -m : String(m)) : '1/4';
+    if (Math.abs(S.fa - fa) > 1e-12 || Math.abs(S.m - m) > 1e-12 || ms !== S.ms || (S.id === 'root' && m !== 0.25)) fail('tanline', S.id, 'f(a) or f′(a) is wrong');
+    // x runs over the drawn stretch and no further: √x from 1 to 9, 1/x from 0.5 to 2.5 (never 0), sin x from −1.5 to 1.5
+    const span = { root: [1, 9], recip: [0.5, 2.5], sin: [-1.5, 1.5] }[S.id];
+    if (Math.abs(a + lo / 10 - span[0]) > 1e-9 || Math.abs(a + hi / 10 - span[1]) > 1e-9) fail('tanline', S.id, `x runs from ${a + lo / 10} to ${a + hi / 10}, not ${span[0]} to ${span[1]}`);
+    // L as written agrees with f(a) + f′(a)(x − a) at two points
+    for (const t of [a + 1, a - 0.5]) {
+      const e = Ls.split(' = ')[0].replace(/(\d)\(/g, '$1*(').replace(/\)\(/g, ')*(').replace(/−/g, '-').replace(/x/g, `(${t})`);
+      if (Math.abs(Function(`return ${e}`)() - (fa + m * (t - a))) > 1e-9) fail('tanline', S.id, `L(x) = ${Ls} is not the tangent at ${a}`);
+    }
+    const e = k => fa + m * k / 10 - f(a + k / 10);
+    // the bend note is true at every stop
+    for (let k = lo; k <= hi; k++) if (k !== 0) {
+      const over = e(k) > 0;
+      if (S.id === 'root' ? !over : S.id === 'recip' ? over : over !== (k > 0)) fail('tanline', `${S.id} ${k}`, 'the tangent is not on the side the bend note says');
+    }
+    // and the quarter or eighth is what halving gives close to a
+    for (const k of [2, -2]) {
+      const r = Math.abs(e(k / 2) / e(k)), want = S.id === 'sin' ? 1 / 8 : 1 / 4;
+      if (Math.abs(r - want) > 0.03) fail('tanline', S.id, `halving close to a gives ${r}, not about ${want}`);
+    }
+    reset(); M.move(1); M.pick(si);
+    if (M.prev !== null || M.k !== 0 || M.halved) fail('tanline', S.id, 'picking a curve does not start it again at a');
+    // the halving note belongs to the halving: the next step clears it
+    reset(); M.pick(si); M.k = 2; M.halve(); if (!M.halved) fail('tanline', S.id, 'halving is not noted');
+    M.move(1); if (M.halved || M.working().some(l => /^You halved/.test(l))) fail('tanline', S.id, 'the halving note stays after a move');
+    for (let k0 = lo; k0 <= hi; k0++) {
+      stops++;
+      for (const dk of [-10, -1, 1, 10, 'half']) {
+        reset(); M.pick(si); M.k = k0; M.prev = null; M.halved = false; M.touched = false;
+        const half = dk === 'half', ok = half ? k0 !== 0 && k0 % 2 === 0 : k0 + dk >= lo && k0 + dk <= hi;
+        if ((half ? M.canHalve() : M.can(dk)) !== ok) fail('tanline', `${S.id} ${k0}`, `a move of ${dk} is ${ok ? 'not ' : ''}offered`);
+        if (half) M.halve(); else M.move(dk);
+        if (!ok) { if (M.k !== k0) fail('tanline', `${S.id} ${k0}`, 'a move is taken that is not offered'); continue; }
+        n++;
+        const k = half ? k0 / 2 : k0 + dk, x = a + k / 10, h = k / 10, y = f(x), L = fa + m * h, miss = L - y, key = `${S.id} ${k0}→${k}`, got = M.working();
+        if (M.k !== k) fail('tanline', key, `x ends at ${M.k}`);
+        if (got[0] !== `f(x) = ${fs} near a = ${a}: f(${a}) = ${fa} and f′(x) = ${dfs}, so f′(${a}) = ${ms}. The tangent line is L(x) = ${Ls}.`) fail('tanline', key, `the tangent is worked wrong: ${got[0]}`);
+        if (k === 0) {
+          if (got.length !== 2 || got[1] !== `At x = ${a} itself, L(${a}) = f(${a}) = ${fa}: the tangent touches the curve here. Step x away and watch them part.`) fail('tanline', key, `x = a is told wrong: ${got.slice(1).join(' ')}`);
+        } else {
+          const l1 = (got[1] || '').match(/^At x = (\S+): x − a = (\S+), so L\((\S+)\) = (\S+) \+ (\S+) × (\S+) ([=≈]) (\S+)\.$/);
+          if (!l1 || !near(l1[1], x) || l1[3] !== l1[1] || !near(l1[2], h) || !near(l1[6], h) || /^−/.test(l1[6]) || val(l1[4]) !== fa
+            || Math.abs(val(l1[5].replace(/^\((.*)\)$/, '$1').replace('1/4', '0.25')) - m) > 1e-12 || !near(l1[8], L) || (l1[7] === '=') !== exact4(L)) fail('tanline', key, `L(x) is worked wrong: ${got[1]}`);
+          const l2 = (got[2] || '').match(/^The curve gives (.+?) ([=≈]) (\S+), so the tangent is too (high|low) by (about )?(\S+)\.$/);
+          if (!l2 || l2[1] !== fx(M.num(x)) || !near(l2[3], y) || (l2[2] === '=') !== exact4(y) || (l2[4] === 'high') !== (miss > 0) || !!l2[5] === exact4(Math.abs(miss)) || !near(l2[6], Math.abs(miss)))
+            fail('tanline', key, `the miss is told wrong: ${got[2]}`);
+          if (got[3] !== BEND[S.id]) fail('tanline', key, `the bend note is wrong: ${got[3]}`);
+          if (half) {
+            const e0 = Math.abs(e(k0)), e1 = Math.abs(miss);
+            const l4 = (got[4] || '').match(/^You halved x − a from (\S+) to (\S+), and the miss went from (\S+) to (\S+), (\S+) times as much\. (.+)$/);
+            const tail = S.id === 'sin' ? 'Close to 0, halving cuts the miss to about an eighth: sin x does not bend at 0, so the miss grows like (x − a)³.'
+              : 'Close to a, halving cuts the miss to about a quarter: the miss grows like (x − a)².';
+            if (!l4 || !near(l4[1], k0 / 10) || !near(l4[2], h) || !near(l4[3], e0) || !near(l4[4], e1) || !near(l4[5], e1 / e0) || l4[6] !== tail || got.length !== 5) fail('tanline', key, `the halving is told wrong: ${got[4]}`);
+          } else if (got.length !== 4) fail('tanline', key, `a note is told that should not be: ${got.slice(4).join(' ')}`);
+        }
+        // the drawing
+        const p = a + lo / 10, q = a + hi / 10, [r0, r1] = S.R, svg = M.svg(), PX = t => M.L + (t - p) / (q - p) * M.W, PY = v => M.TOP + M.Hh - (v - r0) / (r1 - r0) * M.Hh;
+        const inside = Y => Y >= M.TOP - 0.01 && Y <= M.TOP + M.Hh + 0.01;
+        const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+        if (!pt || Math.abs(+pt[1] - PX(x)) > 0.01 || Math.abs(+pt[2] - PY(y)) > 0.01) fail('tanline', key, 'the point is not on the curve at x');
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || cv[1].split(' ').some(c => { const [cx, cy] = c.split(',').map(Number); return Math.abs(cy - PY(f(p + (cx - M.L) / M.W * (q - p)))) > 0.05 || !inside(cy); })) fail('tanline', key, 'the curve leaves f or the figure');
+        const tl = svg.match(/data-k="tangent" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!tl || Math.abs(+tl[1] - PX(p)) > 0.01 || Math.abs(+tl[3] - PX(q)) > 0.01 || Math.abs(+tl[2] - PY(fa + m * (p - a))) > 0.01 || Math.abs(+tl[4] - PY(fa + m * (q - a))) > 0.01 || !inside(+tl[2]) || !inside(+tl[4])) fail('tanline', key, 'the tangent is not drawn across the figure with its slope');
+        const tc = svg.match(/data-k="touch" cx="([\d.-]+)" cy="([\d.-]+)"/);
+        if (!tc || Math.abs(+tc[1] - PX(a)) > 0.01 || Math.abs(+tc[2] - PY(fa)) > 0.01) fail('tanline', key, 'the touching point is not at a');
+        const est = svg.match(/data-k="est" cx="([\d.-]+)" cy="([\d.-]+)"/), gap = svg.match(/data-k="gap" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (k === 0 ? !!(est || gap) : !est || Math.abs(+est[1] - PX(x)) > 0.01 || Math.abs(+est[2] - PY(L)) > 0.01 || !gap || Math.abs(+gap[1] - PX(x)) > 0.01 || Math.abs(+gap[3] - PX(x)) > 0.01 || Math.abs(+gap[2] - PY(y)) > 0.01 || Math.abs(+gap[4] - PY(L)) > 0.01)
+          fail('tanline', key, 'the estimate and the gap are not drawn at x');
+        if (!new RegExp(k === 0 ? 'touching the curve at your point"' : `the tangent ${miss > 0 ? 'above' : 'below'} the curve"`).test(svg)) fail('tanline', key, 'the figure is named wrong');
+        points += k === 0 ? 2 : 4;
+        // every goal, decided here
+        const truth = {
+          close: S.id === 'root' && Math.abs(x - 4.1) < 1e-9 && Math.abs(miss) < 0.001, far: S.id === 'root' && Math.abs(miss) > 0.1,
+          left: S.id === 'root' && x < a, quarter: S.id === 'root' && half, short: S.id === 'recip' && k !== 0 && miss < 0, eighth: S.id === 'sin' && half,
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('tanline', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('tanline', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.k !== 0 || M.prev !== null || M.halved) fail('tanline', key, 'starting over does not go back to a');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('tanline', g.id, 'can never be found');
+  reset();
+  return { n, stops, points, goals: Object.keys(found).length };
+})();
+
 /* The chord workshop: every curve, every stop the point can take, and every
    move from each stop. Each curve is worked again here from its own formula,
    in plain floats, never from the workshop's numbers: the chord's slope, the
@@ -15107,6 +15230,7 @@ console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 1
 console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (every equation at every step size, step by step: ${eulerWalkNotes.steps.toLocaleString()} worked steps checked against Euler's points taken again in floats, each landing and each note against Math's own solution, ${eulerWalkNotes.dashes.toLocaleString()} slope dashes read back, ${eulerWalkNotes.goals} goals findable)`);
 console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
 console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (every move from every stop the point can take on x², x³ and 4/x, ${meanValueNotes.stops.toLocaleString()} stops: the chord's slope and the tangent's worked again in floats, which side of c, every note, the point, chord and tangent read back off the drawing, ${meanValueNotes.goals} goals findable)`);
+console.log(`  tangent stops    ${pad(tanLineNotes.n.toLocaleString(), 15)}  (every move and every halving from every stop x can take on √x, 1/x and sin x, ${tanLineNotes.stops.toLocaleString()} stops: L(x), the curve's value and the miss worked again in floats, which way it misses against the bend, the quarter and the eighth, the curve, tangent, estimate and gap read back off the drawing, ${tanLineNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);

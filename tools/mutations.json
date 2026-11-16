@@ -1,180 +1,264 @@
 {
-  "change": "Linear approximation as a fight topic: estimate f(x) from the tangent line at a nearby a.",
+  "change": "The Tangent Line Workshop: estimate f(x) from the tangent at a, and measure how far and which way it misses.",
   "mutations": [
     {
-      "name": "√x's slope at a forgets the ½",
+      "name": "√x's slope at 4 is 1/2",
       "file": "index.html",
-      "find": "a=F(n*n); fa=F(n); sl=F(1,2*n);",
-      "replace": "a=F(n*n); fa=F(n); sl=F(1,n);",
+      "find": "fa:2, m:1/4, ms:'1/4',",
+      "replace": "fa:2, m:1/2, ms:'1/4',",
       "run": "verify"
     },
     {
-      "name": "x^k's slope forgets the power",
+      "name": "1/x's slope at 1 is +1",
       "file": "index.html",
-      "find": "fa=F(A**k); sl=F(k*A**(k-1));",
-      "replace": "fa=F(A**k); sl=F(A**(k-1));",
+      "find": "fa:1, m:-1, ms:'−1',",
+      "replace": "fa:1, m:1, ms:'−1',",
       "run": "verify"
     },
     {
-      "name": "∛x's slope at a is 1/(3m)",
+      "name": "sin x is drawn as cos x",
       "file": "index.html",
-      "find": "a=F(m**3); fa=F(m); sl=F(1,3*m*m);",
-      "replace": "a=F(m**3); fa=F(m); sl=F(1,3*m);",
+      "find": "f:Math.sin, fx",
+      "replace": "f:Math.cos, fx",
       "run": "verify"
     },
     {
-      "name": "∛x starts from m², not m",
+      "name": "L(x) for √x is written with the wrong slope",
       "file": "index.html",
-      "find": "a=F(m**3); fa=F(m);",
-      "replace": "a=F(m**3); fa=F(m*m);",
+      "find": "Ls:'2 + (1/4)(x − 4)'",
+      "replace": "Ls:'2 + (1/2)(x − 4)'",
       "run": "verify"
     },
     {
-      "name": "the estimate leaves off f(a)",
+      "name": "1/x's f′ is written without its minus",
       "file": "index.html",
-      "find": "const x=add(a,h), step=mul(sl,h), ans=add(fa,step);",
-      "replace": "const x=add(a,h), step=mul(sl,h), ans=step;",
+      "find": "dfs:'−1/x²'",
+      "replace": "dfs:'1/x²'",
       "run": "verify"
     },
     {
-      "name": "the estimate multiplies the slope by x",
+      "name": "the bend note on √x says it undershoots",
       "file": "index.html",
-      "find": "const x=add(a,h), step=mul(sl,h), ans=add(fa,step);",
-      "replace": "const x=add(a,h), step=mul(sl,h), ans=add(fa,mul(sl,x));",
+      "find": "bend:'√x bends down, under its tangent, so the tangent overshoots on both sides of 4.'",
+      "replace": "bend:'√x bends down, under its tangent, so the tangent falls short on both sides of 4.'",
       "run": "verify"
     },
     {
-      "name": "the answer is the exact value",
+      "name": "√x can step past 9",
       "file": "index.html",
-      "find": "    if((ans[1]===1)!==whole && g<400) continue;",
-      "replace": "    if(exact) ans=exact;\n    if((ans[1]===1)!==whole && g<400) continue;",
+      "find": "lo:-30, hi:50,",
+      "replace": "lo:-30, hi:60,",
       "run": "verify"
     },
     {
-      "name": "the question names the wrong a",
+      "name": "1/x can step to 0",
       "file": "index.html",
-      "find": "Use its tangent line at x = ${show(a)} to",
-      "replace": "Use its tangent line at x = ${show(x)} to",
+      "find": "lo:-5, hi:15,",
+      "replace": "lo:-10, hi:15,",
       "run": "verify"
     },
     {
-      "name": "the answers are always whole",
+      "name": "x is a hundredth a step",
       "file": "index.html",
-      "find": "const whole=R.chance(0.5);",
-      "replace": "const whole=true;",
+      "find": "x(k=this.k){ return (this.set().a*10+k)/10; },",
+      "replace": "x(k=this.k){ return (this.set().a*100+k)/100; },",
       "run": "verify"
     },
     {
-      "name": "the answers are seldom whole",
+      "name": "the miss forgets f(a)",
       "file": "index.html",
-      "find": "const whole=R.chance(0.5);",
-      "replace": "const whole=R.chance(0.1);",
+      "find": "miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },",
+      "replace": "miss(k=this.k){ const S=this.set(); return S.m*k/10-S.f(this.x(k)); },",
       "run": "verify"
     },
     {
-      "name": "x^k steps a whole one even for fractions",
+      "name": "the miss is the wrong way round",
       "file": "index.html",
-      "find": "h=whole ? F(R.pick([1,-1])) : F(R.pick([1,-1]),R.pick([2,3,4,5,10]));",
-      "replace": "h=F(R.pick([1,-1]));",
+      "find": "miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },",
+      "replace": "miss(k=this.k){ const S=this.set(); return S.f(this.x(k))-S.fa-S.m*k/10; },",
       "run": "verify"
     },
     {
-      "name": "f may be asked at 0",
+      "name": "L(x) multiplies the slope by x",
       "file": "index.html",
-      "find": "    if(x[0]===0) continue;",
-      "replace": "    if(false) continue;",
+      "find": "const h=this.k/10, L=S.fa+S.m*h, e=this.miss();",
+      "replace": "const h=this.k/10, L=S.fa+S.m*x, e=this.miss();",
       "run": "verify"
     },
     {
-      "name": "the form may give it away",
+      "name": "too high and too low are swapped",
       "file": "index.html",
-      "find": "same<2 || sign<2",
-      "replace": "sign<2",
+      "find": "so the tangent is too ${e>0?'high':'low'} by",
+      "replace": "so the tangent is too ${e>0?'low':'high'} by",
       "run": "verify"
     },
     {
-      "name": "the sign may give it away",
+      "name": "an inexact miss is told as exact",
       "file": "index.html",
-      "find": "same<2 || sign<2",
-      "replace": "same<2",
+      "find": "${this.is(Math.abs(e))[0]==='='?'':'about '}",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "two wrong answers may be the same",
+      "name": "the curve's value is f at a",
       "file": "index.html",
-      "find": "if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    /",
-      "replace": "if(dist.length<4 && ok(s[0])){ dist.push(s); seen.add(key(s[0])); }\n    /",
+      "find": "The curve gives ${S.fx(xs)} ${this.is(S.f(x))}",
+      "replace": "The curve gives ${S.fx(xs)} ${this.is(S.fa)}",
       "run": "verify"
     },
     {
-      "name": "a wrong answer may be 0",
+      "name": "the halving note gives the ratio upside down",
       "file": "index.html",
-      "find": "const ok=v=>v[0]!==0 && Math.abs(v[0]/v[1])<=9",
-      "replace": "const ok=v=>Math.abs(v[0]/v[1])<=9",
+      "find": "${this.num(e1/e0)} times as much",
+      "replace": "${this.num(e0/e1)} times as much",
       "run": "verify"
     },
     {
-      "name": "the bare step is never offered",
+      "name": "the halving note says a quarter on sin x",
       "file": "index.html",
-      "find": "      [step,`that is only the step along the tangent",
-      "replace": "      [F(0),`that is only the step along the tangent",
+      "find": "(S.id==='sin' ? 'Close to 0, halving",
+      "replace": "(S.id==='nope' ? 'Close to 0, halving",
       "run": "verify"
     },
     {
-      "name": "the times-x slip multiplies by x − a",
+      "name": "the halving note stays after a move",
       "file": "index.html",
-      "find": "[add(fa,mul(sl,x)),`that multiplies the slope by x",
-      "replace": "[add(fa,mul(sl,F(2*h[0],h[1]))),`that multiplies the slope by x",
+      "find": "move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.halved=false;",
+      "replace": "move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk;",
       "run": "verify"
     },
     {
-      "name": "the no-slope slip keeps the slope",
+      "name": "an odd step can be halved",
       "file": "index.html",
-      "find": "[add(fa,h),`that adds x − a",
-      "replace": "[add(fa,mul(sl,F(3*h[0],h[1]))),`that adds x − a",
+      "find": "canHalve(){ return this.k!==0 && this.k%2===0; },",
+      "replace": "canHalve(){ return this.k!==0; },",
       "run": "verify"
     },
     {
-      "name": "the wrong-way slip steps the right way",
+      "name": "halving goes all the way back to a",
       "file": "index.html",
-      "find": "[add(fa,mul(sl,F(-h[0],h[1]))),",
-      "replace": "[add(fa,mul(sl,F(2*h[0],h[1]))),",
+      "find": "this.prev=this.k; this.k/=2; this.halved=true;",
+      "replace": "this.prev=this.k; this.k=0; this.halved=true;",
       "run": "verify"
     },
     {
-      "name": "the exact slip is never offered",
+      "name": "picking a curve keeps x",
       "file": "index.html",
-      "find": "    if(exact) slips.push(",
-      "replace": "    if(false) slips.push(",
+      "find": "pick(i){ this.si=i; this.k=0; this.p",
+      "replace": "pick(i){ this.si=i; this.p",
       "run": "verify"
     },
     {
-      "name": "the working ends on the bare step",
+      "name": "starting over keeps the halving note",
       "file": "index.html",
-      "find": "so ${fname(x)} ≈ ${show(fa)} + ${inB(sl)} × ${inB(h)} = ${show(ans)}.`};",
-      "replace": "so ${fname(x)} ≈ ${show(fa)} + ${inB(sl)} × ${inB(h)} = ${show(step)}.`};",
+      "find": "again(){ this.k=0; this.prev=null; this.halved=false;",
+      "replace": "again(){ this.k=0; this.prev=null;",
       "run": "verify"
     },
     {
-      "name": "the working gives no tangent line",
+      "name": "the tangent is drawn from f(a) with slope 1",
       "file": "index.html",
-      "find": "The tangent line is L(x) = ${show(fa)} +",
-      "replace": "The line is ${show(fa)} +",
+      "find": "Tl=t=>S.fa+S.m*(t-S.a);",
+      "replace": "Tl=t=>S.fa+(t-S.a);",
       "run": "verify"
     },
     {
-      "name": "no realm asks linear approximation",
+      "name": "the point sits on the tangent, not the curve",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox'],",
-      "replace": "'growth','meanValue'],",
+      "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\" r=\"5\" fill=\"${FIG_COL.b}\" stroke=\"${FIG_COL.ink}\" stroke-width=\"1\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-t",
+      "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(Lx))}\" r=\"5\" fill=\"${FIG_COL.b}\" stroke=\"${FIG_COL.ink}\" stroke-width=\"1\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-t",
       "run": "verify"
     },
     {
-      "name": "linear approximation is in no strand",
+      "name": "the gap runs to the axis",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox']]",
-      "replace": "'growth','meanValue']]",
+      "find": "y2=\"${f(this.PY(Lx))}\" stroke=\"${FIG_COL.d}\"",
+      "replace": "y2=\"${f(this.PY(0))}\" stroke=\"${FIG_COL.d}\"",
       "run": "verify"
+    },
+    {
+      "name": "the touching point is drawn at x",
+      "file": "index.html",
+      "find": "<circle data-k=\"touch\" cx=\"${f(this.PX(S.a))}\"",
+      "replace": "<circle data-k=\"touch\" cx=\"${f(this.PX(x))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "the figure says above when it is below",
+      "file": "index.html",
+      "find": "the tangent ${Lx>y?'above':'below'} the curve",
+      "replace": "the tangent ${Lx>y?'below':'above'} the curve",
+      "run": "verify"
+    },
+    {
+      "name": "within 0.001 is found anywhere on √x",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.k===1},",
+      "replace": "ok:K=>K.si===0 && K.k!==0},",
+      "run": "verify"
+    },
+    {
+      "name": "drifting is found at 0.01",
+      "file": "index.html",
+      "find": "Math.abs(K.miss())>0.1},",
+      "replace": "Math.abs(K.miss())>0.01},",
+      "run": "verify"
+    },
+    {
+      "name": "the eighth is found on √x",
+      "file": "index.html",
+      "find": "ok:K=>K.si===2 && K.halved}",
+      "replace": "ok:K=>K.halved}",
+      "run": "verify"
+    },
+    {
+      "name": "falling short is found on sin x",
+      "file": "index.html",
+      "find": "ok:K=>K.si===1 && K.k!==0},",
+      "replace": "ok:K=>K.si>0 && K.k!==0},",
+      "run": "verify"
+    },
+    {
+      "name": "the Tome does not offer it",
+      "file": "index.html",
+      "find": "onclick=\"TanLine.open()\">Open the tangent line workshop</button>",
+      "replace": "onclick=\"UI.go('s-title')\">Open the tangent line workshop</button>",
+      "run": "play:tanline"
+    },
+    {
+      "name": "linear approximation links to no workshop",
+      "file": "index.html",
+      "find": "    TanLine: [\"🪡 Tangent Line Workshop\", ['linApprox']],\n",
+      "replace": "",
+      "run": "play:tanline"
+    },
+    {
+      "name": "the screen opens unrendered",
+      "file": "index.html",
+      "find": "    if(id==='s-tanline') TanLine.render();\n",
+      "replace": "",
+      "run": "play:tanline"
+    },
+    {
+      "name": "the buttons never stop at the ends",
+      "file": "index.html",
+      "find": "for(const [id,dk] of [['tlwL',-10],['tlwl',-1],['tlwr',1],['tlwR',10]]) document.getElementById(id).disabled=!this.can(dk);",
+      "replace": "",
+      "run": "play:tanline"
+    },
+    {
+      "name": "halving is always offered",
+      "file": "index.html",
+      "find": "document.getElementById('tlwHalf').disabled=!this.canHalve();",
+      "replace": "",
+      "run": "play:tanline"
+    },
+    {
+      "name": "the goals never show as found",
+      "file": "index.html",
+      "find": "<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE TA",
+      "replace": "<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE TA",
+      "run": "play:tanline"
     }
   ]
 }

@@ -1948,6 +1948,28 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TANGENT LINE WORKSHOP ============ -->
+  <div class="screen" id="s-tanline">
+    <div class="panel"><h2>🪡 Tangent Line Workshop</h2><div class="sub">Near a, a curve and its tangent line are almost the same, so f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve, step x away from a, and watch how far the tangent's estimate misses, and which way.</div></div>
+    <div class="panel">
+      <div id="tlwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="tlwFig"></div>
+      <div id="tlwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move x">
+        <button class="btn sm ghost" id="tlwL" onclick="TanLine.move(-10)" aria-label="Move x one whole left">◀ 1</button>
+        <button class="btn sm ghost" id="tlwl" onclick="TanLine.move(-1)" aria-label="Move x a tenth left">◀ 0.1</button>
+        <button class="btn sm ghost" id="tlwr" onclick="TanLine.move(1)" aria-label="Move x a tenth right">0.1 ▶</button>
+        <button class="btn sm" id="tlwR" onclick="TanLine.move(10)" aria-label="Move x one whole right">1 ▶</button>
+        <button class="btn sm ghost" id="tlwHalf" onclick="TanLine.halve()" aria-label="Halve x minus a, moving x half way back to a">Halve x − a</button>
+        <button class="btn sm ghost" id="tlwAgain" onclick="TanLine.again()" aria-label="Go back to x = a">Start over</button>
+      </div>
+      <div id="tlwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="tlwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tlwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CHORD WORKSHOP ============ -->
   <div class="screen" id="s-mvt">
     <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
@@ -4288,6 +4310,7 @@ const WORKSHOP_FOR = (() => {
     EulerWalk: ["👣 Euler Step Workshop", ['euler']],
     Doubling: ["⏳ Doubling Workshop", ['growth']],
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
+    TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13757,6 +13780,7 @@ const UI = {
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
+    if(id==='s-tanline') TanLine.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14591,6 +14615,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>
          <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪡 Tangent Line Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Estimate √x, 1/x and sin x from a tangent line, L(x) = f(a) + f′(a)(x − a), and watch how far it misses. See why √x is always overshot and 1/x always undershot, and halve the step to cut the miss to a quarter, or on sin x to an eighth.</div>
+         <button class="btn sm" id="tomeTanLine" style="width:auto;margin-top:8px" onclick="TanLine.open()">Open the tangent line workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -28015,6 +28044,123 @@ const ChordPick = {
     return out;
   }
 };
+/* ---------- The tangent line workshop: linear approximation by hand ----------
+   Near a, f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve (√x near 4, 1/x
+   near 1, sin x near 0) and step x away from a a tenth or a whole one at a
+   time, or halve x − a. The figure draws the curve, its tangent at a and the
+   gap between them at x, and the readout works L(x) beside the curve's own
+   value and says by how much and which way the tangent misses, so nothing
+   is held in the head. √x bends under its tangent, so the tangent always
+   overshoots; 1/x bends over it, so it always falls short; halving x − a
+   cuts the miss to about a quarter, and on sin x, which does not bend at 0,
+   to about an eighth. Nothing is saved. */
+const TanLine = {
+  SETS:[
+    {id:'root', btn:'√x near 4', name:'square root of x near 4', fs:'√x', dfs:'1/(2√x)', a:4, fa:2, m:1/4, ms:'1/4',
+     Ls:'2 + (1/4)(x − 4)', f:Math.sqrt, fx:s=>\`√\${s}\`, lo:-30, hi:50, R:[0.8,3.5], ticks:[1,2,3,4,5,6,7,8,9],
+     bend:'√x bends down, under its tangent, so the tangent overshoots on both sides of 4.'},
+    {id:'recip', btn:'1/x near 1', name:'1 over x near 1', fs:'1/x', dfs:'−1/x²', a:1, fa:1, m:-1, ms:'−1',
+     Ls:'1 − (x − 1)', f:x=>1/x, fx:s=>\`1/\${s}\`, lo:-5, hi:15, R:[-0.6,2.1], ticks:[0.5,1,1.5,2,2.5],
+     bend:'1/x bends up, over its tangent, so the tangent falls short on both sides of 1.'},
+    {id:'sin', btn:'sin x near 0', name:'sine of x near 0', fs:'sin x', dfs:'cos x', a:0, fa:0, m:1, ms:'1',
+     Ls:'0 + 1(x − 0) = x', f:Math.sin, fx:s=>/−/.test(s) ? \`sin(\${s})\` : \`sin \${s}\`, lo:-15, hi:15, R:[-1.6,1.6], ticks:[-1,0,1],
+     bend:'Right of 0, sin x bends down under its tangent, so the tangent overshoots; left of 0 it bends up, so the tangent falls short.'}
+  ],
+  si:0, k:0, prev:null, halved:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'close', t:'On √x, estimate √4.1 and come within 0.001 of it.', toast:'Within 0.001',
+     ok:K=>K.si===0 && K.k===1},
+    {id:'far', t:'On √x, step out until the tangent misses by more than 0.1.', toast:'Far from 4, the tangent drifts',
+     ok:K=>K.si===0 && Math.abs(K.miss())>0.1},
+    {id:'left', t:'On √x, step left of 4 and see the tangent still overshoot.', toast:'√x bends below its tangent',
+     ok:K=>K.si===0 && K.k<0},
+    {id:'quarter', t:'On √x, halve x − a and watch the miss fall to about a quarter.', toast:'Halve the step, quarter the miss',
+     ok:K=>K.si===0 && K.halved},
+    {id:'short', t:'On 1/x, see the tangent fall short of the curve.', toast:'1/x bends above its tangent',
+     ok:K=>K.si===1 && K.k!==0},
+    {id:'eighth', t:'On sin x, halve x − a and watch the miss fall to about an eighth.', toast:'No bend at 0, an eighth',
+     ok:K=>K.si===2 && K.halved}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(k=this.k){ return (this.set().a*10+k)/10; },
+  /* L(x) − f(x): above 0 the tangent is too high, below 0 too low */
+  miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },
+  can(dk){ const S=this.set(), k=this.k+dk; return k>=S.lo && k<=S.hi; },
+  canHalve(){ return this.k!==0 && this.k%2===0; },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? \`(\${s})\` : s; },
+  working(){
+    const S=this.set(), x=this.x(), xs=this.num(x), out=[];
+    out.push(\`f(x) = \${S.fs} near a = \${S.a}: f(\${S.a}) = \${S.fa} and f′(x) = \${S.dfs}, so f′(\${S.a}) = \${S.ms}. The tangent line is L(x) = \${S.Ls}.\`);
+    if(this.k===0){
+      out.push(\`At x = \${S.a} itself, L(\${S.a}) = f(\${S.a}) = \${S.fa}: the tangent touches the curve here. Step x away and watch them part.\`);
+      return out;
+    }
+    const h=this.k/10, L=S.fa+S.m*h, e=this.miss();
+    out.push(\`At x = \${xs}: x − a = \${this.num(h)}, so L(\${xs}) = \${S.fa} + \${S.ms==='1'?'1':\`(\${S.ms})\`} × \${this.pf(h)} \${this.is(L)}.\`);
+    out.push(\`The curve gives \${S.fx(xs)} \${this.is(S.f(x))}, so the tangent is too \${e>0?'high':'low'} by \${this.is(Math.abs(e))[0]==='='?'':'about '}\${this.num(Math.abs(e))}.\`);
+    out.push(S.bend);
+    if(this.halved){
+      const e0=Math.abs(this.miss(this.prev)), e1=Math.abs(e);
+      out.push(\`You halved x − a from \${this.num(this.prev/10)} to \${this.num(h)}, and the miss went from \${this.num(e0)} to \${this.num(e1)}, \${this.num(e1/e0)} times as much. \`+
+        (S.id==='sin' ? 'Close to 0, halving cuts the miss to about an eighth: sin x does not bend at 0, so the miss grows like (x − a)³.'
+          : 'Close to a, halving cuts the miss to about a quarter: the miss grows like (x − a)².'));
+    }
+    return out;
+  },
+  /* the curve, its tangent at a, and the gap between them at x */
+  L:30, TOP:12, W:310, Hh:230,
+  span(){ const S=this.set(); return [S.a+S.lo/10, S.a+S.hi/10]; },
+  PX(t){ const [p,q]=this.span(); return this.L+(t-p)/(q-p)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, [p,q]=this.span(), f=v=>v.toFixed(2), x=this.x(), y=S.f(x), Lx=S.fa+S.m*(x-S.a), Tl=t=>S.fa+S.m*(t-S.a);
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${S.fs} from \${this.num(p)} to \${this.num(q)} in gold, its tangent at x = \${S.a} in blue\${this.k===0?', touching the curve at your point':\`, and at x = \${this.num(x)} the gap between them marked in red, the tangent \${Lx>y?'above':'below'} the curve\`}">\`;
+    const y0=Math.min(Math.max(0,c),d);
+    out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(this.PY(y0))}" x2="\${this.L+this.W}" y2="\${f(this.PY(y0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of S.ticks) out+=\`<text data-k="tick" x="\${f(this.PX(t))}" y="\${f(Math.min(this.TOP+this.Hh+10,this.PY(y0)+12))}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${neg(t)}</text>\`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=p+(q-p)*i/120; pts.push(\`\${f(this.PX(t))},\${f(this.PY(S.f(t)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    out+=\`<line data-k="tangent" x1="\${f(this.PX(p))}" y1="\${f(this.PY(Tl(p)))}" x2="\${f(this.PX(q))}" y2="\${f(this.PY(Tl(q)))}" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+    out+=\`<circle data-k="touch" cx="\${f(this.PX(S.a))}" cy="\${f(this.PY(S.fa))}" r="3.5" fill="\${FIG_COL.dim}"/>\`;
+    if(this.k!==0){
+      out+=\`<line data-k="gap" x1="\${f(this.PX(x))}" y1="\${f(this.PY(y))}" x2="\${f(this.PX(x))}" y2="\${f(this.PY(Lx))}" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      out+=\`<circle data-k="est" cx="\${f(this.PX(x))}" cy="\${f(this.PY(Lx))}" r="4" fill="\${FIG_COL.a}"/>\`;
+    }
+    out+=\`<circle data-k="pt" cx="\${f(this.PX(x))}" cy="\${f(this.PY(y))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-tanline'); },
+  pick(i){ this.si=i; this.k=0; this.prev=null; this.halved=false; this.touched=true; this.render(); },
+  move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.halved=false; this.touched=true; this.render(); },
+  halve(){ if(!this.canHalve()) return; this.prev=this.k; this.k/=2; this.halved=true; this.touched=true; this.render(); },
+  again(){ this.k=0; this.prev=null; this.halved=false; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tlwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TanLine.pick(\${i})" aria-label="f(x) = \${s.name}">\${s.btn}</button>\`).join('');
+    for(const [id,dk] of [['tlwL',-10],['tlwl',-1],['tlwr',1],['tlwR',10]]) document.getElementById(id).disabled=!this.can(dk);
+    document.getElementById('tlwHalf').disabled=!this.canHalve();
+    document.getElementById('tlwAgain').disabled=this.k===0 && this.prev===null;
+    document.getElementById('tlwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is f and the blue line is its tangent at a, the grey dot. At your x the red line is the gap between them: how far the estimate L(x) misses f(x).</div>\`;
+    document.getElementById('tlwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tlwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE TANGENT','every miss measured','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The chord workshop: the mean value theorem by hand ----------
    Somewhere strictly between a and b the tangent runs parallel to the chord.
    Pick a curve (x² on [0, 4], x³ on [0, 3], 4/x on [1, 4]) and walk a point
