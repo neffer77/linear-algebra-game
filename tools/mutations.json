@@ -1,278 +1,285 @@
 {
-  "change": "Which F? in the antiderivative workshop: see f, pick which of four F has f as its slope",
+  "change": "Which Aᵀ? in the transpose workshop: see A, pick which of four matrices is Aᵀ",
   "mutations": [
     {
-      "name": "F is f's slope, not its antiderivative",
+      "name": "the rule is cut short",
       "file": "index.html",
-      "find": "return k==='right' ? {k:c.a, p:m} :",
-      "replace": "return k==='right' ? {k:c.a*m, p:m} :",
+      "find": "RULE:'The transpose Aᵀ turns each row of A into a column",
+      "replace": "RULE:'The transpose Aᵀ turns each row of A into a row",
       "run": "verify"
     },
     {
-      "name": "the no-divide slip divides",
+      "name": "Aᵀ is A itself",
       "file": "index.html",
-      "find": "k==='nodiv' ? {k:f.k, p:m} :",
-      "replace": "k==='nodiv' ? {k:f.k/m, p:m} :",
+      "find": "return k==='right' ? make((p,q)=>A[q][p]) : k==='copy'",
+      "replace": "return k==='right' ? A.map(row=>row.slice()) : k==='copy'",
       "run": "verify"
     },
     {
-      "name": "the old-power slip uses the new power",
+      "name": "the copy slip is already turned",
       "file": "index.html",
-      "find": "k==='olddiv' ? {k:f.k/f.p, p:m}",
-      "replace": "k==='olddiv' ? {k:f.k/(f.p+2), p:m}",
+      "find": "k==='copy' ? A.map(row=>row.slice())",
+      "replace": "k==='copy' ? make((p,q)=>A[q][p])",
       "run": "verify"
     },
     {
-      "name": "the slope-of-f slip keeps the power",
+      "name": "the reshape slip reads down",
       "file": "index.html",
-      "find": "k==='deriv' ? {k:f.k*f.p, p:f.p-1} :",
-      "replace": "k==='deriv' ? {k:f.k*f.p, p:f.p} :",
+      "find": "make((p,q)=>flat[p*r+q])",
+      "replace": "make((p,q)=>A[q][p])",
       "run": "verify"
     },
     {
-      "name": "the multiply slip divides twice",
+      "name": "the reshape slip pours by the wrong count",
       "file": "index.html",
-      "find": "k==='deriv' ? {k:f.k*f.p, p:f.p-1} : {k:f.k*m, p:m};",
-      "replace": "k==='deriv' ? {k:f.k*f.p, p:f.p-1} : {k:f.k/m/m, p:m};",
+      "find": "make((p,q)=>flat[p*r+q])",
+      "replace": "make((p,q)=>flat[p*c+q]??0)",
       "run": "verify"
     },
     {
-      "name": "a number's slope is not 0",
+      "name": "the other diagonal is the main one",
       "file": "index.html",
-      "find": "slope(t){ return t.p===0 ? {k:0, p:0} :",
-      "replace": "slope(t){ return t.p===0 ? {k:t.k, p:0} :",
+      "find": "make((p,q)=>A[r-1-q][c-1-p])",
+      "replace": "make((p,q)=>A[q][c-1-p])",
       "run": "verify"
     },
     {
-      "name": "thirds are not allowed",
+      "name": "the quarter turn turns the other way",
       "file": "index.html",
-      "find": "  DEN:[1,2,3,4,6,8],",
-      "replace": "  DEN:[1,2,4,8],",
-      "run": "verify"
-    },
-    {
-      "name": "half powers are never dealt",
-      "file": "index.html",
-      "find": "  MS:[-2,-1,0.5,1.5,2,3,4],",
-      "replace": "  MS:[-2,-1,2,3,4],",
-      "run": "verify"
-    },
-    {
-      "name": "F may be x itself, leaving f a number",
-      "file": "index.html",
-      "find": "  MS:[-2,-1,0.5,1.5,2,3,4],",
-      "replace": "  MS:[-2,-1,0.5,1,1.5,2,3,4],",
-      "run": "verify"
-    },
-    {
-      "name": "only positive numbers in front",
-      "file": "index.html",
-      "find": "return {a:R.pick(Number.isInteger(m) ? [-3,-2,-1,1,2,3] : [-4,-2,2,4]), m};",
-      "replace": "return {a:R.pick(Number.isInteger(m) ? [1,2,3] : [2,4]), m};",
-      "run": "verify"
-    },
-    {
-      "name": "the same f may come twice",
-      "file": "index.html",
-      "find": "for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(c);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('ANTIDERIVATIVE",
-      "replace": "c=this.build();\n    const rest=this.slips(c);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('ANTIDERIVATIVE",
-      "run": "verify"
-    },
-    {
-      "name": "the old-power slip is never offered",
-      "file": "index.html",
-      "find": "  SLIPS:['nodiv','olddiv','deriv','mult'],",
-      "replace": "  SLIPS:['nodiv','deriv','mult'],",
-      "run": "verify"
-    },
-    {
-      "name": "the banner comes at four",
-      "file": "index.html",
-      "find": "Celebrate.banner('ANTIDERIVATIVE READER', this.matched+' antiderivatives picked'",
-      "replace": "Celebrate.banner('ANTIDERIVATIVE READER', (this.matched+1)+' antiderivatives picked'",
-      "run": "verify"
-    },
-    {
-      "name": "the toast miscounts the tries",
-      "file": "index.html",
-      "find": "else UI.toast(`✓ ${'ABCD'[i]} has slope f, picked ${tries===1?'on the first try':'in '+tries+' tries'}.",
-      "replace": "else UI.toast(`✓ ${'ABCD'[i]} has slope f, picked ${tries===1?'on the first try':'in '+(tries-1)+' tries'}.",
-      "run": "verify"
-    },
-    {
-      "name": "a miss is not crossed off",
-      "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Anti.render();",
-      "replace": "      this.misses++; this.last=null;\n    }\n    Anti.render();",
-      "run": "verify"
-    },
-    {
-      "name": "a pick does not redraw",
-      "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Anti.render();",
-      "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }",
-      "run": "verify"
-    },
-    {
-      "name": "a negative number in front loses its brackets",
-      "file": "index.html",
-      "find": "par(v){ return v<0 || !Number.isInteger(v) ? `(${this.frac(v)})` : this.frac(v); },",
-      "replace": "par(v){ return !Number.isInteger(v) ? `(${this.frac(v)})` : this.frac(v); },",
-      "run": "verify"
-    },
-    {
-      "name": "a fraction is written as a decimal",
-      "file": "index.html",
-      "find": "return d===1 ? s+n : `${s}${n}/${d}`; },",
-      "replace": "return d===1 ? s+n : `${s}${n/d}`; },",
-      "run": "verify"
-    },
-    {
-      "name": "−1 in front is written out",
-      "file": "index.html",
-      "find": "return (k===1?'':k===-1?'−':Number.isInteger(k)?this.frac(k):`(${this.frac(k)})`)+Anti.pw(p);",
-      "replace": "return (k===1?'':Number.isInteger(k)?this.frac(k):`(${this.frac(k)})`)+Anti.pw(p);",
-      "run": "verify"
-    },
-    {
-      "name": "the working drops the power one too far",
-      "file": "index.html",
-      "find": "${t.p===1?'':' · '+Anti.pw(t.p-1)} = ${this.T(this.slope(t))}`;",
-      "replace": "${t.p===1?'':' · '+Anti.pw(t.p-2)} = ${this.T(this.slope(t))}`;",
-      "run": "verify"
-    },
-    {
-      "name": "the working forgets the power in front",
-      "file": "index.html",
-      "find": "return `the slope of ${this.T(t)} is ${this.par(t.k)} · ${this.par(t.p)}",
-      "replace": "return `the slope of ${this.T(t)} is ${this.par(t.k)} · ${this.par(1)}",
-      "run": "verify"
-    },
-    {
-      "name": "the old-power slip names the new power",
-      "file": "index.html",
-      "find": "${L} divides by the old power, ${fr(m-1)}, instead",
-      "replace": "${L} divides by the old power, ${fr(m)}, instead",
-      "run": "verify"
-    },
-    {
-      "name": "the multiply slip is told as the no-divide slip",
-      "file": "index.html",
-      "find": "    return `${L} multiplies by the new power, ${fr(m)}, instead of dividing by it.`;",
-      "replace": "    return `${L} raises the power to ${Anti.pw(m)} but never divides by the new power, ${fr(m)}.`;",
-      "run": "verify"
-    },
-    {
-      "name": "the check works the right F for the miss",
-      "file": "index.html",
-      "find": "return `Check ${L} by its slope: ${this.work(this.term(c,k))}, which is not f.",
-      "replace": "return `Check ${L} by its slope: ${this.work(this.term(c,'right'))}, which is not f.",
-      "run": "verify"
-    },
-    {
-      "name": "the gold curve is drawn at the wrong height",
-      "file": "index.html",
-      "find": "    s+=path(f,'target',FIG_COL.b,2.5,true);",
-      "replace": "    s+=path({k:f.k*1.2,p:f.p},'target',FIG_COL.b,2.5,true);",
-      "run": "verify"
-    },
-    {
-      "name": "the red curve is F, not its slope",
-      "file": "index.html",
-      "find": "if(m!==null) s+=path(this.slope(this.term(c,this.round.opts[m].k)),'slope',FIG_COL.d,3,false);",
-      "replace": "if(m!==null) s+=path(this.term(c,this.round.opts[m].k),'slope',FIG_COL.d,3,false);",
-      "run": "verify"
-    },
-    {
-      "name": "the red curve is drawn before a miss",
-      "file": "index.html",
-      "find": "if(m!==null) s+=path(this.slope(this.term(c,this.round.opts[m].k)),'slope',FIG_COL.d,3,false);",
-      "replace": "s+=path(this.slope(this.term(c,this.round.opts[m===null?0:m].k)),'slope',FIG_COL.d,3,false);",
-      "run": "verify"
-    },
-    {
-      "name": "the red curve is gold",
-      "file": "index.html",
-      "find": "'slope',FIG_COL.d,3,false);",
-      "replace": "'slope',FIG_COL.b,3,false);",
-      "run": "verify"
-    },
-    {
-      "name": "the y axis labels its round number at the wrong height",
-      "file": "index.html",
-      "find": "for(const v of [0,Ty]) s+=`<line x1=\"37\" y1=\"${n(PY(v))}\" x2=\"43\" y2=\"${n(PY(v))}\" stroke=\"${FIG_COL.axis}\" stroke-width=\"1\"/><text x=\"34\" y=\"${n(PY(v)+3)}\"",
-      "replace": "for(const v of [0,Ty]) s+=`<line x1=\"37\" y1=\"${n(PY(v))}\" x2=\"43\" y2=\"${n(PY(v))}\" stroke=\"${FIG_COL.axis}\" stroke-width=\"1\"/><text x=\"34\" y=\"${n(PY(v*0.9)+3)}\"",
-      "run": "verify"
-    },
-    {
-      "name": "the x ticks sit at the wrong place",
-      "file": "index.html",
-      "find": "s+=`<line x1=\"${n(PX(t))}\" y1=\"${n(PY(0)-3)}\" x2=\"${n(PX(t))}\" y2=\"${n(PY(0)+3)}\" stroke=\"${FIG_COL.axis}\" stroke-width=\"1\"/><text x=\"${n(PX(t))}\"",
-      "replace": "s+=`<line x1=\"${n(PX(t))}\" y1=\"${n(PY(0)-3)}\" x2=\"${n(PX(t))}\" y2=\"${n(PY(0)+3)}\" stroke=\"${FIG_COL.axis}\" stroke-width=\"1\"/><text x=\"${n(PX(t+0.1))}\"",
-      "run": "verify"
-    },
-    {
-      "name": "the y range leaves f off the picture",
-      "file": "index.html",
-      "find": "const pad=(hi-lo)*0.06;\n    return {y0:lo-pad, y1:hi+pad};",
-      "replace": "const pad=(hi-lo)*0.06;\n    return {y0:lo/2-pad, y1:hi/2+pad};",
-      "run": "verify"
-    },
-    {
-      "name": "the red slope is not read out",
-      "file": "index.html",
-      "find": "+(m===null?'':`; the slope of ${'ABCD'[m]}, ${this.T(this.slope(this.term(c,r.opts[m].k)))}, in red, off f`);",
-      "replace": "+'';",
-      "run": "verify"
-    },
-    {
-      "name": "a missed F is not told as wrong",
-      "file": "index.html",
-      "find": "aria-label=\"${'ABCD'[i]}: F(x) = ${x}${gone?'. Its slope is not f':''}\"",
-      "replace": "aria-label=\"${'ABCD'[i]}: F(x) = ${x}\"",
-      "run": "verify"
-    },
-    {
-      "name": "a missed F stays open",
-      "file": "index.html",
-      "find": "data-opt=\"${'ABCD'[i]}\" ${gone?'disabled ':''}onclick=\"AntiPick.choose(${i})\"",
-      "replace": "data-opt=\"${'ABCD'[i]}\" onclick=\"AntiPick.choose(${i})\"",
-      "run": "verify"
-    },
-    {
-      "name": "the miss is not explained",
-      "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.term(this.last.c,'right'))}",
-      "replace": "if(m!==null) lines.push(this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.term(this.last.c,'right'))}",
-      "run": "verify"
-    },
-    {
-      "name": "the right pick's working shows the new f",
-      "file": "index.html",
-      "find": "lines.push(`That was it: ${this.work(this.term(this.last.c,'right'))}, which is f.",
-      "replace": "lines.push(`That was it: ${this.work(this.term(c,'right'))}, which is f.",
-      "run": "verify"
-    },
-    {
-      "name": "f is not written out",
-      "file": "index.html",
-      "find": "out+=`<div style=\"text-align:center;font-size:18px;font-weight:700;margin-bottom:4px\">f(x) = ${this.T(f)}</div>`;",
-      "replace": "out+=`<div style=\"text-align:center;font-size:18px;font-weight:700;margin-bottom:4px\">f(x) = ${this.T({k:f.k,p:f.p+1})}</div>`;",
+      "find": "make((p,q)=>A[r-1-q][p]);",
+      "replace": "make((p,q)=>A[q][c-1-p]);",
       "run": "verify"
     },
     {
       "name": "a slip that matches another is kept",
       "file": "index.html",
-      "find": "if(seen.has(this.key(t))) continue; seen.add",
-      "replace": "seen.add",
+      "find": "const x=this.key(this.mat(A,k)); if(seen.has(x)) continue; seen.add(x); keep.push(k);",
+      "replace": "keep.push(k);",
       "run": "verify"
     },
     {
-      "name": "odd numbers sit in front of half powers",
+      "name": "the quarter-turn slip is never offered",
       "file": "index.html",
-      "find": "[-3,-2,-1,1,2,3] : [-4,-2,2,4]), m};",
-      "replace": "[-3,-2,-1,1,2,3] : [-3,-1,1,3]), m};",
+      "find": "  SLIPS:['copy','reshape','anti','rot'],",
+      "replace": "  SLIPS:['copy','reshape','anti'],",
       "run": "verify"
+    },
+    {
+      "name": "A is only ever wide",
+      "file": "index.html",
+      "find": "  SHAPES:[[2,3],[3,2],[2,2]],",
+      "replace": "  SHAPES:[[2,3]],",
+      "run": "verify"
+    },
+    {
+      "name": "A may hold a 0",
+      "file": "index.html",
+      "find": "pool=[-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9];",
+      "replace": "pool=[-9,-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8,9];",
+      "run": "verify"
+    },
+    {
+      "name": "A may repeat a number",
+      "file": "index.html",
+      "find": "return Array.from({length:r},(_,i)=>pool.slice(i*c,i*c+c));",
+      "replace": "return Array.from({length:r},(_,i)=>pool.slice(i,i+c));",
+      "run": "verify"
+    },
+    {
+      "name": "the same A may come twice",
+      "file": "index.html",
+      "find": "if(!prev||this.key(A)!==this.key(prev)) break; }\n    const rest=this.slips(A);",
+      "replace": "break; }\n    const rest=this.slips(A);",
+      "run": "verify"
+    },
+    {
+      "name": "the right matrix always sits at A",
+      "file": "index.html",
+      "find": "const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
+      "replace": "const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    this.round={A,opts",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is counted as a pick",
+      "file": "index.html",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Transpose.render();",
+      "replace": "r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Transpose.render();",
+      "run": "verify"
+    },
+    {
+      "name": "a first try is not counted",
+      "file": "index.html",
+      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "replace": "      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "run": "verify"
+    },
+    {
+      "name": "no banner at five",
+      "file": "index.html",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "run": "verify"
+    },
+    {
+      "name": "the toast miscounts the tries",
+      "file": "index.html",
+      "find": "UI.toast(`✓ ${'ABCD'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+tries+' tries'}",
+      "replace": "UI.toast(`✓ ${'ABCD'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+(tries-1)+' tries'}",
+      "run": "verify"
+    },
+    {
+      "name": "a missed matrix can be tapped again",
+      "file": "index.html",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRANSPOSE",
+      "run": "verify"
+    },
+    {
+      "name": "a pick does not redraw",
+      "file": "index.html",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Transpose.render();",
+      "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }",
+      "run": "verify"
+    },
+    {
+      "name": "every entry counts as out of place",
+      "file": "index.html",
+      "find": "M.forEach((row,p)=>row.forEach((x,q)=>{ if(x!==T[p][q]) out.push([p,q]); }));",
+      "replace": "M.forEach((row,p)=>row.forEach((x,q)=>{ out.push([p,q]); }));",
+      "run": "verify"
+    },
+    {
+      "name": "no red cells after a miss",
+      "file": "index.html",
+      "find": "{bad:gone?this.wrong(A,M):[]}",
+      "replace": "{bad:[]}",
+      "run": "verify"
+    },
+    {
+      "name": "the copy slip calls a wide A square",
+      "file": "index.html",
+      "find": "      ? `${L} is A copied as it was. Only the main diagonal stays put",
+      "replace": "      ? `${L} is A copied as it was, still. Only the main diagonal stays put",
+      "run": "verify"
+    },
+    {
+      "name": "the copy slip gets the shape backwards",
+      "file": "index.html",
+      "find": "becomes one of Aᵀ's ${r} columns, so Aᵀ is ${c}×${r}.`;",
+      "replace": "becomes one of Aᵀ's ${r} columns, so Aᵀ is ${r}×${c}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "the reshape slip names the old shape",
+      "file": "index.html",
+      "find": "pours the entries into the ${c}×${r} shape",
+      "replace": "pours the entries into the ${r}×${c} shape",
+      "run": "verify"
+    },
+    {
+      "name": "the anti slip is explained as the rotation",
+      "file": "index.html",
+      "find": "if(k==='anti') return `${L} flips A across the other diagonal",
+      "replace": "if(k==='anti') return `${L} turns A a quarter turn",
+      "run": "verify"
+    },
+    {
+      "name": "the check names the slot without flipping it",
+      "file": "index.html",
+      "find": "takes the entry from ${this.at(q,p)} of A, which is ${neg(A[q][p])}.",
+      "replace": "takes the entry from ${this.at(p,q)} of A, which is ${neg(A[q][p])}.",
+      "run": "verify"
+    },
+    {
+      "name": "the check reads the wrong entry of A",
+      "file": "index.html",
+      "find": "of A, which is ${neg(A[q][p])}.",
+      "replace": "of A, which is ${neg(A[p][q]??0)}.",
+      "run": "verify"
+    },
+    {
+      "name": "the check names a slot that is right",
+      "file": "index.html",
+      "find": "const [p,q]=w[0];",
+      "replace": "const [p,q]=[0,0];",
+      "run": "verify"
+    },
+    {
+      "name": "the wrong shape is not checked",
+      "file": "index.html",
+      "find": "if(!w.length) return `${L} is ${this.size(M)}, but Aᵀ is ${this.size(this.mat(A,'right'))}. ${keep}`;",
+      "replace": "if(!w.length) return keep;",
+      "run": "verify"
+    },
+    {
+      "name": "the row-1 reminder reads column 1",
+      "file": "index.html",
+      "find": "const keep=`Row 1 of A reads ${A[0].map(neg).join(', ')} across",
+      "replace": "const keep=`Row 1 of A reads ${A.map(r=>neg(r[0])).join(', ')} across",
+      "run": "verify"
+    },
+    {
+      "name": "the gold edges miss the diagonal",
+      "file": "index.html",
+      "find": "diag&&p===q?'var(--gold-dk)'",
+      "replace": "diag&&p===0?'var(--gold-dk)'",
+      "run": "verify"
+    },
+    {
+      "name": "A is drawn without its diagonal",
+      "file": "index.html",
+      "find": "${this.grid(A,{diag:true})}</div>",
+      "replace": "${this.grid(A)}</div>",
+      "run": "verify"
+    },
+    {
+      "name": "A is read out by its columns",
+      "file": "index.html",
+      "find": "aria-label=\"A is ${this.size(A)}, with rows ${this.rows(A)}\"",
+      "replace": "aria-label=\"A is ${this.size(A)}, with rows ${this.rows(this.mat(A,'right'))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "a button is named after another option",
+      "file": "index.html",
+      "find": "aria-label=\"${'ABCD'[i]}: ${this.size(M)}, with rows ${this.rows(M)}",
+      "replace": "aria-label=\"${'ABCD'[i]}: ${this.size(M)}, with rows ${this.rows(this.mat(A,'right'))}",
+      "run": "verify"
+    },
+    {
+      "name": "a missed matrix is not told as wrong",
+      "file": "index.html",
+      "find": "${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px",
+      "replace": "\" style=\"margin:0;padding:6px 2px",
+      "run": "verify"
+    },
+    {
+      "name": "a missed matrix is not shut",
+      "file": "index.html",
+      "find": "data-opt=\"${'ABCD'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick",
+      "replace": "data-opt=\"${'ABCD'[i]}\" onclick=\"TransPick",
+      "run": "verify"
+    },
+    {
+      "name": "the right pick is not worked out",
+      "file": "index.html",
+      "find": "lines.push(`That was it: ${B.map((row,i)=>`row ${i+1} of A, ${row.map(neg).join(', ')}, stands as column ${i+1}`).join(', and ')}. Here is a new one.`); }",
+      "replace": "lines.push('That was it. Here is a new one.'); }",
+      "run": "verify"
+    },
+    {
+      "name": "the visit count is not shown",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"txRead\"",
+      "replace": "    out+=`<div id=\"txRead\"",
+      "run": "verify"
+    },
+    {
+      "name": "the tab leaves the hand workshop showing",
+      "file": "index.html",
+      "find": "for(const id of ['tpSets','tpFig','tpRead','tpGoalPanel']) document",
+      "replace": "for(const id of []) document",
+      "run": "play"
     }
   ]
 }

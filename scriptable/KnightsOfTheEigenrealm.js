@@ -1717,12 +1717,14 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRANSPOSE WORKSHOP ============ -->
   <div class="screen" id="s-transpose">
     <div class="panel"><h2>🪞 Transpose Workshop</h2><div class="sub">The transpose Aᵀ flips a matrix across its main diagonal, so its rows become columns. Pick up each entry of A and put it down where it belongs in Aᵀ; a slot only takes the right number, and tells you why when it turns one away.</div></div>
+    <div id="tpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move entries by hand or pick Aᵀ"></div>
     <div class="panel">
+      <div id="txBox"></div>
       <div id="tpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
       <div id="tpFig"></div>
       <div id="tpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="tpGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="tpGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14130,7 +14132,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪞 Transpose Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose. Then turn it round: see A, and pick which of four matrices is Aᵀ.</div>
          <button class="btn sm" id="tomeTranspose" style="width:auto;margin-top:8px" onclick="Transpose.open()">Open the transpose workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21363,6 +21365,119 @@ const Anti = {
   }
 };
 
+/* ---------- Which Aᵀ? The transpose workshop turned round ----------
+   A is shown, and four matrices, one of them Aᵀ. The others are the slips
+   people make: A copied as it was, A's entries poured into the new shape row
+   by row, A flipped across the wrong diagonal, and A turned a quarter turn.
+   A wrong pick is shut, the entries where it goes wrong are marked in red,
+   and one of them is checked against A. Nothing is saved. */
+const TransPick = {
+  SHAPES:[[2,3],[3,2],[2,2]],
+  SLIPS:['copy','reshape','anti','rot'],
+  RULE:'The transpose Aᵀ turns each row of A into a column: the entry in row i, column j of A moves to row j, column i of Aᵀ. A wide matrix turns tall, and the main diagonal, where the row and column numbers match, stays put. Which matrix is Aᵀ?',
+  // the matrix each option stands for
+  mat(A,k){
+    const r=A.length, c=A[0].length, flat=A.flat();
+    const make=f=>Array.from({length:c},(_,p)=>Array.from({length:r},(_,q)=>f(p,q)));
+    return k==='right' ? make((p,q)=>A[q][p]) : k==='copy' ? A.map(row=>row.slice())
+      : k==='reshape' ? make((p,q)=>flat[p*r+q]) : k==='anti' ? make((p,q)=>A[r-1-q][c-1-p]) : make((p,q)=>A[r-1-q][p]);
+  },
+  key:M=>JSON.stringify(M),
+  // the slips this A can offer: each a matrix different from Aᵀ and from every one kept before it
+  slips(A){
+    const seen=new Set([this.key(this.mat(A,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const x=this.key(this.mat(A,k)); if(seen.has(x)) continue; seen.add(x); keep.push(k); }
+    return keep;
+  },
+  build(){
+    const [r,c]=R.pick(this.SHAPES), pool=[-9,-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8,9];
+    for(let i=pool.length-1;i>0;i--){ const j=R.i(0,i); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+    // every entry different, so no slip lands on Aᵀ by luck
+    return Array.from({length:r},(_,i)=>pool.slice(i*c,i*c+c));
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.A;
+    let A;
+    for(let g=0;g<50;g++){ A=this.build(); if(!prev||this.key(A)!==this.key(prev)) break; }
+    const rest=this.slips(A);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TRANSPOSE READER', this.matched+' transposes picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is Aᵀ, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={A:r.A};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Transpose.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  size:M=>\`\${M.length}×\${M[0].length}\`,
+  rows:M=>M.map(row=>row.map(neg).join(', ')).join('; '),
+  // the entries of M that are not where Aᵀ has them
+  wrong(A,M){
+    const T=this.mat(A,'right'), out=[];
+    if(M.length!==T.length) return out;
+    M.forEach((row,p)=>row.forEach((x,q)=>{ if(x!==T[p][q]) out.push([p,q]); }));
+    return out;
+  },
+  slip(A,k,L){
+    const r=A.length, c=A[0].length;
+    if(k==='copy') return r===c
+      ? \`\${L} is A copied as it was. Only the main diagonal stays put: the two entries off it swap places across it.\`
+      : \`\${L} is A copied as it was, still \${r}×\${c}. Transposing turns the shape: each of A's \${r} rows becomes one of Aᵀ's \${r} columns, so Aᵀ is \${c}×\${r}.\`;
+    if(k==='reshape') return \`\${L} reads A across, row by row, and pours the entries into the \${c}×\${r} shape row by row. The shape is right but the order is not: row 1 of A has to stand as column 1, going down.\`;
+    if(k==='anti') return \`\${L} flips A across the other diagonal, from top right to bottom left. The transpose flips across the main diagonal, from top left to bottom right, which stays put.\`;
+    return \`\${L} turns A a quarter turn, so each column of A becomes a row read from the bottom up. The transpose keeps the order: row 1 of A becomes column 1 of Aᵀ, read top to bottom.\`;
+  },
+  at:(i,j)=>\`row \${i+1}, column \${j+1}\`,
+  check(A,k,L){
+    const M=this.mat(A,k), w=this.wrong(A,M);
+    const keep=\`Row 1 of A reads \${A[0].map(neg).join(', ')} across, so column 1 of Aᵀ reads \${A[0].map(neg).join(', ')} down.\`;
+    if(!w.length) return \`\${L} is \${this.size(M)}, but Aᵀ is \${this.size(this.mat(A,'right'))}. \${keep}\`;
+    const [p,q]=w[0];
+    return \`Check \${L} at \${this.at(p,q)}: it holds \${neg(M[p][q])}. That slot of Aᵀ takes the entry from \${this.at(q,p)} of A, which is \${neg(A[q][p])}. \${keep}\`;
+  },
+  // a matrix drawn as a grid of numbers in brackets; gold edges mark the main diagonal, red the entries out of place
+  grid(M,{diag=false,bad=[]}={}){
+    const m=M[0].length, isBad=(p,q)=>bad.some(([a,b])=>a===p&&b===q);
+    return \`<span data-m="\${M.length}x\${m}" style="display:inline-grid;grid-template-columns:repeat(\${m},auto);gap:3px 4px;padding:3px 5px;border-left:2px solid var(--dim);border-right:2px solid var(--dim);border-radius:5px;vertical-align:middle">\`+
+      M.map((row,p)=>row.map((x,q)=>\`<span data-cell="\${p},\${q}"\${isBad(p,q)?' data-bad="1"':''} style="min-width:24px;text-align:center;padding:1px 2px;border:1px solid \${isBad(p,q)?FIG_COL.d:diag&&p===q?'var(--gold-dk)':'transparent'};border-radius:4px;\${isBad(p,q)?'color:'+FIG_COL.d+';':''}">\${neg(x)}</span>\`).join('')).join('')+\`</span>\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, A=r.A, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="txA" role="img" aria-label="A is \${this.size(A)}, with rows \${this.rows(A)}" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0"><span style="margin-right:6px">A =</span>\${this.grid(A,{diag:true})}</div>\`;
+    out+=\`<div id="txPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), M=this.mat(A,o.k);
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="TransPick.choose(\${i})" aria-label="\${'ABCD'[i]}: \${this.size(M)}, with rows \${this.rows(M)}\${gone?'. Not Aᵀ':''}" style="margin:0;padding:6px 2px;font-size:15px"><b>\${'ABCD'[i]}</b> \${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'ABCD'[m]), this.check(A,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.A;
+      lines.push(\`That was it: \${B.map((row,i)=>\`row \${i+1} of A, \${row.map(neg).join(', ')}, stands as column \${i+1}\`).join(', and ')}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="txRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The transpose workshop: rows into columns ----------
    Pick up an entry of A and put it down where it belongs in Aᵀ. A slot
    takes an entry only if it is the right number, so a slip is caught and
@@ -21466,7 +21581,15 @@ const Transpose = {
     if(x===this.T(p,q)){ this.fill[p][q]=x; this.used[i][j]=true; this.sel=null; this.last={kind:'good',i,j,p,q}; }
     else this.last={kind:'miss',i,j,p,q};
     this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('tpTab').innerHTML=[['hand','🪞 Move by hand','Move each entry of A to its place in Aᵀ by hand'],['pick','🎯 Which Aᵀ?','See A, and pick which of four matrices is Aᵀ']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Transpose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['tpSets','tpFig','tpRead','tpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('txBox').innerHTML=pick ? TransPick.html() : '';
+    if(pick) return;
     if(!this.fill) this.start();
     document.getElementById('tpSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Transpose.pick(\${i})" aria-label="\${s.btn}: a \${s.A.length}×\${s.A[0].length} matrix">\${s.btn}</button>\`).join('');
