@@ -1058,13 +1058,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BEST FIT WORKSHOP ============ -->
   <div class="screen" id="s-fit">
     <div class="panel"><h2>📏 Best Fit Workshop</h2><div class="sub">Set a line y = m·x + c through a handful of points. Each point misses the line by its y minus the line's height there. Square every miss and add them up: the line with the smallest total is the best fit, the least-squares line.</div></div>
+    <div id="ftTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the line by hand or pick the best slope"></div>
     <div class="panel">
+      <div id="fpBox"></div>
       <div id="ftSets" class="wsModes" role="group" aria-label="The points"></div>
       <div id="ftAmts" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The slope m and the height c"></div>
       <div id="ftFig"></div>
       <div id="ftRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="ftGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="ftGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14055,7 +14057,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats. Then turn it round: see a few points and pick which of four numbers is the slope of the best line.</div>
          <button class="btn sm" id="tomeFit" style="width:auto;margin-top:8px" onclick="Fit.open()">Open the best fit workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -16891,6 +16893,140 @@ const Undo = {
   }
 };
 
+/* ---------- Which slope fits best? The best fit workshop turned round ----------
+   Three or four points with whole x and y, and four numbers, one of them the
+   slope of the least-squares line. The rule is stated first: the best line
+   goes through the middle point (x̄, ȳ), and its slope is
+   Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². The wrong numbers are the slips people make:
+   the slope from the first point to the last, or between the first two, a
+   line through the origin, the line from the origin to the middle point, or
+   x fitted on y. A wrong slope L is checked by what makes the best line
+   best: its misses from the middle point, each times its x − x̄, add to 0,
+   and with slope L they add to Σ(x − x̄)(y − ȳ) − L·Σ(x − x̄)², which is not
+   0. Nothing is saved. */
+const FitPick = {
+  SLIPS:['ends','first','origin','mean','flip'],
+  RULE:'The best line, the one whose squared misses add up to the least, goes through the middle point (x̄, ȳ), and its slope is m = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². Find x̄ and ȳ, then for each point multiply its two gaps from them and add, and add the squares of the x gaps. Which slope does the best line have?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0 ? `(${this.fs(f)})` : this.fs(f); },
+  // the sums, each times n so they stay whole: n·Σ(x − x̄)(y − ȳ), n·Σ(x − x̄)², n·Σ(y − ȳ)²
+  sums(S){
+    const P=S.p, n=P.length, sx=P.reduce((s,q)=>s+q[0],0), sy=P.reduce((s,q)=>s+q[1],0);
+    const sxy=P.reduce((s,q)=>s+q[0]*q[1],0), sxx=P.reduce((s,q)=>s+q[0]*q[0],0), syy=P.reduce((s,q)=>s+q[1]*q[1],0);
+    return {n, sx, sy, A:n*sxy-sx*sy, B:n*sxx-sx*sx, C:n*syy-sy*sy, sxy, sxx};
+  },
+  val(S,k){
+    const P=S.p, n=P.length, T=this.sums(S);
+    if(k==='right') return this.frac(T.A,T.B);
+    if(k==='ends') return this.frac(P[n-1][1]-P[0][1],P[n-1][0]-P[0][0]);
+    if(k==='first') return this.frac(P[1][1]-P[0][1],P[1][0]-P[0][0]);
+    if(k==='origin') return this.frac(T.sxy,T.sxx);
+    if(k==='mean') return T.sx ? this.frac(T.sy,T.sx) : null;
+    return T.A ? this.frac(T.C,T.A) : null;
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips these points can offer: each a number other than 0, up to 20 across, and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!v || v[0]===0 || Math.abs(v[0]/v[1])>20 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // a number like the right one: of its form, whole or fraction, or of its sign
+  same(S,k,by){ const v=this.val(S,k), W=this.val(S,'right'); return by==='form' ? this.whole(v)===this.whole(W) : (v[0]<0)===(W[0]<0); },
+  // the sets of three slips that hold one number of the right one's form and one of its sign, so neither gives it away
+  trios(S){
+    const rest=this.slips(S), out=[];
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.same(S,x,'form')) && t.some(x=>this.same(S,x,'sign'))) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1, wantNeg=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const n=R.i(3,4), xs=new Set();
+      while(xs.size<n) xs.add(R.i(-2,3));
+      const p=[...xs].sort((a,b)=>a-b).map(x=>[x,R.i(-4,5)]);
+      const S={p}, T=this.sums(S);
+      if(!T.A) continue;
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole || (W[0]<0)!==wantNeg || Math.abs(W[0]/W[1])>20) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {p:[[-1,1],[0,4],[2,2],[3,5]]};
+  },
+  pts(S){ return S.p.map(([x,y])=>`(${neg(x)}, ${neg(y)})`).join(', '); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form, and one of its sign, always stand beside it, so neither gives it away
+    const T=this.trios(S), take=T[R.i(0,T.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('LINE LAYER', this.matched+' best slopes found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the best slope, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Fit.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // the middle point and the two sums, as the player would write them
+  mid(S){ const T=this.sums(S); return {x:this.frac(T.sx,T.n), y:this.frac(T.sy,T.n), sxy:this.frac(T.A,T.n), sxx:this.frac(T.B,T.n)}; },
+  slip(S,k,L){
+    const P=S.p, n=P.length, M=this.mid(S);
+    if(k==='ends') return `${L} is the slope from the first point to the last, (${neg(P[n-1][1])} − ${this.pf([P[0][1],1])}) / (${neg(P[n-1][0])} − ${this.pf([P[0][0],1])}). The points between count too.`;
+    if(k==='first') return `${L} is the slope between the first two points alone. Every point counts in the best line.`;
+    if(k==='origin') return `${L} is Σxy / Σx², the best line forced through (0, 0). The best line goes through the middle point (${this.fs(M.x)}, ${this.fs(M.y)}), so take x̄ and ȳ away first.`;
+    if(k==='mean') return `${L} is ȳ / x̄, the line from (0, 0) to the middle point. The best line goes through the middle point, but not through (0, 0).`;
+    return `${L} is Σ(y − ȳ)² / Σ(x − x̄)(y − ȳ), x fitted on y. That line makes the sideways misses least; the best line here makes the up-and-down misses least.`;
+  },
+  check(S,k,L){
+    const M=this.mid(S), v=this.val(S,k), K=this.frac(M.sxy[0]*M.sxx[1]*v[1]-v[0]*M.sxx[0]*M.sxy[1],M.sxy[1]*M.sxx[1]*v[1]);
+    return `Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope ${this.fs(v)} they add to Σ(x − x̄)(y − ȳ) − ${this.pf(v)} × Σ(x − x̄)² = ${this.fs(M.sxy)} − ${this.pf(v)} × ${this.fs(M.sxx)} = ${this.fs(K)}, not 0, so a ${K[0]>0?'bigger':'smaller'} slope fits better.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="fpQ" style="text-align:center;font-size:16px;margin-bottom:2px">Points: ${this.pts(S)}</div>`;
+    out+=`<div class="small" style="text-align:center">Which slope does the best line have?</div>`;
+    out+=`<div id="fpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="FitPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the best slope':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, M=this.mid(B);
+      lines.push(`That was it: x̄ = ${this.fs(M.x)} and ȳ = ${this.fs(M.y)}, Σ(x − x̄)(y − ȳ) = ${this.fs(M.sxy)} and Σ(x − x̄)² = ${this.fs(M.sxx)}, so m = ${this.fs(M.sxy)} ÷ ${this.fs(M.sxx)} = ${this.fs(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="fpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 /* ============ BEST FIT WORKSHOP ============
    A line y = m·x + c through scattered points, set by hand. Each point's
    miss is its y minus the line's height there; the readout works every miss,
@@ -16980,7 +17116,15 @@ const Fit = {
     else { const v=this.ch+by; if(v<this.CLO || v>this.CHI) return; this.ch=v; }
     this.touched=true; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('ftTab').innerHTML=[['hand','📏 Set it by hand','Set the line through the points by hand'],['pick','🎯 Which slope fits best?','See a few points and pick which of four numbers is the slope of the best line through them']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Fit.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['ftSets','ftAmts','ftFig','ftRead','ftGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('fpBox').innerHTML=pick ? FitPick.html() : '';
+    if(pick) return;
     document.getElementById('ftSets').innerHTML=this.SETS.map((o,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Fit.pick(${i})"
         aria-label="${o.btn}: ${o.is}, at ${o.pts.map(p=>`(${neg(p[0])}, ${neg(p[1])})`).join(', ')}">${o.btn}</button>`).join('');

@@ -7323,6 +7323,152 @@ const hzPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which slope fits best? The best fit workshop turned round. Every number is
+   read back off its button and checked against the slip it is named as,
+   worked from the points here; the right one alone is the bottom of the
+   squared misses, found without the rule: with the height set best for each
+   slope, a nudge of a hair either way makes the total of squared misses
+   bigger. Each wrong number's check is worked again from the points. */
+const fitPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Fit = {render(){ env.renders++; }};" +
+    cut('const FitPick = {', '/* ============ BEST FIT WORKSHOP ============') + 'return FitPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // the middle point and the two sums, worked here in fractions: each gap times n stays whole
+  const work = Q => { const n = Q.p.length, sx = Q.p.reduce((s, q) => s + q[0], 0), sy = Q.p.reduce((s, q) => s + q[1], 0);
+    let gxy = 0, gxx = 0, gyy = 0;
+    for (const [x, y] of Q.p) { const dx = n * x - sx, dy = n * y - sy; gxy += dx * dy; gxx += dx * dx; gyy += dy * dy; }
+    return { n, xb: red(sx, n), yb: red(sy, n), sxy: red(gxy, n * n), sxx: red(gxx, n * n), syy: red(gyy, n * n), sx, sy }; };
+  const div = (a, b) => red(a[0] * b[1], a[1] * b[0]);
+  const want = (k, Q) => { const P = Q.p, n = P.length, W = work(Q);
+    if (k === 'right') return div(W.sxy, W.sxx);
+    if (k === 'ends') return red(P[n - 1][1] - P[0][1], P[n - 1][0] - P[0][0]);
+    if (k === 'first') return red(P[1][1] - P[0][1], P[1][0] - P[0][0]);
+    if (k === 'origin') return red(P.reduce((s, q) => s + q[0] * q[1], 0), P.reduce((s, q) => s + q[0] * q[0], 0));
+    if (k === 'mean') return W.sx ? red(W.sy, W.sx) : null;
+    if (k === 'flip') return W.sxy[0] ? div(W.syy, W.sxy) : null;
+    return null; };
+  // the total of squared misses for slope m, with the height set best for it: through the middle point
+  const sse = (Q, m) => { const W = work(Q), xb = W.xb[0] / W.xb[1], yb = W.yb[0] / W.yb[1];
+    return Q.p.reduce((s, [x, y]) => s + (y - (yb + m * (x - xb))) ** 2, 0); };
+  const bottom = (Q, m) => { const h = 1e-4; return sse(Q, m) < sse(Q, m + h) && sse(Q, m) < sse(Q, m - h); };
+  const pts = Q => Q.p.map(([x, y]) => `(${ng(x)}, ${ng(y)})`).join(', ');
+  const slipOf = (k, L, Q) => { const P = Q.p, n = P.length, W = work(Q);
+    if (k === 'ends') return `${L} is the slope from the first point to the last, (${ng(P[n - 1][1])} − ${pf([P[0][1], 1])}) / (${ng(P[n - 1][0])} − ${pf([P[0][0], 1])}). The points between count too.`;
+    if (k === 'first') return `${L} is the slope between the first two points alone. Every point counts in the best line.`;
+    if (k === 'origin') return `${L} is Σxy / Σx², the best line forced through (0, 0). The best line goes through the middle point (${fr(W.xb)}, ${fr(W.yb)}), so take x̄ and ȳ away first.`;
+    if (k === 'mean') return `${L} is ȳ / x̄, the line from (0, 0) to the middle point. The best line goes through the middle point, but not through (0, 0).`;
+    return `${L} is Σ(y − ȳ)² / Σ(x − x̄)(y − ȳ), x fitted on y. That line makes the sideways misses least; the best line here makes the up-and-down misses least.`; };
+  const checkOf = (v, L, Q) => { const W = work(Q), K = red(W.sxy[0] * W.sxx[1] * v[1] - v[0] * W.sxx[0] * W.sxy[1], W.sxy[1] * W.sxx[1] * v[1]);
+    return { K, line: `Check ${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope ${fr(v)} they add to Σ(x − x̄)(y − ȳ) − ${pf(v)} × Σ(x − x̄)² = ${fr(W.sxy)} − ${pf(v)} × ${fr(W.sxx)} = ${fr(K)}, not 0, so a ${K[0] > 0 ? 'bigger' : 'smaller'} slope fits better.` }; };
+  if (S.RULE !== 'The best line, the one whose squared misses add up to the least, goes through the middle point (x̄, ȳ), and its slope is m = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². Find x̄ and ȳ, then for each point multiply its two gaps from them and add, and add the squares of the x gaps. Which slope does the best line have?') fail('fitpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('fitpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, four = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Xs = new Set(), Ys = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), n = Q.p.length;
+      rounds++; if (n === 4) four++; Q.p.forEach(([x, y]) => { Xs.add(x); Ys.add(y); });
+      if (![3, 4].includes(n) || Q.p.some(([x, y]) => !Number.isInteger(x) || !Number.isInteger(y) || x < -2 || x > 3 || y < -4 || y > 5)) fail('fitpick', key, `${sig} is not three or four whole points, x from −2 to 3 and y from −4 to 5`);
+      if (Q.p.some((q, i) => i && q[0] <= Q.p[i - 1][0])) fail('fitpick', key, `the points of ${sig} are not in order of x, all different`);
+      if (prev && prev === sig) fail('fitpick', key, 'the same points come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('fitpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` Points: ${pts(Q)} Which slope does the best line have? A`)) fail('fitpick', key, 'the rule and the points are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="FitPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('fitpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('fitpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(v[0] / v[1]) > 20)) fail('fitpick', key, 'a number is 0 or past 20');
+      if (new Set(vals.map(String)).size !== 4) fail('fitpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      { const T = S.trios(Q); if (T.length > 1) { choice++; if (r.opts.some(o => o.k !== 'right' && !T[0].includes(o.k))) later++; } }
+      if (vals[ri][1] === 1) whole++; if (vals[ri][0] < 0) negs++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('fitpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && (v[0] < 0) === (vals[ri][0] < 0))) fail('fitpick', key, 'no wrong number has the right one’s sign');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('fitpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('fitpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== bottom(Q, vals[i][0] / vals[i][1])) fail('fitpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the bottom of the squared misses`);
+      });
+      if (k === 0 && txt(S.html().split('id="fpRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('fitpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('fitpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="fpRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ch = checkOf(vals[i], Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('fitpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        if (lines[1] !== ch.line) fail('fitpick', key, `the check of ${o.k} is: ${lines[1]} | want ${ch.line}`);
+        if (ch.K[0] === 0) fail('fitpick', key, 'a wrong number passes its check');
+        // the check's sum, worked straight from the points: each miss from the middle point times its x gap
+        { const W = work(Q), xb = W.xb[0] / W.xb[1], yb = W.yb[0] / W.yb[1], L = vals[i][0] / vals[i][1];
+          const direct = Q.p.reduce((s, [x, y]) => s + (x - xb) * ((y - yb) - L * (x - xb)), 0);
+          if (Math.abs(direct - ch.K[0] / ch.K[1]) > 1e-9) fail('fitpick', key, `the check of ${o.k} sums to ${direct}, not ${fr(ch.K)}`);
+          const best = want('right', Q), bv = best[0] / best[1];
+          if ((ch.K[0] > 0) !== (bv > L)) fail('fitpick', key, `the check of ${o.k} points the wrong way`); }
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="FitPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the best slope"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('fitpick', key, 'the missed numbers are not shut and told as not the best slope');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('fitpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('fitpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('fitpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('fitpick', key, 'no fresh points after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LINE LAYER / 5 best slopes found') fail('fitpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the best slope, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('fitpick', key, `the toast is ${env.toasts[nt]}`); }
+      const W = work(Q), after = `That was it: x̄ = ${fr(W.xb)} and ȳ = ${fr(W.yb)}, Σ(x − x̄)(y − ȳ) = ${fr(W.sxy)} and Σ(x − x̄)² = ${fr(W.sxx)}, so m = ${fr(W.sxy)} ÷ ${fr(W.sxx)} = ${fr(want('right', Q))}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      const got = txt(S.html().split('id="fpRead"')[1].replace(/^[^>]*>/, ''));
+      if (got !== after) fail('fitpick', key, `after a pick: ${got} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same points dealt again are turned away for fresh ones
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { p: [[-1, 1], [0, 4], [2, 2], [3, 5]] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"p":[[-1,1],[0,4],[2,2],[3,5]]}') fail('fitpick', 'repeat', 'the same points are dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['ends', 'first', 'origin', 'mean', 'flip']) if (!kinds[k]) fail('fitpick', 'slips', `the slip ${k} is never offered`);
+  if (Xs.size !== 6 || Ys.size !== 10) fail('fitpick', 'deal', `x ${[...Xs]}, y ${[...Ys]} is not the whole deal`);
+  if (slots.size !== 4) fail('fitpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('fitpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('fitpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (four < rounds * 0.3 || four > rounds * 0.7) fail('fitpick', 'deal', `${four} of ${rounds} rounds have four points, not about half`);
+  if (later < choice * 0.5) fail('fitpick', 'deal', `the slips shown were the first set ${choice - later} times of ${choice}, so the other sets are rarely dealt`);
+  if (fives !== 30) fail('fitpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12081,6 +12227,7 @@ console.log(`  touching planes    ${pad(tanPickNotes.rounds.toLocaleString(), 12
 console.log(`  cistern totals     ${pad(cisternPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-total in the cistern workshop, every total read back off its button and checked against the slip it is named as, the right one alone matching the area under the flow by Simpson's sum; ${cisternPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their G, ${cisternPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  flipped slopes     ${pad(invPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the inverse slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching the inverse solved for a hair either side; ${invPickNotes.misses.toLocaleString()} wrong picks checked against g′(u) × f′(p) = 1, ${invPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-head in the horizon workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching f at ten million; ${hzPickNotes.misses.toLocaleString()} wrong picks checked by the biggest-power part of the gap, ${hzPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-fits-best in the best fit workshop, every number read back off its button and checked against the slip it is named as, the right one alone the bottom of the squared misses; ${fitPickNotes.misses.toLocaleString()} wrong picks checked by the misses times their x gaps, ${fitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
