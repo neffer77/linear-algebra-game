@@ -1168,10 +1168,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ NEWTON'S METHOD ============ -->
   <div class="screen" id="s-newton">
     <div class="panel"><h2>🔎 Newton's Method Workshop</h2><div class="sub">Guess where a curve crosses the axis, then follow the tangent at your guess down to the axis: where it lands is a better guess. Step again and again, and watch a root run down in a few steps, or watch the method go astray.</div></div>
+    <div id="nwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step by hand or pick x₁"></div>
     <div class="panel">
+      <div id="nkBox"></div>
       <div id="nwCurves" class="wsModes" role="group" aria-label="Function"></div>
       <div id="nwFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+      <div id="nwStep" class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
         <div class="wsCell"><button id="nwXLo" onclick="Newton.moveX(-1)" aria-label="Move the first guess x₀ left">−</button>
           <b id="nwX" style="font-size:17px;min-width:0"></b>
           <button id="nwXHi" onclick="Newton.moveX(1)" aria-label="Move the first guess x₀ right">+</button></div>
@@ -1181,7 +1183,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="nwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="nwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="nwGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14072,7 +14074,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔎 Newton's Method Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever. Then turn it round: see a curve and a first guess, and pick which of four numbers is the next guess.</div>
          <button class="btn sm" id="tomeNewton" style="width:auto;margin-top:8px" onclick="Newton.open()">Open the Newton's method workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -17524,6 +17526,132 @@ const Taylor = {
    readout works every step from f and f′ at the guess before it, so the
    player watches the method close in on a root in a few steps, overshoot
    one, stall on a flat tangent, or go round in a loop for ever. */
+/* ---------- Which x₁? The Newton's method workshop turned round ----------
+ * A quadratic f, a first guess x₀ with f(x₀) and f′(x₀) worked out, and four
+ * numbers. The next guess is x₁ = x₀ − f(x₀)/f′(x₀), where the tangent at x₀
+ * meets the axis. The wrong numbers are the slips people make with the step:
+ * adding f/f′ instead of taking it away; the fraction upside down, f′/f; the
+ * step alone, −f/f′, with x₀ left off; and x₀ − f(x₀), the height taken away
+ * without dividing by the slope. A 0 is never offered, and the right number
+ * is a fraction about half the time, with another number of its form always
+ * beside it.
+ */
+const NewtonPick = {
+  SLIPS:['plus','flip','noX','noDiv'],
+  RULE:'The tangent at x₀ falls f(x₀) to reach the axis, and it falls f′(x₀) for each step along, so it meets the axis f(x₀)/f′(x₀) along from x₀, back toward the root. That makes the next guess x₁ = x₀ − f(x₀)/f′(x₀). Which number is x₁?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  // n/d written as it stands, then in lowest terms when that reads differently
+  rat(n,d){ const w=`${neg(n)}/${this.pn(d)}`, v=this.fs(this.frac(n,d)); return v===w ? w : `${w} = ${v}`; },
+  // the polynomial px² + qx + r as the workshop writes it
+  poly([p,q,r]){
+    const t=(n,v,first)=>{ if(!n) return ''; const m=Math.abs(n), b=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };
+    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);
+    return (a+b+c)||'0';
+  },
+  F(S){ const [p,q,r]=S.f, x=S.x0; return p*x*x+q*x+r; },
+  D(S){ return 2*S.f[0]*S.x0+S.f[1]; },
+  // the number each option stands for, as a fraction; null where it has no value
+  val(S,k){
+    const F=this.F(S), D=this.D(S), x=S.x0, P=(n,m)=>m ? this.frac(n,m) : null;
+    return k==='right' ? P(x*D-F,D) : k==='plus' ? P(x*D+F,D) : k==='flip' ? P(x*F-D,F)
+      : k==='noX' ? P(-F,D) : [x-F,1];
+  },
+  key(v){ return v ? this.fs(v) : ''; },
+  // the slips this guess can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!v || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantFrac=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={f:[R.pick([1,1,2,-1]), R.i(-4,4), R.i(-6,6)], x0:R.i(-3,3)};
+      const F=this.F(S), D=this.D(S);
+      if(!F || !D || Math.abs(F)>15 || Math.abs(D)>12) continue;
+      const L=this.val(S,'right');
+      if(!L[0] || this.whole(L)===wantFrac) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(L))) continue;
+      return S;
+    }
+    return {f:[1,0,-2], x0:2};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.x0,...S.f].join()!==[prev.x0,...prev.f].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TANGENT RIDER', this.matched+' steps taken','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is x₁, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Newton.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // the tangent at x₀ written out: y = f(x₀) + f′(x₀)(x − x₀)
+  tangent(S){ return `y = ${neg(this.F(S))} + ${this.pn(this.D(S))}(x − ${this.pn(S.x0)})`; },
+  // the tangent's height at the number v, as a fraction
+  height(S,v){ const F=this.F(S), D=this.D(S); return this.frac(F*v[1]+D*v[0]-D*S.x0*v[1], v[1]); },
+  slip(S,k,L){
+    if(k==='plus') return `${L} adds f(x₀)/f′(x₀) to x₀. The step has to go back toward the axis, so it is taken away.`;
+    if(k==='flip') return `${L} takes away f′(x₀)/f(x₀), the fraction upside down. How far along the tangent reaches the axis is the height over the slope, f/f′.`;
+    if(k==='noX') return `${L} is −f(x₀)/f′(x₀), the step alone. The step starts from x₀, so x₀ still has to be put in front of it.`;
+    return `${L} is x₀ − f(x₀), the height taken away without dividing by the slope. The tangent falls f′(x₀) for each step along, so it reaches the axis after f(x₀)/f′(x₀) steps, not f(x₀).`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k);
+    return `Check ${L} on the tangent at x₀, ${this.tangent(S)}: at x = ${this.fs(v)} its height is ${this.fs(this.height(S,v))}, not 0, so it has not reached the axis there.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss(), x=S.x0, P=this.poly(S.f);
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="nkQ" style="text-align:center;font-size:18px;margin-bottom:2px">f(x) = ${P}, x₀ = ${neg(x)}</div>`;
+    out+=`<div id="nkAt" class="small" style="text-align:center">f(${neg(x)}) = ${neg(this.F(S))}, and f′(${neg(x)}) = 2 × ${this.pn(S.f[0])} × ${this.pn(x)} + ${this.pn(S.f[1])} = ${neg(this.D(S))}.</div>`;
+    out+=`<div id="nkPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="NewtonPick.choose(${i})" aria-label="${L}: x₁ = ${v}${gone?'. Not x₁':''}" style="margin:0"><b>${L}</b> x₁ = ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, F=this.F(B), D=this.D(B), x1=this.val(B,'right');
+      lines.push(`That was it: x₁ = ${neg(B.x0)} − ${this.pn(F)}/${this.pn(D)} = ${this.fs(x1)}, and the tangent ${this.tangent(B)} is 0 there, so x₁ is where it meets the axis. Here is a new curve.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="nkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 const Newton = {
   CURVES:[
     {id:'sq',   name:'x² − 2',      d:'2x',      f:{poly:[[1,2],[-2,0]]},       up:true,  ylim:[-3,8],
@@ -17624,7 +17752,15 @@ const Newton = {
     if(v<0 || v>this.NMAX || (by>0 && this.flat())) return;
     this.n=v; this.touched=true; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('nwTab').innerHTML=[['hand','🔎 Step by hand','Slide down the tangents by hand and watch the guesses'],['pick','🎯 Which x₁?','See a curve and a first guess, and pick which of four numbers is the next guess']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Newton.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['nwCurves','nwFig','nwStep','nwRead','nwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('nkBox').innerHTML=pick ? NewtonPick.html() : '';
+    if(pick) return;
     const C=this.curve(), xs=this.path(), n=xs.length-1, X=xs[n], F=this.f(X), D=this.fp(X);
     document.getElementById('nwCurves').innerHTML=this.CURVES.map((c,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.ci}" onclick="Newton.pick(${i})" aria-label="f(x) = ${c.name}">${c.name}</button>`).join('');

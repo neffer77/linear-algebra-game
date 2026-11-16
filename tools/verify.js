@@ -4373,6 +4373,164 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which x₁? The pick-the-next-guess round in the Newton's method workshop.
+   Every number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from the curve
+   alone, and the right one alone must be where the tangent at x₀ really
+   meets the axis: the tangent is worked out here and must be 0 there. Every
+   slope, step and height in the readout is worked again from the numbers it
+   shows. */
+const newtonPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Newton = {render(){ env.renders++; }};" +
+    cut('const NewtonPick = {', 'const Newton = {') + 'return NewtonPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const tm = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), b = (m === 1 && v ? '' : m) + v; return first ? (n < 0 ? '−' : '') + b : (n < 0 ? ' − ' : ' + ') + b; };
+  const poly = ([p, q, r]) => { const a = tm(p, 'x²', true), b = tm(q, 'x', !a), c = tm(r, '', !a && !b); return (a + b + c) || '0'; };
+  const at = (F, x) => F[0] * x * x + F[1] * x + F[2];
+  const sl = (F, x) => 2 * F[0] * x + F[1];
+  // each option, worked out here from the curve and x₀ alone
+  const want = {
+    right: Q => { const F = at(Q.f, Q.x0), D = sl(Q.f, Q.x0); return fr(Q.x0 * D - F, D); },
+    plus: Q => { const F = at(Q.f, Q.x0), D = sl(Q.f, Q.x0); return fr(Q.x0 * D + F, D); },
+    flip: Q => { const F = at(Q.f, Q.x0), D = sl(Q.f, Q.x0); return fr(Q.x0 * F - D, F); },
+    noX: Q => fr(-at(Q.f, Q.x0), sl(Q.f, Q.x0)),
+    noDiv: Q => fr(Q.x0 - at(Q.f, Q.x0), 1)
+  };
+  // the tangent at x₀, y = f(x₀) + f′(x₀)(x − x₀), at the fraction v
+  const tan = (Q, v) => fr(at(Q.f, Q.x0) * v[1] + sl(Q.f, Q.x0) * (v[0] - Q.x0 * v[1]), v[1]);
+  const tanTxt = Q => `y = ${ng(at(Q.f, Q.x0))} + ${pn(sl(Q.f, Q.x0))}(x − ${pn(Q.x0)})`;
+  const N = '(\\(?−?\\d+\\)?)', V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "2 × p × x + q = s", every "x − F/D = v" and every tangent height in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(/2 × (\(?−?\d+\)?) × (\(?−?\d+\)?) \+ (\(?−?\d+\)?) = (−?\d+)/g)) { n++;
+      if (2 * rd(m[1])[0] * rd(m[2])[0] + rd(m[3])[0] !== rd(m[4])[0]) fail('newtonpick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(new RegExp(`x₁ = ${N} − ${N}\\/${N} = ${V}(?![\\d/])`, 'g'))) { n++;
+      const x = rd(m[1])[0], F = rd(m[2])[0], D = rd(m[3])[0];
+      if (!eq(fr(x * D - F, D), rd(m[4]))) fail('newtonpick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(new RegExp(`y = ${N} \\+ ${N}\\(x − ${N}\\): at x = ${V} its height is ${V},`, 'g'))) { n++;
+      const F = rd(m[1])[0], D = rd(m[2])[0], x = rd(m[3])[0], v = rd(m[4]);
+      if (!eq(fr(F * v[1] + D * (v[0] - x * v[1]), v[1]), rd(m[5]))) fail('newtonpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="nkRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L) => ({
+    plus: `${L} adds f(x₀)/f′(x₀) to x₀. The step has to go back toward the axis, so it is taken away.`,
+    flip: `${L} takes away f′(x₀)/f(x₀), the fraction upside down. How far along the tangent reaches the axis is the height over the slope, f/f′.`,
+    noX: `${L} is −f(x₀)/f′(x₀), the step alone. The step starts from x₀, so x₀ still has to be put in front of it.`,
+    noDiv: `${L} is x₀ − f(x₀), the height taken away without dividing by the slope. The tangent falls f′(x₀) for each step along, so it reaches the axis after f(x₀)/f′(x₀) steps, not f(x₀).` }[k]);
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L} on the tangent at x₀, ${tanTxt(Q)}: at x = ${fst(v)} its height is ${fst(tan(Q, v))}, not 0, so it has not reached the axis there.`; };
+  if (S.RULE !== 'The tangent at x₀ falls f(x₀) to reach the axis, and it falls f′(x₀) for each step along, so it meets the axis f(x₀)/f′(x₀) along from x₀, back toward the root. That makes the next guess x₁ = x₀ − f(x₀)/f′(x₀). Which number is x₁?') fail('newtonpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('newtonpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracR = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), xs = new Set(), wholes = new Set(), leads = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, x0 = Q.x0, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; xs.add(x0); leads.add(Q.f[0]);
+      const F = at(Q.f, x0), D = sl(Q.f, x0);
+      if ([x0, ...Q.f].some(x => !Number.isInteger(x)) || Math.abs(x0) > 3 || ![1, 2, -1].includes(Q.f[0]) || Math.abs(Q.f[1]) > 4 || Math.abs(Q.f[2]) > 6) fail('newtonpick', key, `${poly(Q.f)} from ${x0} is not small and whole`);
+      if (!F) fail('newtonpick', key, `x₀ = ${ng(x0)} is a root already`);
+      if (!D) fail('newtonpick', key, `the tangent at x₀ = ${ng(x0)} is flat`);
+      if (Math.abs(F) > 15 || Math.abs(D) > 12) fail('newtonpick', key, `f(x₀) = ${F} or f′(x₀) = ${D} is too big to work`);
+      const L = want.right(Q);
+      { // the tangent at x₀, worked as a line through (x₀, f(x₀)) with slope f′(x₀), is 0 at x₁ and nowhere else
+        const x1 = L[0] / L[1], h = 1e-6, slope = (at(Q.f, x0 + h) - at(Q.f, x0 - h)) / (2 * h);
+        if (Math.abs(F + slope * (x1 - x0)) > 1e-6) fail('newtonpick', key, `the tangent at ${ng(x0)} is not 0 at ${fst(L)}`); }
+      if (L[0] === 0) fail('newtonpick', key, 'x₁ is 0, and 0 is never offered as a wrong number, so it would give itself away');
+      if (L[1] === 1) wholes.add(L[0]); else fracR++;
+      if (prev && prev === sig) fail('newtonpick', key, 'the same curve and guess come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('newtonpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` f(x) = ${poly(Q.f)}, x₀ = ${ng(x0)} f(${ng(x0)}) = ${ng(F)}, and f′(${ng(x0)}) = 2 × ${pn(Q.f[0])} × ${pn(x0)} + ${pn(Q.f[1])} = ${ng(D)}. A`)) fail('newtonpick', key, 'the rule, the curve, x₀ and its value and slope are not shown first');
+      sums(txt(h0.split('id="nkAt"')[1].split('</div>')[0].replace(/^[^>]*>/, '')), key);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="NewtonPick\.choose\((\d)\)" aria-label="([ABCD]): x₁ = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> x₁ = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('newtonpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('newtonpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('newtonpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('newtonpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('newtonpick', key, `x₁ is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('newtonpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('newtonpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('newtonpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} x₁`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of ['plus', 'flip', 'noX', 'noDiv']) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('newtonpick', key, 'a curve with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('newtonpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('newtonpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('newtonpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt)} ${checkOf(o.k, Lt, Q)}`);
+        if (sums(rt, key) !== 1) fail('newtonpick', key, 'a miss does not work the tangent at the missed number');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="NewtonPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not x₁"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('newtonpick', key, 'the missed numbers are not shut and told as not x₁');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('newtonpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('newtonpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('newtonpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('newtonpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TANGENT RIDER / 5 steps taken') fail('newtonpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is x₁, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('newtonpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read();
+      const after = `That was it: x₁ = ${ng(x0)} − ${pn(F)}/${pn(D)} = ${fst(L)}, and the tangent ${tanTxt(Q)} is 0 there, so x₁ is where it meets the axis. Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('newtonpick', key, `after a pick: ${rt} | want ${after}`);
+      if (sums(rt, key) !== 1) fail('newtonpick', key, 'the right pick does not work the step');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve and guess dealt again are turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { f: [1, 0, -2], x0: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"f":[1,0,-2],"x0":2}') fail('newtonpick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['plus', 'flip', 'noX', 'noDiv']) if (!kinds[k]) fail('newtonpick', 'slips', `the slip ${k} is never offered`);
+  if (leads.size !== 3) fail('newtonpick', 'deal', `the x² coefficient is only ever ${[...leads].sort().join(', ')}`);
+  if (xs.size !== 7) fail('newtonpick', 'deal', `x₀ is only ever ${[...xs].sort().join(', ')}`);
+  if (wholes.size < 8 || ![...wholes].some(w => w < 0)) fail('newtonpick', 'deal', `the whole x₁ are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (fracR < rounds * 0.45 || fracR > rounds * 0.55) fail('newtonpick', 'deal', `x₁ is a fraction in ${fracR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left4.size !== 4) fail('newtonpick', 'deal', `when a curve has four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('newtonpick', 'deal', `x₁ only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('newtonpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9112,6 +9270,7 @@ console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15
 console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-det-A in the cofactor workshop, every number read back off its button and checked against the slip it is named as and against det A worked by Sarrus' rule; ${cofPickNotes.misses.toLocaleString()} wrong picks named and pointed to the quickest line, ${cofPickNotes.worked.toLocaleString()} minors and sums worked again from their own numbers)`);
 console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-k in the elimination workshop, every k read back off its button as an exact fraction and checked against the slip it is named as, the right one alone clearing x from row 2; ${elimPickNotes.misses.toLocaleString()} wrong picks checked, ${elimPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${elimPickNotes.fracK.toLocaleString()} rounds whose right k is a fraction)`);
 console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-limit in the L'Hôpital workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the ratio a hair from the point; ${hopPickNotes.misses.toLocaleString()} wrong picks checked, ${hopPickNotes.worked.toLocaleString()} slopes and fractions worked again from their own numbers, ${hopPickNotes.fracR.toLocaleString()} rounds whose limit is a fraction)`);
+console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
