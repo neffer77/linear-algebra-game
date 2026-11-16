@@ -4224,6 +4224,79 @@ arcLength(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:`${why}.`};
   }
+},/* Logistic growth: dP/dt = rP(1 − P/K) grows like rP while P is small and
+   slows to nothing as P nears the ceiling K. At depth 1, how fast it grows at
+   a given P; at depth 2, how fast it grows at its fastest, rK/4 at P = K/2;
+   at depth 3, P at the moment e^(rt) reaches a given number, from the
+   solution P(t) = K/(1 + A·e^(−rt)) with A = (K − P(0))/P(0). Whole and
+   fractional answers come up about equally. The wrong answers are the slips
+   people make: rP with no ceiling, P/K where the room left is 1 − P/K, the
+   P or the r or the ÷ K dropped, the population K/2 given for the rate, A
+   turned upside down, and e^(rt) where the solution has e^(−rt). */
+logistic(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), dv=(u,v)=>mul(u,[v[1],v[0]]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], one=F(1);
+  const dec=u=>String(+(u[0]/u[1]).toFixed(3));
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const r=R.pick([[1,10],[1,5],[1,4],[3,10],[2,5],[1,2],[3,5],[3,4],[4,5],[3,2],[2,1]]).slice(), rs=dec(r);
+    // at depth 2 rK/4 comes out whole for most round K, so K there also takes the odd tens
+    const K=F(R.pick(d===2?[30,50,70,90,100,150,200,250,300,350,500]:[100,200,300,400,500,600,800,1000,1200])), Ks=show(K);
+    const eq=`dP/dt = ${rs}P(1 − P/${Ks})`;
+    let q, ans, why, slips;
+    if(d===1){
+      const P=mul(K,F(R.i(1,9),10)), Ps=show(P), room=sub(one,dv(P,K));
+      ans=mul(mul(r,P),room);
+      q=`${eq}. How fast is the population growing when P = ${Ps}?`;
+      why=`Put P = ${Ps} into rP(1 − P/K): the room left is 1 − ${Ps}/${Ks} = ${show(room)}, so dP/dt = ${rs} × ${Ps} × ${show(room)} = ${show(ans)}`;
+      slips=[
+        [mul(r,P),`that is rP alone, growth with no ceiling; the factor 1 − P/K is what slows it as P nears ${Ks}`],
+        [mul(mul(r,P),dv(P,K)),`that uses P/K = ${show(dv(P,K))}, the share already filled, where the formula needs 1 − P/K, the room left`],
+        [mul(r,room),`that drops the P in front: the rate is r times P times the room left`],
+        [mul(mul(r,P),sub(K,P)),`that leaves off the ÷ ${Ks}: 1 − P/K is (K − P)/K, a share, not a count`],
+        [mul(mul(r,P),add(one,dv(P,K))),`that adds P/K where it takes it away: the room left is 1 − P/K`]
+      ];
+    } else if(d===2){
+      const half=mul(K,F(1,2));
+      ans=mul(mul(r,K),F(1,4));
+      q=`${eq}. How fast is the population growing at its fastest?`;
+      why=`rP(1 − P/K) is a hump that is 0 at P = 0 and at P = ${Ks}, so it peaks half way, at P = ${show(half)}. There dP/dt = ${rs} × ${show(half)} × (1 − 1/2) = rK/4 = ${show(ans)}`;
+      slips=[
+        [half,`that is the population where growth is fastest, P = K/2 = ${show(half)}, not how fast it grows there`],
+        [mul(r,half),`that puts P = K/2 into rP alone and forgets the room left, 1 − P/K = 1/2`],
+        [mul(r,K),`that is rP at P = K, but there 1 − P/K = 0 and growth has stopped`],
+        [mul(K,F(1,4)),`that leaves out r: at P = K/2 the rate is r × K/2 × 1/2`],
+        [mul(r,mul(half,half)),`that leaves off the ÷ K: at P = K/2 the room left is the share 1/2, not K/2`]
+      ];
+    } else {
+      const P0=mul(K,F(R.i(1,9),10)), E=F(R.pick([2,3,4,5,9])), A=dv(sub(K,P0),P0), Es=show(E), P0s=show(P0);
+      const sol=a=>dv(K,add(one,a));
+      ans=sol(dv(A,E));
+      q=`${eq} with P(0) = ${P0s}. Find P at the moment e^(${rs}t) = ${Es}.`;
+      why=`The solution is P(t) = K/(1 + A·e^(−rt)) with A = (K − P(0))/P(0) = ${show(sub(K,P0))}/${P0s} = ${show(A)}. When e^(${rs}t) = ${Es}, e^(−${rs}t) = 1/${Es}, so P = ${Ks}/(1 + ${A[1]===1?show(A):`(${show(A)})`}/${Es}) = ${show(ans)}`;
+      slips=[
+        [sol(dv(dv(P0,sub(K,P0)),E)),`that turns A upside down: A = (K − P(0))/P(0) = ${show(A)}, so that P(0) = K/(1 + A)`],
+        [sol(mul(A,E)),`that uses e^(${rs}t) = ${Es} where the solution has e^(−${rs}t) = 1/${Es}; with it P would shrink`],
+        [mul(P0,E),`that is P(0) × e^(${rs}t), growth with no ceiling; logistic growth slows as P nears ${Ks}`],
+        [sol(dv(dv(K,P0),E)),`that takes A = K/P(0); A is (K − P(0))/P(0), so that P(0) comes out right at t = 0`],
+        [P0,`that is P(0) itself, where e^(${rs}t) = 1; the population has grown since`]
+      ];
+    }
+    const ok=v=>v[0]>0 && v[0]<=9999 && Math.abs(v[0]/v[1])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || ans[0]>9999 || ans[1]>999 || same<2 || (ans[1]===1)!==whole) && g<400) continue;
+    return {topic:'Logistic Growth',
+      codex:{rule:'dP/dt = rP(1 − P/K) slows to 0 as P nears the ceiling K, and is fastest at P = K/2, where it is rK/4. P(t) = K/(1 + A·e^(−rt)), with A = (K − P(0))/P(0).',
+             eg:'dP/dt = 0.2P(1 − P/500) at P = 100: the room left is 1 − 100/500 = 4/5, so dP/dt = 0.2 × 100 × 4/5 = 16.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`${why}.`};
+  }
 }
 };
 
@@ -4337,7 +4410,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4350,7 +4423,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4938,7 +5011,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},

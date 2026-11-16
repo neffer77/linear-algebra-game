@@ -1,236 +1,187 @@
 {
-  "change": "The Arc Length Workshop: lay straight chords along a curve, measure each by Pythagoras, and watch the total close in on ∫√(1 + f′²) dx.",
+  "change": "Logistic growth as a fight topic: growth with a ceiling, dP/dt = rP(1 − P/K).",
   "mutations": [
     {
-      "name": "the line's slope is 4/3",
+      "name": "depth 1 gives rP",
       "file": "index.html",
-      "find": "f:x=>0.75*x, T:5,",
-      "replace": "f:x=>x*4/3, T:5,",
+      "find": "ans=mul(mul(r,P),room);",
+      "replace": "ans=mul(r,P);",
       "run": "verify"
     },
     {
-      "name": "the cubic's second term is 1/x",
+      "name": "depth 1 uses P/K for the room left",
       "file": "index.html",
-      "find": "f:x=>x**3/6+1/(2*x),",
-      "replace": "f:x=>x**3/6+1/x,",
+      "find": "Ps=show(P), room=sub(one,dv(P,K));",
+      "replace": "Ps=show(P), room=dv(P,K);",
       "run": "verify"
     },
     {
-      "name": "the cubic's true length is 17/11",
+      "name": "depth 2 gives rK/2",
       "file": "index.html",
-      "find": "T:17/12, Ts:'17/12',",
-      "replace": "T:17/11, Ts:'17/12',",
+      "find": "ans=mul(mul(r,K),F(1,4));",
+      "replace": "ans=mul(mul(r,K),F(1,2));",
       "run": "verify"
     },
     {
-      "name": "the circle's true length is π",
+      "name": "depth 2 gives the population K/2",
       "file": "index.html",
-      "find": "T:Math.PI/2, Ts:'π/2',",
-      "replace": "T:Math.PI, Ts:'π/2',",
+      "find": "ans=mul(mul(r,K),F(1,4));",
+      "replace": "ans=half;",
       "run": "verify"
     },
     {
-      "name": "the circle runs to 0.9",
+      "name": "depth 3 turns A upside down",
       "file": "index.html",
-      "find": "a:0, b:1, f:x=>Math.sqrt(Math.max(0,1-x*x)),",
-      "replace": "a:0, b:0.9, f:x=>Math.sqrt(Math.max(0,1-x*x)),",
+      "find": "ans=sol(dv(A,E));",
+      "replace": "ans=sol(dv(dv(P0,sub(K,P0)),E));",
       "run": "verify"
     },
     {
-      "name": "the cubic's opening forgets the square",
+      "name": "depth 3 uses e^(rt)",
       "file": "index.html",
-      "find": "so the true length is ∫₁² (x²/2 + 1/(2x²)) dx = 17/12",
-      "replace": "so the true length is ∫₁² √(x²/2 + 1/(2x²)) dx = 17/12",
+      "find": "ans=sol(dv(A,E));",
+      "replace": "ans=sol(mul(A,E));",
       "run": "verify"
     },
     {
-      "name": "the chords can reach 64",
+      "name": "depth 3's A is K/P(0)",
       "file": "index.html",
-      "find": "MAXJ:5,",
-      "replace": "MAXJ:6,",
+      "find": "A=dv(sub(K,P0),P0)",
+      "replace": "A=dv(K,P0)",
       "run": "verify"
     },
     {
-      "name": "each chord is run plus rise",
+      "name": "the question shows r to one place",
       "file": "index.html",
-      "find": "s+=Math.hypot(xs[i]-xs[i-1],S.f(xs[i])-S.f(xs[i-1]));",
-      "replace": "s+=Math.abs(xs[i]-xs[i-1])+Math.abs(S.f(xs[i])-S.f(xs[i-1]));",
+      "find": "const dec=u=>String(+(u[0]/u[1]).toFixed(3));",
+      "replace": "const dec=u=>String(+(u[0]/u[1]).toFixed(1));",
       "run": "verify"
     },
     {
-      "name": "a chord's length is told as run plus rise",
+      "name": "the question's K is off by one",
       "file": "index.html",
-      "find": "length √(${this.pf(r)}² + ${this.pf(h)}²) ${this.is(Math.hypot(r,h))}.",
-      "replace": "length √(${this.pf(r)}² + ${this.pf(h)}²) ${this.is(Math.abs(r)+Math.abs(h))}.",
+      "find": "const eq=`dP/dt = ${rs}P(1 − P/${Ks})`;",
+      "replace": "const eq=`dP/dt = ${rs}P(1 − P/${show(add(K,one))})`;",
       "run": "verify"
     },
     {
-      "name": "the rise is f at the end alone",
+      "name": "depth 3 asks e^(rt) with another r",
       "file": "index.html",
-      "find": "const r=xs[i]-xs[i-1], h=S.f(xs[i])-S.f(xs[i-1]);",
-      "replace": "const r=xs[i]-xs[i-1], h=S.f(xs[i]);",
+      "find": "Find P at the moment e^(${rs}t) = ${Es}.`;",
+      "replace": "Find P at the moment e^(${dec(add(r,F(1,10)))}t) = ${Es}.`;",
       "run": "verify"
     },
     {
-      "name": "the chords are listed up to 8",
+      "name": "the answers are always whole",
       "file": "index.html",
-      "find": "if(n<=4){",
-      "replace": "if(n<=8){",
+      "find": "const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    c",
+      "replace": "const whole=true;\n  for(let g=0;;g++){\n    c",
       "run": "verify"
     },
     {
-      "name": "the gap is the wrong way round",
+      "name": "the answers are seldom whole",
       "file": "index.html",
-      "find": "gap(j=this.j){ return this.set().T-this.total(j); },",
-      "replace": "gap(j=this.j){ return this.total(j)-this.set().T; },",
+      "find": "const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    c",
+      "replace": "const whole=R.chance(0.1);\n  for(let g=0;;g++){\n    c",
       "run": "verify"
     },
     {
-      "name": "the runs add up to the wrong width",
+      "name": "depth 2's K is always round",
       "file": "index.html",
-      "find": "The runs alone add up to b − a = ${this.num(S.b-S.a)}",
-      "replace": "The runs alone add up to b − a = ${this.num(S.b)}",
+      "find": "R.pick(d===2?[30,50,70,90,100,150,200,250,300,350,500]:",
+      "replace": "R.pick(d===2?[100,200,300,400,500,600,800,1000,1200]:",
       "run": "verify"
     },
     {
-      "name": "the doubling ratio is upside down",
+      "name": "the form may give it away",
       "file": "index.html",
-      "find": "${this.num(g1/g0)} times as much",
-      "replace": "${this.num(g0/g1)} times as much",
+      "find": "same<2 || (ans[1]===1)!==whole",
+      "replace": "(ans[1]===1)!==whole",
       "run": "verify"
     },
     {
-      "name": "the circle is said to fall to a quarter",
+      "name": "only three wrong answers",
       "file": "index.html",
-      "find": "(S.id==='cubic' ? 'Each chord is half as long",
-      "replace": "(S.id!=='line' ? 'Each chord is half as long",
+      "find": "dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form\n",
+      "replace": "dist.length<3 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form\n",
       "run": "verify"
     },
     {
-      "name": "the doubling note stays after halving",
+      "name": "depth 1's no-ceiling slip keeps the ceiling",
       "file": "index.html",
-      "find": "this.prev=this.j; this.j--; this.doubled=false;",
-      "replace": "this.prev=this.j; this.j--;",
+      "find": "[mul(r,P),`that is rP alone",
+      "replace": "[mul(mul(r,P),room),`that is rP alone",
       "run": "verify"
     },
     {
-      "name": "an exact total is told as about",
+      "name": "depth 1's share slip uses the room",
       "file": "index.html",
-      "find": "is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },\n  /",
-      "replace": "is(v){ return '≈ '+this.num(v); },\n  /",
+      "find": "[mul(mul(r,P),dv(P,K)),`that uses P/K",
+      "replace": "[mul(mul(r,P),sub(one,dv(P,K))),`that uses P/K",
       "run": "verify"
     },
     {
-      "name": "the count names the run as b − a",
+      "name": "depth 1's ÷ K slip divides by 2",
       "file": "index.html",
-      "find": "each with run (b − a)/${n} ${this.is(run)}:",
-      "replace": "each with run (b − a)/${n} ${this.is(run*n)}:",
+      "find": "[mul(mul(r,P),sub(K,P)),`that leaves off",
+      "replace": "[mul(mul(r,P),dv(sub(K,P),F(2))),`that leaves off",
       "run": "verify"
     },
     {
-      "name": "picking a curve keeps the chords",
+      "name": "depth 2's rP-at-K slip halves",
       "file": "index.html",
-      "find": "pick(i){ this.si=i; this.j=0;",
-      "replace": "pick(i){ this.si=i;",
+      "find": "[mul(r,K),`that is rP at P = K",
+      "replace": "[mul(r,half),`that is rP at P = K",
       "run": "verify"
     },
     {
-      "name": "starting over keeps the doubling note",
+      "name": "depth 2's no-r slip is K/2",
       "file": "index.html",
-      "find": "again(){ this.j=0; this.prev=null; this.doubled=false;",
-      "replace": "again(){ this.j=0; this.prev=null;",
+      "find": "[mul(K,F(1,4)),`that leaves out r",
+      "replace": "[mul(K,F(1,2)),`that leaves out r",
       "run": "verify"
     },
     {
-      "name": "doubling is not noted",
+      "name": "depth 3's no-ceiling slip adds",
       "file": "index.html",
-      "find": "this.prev=this.j; this.j++; this.doubled=true;",
-      "replace": "this.prev=this.j; this.j++; this.doubled=false;",
+      "find": "[mul(P0,E),`that is P(0) × e^",
+      "replace": "[add(P0,E),`that is P(0) × e^",
       "run": "verify"
     },
     {
-      "name": "the y scale is stretched",
+      "name": "depth 3's K/P(0) slip forgets the E",
       "file": "index.html",
-      "find": "PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc(); },",
-      "replace": "PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc()*1.1; },",
+      "find": "[sol(dv(dv(K,P0),E)),`that takes A",
+      "replace": "[sol(dv(K,P0)),`that takes A",
       "run": "verify"
     },
     {
-      "name": "the chords start one point late",
+      "name": "depth 3's e^(rt) slip divides",
       "file": "index.html",
-      "find": "x1=\"${f(this.PX(xs[i-1]))}\" y1=\"${f(this.PY(S.f(xs[i-1])))}\"",
-      "replace": "x1=\"${f(this.PX(xs[i]))}\" y1=\"${f(this.PY(S.f(xs[i])))}\"",
+      "find": "[sol(mul(A,E)),`that uses e^",
+      "replace": "[sol(dv(A,mul(E,E))),`that uses e^",
       "run": "verify"
     },
     {
-      "name": "a node sits on the axis",
+      "name": "depth 3's working ends on P(0)",
       "file": "index.html",
-      "find": "<circle data-k=\"node\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(S.f(x)))}\"",
-      "replace": "<circle data-k=\"node\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(0))}\"",
+      "find": "P = ${Ks}/(1 + ${A[1]===1?show(A):`(${show(A)})`}/${Es}) = ${show(ans)}`;",
+      "replace": "P = ${Ks}/(1 + ${A[1]===1?show(A):`(${show(A)})`}/${Es}) = ${P0s}`;",
       "run": "verify"
     },
     {
-      "name": "the figure counts the chords wrong",
+      "name": "no realm asks logistic growth",
       "file": "index.html",
-      "find": "with ${n===1?'one straight chord':`${n} straight chords`} in blue",
-      "replace": "with ${n===1?'one straight chord':`${n+1} straight chords`} in blue",
+      "find": "'growth','meanValue','linApprox','arcLength','logistic'],",
+      "replace": "'growth','meanValue','linApprox','arcLength'],",
       "run": "verify"
     },
     {
-      "name": "within 0.001 is found at 0.01",
+      "name": "logistic growth is in no strand",
       "file": "index.html",
-      "find": "ok:K=>K.si===1 && K.gap()<0.001},\n    {id:'q",
-      "replace": "ok:K=>K.si===1 && K.gap()<0.01},\n    {id:'q",
+      "find": "'growth','meanValue','linApprox','arcLength','logistic']]",
+      "replace": "'growth','meanValue','linApprox','arcLength']]",
       "run": "verify"
-    },
-    {
-      "name": "π/2 is found to one place",
-      "file": "index.html",
-      "find": "ok:K=>K.si===2 && K.total().toFixed(2)==='1.57'},",
-      "replace": "ok:K=>K.si===2 && K.total().toFixed(1)==='1.6'},",
-      "run": "verify"
-    },
-    {
-      "name": "the third is found on the cubic",
-      "file": "index.html",
-      "find": "ok:K=>K.si===2 && K.doubled}",
-      "replace": "ok:K=>K.si>0 && K.doubled}",
-      "run": "verify"
-    },
-    {
-      "name": "the line's goal is found without doubling",
-      "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.doubled},",
-      "replace": "ok:K=>K.si===0},",
-      "run": "verify"
-    },
-    {
-      "name": "the Tome does not offer it",
-      "file": "index.html",
-      "find": "onclick=\"ArcLen.open()\">Open the arc length workshop</button>",
-      "replace": "onclick=\"UI.go('s-title')\">Open the arc length workshop</button>",
-      "run": "play:arclen"
-    },
-    {
-      "name": "the screen opens unrendered",
-      "file": "index.html",
-      "find": "    if(id==='s-arclen') ArcLen.render();\n",
-      "replace": "",
-      "run": "play:arclen"
-    },
-    {
-      "name": "doubling never stops at 32",
-      "file": "index.html",
-      "find": "document.getElementById('arcwMore').disabled=!this.can(1);",
-      "replace": "",
-      "run": "play:arclen"
-    },
-    {
-      "name": "the goals never show as found",
-      "file": "index.html",
-      "find": "<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE ME",
-      "replace": "<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE ME",
-      "run": "play:arclen"
     }
   ]
 }

@@ -739,6 +739,7 @@ function workedSum(key, ex, a) {
 let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
 let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
+let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -1232,6 +1233,55 @@ Object.assign(ANALYSIS, {
     if (p.d.some(z => /^that is the run/.test(fl(z[1])))) alRun++;
     covered.add('arcLength');
   },
+  // Logistic growth, worked again here in floating point: r, K and the rest
+  // read off the question; at depths 1 and 2 the rate rP(1 − P/K) taken as it
+  // stands, its peak found by scanning P from 0 to K; at depth 3 the equation
+  // stepped forward by Runge–Kutta from P(0) to the time t = ln(E)/r. Each
+  // wrong answer is worked again as the slip its reason names.
+  logistic: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^dP\/dt = ([\d.]+)P\(1 - P\/(\d+)\)(?:\. How fast is the population growing when P = (\d+)\?|\. How fast is the population growing at its fastest\?| with P\(0\) = (\d+)\. Find P at the moment e\^\(([\d.]+)t\) = (\d+)\.)$/);
+    if (!m) { fail('analysis', 'logistic', `the question does not read as logistic growth: ${t}`); return; }
+    const r = +m[1], K = +m[2], rate = P => r * P * (1 - P / K);
+    let truth, slip, d;
+    if (m[3] !== undefined) {
+      d = 1; const P = +m[3];
+      if (!(P > 0 && P < K)) fail('analysis', 'logistic', `P is not between 0 and K: ${t}`);
+      truth = rate(P);
+      slip = [[/^that is rP alone/, r * P], [/^that uses P\/K = /, r * P * P / K], [/^that drops the P in front/, r * (1 - P / K)],
+        [/^that leaves off the ÷ /, r * P * (K - P)], [/^that adds P\/K/, r * P * (1 + P / K)]];
+    } else if (m[4] === undefined) {
+      d = 2; let best = 0, at = 0;
+      for (let i = 0; i <= 100000; i++) { const P = K * i / 100000, v = rate(P); if (v > best) { best = v; at = P; } }
+      if (Math.abs(at - K / 2) > K * 1e-4) fail('analysis', 'logistic', `the rate does not peak at K/2: ${t}`);
+      truth = best;
+      slip = [[/^that is the population where growth is fastest/, at], [/^that puts P = K\/2 into rP alone/, r * at], [/^that is rP at P = K/, r * K],
+        [/^that leaves out r/, best / r], [/^that leaves off the ÷ /, r * at * (K - at)]];
+    } else {
+      d = 3; const P0 = +m[4], E = +m[6];
+      if (+m[5] !== r) fail('analysis', 'logistic', `the e^(rt) does not use the equation's r: ${t}`);
+      if (!(P0 > 0 && P0 < K && E > 1)) fail('analysis', 'logistic', `P(0) or e^(rt) is out of range: ${t}`);
+      // Runge–Kutta from 0 to t = ln(E)/r
+      const T = Math.log(E) / r, n = 20000, h = T / n; let P = P0;
+      for (let i = 0; i < n; i++) { const k1 = rate(P), k2 = rate(P + h * k1 / 2), k3 = rate(P + h * k2 / 2), k4 = rate(P + h * k3); P += h * (k1 + 2 * k2 + 2 * k3 + k4) / 6; }
+      truth = P;
+      const A = (K - P0) / P0;
+      slip = [[/^that turns A upside down/, K / (1 + 1 / (A * E))], [/^that uses e\^\(/, K / (1 + A * E)], [/^that is P\(0\) × e\^/, P0 * E],
+        [/^that takes A = K\/P\(0\)/, K / (1 + K / (P0 * E))], [/^that is P\(0\) itself/, P0]];
+    }
+    valueCheck('logistic', truth, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'logistic', `the working does not end on ${p.a}: ${w}`);
+    for (const [v, why] of p.d) {
+      const s = slip.find(([re]) => re.test(fl(why)));
+      if (!s) { fail('analysis', 'logistic', `a wrong answer's reason is not one of depth ${d}'s slips: ${why}`); continue; }
+      if (Math.abs(val(fl(v)) - s[1]) > 1e-6 * Math.max(1, Math.abs(s[1]))) fail('analysis', 'logistic', `${fl(v)} is not the slip it is named as (${s[1]}): ${why}`);
+      if ([/^that is rP alone/, /^that is the population where/, /^that (turns A upside down|takes A = K)/][d - 1].test(fl(why))) lgKey++;
+    }
+    covered.add('logistic');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1353,7 +1403,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 75, sig: 0x2cef };
+  const PINNED = { count: 76, sig: 0xa1b7 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -15327,6 +15377,30 @@ for (let d = 1; d <= 3; d++) {
   if (alRun < AL * 0.5) fail('analysis', 'arcLength', `depth ${d} offers the bare run in only ${alRun} of ${AL} questions`);
   if (d < 3 && (alWhole < AL * 0.35 || alWhole > AL * 0.65)) fail('analysis', 'arcLength', `depth ${d} gives a whole answer ${alWhole} times in ${AL}, not about half`);
   if (d === 3 && alWhole) fail('analysis', 'arcLength', `depth 3 gives a whole answer ${alWhole} times, where too few slips would be whole beside it`);
+}
+
+// Logistic growth at every depth: the answer and its four slips are five
+// different exact numbers above 0, each slip with its reason; two of the four
+// share the answer's form; each depth's commonest slip (rP with no ceiling,
+// the population K/2 for the rate, A turned upside down or taken as K/P(0)) is
+// offered often; and whole and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const LG = 3000;
+  lgKey = 0; lgWhole = 0;
+  for (let i = 0; i < LG; i++) {
+    const p = GEN.logistic(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'logistic', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^\d+(\/\d+)?$/.test(v) || /^0/.test(v))) fail('analysis', 'logistic', `a number is not exact, is 0 or is below 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.split('/')[0].length > 4 || (v.split('/')[1] || '').length > 3)) fail('analysis', 'logistic', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'logistic', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'logistic', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) lgWhole++;
+    ANALYSIS.logistic(p);
+  }
+  if (lgKey < LG * 0.5) fail('analysis', 'logistic', `depth ${d} offers its commonest slip in only ${lgKey} of ${LG} questions`);
+  if (lgWhole < LG * 0.35 || lgWhole > LG * 0.65) fail('analysis', 'logistic', `depth ${d} gives a whole answer ${lgWhole} times in ${LG}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);
