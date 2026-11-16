@@ -1790,11 +1790,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TANGENT PLANE WORKSHOP ============ -->
   <div class="screen" id="s-tanplane">
     <div class="panel"><h2>🪁 Tangent Plane Workshop</h2><div class="sub">A tangent plane is built from three numbers: the height at the point and a slope along each axis. Set them by hand and watch two slices through the surface, one along x and one along y, to see whether the plane touches.</div></div>
+    <div id="tqTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build a plane by hand or pick the one that touches"></div>
     <div class="panel">
+      <div id="tnBox"></div>
       <div id="tqSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which surface"></div>
       <div id="tqFig"></div>
       <div id="tqP" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="tqStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="tqhLo" onclick="TanPlane.move('h',-1)" aria-label="Make the height of the plane smaller">−</button>
           <b id="tqh" style="font-size:16px;min-width:0"></b>
           <button id="tqhHi" onclick="TanPlane.move('h',1)" aria-label="Make the height of the plane bigger">+</button></div>
@@ -1807,7 +1809,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="tqRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="tqGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="tqGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14172,7 +14174,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪁 Tangent Plane Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build a tangent plane from its height and two slopes, and watch it touch a bowl, a saddle and a dome in two side views. Swap the slopes, forget the height, and see why a plane has to fit both slices at once. Then turn it round: see a surface and a point, and pick which of four planes touches it there.</div>
          <button class="btn sm" id="tomeTanPlane" style="width:auto;margin-top:8px" onclick="TanPlane.open()">Open the tangent plane workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -24416,6 +24418,139 @@ const TrigInt = {
   }
 };
 
+/* ---------- Which plane? The tangent plane workshop turned round ----------
+   A surface f(x, y) = ax² + cxy + by² with whole a, b and c, a whole point
+   (x₀, y₀), and four planes z = h + p(x − x₀) + q(y − y₀), one of them the
+   tangent plane. The rule is stated first. The wrong planes are built two
+   ways at once: one slip in the height and one in the slopes, so one plane
+   has the height wrong, one the slopes, and one both. Every plane then
+   shares its height with one other and its slopes with another, so no plane
+   stands out by agreeing with the rest. A wrong pick is checked at the point
+   for a wrong height, or by a step of 1 along x or y, where the surface sits
+   exactly a (or b) above a plane that touches it. Nothing is saved. */
+const TanPick = {
+  HS:['noSq','swapPt','noC'],
+  XS:['swap','noTwo','noHold'],
+  P:[-2,-1,1,2],
+  RULE:'The tangent plane at (x₀, y₀) is z = f(x₀, y₀) + f_x·(x − x₀) + f_y·(y − y₀). Find the height first, by putting the point into f. Then each slope: f_x by differentiating in x while y is held still, so cxy has slope cy along x, and f_y the same way in y. Put the point into both slopes. Which plane touches?',
+  co(n){ return n===1 ? '' : n===-1 ? '−' : neg(n); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  sg:n=>n<0 ? '−' : '+',
+  ab:n=>Math.abs(n)===1 ? '' : String(Math.abs(n)),
+  f(S,x,y){ return S.a*x*x+S.c*x*y+S.b*y*y; },
+  // the height and the two slopes each kind of plane is built from
+  part(S,k){
+    const {a,b,c,x,y}=S;
+    if(k==='h') return this.f(S,x,y);
+    if(k==='noSq') return a*x+c*x*y+b*y;
+    if(k==='swapPt') return this.f(S,y,x);
+    if(k==='noC') return a*x*x+b*y*y;
+    const p=2*a*x+c*y, q=c*x+2*b*y;
+    return k==='slopes' ? [p,q] : k==='swap' ? [q,p] : k==='noTwo' ? [a*x+c*y,c*x+b*y] : [2*a*x,2*b*y];
+  },
+  // a plane as [h, p, q]: 'right', a height slip, a slope slip, or both joined by +
+  val(S,k){
+    const [H,X]=k==='right' ? ['h','slopes'] : this.HS.includes(k) ? [k,'slopes'] : this.XS.includes(k) ? ['h',k] : k.split('+');
+    return [this.part(S,H),...this.part(S,X)];
+  },
+  key:v=>v.join(),
+  ok(v){ return v.every(n=>n!==0 && Math.abs(n)<=24); },
+  // the height slips and the slope slips this surface can offer
+  hs(S){ const h=this.part(S,'h'); return this.HS.filter(k=>{ const v=this.part(S,k); return v!==h && v!==0 && Math.abs(v)<=24; }); },
+  xs(S){ const [p,q]=this.part(S,'slopes'); return this.XS.filter(k=>{ const [u,w]=this.part(S,k); return (u!==p||w!==q) && this.ok([u,w]); }); },
+  build(){
+    for(let g=0;g<500;g++){
+      const sg=()=>R.i(0,1)?1:-1;
+      const S={a:R.i(1,2)*sg(), b:R.i(1,2)*sg(), c:R.i(1,3)*sg(), x:this.P[R.i(0,3)], y:this.P[R.i(0,3)]};
+      if(!this.ok(this.val(S,'right'))) continue;
+      const hs=this.hs(S), xs=this.xs(S);
+      if(!hs.length || !xs.length) continue;
+      return S;
+    }
+    return {a:1, b:2, c:-3, x:2, y:1};
+  },
+  surf(S){ return `${this.co(S.a)}x² ${this.sg(S.c)} ${this.ab(S.c)}xy ${this.sg(S.b)} ${this.ab(S.b)}y²`; },
+  br(v,at){ return `(${v} ${at<0?'+':'−'} ${Math.abs(at)})`; },
+  plane(S,v){ const [h,p,q]=v; return `z = ${neg(h)} ${this.sg(p)} ${this.ab(p)}${this.br('x',S.x)} ${this.sg(q)} ${this.ab(q)}${this.br('y',S.y)}`; },
+  pt(S){ return `(${neg(S.x)}, ${neg(S.y)})`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];
+    const opts=['right',H,X,H+'+'+X].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('PLANE TOUCHER', this.matched+' planes touched','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the tangent plane, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    TanPlane.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slipH(S,k,Sb){
+    const {a,b,c,x,y}=S;
+    if(k==='noSq'){ const bits=[];
+      if(x*x!==x) bits.push(`at x = ${neg(x)}, x² is ${this.pn(x)}² = ${x*x}, not ${neg(x)}`);
+      if(y*y!==y) bits.push(`at y = ${neg(y)}, y² is ${this.pn(y)}² = ${y*y}, not ${neg(y)}`);
+      return `${Sb} puts the point into f without squaring: ${bits.join(', and ')}.`; }
+    if(k==='swapPt') return `${Sb} puts the point in the wrong way round, x = ${neg(y)} and y = ${neg(x)}. The point is ${this.pt(S)}, so x is ${neg(x)} and y is ${neg(y)}.`;
+    return `${Sb} leaves the ${this.co(c)}xy term out of the height. At the point it is ${neg(c)} × ${this.pn(x)} × ${this.pn(y)} = ${neg(c*x*y)}, and it counts too.`;
+  },
+  slipX(S,k,Sb){
+    const {c,x,y}=S;
+    if(k==='swap') return `${Sb} puts the slopes in each other’s places. f_x is the slope as x moves, so it goes with ${this.br('x',S.x)}, and f_y with ${this.br('y',S.y)}.`;
+    if(k==='noTwo') return `${Sb} forgets the 2 that a square brings down: x² has slope 2x and y² has slope 2y.`;
+    return `${Sb} drops the ${this.co(c)}xy term from the slopes. Held at y = ${neg(y)}, it is ${this.co(c*y)}x, with slope ${neg(c*y)} along x, and held at x = ${neg(x)} it is ${this.co(c*x)}y, with slope ${neg(c*x)} along y.`;
+  },
+  slip(S,k,L){
+    if(this.HS.includes(k)) return this.slipH(S,k,L);
+    if(this.XS.includes(k)) return this.slipX(S,k,L);
+    const [H,X]=k.split('+');
+    return `${this.slipH(S,H,L)} ${this.slipX(S,X,'It also')}`;
+  },
+  check(S,k,L){
+    const [h1,p1,q1]=this.val(S,k), [h,p]=this.val(S,'right'), {a,b,c,x,y}=S;
+    if(h1!==h) return `Check ${L}: at ${this.pt(S)} both brackets are 0, so ${L}’s plane has height ${neg(h1)} there. The surface has f${this.pt(S)} = ${neg(a)} × ${this.pn(x)}² + ${this.pn(c)} × ${this.pn(x)} × ${this.pn(y)} + ${this.pn(b)} × ${this.pn(y)}² = ${neg(h)}, so ${L}’s plane passes ${Math.abs(h1-h)} ${h1>h?'above':'below'} the point.`;
+    const alongX=p1!==p, X=alongX?x+1:x, Y=alongX?y:y+1, m=alongX?p1:q1, Z=h1+m, F=this.f(S,X,Y), bend=alongX?a:b;
+    return `Check ${L}: step 1 along ${alongX?'x':'y'}, from ${this.pt(S)} to (${neg(X)}, ${neg(Y)}). ${L}’s plane goes from ${neg(h1)} to ${neg(h1)} + ${this.pn(m)} = ${neg(Z)}. The surface goes to f(${neg(X)}, ${neg(Y)}) = ${neg(F)}. Along ${alongX?'x':'y'} a surface bends away from a plane that touches it by its ${alongX?'x':'y'}² part, ${neg(bend)} × 1² = ${neg(bend)}, so the surface minus the plane must be ${neg(bend)}, but here it is ${neg(F)} − ${this.pn(Z)} = ${neg(F-Z)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="tnQ" style="text-align:center;font-size:16px;margin-bottom:2px">Touch f(x, y) = ${this.surf(S)} at ${this.pt(S)}.</div>`;
+    out+=`<div class="small" style="text-align:center">Which plane touches it there?</div>`;
+    out+=`<div id="tnPick" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.plane(S,this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="TanPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the tangent plane':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, W=this.val(B,'right');
+      lines.push(`That was it: f${this.pt(B)} = ${neg(W[0])}, f_x = ${this.co(2*B.a)}x ${this.sg(B.c)} ${this.ab(B.c)}y = ${neg(W[1])} and f_y = ${this.co(B.c)}x ${this.sg(B.b)} ${this.ab(2*B.b)}y = ${neg(W[2])} at the point, so the plane is ${this.plane(B,W)}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="tnRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The tangent plane workshop: a height and two slopes ----------
    The surface is z = a·x² + b·y², and the player builds the plane
    z = h + p(x − x₀) + q(y − y₀) that should touch it at (x₀, y₀). Two side
@@ -24521,7 +24656,15 @@ const TanPlane = {
   start(){ this.h=0; this.p=0; this.q=0; },
   pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
   move(k,by){ const v=this[k]+by; if(v<this.LO || v>this.HI) return; this[k]=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('tqTab').innerHTML=[['hand','🪁 Build it by hand','Set a plane’s height and slopes by hand'],['pick','🎯 Which plane?','See a surface and a point, and pick which of four planes touches it there']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="TanPlane.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['tqSets','tqFig','tqP','tqStep','tqRead','tqGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('tnBox').innerHTML=pick ? TanPick.html() : '';
+    if(pick) return;
     document.getElementById('tqSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="TanPlane.pick(${i})" aria-label="${s.btn}: z = ${this.sq(s.a,'x')} ${s.b<0?'−':'+'} ${this.sq(Math.abs(s.b),'y')} at (${neg(s.x0)}, ${neg(s.y0)})">${s.btn}</button>`).join('');
     for(const [k,lbl] of [['h','height'],['p','slope along x'],['q','slope along y']]){

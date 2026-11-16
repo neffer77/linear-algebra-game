@@ -1,446 +1,502 @@
 {
-  "change": "Which Aⁿv? The diagonal workshop turned round: see A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv.",
+  "change": "Which plane? The tangent plane workshop turned round: see a surface and a point, and pick which of four planes touches it there.",
   "mutations": [
     {
-      "name": "the rule raises a and b too",
+      "name": "the rule forgets the height",
       "file": "index.html",
-      "find": "and Aⁿv = a·λ₁ⁿ·p₁ + b·λ₂ⁿ·p₂. Keep",
-      "replace": "and Aⁿv = aⁿ·λ₁ⁿ·p₁ + bⁿ·λ₂ⁿ·p₂. Keep",
+      "find": "Find the height first, by putting the point into f. Then each slope:",
+      "replace": "Then each slope:",
       "run": "verify"
     },
     {
-      "name": "the rule pairs the eigenvalues the wrong way",
+      "name": "the rule holds the wrong letter still",
       "file": "index.html",
-      "find": "raise each eigenvalue to the n, and pair it with its own eigenvector.",
-      "replace": "raise each eigenvalue to the n, and pair it with the other eigenvector.",
+      "find": "f_x by differentiating in x while y is held still, so cxy has slope cy along x,",
+      "replace": "f_x by differentiating in x while x is held still, so cxy has slope cx along x,",
       "run": "verify"
     },
     {
-      "name": "a P with det 2 is let in",
+      "name": "f forgets the cross term",
       "file": "index.html",
-      "find": "  PP:[[[1,1],[1,2]],",
-      "replace": "  PP:[[[1,1],[1,3]],",
+      "find": "  f(S,x,y){ return S.a*x*x+S.c*x*y+S.b*y*y; },",
+      "replace": "  f(S,x,y){ return S.a*x*x+S.b*y*y; },",
       "run": "verify"
     },
     {
-      "name": "an eigenvalue of 1 is let in",
+      "name": "f forgets to square y",
       "file": "index.html",
-      "find": "  LAM:[-2,-1,2,3],",
-      "replace": "  LAM:[-2,1,2,3],",
+      "find": "  f(S,x,y){ return S.a*x*x+S.c*x*y+S.b*y*y; },",
+      "replace": "  f(S,x,y){ return S.a*x*x+S.c*x*y+S.b*y; },",
       "run": "verify"
     },
     {
-      "name": "A is built without dividing by det P",
+      "name": "the slope along x forgets the 2",
       "file": "index.html",
-      "find": "return [0,1].map(i=>[0,1].map(j=>(PD[i][0]*adj[0][j]+PD[i][1]*adj[1][j])/d)); },",
-      "replace": "return [0,1].map(i=>[0,1].map(j=>(PD[i][0]*adj[0][j]+PD[i][1]*adj[1][j]))); },",
+      "find": "    const p=2*a*x+c*y, q=c*x+2*b*y;",
+      "replace": "    const p=a*x+c*y, q=c*x+2*b*y;",
       "run": "verify"
     },
     {
-      "name": "A is built with D the wrong way round",
+      "name": "the slope along x holds the wrong letter",
       "file": "index.html",
-      "find": "const PD=[[p[0]*l1,q[0]*l2],[p[1]*l1,q[1]*l2]],",
-      "replace": "const PD=[[p[0]*l2,q[0]*l1],[p[1]*l2,q[1]*l1]],",
+      "find": "    const p=2*a*x+c*y, q=c*x+2*b*y;",
+      "replace": "    const p=2*a*x+c*x, q=c*x+2*b*y;",
       "run": "verify"
     },
     {
-      "name": "A is built with P⁻¹ unflipped",
+      "name": "the slope along y holds the wrong letter",
       "file": "index.html",
-      "find": "adj=[[q[1],-q[0]],[-p[1],p[0]]];",
-      "replace": "adj=[[q[1],-p[1]],[-q[0],p[0]]];",
+      "find": "    const p=2*a*x+c*y, q=c*x+2*b*y;",
+      "replace": "    const p=2*a*x+c*y, q=c*y+2*b*y;",
       "run": "verify"
     },
     {
-      "name": "v is built from a twice",
+      "name": "the slope along y uses a",
       "file": "index.html",
-      "find": "  v(S){ const [p,q]=S.P; return [S.a*p[0]+S.b*q[0], S.a*p[1]+S.b*q[1]]; },",
-      "replace": "  v(S){ const [p,q]=S.P; return [S.a*p[0]+S.a*q[0], S.a*p[1]+S.b*q[1]]; },",
+      "find": "    const p=2*a*x+c*y, q=c*x+2*b*y;",
+      "replace": "    const p=2*a*x+c*y, q=c*x+2*a*y;",
       "run": "verify"
     },
     {
-      "name": "the right vector raises a too",
+      "name": "the unsquared height squares y",
       "file": "index.html",
-      "find": "return k==='right' ? this.comb(a*l1**n,b*l2**n,S) :",
-      "replace": "return k==='right' ? this.comb((a*l1)**n,b*l2**n,S) :",
+      "find": "    if(k==='noSq') return a*x+c*x*y+b*y;",
+      "replace": "    if(k==='noSq') return a*x+c*x*y+b*y*y;",
       "run": "verify"
     },
     {
-      "name": "the right vector pairs the eigenvalues wrong",
+      "name": "the turned-round height is not turned",
       "file": "index.html",
-      "find": "return k==='right' ? this.comb(a*l1**n,b*l2**n,S) :",
-      "replace": "return k==='right' ? this.comb(a*l2**n,b*l1**n,S) :",
+      "find": "    if(k==='swapPt') return this.f(S,y,x);",
+      "replace": "    if(k==='swapPt') return this.f(S,x,-y);",
       "run": "verify"
     },
     {
-      "name": "the right vector is one power short",
+      "name": "the height without the cross term keeps it",
       "file": "index.html",
-      "find": "return k==='right' ? this.comb(a*l1**n,b*l2**n,S) :",
-      "replace": "return k==='right' ? this.comb(a*l1**(n-1),b*l2**(n-1),S) :",
-      "run": "verify"
-    },
-    {
-      "name": "the once slip is raised",
-      "file": "index.html",
-      "find": ": k==='once' ? this.comb(a*l1,b*l2,S)",
-      "replace": ": k==='once' ? this.comb(a*l1**2,b*l2**2,S)",
+      "find": "    if(k==='noC') return a*x*x+b*y*y;",
+      "replace": "    if(k==='noC') return a*x*x+b*y*y+c;",
       "run": "verify"
     },
     {
       "name": "the swap slip is not swapped",
       "file": "index.html",
-      "find": ": k==='swap' ? this.comb(a*l2**n,b*l1**n,S)",
-      "replace": ": k==='swap' ? this.comb(a*l1**n,b*l2**n,S)",
+      "find": "k==='swap' ? [q,p] :",
+      "replace": "k==='swap' ? [p,-q] :",
       "run": "verify"
     },
     {
-      "name": "the coefficient slip raises only a",
+      "name": "the 2-forgotten slip keeps the 2",
       "file": "index.html",
-      "find": ": k==='coef' ? this.comb((a*l1)**n,(b*l2)**n,S)",
-      "replace": ": k==='coef' ? this.comb((a*l1)**n,b*l2**n,S)",
+      "find": "k==='noTwo' ? [a*x+c*y,c*x+b*y] :",
+      "replace": "k==='noTwo' ? [a*x+c*y,c*x+2*b*y] :",
       "run": "verify"
     },
     {
-      "name": "the times slip adds n",
+      "name": "the cross-term slip keeps the cross term along y",
       "file": "index.html",
-      "find": ": k==='times' ? this.comb(a*n*l1,b*n*l2,S)",
-      "replace": ": k==='times' ? this.comb(a*(n+l1),b*(n+l2),S)",
+      "find": ": [2*a*x,2*b*y];",
+      "replace": ": [2*a*x,c*x+2*b*y];",
       "run": "verify"
     },
     {
-      "name": "the forgotten-coefficient slip keeps them",
+      "name": "a both-slip keeps the right height",
       "file": "index.html",
-      "find": ": this.comb(l1**n,l2**n,S);",
-      "replace": ": this.comb(a*l1**n,b*l2**n,S);",
+      "find": "    const [H,X]=k==='right' ? ['h','slopes'] : this.HS.includes(k) ? [k,'slopes'] : this.XS.includes(k) ? ['h',k] : k.split('+');",
+      "replace": "    const [H,X]=k==='right' ? ['h','slopes'] : this.HS.includes(k) ? [k,'slopes'] : this.XS.includes(k) ? ['h',k] : ['h',k.split('+')[1]];",
       "run": "verify"
     },
     {
-      "name": "comb mixes the parts",
+      "name": "a both-slip keeps the right slopes",
       "file": "index.html",
-      "find": "  comb(x,y,S){ const [p,q]=S.P; return [x*p[0]+y*q[0], x*p[1]+y*q[1]]; },",
-      "replace": "  comb(x,y,S){ const [p,q]=S.P; return [x*p[0]+y*q[0], x*p[1]+y*q[0]]; },",
+      "find": "    const [H,X]=k==='right' ? ['h','slopes'] : this.HS.includes(k) ? [k,'slopes'] : this.XS.includes(k) ? ['h',k] : k.split('+');",
+      "replace": "    const [H,X]=k==='right' ? ['h','slopes'] : this.HS.includes(k) ? [k,'slopes'] : this.XS.includes(k) ? ['h',k] : [k.split('+')[0],'slopes'];",
       "run": "verify"
     },
     {
-      "name": "two vectors may be the same",
+      "name": "a height slip is let through when it changes nothing",
       "file": "index.html",
-      "find": "      if(seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  build(){\n    for(let g=0;g<500;g++){\n      const P",
-      "replace": "      if(false) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  build(){\n    for(let g=0;g<500;g++){\n      const P",
+      "find": "return this.HS.filter(k=>{ const v=this.part(S,k); return v!==h && v!==0",
+      "replace": "return this.HS.filter(k=>{ const v=this.part(S,k); return v!==0",
       "run": "verify"
     },
     {
-      "name": "the slips always come in the same few",
+      "name": "a 0 height slip is let through",
       "file": "index.html",
-      "find": "  SLIPS:['once','swap','coef','times','noCoef'],",
-      "replace": "  SLIPS:['once','swap','coef','times'],",
+      "find": "return v!==h && v!==0 && Math.abs(v)<=24; }); },",
+      "replace": "return v!==h && Math.abs(v)<=24; }); },",
       "run": "verify"
     },
     {
-      "name": "the two eigenvalues may be the same",
+      "name": "a slope slip is let through when it changes nothing",
       "file": "index.html",
-      "find": "      if(l1===l2) continue;\n      c",
-      "replace": "      if(false) continue;\n      c",
+      "find": "return (u!==p||w!==q) && this.ok([u,w]); }); },",
+      "replace": "return this.ok([u,w]); }); },",
       "run": "verify"
     },
     {
-      "name": "entries may run past 200",
+      "name": "a 0 may sit in a plane",
       "file": "index.html",
-      "find": "this.val(S,k).some(x=>Math.abs(x)>200))) continue;",
-      "replace": "this.val(S,k).some(x=>Math.abs(x)>2000))) continue;",
+      "find": "  ok(v){ return v.every(n=>n!==0 && Math.abs(n)<=24); },",
+      "replace": "  ok(v){ return v.every(n=>Math.abs(n)<=24); },",
       "run": "verify"
     },
     {
-      "name": "a deal with two slips may be dealt",
+      "name": "numbers may run past 24",
       "file": "index.html",
-      "find": "      if(this.slips(S).length<3) continue;\n      return S;\n    }\n    return {P",
-      "replace": "      if(this.slips(S).length<2) continue;\n      return S;\n    }\n    return {P",
-      "run": "verify"
-    },
-    {
-      "name": "the last P is never dealt",
-      "file": "index.html",
-      "find": "const P=this.PP[R.i(0,this.PP.length-1)],",
-      "replace": "const P=this.PP[R.i(0,this.PP.length-2)],",
-      "run": "verify"
-    },
-    {
-      "name": "λ₂ is never 3",
-      "file": "index.html",
-      "find": "l2=this.LAM[R.i(0,3)], sg",
-      "replace": "l2=this.LAM[R.i(0,2)], sg",
+      "find": "  ok(v){ return v.every(n=>n!==0 && Math.abs(n)<=24); },",
+      "replace": "  ok(v){ return v.every(n=>n!==0 && Math.abs(n)<=40); },",
       "run": "verify"
     },
     {
       "name": "a is never negative",
       "file": "index.html",
-      "find": "const S={P, l1, l2, a:R.i(1,2)*sg(),",
-      "replace": "const S={P, l1, l2, a:R.i(1,2),",
+      "find": "const S={a:R.i(1,2)*sg(), b:",
+      "replace": "const S={a:R.i(1,2), b:",
       "run": "verify"
     },
     {
-      "name": "b is never 2",
+      "name": "b never reaches 2",
       "file": "index.html",
-      "find": "b:R.i(1,2)*sg(), n:",
-      "replace": "b:R.i(1,1)*sg(), n:",
+      "find": "b:R.i(1,2)*sg(), c:",
+      "replace": "b:R.i(1,1)*sg(), c:",
       "run": "verify"
     },
     {
-      "name": "the power is never 4",
+      "name": "c never reaches 3",
       "file": "index.html",
-      "find": "n:R.i(2,4)};\n      const W=this.val(S,'right');\n      if(W",
-      "replace": "n:R.i(2,3)};\n      const W=this.val(S,'right');\n      if(W",
+      "find": "c:R.i(1,3)*sg(), x:",
+      "replace": "c:R.i(1,2)*sg(), x:",
       "run": "verify"
     },
     {
-      "name": "a 1 is written in front of p",
+      "name": "the point is only ever on one side",
       "file": "index.html",
-      "find": "  term(c,s){ return c===1 ? s :",
-      "replace": "  term(c,s){ return c===1 ? '1'+s :",
+      "find": "  P:[-2,-1,1,2],",
+      "replace": "  P:[1,2,1,2],",
       "run": "verify"
     },
     {
-      "name": "a −1 is written as −1p",
+      "name": "x is only ever 1 or 2",
       "file": "index.html",
-      "find": "c===-1 ? '−'+s :",
-      "replace": "c===-1 ? '−1'+s :",
+      "find": "x:this.P[R.i(0,3)], y:",
+      "replace": "x:this.P[R.i(2,3)], y:",
       "run": "verify"
     },
     {
-      "name": "a minus b is written as plus",
+      "name": "the height slips are only ever two",
       "file": "index.html",
-      "find": "${S.b<0?'−':'+'} ${this.t",
-      "replace": "${'+'} ${this.t",
+      "find": "  HS:['noSq','swapPt','noC'],",
+      "replace": "  HS:['noSq','noC'],",
       "run": "verify"
     },
     {
-      "name": "a negative loses its brackets",
+      "name": "the slope slips are only ever two",
       "file": "index.html",
-      "find": "  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  A",
-      "replace": "  pn:n=>String(n),\n  A",
+      "find": "  XS:['swap','noTwo','noHold'],",
+      "replace": "  XS:['swap','noTwo'],",
       "run": "verify"
     },
     {
-      "name": "the power is written as squared",
+      "name": "the same surface may come twice",
       "file": "index.html",
-      "find": "  SUP:{2:'²',3:'³',4:'⁴'},",
-      "replace": "  SUP:{2:'²',3:'²',4:'⁴'},",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||true) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "parts are worked without det P",
+      "name": "the height slip is always the first it can be",
       "file": "index.html",
-      "find": "return [(w[0]*q[1]-q[0]*w[1])/d, (p[0]*w[1]-w[0]*p[1])/d]; },",
-      "replace": "return [(w[0]*q[1]-q[0]*w[1]), (p[0]*w[1]-w[0]*p[1])]; },",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[0], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "the same deal may come twice",
+      "name": "the slope slip is always the first it can be",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||true) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[0];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "the slips always come in one order",
+      "name": "the both-slip is left out for a second slope slip",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(S);\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,xs.find(k=>k!==X)||X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
-      "name": "the vector always sits first",
+      "name": "the both-slip is left out for a second height slip",
       "file": "index.html",
-      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
-      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(S);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  A",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,hs.find(k=>k!==H)||H].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "run": "verify"
+    },
+    {
+      "name": "the plane always sits first",
+      "file": "index.html",
+      "find": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()};",
+      "replace": "  newRound(){\n    const prev=this.round && this.round.S;\n    let S;\n    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const hs=this.hs(S), xs=this.xs(S), H=hs[R.i(0,hs.length-1)], X=xs[R.i(0,xs.length-1)];\n    const opts=['right',H,X,H+'+'+X].map(k=>({k}));\n    this.round={S,opts,out:new Set()};",
       "run": "verify"
     },
     {
       "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Di",
-      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Di",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tan",
+      "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Tan",
       "run": "verify"
     },
     {
       "name": "a miss is not shut",
       "file": "index.html",
-      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Di",
-      "replace": "      this.misses++; this.last=null;\n    }\n    Di",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tan",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Tan",
       "run": "verify"
     },
     {
-      "name": "a shut vector can be picked again",
+      "name": "a shut plane can be picked again",
       "file": "index.html",
-      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
-      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
       "run": "verify"
     },
     {
       "name": "a first try is counted after a miss",
       "file": "index.html",
-      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
-      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
+      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
+      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('PO",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
       "run": "verify"
     },
     {
-      "name": "the banner names the wrong thing",
+      "name": "the toast miscounts tries",
       "file": "index.html",
-      "find": "' powers found'",
-      "replace": "' found'",
+      "find": "      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
+      "replace": "      const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('PL",
       "run": "verify"
     },
     {
-      "name": "the toast forgets the tries",
+      "name": "a right pick keeps the old surface",
       "file": "index.html",
-      "find": "picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    D",
-      "replace": "picked ${'on the first try'}. Here is another.`);\n      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    D",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tan",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tan",
       "run": "verify"
     },
     {
-      "name": "the workshop is not redrawn",
+      "name": "a pick does not redraw",
       "file": "index.html",
-      "find": "    Diag.render();\n  },",
-      "replace": "  },",
+      "find": "    TanPlane.render();\n  },\n  miss(){",
+      "replace": "  },\n  miss(){",
       "run": "verify"
     },
     {
-      "name": "the right pick leaves the old deal",
+      "name": "a 1 is written in front of x²",
       "file": "index.html",
-      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    D",
-      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    D",
+      "find": "  co(n){ return n===1 ? '' : n===-1 ? '−' : neg(n); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  s",
+      "replace": "  co(n){ return n===1 ? '1' : n===-1 ? '−' : neg(n); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  s",
       "run": "verify"
     },
     {
-      "name": "the once line raises to the wrong power",
+      "name": "a −1 is written as −1",
       "file": "index.html",
-      "find": "so p₁ is stretched by ${this.pn(l1)}${e} = ${neg(l1**n)}",
-      "replace": "so p₁ is stretched by ${this.pn(l1)}${e} = ${neg(l1**(n+1))}",
+      "find": "n===-1 ? '−' : neg(n); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  s",
+      "replace": "n===-1 ? '−1' : neg(n); },\n  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  s",
       "run": "verify"
     },
     {
-      "name": "the swap line pairs them wrong",
+      "name": "a 1 is written in front of a bracket",
       "file": "index.html",
-      "find": "so ${this.pn(l1)}${e} goes with p₁ and ${this.pn(l2)}${e} with p₂.`;",
-      "replace": "so ${this.pn(l2)}${e} goes with p₁ and ${this.pn(l1)}${e} with p₂.`;",
+      "find": "  ab:n=>Math.abs(n)===1 ? '' : String(Math.abs(n)),",
+      "replace": "  ab:n=>String(Math.abs(n)),",
       "run": "verify"
     },
     {
-      "name": "the coefficient line names the wrong numbers",
+      "name": "a negative loses its brackets",
       "file": "index.html",
-      "find": "v holds ${neg(a)} of p₁ and ${neg(b)} of p₂,",
-      "replace": "v holds ${neg(b)} of p₁ and ${neg(a)} of p₂,",
+      "find": "  pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  s",
+      "replace": "  pn:n=>neg(n),\n  s",
       "run": "verify"
     },
     {
-      "name": "the times line picks a tied eigenvalue",
+      "name": "a minus sign is written as plus",
       "file": "index.html",
-      "find": "const l=n*l1!==l1**n ? l1 : l2;",
-      "replace": "const l=l1;",
+      "find": "  sg:n=>n<0 ? '−' : '+',",
+      "replace": "  sg:n=>'+',",
       "run": "verify"
     },
     {
-      "name": "the times line multiplies wrong",
+      "name": "a bracket keeps the sign of the point",
       "file": "index.html",
-      "find": "not ${n} × ${this.pn(l)} = ${neg(n*l)}.`;",
-      "replace": "not ${n} × ${this.pn(l)} = ${neg(n+l)}.`;",
+      "find": "  br(v,at){ return `(${v} ${at<0?'+':'−'} ${Math.abs(at)})`; },",
+      "replace": "  br(v,at){ return `(${v} ${at<0?'−':'+'} ${Math.abs(at)})`; },",
       "run": "verify"
     },
     {
-      "name": "the coefficient-forgotten line drops b",
+      "name": "the surface swaps a and b",
       "file": "index.html",
-      "find": "of p₁ and ${neg(b)} × ${neg(l2**n)} of p₂, not",
-      "replace": "of p₁ and ${neg(l2**n)} of p₂, not",
+      "find": "  surf(S){ return `${this.co(S.a)}x² ${this.sg(S.c)} ${this.ab(S.c)}xy ${this.sg(S.b)} ${this.ab(S.b)}y²`; },",
+      "replace": "  surf(S){ return `${this.co(S.b)}x² ${this.sg(S.c)} ${this.ab(S.c)}xy ${this.sg(S.a)} ${this.ab(S.a)}y²`; },",
       "run": "verify"
     },
     {
-      "name": "the check names the wrong part",
+      "name": "the plane swaps its slopes in writing",
       "file": "index.html",
-      "find": "one=c1!==S.a*S.l1**S.n;",
-      "replace": "one=c2===S.b*S.l2**S.n;",
+      "find": "return `z = ${neg(h)} ${this.sg(p)} ${this.ab(p)}${this.br('x',S.x)} ${this.sg(q)} ${this.ab(q)}${this.br('y',S.y)}`; },",
+      "replace": "return `z = ${neg(h)} ${this.sg(q)} ${this.ab(q)}${this.br('x',S.x)} ${this.sg(p)} ${this.ab(p)}${this.br('y',S.y)}`; },",
       "run": "verify"
     },
     {
-      "name": "the check shows the right vector",
+      "name": "the unsquared slip names the wrong square",
       "file": "index.html",
-      "find": "const w=this.val(S,k), [c1,c2]=this.parts(S,w),",
-      "replace": "const w=this.val(S,'right'), [c1,c2]=this.parts(S,w),",
+      "find": "if(x*x!==x) bits.push(`at x = ${neg(x)}, x² is ${this.pn(x)}² = ${x*x}, not ${neg(x)}`);",
+      "replace": "bits.push(`at x = ${neg(x)}, x² is ${this.pn(x)}² = ${x*x}, not ${neg(x)}`);",
+      "run": "verify"
+    },
+    {
+      "name": "the turned-round slip names the point as it was",
+      "file": "index.html",
+      "find": "The point is ${this.pt(S)}, so x is ${neg(x)} and y is ${neg(y)}.`;",
+      "replace": "The point is ${this.pt(S)}, so x is ${neg(y)} and y is ${neg(x)}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "the cross-term height slip works the term wrong",
+      "file": "index.html",
+      "find": "At the point it is ${neg(c)} × ${this.pn(x)} × ${this.pn(y)} = ${neg(c*x*y)}, and it counts too.",
+      "replace": "At the point it is ${neg(c)} × ${this.pn(x)} × ${this.pn(y)} = ${neg(c*x)}, and it counts too.",
+      "run": "verify"
+    },
+    {
+      "name": "the cross-term slope slip gives the wrong slope along x",
+      "file": "index.html",
+      "find": "with slope ${neg(c*y)} along x,",
+      "replace": "with slope ${neg(c*x)} along x,",
+      "run": "verify"
+    },
+    {
+      "name": "a both-slip forgets its second slip",
+      "file": "index.html",
+      "find": "    return `${this.slipH(S,H,L)} ${this.slipX(S,X,'It also')}`;",
+      "replace": "    return this.slipH(S,H,L);",
+      "run": "verify"
+    },
+    {
+      "name": "the height check uses the right height",
+      "file": "index.html",
+      "find": "so ${L}’s plane has height ${neg(h1)} there.",
+      "replace": "so ${L}’s plane has height ${neg(h)} there.",
+      "run": "verify"
+    },
+    {
+      "name": "the height check gets the side wrong",
+      "file": "index.html",
+      "find": "${Math.abs(h1-h)} ${h1>h?'above':'below'} the point.",
+      "replace": "${Math.abs(h1-h)} ${h1<h?'above':'below'} the point.",
+      "run": "verify"
+    },
+    {
+      "name": "the step check steps 2",
+      "file": "index.html",
+      "find": "X=alongX?x+1:x, Y=alongX?y:y+1,",
+      "replace": "X=alongX?x+2:x, Y=alongX?y:y+2,",
+      "run": "verify"
+    },
+    {
+      "name": "the step check uses the right slope",
+      "file": "index.html",
+      "find": "m=alongX?p1:q1, Z=h1+m,",
+      "replace": "m=alongX?p:q1, Z=h1+m,",
+      "run": "verify"
+    },
+    {
+      "name": "the step check bends by the wrong number",
+      "file": "index.html",
+      "find": "bend=alongX?a:b;",
+      "replace": "bend=alongX?b:a;",
+      "run": "verify"
+    },
+    {
+      "name": "the step check forgets the bend",
+      "file": "index.html",
+      "find": "so the surface minus the plane must be ${neg(bend)}, but",
+      "replace": "so the surface minus the plane must be 0, but",
       "run": "verify"
     },
     {
       "name": "a miss is not checked",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, e",
-      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, e",
+      "find": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W",
+      "replace": "    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, W",
       "run": "verify"
     },
     {
-      "name": "the right line forgets a",
+      "name": "the right line swaps the slopes",
       "file": "index.html",
-      "find": "lines.push(`That was it: ${this.An(B)} = ${neg(B.a)}·",
-      "replace": "lines.push(`That was it: ${this.An(B)} = ${neg(B.b)}·",
+      "find": "f_x = ${this.co(2*B.a)}x ${this.sg(B.c)} ${this.ab(B.c)}y = ${neg(W[1])} and f_y = ${this.co(B.c)}x ${this.sg(B.b)} ${this.ab(2*B.b)}y = ${neg(W[2])}",
+      "replace": "f_x = ${this.co(2*B.a)}x ${this.sg(B.c)} ${this.ab(B.c)}y = ${neg(W[2])} and f_y = ${this.co(B.c)}x ${this.sg(B.b)} ${this.ab(2*B.b)}y = ${neg(W[1])}",
       "run": "verify"
     },
     {
-      "name": "the right line swaps the eigenvectors",
+      "name": "the right line forgets the 2 in f_y",
       "file": "index.html",
-      "find": "= ${neg(c1)}·${this.vs(B.P[0])} + ${this.pn(c2)}·${this.vs(B.P[1])}",
-      "replace": "= ${neg(c1)}·${this.vs(B.P[1])} + ${this.pn(c2)}·${this.vs(B.P[0])}",
+      "find": "${this.sg(B.b)} ${this.ab(2*B.b)}y = ${neg(W[2])}",
+      "replace": "${this.sg(B.b)} ${this.ab(B.b)}y = ${neg(W[2])}",
       "run": "verify"
     },
     {
       "name": "the count line is lost",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"pwRead\"",
-      "replace": "    out+=`<div id=\"pwRead\"",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tnRead\"",
+      "replace": "    out+=`<div id=\"tnRead\"",
       "run": "verify"
     },
     {
       "name": "the rule is not shown",
       "file": "index.html",
-      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"pwQ\"",
-      "replace": "    let out=``;\n    out+=`<div id=\"pwQ\"",
+      "find": "    let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tnQ\"",
+      "replace": "    let out=``;\n    out+=`<div id=\"tnQ\"",
       "run": "verify"
     },
     {
-      "name": "v is not shown in numbers",
+      "name": "the point is not shown",
       "file": "index.html",
-      "find": "v = ${this.vstr(S)} = ${this.vs(this.v(S))}.</div>`;",
-      "replace": "v = ${this.vstr(S)}.</div>`;",
+      "find": "Touch f(x, y) = ${this.surf(S)} at ${this.pt(S)}.",
+      "replace": "Touch f(x, y) = ${this.surf(S)}.",
       "run": "verify"
     },
     {
-      "name": "A's second row repeats its first",
+      "name": "a shut plane keeps its name",
       "file": "index.html",
-      "find": "A has rows ${this.vs(M[0])} and ${this.vs(M[1])}.",
-      "replace": "A has rows ${this.vs(M[0])} and ${this.vs(M[0])}.",
-      "run": "verify"
-    },
-    {
-      "name": "a shut vector keeps its name",
-      "file": "index.html",
-      "find": "${gone?'. Not '+this.An(S):''}",
+      "find": "${gone?'. Not the tangent plane':''}",
       "replace": "",
       "run": "verify"
     },
     {
       "name": "the buttons are not named",
       "file": "index.html",
-      "find": "aria-label=\"${L}: ${v}${gone?'. Not '+this.An(S):''}\" ",
+      "find": "aria-label=\"${L}: ${v}${gone?'. Not the tangent plane':''}\" ",
       "replace": "",
       "run": "verify"
     },
     {
+      "name": "the planes sit two by two",
+      "file": "index.html",
+      "find": "grid-template-columns:1fr;gap:6px;margin-top:6px\">`+r.opts",
+      "replace": "grid-template-columns:1fr 1fr;gap:6px;margin-top:6px\">`+r.opts",
+      "run": "play:tanpick"
+    },
+    {
       "name": "the hand workshop does not step aside",
       "file": "index.html",
-      "find": "    for(const id of ['dgSets','dgFig','dgCols','dgRead','dgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "replace": "    for(const id of ['dgSets','dgFig','dgRead','dgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "run": "play:powpick"
+      "find": "    for(const id of ['tqSets','tqFig','tqP','tqStep','tqRead','tqGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "    for(const id of ['tqSets','tqFig','tqRead','tqGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "run": "play:tanpick"
     }
   ]
 }
