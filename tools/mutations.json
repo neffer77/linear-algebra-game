@@ -1,522 +1,550 @@
 {
-  "change": "Which estimate? The tangent line workshop turned round: see a curve and an x near a, and pick which of four numbers is the tangent's estimate.",
+  "change": "Which limit? The limit workshop turned round: see a ratio and where x heads, and pick its limit, or that it has none.",
   "mutations": [
     {
-      "name": "√x has the slope 1/√x",
+      "name": "the top's other factor takes the wrong sign",
       "file": "index.html",
-      "find": "return kind==='root' ? {fa:[n,1], m:[1,2*n],",
-      "replace": "return kind==='root' ? {fa:[n,1], m:[1,n],",
+      "find": "top(S){ const [p,q]=S.hole ? [S.a,S.r] : [S.r1,S.r2]; return [S.m, -S.m*(p+q), S.m*p*q]; },",
+      "replace": "top(S){ const [p,q]=S.hole ? [S.a,S.r] : [S.r1,S.r2]; return [S.m, -S.m*(p-q), -S.m*p*q]; },",
       "run": "verify"
     },
     {
-      "name": "√x starts at a",
+      "name": "the bottom is written with a wrong sign",
       "file": "index.html",
-      "find": "return kind==='root' ? {fa:[n,1], m:[1,2*n],",
-      "replace": "return kind==='root' ? {fa:[n*n,1], m:[1,2*n],",
+      "find": "bot(S){ return [1, -(S.a+S.s), S.a*S.s]; },",
+      "replace": "bot(S){ return [1, (S.a+S.s), S.a*S.s]; },",
       "run": "verify"
     },
     {
-      "name": "∛x has the slope 1/(3∛x)",
+      "name": "a 1 in front of x is written",
       "file": "index.html",
-      "find": ": kind==='cube' ? {fa:[n,1], m:[1,3*n*n],",
-      "replace": ": kind==='cube' ? {fa:[n,1], m:[1,3*n],",
+      "find": "const m=Math.abs(n), b=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
+      "replace": "const m=Math.abs(n), b=m+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
       "run": "verify"
     },
     {
-      "name": "1/x has a rising slope",
+      "name": "a minus first is lost",
       "file": "index.html",
-      "find": ": {fa:[1,n], m:[-1,n*n],",
-      "replace": ": {fa:[1,n], m:[1,n*n],",
+      "find": "return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
+      "replace": "return first ? b : (n<0?' − ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
       "run": "verify"
     },
     {
-      "name": "1/x has the slope −1/x",
+      "name": "a hyphen stands for minus",
       "file": "index.html",
-      "find": ": {fa:[1,n], m:[-1,n*n],",
-      "replace": ": {fa:[1,n], m:[-1,n],",
+      "find": "(n<0?' − ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
+      "replace": "(n<0?' - ':' + ')+b; };\n    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);\n    return (a+b+c)||'0';\n  },\n  // x",
       "run": "verify"
     },
     {
-      "name": "1/x steps a whole number across",
+      "name": "x − 0 is written as a factor",
       "file": "index.html",
-      "find": "h:this.frac(d,10), x:this.frac(10*n+d,10), m2:[-1,n]}; },",
-      "replace": "h:[d,1], x:this.frac(10*n+d,10), m2:[-1,n]}; },",
+      "find": "fac(v){ return v===0 ? 'x' :",
+      "replace": "fac(v){ return v===0 ? 'x − 0' :",
       "run": "verify"
     },
     {
-      "name": "the root slip uses the right slope",
+      "name": "x + 3 is written x − −3",
       "file": "index.html",
-      "find": "h:[d,1], x:[n*n+d,1], m2:[1,n]}",
-      "replace": "h:[d,1], x:[n*n+d,1], m2:[1,2*n]}",
+      "find": "v>0 ? `x − ${v}` : `x + ${-v}`; },",
+      "replace": "`x − ${neg(v)}`; },",
       "run": "verify"
     },
     {
-      "name": "x for 1/x is shown as a step",
+      "name": "lowest terms are not taken",
       "file": "index.html",
-      "find": "return S.kind==='recip' ? ((10*S.n+S.d)/10).toFixed(1) : String(this.A(S)+S.d); },",
-      "replace": "return S.kind==='recip' ? (S.d/10).toFixed(1) : String(this.A(S)+S.d); },",
+      "find": "frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
+      "replace": "frac(p,q){ if(q<0){ p=-p; q=-q; } return [p,q]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
       "run": "verify"
     },
     {
-      "name": "a for ∛x is n²",
+      "name": "a minus is left on the bottom",
       "file": "index.html",
-      "find": "S.kind==='cube' ? S.n**3 : S.n; },",
-      "replace": "S.kind==='cube' ? S.n**2 : S.n; },",
+      "find": "frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
+      "replace": "frac(p,q){ const g=this.gcd(p,q)||1; return [p/g,q/g]; },\n  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
       "run": "verify"
     },
     {
-      "name": "the estimate leaves off f(a)",
+      "name": "a whole number is written over 1",
       "file": "index.html",
-      "find": "return k==='right' ? this.add(p.fa,mh)",
-      "replace": "return k==='right' ? mh",
+      "find": "fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
+      "replace": "fs:f=>false ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,\n  a",
       "run": "verify"
     },
     {
-      "name": "the estimate goes the wrong way",
+      "name": "the limit is the leftover top over bottom upside down",
       "file": "index.html",
-      "find": "return k==='right' ? this.add(p.fa,mh)",
-      "replace": "return k==='right' ? this.add(p.fa,[-mh[0],mh[1]])",
+      "find": "return k==='right' ? P(m*(a-r),a-s) :",
+      "replace": "return k==='right' ? P(a-s,m*(a-r)) :",
       "run": "verify"
     },
     {
-      "name": "the start slip keeps f(a)",
+      "name": "the limit leaves off m",
       "file": "index.html",
-      "find": "k==='noBase' ? mh :",
-      "replace": "k==='noBase' ? this.add(p.fa,mh) :",
+      "find": "return k==='right' ? P(m*(a-r),a-s) :",
+      "replace": "return k==='right' ? P(a-r,a-s) :",
       "run": "verify"
     },
     {
-      "name": "the slope slip keeps the slope",
+      "name": "the top's sign slip keeps the sign",
       "file": "index.html",
-      "find": "k==='noSlope' ? this.add(p.fa,p.h)",
-      "replace": "k==='noSlope' ? this.add(p.fa,mh)",
+      "find": "k==='signR' ? P(m*(a+r),a-s)",
+      "replace": "k==='signR' ? P(m*(a-r),a+s)",
       "run": "verify"
     },
     {
-      "name": "the flip slip adds",
+      "name": "the bottom's sign slip changes the top",
       "file": "index.html",
-      "find": "k==='flip' ? this.add(p.fa,[-mh[0],mh[1]])",
-      "replace": "k==='flip' ? this.add(p.fa,mh)",
+      "find": "k==='signS' ? P(m*(a-r),a+s)",
+      "replace": "k==='signS' ? P(m*(a+r),a-s)",
       "run": "verify"
     },
     {
-      "name": "the slope-rule slip uses the right slope",
+      "name": "the dropped bottom keeps the bottom",
       "file": "index.html",
-      "find": "k==='slope' ? this.add(p.fa,this.mul(p.m2,p.h))",
-      "replace": "k==='slope' ? this.add(p.fa,this.mul(p.m,p.h))",
+      "find": "k==='dropS' ? P(m*(a-r),1)",
+      "replace": "k==='dropS' ? P(m*(a-r),a+s)",
       "run": "verify"
     },
     {
-      "name": "the start-at-a slip starts at f(a)",
+      "name": "the dropped top drops m too",
       "file": "index.html",
-      "find": "k==='startA' ? this.add([this.A(S),1],mh)",
-      "replace": "k==='startA' ? this.add(p.fa,mh)",
+      "find": "k==='dropR' ? P(m,a-s)",
+      "replace": "k==='dropR' ? P(1,a-s)",
       "run": "verify"
     },
     {
-      "name": "the root slip keeps the root",
+      "name": "the flip slip is not flipped",
       "file": "index.html",
-      "find": "this.add(p.fa,this.mul([1,(S.kind==='root'?2:3)*this.A(S)],p.h))",
-      "replace": "this.add(p.fa,this.mul(p.m,p.h))",
+      "find": "k==='flip' ? P(a-s,m*(a-r)) : null; }",
+      "replace": "k==='flip' ? P(m*(a-s),a-r) : null; }",
       "run": "verify"
     },
     {
-      "name": "the x slip multiplies by the step",
+      "name": "the top alone is the top at 0",
       "file": "index.html",
-      "find": ": this.add(p.fa,this.mul(p.m,p.x));\n",
-      "replace": ": this.add(p.fa,this.mul(p.m,p.h));\n",
+      "find": "return k==='topOnly' ? P(Na,1) :",
+      "replace": "return k==='topOnly' ? P(T[2],1) :",
       "run": "verify"
     },
     {
-      "name": "1/x may lose a root it has not got",
+      "name": "L'Hôpital forgets the 2",
       "file": "index.html",
-      "find": "if(k==='noRoot' && S.kind==='recip') continue;",
-      "replace": "",
+      "find": "P(2*T[0]*a+T[1],2*a+B[1])",
+      "replace": "P(T[0]*a+T[1],a+B[1])",
+      "run": "verify"
+    },
+    {
+      "name": "the crossed-out slip keeps a on the bottom",
+      "file": "index.html",
+      "find": "k==='cancelA' ? P(Na,a-s)",
+      "replace": "k==='cancelA' ? P(Na,a+s)",
+      "run": "verify"
+    },
+    {
+      "name": "the x² ratio is 1",
+      "file": "index.html",
+      "find": "k==='lead' ? P(m,1)",
+      "replace": "k==='lead' ? P(1,1)",
+      "run": "verify"
+    },
+    {
+      "name": "x = 0 is the top at 0 alone",
+      "file": "index.html",
+      "find": "k==='zeroIn' ? P(T[2],B[2])",
+      "replace": "k==='zeroIn' ? P(T[2],1)",
       "run": "verify"
     },
     {
       "name": "0 may be offered",
       "file": "index.html",
-      "find": "if(v[0]===0 || seen.has(this.key(v)) ",
-      "replace": "if(seen.has(this.key(v)) ",
+      "find": "const seen=new Set(['0']), keep=[];",
+      "replace": "const seen=new Set(), keep=[];",
       "run": "verify"
     },
     {
-      "name": "two slips may show the same number",
+      "name": "a slip the same as the limit is let through",
       "file": "index.html",
-      "find": "if(v[0]===0 || seen.has(this.key(v)) ||",
-      "replace": "if(v[0]===0 ||",
+      "find": "if(S.hole) seen.add(this.key(this.val(S,'right')));",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a check may work out the estimate",
+      "name": "two slips may be the same number",
       "file": "index.html",
-      "find": "|| this.key(this.worked(S,k))===this.key(W)) continue;",
-      "replace": ") continue;",
+      "find": "if(!v || seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  /",
+      "replace": "if(!v) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  /",
       "run": "verify"
     },
     {
-      "name": "one wrong number of its form is enough",
+      "name": "the slips with no hole are the hole's",
       "file": "index.html",
-      "find": "V.filter(v=>this.whole(v)===form).length<2 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
-      "replace": "V.filter(v=>this.whole(v)===form).length<1 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
+      "find": "for(const k of S.hole ? this.HOLE : this.NONE){",
+      "replace": "for(const k of this.HOLE){",
       "run": "verify"
     },
     {
-      "name": "one wrong number of its sign is enough",
+      "name": "one number of the limit's form is enough",
       "file": "index.html",
-      "find": "V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
-      "replace": "V.filter(v=>v[0]*W[0]>0).length<1) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,t",
+      "find": "if(V.filter(v=>this.whole(v)===form).length<2 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
+      "replace": "if(V.filter(v=>this.whole(v)===form).length<1 || V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
+      "run": "verify"
+    },
+    {
+      "name": "one number of the limit's sign is enough",
+      "file": "index.html",
+      "find": "V.filter(v=>v[0]*W[0]>0).length<2) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
+      "replace": "V.filter(v=>v[0]*W[0]>0).length<1) continue;\n      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
       "run": "verify"
     },
     {
       "name": "a wrong number may be two others added",
       "file": "index.html",
-      "find": "      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n",
-      "replace": "",
+      "find": "if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
+      "replace": "\n      out.push(t);\n    }\n    return out;\n  },\n  // ab",
       "run": "verify"
     },
     {
-      "name": "the estimate is always whole",
+      "name": "every ratio hides a hole",
       "file": "index.html",
-      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const k",
-      "replace": "const wantWhole=true;\n    for(let g=0;g<500;g++){\n      const k",
+      "find": "const none=R.i(1,5)===1,",
+      "replace": "const none=false,",
       "run": "verify"
     },
     {
-      "name": "the estimate is never whole",
+      "name": "half the ratios hide no hole",
       "file": "index.html",
-      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const k",
-      "replace": "const wantWhole=false;\n    for(let g=0;g<500;g++){\n      const k",
+      "find": "const none=R.i(1,5)===1,",
+      "replace": "const none=R.i(1,2)===1,",
       "run": "verify"
     },
     {
-      "name": "1/x comes up as often as each other curve",
+      "name": "the limit is always whole",
       "file": "index.html",
-      "find": "['root','cube','recip','recip'][R.i(0,3)];",
-      "replace": "['root','cube','recip'][R.i(0,2)];",
+      "find": "wantWhole=R.i(0,1)===1, m",
+      "replace": "wantWhole=true, m",
       "run": "verify"
     },
     {
-      "name": "∛x never gives a whole estimate",
+      "name": "the limit's form is not sought",
       "file": "index.html",
-      "find": "const kind=wantWhole ? ['root','cube'][R.i(0,1)]",
-      "replace": "const kind=wantWhole ? 'root'",
+      "find": "if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {h",
+      "replace": "\n      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {h",
       "run": "verify"
     },
     {
-      "name": "√x always steps forward",
+      "name": "m is never 1",
       "file": "index.html",
-      "find": "d=wantWhole ? 2*n*[-1,1,2][R.i(0,2)] : R.i(-2*n,2*n); }",
-      "replace": "d=wantWhole ? 2*n*[1,2][R.i(0,1)] : R.i(1,2*n); }",
+      "find": "ms=[1,1,2,3];",
+      "replace": "ms=[2,2,2,3];",
       "run": "verify"
     },
     {
-      "name": "√x may step 0",
+      "name": "a hole's other factor may be the hole",
       "file": "index.html",
-      "find": "if(d===0 || this.A(S)+d<1) continue;",
-      "replace": "if(this.A(S)+d<1) continue;",
+      "find": "if(r===a || r===s) continue;",
+      "replace": "if(r===s) continue;",
       "run": "verify"
     },
     {
-      "name": "x may fall below 1",
+      "name": "a ratio with no hole may hide one",
       "file": "index.html",
-      "find": "if(d===0 || this.A(S)+d<1) continue;",
-      "replace": "if(d===0) continue;",
+      "find": "if(r1===a || r2===a || !a || !s) continue;",
+      "replace": "if(!a || !s) continue;",
       "run": "verify"
     },
     {
-      "name": "the form asked for is not kept",
+      "name": "a ratio with no hole needs only three slips",
       "file": "index.html",
-      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!",
-      "replace": "      if(!",
+      "find": "if(this.slips(S).length<4) continue;",
+      "replace": "if(this.slips(S).length<3) continue;",
       "run": "verify"
     },
     {
-      "name": "a curve with no trio may be dealt",
+      "name": "the same ratio may come twice",
       "file": "index.html",
-      "find": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
-      "replace": "      return S;\n    }\n    return {k",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    l",
+      "replace": "break; }\n    l",
       "run": "verify"
     },
     {
-      "name": "the same curve may come twice",
+      "name": "the limit's place is not balanced",
       "file": "index.html",
-      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // the e",
-      "replace": "break; }\n    // the e",
+      "find": "want=ranks[this.pickW(ranks.map(x=>this.PLACE[x]))]",
+      "replace": "want=ranks[0]",
       "run": "verify"
     },
     {
-      "name": "the place never favours the top",
+      "name": "the limit's place is weighed wrongly",
       "file": "index.html",
-      "find": "PLACE:[1,1,1,3],",
-      "replace": "PLACE:[1,1,1,1],",
+      "find": "PLACE:[2,1,1,2],",
+      "replace": "PLACE:[1,3,3,1],",
       "run": "verify"
     },
     {
-      "name": "the estimate always sits lowest",
+      "name": "the limit always sits first",
       "file": "index.html",
-      "find": "want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "replace": "want=Math.min(...ranks), fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "find": "const opts=[...R.shuffle(nums),",
+      "replace": "const opts=[...nums,",
       "run": "verify"
     },
     {
-      "name": "the place counts the numbers above",
+      "name": "No limit is always the slip",
       "file": "index.html",
-      "find": "return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], wt=ranks.map(x=>this.PLACE[x]), want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "replace": "return v[0]*W[1]>W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], wt=ranks.map(x=>this.PLACE[x]), want=ranks[this.pickW(wt)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "run": "verify"
-    },
-    {
-      "name": "the trio ignores the place",
-      "file": "index.html",
-      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "replace": "fit=T, take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "run": "verify"
-    },
-    {
-      "name": "the slips are always the first that fit",
-      "file": "index.html",
-      "find": "take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "replace": "take=fit[0];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "run": "verify"
-    },
-    {
-      "name": "the estimate always sits first",
-      "file": "index.html",
-      "find": "const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
-      "replace": "const opts=['right',...take].map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('T",
+      "find": "S.hole?'zeroZero':'right'].map(k=>({k}));",
+      "replace": "'zeroZero'].map(k=>({k}));",
       "run": "verify"
     },
     {
       "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
-      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    TanL",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Li",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Li",
       "run": "verify"
     },
     {
       "name": "a miss is not shut",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
-      "replace": "this.misses++; this.last=null;\n    }\n    TanL",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Li",
+      "replace": "this.misses++; this.last=null;\n    }\n    Li",
       "run": "verify"
     },
     {
-      "name": "a shut number can be picked again",
+      "name": "a shut answer can be picked again",
       "file": "index.html",
-      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
-      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
       "run": "verify"
     },
     {
       "name": "a first try is counted after a miss",
       "file": "index.html",
-      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
-      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
       "run": "verify"
     },
     {
       "name": "the banner never comes at five",
       "file": "index.html",
-      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
-      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
       "run": "verify"
     },
     {
       "name": "the toast miscounts tries",
       "file": "index.html",
-      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
-      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TANGENT T",
+      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
+      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('HOL",
       "run": "verify"
     },
     {
-      "name": "a right pick keeps the old curve",
+      "name": "a right pick keeps the old ratio",
       "file": "index.html",
-      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
-      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    TanL",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Li",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Li",
       "run": "verify"
     },
     {
       "name": "a pick does not redraw",
       "file": "index.html",
-      "find": "    TanLine.render();\n  },\n  missed()",
+      "find": "    Limit.render();\n  },\n  missed()",
       "replace": "  },\n  missed()",
       "run": "verify"
     },
     {
-      "name": "the slips are told the wrong way round",
+      "name": "the 0/0 slip names the wrong factor",
       "file": "index.html",
-      "find": "if(k==='noBase') return `${L} leaves off the start",
-      "replace": "if(k==='noSlope') return `${L} leaves off the start",
+      "find": "and that only says ${A} is a factor of each",
+      "replace": "and that only says ${this.pf(s)} is a factor of each",
       "run": "verify"
     },
     {
-      "name": "the slope slip names the wrong slope",
+      "name": "the top's sign slip names the right factor as wrong",
       "file": "index.html",
-      "find": "and here f′(${A}) = ${m}.`;",
-      "replace": "and here f′(${A}) = ${this.fs(p.m2)}.`;",
+      "find": "writes the top's other factor as ${this.pf(-S.r)}",
+      "replace": "writes the top's other factor as ${this.pf(S.r)}",
       "run": "verify"
     },
     {
-      "name": "the x slip names the step as x",
+      "name": "the dropped slips are told the wrong way round",
       "file": "index.html",
-      "find": "${L} multiplies the slope by x = ${this.xs(S)}",
-      "replace": "${L} multiplies the slope by x = ${this.hs(S)}",
+      "find": "if(k==='dropS') return `${L} cancels",
+      "replace": "if(k==='dropR') return `${L} cancels",
       "run": "verify"
     },
     {
-      "name": "the √x slope is worked at a",
+      "name": "L'Hôpital's slip says the top is 0",
       "file": "index.html",
-      "find": "so at ${A} it is 1/(2 × ${n}) = ${m}.`;",
-      "replace": "so at ${A} it is 1/(2 × ${A}) = ${m}.`;",
+      "find": "and here the top is not 0 at x",
+      "replace": "and here the top is 0 at x",
       "run": "verify"
     },
     {
-      "name": "the root slip's formula forgets the 2",
+      "name": "the x² slip names the wrong ratio",
       "file": "index.html",
-      "find": "(S.kind==='root' ? 'f(a) + (x − a)/(2a)'",
-      "replace": "(S.kind==='root' ? 'f(a) + (x − a)/a'",
+      "find": "${L} is the x² terms' ratio, ${S.m}/1",
+      "replace": "${L} is the x² terms' ratio, 1/${S.m}",
       "run": "verify"
     },
     {
       "name": "a miss is not explained",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
-      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCDE'[m]), this.check(S,r.opts[m].k,'ABCDE'[m]));",
+      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCDE'[m]));",
       "run": "verify"
     },
     {
       "name": "a miss is not checked",
       "file": "index.html",
-      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
-      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, p=",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCDE'[m]), this.check(S,r.opts[m].k,'ABCDE'[m]));",
+      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCDE'[m]));",
       "run": "verify"
     },
     {
-      "name": "the check at a skips the x slip",
+      "name": "the 0/0 check works the wrong leftover",
       "file": "index.html",
-      "find": "if(k==='noBase'||k==='useX'||k==='startA'){",
-      "replace": "if(k==='noBase'||k==='startA'){",
+      "find": "which at x = ${neg(a)} is ${neg(a)} − ${this.pn(s)} = ${neg(a-s)}",
+      "replace": "which at x = ${neg(a)} is ${neg(a)} − ${this.pn(s)} = ${neg(a+s)}",
       "run": "verify"
     },
     {
-      "name": "the x slip is checked at x = 0",
+      "name": "the top's sign check multiplies out the right factors",
       "file": "index.html",
-      "find": "k==='useX' ? this.add(p.fa,this.mul(p.m,[A,1]))",
-      "replace": "k==='useX' ? p.fa",
+      "find": "multiplies out to ${this.poly([m,-m*(a-S.r),-m*a*S.r])}",
+      "replace": "multiplies out to ${this.poly(T)}",
       "run": "verify"
     },
     {
-      "name": "the flip slip is said to move the right way",
+      "name": "the bottom's sign check multiplies out the right factors",
       "file": "index.html",
-      "find": "k==='flip' ? [-p.m[0],p.m[1]]",
-      "replace": "k==='flip' ? p.m",
+      "find": "multiplies out to ${this.poly([1,-(a-s),-a*s])}",
+      "replace": "multiplies out to ${this.poly(B)}",
       "run": "verify"
     },
     {
-      "name": "the slope slip is said to move by 1",
+      "name": "the check is made at a",
       "file": "index.html",
-      "find": "k==='noSlope' ? [1,1]",
-      "replace": "k==='noSlope' ? p.m",
+      "find": "const t=this.away(S), ft=",
+      "replace": "const t=S.a, ft=",
       "run": "verify"
     },
     {
-      "name": "the root slip is said to move by f′(a)",
+      "name": "the dropped bottom's check gives f",
       "file": "index.html",
-      "find": ": k==='noRoot' ? [1,(S.kind==='root'?2:3)*A] : p.m2;",
-      "replace": ": k==='noRoot' ? p.m : p.m2;",
+      "find": "const g=k==='dropS' ? [m*(t-S.r),1] :",
+      "replace": "const g=k==='dropS' ? ft :",
       "run": "verify"
     },
     {
-      "name": "the start slip is said to give 0 at a",
+      "name": "the check may give the limit",
       "file": "index.html",
-      "find": "k==='startA' ? [A,1] :",
-      "replace": "k==='startA' ? [0,1] :",
+      "find": "if(g.some(v=>eq(v,f)||eq(v,W)) || eq(f,W)) continue;",
+      "replace": "if(g.some(v=>eq(v,f))) continue;",
       "run": "verify"
     },
     {
-      "name": "the check at a wants a",
+      "name": "the check may give what f gives",
       "file": "index.html",
-      "find": "so it must give f(${A}) = ${fa}. ${L}'s formula",
-      "replace": "so it must give ${A}. ${L}'s formula",
+      "find": "if(g.some(v=>eq(v,f)||eq(v,W)) || eq(f,W)) continue;",
+      "replace": "if(g.some(v=>eq(v,W)) || eq(f,W)) continue;",
       "run": "verify"
     },
     {
-      "name": "the right line drops the start",
+      "name": "the check may land on a zero of the bottom",
       "file": "index.html",
-      "find": "That was it: L(${this.xs(B)}) = ${this.fs(p.fa)} + ",
-      "replace": "That was it: L(${this.xs(B)}) = ",
+      "find": "if(t===S.s || t===S.r) continue;",
+      "replace": "if(t===S.r) continue;",
       "run": "verify"
     },
     {
-      "name": "the true value is worked as √ for every curve",
+      "name": "the top-alone check skips the bottom",
       "file": "index.html",
-      "find": "const truth=B.kind==='root' ? Math.sqrt(x) : B.kind==='cube' ? Math.cbrt(x) : 1/x,",
-      "replace": "const truth=Math.sqrt(x),",
+      "find": "the bottom is ${this.pf(a)}${this.pf(s)} = 0 × ${this.pn(a-s)} = 0.",
+      "replace": "the bottom is ${this.pf(s)} = ${this.pn(a-s)}.",
       "run": "verify"
     },
     {
-      "name": "the miss is told the wrong way",
+      "name": "the L'Hôpital check puts in 0",
       "file": "index.html",
-      "find": "${miss>0?'overshoots':'falls short'}",
-      "replace": "${miss<0?'overshoots':'falls short'}",
+      "find": "${this.poly(T)} gives ${neg(this.at(T,a))} there, not 0.",
+      "replace": "${this.poly(T)} gives ${neg(this.at(T,0))} there, not 0.",
       "run": "verify"
     },
     {
-      "name": "the right line keeps the sign of the rise",
+      "name": "the right line forgets m at x = a",
       "file": "index.html",
-      "find": "${mh[0]<0?'−':'+'} ${this.fs([Math.abs(mh[0]),mh[1]])}",
-      "replace": "+ ${this.fs(mh)}",
+      "find": "${B.m===1 ? this.rat(B.a-B.r,B.a-B.s) :",
+      "replace": "${true ? this.rat(B.a-B.r,B.a-B.s) :",
+      "run": "verify"
+    },
+    {
+      "name": "the right line cancels the wrong factor",
+      "file": "index.html",
+      "find": "and away from x = ${neg(B.a)} that is ${this.mm(B.m)}${this.pf(B.r)}/${this.pf(B.s)}",
+      "replace": "and away from x = ${neg(B.a)} that is ${this.mm(B.m)}${this.pf(B.a)}/${this.pf(B.s)}",
+      "run": "verify"
+    },
+    {
+      "name": "the no-limit line says the top is 0",
+      "file": "index.html",
+      "find": "the top is ${neg(this.at(this.top(B),B.a))} but the bottom is 0",
+      "replace": "the top is 0 but the bottom is 0",
       "run": "verify"
     },
     {
       "name": "the count line is lost",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tl",
-      "replace": "    out+=`<div id=\"tl",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"lm",
+      "replace": "    out+=`<div id=\"lm",
       "run": "verify"
     },
     {
       "name": "the rule is not shown",
       "file": "index.html",
-      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tl",
-      "replace": "let out='';\n    out+=`<div id=\"tl",
+      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"lm",
+      "replace": "let out='';\n    out+=`<div id=\"lm",
       "run": "verify"
     },
     {
-      "name": "the rule forgets the start",
+      "name": "the rule calls 0/0 no limit",
       "file": "index.html",
-      "find": "so f(x) ≈ L(x) = f(a) + f′(a)(x − a):",
-      "replace": "so f(x) ≈ L(x) = f′(a)(x − a):",
+      "find": "that 0/0 is not an answer:",
+      "replace": "that 0/0 means no limit:",
       "run": "verify"
     },
     {
-      "name": "a shut number keeps its name",
+      "name": "a shut answer keeps its name",
       "file": "index.html",
-      "find": "${gone?'. Not the estimate':''}",
-      "replace": "",
+      "find": "${gone?'. Not the limit':''}\" style=\"margin:0$",
+      "replace": "\" style=\"margin:0$",
       "run": "verify"
     },
     {
-      "name": "a is not shown",
+      "name": "No limit is shown as a number",
       "file": "index.html",
-      "find": "with the tangent at a = ${this.A(S)}</div>",
-      "replace": "with the tangent</div>",
+      "find": "v=i===4 ? 'No limit' : this.fs(this.val(S,o.k)),",
+      "replace": "v=this.fs(this.val(S,o.k)||[1,1]),",
       "run": "verify"
     },
     {
       "name": "the hand workshop does not step aside",
       "file": "index.html",
-      "find": "for(const id of ['tlwSets','tlwFig','tlwMoveRow','tlwRead','tlwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "find": "for(const id of ['lmFns','lmSide','lmFig','lmMoveRow','lmRead','lmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
       "replace": "",
-      "run": "play:estpick"
+      "run": "play:limpick"
     },
     {
-      "name": "the mix leaves the tangent line workshop out",
+      "name": "No limit is squeezed into the grid",
       "file": "index.html",
-      "find": "    ['LogiPick','LogiGrow','🐇 Logistic Workshop'],\n    ['EstPick','TanLine','🪡 Tangent Line Workshop']\n",
-      "replace": "    ['LogiPick','LogiGrow','🐇 Logistic Workshop']\n",
+      "find": "style=\"margin:0${i===4?';grid-column:1 / -1':''}\"",
+      "replace": "style=\"margin:0\"",
+      "run": "play:limpick"
+    },
+    {
+      "name": "the mix leaves the limit workshop out",
+      "file": "index.html",
+      "find": "    ['EstPick','TanLine','🪡 Tangent Line Workshop'],\n    ['LimPick','Limit','🌫️ Limit Workshop']\n",
+      "replace": "    ['EstPick','TanLine','🪡 Tangent Line Workshop']\n",
       "run": "verify"
     }
   ]

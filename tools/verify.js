@@ -8051,6 +8051,187 @@ const slicePickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which limit? The limit workshop turned round. The ratio is rebuilt here from
+   its factors and read back off the page; every number is read back off its
+   button and worked again from the slip it is named as; and the limit is found
+   without the rule, by putting x a hair either side of a into the ratio. Where
+   nothing cancels, No limit alone is right and f is seen to run off without
+   end; where something does, No limit is the 0/0 slip and the right number is
+   the one both sides close in on. No number's form, sign or place gives the
+   limit away, none is 0, no wrong one is two others added, and no check works
+   out the limit. Each wrong pick's slip and check are worked again. */
+const limPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  R.shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R._r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const P = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Limit = {render(){ env.renders++; }};" +
+    cut('const LimPick = {', '/* ============ TAYLOR WORKSHOP') + 'return LimPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const ng = n => (n < 0 ? '−' : '') + Math.abs(n);
+  const show = f => ng(f[0]) + (f[1] === 1 ? '' : '/' + f[1]);
+  const read = s => { const m = s.match(/^(−?)(\d+)(?:\/(\d+))?$/); if (!m) return null; const q = m[3] ? +m[3] : 1; if (m[3] && (q === 1 || gcd(+m[2], q) !== 1)) return null; return [(m[1] ? -1 : 1) * +m[2], q]; };
+  const same = (u, v) => u[0] * v[1] === v[0] * u[1];
+  // a quadratic written out, its x² term first, a 1 in front of x left off, and nothing for a 0
+  const poly = c => { let o = ''; [[c[0], 'x²'], [c[1], 'x'], [c[2], '']].forEach(([n, v]) => { if (!n) return; const b = (Math.abs(n) === 1 && v ? '' : Math.abs(n)) + v;
+    o += o ? (n < 0 ? ' − ' : ' + ') + b : (n < 0 ? '−' : '') + b; }); return o || '0'; };
+  const pf = v => (v === 0 ? 'x' : v > 0 ? `(x − ${v})` : `(x + ${-v})`), fc = v => (v === 0 ? 'x' : v > 0 ? `x − ${v}` : `x + ${-v}`);
+  const pn = n => (n < 0 ? `(${ng(n)})` : ng(n)), mm = m => (m === 1 ? '' : String(m));
+  const rat = (n, d) => { const w = `${ng(n)}/${pn(d)}`, v = show(fr(n, d)); return v === w ? w : `${w} = ${v}`; };
+  // the ratio, rebuilt from its factors
+  const parts = Q => { const [p, q] = Q.hole ? [Q.a, Q.r] : [Q.r1, Q.r2];
+    const T = [Q.m, -Q.m * (p + q), Q.m * p * q], B = [1, -(Q.a + Q.s), Q.a * Q.s], at = (c, x) => c[0] * x * x + c[1] * x + c[2];
+    return { T, B, at, f: x => at(T, x) / at(B, x) }; };
+  // every number, worked again from the slip it stands for
+  const want = (k, Q) => { const { m, a, s } = Q, { T, B, at } = parts(Q), F = (n, d) => (d ? fr(n, d) : null);
+    if (Q.hole) { const r = Q.r;
+      return ({ right: F(m * (a - r), a - s), signR: F(m * (a + r), a - s), signS: F(m * (a - r), a + s), dropS: F(m * (a - r), 1), dropR: F(m, a - s), flip: F(a - s, m * (a - r)) })[k] || null; }
+    const Na = at(T, a), d = (c, x) => 2 * c[0] * x + c[1];
+    return ({ topOnly: F(Na, 1), lhop: F(d(T, a), d(B, a)), cancelA: F(Na, a - s), lead: F(m, 1), zeroIn: F(T[2], B[2]) })[k] || null; };
+  // the limit found without the rule: x a hair either side of a
+  const near = Q => { const { f } = parts(Q), h = 1e-7; return [f(Q.a - h), f(Q.a + h)]; };
+  const isLim = (v, Q) => near(Q).every(y => Math.abs(y - v[0] / v[1]) <= 1e-5 * Math.max(1, Math.abs(y)));
+  const runsOff = Q => { const [l, r] = near(Q); return Math.abs(l) > 1e5 && Math.abs(r) > 1e5 && l * r < 0; };
+  const slipOf = (k, L, Q) => { const { m, a, s } = Q, A = pf(a);
+    return ({
+      zeroZero: `${L} takes 0/0 for no limit. The top and the bottom are both 0 at x = ${ng(a)}, and that only says ${A} is a factor of each: cancel it before you decide.`,
+      signR: `${L} writes the top's other factor as ${pf(-Q.r)}, with the wrong sign. The top is 0 at x = ${ng(Q.r)}, so that factor is ${pf(Q.r)}.`,
+      signS: `${L} writes the bottom's other factor as ${pf(-s)}, with the wrong sign. The bottom is 0 at x = ${ng(s)}, so that factor is ${pf(s)}.`,
+      dropS: `${L} cancels ${A} but then drops the ${pf(s)} left on the bottom. Cancelling takes away only the factor the top and the bottom share.`,
+      dropR: `${L} cancels ${A} but then drops the ${pf(Q.r)} left on the top. Cancelling takes away only the factor the top and the bottom share.`,
+      flip: `${L} turns what is left upside down. Cancelling ${A} leaves the top's other factor on top and the bottom's below.`,
+      topOnly: `${L} is the top alone at x = ${ng(a)} and leaves out the bottom, which is 0 there.`,
+      lhop: `${L} uses L'Hôpital's rule, top′ over bottom′. That rule is only for 0/0, and here the top is not 0 at x = ${ng(a)}.`,
+      cancelA: `${L} crosses out the ${A} on the bottom, but the top has no ${A} to cancel it with: its factors are ${pf(Q.r1)} and ${pf(Q.r2)}.`,
+      lead: `${L} is the x² terms' ratio, ${m}/1: that is where f heads as x grows without end, not as x closes in on ${ng(a)}.`,
+      zeroIn: `${L} puts x = 0 in, where the limit asks about x closing in on ${ng(a)}.` })[k]; };
+  const RULE = 'Put x = a in first. If the bottom is 0 but the top is not, f runs off without end near a, so there is no limit. If both are 0, that 0/0 is not an answer: x − a is a factor of the top and of the bottom, so cancel it and put x = a into what is left. Which is the limit as x → a?';
+  if (P.RULE !== RULE) fail('limpick', 'rule', 'the rule is not stated as it should be');
+  if (P.round !== null || P.matched !== 0) fail('limpick', 'open', 'a round is dealt before the mode is opened');
+  const HOLE = ['signR', 'signS', 'dropS', 'dropR', 'flip'], NONE = ['topOnly', 'lhop', 'cancelA', 'lead', 'zeroIn'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0, holes = 0, nones = 0;
+  const slots = new Set(), kinds = {}, places = [0, 0, 0, 0];
+  const BTN = /<button class="btn sm ghost smOpt" data-opt="([ABCDE])" onclick="LimPick\.choose\((\d)\)" aria-label="([ABCDE]): ([^"]+)" style="margin:0(;grid-column:1 \/ -1)?"><b>([ABCDE])<\/b> ([^<]+)<\/button>/g;
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
+    P.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), { T, B, at } = parts(Q);
+      rounds++; if (Q.hole) holes++; else nones++;
+      const okQ = [1, 2, 3].includes(Q.m) && Math.abs(Q.a) <= 4 && Math.abs(Q.s) <= 4 && Q.s !== Q.a &&
+        (Q.hole ? Math.abs(Q.r) <= 5 && Q.r !== Q.a && Q.r !== Q.s : Q.a && Q.s && Math.abs(Q.r1) <= 4 && Math.abs(Q.r2) <= 4 && Q.r1 <= Q.r2 && Q.r1 !== Q.a && Q.r2 !== Q.a);
+      if (!okQ) fail('limpick', key, `${sig} is not a ratio of the kind dealt`);
+      if (Q.hole !== (at(T, Q.a) === 0) || at(B, Q.a) !== 0) fail('limpick', key, `${sig}: the bottom is not 0 at a, or the top's 0 there does not match the hole`);
+      if (prev && prev === sig) fail('limpick', key, 'the same ratio comes twice in a row');
+      if (r.opts.length !== 5 || r.opts.filter(o => o.k === 'right').length !== 1 || r.opts[4].k !== (Q.hole ? 'zeroZero' : 'right')) fail('limpick', key, 'there are not four numbers and No limit, one of them right');
+      const h0 = P.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = (${poly(T)})/(${poly(B)}) as x → ${ng(Q.a)} Which is the limit? A `)) fail('limpick', key, `the rule and the ratio are not shown first: ${head.slice(RULE.length, RULE.length + 90)}`);
+      const btns = [...h0.matchAll(BTN)];
+      if (btns.length !== 5 || btns.some((x, i) => x[1] !== 'ABCDE'[i] || +x[2] !== i || x[3] !== 'ABCDE'[i] || x[6] !== 'ABCDE'[i] || x[4] !== x[7] || !!x[5] !== (i === 4))) { fail('limpick', key, 'the answers are not offered as they are, A to E, with E across the row'); continue; }
+      if (btns[4][7] !== 'No limit') fail('limpick', key, `E is ${btns[4][7]}, not No limit`);
+      const V = btns.slice(0, 4).map(x => read(x[7]));
+      if (V.some(v => !v)) { fail('limpick', key, `a number cannot be read in its lowest terms: ${btns.map(x => x[7]).join(' | ')}`); continue; }
+      if (new Set(btns.slice(0, 4).map(x => x[7])).size !== 4) fail('limpick', key, 'two numbers are the same');
+      if (V.some(v => v[0] === 0)) fail('limpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right');
+      V.forEach((v, i) => {
+        const o = r.opts[i], w = want(o.k, Q);
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!(Q.hole ? ['right', ...HOLE] : NONE).includes(o.k) || !w) { fail('limpick', key, `a number is the unknown ${o.k}`); return; }
+        if (v[0] !== w[0] || v[1] !== w[1]) fail('limpick', key, `${o.k} is shown as ${btns[i][7]}, which is not that slip`);
+        if ((i === ri) !== isLim(v, Q)) fail('limpick', key, `${btns[i][7]} ${i === ri ? 'is not' : 'is'} what f closes in on`);
+      });
+      if (!Q.hole) { if (!runsOff(Q)) fail('limpick', key, 'No limit is right, but f does not run off either side of a'); }
+      else { // nothing in its look: two of its form, two of its sign, no wrong one two others added, its place among them shuffled
+        slots.add(ri);
+        const W = V[ri], wr = V.filter((v, i) => i !== ri), num = v => v[0] / v[1];
+        if (W[1] === 1) wholes++;
+        if (wr.filter(v => (v[1] === 1) === (W[1] === 1)).length < 2) fail('limpick', key, 'fewer than two wrong numbers share the limit\'s form');
+        if (wr.filter(v => v[0] * W[0] > 0).length < 2) fail('limpick', key, 'fewer than two wrong numbers share the limit\'s sign');
+        V.forEach((v, i) => { if (i === ri) return; for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) if (a !== i && b !== i && Math.abs(num(V[a]) + num(V[b]) - num(v)) < 1e-12) fail('limpick', key, `${btns[i][7]} is ${btns[a][7]} and ${btns[b][7]} added`); });
+        places[wr.filter(v => num(v) < num(W)).length]++; }
+      if (k === 0 && txt(P.html().split('id="lmqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('limpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3, 4].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 5;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCDE'[i], m0 = P.matched, nt = env.toasts.length, { m, a, s } = Q;
+        kinds[o.k] = kinds[o.k] || 0;
+        P.choose(i); misses++;
+        if (P.matched !== m0 || !P.round.out.has(i) || P.round !== r || env.toasts.length !== nt) fail('limpick', key, 'a miss is counted, or not crossed off');
+        const lines = P.html().split('id="lmqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${P.matched} picked this visit, ${P.firstTry} on the first try.`) fail('limpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        // the check, worked again
+        let wc;
+        if (o.k === 'zeroZero') { if (a - s === 0) fail('limpick', key, 'what is left has a bottom of 0 at a');
+          wc = `Check what is left once ${pf(a)} is cancelled: its bottom is ${fc(s)}, which at x = ${ng(a)} is ${ng(a)} − ${pn(s)} = ${ng(a - s)}, not 0, so what is left has a number there.`; }
+        else if (o.k === 'signR' || o.k === 'signS') { // the wrong factors multiplied out by hand, never the ratio's own
+          const [c, p0, q0, own] = o.k === 'signR' ? [m, a, -Q.r, T] : [1, a, -s, B], got = [c, -c * (p0 + q0), c * p0 * q0];
+          if (got.every((x, j) => x === own[j])) fail('limpick', key, `${o.k}'s factors multiply out to the ratio's own`);
+          wc = `Check ${Lt}'s factors of the ${o.k === 'signR' ? 'top' : 'bottom'}: ${o.k === 'signR' ? mm(m) : ''}${pf(p0)}${pf(q0)} multiplies out to ${poly(got)}, not ${poly(own)}.`; }
+        else if (['dropS', 'dropR', 'flip'].includes(o.k)) {
+          const t = P.away(Q), ft = fr(at(T, t), at(B, t)), W = want('right', Q);
+          const g = o.k === 'dropS' ? [m * (t - Q.r), 1] : o.k === 'dropR' ? fr(m, t - s) : fr(t - s, m * (t - Q.r));
+          const F = o.k === 'dropS' ? `${mm(m)}${pf(Q.r)}` : o.k === 'dropR' ? `${m}/${pf(s)}` : m === 1 ? `${pf(s)}/${pf(Q.r)}` : `${pf(s)}/(${m}${pf(Q.r)})`;
+          if (t === a || at(B, t) === 0 || Math.abs(ft[0] / ft[1] - parts(Q).f(t)) > 1e-9) fail('limpick', key, `the check of ${o.k} is made at x = ${t}, where f is not what it says`);
+          if (same(g, ft)) fail('limpick', key, `${o.k} agrees with f at x = ${t}, so its check shows nothing`);
+          if (same(g, W) || same(ft, W)) fail('limpick', key, `the check of ${o.k} works out the limit ${show(W)}`);
+          wc = `Check ${Lt} away from ${ng(a)}, at x = ${ng(t)}: f(${ng(t)}) = ${rat(at(T, t), at(B, t))}, and ${Lt}'s formula, ${F}, gives ${show(g)} there, not ${show(ft)}.`; }
+        else if (o.k === 'topOnly') wc = `Check ${Lt}: f is the top over the bottom, and at x = ${ng(a)} the bottom is ${pf(a)}${pf(s)} = 0 × ${pn(a - s)} = 0.`;
+        else if (o.k === 'lhop') wc = `Check the top at x = ${ng(a)} before using the rule: ${poly(T)} gives ${ng(at(T, a))} there, not 0.`;
+        else if (o.k === 'cancelA') wc = `Check the top for the factor ${pf(a)}: put x = ${ng(a)} in and it gives ${ng(at(T, a))}, not 0, so ${pf(a)} does not divide it.`;
+        else if (o.k === 'lead') wc = `Check where x is heading: ${Lt} is what f is close to when x is huge, and here x closes in on ${ng(a)}.`;
+        else wc = `Check where x is heading: ${Lt} is f(0), and here x closes in on ${ng(a)}, not 0.`;
+        if (lines[1] !== wc) fail('limpick', key, `the check of ${o.k} is: ${lines[1]} | want ${wc}`);
+        worked++;
+        const hh = P.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LimPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the limit"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('limpick', key, 'the missed answers are not shut and told as not the limit');
+        const r0 = env.renders; P.choose(i);
+        if (P.misses !== q + 1 || env.renders !== r0) fail('limpick', key, 'tapping a missed answer again does something');
+      }
+      const m0 = P.matched, ft = P.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      P.choose(ri);
+      if (env.renders !== r0 + 1) fail('limpick', key, 'a pick does not redraw the workshop');
+      if (P.matched !== m0 + 1 || P.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('limpick', key, 'the right pick is not counted');
+      if (P.round === r || P.misses !== 0 || P.picked !== null) fail('limpick', key, 'no fresh ratio after the right pick');
+      if (P.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'HOLE FINDER / 5 limits found') fail('limpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCDE'[ri]} is the limit, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('limpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(P.html().split('id="lmqRead"')[1].replace(/^[^>]*>/, ''));
+      const { m, a, s } = Q, W = want('right', Q);
+      const wl = Q.hole
+        ? `That was it: (${poly(T)})/(${poly(B)}) = ${mm(m)}${pf(a)}${pf(Q.r)}/(${pf(a)}${pf(s)}), and away from x = ${ng(a)} that is ${mm(m)}${pf(Q.r)}/${pf(s)}. At x = ${ng(a)} it gives ${m === 1 ? rat(a - Q.r, a - s) : `${m} × ${pn(a - Q.r)}/${pn(a - s)} = ${show(W)}`}. Here is a new one.`
+        : `That was it: at x = ${ng(a)} the top is ${ng(at(T, a))} but the bottom is 0, so near ${ng(a)} f runs off without end, up on one side and down on the other, and heads for no number. Here is a new one.`;
+      if (got !== `${wl} ${P.matched} picked this visit, ${P.firstTry} on the first try.`) fail('limpick', key, `after a pick: ${got} | want ${wl}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same ratio dealt again is turned away for a fresh one
+    const real = P.build; let c = 0, S0 = { hole: true, m: 1, a: 2, s: -1, r: 4 };
+    P.build = () => (c++ < 3 ? S0 : real.call(P));
+    P.round = null; P.newRound(); P.newRound();
+    if (JSON.stringify(P.round.S) === JSON.stringify(S0)) fail('limpick', 'repeat', 'the same ratio is dealt twice in a row');
+    P.build = real;
+  }
+  for (const k of HOLE) if (!kinds[k] || kinds[k] < holes * 0.15) fail('limpick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${holes} rounds with a hole`);
+  for (const k of NONE) if (!kinds[k] || kinds[k] < nones * 0.4) fail('limpick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${nones} rounds with no hole`);
+  if (nones < rounds * 0.12 || nones > rounds * 0.28) fail('limpick', 'deal', `${nones} of ${rounds} ratios hide no hole, not about one in five`);
+  if (wholes < holes * 0.4 || wholes > holes * 0.6) fail('limpick', 'deal', `the limit is whole in ${wholes} of ${holes} rounds, not about half`);
+  if (slots.size !== 4) fail('limpick', 'deal', `the limit only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  places.forEach((c, i) => { if (c < 0.15 * holes) fail('limpick', 'deal', `the limit stands ${i} from the bottom in only ${c} of ${holes} rounds`); });
+  if (fives !== 30) fail('limpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
 /* Which estimate? The tangent line workshop turned round. Every number is
    read back off its button and worked again here from the slip it is named
    as; the right one alone is the tangent's estimate, found without the rule
@@ -16118,6 +16299,7 @@ console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 1
 console.log(`  lengths set up     ${pad(arcPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-integral in the arc length workshop, every integral read back off its button, taken apart and checked against the slip it is named as, the right one alone √(1 + f′²) with f′ nudged and adding up to what fine chords measure, no look giving it away; ${arcPickNotes.misses.toLocaleString()} wrong picks checked at one x, ${arcPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  rates worked       ${pad(logiPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the logistic workshop, every number read back off its button and worked again from the slip it is named as, the right one alone the rate found by stepping the equation, none given away by its form, sign or place; ${logiPickNotes.misses.toLocaleString()} wrong picks checked where their formula fails, ${logiPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
 console.log(`  estimates made     ${pad(estPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the tangent line workshop, every number read back off its button and worked again from the slip it is named as, the right one alone the tangent's estimate found by nudging the curve for its slope, none given away by its form, sign or place; ${estPickNotes.misses.toLocaleString()} wrong picks checked at x = a or one step across, ${estPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
+console.log(`  limits found       ${pad(limPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-limit in the limit workshop, every ratio rebuilt from its factors, every number read back off its button and worked again from the slip it is named as, the limit found by putting x a hair either side of a, No limit right only where f runs off, none given away by its form, sign or place; ${limPickNotes.misses.toLocaleString()} wrong picks checked, ${limPickNotes.worked.toLocaleString()} readouts with every number worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);

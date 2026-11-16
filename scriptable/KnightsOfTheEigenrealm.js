@@ -1160,18 +1160,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LIMIT WORKSHOP ============ -->
   <div class="screen" id="s-limit">
     <div class="panel"><h2>🌫️ Limit Workshop</h2><div class="sub">Some formulas give no number at one point. Close in on it from the left or the right, h at a time, and watch where f(x) is heading. A limit is what both sides agree on.</div></div>
+    <div id="lmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the limit"></div>
     <div class="panel">
+      <div id="lmqBox"></div>
       <div id="lmFns" class="wsModes wrap" role="group" aria-label="Function"></div>
       <div id="lmSide" class="wsModes" role="group" aria-label="Side"></div>
       <div id="lmFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="lmMoveRow" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="lmHLo" onclick="Limit.moveH(1)" aria-label="Make h smaller, bringing x closer in">−</button>
           <b id="lmH"></b>
           <button id="lmHHi" onclick="Limit.moveH(-1)" aria-label="Make h larger, moving x further away">+</button></div>
       </div>
       <div id="lmRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div id="lmGoalPanel" class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="lmGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -4493,7 +4495,7 @@ const WORKSHOP_FOR = (() => {
     Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
     Gram:    ["📐 Gram–Schmidt Workshop", ['gramSchmidt']],
     Castles: ["🏰 Two Castles Workshop", ['matPow']],
-    Limit:   ["🌫️ Limit Workshop", ['limRational']],
+    Limit:   ["🌫️ Limit Workshop", ['limPoly','limRational']],
     Hopital: ["🔬 L'Hôpital Workshop", ['lhopital']],
     Product: ["🌾 Product Rule Workshop", ['productRule']],
     Ladder:  ["🪜 Ladder Workshop", ['relatedRates']],
@@ -14685,7 +14687,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading. Then turn it round: see a ratio and the x it closes in on, and pick its limit, or that it has none.</div>
          <button class="btn sm" id="tomeLimit" style="width:auto;margin-top:8px" onclick="Limit.open()">Open the limit workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -18771,7 +18773,15 @@ const Limit = {
   pick(i){ this.fi=i; this.touched=true; this.render(); },
   setSide(s){ this.side=s; this.touched=true; this.render(); },
   moveH(by){ const v=this.hi+by; if(v<0||v>=this.HS.length) return; this.hi=v; this.touched=true; this.render(); },
+  tab:'hand', // close in by hand, or which limit
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('lmTab').innerHTML=[['hand','🌫️ Close in by hand','Close in on the point from the left and the right by hand'],['pick','🎯 Which limit?','See a ratio and the x it closes in on, and pick which number is its limit, or that it has none']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Limit.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['lmFns','lmSide','lmFig','lmMoveRow','lmRead','lmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('lmqBox').innerHTML=pick ? LimPick.html() : '';
+    if(pick) return;
     const F=this.fn(), x=this.x(), v=this.fx();
     if(this.touched && this.closest()) (this.near[F.id]=this.near[F.id]||new Set()).add(this.side);
     document.getElementById('lmFns').innerHTML=this.FNS.map((f,i)=>
@@ -18796,6 +18806,206 @@ const Limit = {
         Celebrate.banner('LIMIT SEEKER','every side watched','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Which limit? The limit workshop turned round ----------
+   A ratio of two quadratics and the point x heads for, and five answers: four
+   numbers and No limit. The rule is stated first: put x = a in; if only the
+   bottom is 0, f runs off without end and there is no limit; if both are 0,
+   x − a is a factor of each, so cancel it and put x = a into what is left.
+   Most ratios hide a hole; about one in five has none, and then No limit is
+   right. The wrong answers are the slips people make: 0/0 read as no limit, a
+   factor written with the wrong sign, a factor dropped after the cancelling,
+   what is left turned upside down; and, where nothing cancels, the top alone,
+   L'Hôpital's rule where it does not apply, a cancelling with nothing to cancel,
+   the x² terms' ratio, or x = 0 put in. Where the limit is a number, two wrong
+   numbers share its form and two its sign, none is two others added, and its
+   place among them is balanced. A wrong pick is named as its slip and checked
+   without giving the limit away. Nothing is saved. */
+const LimPick = {
+  HOLE:['signR','signS','dropS','dropR','flip'],
+  NONE:['topOnly','lhop','cancelA','lead','zeroIn'],
+  RULE:'Put x = a in first. If the bottom is 0 but the top is not, f runs off without end near a, so there is no limit. If both are 0, that 0/0 is not an answer: x − a is a factor of the top and of the bottom, so cancel it and put x = a into what is left. Which is the limit as x → a?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  add(a,b){ return this.frac(a[0]*b[1]+b[0]*a[1],a[1]*b[1]); },
+  // the polynomial px² + qx + r as the workshop writes it
+  poly([p,q,r]){
+    const t=(n,v,first)=>{ if(!n) return ''; const m=Math.abs(n), b=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };
+    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);
+    return (a+b+c)||'0';
+  },
+  // x − v as a factor: x, x − 2 or x + 3
+  fac(v){ return v===0 ? 'x' : v>0 ? \`x − \${v}\` : \`x + \${-v}\`; },
+  // the factor in brackets, alone as x where it is only x
+  pf(v){ return v===0 ? 'x' : \`(\${this.fac(v)})\`; },
+  mm(m){ return m===1 ? '' : String(m); },
+  pn(n){ return n<0 ? \`(\${neg(n)})\` : neg(n); },
+  // n/d written as it stands, then in lowest terms when that reads differently
+  rat(n,d){ const w=\`\${neg(n)}/\${this.pn(d)}\`, v=this.fs(this.frac(n,d)); return v===w ? w : \`\${w} = \${v}\`; },
+  // the top m(x − p)(x − q) and the bottom (x − a)(x − s), multiplied out
+  top(S){ const [p,q]=S.hole ? [S.a,S.r] : [S.r1,S.r2]; return [S.m, -S.m*(p+q), S.m*p*q]; },
+  bot(S){ return [1, -(S.a+S.s), S.a*S.s]; },
+  at(P,x){ return P[0]*x*x+P[1]*x+P[2]; },
+  // the number each answer stands for, as a fraction; null for No limit, or where the slip has no number
+  val(S,k){
+    const {m,a,s}=S, P=(n,d)=>d ? this.frac(n,d) : null;
+    if(S.hole){ const r=S.r;
+      return k==='right' ? P(m*(a-r),a-s) : k==='signR' ? P(m*(a+r),a-s) : k==='signS' ? P(m*(a-r),a+s)
+        : k==='dropS' ? P(m*(a-r),1) : k==='dropR' ? P(m,a-s) : k==='flip' ? P(a-s,m*(a-r)) : null; }
+    const T=this.top(S), B=this.bot(S), Na=this.at(T,a);
+    return k==='topOnly' ? P(Na,1) : k==='lhop' ? P(2*T[0]*a+T[1],2*a+B[1]) : k==='cancelA' ? P(Na,a-s)
+      : k==='lead' ? P(m,1) : k==='zeroIn' ? P(T[2],B[2]) : null;
+  },
+  key(v){ return v ? this.fs(v) : ''; },
+  whole(v){ return v[1]===1; },
+  // the slips this ratio can offer: each a number other than 0, different from the limit and every one kept before it
+  slips(S){
+    const seen=new Set(['0']), keep=[];
+    if(S.hole) seen.add(this.key(this.val(S,'right')));
+    for(const k of S.hole ? this.HOLE : this.NONE){ const v=this.val(S,k);
+      if(!v || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the limit: two of its form and two of its sign, and no number two others added
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    const eq=(a,b)=>a[0]*b[1]===b[0]*a[1];
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]], V=t.map(x=>this.val(S,x)), all=[W,...V];
+      if(V.filter(v=>this.whole(v)===form).length<2 || V.filter(v=>v[0]*W[0]>0).length<2) continue;
+      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;
+      out.push(t);
+    }
+    return out;
+  },
+  // about one ratio in five hides no hole; the rest are whole about half the time
+  build(){
+    const none=R.i(1,5)===1, wantWhole=R.i(0,1)===1, ms=[1,1,2,3];
+    for(let g=0;g<500;g++){
+      const m=ms[R.i(0,3)], a=R.i(-4,4), s=R.i(-4,4);
+      if(s===a) continue;
+      if(none){
+        const r1=R.i(-4,4), r2=R.i(-4,4), S={hole:false,m,a,s,r1:Math.min(r1,r2),r2:Math.max(r1,r2)};
+        if(r1===a || r2===a || !a || !s) continue;
+        if(this.slips(S).length<4) continue;
+        return S;
+      }
+      const r=R.i(-5,5), S={hole:true,m,a,s,r};
+      if(r===a || r===s) continue;
+      if(this.whole(this.val(S,'right'))!==wantWhole) continue;
+      if(!this.trios(S).length) continue;
+      return S;
+    }
+    return {hole:true,m:1,a:2,s:-1,r:4};
+  },
+  // how often the limit's place among the four numbers is chosen when it may go there, the rarer ones favoured
+  PLACE:[2,1,1,2],
+  pickW(w){ let x=R.i(1,w.reduce((a,b)=>a+b,0)); for(let i=0;i<w.length;i++){ x-=w[i]; if(x<=0) return i; } return w.length-1; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    let nums;
+    if(S.hole){
+      const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+      const ranks=[...new Set(T.map(rk))], want=ranks[this.pickW(ranks.map(x=>this.PLACE[x]))], fit=T.filter(t=>rk(t)===want);
+      nums=['right',...fit[R.i(0,fit.length-1)]];
+    } else nums=R.shuffle(this.slips(S)).slice(0,4);
+    // No limit always stands last, under the four numbers: right where nothing cancels, the 0/0 slip where something does
+    const opts=[...R.shuffle(nums),S.hole?'zeroZero':'right'].map(k=>({k}));
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('HOLE FINDER', this.matched+' limits found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCDE'[i]} is the limit, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Limit.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // the ratio as it is shown, and its factors
+  show(S){ return \`(\${this.poly(this.top(S))})/(\${this.poly(this.bot(S))})\`; },
+  slip(S,k,L){
+    const {m,a,s}=S, A=this.pf(a);
+    if(k==='zeroZero') return \`\${L} takes 0/0 for no limit. The top and the bottom are both 0 at x = \${neg(a)}, and that only says \${A} is a factor of each: cancel it before you decide.\`;
+    if(k==='signR') return \`\${L} writes the top's other factor as \${this.pf(-S.r)}, with the wrong sign. The top is 0 at x = \${neg(S.r)}, so that factor is \${this.pf(S.r)}.\`;
+    if(k==='signS') return \`\${L} writes the bottom's other factor as \${this.pf(-s)}, with the wrong sign. The bottom is 0 at x = \${neg(s)}, so that factor is \${this.pf(s)}.\`;
+    if(k==='dropS') return \`\${L} cancels \${A} but then drops the \${this.pf(s)} left on the bottom. Cancelling takes away only the factor the top and the bottom share.\`;
+    if(k==='dropR') return \`\${L} cancels \${A} but then drops the \${this.pf(S.r)} left on the top. Cancelling takes away only the factor the top and the bottom share.\`;
+    if(k==='flip') return \`\${L} turns what is left upside down. Cancelling \${A} leaves the top's other factor on top and the bottom's below.\`;
+    if(k==='topOnly') return \`\${L} is the top alone at x = \${neg(a)} and leaves out the bottom, which is 0 there.\`;
+    if(k==='lhop') return \`\${L} uses L'Hôpital's rule, top′ over bottom′. That rule is only for 0/0, and here the top is not 0 at x = \${neg(a)}.\`;
+    if(k==='cancelA') return \`\${L} crosses out the \${A} on the bottom, but the top has no \${A} to cancel it with: its factors are \${this.pf(S.r1)} and \${this.pf(S.r2)}.\`;
+    if(k==='lead') return \`\${L} is the x² terms' ratio, \${S.m}/1: that is where f heads as x grows without end, not as x closes in on \${neg(a)}.\`;
+    return \`\${L} puts x = 0 in, where the limit asks about x closing in on \${neg(a)}.\`;
+  },
+  // a wrong pick checked without giving the limit away
+  check(S,k,L){
+    const {m,a,s}=S, T=this.top(S), B=this.bot(S);
+    if(k==='zeroZero') return \`Check what is left once \${this.pf(a)} is cancelled: its bottom is \${this.fac(s)}, which at x = \${neg(a)} is \${neg(a)} − \${this.pn(s)} = \${neg(a-s)}, not 0, so what is left has a number there.\`;
+    if(k==='signR') return \`Check \${L}'s factors of the top: \${this.mm(m)}\${this.pf(a)}\${this.pf(-S.r)} multiplies out to \${this.poly([m,-m*(a-S.r),-m*a*S.r])}, not \${this.poly(T)}.\`;
+    if(k==='signS') return \`Check \${L}'s factors of the bottom: \${this.pf(a)}\${this.pf(-s)} multiplies out to \${this.poly([1,-(a-s),-a*s])}, not \${this.poly(B)}.\`;
+    if(k==='dropS'||k==='dropR'||k==='flip'){
+      const t=this.away(S), ft=this.frac(this.at(T,t),this.at(B,t));
+      const F=k==='dropS' ? \`\${this.mm(m)}\${this.pf(S.r)}\` : k==='dropR' ? \`\${m}/\${this.pf(s)}\` : m===1 ? \`\${this.pf(s)}/\${this.pf(S.r)}\` : \`\${this.pf(s)}/(\${m}\${this.pf(S.r)})\`;
+      const g=k==='dropS' ? [m*(t-S.r),1] : k==='dropR' ? this.frac(m,t-s) : this.frac(t-s,m*(t-S.r));
+      return \`Check \${L} away from \${neg(a)}, at x = \${neg(t)}: f(\${neg(t)}) = \${this.rat(this.at(T,t),this.at(B,t))}, and \${L}'s formula, \${F}, gives \${this.fs(g)} there, not \${this.fs(ft)}.\`;
+    }
+    if(k==='topOnly') return \`Check \${L}: f is the top over the bottom, and at x = \${neg(a)} the bottom is \${this.pf(a)}\${this.pf(s)} = 0 × \${this.pn(a-s)} = 0.\`;
+    if(k==='lhop') return \`Check the top at x = \${neg(a)} before using the rule: \${this.poly(T)} gives \${neg(this.at(T,a))} there, not 0.\`;
+    if(k==='cancelA') return \`Check the top for the factor \${this.pf(a)}: put x = \${neg(a)} in and it gives \${neg(this.at(T,a))}, not 0, so \${this.pf(a)} does not divide it.\`;
+    if(k==='lead') return \`Check where x is heading: \${L} is what f is close to when x is huge, and here x closes in on \${neg(a)}.\`;
+    return \`Check where x is heading: \${L} is f(0), and here x closes in on \${neg(a)}, not 0.\`;
+  },
+  // a whole x near a where the ratio and every leftover formula have a value, each slip gives something else, and none gives the limit
+  away(S){
+    for(let i=1;i<20;i++){ const t=S.a+(i%2 ? (i+1)/2 : -i/2);
+      if(t===S.s || t===S.r) continue;
+      const T=this.top(S), B=this.bot(S), f=this.frac(this.at(T,t),this.at(B,t)), m=S.m;
+      const g=[[m*(t-S.r),1],this.frac(m,t-S.s),this.frac(t-S.s,m*(t-S.r))], W=this.val(S,'right'), eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+      // each slip must miss f there, and neither number may be the limit itself
+      if(g.some(v=>eq(v,f)||eq(v,W)) || eq(f,W)) continue;
+      return t; }
+    return S.a+10;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="lmqQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.show(S)} as x → \${neg(S.a)}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which is the limit?</div>\`;
+    out+=\`<div id="lmqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=i===4 ? 'No limit' : this.fs(this.val(S,o.k)), L='ABCDE'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="LimPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the limit':''}" style="margin:0\${i===4?';grid-column:1 / -1':''}"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCDE'[m]), this.check(S,r.opts[m].k,'ABCDE'[m]));
+    else if(this.last){ const B=this.last.S;
+      if(B.hole){ const W=this.val(B,'right');
+        lines.push(\`That was it: \${this.show(B)} = \${this.mm(B.m)}\${this.pf(B.a)}\${this.pf(B.r)}/(\${this.pf(B.a)}\${this.pf(B.s)}), and away from x = \${neg(B.a)} that is \${this.mm(B.m)}\${this.pf(B.r)}/\${this.pf(B.s)}. At x = \${neg(B.a)} it gives \${B.m===1 ? this.rat(B.a-B.r,B.a-B.s) : \`\${B.m} × \${this.pn(B.a-B.r)}/\${this.pn(B.a-B.s)} = \${this.fs(W)}\`}. Here is a new one.\`); }
+      else lines.push(\`That was it: at x = \${neg(B.a)} the top is \${neg(this.at(this.top(B),B.a))} but the bottom is 0, so near \${neg(B.a)} f runs off without end, up on one side and down on the other, and heads for no number. Here is a new one.\`);
+    }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="lmqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
   }
 };
 
@@ -30437,9 +30647,10 @@ const MixPick = {
     ['BuildPick','Optim','🏗️ Biggest Build Workshop'],
     ['ArcPick','ArcLen','🧵 Arc Length Workshop'],
     ['LogiPick','LogiGrow','🐇 Logistic Workshop'],
-    ['EstPick','TanLine','🪡 Tangent Line Workshop']
+    ['EstPick','TanLine','🪡 Tangent Line Workshop'],
+    ['LimPick','Limit','🌫️ Limit Workshop']
   ],
-  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, LogiGrow, LogiPick, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EstPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanLine, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, LogiGrow, LogiPick, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EstPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, LimPick, Limit, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanLine, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },

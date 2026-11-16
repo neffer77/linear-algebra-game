@@ -52,6 +52,7 @@ const SUITES = [
   require('./play/slope'),       // a secant becomes a tangent as h closes in
   require('./play/compose'),     // two moves of the plane, and why their order matters
   require('./play/limit'),       // closing in on a point from the left and the right
+  require('./play/limpick'),   // see a ratio and where x heads, pick its limit or that it has none
   require('./play/descent'),     // a walk down a valley against its gradient
   require('./play/span'),        // a of one arrow and b of another
   require('./play/elim'),        // two equations solved with row operations
