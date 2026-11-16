@@ -4132,6 +4132,98 @@ linApprox(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`\${why}. The tangent line is L(x) = \${show(fa)} + \${inB(sl)}(x − \${inB(a)}), and x − a = \${show(x)} − \${inB(a)} = \${show(h)}, so \${fname(x)} ≈ \${show(fa)} + \${inB(sl)} × \${inB(h)} = \${show(ans)}.\`};
   }
+},/* Arc length: the length of y = f(x) from a to b is ∫ₐᵇ √(1 + f′(x)²) dx,
+   each tiny step having run dx and rise f′ dx. A straight line at depth 1,
+   where √(1 + m²) is the same all along; y = (2/3)x√x at depth 2, where
+   f′ = √x and the root is √(1 + x); and at depth 3 y = x³/(3c) + c/(4x),
+   built so that 1 + f′² is a perfect square. Whole and fractional answers
+   come up about equally at the first two depths; at the third the length is
+   always a fraction, and so are most of the slips. The wrong answers are the
+   slips people make: the run b − a alone, the rise f(b) − f(a) alone, rise
+   and run added instead of put through Pythagoras, ∫(1 + f′²) with the square
+   root forgotten, and at depth 2 the antiderivative's 2/3 dropped, turned
+   upside down, or its lower end left off. */
+arcLength(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const pow=(u,k)=>{ let r=F(1); for(let i=0;i<k;i++) r=mul(r,u); return r; }, abs=u=>[Math.abs(u[0]),u[1]];
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):\`(\${show(u)})\`;
+  // at depth 3 the length is a fraction: where it comes out whole, too few slips do, so the form would give it away
+  const whole=d<3 && R.chance(0.5);
+  for(let g=0;;g++){
+    let fs, a, b, ans, why, slips;
+    if(d===1){
+      // m with √(1 + m²) a fraction: the sides of a right triangle with whole sides
+      const [p,q,h]=R.pick([[3,4,5],[4,3,5],[5,12,13],[12,5,13],[8,15,17],[15,8,17]]), sg=R.pick([1,-1]);
+      const m=F(sg*p,q), r=F(h,q), c=R.i(-5,5);
+      a=F(R.i(-3,3));
+      const w=whole ? q*(q<=5?R.i(1,2):1) : R.i(1,9);
+      b=add(a,F(w));
+      const W=F(w), rise=mul(abs(m),W);
+      fs=\`\${sg<0?'−':''}(\${p}/\${q})x\${c===0?'':c>0?\` + \${c}\`:\` − \${-c}\`}\`;
+      ans=mul(r,W);
+      why=\`f′(x) = \${show(m)} everywhere, so √(1 + f′²) = √(1 + \${p*p}/\${q*q}) = √(\${h*h}/\${q*q}) = \${show(r)} all along. The length is \${show(r)} × (b − a) = \${show(r)} × \${w} = \${show(ans)}\`;
+      slips=[
+        [W,\`that is the run b − a = \${w} alone; along a slope each step is longer than its run\`],
+        [rise,\`that is how far the line rises, |f(b) − f(a)| = \${show(rise)}; the length also counts the run\`],
+        [add(W,rise),\`that adds the run \${w} and the rise \${show(rise)}; a slanted step is the hypotenuse, √(run² + rise²), not run + rise\`],
+        [mul(W,add(F(1),mul(m,m))),\`that is ∫(1 + f′²) dx with the square root forgotten: 1 + f′² = \${show(add(F(1),mul(m,m)))}, but each step is √(1 + f′²) = \${show(r)} times its run\`]
+      ];
+    } else if(d===2){
+      // √(1 + x) whole at both ends: 1 + a = A², 1 + b = B²; the length (2/3)(B³ − A³) is whole when B − A is a multiple of 3
+      const A=R.i(1,4), B=R.i(A+1,6);
+      if(((B-A)%3===0)!==whole && g<400) continue;
+      a=F(A*A-1); b=F(B*B-1);
+      const D=F(B**3-A**3);
+      fs='(2/3)x√x';
+      ans=mul(F(2,3),D);
+      why=\`f′(x) = √x, so √(1 + f′²) = √(1 + x). An antiderivative is (2/3)(1 + x)^(3/2), so the length is (2/3)((1 + \${show(b)})^(3/2) − (1 + \${show(a)})^(3/2)) = (2/3)(\${B}³ − \${A}³) = (2/3) × \${show(D)} = \${show(ans)}\`;
+      slips=[
+        [D,\`that drops the 2/3: (1 + x)^(3/2) has slope (3/2)√(1 + x), so the antiderivative of √(1 + x) carries 2/3 in front\`],
+        [mul(F(3,2),D),\`that puts 3/2 in front, the slope's number, instead of 2/3; integrating raises the power and divides by it\`],
+        [sub(b,a),\`that is the run b − a = \${show(sub(b,a))} alone; the curve climbs as it goes, so it is longer than its run\`],
+        [add(sub(b,a),F((B*B-1)**2-(A*A-1)**2,2)),\`that is ∫(1 + f′²) dx = ∫(1 + x) dx with the square root forgotten; each step is √(1 + x) times its run\`]
+      ];
+      slips.push([mul(F(2,3),F(B**3)),\`that leaves off the lower end: (2/3)(1 + x)^(3/2) at x = \${show(a)} is \${show(mul(F(2,3),F(A**3)))}, and it has to be taken away\`]);
+    } else {
+      // y = x³/(3c) + c/(4x): f′ = x²/c − c/(4x²), and 1 + f′² = (x²/c + c/(4x²))², so the length is [x³/(3c) − c/(4x)] from a to b
+      const pairs=[[2,[1,1],[2,1]],[2,[1,1],[3,1]],[2,[2,1],[3,1]],[2,[1,2],[1,1]],[2,[2,1],[4,1]],[1,[1,1],[2,1]],[1,[1,2],[1,1]],[1,[1,1],[3,1]],[3,[1,1],[3,1]],[3,[1,2],[3,2]],[4,[1,1],[2,1]],[4,[2,1],[3,1]],[4,[1,1],[3,1]],[4,[2,1],[4,1]]];
+      const [c,aa,bb]=R.pick(pairs); a=F(...aa); b=F(...bb);
+      const fx=x=>add(mul(pow(x,3),F(1,3*c)),mul(F(c,4),F(x[1],x[0]))), G=x=>sub(mul(pow(x,3),F(1,3*c)),mul(F(c,4),F(x[1],x[0])));
+      ans=sub(G(b),G(a));
+      if((ans[1]===1)!==whole && g<400) continue;
+      // c/(4x) and c/(4x²) in lowest terms: 1/(4x), 1/(2x), 3/(4x), 1/x
+      const [cn,cd]=F(c,4), over=v=>cd===1 ? \`\${cn}/\${v}\` : \`\${cn}/(\${cd}\${v})\`;
+      const t1=\`x³/\${3*c}\`, t2=over('x');
+      fs=\`\${t1} + \${t2}\`;
+      const dp=c===1?'x²':\`x²/\${c}\`, d2=over('x²'), G2=t2;
+      why=\`f′(x) = \${dp} − \${d2}, and 1 + f′² = (\${dp} + \${d2})², a perfect square. So √(1 + f′²) = \${dp} + \${d2}, whose antiderivative is \${t1} − \${G2}, and the length is [\${t1} − \${G2}] from \${show(a)} to \${show(b)} = \${show(G(b))} − \${inB(G(a))} = \${show(ans)}\`;
+      const rise=sub(fx(b),fx(a)), W=sub(b,a);
+      // ∫(1 + f′²) dx = ∫(x⁴/c² + 1/2 + c²/(16x⁴)) dx = [x⁵/(5c²) + x/2 − c²/(48x³)]
+      const H=x=>add(add(mul(pow(x,5),F(1,5*c*c)),mul(x,F(1,2))),mul(F(-c*c,48),F(x[1]**3,x[0]**3)));
+      slips=[
+        [rise,\`that is how far the curve rises, f(b) − f(a): the + of f stayed a + where √(1 + f′²) needs \${t1} − \${G2}\`],
+        [W,\`that is the run b − a = \${show(W)} alone; the curve climbs as it goes, so it is longer than its run\`],
+        [add(W,rise),\`that adds the run and the rise; each tiny step is the hypotenuse, √(run² + rise²), not run + rise\`],
+        [sub(H(b),H(a)),\`that is ∫(1 + f′²) dx with the square root forgotten; 1 + f′² is a perfect square, so take its root first\`]
+      ];
+    }
+    const ok=v=>v[0]!==0 && Math.abs(v[0])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form and one of its sign
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;
+    if((dist.length<4 || Math.abs(ans[0])>999 || ans[1]>999 || same<2 || sign<2) && g<400) continue;
+    if((ans[1]===1)!==whole && g<400) continue;
+    return {topic:'Arc Length',
+      codex:{rule:'The length of y = f(x) from a to b is ∫ₐᵇ √(1 + f′(x)²) dx. Each tiny step runs dx and rises f′ dx, so Pythagoras makes it √(1 + f′²) dx long.',
+             eg:'y = (3/4)x from 0 to 4: √(1 + 9/16) = 5/4 all along, so the length is 5/4 × 4 = 5.'},
+      q:\`Find the length of the curve y = \${fs} from x = \${show(a)} to x = \${show(b)}.\`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
 }
 };
 
@@ -4245,7 +4337,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4258,7 +4350,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4845,7 +4937,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},

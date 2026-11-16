@@ -737,6 +737,7 @@ function workedSum(key, ex, a) {
 }
 let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
 let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
+let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -1191,6 +1192,45 @@ Object.assign(ANALYSIS, {
     if (p.d.some(z => /^that is the exact value of /.test(z[1]))) laExact++;
     covered.add('linApprox');
   },
+  // Arc length, worked again here in floating point: f read off the question,
+  // f′ by a central difference, and ∫ √(1 + f′²) dx by Simpson's rule from a
+  // to b. Each wrong answer is worked again as the slip its reason names.
+  arcLength: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), N = '(-?\\d+(?:/\\d+)?)';
+    const m = t.match(new RegExp(`^Find the length of the curve y = (.+) from x = ${N} to x = ${N}\\.$`));
+    if (!m) { fail('analysis', 'arcLength', `the question does not read as an arc length: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const a = val(m[2]), b = val(m[3]);
+    if (!(b > a)) { fail('analysis', 'arcLength', `the curve does not run from a to a larger b: ${t}`); return; }
+    let f, kind;
+    const lin = m[1].match(/^(-?)\((\d+)\/(\d+)\)x(?: ([+-]) (\d+))?$/), cub = m[1].match(/^x³\/(\d+) \+ (\d+)\/(?:\((\d+)x\)|x)$/);
+    if (lin) { const s = (lin[1] ? -1 : 1) * lin[2] / lin[3], c = lin[4] ? (lin[4] === '-' ? -1 : 1) * lin[5] : 0; f = x => s * x + c; kind = 'line'; }
+    else if (m[1] === '(2/3)x√x') { f = x => 2 / 3 * x * Math.sqrt(x); kind = 'root'; if (a < 0) fail('analysis', 'arcLength', `x√x is asked below 0: ${t}`); }
+    else if (cub) { const D = +cub[1], n = +cub[2], k = cub[3] ? +cub[3] : 1; f = x => x ** 3 / D + n / (k * x); kind = 'cubic';
+      if (a <= 0) fail('analysis', 'arcLength', `1/x is asked at or below 0: ${t}`);
+      // built so that 1 + f′² is a perfect square: x³/(3c) and c/(4x) with the same c
+      if (Math.abs(D / 3 - 4 * n / k) > 1e-9) fail('analysis', 'arcLength', `1 + f′² is not a perfect square for ${m[1]}`); }
+    else { fail('analysis', 'arcLength', `the curve is not one of the three: ${m[1]}`); return; }
+    const df = x => (f(x + 1e-6) - f(x - 1e-6)) / 2e-6;
+    const simpson = g => { const n = 4000, h = (b - a) / n; let s = g(a) + g(b); for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * g(a + i * h); return s * h / 3; };
+    const L = simpson(x => Math.sqrt(1 + df(x) ** 2)), noRoot = simpson(x => 1 + df(x) ** 2), rise = f(b) - f(a);
+    valueCheck('arcLength', L, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!/√\(1 \+ f′²\)/.test(w) || !w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'arcLength', `the working does not take √(1 + f′²) and end on ${p.a}: ${w}`);
+    const slip = [[/^that is the run b - a/, b - a], [/^that is how far the line rises/, Math.abs(rise)], [/^that is how far the curve rises/, rise],
+      [/^that adds the run/, b - a + (kind === 'line' ? Math.abs(rise) : rise)], [/^that is ∫\(1 \+ f′²\) dx/, noRoot],
+      [/^that drops the 2\/3/, 1.5 * L], [/^that puts 3\/2 in front/, 2.25 * L], [/^that leaves off the lower end/, L + 2 / 3 * (1 + a) ** 1.5]];
+    for (const [v, why] of p.d) {
+      const s = slip.find(([re]) => re.test(fl(why)));
+      if (!s) { fail('analysis', 'arcLength', `a wrong answer's reason is not one of the slips: ${why}`); continue; }
+      if (Math.abs(val(fl(v)) - s[1]) > 1e-5 * Math.max(1, Math.abs(s[1]))) fail('analysis', 'arcLength', `${fl(v)} is not the slip it is named as (${s[1]}): ${why}`);
+      if (/^that is ∫/.test(fl(why))) alNoRoot++;
+    }
+    if (p.d.some(z => /^that is the run/.test(fl(z[1])))) alRun++;
+    covered.add('arcLength');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1312,7 +1352,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 74, sig: 0xb127 };
+  const PINNED = { count: 75, sig: 0x2cef };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -15134,6 +15174,34 @@ for (let d = 1; d <= 3; d++) {
   if (laStepOffered < LA / 5) fail('analysis', 'linApprox', `depth ${d} offers the bare step as a slip in only ${laStepOffered} of ${LA} questions`);
   if (d === 2 && laExact < LA * 0.4) fail('analysis', 'linApprox', `depth 2 offers the exact value as a slip in only ${laExact} of ${LA} questions`);
   if (laWhole < LA * 0.35 || laWhole > LA * 0.65) fail('analysis', 'linApprox', `depth ${d} gives a whole answer ${laWhole} times in ${LA}, not about half`);
+}
+
+// Arc length at every depth: the answer and its four slips are five different
+// exact numbers, none of them 0, each slip with its reason; two of the four
+// share the answer's form and two its sign; the forgotten square root and the
+// bare run are offered often; whole and fractional answers come up about
+// equally at the first two depths, and at the third the length is a fraction.
+for (let d = 1; d <= 3; d++) {
+  const AL = 3000;
+  alNoRoot = 0; alRun = 0; alWhole = 0;
+  for (let i = 0; i < AL; i++) {
+    const p = GEN.arcLength(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'arcLength', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v) || /^−?0/.test(v))) fail('analysis', 'arcLength', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace(/^−/, '').split('/').some(x => x.length > 3))) fail('analysis', 'arcLength', `a number runs past three digits: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'arcLength', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/'), neg = v => v.startsWith('−');
+    if (vals[0].startsWith('−')) fail('analysis', 'arcLength', `a length is below 0: ${vals[0]}`);
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'arcLength', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => neg(v) === neg(vals[0])).length < 2) fail('analysis', 'arcLength', `fewer than two wrong answers have the answer's sign: ${vals.join(', ')}`);
+    if (whole(vals[0])) alWhole++;
+    ANALYSIS.arcLength(p);
+  }
+  if (alNoRoot < AL * 0.5) fail('analysis', 'arcLength', `depth ${d} offers the forgotten square root in only ${alNoRoot} of ${AL} questions`);
+  if (alRun < AL * 0.5) fail('analysis', 'arcLength', `depth ${d} offers the bare run in only ${alRun} of ${AL} questions`);
+  if (d < 3 && (alWhole < AL * 0.35 || alWhole > AL * 0.65)) fail('analysis', 'arcLength', `depth ${d} gives a whole answer ${alWhole} times in ${AL}, not about half`);
+  if (d === 3 && alWhole) fail('analysis', 'arcLength', `depth 3 gives a whole answer ${alWhole} times, where too few slips would be whole beside it`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

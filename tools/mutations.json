@@ -1,264 +1,201 @@
 {
-  "change": "The Tangent Line Workshop: estimate f(x) from the tangent at a, and measure how far and which way it misses.",
+  "change": "Arc length as a fight topic: measure a curve with the integral of √(1 + f′²).",
   "mutations": [
     {
-      "name": "√x's slope at 4 is 1/2",
+      "name": "the line's length forgets the root",
       "file": "index.html",
-      "find": "fa:2, m:1/4, ms:'1/4',",
-      "replace": "fa:2, m:1/2, ms:'1/4',",
+      "find": "ans=mul(r,W);",
+      "replace": "ans=mul(W,add(F(1),mul(m,m)));",
       "run": "verify"
     },
     {
-      "name": "1/x's slope at 1 is +1",
+      "name": "the line's length is the run",
       "file": "index.html",
-      "find": "fa:1, m:-1, ms:'−1',",
-      "replace": "fa:1, m:1, ms:'−1',",
+      "find": "ans=mul(r,W);",
+      "replace": "ans=W;",
       "run": "verify"
     },
     {
-      "name": "sin x is drawn as cos x",
+      "name": "the line's slope is q/p",
       "file": "index.html",
-      "find": "f:Math.sin, fx",
-      "replace": "f:Math.cos, fx",
+      "find": "const m=F(sg*p,q), r=F(h,q)",
+      "replace": "const m=F(sg*q,p), r=F(h,q)",
       "run": "verify"
     },
     {
-      "name": "L(x) for √x is written with the wrong slope",
+      "name": "depth 2 drops the 2/3",
       "file": "index.html",
-      "find": "Ls:'2 + (1/4)(x − 4)'",
-      "replace": "Ls:'2 + (1/2)(x − 4)'",
+      "find": "ans=mul(F(2,3),D);",
+      "replace": "ans=D;",
       "run": "verify"
     },
     {
-      "name": "1/x's f′ is written without its minus",
+      "name": "depth 2 leaves off the lower end",
       "file": "index.html",
-      "find": "dfs:'−1/x²'",
-      "replace": "dfs:'1/x²'",
+      "find": "const D=F(B**3-A**3);",
+      "replace": "const D=F(B**3);",
       "run": "verify"
     },
     {
-      "name": "the bend note on √x says it undershoots",
+      "name": "depth 2 starts from A, not A² − 1",
       "file": "index.html",
-      "find": "bend:'√x bends down, under its tangent, so the tangent overshoots on both sides of 4.'",
-      "replace": "bend:'√x bends down, under its tangent, so the tangent falls short on both sides of 4.'",
+      "find": "a=F(A*A-1); b=F(B*B-1);",
+      "replace": "a=F(A*A); b=F(B*B-1);",
       "run": "verify"
     },
     {
-      "name": "√x can step past 9",
+      "name": "depth 3 gives the rise",
       "file": "index.html",
-      "find": "lo:-30, hi:50,",
-      "replace": "lo:-30, hi:60,",
+      "find": "ans=sub(G(b),G(a));",
+      "replace": "ans=sub(fx(b),fx(a));",
       "run": "verify"
     },
     {
-      "name": "1/x can step to 0",
+      "name": "depth 3's antiderivative keeps the +",
       "file": "index.html",
-      "find": "lo:-5, hi:15,",
-      "replace": "lo:-10, hi:15,",
+      "find": "G=x=>sub(mul(pow(x,3),F(1,3*c)),",
+      "replace": "G=x=>add(mul(pow(x,3),F(1,3*c)),",
       "run": "verify"
     },
     {
-      "name": "x is a hundredth a step",
+      "name": "depth 3's curve is written with 4x for c/(4x)",
       "file": "index.html",
-      "find": "x(k=this.k){ return (this.set().a*10+k)/10; },",
-      "replace": "x(k=this.k){ return (this.set().a*100+k)/100; },",
+      "find": "const t1=`x³/${3*c}`, t2=over('x');",
+      "replace": "const t1=`x³/${3*c}`, t2=`1/(4x)`;",
       "run": "verify"
     },
     {
-      "name": "the miss forgets f(a)",
+      "name": "depth 3's curve is written with x³/c",
       "file": "index.html",
-      "find": "miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },",
-      "replace": "miss(k=this.k){ const S=this.set(); return S.m*k/10-S.f(this.x(k)); },",
+      "find": "const t1=`x³/${3*c}`,",
+      "replace": "const t1=`x³/${c}`,",
       "run": "verify"
     },
     {
-      "name": "the miss is the wrong way round",
+      "name": "the question names the wrong b",
       "file": "index.html",
-      "find": "miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },",
-      "replace": "miss(k=this.k){ const S=this.set(); return S.f(this.x(k))-S.fa-S.m*k/10; },",
+      "find": "from x = ${show(a)} to x = ${show(b)}.`,",
+      "replace": "from x = ${show(a)} to x = ${show(add(b,F(1)))}.`,",
       "run": "verify"
     },
     {
-      "name": "L(x) multiplies the slope by x",
+      "name": "the answers are always whole",
       "file": "index.html",
-      "find": "const h=this.k/10, L=S.fa+S.m*h, e=this.miss();",
-      "replace": "const h=this.k/10, L=S.fa+S.m*x, e=this.miss();",
+      "find": "const whole=d<3 && R.chance(0.5);",
+      "replace": "const whole=d<3;",
       "run": "verify"
     },
     {
-      "name": "too high and too low are swapped",
+      "name": "the answers are seldom whole",
       "file": "index.html",
-      "find": "so the tangent is too ${e>0?'high':'low'} by",
-      "replace": "so the tangent is too ${e>0?'low':'high'} by",
+      "find": "const whole=d<3 && R.chance(0.5);",
+      "replace": "const whole=d<3 && R.chance(0.1);",
       "run": "verify"
     },
     {
-      "name": "an inexact miss is told as exact",
+      "name": "depth 3 may be whole",
       "file": "index.html",
-      "find": "${this.is(Math.abs(e))[0]==='='?'':'about '}",
-      "replace": "",
+      "find": "const whole=d<3 && R.chance(0.5);",
+      "replace": "const whole=R.chance(0.5);",
       "run": "verify"
     },
     {
-      "name": "the curve's value is f at a",
+      "name": "depth 1 runs a whole step even for fractions",
       "file": "index.html",
-      "find": "The curve gives ${S.fx(xs)} ${this.is(S.f(x))}",
-      "replace": "The curve gives ${S.fx(xs)} ${this.is(S.fa)}",
+      "find": "const w=whole ? q*(q<=5?R.i(1,2):1) : R.i(1,9);",
+      "replace": "const w=q*(q<=5?R.i(1,2):1);",
       "run": "verify"
     },
     {
-      "name": "the halving note gives the ratio upside down",
+      "name": "the form may give it away",
       "file": "index.html",
-      "find": "${this.num(e1/e0)} times as much",
-      "replace": "${this.num(e0/e1)} times as much",
+      "find": "same<2 || sign<2) && g<400) continue;\n    i",
+      "replace": "sign<2) && g<400) continue;\n    i",
       "run": "verify"
     },
     {
-      "name": "the halving note says a quarter on sin x",
+      "name": "only three wrong answers",
       "file": "index.html",
-      "find": "(S.id==='sin' ? 'Close to 0, halving",
-      "replace": "(S.id==='nope' ? 'Close to 0, halving",
+      "find": "dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form and one of its sign\n    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;\n    if((dist.length<4 || M",
+      "replace": "dist.length<3 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form and one of its sign\n    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;\n    if((dist.length<4 || M",
       "run": "verify"
     },
     {
-      "name": "the halving note stays after a move",
+      "name": "the line's no-root slip keeps the root",
       "file": "index.html",
-      "find": "move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.halved=false;",
-      "replace": "move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk;",
+      "find": "[mul(W,add(F(1),mul(m,m))),`that is ∫(1 + f′²) dx",
+      "replace": "[mul(W,F(h+1,q)),`that is ∫(1 + f′²) dx",
       "run": "verify"
     },
     {
-      "name": "an odd step can be halved",
+      "name": "the line's run-plus-rise slip doubles the run",
       "file": "index.html",
-      "find": "canHalve(){ return this.k!==0 && this.k%2===0; },",
-      "replace": "canHalve(){ return this.k!==0; },",
+      "find": "[add(W,rise),`that adds the run ${w}",
+      "replace": "[add(W,W),`that adds the run ${w}",
       "run": "verify"
     },
     {
-      "name": "halving goes all the way back to a",
+      "name": "depth 2's no-root slip uses B⁴ − A⁴",
       "file": "index.html",
-      "find": "this.prev=this.k; this.k/=2; this.halved=true;",
-      "replace": "this.prev=this.k; this.k=0; this.halved=true;",
+      "find": "F((B*B-1)**2-(A*A-1)**2,2)",
+      "replace": "F(B**4-A**4,2)",
       "run": "verify"
     },
     {
-      "name": "picking a curve keeps x",
+      "name": "depth 2's 3/2 slip uses 1/2",
       "file": "index.html",
-      "find": "pick(i){ this.si=i; this.k=0; this.p",
-      "replace": "pick(i){ this.si=i; this.p",
+      "find": "[mul(F(3,2),D),`that puts 3/2",
+      "replace": "[mul(F(1,2),D),`that puts 3/2",
       "run": "verify"
     },
     {
-      "name": "starting over keeps the halving note",
+      "name": "depth 2's lower-end slip takes A³",
       "file": "index.html",
-      "find": "again(){ this.k=0; this.prev=null; this.halved=false;",
-      "replace": "again(){ this.k=0; this.prev=null;",
+      "find": "slips.push([mul(F(2,3),F(B**3)),",
+      "replace": "slips.push([mul(F(2,3),F(A**3)),",
       "run": "verify"
     },
     {
-      "name": "the tangent is drawn from f(a) with slope 1",
+      "name": "depth 3's no-root slip forgets the 1/2",
       "file": "index.html",
-      "find": "Tl=t=>S.fa+S.m*(t-S.a);",
-      "replace": "Tl=t=>S.fa+(t-S.a);",
+      "find": "add(mul(pow(x,5),F(1,5*c*c)),mul(x,F(1,2)))",
+      "replace": "add(mul(pow(x,5),F(1,5*c*c)),x)",
       "run": "verify"
     },
     {
-      "name": "the point sits on the tangent, not the curve",
+      "name": "depth 3's run slip is twice the run",
       "file": "index.html",
-      "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\" r=\"5\" fill=\"${FIG_COL.b}\" stroke=\"${FIG_COL.ink}\" stroke-width=\"1\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-t",
-      "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(Lx))}\" r=\"5\" fill=\"${FIG_COL.b}\" stroke=\"${FIG_COL.ink}\" stroke-width=\"1\"/>`;\n    return out+`</svg>`;\n  },\n  open(){ UI.go('s-t",
+      "find": "[W,`that is the run b − a = ${show(W)}",
+      "replace": "[mul(W,F(2)),`that is the run b − a = ${show(W)}",
       "run": "verify"
     },
     {
-      "name": "the gap runs to the axis",
+      "name": "the working forgets the root",
       "file": "index.html",
-      "find": "y2=\"${f(this.PY(Lx))}\" stroke=\"${FIG_COL.d}\"",
-      "replace": "y2=\"${f(this.PY(0))}\" stroke=\"${FIG_COL.d}\"",
+      "find": "f′(x) = √x, so √(1 + f′²) = √(1 + x).",
+      "replace": "f′(x) = √x, so 1 + f′² = 1 + x.",
       "run": "verify"
     },
     {
-      "name": "the touching point is drawn at x",
+      "name": "the line's working ends on the run",
       "file": "index.html",
-      "find": "<circle data-k=\"touch\" cx=\"${f(this.PX(S.a))}\"",
-      "replace": "<circle data-k=\"touch\" cx=\"${f(this.PX(x))}\"",
+      "find": "The length is ${show(r)} × (b − a) = ${show(r)} × ${w} = ${show(ans)}`;",
+      "replace": "The length is ${show(r)} × (b − a) = ${show(r)} × ${w} = ${w}`;",
       "run": "verify"
     },
     {
-      "name": "the figure says above when it is below",
+      "name": "no realm asks arc length",
       "file": "index.html",
-      "find": "the tangent ${Lx>y?'above':'below'} the curve",
-      "replace": "the tangent ${Lx>y?'below':'above'} the curve",
+      "find": "'growth','meanValue','linApprox','arcLength'],",
+      "replace": "'growth','meanValue','linApprox'],",
       "run": "verify"
     },
     {
-      "name": "within 0.001 is found anywhere on √x",
+      "name": "arc length is in no strand",
       "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.k===1},",
-      "replace": "ok:K=>K.si===0 && K.k!==0},",
+      "find": "'growth','meanValue','linApprox','arcLength']]",
+      "replace": "'growth','meanValue','linApprox']]",
       "run": "verify"
-    },
-    {
-      "name": "drifting is found at 0.01",
-      "file": "index.html",
-      "find": "Math.abs(K.miss())>0.1},",
-      "replace": "Math.abs(K.miss())>0.01},",
-      "run": "verify"
-    },
-    {
-      "name": "the eighth is found on √x",
-      "file": "index.html",
-      "find": "ok:K=>K.si===2 && K.halved}",
-      "replace": "ok:K=>K.halved}",
-      "run": "verify"
-    },
-    {
-      "name": "falling short is found on sin x",
-      "file": "index.html",
-      "find": "ok:K=>K.si===1 && K.k!==0},",
-      "replace": "ok:K=>K.si>0 && K.k!==0},",
-      "run": "verify"
-    },
-    {
-      "name": "the Tome does not offer it",
-      "file": "index.html",
-      "find": "onclick=\"TanLine.open()\">Open the tangent line workshop</button>",
-      "replace": "onclick=\"UI.go('s-title')\">Open the tangent line workshop</button>",
-      "run": "play:tanline"
-    },
-    {
-      "name": "linear approximation links to no workshop",
-      "file": "index.html",
-      "find": "    TanLine: [\"🪡 Tangent Line Workshop\", ['linApprox']],\n",
-      "replace": "",
-      "run": "play:tanline"
-    },
-    {
-      "name": "the screen opens unrendered",
-      "file": "index.html",
-      "find": "    if(id==='s-tanline') TanLine.render();\n",
-      "replace": "",
-      "run": "play:tanline"
-    },
-    {
-      "name": "the buttons never stop at the ends",
-      "file": "index.html",
-      "find": "for(const [id,dk] of [['tlwL',-10],['tlwl',-1],['tlwr',1],['tlwR',10]]) document.getElementById(id).disabled=!this.can(dk);",
-      "replace": "",
-      "run": "play:tanline"
-    },
-    {
-      "name": "halving is always offered",
-      "file": "index.html",
-      "find": "document.getElementById('tlwHalf').disabled=!this.canHalve();",
-      "replace": "",
-      "run": "play:tanline"
-    },
-    {
-      "name": "the goals never show as found",
-      "file": "index.html",
-      "find": "<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE TA",
-      "replace": "<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE TA",
-      "run": "play:tanline"
     }
   ]
 }
