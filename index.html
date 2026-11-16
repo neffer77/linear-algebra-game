@@ -1516,17 +1516,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ HILLWALKER WORKSHOP ============ -->
   <div class="screen" id="s-hill">
     <div class="panel"><h2>🗺️ Hillwalker Workshop</h2><div class="sub">Stand on a hill and turn to face a heading. The slope that way is the directional derivative, ∇f · û. Find the steepest climb, the steepest drop, and the headings that stay level along the contour.</div></div>
+    <div id="hwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a hill by hand or pick its slope"></div>
     <div class="panel">
+      <div id="dsBox"></div>
       <div id="hwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill"></div>
       <div id="hwFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="hwStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="hwHLo" onclick="Hill.turn(-1)" aria-label="Turn the heading clockwise">↻</button>
           <b id="hwH" style="font-size:17px;min-width:0"></b>
           <button id="hwHHi" onclick="Hill.turn(1)" aria-label="Turn the heading anticlockwise">↺</button></div>
       </div>
       <div id="hwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="hwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="hwGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14231,7 +14233,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🗺️ Hillwalker Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom. Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way.</div>
          <button class="btn sm" id="tomeHill" style="width:auto;margin-top:8px" onclick="Hill.open()">Open the hillwalker workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
@@ -21380,6 +21382,123 @@ const Detect = {
   }
 };
 
+/* ---------- Which slope? The hillwalker workshop turned round ----------
+   A hill f(x, y) = px² + qy² with whole p and q, a whole point (x, y) on it,
+   and a heading û = ⟨u/5, v/5⟩ of length 1, and four numbers, one of them the
+   slope that way, ∇f · û = (2px·u + 2qy·v)/5. The rule is stated first; the
+   wrong numbers are the slips people make with it. A wrong pick is checked
+   by a step of 5 along û, whose rise is always 5 times the slope plus the
+   bend pu² + qv². Nothing is saved. */
+const HillPick = {
+  SLIPS:['noUnit','swap','xOnly','yOnly','noTwo'],
+  U:[[4,3],[3,4],[-3,4],[-4,3],[-4,-3],[-3,-4],[3,-4],[4,-3]],
+  RULE:'The slope facing a heading û of length 1 is ∇f · û. Find the gradient first: ∇f = ⟨∂f/∂x, ∂f/∂y⟩, each part found by differentiating in that letter alone, so px² + qy² has ∇f = ⟨2px, 2qy⟩. Then multiply part by part and add: ∂f/∂x times the east part of û, plus ∂f/∂y times its north part. Which is the slope?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  grad(S){ return [2*S.p*S.x, 2*S.q*S.y]; },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const [gx,gy]=this.grad(S), {u,v,p,q,x,y}=S;
+    return k==='right' ? this.frac(gx*u+gy*v,5) : k==='noUnit' ? this.frac(gx*u+gy*v,1) : k==='swap' ? this.frac(gx*v+gy*u,5)
+      : k==='xOnly' ? this.frac(gx*u,5) : k==='yOnly' ? this.frac(gy*v,5) : this.frac(p*x*u+q*y*v,5);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this hill can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const [u,v]=this.U[R.i(0,7)];
+      const S={p:R.i(1,3)*(R.i(0,1)?1:-1), q:R.i(1,3)*(R.i(0,1)?1:-1), x:R.i(-3,3), y:R.i(-3,3), u, v};
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {p:2, q:-1, x:1, y:2, u:3, v:4};
+  },
+  f(S,x,y){ return S.p*x*x+S.q*y*y; },
+  cx(n){ return n===1 ? '' : n===-1 ? '−' : neg(n); },
+  hill(S){ return `${this.cx(S.p)}x² ${S.q<0?'−':'+'} ${Math.abs(S.q)===1?'':Math.abs(S.q)}y²`; },
+  head(S){ return `⟨${this.fs(this.frac(S.u,5))}, ${this.fs(this.frac(S.v,5))}⟩`; },
+  bend(S){ return S.p*S.u*S.u+S.q*S.v*S.v; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TRAIL READER', this.matched+' slopes read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the slope, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Hill.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {p,q,u,v}=S, [gx,gy]=this.grad(S), fu=this.fs(this.frac(u,5)), fv=this.fs(this.frac(v,5));
+    if(k==='noUnit') return `${L} uses ⟨${neg(u)}, ${neg(v)}⟩, which has length 5, not û. A heading has to have length 1, so divide by 5: û = ${this.head(S)}.`;
+    if(k==='swap') return `${L} pairs the parts the wrong way round. ∂f/∂x goes with the east part of û, ${fu}, and ∂f/∂y with the north part, ${fv}.`;
+    if(k==='xOnly') return `${L} keeps only the east part, ∂f/∂x × ${fu}. Facing û you also go ${fv} north for each step, so add ∂f/∂y × ${fv} too.`;
+    if(k==='yOnly') return `${L} keeps only the north part, ∂f/∂y × ${fv}. Facing û you also go ${fu} east for each step, so add ∂f/∂x × ${fu} too.`;
+    return `${L} forgets the 2 that a square brings down: ∂f/∂x is ${this.cx(2*p)}x, not ${this.cx(p)}x, and ∂f/∂y is ${this.cx(2*q)}y, not ${this.cx(q)}y, so ∇f = ⟨${neg(gx)}, ${neg(gy)}⟩.`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {p,q,x,y}=S, X=x+S.u, Y=y+S.v, F0=this.f(S,x,y), F1=this.f(S,X,Y), C=this.bend(S);
+    return `Check ${L}: step 5 along û, from (${neg(x)}, ${neg(y)}) to (${neg(X)}, ${neg(Y)}). f goes from ${neg(F0)} to ${neg(F1)}, a rise of ${neg(F1-F0)}. A step that long always rises by 5 × the slope plus the bend ${neg(p)} × ${this.pn(S.u)}² + ${this.pn(q)} × ${this.pn(S.v)}² = ${neg(C)}, so 5 × the slope + ${this.pn(C)} must be ${neg(F1-F0)}. With the slope ${this.fs(v)} that is 5 × ${this.pf(v)} + ${this.pn(C)} = ${neg(5*v[0]/v[1]+C)}, not ${neg(F1-F0)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="dsQ" style="text-align:center;font-size:16px;margin-bottom:2px">Stand at (${neg(S.x)}, ${neg(S.y)}) on f(x, y) = ${this.hill(S)} and face û = ${this.head(S)}.</div>`;
+    out+=`<div class="small" style="text-align:center">Which is the slope that way?</div>`;
+    out+=`<div id="dsPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="HillPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the slope':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, [gx,gy]=this.grad(B), W=this.val(B,'right'), C=this.bend(B), d=this.f(B,B.x+B.u,B.y+B.v)-this.f(B,B.x,B.y);
+      lines.push(`That was it: ∇f = ⟨${neg(gx)}, ${neg(gy)}⟩ at (${neg(B.x)}, ${neg(B.y)}), and ∇f · û = ${neg(gx)} × ${this.pf(this.frac(B.u,5))} + ${this.pn(gy)} × ${this.pf(this.frac(B.v,5))} = ${this.fs(W)}. A step of 5 along û rises by 5 × ${this.pf(W)} + ${this.pn(C)} = ${neg(d)}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="dsRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 /* ---------- The hillwalker workshop: the directional derivative ----------
    Stand on a hill and turn to face a heading û of length 1. The slope that
    way is ∇f · û, which is ‖∇f‖ cos θ: steepest along ∇f itself, nothing at
@@ -21486,7 +21605,15 @@ const Hill = {
   open(){ UI.go('s-hill'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   turn(by){ this.k=(this.k+by+this.U.length)%this.U.length; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('hwTab').innerHTML=[['hand','🗺️ Walk it by hand','Turn on a hill by hand and read the slope'],['pick','🎯 Which slope?','See a hill, a point and a heading, and pick which of four numbers is the slope that way']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Hill.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['hwSets','hwFig','hwStep','hwRead','hwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dsBox').innerHTML=pick ? HillPick.html() : '';
+    if(pick) return;
     document.getElementById('hwSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Hill.pick(${i})" aria-label="${s.btn}: f(x, y) = ${s.fs}, standing at (${s.P.map(neg).join(', ')})">${s.btn}</button>`).join('');
     document.getElementById('hwH').textContent=`û = ${this.uvec()}`;

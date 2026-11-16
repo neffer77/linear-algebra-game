@@ -127,6 +127,7 @@ const SUITES = [
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
+  require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
