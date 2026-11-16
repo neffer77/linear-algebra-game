@@ -119,6 +119,7 @@ const SUITES = [
   require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum
   require('./play/ladpick'), // see a ladder, pick which of four numbers is the top's speed
+  require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
