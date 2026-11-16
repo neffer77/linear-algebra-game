@@ -6531,6 +6531,161 @@ const pathPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which Aⁿv? The pick-a-power round in the diagonal workshop. Every vector on
+   screen is read back off its button and checked against the slip it is
+   named as, worked out here from A, its eigenvectors and v alone. The right
+   one alone must be Aⁿv: checked by multiplying A into v n times. Every check
+   in the readout is worked again: the eigenvector parts of the wrong vector,
+   what Aⁿv must hold, and the part that differs. */
+const powPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Diag = {render(){ env.renders++; }};" +
+    cut('const PowPick = {', '/* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal') + 'return PowPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const num = t => { const m = t.match(/^(−?)(\d+)$/); return m ? (m[1] ? -1 : 1) * +m[2] : null; };
+  const vs = v => `(${ng(v[0])}, ${ng(v[1])})`;
+  const SUP = { 2: '²', 3: '³', 4: '⁴' };
+  // everything about a deal worked out here: A built from P and D, v from a and b, and Aⁿv by n multiplications
+  const det = Q => Q.P[0][0] * Q.P[1][1] - Q.P[1][0] * Q.P[0][1];
+  const Amat = Q => { const [p, q] = Q.P, d = det(Q);
+    // A = P D P⁻¹ written out entry by entry
+    return [[(p[0] * Q.l1 * q[1] - q[0] * Q.l2 * p[1]) / d, (-p[0] * Q.l1 * q[0] + q[0] * Q.l2 * p[0]) / d],
+            [(p[1] * Q.l1 * q[1] - q[1] * Q.l2 * p[1]) / d, (-p[1] * Q.l1 * q[0] + q[1] * Q.l2 * p[0]) / d]]; };
+  const mul = (M, w) => [M[0][0] * w[0] + M[0][1] * w[1], M[1][0] * w[0] + M[1][1] * w[1]];
+  const lin = (Q, x, y) => [x * Q.P[0][0] + y * Q.P[1][0], x * Q.P[0][1] + y * Q.P[1][1]];
+  const vOf = Q => lin(Q, Q.a, Q.b);
+  const power = Q => { const M = Amat(Q); let w = vOf(Q); for (let i = 0; i < Q.n; i++) w = mul(M, w); return w; };
+  const want = {
+    right: Q => lin(Q, Q.a * Q.l1 ** Q.n, Q.b * Q.l2 ** Q.n),
+    once: Q => lin(Q, Q.a * Q.l1, Q.b * Q.l2),
+    swap: Q => lin(Q, Q.a * Q.l2 ** Q.n, Q.b * Q.l1 ** Q.n),
+    coef: Q => lin(Q, (Q.a * Q.l1) ** Q.n, (Q.b * Q.l2) ** Q.n),
+    times: Q => lin(Q, Q.a * Q.n * Q.l1, Q.b * Q.n * Q.l2),
+    noCoef: Q => lin(Q, Q.l1 ** Q.n, Q.l2 ** Q.n)
+  };
+  const SL = ['once', 'swap', 'coef', 'times', 'noCoef'];
+  const same = (u, w) => u[0] === w[0] && u[1] === w[1];
+  const term = (c, s) => (c === 1 ? s : c === -1 ? '−' + s : `${ng(c)}${s}`);
+  const vstr = Q => `${term(Q.a, 'p₁')} ${Q.b < 0 ? '−' : '+'} ${term(Math.abs(Q.b), 'p₂')}`;
+  const An = Q => 'A' + SUP[Q.n] + 'v';
+  const read = () => txt(S.html().split('id="pwRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => { const e = SUP[Q.n], n = Q.n, l = n * Q.l1 !== Q.l1 ** n ? Q.l1 : Q.l2; return ({
+    once: `${L} applies A only once, stretching p₁ by ${ng(Q.l1)} and p₂ by ${ng(Q.l2)}. ${An(Q)} applies A ${n} times, so p₁ is stretched by ${pn(Q.l1)}${e} = ${ng(Q.l1 ** n)} and p₂ by ${pn(Q.l2)}${e} = ${ng(Q.l2 ** n)}.`,
+    swap: `${L} pairs each eigenvalue with the other eigenvector. A stretches p₁ by ${ng(Q.l1)} and p₂ by ${ng(Q.l2)}, so ${pn(Q.l1)}${e} goes with p₁ and ${pn(Q.l2)}${e} with p₂.`,
+    coef: `${L} raises a and b to the ${n} too. Only the stretching repeats: v holds ${ng(Q.a)} of p₁ and ${ng(Q.b)} of p₂, and those stay ${ng(Q.a)} and ${ng(Q.b)} while ${ng(Q.l1)} and ${ng(Q.l2)} are raised to the ${n}.`,
+    times: `${L} multiplies each eigenvalue by ${n} instead of raising it to the ${n}. Stretching by ${ng(l)} ${n} times multiplies by ${pn(l)}${e} = ${ng(l ** n)}, not ${n} × ${pn(l)} = ${ng(n * l)}.`,
+    noCoef: `${L} forgets how much of each eigenvector v holds. v = ${vstr(Q)}, so ${An(Q)} = ${ng(Q.a)} × ${ng(Q.l1 ** n)} of p₁ and ${ng(Q.b)} × ${ng(Q.l2 ** n)} of p₂, not ${ng(Q.l1 ** n)} and ${ng(Q.l2 ** n)}.` })[k]; };
+  const V = '\\((−?\\d+), (−?\\d+)\\)', N = '(−?\\d+|\\(−\\d+\\))';
+  const CHK = new RegExp(`^Check ([ABCD]): in eigenvectors, ${V} = (−?\\d+)·p₁ \\+ ${N}·p₂\\. (A[²³⁴]v) must hold (−?\\d+)·${N}([²³⁴]) of p₁ and (−?\\d+)·${N}([²³⁴]) of p₂, and (−?\\d+) is not (−?\\d+)·${N}([²³⁴])\\.$`);
+  const unp = t => num(t.replace(/^\((.*)\)$/, '$1'));
+  // a check, worked again: the parts of the wrong vector, what Aⁿv must hold, and the part that differs
+  const checkOk = (line, L, Q, w, key) => { const m = line.match(CHK);
+    if (!m) { fail('powpick', key, `the check of ${L} is not worded as it should be: ${line}`); return; }
+    const [, Lt, x, y, c1, c2, an, a, l1, e1, b, l2, e2, bad, s, ls, es] = m, e = SUP[Q.n];
+    if (Lt !== L || num(x) !== w[0] || num(y) !== w[1]) fail('powpick', key, `the check of ${L} does not use its own vector ${vs(w)}`);
+    if (!same(lin(Q, num(c1), unp(c2)), w)) fail('powpick', key, `${c1}·p₁ + ${c2}·p₂ is not ${vs(w)}`);
+    if (an !== An(Q) || num(a) !== Q.a || unp(l1) !== Q.l1 || num(b) !== Q.b || unp(l2) !== Q.l2 || e1 !== e || e2 !== e) fail('powpick', key, `the check of ${L} does not say what ${An(Q)} must hold`);
+    const first = num(c1) !== Q.a * Q.l1 ** Q.n;
+    if (first ? (num(bad) !== num(c1) || num(s) !== Q.a || unp(ls) !== Q.l1) : (num(bad) !== unp(c2) || num(s) !== Q.b || unp(ls) !== Q.l2) || es !== e) fail('powpick', key, `the check of ${L} does not name the part that differs`);
+    if (!first && unp(c2) === Q.b * Q.l2 ** Q.n) fail('powpick', key, 'a wrong vector passes the check'); };
+  if (S.RULE !== 'Eigenvectors make powers easy. A only stretches an eigenvector: A·p₁ = λ₁p₁ and A·p₂ = λ₂p₂. So if v = a·p₁ + b·p₂, each power of A stretches each part once more, and Aⁿv = a·λ₁ⁿ·p₁ + b·λ₂ⁿ·p₂. Keep a and b as they are, raise each eigenvalue to the n, and pair it with its own eigenvector. Which is Aⁿv?') fail('powpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('powpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), Ps = new Set(), L1 = new Set(), L2 = new Set(), As = new Set(), Bs = new Set(), Ns = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Ps.add(JSON.stringify(Q.P)); L1.add(Q.l1); L2.add(Q.l2); As.add(Q.a); Bs.add(Q.b); Ns.add(Q.n);
+      if (Math.abs(det(Q)) !== 1 || ![Q.a, Q.b].every(c => [-2, -1, 1, 2].includes(c)) || ![Q.l1, Q.l2].every(l => [-2, -1, 2, 3].includes(l)) || Q.l1 === Q.l2 || ![2, 3, 4].includes(Q.n)) fail('powpick', key, `${sig} is not a deal as it should be`);
+      const M = Amat(Q);
+      if (!M.flat().every(Number.isInteger)) fail('powpick', key, `A of ${sig} is not whole`);
+      if (!same(mul(M, Q.P[0]), Q.P[0].map(c => c * Q.l1)) || !same(mul(M, Q.P[1]), Q.P[1].map(c => c * Q.l2))) fail('powpick', key, 'p₁ and p₂ are not eigenvectors of A with their eigenvalues');
+      const W = want.right(Q);
+      if (!same(W, power(Q))) fail('powpick', key, `${vs(W)} is not ${An(Q)}`);
+      if (prev && prev === sig) fail('powpick', key, 'the same deal comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('powpick', key, 'there are not four vectors, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` A has rows ${vs(M[0])} and ${vs(M[1])}. p₁ = ${vs(Q.P[0])} has eigenvalue ${ng(Q.l1)}, and p₂ = ${vs(Q.P[1])} has eigenvalue ${ng(Q.l2)}. v = ${vstr(Q)} = ${vs(vOf(Q))}. Which is ${An(Q)}? A`)) fail('powpick', key, 'the rule, A, its eigenvectors and v are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="PowPick\.choose\((\d)\)" aria-label="([ABCD]): \((−?\d+), (−?\d+)\)" style="margin:0"><b>([ABCD])<\/b> \((−?\d+), (−?\d+)\)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[6] !== 'ABCD'[i] || x[4] !== x[7] || x[5] !== x[8])) { fail('powpick', key, 'the four vectors are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => [num(x[4]), num(x[5])]);
+      if (new Set(vals.map(String)).size !== 4) fail('powpick', key, 'two vectors are the same');
+      if (vals.some(v => v[0] === 0 && v[1] === 0)) fail('powpick', key, 'the zero vector is offered');
+      if (vals.some(v => v.some(c => Math.abs(c) > 200))) fail('powpick', key, 'an entry past 200 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('powpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!same(vals[i], want[o.k](Q))) fail('powpick', key, `${o.k} is shown as ${vs(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== same(vals[i], power(Q))) fail('powpick', key, `${vs(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} ${An(Q)}`);
+      });
+      {
+        const can = [], seen = new Set([String(W), '0,0']);
+        for (const s of SL) { const v = String(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('powpick', key, 'a deal with fewer than three slips is dealt');
+        if (['right', ...SL].some(s => want[s](Q).some(c => Math.abs(c) > 200))) fail('powpick', key, 'a deal with an entry past 200 among its slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('powpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('powpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="pwRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('powpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        checkOk(lines[1] || '', Lt, Q, vals[i], key);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="PowPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not ${An(Q)}"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('powpick', key, `the missed vectors are not shut and told as not ${An(Q)}`);
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('powpick', key, 'tapping a missed vector again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('powpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('powpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('powpick', key, 'no fresh deal after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'POWER BROKER / 5 powers found') fail('powpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is ${An(Q)}, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('powpick', key, `the toast is ${env.toasts[nt]}`); }
+      const e = SUP[Q.n], c1 = Q.a * Q.l1 ** Q.n, c2 = Q.b * Q.l2 ** Q.n;
+      const after = `That was it: ${An(Q)} = ${ng(Q.a)}·${pn(Q.l1)}${e}·p₁ + ${pn(Q.b)}·${pn(Q.l2)}${e}·p₂ = ${ng(c1)}·${vs(Q.P[0])} + ${pn(c2)}·${vs(Q.P[1])} = ${vs(W)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('powpick', key, `after a pick: ${read()} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same deal dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { P: [[1, 1], [1, 2]], l1: 2, l2: -1, a: 2, b: -1, n: 3 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"P":[[1,1],[1,2]],"l1":2,"l2":-1,"a":2,"b":-1,"n":3}') fail('powpick', 'repeat', 'the same deal is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('powpick', 'slips', `the slip ${k} is never offered`);
+  if (Ps.size !== S.PP.length || L1.size !== 4 || L2.size !== 4 || As.size !== 4 || Bs.size !== 4 || Ns.size !== 3) fail('powpick', 'deal', `${Ps.size} P, λ₁ ${[...L1]}, λ₂ ${[...L2]}, a ${[...As]}, b ${[...Bs]}, n ${[...Ns]} is not the whole deal`);
+  if (S.PP.length !== 12 || S.PP.some(P => Math.abs(P[0][0] * P[1][1] - P[1][0] * P[0][1]) !== 1)) fail('powpick', 'deal', 'the columns for P are not twelve pairs with det ±1');
+  if (left.size !== 5) fail('powpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('powpick', 'deal', `${'Aⁿv'} only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('powpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -11284,6 +11439,7 @@ console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(),
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  path rates         ${pad(pathPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the path chain workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching z nudged along the path; ${pathPickNotes.misses.toLocaleString()} wrong picks checked by a nudge in t, ${pathPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  eigen powers       ${pad(powPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-Aⁿv in the diagonal workshop, every vector read back off its button and checked against the slip it is named as, the right one alone matching A multiplied into v n times; ${powPickNotes.misses.toLocaleString()} wrong picks checked by their eigenvector parts, ${powPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

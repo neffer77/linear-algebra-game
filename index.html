@@ -1750,13 +1750,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DIAGONAL WORKSHOP ============ -->
   <div class="screen" id="s-diag">
     <div class="panel"><h2>🔑 Diagonal Workshop</h2><div class="sub">To diagonalise A, build P from eigenvectors: then P⁻¹AP is a diagonal D. Choose P's two columns by hand and watch P⁻¹AP worked out, column by column.</div></div>
+    <div id="dgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build P by hand or pick a power"></div>
     <div class="panel">
+      <div id="pwBox"></div>
       <div id="dgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
       <div id="dgFig"></div>
       <div id="dgCols"></div>
       <div id="dgRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="dgGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="dgGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14160,7 +14162,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔑 Diagonal Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise. Then turn it round: see A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv.</div>
          <button class="btn sm" id="tomeDiag" style="width:auto;margin-top:8px" onclick="Diag.open()">Open the diagonal workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -23923,6 +23925,126 @@ const Transpose = {
   }
 };
 
+/* ---------- Which Aⁿv? The diagonal workshop turned round ----------
+   A 2×2 matrix A with two eigenvectors p₁ and p₂ and their eigenvalues, a
+   vector v = a·p₁ + b·p₂, and four vectors, one of them Aⁿv = a·λ₁ⁿ·p₁ +
+   b·λ₂ⁿ·p₂. The rule is stated first; the wrong vectors are the slips people
+   make with it. A wrong pick is checked by writing it in
+   eigenvector parts. Nothing is saved. */
+const PowPick = {
+  SLIPS:['once','swap','coef','times','noCoef'],
+  /* pairs of columns for P whose det is ±1, so A = PDP⁻¹ has whole entries */
+  PP:[[[1,1],[1,2]],[[1,0],[1,1]],[[2,1],[1,1]],[[1,1],[0,1]],[[1,-1],[0,1]],[[1,2],[0,1]],[[1,0],[2,1]],[[1,1],[1,0]],[[1,-1],[1,0]],[[2,1],[1,0]],[[1,1],[-1,0]],[[1,2],[1,1]]],
+  LAM:[-2,-1,2,3],
+  SUP:{2:'²',3:'³',4:'⁴'},
+  RULE:'Eigenvectors make powers easy. A only stretches an eigenvector: A·p₁ = λ₁p₁ and A·p₂ = λ₂p₂. So if v = a·p₁ + b·p₂, each power of A stretches each part once more, and Aⁿv = a·λ₁ⁿ·p₁ + b·λ₂ⁿ·p₂. Keep a and b as they are, raise each eigenvalue to the n, and pair it with its own eigenvector. Which is Aⁿv?',
+  vs:v=>`(${neg(v[0])}, ${neg(v[1])})`,
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  A(S){ const [p,q]=S.P, d=p[0]*q[1]-q[0]*p[1], l1=S.l1, l2=S.l2;
+    // A = P·D·P⁻¹, with P⁻¹ = adj P / det P
+    const PD=[[p[0]*l1,q[0]*l2],[p[1]*l1,q[1]*l2]], adj=[[q[1],-q[0]],[-p[1],p[0]]];
+    return [0,1].map(i=>[0,1].map(j=>(PD[i][0]*adj[0][j]+PD[i][1]*adj[1][j])/d)); },
+  v(S){ const [p,q]=S.P; return [S.a*p[0]+S.b*q[0], S.a*p[1]+S.b*q[1]]; },
+  mul(M,v){ return [M[0][0]*v[0]+M[0][1]*v[1], M[1][0]*v[0]+M[1][1]*v[1]]; },
+  comb(x,y,S){ const [p,q]=S.P; return [x*p[0]+y*q[0], x*p[1]+y*q[1]]; },
+  // the vector each option stands for
+  val(S,k){
+    const {a,b,l1,l2,n}=S;
+    return k==='right' ? this.comb(a*l1**n,b*l2**n,S) : k==='once' ? this.comb(a*l1,b*l2,S)
+      : k==='swap' ? this.comb(a*l2**n,b*l1**n,S) : k==='coef' ? this.comb((a*l1)**n,(b*l2)**n,S)
+      : k==='times' ? this.comb(a*n*l1,b*n*l2,S) : this.comb(l1**n,l2**n,S);
+  },
+  key:v=>v.join(','),
+  // the slips this deal can offer: each a vector other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0,0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const P=this.PP[R.i(0,this.PP.length-1)], l1=this.LAM[R.i(0,3)], l2=this.LAM[R.i(0,3)], sg=()=>R.i(0,1)?1:-1;
+      if(l1===l2) continue;
+      const S={P, l1, l2, a:R.i(1,2)*sg(), b:R.i(1,2)*sg(), n:R.i(2,4)};
+      const W=this.val(S,'right');
+      if(W[0]===0 && W[1]===0) continue;
+      if(['right',...this.SLIPS].some(k=>this.val(S,k).some(x=>Math.abs(x)>200))) continue;
+      if(this.slips(S).length<3) continue;
+      return S;
+    }
+    return {P:[[1,1],[1,2]], l1:2, l2:-1, a:2, b:-1, n:3};
+  },
+  term(c,s){ return c===1 ? s : c===-1 ? '−'+s : `${neg(c)}${s}`; },
+  vstr(S){ return `${this.term(S.a,'p₁')} ${S.b<0?'−':'+'} ${this.term(Math.abs(S.b),'p₂')}`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(S);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  An(S){ return 'A'+this.SUP[S.n]+'v'; },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('POWER BROKER', this.matched+' powers found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is ${this.An(r.S)}, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Diag.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,b,l1,l2,n}=S, e=this.SUP[n], An=this.An(S);
+    if(k==='once') return `${L} applies A only once, stretching p₁ by ${neg(l1)} and p₂ by ${neg(l2)}. ${An} applies A ${n} times, so p₁ is stretched by ${this.pn(l1)}${e} = ${neg(l1**n)} and p₂ by ${this.pn(l2)}${e} = ${neg(l2**n)}.`;
+    if(k==='swap') return `${L} pairs each eigenvalue with the other eigenvector. A stretches p₁ by ${neg(l1)} and p₂ by ${neg(l2)}, so ${this.pn(l1)}${e} goes with p₁ and ${this.pn(l2)}${e} with p₂.`;
+    if(k==='coef') return `${L} raises a and b to the ${n} too. Only the stretching repeats: v holds ${neg(a)} of p₁ and ${neg(b)} of p₂, and those stay ${neg(a)} and ${neg(b)} while ${neg(l1)} and ${neg(l2)} are raised to the ${n}.`;
+    if(k==='times'){ const l=n*l1!==l1**n ? l1 : l2;
+      return `${L} multiplies each eigenvalue by ${n} instead of raising it to the ${n}. Stretching by ${neg(l)} ${n} times multiplies by ${this.pn(l)}${e} = ${neg(l**n)}, not ${n} × ${this.pn(l)} = ${neg(n*l)}.`; }
+    return `${L} forgets how much of each eigenvector v holds. v = ${this.vstr(S)}, so ${An} = ${neg(a)} × ${neg(l1**n)} of p₁ and ${neg(b)} × ${neg(l2**n)} of p₂, not ${neg(l1**n)} and ${neg(l2**n)}.`;
+  },
+  // a vector in eigenvector parts: w = c₁·p₁ + c₂·p₂, by Cramer's rule (det P is ±1)
+  parts(S,w){ const [p,q]=S.P, d=p[0]*q[1]-q[0]*p[1]; return [(w[0]*q[1]-q[0]*w[1])/d, (p[0]*w[1]-w[0]*p[1])/d]; },
+  check(S,k,L){
+    const w=this.val(S,k), [c1,c2]=this.parts(S,w), e=this.SUP[S.n], one=c1!==S.a*S.l1**S.n;
+    return `Check ${L}: in eigenvectors, ${this.vs(w)} = ${neg(c1)}·p₁ + ${this.pn(c2)}·p₂. ${this.An(S)} must hold ${neg(S.a)}·${this.pn(S.l1)}${e} of p₁ and ${neg(S.b)}·${this.pn(S.l2)}${e} of p₂, and ${neg(one?c1:c2)} is not ${one ? neg(S.a)+'·'+this.pn(S.l1)+e : neg(S.b)+'·'+this.pn(S.l2)+e}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss(), M=this.A(S), [p,q]=S.P;
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="pwQ" style="text-align:center;font-size:15px;margin-bottom:2px">A has rows ${this.vs(M[0])} and ${this.vs(M[1])}. p₁ = ${this.vs(p)} has eigenvalue ${neg(S.l1)}, and p₂ = ${this.vs(q)} has eigenvalue ${neg(S.l2)}. v = ${this.vstr(S)} = ${this.vs(this.v(S))}.</div>`;
+    out+=`<div class="small" style="text-align:center">Which is ${this.An(S)}?</div>`;
+    out+=`<div id="pwPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.vs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="PowPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not '+this.An(S):''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, e=this.SUP[B.n], c1=B.a*B.l1**B.n, c2=B.b*B.l2**B.n;
+      lines.push(`That was it: ${this.An(B)} = ${neg(B.a)}·${this.pn(B.l1)}${e}·p₁ + ${this.pn(B.b)}·${this.pn(B.l2)}${e}·p₂ = ${neg(c1)}·${this.vs(B.P[0])} + ${this.pn(c2)}·${this.vs(B.P[1])} = ${this.vs(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="pwRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 /* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal ----------
    Build P from two arrows by hand and watch P⁻¹AP worked out exactly. Each
    column of P that is an eigenvector clears its own column of P⁻¹AP down to
@@ -24011,8 +24133,16 @@ const Diag = {
   open(){ UI.go('s-diag'); },
   pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
   col(k,i){ this.c[k]=i; this.touched=true; this.note(); this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
     if(!this.c) this.start();
+    document.getElementById('dgTab').innerHTML=[['hand','🔑 Build P by hand','Build P from two arrows by hand and watch P⁻¹AP worked out'],['pick','🎯 Which Aⁿv?','See A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Diag.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['dgSets','dgFig','dgCols','dgRead','dgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('pwBox').innerHTML=pick ? PowPick.html() : '';
+    if(pick) return;
     document.getElementById('dgSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Diag.pick(${i})" aria-label="${s.btn}: A has rows ${this.vec(s.A[0])} and ${this.vec(s.A[1])}">${s.btn}</button>`).join('');
     document.getElementById('dgCols').innerHTML=[0,1].map(k=>
