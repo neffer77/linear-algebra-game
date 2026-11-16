@@ -1689,11 +1689,13 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ANTIDERIVATIVE WORKSHOP ============ -->
   <div class="screen" id="s-anti">
     <div class="panel"><h2>🪃 Antiderivative Workshop</h2><div class="sub">An antiderivative runs the power rule backwards: find an F whose slope is f. Guess F = c·xⁿ + C by hand, take its slope, and see whether the green lands on the gold.</div></div>
+    <div id="adTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Guess F by hand or pick F"></div>
     <div class="panel">
+      <div id="apBox"></div>
       <div id="adSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
       <div id="adFig"></div>
       <div id="adF" style="text-align:center;font-size:18px;font-weight:700;margin:6px 0"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="adSteps" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="adNLo" onclick="Anti.moveN(-1)" aria-label="Make the power a half smaller">−</button>
           <b id="adN" style="font-size:17px;min-width:0"></b>
           <button id="adNHi" onclick="Anti.moveN(1)" aria-label="Make the power a half bigger">+</button></div>
@@ -1706,7 +1708,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="adRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="adGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="adGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14123,7 +14125,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪃 Antiderivative Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach. Then turn it round: see f, and pick which of four F has f as its slope.</div>
          <button class="btn sm" id="tomeAnti" style="width:auto;margin-top:8px" onclick="Anti.open()">Open the antiderivative workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21086,6 +21088,150 @@ const Quot = {
   }
 };
 
+/* -------------- which F? (antiderivative workshop) -------------- */
+/* The workshop turned round: a target f(x) = k·xᵖ and four F's, one of them
+   an antiderivative of f. The others are the slips people make running the
+   power rule backwards: raising the power but never dividing by it; dividing
+   by the old power instead of the new one; taking the slope of f instead of
+   undoing it; and multiplying by the new power instead of dividing. Every
+   answer is checked the way the rule says to, by its slope: a wrong pick
+   draws its F′ in red beside f, dashed in gold, and the two never meet.
+   Every number in front is whole or a half. Nothing is saved. */
+const AntiPick = {
+  MS:[-2,-1,0.5,1.5,2,3,4],
+  SLIPS:['nodiv','olddiv','deriv','mult'],
+  RULE:'To undo a power of x, raise the power by one and divide by the new power: xⁿ has antiderivative xⁿ⁺¹/(n + 1). Check by taking the slope of F: it has to come back to f. Every F can carry a + C, which never changes its slope. Which F has slope f?',
+  X:[0.5,2.5],
+  // f, and the term each option stands for; a term is k·xᵖ
+  f(c){ return {k:c.a*c.m, p:c.m-1}; },
+  term(c,k){
+    const f=this.f(c), m=c.m;
+    return k==='right' ? {k:c.a, p:m} : k==='nodiv' ? {k:f.k, p:m} : k==='olddiv' ? {k:f.k/f.p, p:m}
+      : k==='deriv' ? {k:f.k*f.p, p:f.p-1} : {k:f.k*m, p:m};
+  },
+  slope(t){ return t.p===0 ? {k:0, p:0} : {k:t.k*t.p, p:t.p-1}; },
+  // every term on screen is a simple fraction: halves come from the half powers, thirds from dividing by 3
+  DEN:[1,2,3,4,6,8],
+  den(v){ return this.DEN.find(d=>Math.abs(v*d-Math.round(v*d))<1e-9); },
+  frac(v){ const d=this.den(v), s=v<0?'−':'', n=Math.round(Math.abs(v)*d); return d===1 ? s+n : \`\${s}\${n}/\${d}\`; },
+  par(v){ return v<0 || !Number.isInteger(v) ? \`(\${this.frac(v)})\` : this.frac(v); },
+  key:t=>t.k+','+t.p,
+  // the slips this f can offer: each a term different from the answer and from every one kept before it.
+  // Every power in MS leaves at least three, and an even number in front of a half power keeps f's number whole.
+  slips(c){
+    const seen=new Set([this.key(this.term(c,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const t=this.term(c,k); if(seen.has(this.key(t))) continue; seen.add(this.key(t)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    const m=R.pick(this.MS);
+    return {a:R.pick(Number.isInteger(m) ? [-3,-2,-1,1,2,3] : [-4,-2,2,4]), m};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(c);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('ANTIDERIVATIVE READER', this.matched+' antiderivatives picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} has slope f, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Anti.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // k·xᵖ as it is written on paper: 2x³, −x⁻¹, (3/2)x^(1/2), and a number alone when p is 0
+  T(t){
+    const k=t.k, p=t.p;
+    if(k===0) return '0';
+    if(p===0) return this.frac(k);
+    return (k===1?'':k===-1?'−':Number.isInteger(k)?this.frac(k):\`(\${this.frac(k)})\`)+Anti.pw(p);
+  },
+  // a term's slope by the power rule, worked: the slope of 2x³ is 2 · 3 · x² = 6x²
+  work(t){
+    if(t.p===0) return \`\${this.T(t)} is a number on its own, so its slope is 0\`;
+    return \`the slope of \${this.T(t)} is \${this.par(t.k)} · \${this.par(t.p)}\${t.p===1?'':' · '+Anti.pw(t.p-1)} = \${this.T(this.slope(t))}\`;
+  },
+  slip(c,k,L){
+    const m=c.m, fr=v=>Anti.fr(v);
+    if(k==='nodiv') return \`\${L} raises the power to \${Anti.pw(m)} but never divides by the new power, \${fr(m)}. The slope brings that \${fr(m)} back down in front, so it has to be divided out first.\`;
+    if(k==='olddiv') return \`\${L} divides by the old power, \${fr(m-1)}, instead of the new one, \${fr(m)}. Raise the power first, then divide by what it became.\`;
+    if(k==='deriv') return \`\${L} takes the slope of f instead of undoing it: the power went down by one, when undoing a slope sends it up by one, to \${Anti.pw(m)}.\`;
+    return \`\${L} multiplies by the new power, \${fr(m)}, instead of dividing by it.\`;
+  },
+  check(c,k,L){
+    return \`Check \${L} by its slope: \${this.work(this.term(c,k))}, which is not f. But \${this.work(this.term(c,'right'))}, which is f exactly.\`;
+  },
+  // f dashed in gold for x from 0.5 to 2.5, and after a miss the picked F's slope in red
+  frame(c){
+    const f=this.f(c), [x0,x1]=this.X;
+    let lo=0, hi=0;
+    for(let i=0;i<=200;i++){ const x=x0+(x1-x0)*i/200, v=f.k*x**f.p; lo=Math.min(lo,v); hi=Math.max(hi,v); }
+    const pad=(hi-lo)*0.06;
+    return {y0:lo-pad, y1:hi+pad};
+  },
+  NICE:[1,2,5,10,20,50,100,200],
+  panel(c){
+    const f=this.f(c), [x0,x1]=this.X, {y0,y1}=this.frame(c), n=v=>v.toFixed(2);
+    const PX=x=>40+(x-x0)/(x1-x0)*300, PY=y=>188-(y-y0)/(y1-y0)*176;
+    const path=(t,key,col,w,dash)=>{
+      const segs=[]; let seg=[];
+      for(let i=0;i<=160;i++){ const x=x0+(x1-x0)*i/160, v=t.k*x**t.p;
+        if(!isFinite(v) || v<y0 || v>y1){ if(seg.length>1) segs.push(seg); seg=[]; continue; }
+        seg.push(\`\${n(PX(x))},\${n(PY(v))}\`); }
+      if(seg.length>1) segs.push(seg);
+      return segs.map(s=>\`<polyline data-k="\${key}" points="\${s.join(' ')}" fill="none" stroke="\${col}" stroke-width="\${w}"\${dash?' stroke-dasharray="6 5"':''} stroke-linejoin="round"/>\`).join('');
+    };
+    let s=\`<line data-k="xaxis" x1="40" y1="\${n(PY(0))}" x2="340" y2="\${n(PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    s+=\`<line data-k="yaxis" x1="40" y1="12" x2="40" y2="188" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of [1,2]) s+=\`<line x1="\${n(PX(t))}" y1="\${n(PY(0)-3)}" x2="\${n(PX(t))}" y2="\${n(PY(0)+3)}" stroke="\${FIG_COL.axis}" stroke-width="1"/><text x="\${n(PX(t))}" y="\${n(Math.min(198,PY(0)+14))}" font-size="10" fill="\${FIG_COL.dim}" text-anchor="middle">\${t}</text>\`;
+    // the y axis marked at 0 and at one round number on whichever side f reaches further
+    const big=Math.max(y1,-y0), T=this.NICE.filter(v=>v<=big*0.9).pop()||1, Ty=y1>=-y0 ? T : -T;
+    for(const v of [0,Ty]) s+=\`<line x1="37" y1="\${n(PY(v))}" x2="43" y2="\${n(PY(v))}" stroke="\${FIG_COL.axis}" stroke-width="1"/><text x="34" y="\${n(PY(v)+3)}" font-size="10" fill="\${FIG_COL.dim}" text-anchor="end">\${neg(v)}</text>\`;
+    const m=this.miss();
+    if(m!==null) s+=path(this.slope(this.term(c,this.round.opts[m].k)),'slope',FIG_COL.d,3,false);
+    s+=path(f,'target',FIG_COL.b,2.5,true);
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c, m=this.miss(), f=this.f(c);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div style="text-align:center;font-size:18px;font-weight:700;margin-bottom:4px">f(x) = \${this.T(f)}</div>\`;
+    const lab=\`f(x) = \${this.T(f)} dashed in gold, for x from 0.5 to 2.5\`+(m===null?'':\`; the slope of \${'ABCD'[m]}, \${this.T(this.slope(this.term(c,r.opts[m].k)))}, in red, off f\`);
+    out+=\`<svg id="apFig" viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="\${lab}">\${this.panel(c)}</svg>\`;
+    out+=\`<div id="apPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), x=this.T(this.term(c,o.k));
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="AntiPick.choose(\${i})" aria-label="\${'ABCD'[i]}: F(x) = \${x}\${gone?'. Its slope is not f':''}" style="margin:0"><b>\${'ABCD'[i]}</b> \${x}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(\`That was it: \${this.work(this.term(this.last.c,'right'))}, which is f. Here is a new one.\`);
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="apRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The antiderivative workshop: the power rule run backwards ----------
    Guess F(x) = c·xⁿ + C by hand, take its slope by the power rule, and see
    whether it lands on the target f. Raising the power without dividing is the
@@ -21179,7 +21325,15 @@ const Anti = {
   moveN(by){ const i=this.N.indexOf(this.n)+by; if(i<0 || i>=this.N.length) return; this.n=this.N[i]; this.touched=true; this.render(); },
   moveC(by){ const v=this.c+by; if(v<this.CLO || v>this.CHI) return; this.c=v; this.touched=true; this.render(); },
   moveS(by){ const v=this.C+by; if(v<this.SLO || v>this.SHI) return; this.C=v; this.touched=true; this.render(); },
+  tab:'guess',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('adTab').innerHTML=[['guess','🪃 Guess F by hand','Guess an F by hand and see whether its slope lands on f'],['pick','🎯 Which F?','See f, and pick which of four F has f as its slope']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Anti.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['adSets','adFig','adF','adSteps','adRead','adGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('apBox').innerHTML=pick ? AntiPick.html() : '';
+    if(pick) return;
     document.getElementById('adSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Anti.pick(\${i})" aria-label="Target f(x) = \${s.fs.split(',')[0]}">\${s.btn}</button>\`).join('');
     document.getElementById('adN').textContent=\`power \${this.fr(this.n)}\`;

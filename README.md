@@ -1129,6 +1129,18 @@ The game is built so that losing teaches you as much as winning.
   where the rule brings down a 0, the one gap in the power rule that ln x
   fills. Six things to find, and a fight on indefinite integrals now
   offers it.
+
+  **🎯 Which F?** turns the workshop round: f is written out and drawn in
+  gold, and four F are offered, one of them its antiderivative. Powers run from
+  x⁻² to x⁴, halves included, so every F is a number times a power of x in
+  simple fractions. The wrong F are the slips people make: raising the power
+  but never dividing by it, dividing by the old power instead of the new one,
+  multiplying by the new power, and taking the slope of f instead of undoing
+  it. The rule says to check by the slope, so a wrong pick is shut, its slope
+  worked by the power rule beside the right F's, and drawn in red off f.
+  Nothing is saved, and there is no clock. `npm test` checks every F on screen
+  against the slip it is named as, works each slope again from the button, and
+  reads f and the red slope back off the picture's own ticks.
 - **🪞 Transpose Workshop** — rows into columns, by hand. Pick up each
   entry of A and put it down in Aᵀ; a slot only takes the right number, and
   when it turns one away it says where that entry belongs and why. Copy an
@@ -1356,7 +1368,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. Ninety-six suites, about 4,260 checks, about a minute:
+loop only exists once the page is running. Ninety-seven suites, about 4,290 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1447,6 +1459,7 @@ loop only exists once the page is running. Ninety-six suites, about 4,260 checks
 | `lampick` | the Tome says the eigenvalue detective can be turned round; the detective opens on hunting them down, and switching to which λ puts away the matrices, the curve, the stepper, the readout and the goals and states the rule first; A is written and read out, with no curve yet; four pairs are offered two by two, each named as λ = x and y; a wrong pick is named as its slip, checked at its own two numbers and worked out, draws det(A − λI) with two gold rings and red dots at the pair that the picture names, is shut and not counted; the right pick works the trace and det A out, counts (not as a first try after a miss), toasts and deals a new matrix with all four open and the curve put away; a first try counts as one, and the fifth brings EIGENVALUE READER; every button is named, nothing runs off a phone, the hunt comes back, and the save is unchanged |
 | `spanpick` | the Tome says the span workshop can be turned round; the workshop opens on mixing the arrows, and switching to which mix puts away the pairs, the amounts, the plane, the readout and the goals and states the rule first; u, v and the ring are written and drawn, and the picture is read out; four mixes are offered two by two, each named as a mix of u and v; a wrong pick is named as its slip, worked to where it lands, walked in red in two legs to a marked end that the picture names, shut and not counted; the right pick works the mix, counts (not as a first try after a miss), toasts and deals a new pair with all four open and no red walk; a first try counts as one, and the fifth brings SPAN READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `dotpick` | the Tome says the dot product workshop can be turned round; the workshop opens on setting the arrows, and switching to which u·v puts away the steppers, the plane, the readout, Start again and the goals and states the rule first; u and v are written and drawn with no shadow, and the picture is read out; four numbers are offered two by two, each named as u·v; a wrong pick is named as its slip, set beside the right sum and its sign, draws u's shadow on v's line that the picture names, is shut and not counted; the right pick works the sum, counts (not as a first try after a miss), toasts and deals a new pair with all four open and no shadow; a first try counts as one, and the fifth brings DOT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `antipick` | the Tome says the antiderivative workshop can be turned round; the workshop opens on guessing by hand, and switching to which F puts away the targets, the curves, F, the steppers, the readout and the goals and states the rule first; f is written and drawn in gold with no red slope yet, and the picture is read out; four F are offered two by two, each named as an F; a wrong pick is named as its slip, checked by its slope beside the right F's, draws its slope in red that the picture names, is shut and not counted; the right pick works its slope out, counts (not as a first try after a miss), toasts and deals a new f with all four open and no red slope; a first try counts as one, and the fifth brings ANTIDERIVATIVE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
