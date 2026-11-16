@@ -110,6 +110,7 @@ const SUITES = [
   require('./play/transpick'), // see A, pick which of four matrices is Aᵀ
   require('./play/crosspick'), // see u and v, pick which of four arrows is u × v
   require('./play/undopick'), // see A, pick which of four matrices is A⁻¹
+  require('./play/nullpick'), // see a flat A, pick which of four arrows it crushes
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

@@ -4373,6 +4373,137 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which arrow is crushed? The pick-a-null-vector round in the null space
+   workshop. Every arrow on screen is read back off its button and checked
+   against the slip it is named as, worked out here from A alone; the right one
+   alone must be sent to ⟨0, 0⟩. A miss is checked the way the workshop checks
+   v, by dotting it with both rows, and every product is worked again. */
+const nullPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    cut('function mat(rows){', 'const vec = a =>') +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Kernel = {render(){ env.renders++; }};" +
+    cut('const NullPick = {', 'const Kernel = {') + 'return NullPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => +t.replace('−', '-');
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const vec = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const app = (A, v) => [A[0][0] * v[0] + A[0][1] * v[1], A[1][0] * v[0] + A[1][1] * v[1]];
+  // each option, worked out here from A alone
+  const want = {
+    right: A => [-A[0][1], A[0][0]],
+    row: A => [A[0][0], A[0][1]],
+    noflip: A => [A[0][1], A[0][0]],
+    noswap: A => [-A[0][0], A[0][1]],
+    col: A => [1, A[1][0] / A[0][0]]
+  };
+  const dotsOf = (A, v, L) => { const p = app(A, v);
+    return [0, 1].map(i => `${vec(A[i])} · ${L} = ${ng(A[i][0])} × ${pn(v[0])} + ${pn(A[i][1])} × ${pn(v[1])} = ${ng(p[i])}`).join(', and '); };
+  // every "p × q + r × s = t" in a line, worked again from its own numbers
+  const prods = (t, key) => { let n = 0; for (const m of t.matchAll(/(−?\d+) × (\(?−?\d+\)?) \+ (\(?−?\d+\)?) × (\(?−?\d+\)?) = (−?\d+)/g)) {
+    n++; const f = i => num(m[i].replace(/[()]/g, ''));
+    if (f(1) * f(2) + f(3) * f(4) !== f(5)) fail('nullpick', key, `${m[0]} is worked wrong`); } return n; };
+  const cells = h => { const cols = [...h.matchAll(/<span class="col">((?:<span>[^<]*<\/span>)+)<\/span>/g)].map(c => [...c[1].matchAll(/<span>([^<]*)<\/span>/g)].map(x => num(x[1])));
+    return cols.length === 2 && cols.every(c => c.length === 2) ? [[cols[0][0], cols[1][0]], [cols[0][1], cols[1][1]]] : null; };
+  const read = () => txt(S.html().split('id="npRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'The second row of A is a multiple of the first, so A is flat: it crushes a whole line of arrows to ⟨0, 0⟩. To be crushed, v must dot to 0 with the first row ⟨a, b⟩, and then it dots to 0 with the second row too. Swap the entries and change one sign: ⟨−b, a⟩ works, since a × (−b) + b × a = 0. Which arrow does A crush?') fail('nullpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('nullpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), mults = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`;
+      rounds++;
+      const [a, b] = A[0], m = A[1][0] / a; mults.add(m);
+      if (!a || !b || A[0].some(x => !Number.isInteger(x) || Math.abs(x) > 3) || ![-2, -1, 2].includes(m) || A[1][0] !== m * a || A[1][1] !== m * b) fail('nullpick', key, `A = ${JSON.stringify(A)} is not two small rows, the second −2, −1 or 2 times the first`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(A)) fail('nullpick', key, 'the same A comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('nullpick', key, 'there are not four arrows, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' A =') || !h0.includes(`id="npA" style="text-align:center;margin-bottom:4px" aria-label="A has rows ${vec(A[0])} and ${vec(A[1])}">A = `)) fail('nullpick', key, 'the rule and A are not shown first');
+      const shownA = cells(h0.split('id="npA"')[1].split('</div>')[0]);
+      if (!shownA || JSON.stringify(shownA) !== JSON.stringify(A)) fail('nullpick', key, `A is drawn as ${JSON.stringify(shownA)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="NullPick\.choose\((\d)\)" aria-label="([PQRS]): ⟨(−?\d+), (−?\d+)⟩" style="margin:0"><b>([PQRS])<\/b> ⟨(−?\d+), (−?\d+)⟩<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'PQRS'[i] || +x[2] !== i || x[3] !== 'PQRS'[i] || x[6] !== 'PQRS'[i] || x[4] !== x[7] || x[5] !== x[8])) { fail('nullpick', key, 'the four arrows are not offered as they are, P to S'); continue; }
+      const arrows = btns.map(x => [num(x[4]), num(x[5])]);
+      if (new Set(arrows.map(v => v.join())).size !== 4) fail('nullpick', key, 'two arrows are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('nullpick', key, `an option is the unknown ${o.k}`); return; }
+        if (arrows[i].join() !== want[o.k](A).join()) fail('nullpick', key, `${o.k} is shown as ${vec(arrows[i])}, which is not that slip`);
+        const p = app(A, arrows[i]), crushed = p[0] === 0 && p[1] === 0 && (arrows[i][0] || arrows[i][1]);
+        if ((o.k === 'right') !== !!crushed) fail('nullpick', key, `${vec(arrows[i])} ${o.k === 'right' ? 'is not' : 'is'} crushed`);
+      });
+      {
+        const can = []; const seen = new Set([want.right(A).join()]);
+        for (const s of ['row', 'noflip', 'noswap', 'col']) { const v = want[s](A), p = app(A, v);
+          if (!(p[0] === 0 && p[1] === 0) && !seen.has(v.join())) { seen.add(v.join()); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('nullpick', key, 'an A with fewer than three slips is dealt'); }
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('nullpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], v = arrows[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('nullpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const slip = { row: `${L} is the first row itself. A row dots with itself to a × a + b × b, which is never 0, so A never crushes its own rows.`,
+          noflip: `${L} swaps the entries of ${vec(A[0])} but changes no sign. One of them has to change sign too, as in ⟨−b, a⟩.`,
+          noswap: `${L} changes a sign but leaves the entries where they were. They have to swap places too, as in ⟨−b, a⟩.`,
+          col: `${L} points along the line every Av lands on, the column space. The null space is the line A crushes, and that is a different line.` }[o.k];
+        const ck = `Check ${L} the way the workshop checks v: ${dotsOf(A, v, L)}. So A sends ${L} to ${vec(app(A, v))}, not ⟨0, 0⟩.`;
+        if (rt !== `${slip} ${ck} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('nullpick', key, `${o.k} is explained as: ${rt} | want ${slip} ${ck}`);
+        if (prods(rt, key) !== 2) fail('nullpick', key, 'a miss does not dot the arrow with both rows');
+        worked += 2;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="NullPick\\.choose\\(${i}\\)" aria-label="${L}: ⟨[^"]+⟩\\. Not crushed"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('nullpick', key, 'the missed arrows are not shut and told as not crushed');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('nullpick', key, 'tapping a missed arrow again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('nullpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('nullpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('nullpick', key, 'no fresh A after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'NULL SPACE READER / 5 crushed arrows picked') fail('nullpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ A crushes ${'PQRS'[ri]}, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('nullpick', key, `the toast is ${env.toasts[nt]}`); }
+      const v = arrows[ri], rt = read();
+      const after = `That was it, v = ${vec(v)}: ${dotsOf(A, v, 'v')}. Every multiple of v is crushed too, so the null space is the whole line through ${vec(v)}. Here is a new A. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('nullpick', key, `after a pick: ${rt} | want ${after}`);
+      if (prods(rt, key) !== 2 || !/ = 0, and .* = 0\. Every/.test(rt)) fail('nullpick', key, 'the right pick does not dot to 0 with both rows');
+      worked += 2;
+      prev = A;
+    }
+  }
+  { // the same A dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? [[1, 2], [2, 4]] : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.A) === '[[1,2],[2,4]]') fail('nullpick', 'repeat', 'the same A is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['row', 'noflip', 'noswap', 'col']) if (!kinds[k]) fail('nullpick', 'slips', `the slip ${k} is never offered`);
+  if (mults.size !== 3) fail('nullpick', 'deal', `the second row is only ever ${[...mults].join(', ')} times the first`);
+  if (left.size !== 4) fail('nullpick', 'deal', `when an A has four slips, only ${[...left].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('nullpick', 'deal', `the right arrow only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
+  if (fives !== 30) fail('nullpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which A⁻¹? The pick-an-inverse round in the undo workshop. Every matrix on
    screen is read back from both its name and its cells, and checked against
    the slip it is named as, worked out here from A alone; the right one alone
@@ -8383,6 +8514,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);

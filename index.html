@@ -1290,13 +1290,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ NULL SPACE WORKSHOP ============ -->
   <div class="screen" id="s-null">
     <div class="panel"><h2>🕳️ Null Space Workshop</h2><div class="sub">A matrix sends each arrow v to a new arrow Av. Some matrices crush a whole line of arrows down to ⟨0, 0⟩, and those are the matrices that lose a direction. Set v by hand, watch where it lands, and hunt for the arrows that vanish.</div></div>
+    <div id="nsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set v by hand or pick the crushed arrow"></div>
     <div class="panel">
+      <div id="npBox"></div>
       <div id="nsSets" class="wsModes" role="group" aria-label="Which matrix"></div>
       <div id="nsVec" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The arrow v"></div>
       <div id="nsFig"></div>
       <div id="nsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="nsGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="nsGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13997,7 +13999,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🕳️ Null Space Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns. Then turn it round: see a flat A, and pick which of four arrows it crushes.</div>
          <button class="btn sm" id="tomeNull" style="width:auto;margin-top:8px" onclick="Kernel.open()">Open the null space workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -18330,6 +18332,115 @@ const Ladder = {
    column space, and a whole line of vs is crushed to ⟨0, 0⟩: rank 1 plus
    nullity 1 makes 2 columns. A full-rank matrix crushes only ⟨0, 0⟩ and can
    reach any point. Nothing is saved. */
+/* ---------- Which arrow is crushed? The null space workshop turned round ----------
+   A flat matrix A is shown, its second row a multiple of its first, and four
+   arrows, one of them in its null space. The others are the slips people make
+   with ⟨−b, a⟩: the first row itself; its entries swapped with no sign
+   changed; a sign changed with the entries left in place; and the gold line
+   every Av lands on, the column space, taken for the null space. A wrong pick
+   is shut and checked the way the workshop checks v, dotting it with both
+   rows. Nothing is saved. */
+const NullPick = {
+  LO:-3, HI:3,
+  MULTS:[-2,-1,2],   // the second row is this many times the first; never 1, so the rows differ
+  SLIPS:['row','noflip','noswap','col'],
+  RULE:'The second row of A is a multiple of the first, so A is flat: it crushes a whole line of arrows to ⟨0, 0⟩. To be crushed, v must dot to 0 with the first row ⟨a, b⟩, and then it dots to 0 with the second row too. Swap the entries and change one sign: ⟨−b, a⟩ works, since a × (−b) + b × a = 0. Which arrow does A crush?',
+  // the arrow each option stands for; A's rows are ⟨a, b⟩ and k times that
+  arrow(A,k){
+    const [a,b]=A[0], m=A[1][0]/a;
+    return k==='right' ? [-b,a] : k==='row' ? [a,b] : k==='noflip' ? [b,a] : k==='noswap' ? [-a,b] : [1,m];
+  },
+  app:(A,[x,y])=>[A[0][0]*x+A[0][1]*y, A[1][0]*x+A[1][1]*y],
+  crushed(A,v){ const p=this.app(A,v); return p[0]===0 && p[1]===0; },
+  key:v=>v.join(),
+  // the slips this A can offer: each an arrow A does not crush, different from every one kept before it
+  slips(A){
+    const seen=new Set([this.key(this.arrow(A,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.arrow(A,k);
+      if(this.crushed(A,v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const a=R.i(this.LO,this.HI), b=R.i(this.LO,this.HI), m=this.MULTS[R.i(0,2)];
+      if(!a || !b) continue;
+      const A=[[a,b],[m*a,m*b]];
+      if(this.slips(A).length<3) continue;   // a = ±b lands here when the column line is crushed too
+      return A;
+    }
+    return [[1,2],[2,4]];
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.A;
+    let A;
+    for(let g=0;g<50;g++){ A=this.build(); if(!prev||A.flat().join()!==prev.flat().join()) break; }
+    const rest=this.slips(A);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={A,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('NULL SPACE READER', this.matched+' crushed arrows picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ A crushes ${'PQRS'[i]}, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={A:r.A};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Kernel.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>`⟨${neg(w[0])}, ${neg(w[1])}⟩`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  // both rows dotted with v, worked out the way the workshop works them
+  dots(A,v,L){
+    const p=this.app(A,v), P=this.pn;
+    const row=i=>`${this.vec(A[i])} · ${L} = ${neg(A[i][0])} × ${P(v[0])} + ${P(A[i][1])} × ${P(v[1])} = ${neg(p[i])}`;
+    return `${row(0)}, and ${row(1)}`;
+  },
+  slip(A,k,L){
+    const [a,b]=A[0];
+    if(k==='row') return `${L} is the first row itself. A row dots with itself to a × a + b × b, which is never 0, so A never crushes its own rows.`;
+    if(k==='noflip') return `${L} swaps the entries of ⟨${neg(a)}, ${neg(b)}⟩ but changes no sign. One of them has to change sign too, as in ⟨−b, a⟩.`;
+    if(k==='noswap') return `${L} changes a sign but leaves the entries where they were. They have to swap places too, as in ⟨−b, a⟩.`;
+    return `${L} points along the line every Av lands on, the column space. The null space is the line A crushes, and that is a different line.`;
+  },
+  check(A,k,L){
+    const p=this.app(A,this.arrow(A,k));
+    return `Check ${L} the way the workshop checks v: ${this.dots(A,this.arrow(A,k),L)}. So A sends ${L} to ${this.vec(p)}, not ⟨0, 0⟩.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, A=r.A, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="npA" style="text-align:center;margin-bottom:4px" aria-label="A has rows ${this.vec(A[0])} and ${this.vec(A[1])}">A = ${mat(A)}</div>`;
+    out+=`<div id="npPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.arrow(A,o.k), L='PQRS'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="NullPick.choose(${i})" aria-label="${L}: ${this.vec(v)}${gone?'. Not crushed':''}" style="margin:0"><b>${L}</b> ${this.vec(v)}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));
+    else if(this.last){ const B=this.last.A, v=this.arrow(B,'right');
+      lines.push(`That was it, v = ${this.vec(v)}: ${this.dots(B,v,'v')}. Every multiple of v is crushed too, so the null space is the whole line through ${this.vec(v)}. Here is a new A.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="npRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 const Kernel = {
   SETS:[
     {id:'flat', btn:'Flat', A:[[1,2],[2,4]]},
@@ -18408,7 +18519,15 @@ const Kernel = {
   open(){ UI.go('s-null'); },
   pick(i){ this.si=i; this.x=1; this.y=1; this.touched=true; this.look(); this.render(); },
   step(w,by){ const v=this[w]+by; if(v<this.LO || v>this.HI) return; this[w]=v; this.touched=true; this.look(); this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('nsTab').innerHTML=[['hand','🕳️ Set v by hand','Set v by hand and hunt for crushed arrows'],['pick','🎯 Which is crushed?','See A, and pick which of four arrows it crushes to ⟨0, 0⟩']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Kernel.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['nsSets','nsVec','nsFig','nsRead','nsGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('npBox').innerHTML=pick ? NullPick.html() : '';
+    if(pick) return;
     document.getElementById('nsSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Kernel.pick(${i})" aria-label="${s.btn}: rows ${this.v(s.A[0])} and ${this.v(s.A[1])}">${s.btn}</button>`).join('');
     const names={x:"v's first entry", y:"v's second entry"};
