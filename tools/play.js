@@ -133,6 +133,7 @@ const SUITES = [
   require('./play/tanpick'), // see a surface and a point, pick which of four planes touches it there
   require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there
+  require('./play/hzpick'), // see a fraction with the same power on top and underneath, pick which of four numbers it heads for
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

@@ -1656,17 +1656,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ HORIZON WORKSHOP ============ -->
   <div class="screen" id="s-horizon">
     <div class="panel"><h2>🌅 Horizon Workshop</h2><div class="sub">Where does a fraction head as x grows without end? Step x out, ten times further each time, and watch the biggest power on top and underneath take over. Their ratio is where f heads.</div></div>
+    <div id="hzTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x out by hand or pick where a fraction heads"></div>
     <div class="panel">
+      <div id="zpBox"></div>
       <div id="hzSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
       <div id="hzFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="hzStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="hzXLo" onclick="Horizon.moveX(-1)" aria-label="Step x back to a tenth">−</button>
           <b id="hzX" style="font-size:17px;min-width:0"></b>
           <button id="hzXHi" onclick="Horizon.moveX(1)" aria-label="Step x out ten times further">+</button></div>
       </div>
       <div id="hzRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="hzGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="hzGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14162,7 +14164,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌅 Horizon Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first. Then turn it round: see a fraction and pick which of four numbers it heads for.</div>
          <button class="btn sm" id="tomeHorizon" style="width:auto;margin-top:8px" onclick="Horizon.open()">Open the horizon workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -22719,6 +22721,147 @@ const Arrow = {
   }
 };
 
+/* ---------- Where does it head? The horizon workshop turned round ----------
+   A fraction f(x) with the same power on top and underneath, x² or x, whole
+   numbers in front, and four numbers, one of them where f heads as x grows
+   without end. The rule is stated first: the biggest powers take over, so f
+   heads for the ratio of their numbers. The wrong numbers are the slips
+   people make. A wrong pick L is checked the way the workshop teaches: if f
+   headed for L, the gap f(x) − L would shrink to 0, but its top keeps a part
+   in the biggest power, so the gap heads somewhere else. Nothing is saved. */
+const HzPick = {
+  SLIPS:['flip','zero','one','mid','cross'],
+  RULE:'As x grows without end, the biggest power on top and the biggest underneath take over, and every other term is left behind. Divide top and bottom by that power: the rest shrink to 0, and f heads for the ratio of the numbers in front of the biggest powers. Where does f head?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pn(n){ return n<0 ? \`(\${neg(n)})\` : String(n); },
+  pf(f){ return f[0]<0 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // S.t and S.u are the top and bottom, highest power first: [x², x, 1] or [x, 1]
+  val(S,k){
+    const t=S.t, u=S.u, q=t.length===3;
+    if(k==='right') return this.frac(t[0],u[0]);
+    if(k==='flip') return this.frac(u[0],t[0]);
+    if(k==='zero') return u[u.length-1] ? this.frac(t[t.length-1],u[u.length-1]) : null;
+    if(k==='one'){ const a=t.reduce((s,n)=>s+n,0), b=u.reduce((s,n)=>s+n,0); return b ? this.frac(a,b) : null; }
+    if(!q) return null;
+    if(k==='mid') return u[1] ? this.frac(t[1],u[1]) : null;
+    return u[1] ? this.frac(t[0],u[1]) : null;
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this fraction can offer: each a number other than 0, and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!v || v[0]===0 || Math.abs(v[0]/v[1])>30 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // a number like the right one: of its form, whole or fraction, or of its sign
+  same(S,k,by){ const v=this.val(S,k), W=this.val(S,'right'); return by==='form' ? this.whole(v)===this.whole(W) : (v[0]<0)===(W[0]<0); },
+  // the sets of three slips that hold one number of the right one's form and one of its sign, so neither gives it away
+  trios(S){
+    const rest=this.slips(S), out=[];
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.same(S,x,'form')) && t.some(x=>this.same(S,x,'sign'))) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1, q=R.i(0,2)>0;
+    const sg=()=>R.i(0,1)?1:-1;
+    for(let g=0;g<500;g++){
+      let a,d;
+      if(wantWhole){ d=R.i(1,3)*sg(); a=d*R.i(1,4)*sg(); }
+      else { d=R.i(2,6)*sg(); a=R.i(1,9)*sg(); }
+      if(Math.abs(a)>9) continue;
+      const t=q ? [a,R.i(-5,5),R.i(1,9)*sg()] : [a,R.i(1,9)*sg()];
+      const u=q ? [d,R.i(-5,5),R.i(1,9)*sg()] : [d,R.i(1,9)*sg()];
+      const S={t,u};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      // the bottom never reaches 0 out past x = 1, so f has no gap on the way
+      const bot=x=>u.reduce((s,n,i)=>s+n*x**(u.length-1-i),0), s1=Math.sign(bot(1));
+      let gap=false; for(let x=1;x<=60;x+=0.25){ const b=bot(x); if(Math.abs(b)<0.5 || Math.sign(b)!==s1) gap=true; }
+      if(gap) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {t:[3,-1,4],u:[2,5,-1]};
+  },
+  // a polynomial written out, highest power first
+  poly(P){
+    const pw=P.length===3 ? ['x²','x',''] : ['x',''], out=[];
+    P.forEach((n,i)=>{ if(!n) return; const m=Math.abs(n), x=pw[i], body=x ? (m===1?'':m)+x : String(m);
+      out.push((out.length ? (n<0?' − ':' + ') : (n<0?'−':''))+body); });
+    return out.join('');
+  },
+  fx(S){ return \`(\${this.poly(S.t)})/(\${this.poly(S.u)})\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form, and one of its sign, always stand beside it, so neither gives it away
+    const T=this.trios(S), take=T[R.i(0,T.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('HORIZON GAZER', this.matched+' horizons read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is where f heads, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Horizon.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const t=S.t, u=S.u, pw=t.length===3 ? 'x²' : 'x';
+    if(k==='flip') return \`\${L} turns the ratio upside down: it is the bottom’s \${pw} number over the top’s.\`;
+    if(k==='zero') return \`\${L} is the numbers with no x, \${neg(t[t.length-1])} over \${neg(u[u.length-1])}: that is f at x = 0, where nothing has grown yet.\`;
+    if(k==='one') return \`\${L} is f at x = 1, every number on top over every number underneath. At x = 1 no power has taken over yet.\`;
+    if(k==='mid') return \`\${L} is the x numbers, \${neg(t[1])} over \${neg(u[1])}. The x² terms grow faster and take over.\`;
+    return \`\${L} puts the top’s x² number over the bottom’s x number, \${neg(t[0])} over \${neg(u[1])}. The bottom has an x² too, and it grows just as fast as the top’s.\`;
+  },
+  check(S,k,L){
+    const t=S.t, u=S.u, pw=t.length===3 ? 'x²' : 'x', v=this.val(S,k), K=this.frac(t[0]*v[1]-v[0]*u[0],v[1]);
+    return \`Check \${L}: if f headed for \${this.fs(v)}, the gap f(x) − \${this.pf(v)} would shrink to 0. Its top is the top of f minus \${this.pf(v)} times the bottom, and the \${pw} part of that is \${neg(t[0])} − \${this.pf(v)} × \${this.pn(u[0])} = \${this.fs(K)}, not 0. So as x grows the gap heads for \${this.fs(K)} over \${neg(u[0])}, not 0.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="zpQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.fx(S)}</div>\`;
+    out+=\`<div class="small" style="text-align:center">As x grows without end, where does f head?</div>\`;
+    out+=\`<div id="zpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="HzPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not where f heads':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, pw=B.t.length===3 ? 'x²' : 'x';
+      lines.push(\`That was it: divide top and bottom by \${pw}, every other term shrinks to 0, and f heads for \${neg(B.t[0])} over \${neg(B.u[0])}, which is \${this.fs(this.val(B,'right'))}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="zpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 /* ---------- The horizon workshop: where a fraction heads as x grows ----------
    Step x out toward infinity, ten times further each time, and watch the
    biggest power on top and underneath take over. Equal powers head for the
@@ -22803,7 +22946,15 @@ const Horizon = {
   open(){ UI.go('s-horizon'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('hzTab').innerHTML=[['hand','🌅 Step it out by hand','Step x out toward infinity by hand'],['pick','🎯 Where does it head?','See a fraction and pick which of four numbers it heads for as x grows']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Horizon.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['hzSets','hzFig','hzStep','hzRead','hzGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('zpBox').innerHTML=pick ? HzPick.html() : '';
+    if(pick) return;
     document.getElementById('hzSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Horizon.pick(\${i})" aria-label="\${s.btn}: f(x) = (\${this.poly(s.top)})/(\${this.poly(s.bot)})">\${s.btn}</button>\`).join('');
     document.getElementById('hzX').textContent=\`x = \${this.num(this.x())}\`;

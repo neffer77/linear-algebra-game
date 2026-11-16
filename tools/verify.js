@@ -79,7 +79,7 @@ function loadGame() {
     ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
-    ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
+    ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('hzTab')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('crTab')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoTab')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adTab')")) + 'render(){}};exports.Anti=Anti;' +
@@ -7176,6 +7176,153 @@ const invPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Where does it head? The horizon workshop turned round. Every number is read
+   back off its button and checked against the slip it is named as, worked
+   from the fraction here; the right one alone is what f comes to far out,
+   found without the rule by putting in x = ten million. Each wrong number's
+   check is worked again: the biggest-power part of the gap's top is not 0. */
+const hzPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Horizon = {render(){ env.renders++; }};" +
+    cut('const HzPick = {', '/* ---------- The horizon workshop: where a fraction heads as x grows') + 'return HzPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const at = (P, x) => P.reduce((s, n, i) => s + n * x ** (P.length - 1 - i), 0);
+  const f = (Q, x) => at(Q.t, x) / at(Q.u, x);
+  // a polynomial written out by hand, highest power first, terms of 0 left out
+  const poly = P => { const pw = P.length === 3 ? ['x²', 'x', ''] : ['x', '']; let o = '';
+    P.forEach((n, i) => { if (n === 0) return; const m = Math.abs(n), body = pw[i] ? (m === 1 ? '' : m) + pw[i] : String(m);
+      o += o ? (n < 0 ? ' − ' : ' + ') + body : (n < 0 ? '−' : '') + body; }); return o; };
+  const sum = P => P.reduce((s, n) => s + n, 0);
+  // every number, worked from the slip it stands for
+  const want = (k, Q) => { const t = Q.t, u = Q.u, e = t.length - 1;
+    return k === 'right' ? red(t[0], u[0]) : k === 'flip' ? red(u[0], t[0]) : k === 'zero' ? red(t[e], u[e]) : k === 'one' ? red(sum(t), sum(u))
+      : k === 'mid' && e === 2 ? red(t[1], u[1]) : k === 'cross' && e === 2 ? red(t[0], u[1]) : null; };
+  const slipOf = (k, L, Q) => { const t = Q.t, u = Q.u, e = t.length - 1, pw = e === 2 ? 'x²' : 'x';
+    if (k === 'flip') return `${L} turns the ratio upside down: it is the bottom’s ${pw} number over the top’s.`;
+    if (k === 'zero') return `${L} is the numbers with no x, ${ng(t[e])} over ${ng(u[e])}: that is f at x = 0, where nothing has grown yet.`;
+    if (k === 'one') return `${L} is f at x = 1, every number on top over every number underneath. At x = 1 no power has taken over yet.`;
+    if (k === 'mid') return `${L} is the x numbers, ${ng(t[1])} over ${ng(u[1])}. The x² terms grow faster and take over.`;
+    return `${L} puts the top’s x² number over the bottom’s x number, ${ng(t[0])} over ${ng(u[1])}. The bottom has an x² too, and it grows just as fast as the top’s.`; };
+  const checkOf = (v, L, Q) => { const t = Q.t, u = Q.u, pw = t.length === 3 ? 'x²' : 'x', K = red(t[0] * v[1] - v[0] * u[0], v[1]);
+    return { K, line: `Check ${L}: if f headed for ${fr(v)}, the gap f(x) − ${pf(v)} would shrink to 0. Its top is the top of f minus ${pf(v)} times the bottom, and the ${pw} part of that is ${ng(t[0])} − ${pf(v)} × ${pn(u[0])} = ${fr(K)}, not 0. So as x grows the gap heads for ${fr(K)} over ${ng(u[0])}, not 0.` }; };
+  if (S.RULE !== 'As x grows without end, the biggest power on top and the biggest underneath take over, and every other term is left behind. Divide top and bottom by that power: the rest shrink to 0, and f heads for the ratio of the numbers in front of the biggest powers. Where does f head?') fail('hzpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('hzpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, quad = 0, negs = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, tops = new Set(), mids = new Set(), tmids = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), e = Q.t.length - 1;
+      rounds++; if (e === 2) { quad++; mids.add(Q.u[1]); tmids.add(Q.t[1]); } tops.add(Q.t[0]);
+      { const W = want('right', Q); if (W[1] === 1) wholes.add(Math.abs(W[0]));
+        // where more than one set of three would do, any may be dealt, not always the first
+        const seen = new Set([String(W)]), can = [];
+        for (const k of ['flip', 'zero', 'one', 'mid', 'cross']) { const v = want(k, Q);
+          if (!v || v[0] === 0 || Math.abs(v[0] / v[1]) > 30 || seen.has(String(v))) continue; seen.add(String(v)); can.push(k); }
+        const like = (k, by) => { const v = want(k, Q); return by === 'form' ? (v[1] === 1) === (W[1] === 1) : (v[0] < 0) === (W[0] < 0); }, T = [];
+        for (let i = 0; i < can.length; i++) for (let j = i + 1; j < can.length; j++) for (let m = j + 1; m < can.length; m++) {
+          const tr = [can[i], can[j], can[m]]; if (tr.some(x => like(x, 'form')) && tr.some(x => like(x, 'sign'))) T.push(tr); }
+        if (T.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== T[0].slice().sort().join()) later++; } }
+      if (Q.u.length !== Q.t.length || ![2, 3].includes(Q.t.length) || [...Q.t, ...Q.u].some(n => !Number.isInteger(n) || Math.abs(n) > 9)) fail('hzpick', key, `${sig} is not two whole polynomials of the same power, numbers up to 9`);
+      if (Q.t[0] === 0 || Q.u[0] === 0 || Q.t[e] === 0 || Q.u[e] === 0) fail('hzpick', key, `${sig} has a biggest power or a plain number of 0`);
+      { let bad = false; const s1 = Math.sign(at(Q.u, 1)); for (let x = 1; x <= 100; x += 0.01) if (Math.sign(at(Q.u, x)) !== s1 || Math.abs(at(Q.u, x)) < 0.05) bad = true;
+        if (bad) fail('hzpick', key, `the bottom of ${sig} reaches 0 out past x = 1`); }
+      if (prev && prev === sig) fail('hzpick', key, 'the same fraction comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('hzpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` f(x) = (${poly(Q.t)})/(${poly(Q.u)}) As x grows without end, where does f head? A`)) fail('hzpick', key, 'the rule and the fraction are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="HzPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('hzpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('hzpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(v[0] / v[1]) > 30)) fail('hzpick', key, 'a number is 0 or past 30');
+      if (new Set(vals.map(String)).size !== 4) fail('hzpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++; if (vals[ri][0] < 0) negs++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('hzpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && (v[0] < 0) === (vals[ri][0] < 0))) fail('hzpick', key, 'no wrong number has the right one’s sign');
+      const far = f(Q, 1e7);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('hzpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('hzpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(vals[i][0] / vals[i][1] - far) < 1e-4)) fail('hzpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} where f heads`);
+      });
+      if (k === 0 && txt(S.html().split('id="zpRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('hzpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('hzpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="zpRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ch = checkOf(vals[i], Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('hzpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        if (lines[1] !== ch.line) fail('hzpick', key, `the check of ${o.k} is: ${lines[1]} | want ${ch.line}`);
+        if (ch.K[0] === 0) fail('hzpick', key, 'a wrong number passes its check');
+        // the gap really heads where the check says: (f − v) far out comes to K over the bottom's number
+        if (Math.abs((far - vals[i][0] / vals[i][1]) - ch.K[0] / ch.K[1] / Q.u[0]) > 1e-4) fail('hzpick', key, `the gap for ${o.k} does not head where the check says`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="HzPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not where f heads"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('hzpick', key, 'the missed numbers are not shut and told as not where f heads');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('hzpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('hzpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('hzpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('hzpick', key, 'no fresh fraction after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'HORIZON GAZER / 5 horizons read') fail('hzpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where f heads, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('hzpick', key, `the toast is ${env.toasts[nt]}`); }
+      const after = `That was it: divide top and bottom by ${e === 2 ? 'x²' : 'x'}, every other term shrinks to 0, and f heads for ${ng(Q.t[0])} over ${ng(Q.u[0])}, which is ${fr(want('right', Q))}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      const got = txt(S.html().split('id="zpRead"')[1].replace(/^[^>]*>/, ''));
+      if (got !== after) fail('hzpick', key, `after a pick: ${got} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same fraction dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { t: [3, -1, 4], u: [2, 5, -1] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"t":[3,-1,4],"u":[2,5,-1]}') fail('hzpick', 'repeat', 'the same fraction is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['flip', 'zero', 'one', 'mid', 'cross']) if (!kinds[k]) fail('hzpick', 'slips', `the slip ${k} is never offered`);
+  if (tops.size < 14) fail('hzpick', 'deal', `the top's biggest number is only ever ${[...tops]}`);
+  if (slots.size !== 4) fail('hzpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (later < choice * 0.5) fail('hzpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first`);
+  if (mids.size !== 11 || tmids.size !== 11) fail('hzpick', 'deal', `the x numbers are only ever ${[...tmids].sort((a, b) => a - b)} on top and ${[...mids].sort((a, b) => a - b)} underneath`);
+  if (![1, 2, 3, 4].every(n => wholes.has(n))) fail('hzpick', 'deal', `the whole answers only ever reach ${[...wholes].sort()}`);
+  if (whole < rounds * 0.45 || whole > rounds * 0.55) fail('hzpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.35 || negs > rounds * 0.65) fail('hzpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (quad < rounds * 0.58 || quad > rounds * 0.76) fail('hzpick', 'deal', `${quad} of ${rounds} fractions have x², not about two in three`);
+  if (fives !== 30) fail('hzpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -11933,6 +12080,7 @@ console.log(`  eigen powers       ${pad(powPickNotes.rounds.toLocaleString(), 12
 console.log(`  touching planes    ${pad(tanPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-plane in the tangent plane workshop, every plane read back off its button and checked against the slip it is named as, the right one alone matching f and f nudged a hair along x and along y; ${tanPickNotes.misses.toLocaleString()} wrong picks checked at the point or by a step of 1, ${tanPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  cistern totals     ${pad(cisternPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-total in the cistern workshop, every total read back off its button and checked against the slip it is named as, the right one alone matching the area under the flow by Simpson's sum; ${cisternPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their G, ${cisternPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  flipped slopes     ${pad(invPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the inverse slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching the inverse solved for a hair either side; ${invPickNotes.misses.toLocaleString()} wrong picks checked against g′(u) × f′(p) = 1, ${invPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-head in the horizon workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching f at ten million; ${hzPickNotes.misses.toLocaleString()} wrong picks checked by the biggest-power part of the gap, ${hzPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
