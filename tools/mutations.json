@@ -329,13 +329,6 @@
       "find": "    for(const id of ['bdSets','bdFig','bdStep','bdRead','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
       "replace": "    for(const id of ['bdSets','bdFig','bdStep','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
       "run": "play:flippick"
-    },
-    {
-      "name": "the tab leaves the hand workshop showing",
-      "file": "index.html",
-      "find": "    if(pick) return;\n    document.getElementById('bdSets')",
-      "replace": "    document.getElementById('bdSets')",
-      "run": "play:flippick"
     }
   ]
 }
