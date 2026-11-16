@@ -83,7 +83,7 @@ function loadGame() {
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoTab')")) + 'render(){}};exports.Quot=Quot;' +
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adTab')")) + 'render(){}};exports.Anti=Anti;' +
-    ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
+    ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tpTab')")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
@@ -4232,6 +4232,147 @@ const antiPickNotes = (() => {
   return { rounds, misses, curves };
 })();
 
+/* Which Aᵀ? The pick-a-transpose round in the transpose workshop. Every
+   matrix on screen is read back twice, from its button's name and from its
+   cells, and checked against the slip it is named as, worked out here from A
+   alone; the right one must be Aᵀ and no slip may be. After a miss the red
+   cells must be exactly the entries out of place, and the check must name one
+   of them truly. */
+const transPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Transpose = {render(){ env.renders++; }};" +
+    cut('const TransPick = {', '/* ---------- The transpose workshop') + 'return TransPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const num = t => +t.replace('−', '-');
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const T = A => A[0].map((_, j) => A.map(row => row[j]));
+  const want = {
+    right: A => T(A), copy: A => A.map(r => r.slice()),
+    reshape: A => { const f = A.flat(), r = A.length; return T(A).map((row, p) => row.map((_, q) => f[p * r + q])); },
+    anti: A => T(A).map(row => row.slice().reverse()).reverse(),
+    rot: A => T(A).map(row => row.slice().reverse())
+  };
+  const eq = (M, N) => JSON.stringify(M) === JSON.stringify(N);
+  // a grid on the page read back from its cells: its shape, its numbers and which cells are red
+  const cells = h => {
+    const g = h.match(/<span data-m="(\d)x(\d)" [^>]*>([\s\S]*?)<\/span><\/span>/); if (!g) return null;
+    const M = Array.from({ length: +g[1] }, () => Array(+g[2]).fill(null)), bad = [];
+    for (const c of (g[3] + '</span>').matchAll(/<span data-cell="(\d),(\d)"( data-bad="1")? style="([^"]*)">([^<]+)<\/span>/g)) {
+      M[+c[1]][+c[2]] = num(c[5]);
+      if (c[3]) { bad.push([+c[1], +c[2]]); if (!/border:1px solid #e5484d/.test(c[4])) return null; }
+    }
+    return M.flat().some(x => x === null) ? null : { M, bad };
+  };
+  const fromRows = s => s.split('; ').map(r => r.split(', ').map(num));
+  const read = () => txt(S.html().split('id="txRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'The transpose Aᵀ turns each row of A into a column: the entry in row i, column j of A moves to row j, column i of Aᵀ. A wide matrix turns tall, and the main diagonal, where the row and column numbers match, stays put. Which matrix is Aᵀ?') fail('transpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('transpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, reds = 0, fives = 0;
+  const slots = new Set(), kinds = {}, shapes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`;
+      rounds++; shapes.add(A.length + 'x' + A[0].length);
+      const flat = A.flat();
+      if (new Set(flat).size !== flat.length || flat.some(x => !x || Math.abs(x) > 9 || !Number.isInteger(x))) fail('transpick', key, `A holds a repeat, a 0 or a big number: ${JSON.stringify(A)}`);
+      if (prev && eq(prev, A)) fail('transpick', key, 'the same A comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('transpick', key, 'there are not four matrices, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' A =')) fail('transpick', key, 'the rule and A are not shown first');
+      const aBox = h0.split('id="txA"')[1].split('id="txPick"')[0];
+      const aLab = aBox.match(/aria-label="A is (\d)×(\d), with rows ([^"]+)"/), aC = cells(aBox);
+      if (!aLab || !eq(fromRows(aLab[3]), A) || +aLab[1] !== A.length || +aLab[2] !== A[0].length) fail('transpick', key, 'A is not read out as it is');
+      if (!aC || !eq(aC.M, A) || aC.bad.length) fail('transpick', key, 'A is not drawn as it is');
+      const diagCells = [...aBox.matchAll(/data-cell="(\d),(\d)" style="[^"]*border:1px solid var\(--gold-dk\)/g)].map(m => m[1] + m[2]);
+      if (diagCells.join() !== Array.from({ length: Math.min(A.length, A[0].length) }, (_, i) => `${i}${i}`).join()) fail('transpick', key, `the gold edges are on ${diagCells.join()}, not the main diagonal`);
+      const btns = h0.split('id="txPick"')[1].split('id="txRead"')[0].split('<button').slice(1);
+      if (btns.length !== 4) { fail('transpick', key, 'four matrices are not offered'); continue; }
+      const mats = btns.map((b, i) => {
+        const m = b.match(/^ class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TransPick\.choose\((\d)\)" aria-label="([ABCD]): (\d)×(\d), with rows ([^"]+)" [^>]*><b>([ABCD])<\/b> /);
+        if (!m || m[1] !== 'ABCD'[i] || +m[2] !== i || m[3] !== 'ABCD'[i] || m[7] !== 'ABCD'[i]) return null;
+        const c = cells(b), L = fromRows(m[6]);
+        if (!c || !eq(c.M, L) || c.bad.length || +m[4] !== L.length || +m[5] !== L[0].length) return null;
+        return L;
+      });
+      if (mats.some(x => !x)) { fail('transpick', key, 'a matrix is not named and drawn as it is, A to D'); continue; }
+      if (new Set(mats.map(x => JSON.stringify(x))).size !== 4) fail('transpick', key, 'two matrices are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('transpick', key, `an option is the unknown ${o.k}`);
+        else if (!eq(mats[i], want[o.k](A))) fail('transpick', key, `${o.k} is drawn as ${JSON.stringify(mats[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(mats[i], T(A))) fail('transpick', key, `${JSON.stringify(mats[i])} ${o.k === 'right' ? 'is not' : 'is'} Aᵀ`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('transpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, row1 = A[0].map(ng).join(', ');
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('transpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const sq = A.length === A[0].length;
+        const slip = { copy: `${L} is A copied as it was${sq ? '.' : `, still ${A.length}×${A[0].length}.`}`, reshape: `${L} reads A across, row by row, and pours the entries into the ${A[0].length}×${A.length} shape`, anti: `${L} flips A across the other diagonal`, rot: `${L} turns A a quarter turn` }[o.k];
+        if (!rt.startsWith(slip)) fail('transpick', key, `${o.k} is explained as: ${rt}`);
+        if (o.k === 'copy' && !sq && !rt.includes(`becomes one of Aᵀ's ${A.length} columns, so Aᵀ is ${A[0].length}×${A.length}.`)) fail('transpick', key, `the copy slip gets the shape wrong: ${rt}`);
+        const keep = `Row 1 of A reads ${row1} across, so column 1 of Aᵀ reads ${row1} down. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        const same = M.length === A[0].length;
+        if (!same) { if (!rt.includes(`${L} is ${M.length}×${M[0].length}, but Aᵀ is ${A[0].length}×${A.length}. ${keep}`)) fail('transpick', key, `the wrong shape is not checked: ${rt}`); }
+        else {
+          const ck = rt.match(new RegExp(`Check ${L} at row (\\d), column (\\d): it holds (−?\\d+)\\. That slot of Aᵀ takes the entry from row (\\d), column (\\d) of A, which is (−?\\d+)\\. `));
+          if (!ck || !rt.endsWith(keep)) fail('transpick', key, `the miss is not checked against A: ${rt}`);
+          else { const [p, qq] = [ck[1] - 1, ck[2] - 1];
+            if (+ck[4] !== qq + 1 || +ck[5] !== p + 1 || num(ck[3]) !== M[p][qq] || num(ck[6]) !== A[qq][p] || M[p][qq] === A[qq][p]) fail('transpick', key, `the check names a slot that is not out of place: ${ck[0]}`); }
+        }
+        const h = S.html(), b = h.split('id="txPick"')[1].split('<button').slice(1)[i];
+        if (!new RegExp(`^ class="btn sm ghost smOpt miss" data-opt="${L}" disabled onclick="TransPick\\.choose\\(${i}\\)" aria-label="${L}: [^"]+\\. Not Aᵀ"`).test(b) || (h.match(/ disabled /g) || []).length !== q + 1) fail('transpick', key, 'the missed matrices are not shut and told as not Aᵀ');
+        const c = cells(b), T0 = T(A);
+        const out = same ? M.flatMap((row, p) => row.map((x, qq) => [p, qq, x])).filter(([p, qq, x]) => x !== T0[p][qq]).map(([p, qq]) => p + ',' + qq) : [];
+        if (!c || c.bad.map(x => x.join()).join() !== out.join()) fail('transpick', key, `the red cells are ${c && c.bad.map(x => x.join()).join(' ')}, not ${out.join(' ')}`);
+        reds += out.length;
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('transpick', key, 'tapping a missed matrix again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('transpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('transpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('transpick', key, 'no fresh A after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TRANSPOSE READER / 5 transposes picked') fail('transpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is Aᵀ, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('transpick', key, `the toast is ${env.toasts[nt]}`); }
+      const said = A.map((row, i) => `row ${i + 1} of A, ${row.map(ng).join(', ')}, stands as column ${i + 1}`).join(', and ');
+      if (read() !== `That was it: ${said}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('transpick', key, `after a pick: ${read()}`);
+      prev = A;
+    }
+  }
+  { // the same A dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? [[1, 2], [3, 4]] : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.A) === '[[1,2],[3,4]]') fail('transpick', 'repeat', 'the same A is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['copy', 'reshape', 'anti', 'rot']) if (!kinds[k]) fail('transpick', 'slips', `the slip ${k} is never offered`);
+  if (shapes.size !== 3) fail('transpick', 'deal', `A only ever comes as ${[...shapes].join(', ')}`);
+  if (slots.size !== 4) fail('transpick', 'deal', `the right matrix only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('transpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, reds };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -7971,6 +8112,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
