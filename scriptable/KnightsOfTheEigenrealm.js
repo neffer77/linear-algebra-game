@@ -1950,6 +1950,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TRAPEZOID WORKSHOP ============ -->
+  <div class="screen" id="s-trapezoid">
+    <div class="panel"><h2>🪟 Trapezoid Workshop</h2><div class="sub">Cut the area under a curve into strips and join the heights at their edges with straight lines: T = h/2 × (ends + 2 × inside). Double the strips and watch the gap to the true area fall to a quarter, over a curve that bends up and under one that bends down.</div></div>
+    <div class="panel">
+      <div id="tzwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="tzwFig"></div>
+      <div id="tzwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How many strips">
+        <button class="btn sm ghost" id="tzwFewer" onclick="Trap.fewer()" aria-label="Halve the number of strips">◀ Fewer strips</button>
+        <button class="btn sm" id="tzwMore" onclick="Trap.more()" aria-label="Double the number of strips">More strips ▶</button>
+        <button class="btn sm ghost" id="tzwAgain" onclick="Trap.again()" aria-label="Go back to one strip">One strip</button>
+      </div>
+      <div id="tzwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="tzwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tzwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ LOGISTIC WORKSHOP ============ -->
   <div class="screen" id="s-logistic">
     <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
@@ -4608,6 +4627,7 @@ const WORKSHOP_FOR = (() => {
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
     ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
     LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
+    Trap: ["🪟 Trapezoid Workshop", ['trapezoid']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -14080,6 +14100,7 @@ const UI = {
     if(id==='s-tanline') TanLine.render();
     if(id==='s-arclen') ArcLen.render();
     if(id==='s-logistic') LogiGrow.render();
+    if(id==='s-trapezoid') Trap.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14929,6 +14950,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt.</div>
          <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪟 Trapezoid Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the area under x², 4x − x² or a straight line into 1, 2, 4, 8 or 16 strips and add up the trapezoids. See the estimate overshoot a curve that bends up and undershoot one that bends down, meet a line exactly, and the gap fall to a quarter each time the strips double.</div>
+         <button class="btn sm" id="tomeTrap" style="width:auto;margin-top:8px" onclick="Trap.open()">Open the trapezoid workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -28697,6 +28723,145 @@ const LogiPick = {
     lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
     out+=\`<div id="lgqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
     return out;
+  }
+};
+
+/* ---------- The trapezoid workshop: cutting an area into strips ----------
+   Three curves on [0, 4]: x², which bends up; 4x − x², which bends down; and
+   the straight line x/2 + 1. Cut the interval into 1, 2, 4, 8 or 16 strips
+   and join the heights at their edges with straight lines. Each count works
+   h, the end and inside heights, T = h/2 × (ends + 2 × inside), the exact
+   area, and the gap between them, in exact fractions, and checks the gap
+   against h²/12 × (f′(4) − f′(0)). Doubling the strips quarters the gap;
+   a curve that bends up is overshot, one that bends down is undershot, and
+   a straight line is met exactly. Nothing is saved. */
+const Trap = {
+  A:0, B:4, NS:[1,2,4,8,16],
+  CURVES:[
+    {id:'up', btn:'x²', name:'f(x) = x², which bends up', fs:'x²', Y:[0,17],
+     f:x=>x*x, F:x=>x*x*x/3, d:x=>2*x,
+     /* exact, as fractions: f at top/bot, and the area */
+     fq:([t,b])=>[t*t,b*b], I:[64,3], d0:[0,1], d4:[8,1], dw:'2x'},
+    {id:'down', btn:'4x − x²', name:'f(x) = 4x − x², which bends down', fs:'4x − x²', Y:[0,5],
+     f:x=>4*x-x*x, F:x=>2*x*x-x*x*x/3, d:x=>4-2*x,
+     fq:([t,b])=>[4*t*b-t*t,b*b], I:[32,3], d0:[4,1], d4:[-4,1], dw:'4 − 2x'},
+    {id:'line', btn:'x/2 + 1', name:'f(x) = x/2 + 1, a straight line', fs:'x/2 + 1', Y:[0,4],
+     f:x=>x/2+1, F:x=>x*x/4+x, d:x=>0.5,
+     fq:([t,b])=>[t+2*b,2*b], I:[8,1], d0:[1,2], d4:[1,2], dw:'1/2'}
+  ],
+  ci:0, ni:0, moved:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'one', t:'Take one strip and see a single trapezoid cut straight across the curve.', toast:'One trapezoid',
+     ok:K=>K.touched && K.n()===1 && K.cur().id!=='line'},
+    {id:'quarter', t:'On a curve that bends, double the strips and see the gap fall to a quarter.', toast:'Half the width, a quarter of the gap',
+     ok:K=>K.moved>0 && K.cur().id!=='line'},
+    {id:'close', t:'Bring the gap under 1% of the area.', toast:'Within 1%',
+     ok:K=>{ const g=K.gap(), I=K.cur().I; return g[0]!==0 && Math.abs(g[0]/g[1])<I[0]/I[1]/100; }},
+    {id:'over', t:'On x², see the trapezoids come out over the area.', toast:'Bends up, overshoots',
+     ok:K=>K.cur().id==='up' && K.touched},
+    {id:'under', t:'On 4x − x², see the trapezoids come out under the area.', toast:'Bends down, undershoots',
+     ok:K=>K.cur().id==='down'},
+    {id:'exact', t:'On the straight line, see the trapezoids fit it exactly.', toast:'A line is met exactly',
+     ok:K=>K.cur().id==='line'}
+  ],
+  cur(){ return this.CURVES[this.ci]; },
+  n(){ return this.NS[this.ni]; },
+  /* exact fractions as [top, bottom], bottom above 0 */
+  q(t,b=1){ const g=(x,y)=>y?g(y,x%y):Math.abs(x)||1, k=g(t,b)*(b<0?-1:1); return [t/k,b/k]; },
+  add(u,v){ return this.q(u[0]*v[1]+v[0]*u[1],u[1]*v[1]); },
+  mul(u,v){ return this.q(u[0]*v[0],u[1]*v[1]); },
+  fr(u){ return u[1]===1 ? neg(u[0]) : \`\${neg(u[0])}/\${u[1]}\`; },
+  dec(u){ const v=u[0]/u[1]; return Number.isInteger(v) ? '' : \` ≈ \${neg(+v.toFixed(3))}\`; },
+  h(){ return this.q(this.B-this.A,this.n()); },
+  /* the heights at x = 0, h, 2h, …, 4 */
+  xs(){ const n=this.n(); return [...Array(n+1)].map((_,i)=>this.q(4*i,n)); },
+  ys(){ const C=this.cur(); return this.xs().map(x=>this.q(...C.fq(x))); },
+  T(n){
+    const k=n===undefined ? this.ni : this.NS.indexOf(n), keep=this.ni; this.ni=k;
+    const ys=this.ys(), h=this.h(), m=ys.length-1;
+    let s=this.add(ys[0],ys[m]); for(let i=1;i<m;i++) s=this.add(s,this.mul([2,1],ys[i]));
+    const out=this.mul(this.mul(h,[1,2]),s); this.ni=keep; return out;
+  },
+  gap(n){ const I=this.cur().I; return this.add(this.T(n),[-I[0],I[1]]); },
+  working(){
+    const C=this.cur(), n=this.n(), h=this.h(), ys=this.ys(), xs=this.xs(), T=this.T(), I=C.I, g=this.gap();
+    const out=[\`f(x) = \${C.fs} on [0, 4]. The exact area is the integral, \${this.fr(I)}\${this.dec(I)}.\`];
+    let ins=[0,1]; for(let i=1;i<n;i++) ins=this.add(ins,ys[i]);
+    if(n===1) out.push(\`With one strip, h = 4, and the heights at the two ends are \${this.fr(ys[0])} and \${this.fr(ys[1])}. One trapezoid: T = 4/2 × (\${this.fr(ys[0])} + \${this.fr(ys[1])}) = \${this.fr(T)}\${this.dec(T)}.\`);
+    else {
+      out.push(n<=4
+        ? \`With n = \${n} strips, h = 4/\${n} = \${this.fr(h)}, and the heights at x = \${xs.map(x=>this.fr(x)).join(', ')} are \${ys.map(y=>this.fr(y)).join(', ')}.\`
+        : \`With n = \${n} strips, h = 4/\${n} = \${this.fr(h)}. The ends are \${this.fr(ys[0])} and \${this.fr(ys[n])}, and the \${n-1} inside heights add up to \${this.fr(ins)}.\`);
+      out.push(\`T = h/2 × (ends + 2 × inside) = \${this.fr(this.mul(h,[1,2]))} × (\${this.fr(ys[0])} + \${this.fr(ys[n])} + 2 × \${this.fr(ins)}) = \${this.fr(T)}\${this.dec(T)}.\`);
+    }
+    if(g[0]===0) out.push(\`T is the area exactly: the line is straight, so each trapezoid's top lies along it.\`);
+    else {
+      const pc=Math.abs(g[0]/g[1])/(I[0]/I[1])*100, ag=[Math.abs(g[0]),g[1]];
+      out.push(g[0]>0
+        ? \`T is over the area by \${this.fr(T)} − \${this.fr(I)} = \${this.fr(ag)}, \${neg(+pc.toFixed(2))}% of it: the curve bends up, so each straight top runs above it.\`
+        : \`T is under the area by \${this.fr(I)} − \${this.fr(T)} = \${this.fr(ag)}, \${neg(+pc.toFixed(2))}% of it: the curve bends down, so each straight top runs below it.\`);
+    }
+    const dd=this.add(C.d4,[-C.d0[0],C.d0[1]]), hw=h[1]===1?this.fr(h):\`(\${this.fr(h)})\`;
+    out.push(\`As a check, h²/12 × (f′(4) − f′(0)) with f′(x) = \${C.dw} is \${hw}²/12 × \${dd[0]<0?\`(\${this.fr(dd)})\`:this.fr(dd)} = \${this.fr(this.mul(this.mul(h,h),this.mul([1,12],dd)))}, the gap with its sign.\`);
+    if(this.moved){
+      const m=this.moved>0 ? this.NS[this.ni-1] : this.NS[this.ni+1], g0=this.gap(m), ab=u=>this.fr([Math.abs(u[0]),u[1]]);
+      out.push(g[0]===0 ? \`From \${m} strip\${m>1?'s':''} to \${n}, the gap stayed 0.\`
+        : this.moved>0 ? \`Doubling the strips from \${m} to \${n} took the gap from \${ab(g0)} to \${ab(g)}, a quarter: halving h quarters h².\`
+        : \`Halving the strips from \${m} to \${n} took the gap from \${ab(g0)} to \${ab(g)}, four times as much: doubling h makes h² four times as big.\`);
+    }
+    return out;
+  },
+  /* the curve in gold, each strip's trapezoid in blue, the sliver between them in red */
+  L:30, TOP:10, W:300, Hh:220,
+  PX(x){ return this.L+x*this.W/4; },
+  PY(v){ const Y=this.cur().Y; return this.TOP+this.Hh-(v-Y[0])*this.Hh/(Y[1]-Y[0]); },
+  svg(){
+    const C=this.cur(), n=this.n(), f=v=>v.toFixed(2), y0=this.PY(0), xs=this.xs().map(x=>x[0]/x[1]);
+    let out=\`<svg viewBox="0 0 340 255" style="width:100%;height:auto;display:block" role="img" aria-label="\${C.name}, in gold from x = 0 to 4, with the area under it cut into \${n} trapezoid\${n>1?'s':''} in blue\${C.id==='line'?' that fit it exactly':', and the gap between them in red'}">\`;
+    out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${f(this.PX(4))}" y2="\${f(y0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${this.L}" y2="\${this.TOP}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const x of [0,1,2,3,4]) out+=\`<text data-k="tick" x="\${f(this.PX(x))}" y="\${f(y0+13)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${x}</text>\`;
+    for(const v of C.Y[1]>10?[8,16]:[2,4]) out+=\`<text data-k="tick" x="\${this.L-4}" y="\${f(this.PY(v)+3)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="end">\${v}</text>\`;
+    for(let i=0;i<n;i++){
+      const a=xs[i], b=xs[i+1];
+      out+=\`<polygon data-k="trap" points="\${f(this.PX(a))},\${f(y0)} \${f(this.PX(a))},\${f(this.PY(C.f(a)))} \${f(this.PX(b))},\${f(this.PY(C.f(b)))} \${f(this.PX(b))},\${f(y0)}" fill="\${FIG_COL.a}" fill-opacity="0.22" stroke="\${FIG_COL.a}" stroke-width="1.2"/>\`;
+      if(C.id!=='line'){
+        const pts=[]; for(let k=0;k<=12;k++){ const x=a+(b-a)*k/12; pts.push(\`\${f(this.PX(x))},\${f(this.PY(C.f(x)))}\`); }
+        out+=\`<polygon data-k="gap" points="\${pts.join(' ')}" fill="\${FIG_COL.d}" fill-opacity="0.45" stroke="none"/>\`;
+      }
+    }
+    const pts=[]; for(let i=0;i<=160;i++){ const x=4*i/160; pts.push(\`\${f(this.PX(x))},\${f(this.PY(C.f(x)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    for(const x of xs) out+=\`<circle data-k="dot" cx="\${f(this.PX(x))}" cy="\${f(this.PY(C.f(x)))}" r="\${n>8?2.2:3}" fill="\${FIG_COL.a}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-trapezoid'); },
+  can(dn){ const k=this.ni+dn; return k>=0 && k<this.NS.length; },
+  pick(i){ this.ci=i; this.moved=0; this.touched=true; this.render(); },
+  more(){ if(!this.can(1)) return; this.ni++; this.moved=1; this.touched=true; this.render(); },
+  fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=-1; this.touched=true; this.render(); },
+  again(){ this.ni=0; this.moved=0; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tzwSets').innerHTML=this.CURVES.map((c,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.ci}" onclick="Trap.pick(\${i})" aria-label="Cut the area under \${c.name}">\${c.btn}</button>\`).join('');
+    document.getElementById('tzwFewer').disabled=!this.can(-1);
+    document.getElementById('tzwMore').disabled=!this.can(1);
+    document.getElementById('tzwAgain').disabled=this.ni===0;
+    document.getElementById('tzwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is f; the blue trapezoids join its heights at the strip edges with straight lines, and the red slivers are what they miss or take in too much. \${this.n()} strip\${this.n()>1?'s':''} now.</div>\`;
+    document.getElementById('tzwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tzwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('STRIP MASON','every curve cut into trapezoids','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
   }
 };
 

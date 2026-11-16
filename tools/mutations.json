@@ -1,131 +1,257 @@
 {
-  "change": "The trapezoid rule as a fight topic: estimate an integral with n strips, or say how far the estimate overshoots.",
+  "change": "The trapezoid workshop: cut an area into strips, add up the trapezoids, and watch the gap quarter as the strips double.",
   "mutations": [
+    {
+      "name": "the strips run to 32",
+      "file": "index.html",
+      "find": "NS:[1,2,4,8,16],",
+      "replace": "NS:[1,2,4,8,16,32],",
+      "run": "verify"
+    },
+    {
+      "name": "x² is worked as x³",
+      "file": "index.html",
+      "find": "fq:([t,b])=>[t*t,b*b], I:[64,3]",
+      "replace": "fq:([t,b])=>[t*t*t,b*b*b], I:[64,3]",
+      "run": "verify"
+    },
+    {
+      "name": "the area under x² is 64/4",
+      "file": "index.html",
+      "find": "I:[64,3], d0:[0,1], d4:[8,1]",
+      "replace": "I:[64,4], d0:[0,1], d4:[8,1]",
+      "run": "verify"
+    },
+    {
+      "name": "4x − x² is worked as 4x + x²",
+      "file": "index.html",
+      "find": "fq:([t,b])=>[4*t*b-t*t,b*b]",
+      "replace": "fq:([t,b])=>[4*t*b+t*t,b*b]",
+      "run": "verify"
+    },
+    {
+      "name": "the line is worked as x/2",
+      "file": "index.html",
+      "find": "fq:([t,b])=>[t+2*b,2*b]",
+      "replace": "fq:([t,b])=>[t,2*b]",
+      "run": "verify"
+    },
+    {
+      "name": "the slope of 4x − x² at 4 is 4",
+      "file": "index.html",
+      "find": "I:[32,3], d0:[4,1], d4:[-4,1]",
+      "replace": "I:[32,3], d0:[4,1], d4:[4,1]",
+      "run": "verify"
+    },
+    {
+      "name": "a fraction is never brought to its lowest terms",
+      "file": "index.html",
+      "find": "k=g(t,b)*(b<0?-1:1); return [t/k,b/k]; },",
+      "replace": "k=(b<0?-1:1); return [t/k,b/k]; },",
+      "run": "verify"
+    },
+    {
+      "name": "adding multiplies the tops",
+      "file": "index.html",
+      "find": "add(u,v){ return this.q(u[0]*v[1]+v[0]*u[1],u[1]*v[1]); },",
+      "replace": "add(u,v){ return this.q(u[0]*v[1]*v[0]*u[1],u[1]*v[1]); },",
+      "run": "verify"
+    },
+    {
+      "name": "h is 4/(n + 1)",
+      "file": "index.html",
+      "find": "h(){ return this.q(this.B-this.A,this.n()); },",
+      "replace": "h(){ return this.q(this.B-this.A,this.n()+1); },",
+      "run": "verify"
+    },
+    {
+      "name": "the heights stop a strip short",
+      "file": "index.html",
+      "find": "return [...Array(n+1)].map((_,i)=>this.q(4*i,n)); },",
+      "replace": "return [...Array(n)].map((_,i)=>this.q(4*i,n)); },",
+      "run": "verify"
+    },
     {
       "name": "the inside heights are not doubled",
       "file": "index.html",
-      "find": "i===0||i===n?y:mul(F(2),y)",
-      "replace": "i===0||i===n?y:y",
+      "find": "for(let i=1;i<m;i++) s=this.add(s,this.mul([2,1],ys[i]));",
+      "replace": "for(let i=1;i<m;i++) s=this.add(s,ys[i]);",
       "run": "verify"
     },
     {
-      "name": "the estimate is not halved",
+      "name": "T is not halved",
       "file": "index.html",
-      "find": "const T=mul(half,sum(",
-      "replace": "const T=mul(h,sum(",
+      "find": "const out=this.mul(this.mul(h,[1,2]),s);",
+      "replace": "const out=this.mul(h,s);",
       "run": "verify"
     },
     {
-      "name": "the integral divides by the old power",
+      "name": "the ends are doubled too",
       "file": "index.html",
-      "find": "add(mul(F(c,p+1),v),mul(F(k),x))",
-      "replace": "add(mul(F(c,p),v),mul(F(k),x))",
+      "find": "let s=this.add(ys[0],ys[m]);",
+      "replace": "let s=this.mul([2,1],this.add(ys[0],ys[m]));",
       "run": "verify"
     },
     {
-      "name": "the integral forgets the constant",
+      "name": "the gap is the area minus T",
       "file": "index.html",
-      "find": "add(mul(F(c,p+1),v),mul(F(k),x)); };",
-      "replace": "mul(F(c,p+1),v); };",
+      "find": "return this.add(this.T(n),[-I[0],I[1]]); },",
+      "replace": "return this.add(I,[-this.T(n)[0],this.T(n)[1]]); },",
       "run": "verify"
     },
     {
-      "name": "the left sum takes the right heights",
+      "name": "the inside sum takes the ends",
       "file": "index.html",
-      "find": "const L=mul(h,sum(ys.slice(0,n)))",
-      "replace": "const L=mul(h,sum(ys.slice(1)))",
+      "find": "let ins=[0,1]; for(let i=1;i<n;i++) ins=this.add(ins,ys[i]);",
+      "replace": "let ins=[0,1]; for(let i=0;i<=n;i++) ins=this.add(ins,ys[i]);",
       "run": "verify"
     },
     {
-      "name": "the midpoint sum takes the left ends",
+      "name": "a whole number is given a ≈",
       "file": "index.html",
-      "find": "map(x=>fx(add(x,half)))",
-      "replace": "map(x=>fx(x))",
+      "find": "return Number.isInteger(v) ? '' : ` ≈ ${neg(+v.toFixed(3))}`; },",
+      "replace": "return ` ≈ ${neg(+v.toFixed(3))}`; },",
       "run": "verify"
     },
     {
-      "name": "the one trapezoid is not halved",
+      "name": "over and under are swapped",
       "file": "index.html",
-      "find": "const nd=mul(half,sum(ys)), one=mul(mul(sub(b,F(a)),F(1,2)),",
-      "replace": "const nd=mul(half,sum(ys)), one=mul(sub(b,F(a)),",
+      "find": "out.push(g[0]>0\n        ? `T is over",
+      "replace": "out.push(g[0]<0\n        ? `T is over",
       "run": "verify"
     },
     {
-      "name": "the overshoot is the integral minus the estimate",
+      "name": "the percent is of T, not the area",
       "file": "index.html",
-      "find": "E=sub(T,I)",
-      "replace": "E=sub(I,T)",
+      "find": "pc=Math.abs(g[0]/g[1])/(I[0]/I[1])*100",
+      "replace": "pc=Math.abs(g[0]/g[1])/(T[0]/T[1])*100",
       "run": "verify"
     },
     {
-      "name": "the unsquared slip squares h",
+      "name": "the check leaves h unsquared",
       "file": "index.html",
-      "find": "[mul(mul(h,F(1,12)),dd),",
-      "replace": "[mul(mul(mul(h,h),F(1,12)),dd),",
+      "find": "this.fr(this.mul(this.mul(h,h),this.mul([1,12],dd)))",
+      "replace": "this.fr(this.mul(h,this.mul([1,12],dd)))",
       "run": "verify"
     },
     {
-      "name": "the one-strip slip multiplies",
+      "name": "the check uses f′(0) − f′(4)",
       "file": "index.html",
-      "find": "[[mul(E,F(1,n)),",
-      "replace": "[[mul(E,F(n)),",
+      "find": "const dd=this.add(C.d4,[-C.d0[0],C.d0[1]])",
+      "replace": "const dd=this.add(C.d0,[-C.d4[0],C.d4[1]])",
       "run": "verify"
     },
     {
-      "name": "the left and right slips are named the other way round",
+      "name": "doubling compares with the wrong count",
       "file": "index.html",
-      "find": "[L,'that is the left-hand sum",
-      "replace": "[Rt,'that is the left-hand sum",
+      "find": "const m=this.moved>0 ? this.NS[this.ni-1] : this.NS[this.ni+1]",
+      "replace": "const m=this.moved>0 ? this.NS[this.ni+1] : this.NS[this.ni-1]",
       "run": "verify"
     },
     {
-      "name": "the left and right sums may stand together",
+      "name": "the move note is never told",
       "file": "index.html",
-      "find": "if((s[0]===L && dist.some(x=>x[0]===Rt)) || (s[0]===Rt && dist.some(x=>x[0]===L))) continue;",
+      "find": "    if(this.moved){\n      const m=",
+      "replace": "    if(false){\n      const m=",
+      "run": "verify"
+    },
+    {
+      "name": "the heights are listed past four strips",
+      "file": "index.html",
+      "find": "out.push(n<=4\n",
+      "replace": "out.push(n<=8\n",
+      "run": "verify"
+    },
+    {
+      "name": "more strips is offered at sixteen",
+      "file": "index.html",
+      "find": "can(dn){ const k=this.ni+dn; return k>=0 && k<this.NS.length; },",
+      "replace": "can(dn){ const k=this.ni+dn; return k>=0 && k<=this.NS.length; },",
+      "run": "verify"
+    },
+    {
+      "name": "picking a curve keeps the move",
+      "file": "index.html",
+      "find": "pick(i){ this.ci=i; this.moved=0;",
+      "replace": "pick(i){ this.ci=i;",
+      "run": "verify"
+    },
+    {
+      "name": "one strip keeps the count",
+      "file": "index.html",
+      "find": "again(){ this.ni=0; this.moved=0;",
+      "replace": "again(){ this.moved=0;",
+      "run": "verify"
+    },
+    {
+      "name": "fewer strips counts as doubling",
+      "file": "index.html",
+      "find": "fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=-1;",
+      "replace": "fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=1;",
+      "run": "verify"
+    },
+    {
+      "name": "the quarter is found on the line",
+      "file": "index.html",
+      "find": "ok:K=>K.moved>0 && K.cur().id!=='line'},",
+      "replace": "ok:K=>K.moved>0},",
+      "run": "verify"
+    },
+    {
+      "name": "within 1% is within 10%",
+      "file": "index.html",
+      "find": "Math.abs(g[0]/g[1])<I[0]/I[1]/100; }},",
+      "replace": "Math.abs(g[0]/g[1])<I[0]/I[1]/10; }},",
+      "run": "verify"
+    },
+    {
+      "name": "one strip is found on opening",
+      "file": "index.html",
+      "find": "ok:K=>K.touched && K.n()===1",
+      "replace": "ok:K=>K.n()===1",
+      "run": "verify"
+    },
+    {
+      "name": "the trapezoid tops are drawn flat",
+      "file": "index.html",
+      "find": "${f(this.PX(b))},${f(this.PY(C.f(b)))} ${f(this.PX(b))},${f(y0)}\" fill",
+      "replace": "${f(this.PX(b))},${f(this.PY(C.f(a)))} ${f(this.PX(b))},${f(y0)}\" fill",
+      "run": "verify"
+    },
+    {
+      "name": "the slivers are drawn on the line",
+      "file": "index.html",
+      "find": "      if(C.id!=='line'){\n",
+      "replace": "      if(true){\n",
+      "run": "verify"
+    },
+    {
+      "name": "the dots stop short",
+      "file": "index.html",
+      "find": "for(const x of xs) out+=`<circle data-k=\"dot\"",
+      "replace": "for(const x of xs.slice(1)) out+=`<circle data-k=\"dot\"",
+      "run": "verify"
+    },
+    {
+      "name": "the curve stops at 3",
+      "file": "index.html",
+      "find": "const x=4*i/160; pts.push(",
+      "replace": "const x=3*i/160; pts.push(",
+      "run": "verify"
+    },
+    {
+      "name": "the mix leaves no tie to the workshop",
+      "file": "index.html",
+      "find": "    Trap: [\"🪟 Trapezoid Workshop\", ['trapezoid']],\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the answer's form need not be shared",
+      "name": "the screen does not draw on opening",
       "file": "index.html",
-      "find": "same<2 || (ans[1]===1)!==whole) && g<6",
-      "replace": "(ans[1]===1)!==whole) && g<6",
-      "run": "verify"
-    },
-    {
-      "name": "whole and fraction are not balanced",
-      "file": "index.html",
-      "find": "|| (ans[1]===1)!==whole) && g<600",
-      "replace": "|| false) && g<600",
-      "run": "verify"
-    },
-    {
-      "name": "the retries stop at once",
-      "file": "index.html",
-      "find": "&& g<600) continue;",
-      "replace": "&& g<0) continue;",
-      "run": "verify"
-    },
-    {
-      "name": "the working does not reach the estimate",
-      "file": "index.html",
-      "find": "so T = ${show(half)} × (${inside}) = ${show(T)}`",
-      "replace": "so T = ${show(half)} × (${inside})`",
-      "run": "verify"
-    },
-    {
-      "name": "the gap question says undershoots",
-      "file": "index.html",
-      "find": "strips overshoots ${S}. By how much?",
-      "replace": "strips undershoots ${S}. By how much?",
-      "run": "verify"
-    },
-    {
-      "name": "the gap's check squares nothing",
-      "file": "index.html",
-      "find": "${h[1]===1?hs:`(${hs})`}²/12 × ${show(dd)}",
-      "replace": "${hs}/12 × ${show(dd)}",
-      "run": "verify"
+      "find": "    if(id==='s-trapezoid') Trap.render();\n",
+      "replace": "",
+      "run": "play:trapezoid"
     }
   ]
 }

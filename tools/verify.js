@@ -91,6 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const Trap={' + script.slice(script.indexOf("  A:0, B:4, NS:[1,2,4,8,16],\n  CURVES:["), script.indexOf("  render(){\n    document.getElementById('tzwSets')")) + 'render(){}};exports.Trap=Trap;' +
     ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  tab:'hand', // step by hand, or which rate")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
     ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  tab:'hand', // chords by hand")) + 'render(){}};exports.ArcLen=ArcLen;' +
     ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  tab:'hand', // step x by hand, or which estimate")) + 'render(){}};exports.TanLine=TanLine;' +
@@ -115,7 +116,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine, ArcLen, LogiGrow } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine, ArcLen, LogiGrow, Trap } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -12119,6 +12120,134 @@ const doublingNotes = (() => {
   return { n, moves, points, goals: Object.keys(found).length };
 })();
 
+/* The trapezoid workshop: every curve, every count of strips, and every
+   move to more or fewer. The heights, T, the area, the gap and the check
+   h²/12 × (f′(4) − f′(0)) are worked again here in plain floats from f
+   itself, never from the workshop's fractions, and each number in the
+   readout is read back and held to them; the gap's quartering on doubling,
+   its side (over, under or exact) against how the curve bends, and each
+   goal. The trapezoids, the slivers, the dots and the curve are read back
+   off the drawing. */
+const trapNotes = (() => {
+  const M = Trap;
+  const val = t => { const m = String(t).replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(\d+))?$/); return m ? +m[1] / (m[2] ? +m[2] : 1) : NaN; };
+  const is = (t, v) => Math.abs(val(t) - v) < 1e-9 * Math.max(1, Math.abs(v));
+  const CURVE = { up: [x => x * x, x => 2 * x, 'x²', '2x', 1], down: [x => 4 * x - x * x, x => 4 - 2 * x, '4x − x²', '4 − 2x', -1], line: [x => x / 2 + 1, () => 0.5, 'x/2 + 1', '1/2', 0] };
+  if (M.CURVES.map(C => C.id).join() !== 'up,down,line') fail('trapezoid workshop', 'curves', M.CURVES.map(C => C.id).join());
+  if (M.NS.join() !== '1,2,4,8,16' || M.A !== 0 || M.B !== 4) fail('trapezoid workshop', 'strips', 'the counts are not 1, 2, 4, 8 and 16 on [0, 4]');
+  if (M.ci !== 0 || M.ni !== 0 || M.moved) fail('trapezoid workshop', 'open', 'the workshop does not open on x² with one strip');
+  const reset = () => { M.touched = false; M.ci = 0; M.ni = 0; M.moved = 0; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('trapezoid workshop', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, stops = 0;
+  M.CURVES.forEach((C, ci) => {
+    const [f, df, fs, dw, bend] = CURVE[C.id];
+    // the area by Simpson's rule on 1000 strips, exact for these curves, never from the workshop
+    let I = f(0) + f(4); for (let i = 1; i < 1000; i++) I += (i % 2 ? 4 : 2) * f(4 * i / 1000); I *= 4 / 3000;
+    const T = k => { const h = 4 / k; let s = 0; for (let i = 0; i < k; i++) s += h * (f(i * h) + f((i + 1) * h)) / 2; return s; };
+    for (const k of M.NS) {
+      // the gap is h²/12 × (f′(4) − f′(0)) for these curves, and its side follows the bend
+      if (Math.abs(T(k) - I - (4 / k) ** 2 / 12 * (df(4) - df(0))) > 1e-9) fail('trapezoid workshop', C.id, `the gap at ${k} strips is not h²/12 × (f′(4) − f′(0))`);
+      if (Math.sign(Math.round((T(k) - I) * 1e9)) !== bend) fail('trapezoid workshop', C.id, `at ${k} strips the estimate is on the wrong side for how the curve bends`);
+    }
+    reset(); M.more(); M.pick(ci);
+    if (M.ni !== 1 || M.moved) fail('trapezoid workshop', C.id, 'picking a curve does not keep the strips and drop the move');
+    for (let k0 = 0; k0 < M.NS.length; k0++) {
+      stops++;
+      for (const dk of [0, -1, 1]) {
+        reset(); M.ci = ci; M.ni = k0; M.touched = false;
+        const ok = dk === 0 || (k0 + dk >= 0 && k0 + dk < M.NS.length);
+        if (dk && M.can(dk) !== ok) fail('trapezoid workshop', `${C.id} ${M.NS[k0]}`, `${dk > 0 ? 'more' : 'fewer'} strips is ${ok ? 'not ' : ''}offered`);
+        if (dk > 0) M.more(); else if (dk < 0) M.fewer(); else M.pick(ci);
+        if (!ok) { if (M.ni !== k0) fail('trapezoid workshop', `${C.id} ${M.NS[k0]}`, 'a move is made that is not offered'); continue; }
+        n++;
+        const k = M.NS[k0 + dk], h = 4 / k, key = `${C.id} ${M.NS[k0]}→${k}`, got = M.working(), t = T(k), gap = t - I;
+        if (M.n() !== k) fail('trapezoid workshop', key, `the strips end at ${M.n()}`);
+        let L = 0;
+        { const m = got[L].match(/^f\(x\) = (.+) on \[0, 4\]\. The exact area is the integral, (\S+?)(?: ≈ (\S+))?\.$/);
+          if (!m || m[1] !== fs || !is(m[2], I) || (m[3] !== undefined) !== !Number.isInteger(+I.toFixed(9)) || (m[3] && Math.abs(+m[3] - I) > 5e-4)) fail('trapezoid workshop', key, `the area is told wrong: ${got[L]}`); }
+        L++;
+        const ys = [...Array(k + 1)].map((_, i) => f(i * h)), inside = ys.slice(1, k).reduce((a, b) => a + b, 0);
+        const tv = (s, v) => { const m = s.match(/^(\S+?)(?: ≈ (\S+))?$/); return m && is(m[1], v) && (m[2] !== undefined) === !Number.isInteger(+v.toFixed(9)) && (!m[2] || Math.abs(+m[2] - v) <= 5e-4); };
+        if (k === 1) {
+          const m = got[L].match(/^With one strip, h = 4, and the heights at the two ends are (\S+) and (\S+)\. One trapezoid: T = 4\/2 × \((\S+) \+ (\S+)\) = (.+)\.$/);
+          if (!m || !is(m[1], ys[0]) || !is(m[2], ys[1]) || m[3] !== m[1] || m[4] !== m[2] || !tv(m[5], t)) fail('trapezoid workshop', key, `one strip is told wrong: ${got[L]}`);
+          L++;
+        } else {
+          if (k <= 4) {
+            const m = got[L].match(/^With n = (\d+) strips, h = 4\/(\d+) = (\S+), and the heights at x = (.+) are (.+)\.$/);
+            if (!m || +m[1] !== k || +m[2] !== k || !is(m[3], h) || m[4].split(', ').some((x, i) => !is(x, i * h)) || m[4].split(', ').length !== k + 1
+              || m[5].split(', ').some((y, i) => !is(y, ys[i])) || m[5].split(', ').length !== k + 1) fail('trapezoid workshop', key, `the heights are told wrong: ${got[L]}`);
+          } else {
+            const m = got[L].match(/^With n = (\d+) strips, h = 4\/(\d+) = (\S+)\. The ends are (\S+) and (\S+), and the (\d+) inside heights add up to (\S+)\.$/);
+            if (!m || +m[1] !== k || +m[2] !== k || !is(m[3], h) || !is(m[4], ys[0]) || !is(m[5], ys[k]) || +m[6] !== k - 1 || !is(m[7], inside)) fail('trapezoid workshop', key, `the heights are told wrong: ${got[L]}`);
+          }
+          L++;
+          const m = got[L].match(/^T = h\/2 × \(ends \+ 2 × inside\) = (\S+) × \((\S+) \+ (\S+) \+ 2 × (\S+)\) = (.+)\.$/);
+          if (!m || !is(m[1], h / 2) || !is(m[2], ys[0]) || !is(m[3], ys[k]) || !is(m[4], inside) || !tv(m[5], t)) fail('trapezoid workshop', key, `T is worked wrong: ${got[L]}`);
+          // the rule as told agrees with adding the trapezoids one by one
+          if (Math.abs(h / 2 * (ys[0] + ys[k] + 2 * inside) - t) > 1e-9) fail('trapezoid workshop', key, 'the rule and the trapezoids disagree');
+          L++;
+        }
+        const pc = Math.abs(gap) / I * 100;
+        if (bend === 0) { if (got[L] !== 'T is the area exactly: the line is straight, so each trapezoid\'s top lies along it.') fail('trapezoid workshop', key, `the exact fit is not told: ${got[L]}`); }
+        else {
+          const m = got[L].match(/^T is (over|under) the area by (\S+) − (\S+) = (\S+), ([\d.]+)% of it: the curve bends (up|down), so each straight top runs (above|below) it\.$/);
+          if (!m || (m[1] === 'over') !== (gap > 0) || (m[6] === 'up') !== (bend > 0) || (m[7] === 'above') !== (bend > 0)
+            || !is(m[2], gap > 0 ? t : I) || !is(m[3], gap > 0 ? I : t) || !is(m[4], Math.abs(gap)) || Math.abs(+m[5] - pc) > 0.005 + 1e-9) fail('trapezoid workshop', key, `the gap is told wrong: ${got[L]}`);
+        }
+        L++;
+        { const m = got[L].match(/^As a check, h²\/12 × \(f′\(4\) − f′\(0\)\) with f′\(x\) = (.+) is \(?(\S+?)\)?²\/12 × \(?(\S+?)\)? = (\S+), the gap with its sign\.$/);
+          if (!m || m[1] !== dw || !is(m[2], h) || !is(m[3], df(4) - df(0)) || !is(m[4], gap)) fail('trapezoid workshop', key, `the check is told wrong: ${got[L]}`); }
+        L++;
+        if (dk) {
+          const k1 = M.NS[k0], g0 = T(k1) - I;
+          const line = bend === 0 ? `From ${k1} strip${k1 > 1 ? 's' : ''} to ${k}, the gap stayed 0.`
+            : dk > 0 ? `Doubling the strips from ${k1} to ${k} took the gap from ${M.fr([Math.abs(M.gap(k1)[0]), M.gap(k1)[1]])} to ${M.fr([Math.abs(M.gap()[0]), M.gap()[1]])}, a quarter: halving h quarters h².`
+            : `Halving the strips from ${k1} to ${k} took the gap from ${M.fr([Math.abs(M.gap(k1)[0]), M.gap(k1)[1]])} to ${M.fr([Math.abs(M.gap()[0]), M.gap()[1]])}, four times as much: doubling h makes h² four times as big.`;
+          if (got[L] !== line) fail('trapezoid workshop', key, `the move is told wrong: ${got[L]}`);
+          // the quarter is true
+          if (bend && Math.abs(gap / g0 - (dk > 0 ? 0.25 : 4)) > 1e-9) fail('trapezoid workshop', key, 'the gap does not quarter as the strips double');
+          if (bend && !(is(M.fr([Math.abs(M.gap(k1)[0]), M.gap(k1)[1]]), Math.abs(g0)))) fail('trapezoid workshop', key, 'the gap before the move is worked wrong');
+          L++;
+        }
+        if (got.length !== L) fail('trapezoid workshop', key, `a line is told that should not be: ${got.slice(L).join(' ')}`);
+        // the drawing
+        const Y = C.Y, PX = x => M.L + x * M.W / 4, PY = v => M.TOP + M.Hh - (v - Y[0]) * M.Hh / (Y[1] - Y[0]), y0 = PY(0);
+        const inside2 = (X, Yp) => X >= M.L - 0.01 && X <= M.L + M.W + 0.01 && Yp >= M.TOP - 0.01 && Yp <= M.TOP + M.Hh + 0.01;
+        const pts = s => s.trim().split(' ').map(c => c.split(',').map(Number));
+        const svg = M.svg();
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || pts(cv[1]).some(([cx, cy]) => Math.abs(cy - PY(f((cx - M.L) * 4 / M.W))) > 0.05 || !inside2(cx, cy))) fail('trapezoid workshop', key, 'the curve leaves f or the figure');
+        const tr = [...svg.matchAll(/data-k="trap" points="([^"]+)"/g)].map(m => pts(m[1]));
+        if (tr.length !== k || tr.some((q, i) => { const a = i * h, b = (i + 1) * h, w = [[a, 0], [a, f(a)], [b, f(b)], [b, 0]];
+          return q.length !== 4 || q.some(([X, Yp], j) => Math.abs(X - PX(w[j][0])) > 0.01 || Math.abs(Yp - PY(w[j][1])) > 0.01 || !inside2(X, Yp)); }))
+          fail('trapezoid workshop', key, `the ${k} trapezoids are not drawn on the strips`);
+        const gp = [...svg.matchAll(/data-k="gap" points="([^"]+)"/g)].map(m => pts(m[1]));
+        if (gp.length !== (bend ? k : 0) || gp.some((q, i) => { const a = i * h, b = (i + 1) * h;
+          return Math.abs(q[0][0] - PX(a)) > 0.01 || Math.abs(q[q.length - 1][0] - PX(b)) > 0.01 || q.some(([X, Yp]) => Math.abs(Yp - PY(f((X - M.L) * 4 / M.W))) > 0.05); }))
+          fail('trapezoid workshop', key, 'the slivers are not between the curve and the trapezoid tops');
+        const dots = [...svg.matchAll(/data-k="dot" cx="([\d.]+)" cy="([\d.]+)"/g)];
+        if (dots.length !== k + 1 || dots.some((d, i) => Math.abs(+d[1] - PX(i * h)) > 0.01 || Math.abs(+d[2] - PY(f(i * h))) > 0.01)) fail('trapezoid workshop', key, 'the dots are not the heights at the strip edges');
+        if (!svg.includes(`cut into ${k} trapezoid${k > 1 ? 's' : ''} in blue`)) fail('trapezoid workshop', key, 'the figure is named wrong');
+        // every goal, decided here
+        const truth = {
+          one: k === 1 && bend !== 0 && M.touched, quarter: dk > 0 && bend !== 0, close: bend !== 0 && pc < 1,
+          over: C.id === 'up', under: C.id === 'down', exact: C.id === 'line',
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('trapezoid workshop', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('trapezoid workshop', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.ni !== 0 || M.moved) fail('trapezoid workshop', key, 'one strip does not go back to one strip');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('trapezoid workshop', g.id, 'can never be found');
+  reset();
+  return { n, stops, goals: Object.keys(found).length };
+})();
 /* The logistic workshop: every start, every whole t from 0 to 20, and every
    step forward and back. P is worked again here from K·P(0)/(P(0) + (K − P(0))
    e^(−rt)), in plain floats, never from the workshop's numbers, and checked to
@@ -16388,6 +16517,7 @@ console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (
 console.log(`  tangent stops    ${pad(tanLineNotes.n.toLocaleString(), 15)}  (every move and every halving from every stop x can take on √x, 1/x and sin x, ${tanLineNotes.stops.toLocaleString()} stops: L(x), the curve's value and the miss worked again in floats, which way it misses against the bend, the quarter and the eighth, the curve, tangent, estimate and gap read back off the drawing, ${tanLineNotes.goals} goals findable)`);
 console.log(`  chord counts     ${pad(arcLenNotes.n.toLocaleString(), 15)}  (every doubling and halving from every count of chords on the line, the cubic and the quarter circle, ${arcLenNotes.counts.toLocaleString()} counts: each of ${arcLenNotes.chords.toLocaleString()} chords measured again by Pythagoras, the total and its gap against the true length worked by Simpson's rule, the quarter and the third checked true, every chord and its ends read back off the drawing, ${arcLenNotes.goals} goals findable)`);
 console.log(`  logistic steps   ${pad(logiNotes.n.toLocaleString(), 15)}  (every step forward and back from every whole t on the three starts, ${logiNotes.stops.toLocaleString()} stops: P worked again from its formula and checked to solve the equation, the rate, the growth of each step, the rise and fall either side of 500, K/2 and the 1% mark, the curve, the dots and the tangent read back off the drawing, ${logiNotes.goals} goals findable)`);
+console.log(`  trapezoid strips ${pad(trapNotes.n.toLocaleString(), 15)}  (every count of strips on the three curves, more, fewer and none, ${trapNotes.stops.toLocaleString()} stops: the heights, T, the area, the gap and its check worked again from f, the quarter on doubling, over, under or exact against the bend, the trapezoids, slivers and dots read back off the drawing, ${trapNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
