@@ -1353,17 +1353,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ GEOMETRIC SERIES WORKSHOP ============ -->
   <div class="screen" id="s-geo">
     <div class="panel"><h2>🧮 Geometric Series Workshop</h2><div class="sub">Each term is the last one times r. Add them one at a time and watch the running total: when r is small enough an endless sum lands on a finite number, and when it is not the total runs away for ever.</div></div>
+    <div id="gnTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Add the terms by hand or pick the sum"></div>
     <div class="panel">
+      <div id="gqBox"></div>
       <div id="gnSets" class="wsModes" role="group" aria-label="Which series"></div>
       <div id="gnFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="gnStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="gnNLo" onclick="Geo.moveN(-1)" aria-label="Take the last term away">−</button>
           <b id="gnN" style="font-size:17px;min-width:0"></b>
           <button id="gnNHi" onclick="Geo.moveN(1)" aria-label="Add the next term">+</button></div>
       </div>
       <div id="gnRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="gnGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="gnGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14085,7 +14087,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🧮 Geometric Series Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Add an endless sum one term at a time and watch the total close in on a/(1 − r), swing around it, or run away for ever.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Add an endless sum one term at a time and watch the total close in on a/(1 − r), swing around it, or run away for ever. Then turn it round: see a series, and pick which of four numbers is its endless sum.</div>
          <button class="btn sm" id="tomeGeo" style="width:auto;margin-top:8px" onclick="Geo.open()">Open the geometric series workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -19213,6 +19215,123 @@ const Gram = {
    When |r| < 1 the gap to a/(1 − r) shrinks by the factor r with every term,
    so the endless sum has a finite total; a negative r swings above and below
    it; r = 2 runs away, and a/(1 − r) there is not the sum. Nothing is saved. */
+/* ---------- Which sum? The geometric series workshop turned round ----------
+ * A first term a and a ratio r with |r| < 1, the first few terms written out,
+ * and four numbers. The endless sum is a/(1 − r). The wrong numbers are the
+ * slips people make with it: a/(1 + r), the sign in the bottom flipped;
+ * 1/(1 − r), the sum with a left out; ar/(1 − r), the sum from the second
+ * term on; and a × (1 − r), multiplied where it should divide. A wrong pick is
+ * checked by the sum's own rule, S = a + rS: take the first term off, and
+ * what is left is r times the whole. A 0 is never offered, and the sum is a
+ * fraction about half the time, with another number of its form beside it.
+ */
+const GeoPick = {
+  SLIPS:['plus','noA','skip','times'],
+  RULE:'An endless geometric series a + ar + ar² + ⋯ with r between −1 and 1 adds up to a/(1 − r): take the first term off and what is left is r times the whole, so S = a + rS, and S(1 − r) = a. Which number is the sum?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  r(S){ return this.frac(S.p,S.q); },
+  // term k, a × r^k, as a fraction
+  term(S,k){ return this.frac(S.a*S.p**k, S.q**k); },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,p,q}=S;
+    return k==='right' ? this.frac(a*q,q-p) : k==='plus' ? this.frac(a*q,q+p) : k==='noA' ? this.frac(q,q-p)
+      : k==='skip' ? this.frac(a*p,q-p) : this.frac(a*(q-p),q);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this series can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantFrac=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const q=R.i(2,5), S={a:R.pick([2,3,4,5,6,-2,-3,-4]), p:R.i(1-q,q-1), q};
+      if(!S.p || this.gcd(S.p,q)!==1) continue;
+      const L=this.val(S,'right');
+      if(this.whole(L)===wantFrac || Math.abs(L[0])>40) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(L))) continue;
+      return S;
+    }
+    return {a:2, p:1, q:2};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.p,S.q].join()!==[prev.a,prev.p,prev.q].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TAIL TAMER', this.matched+' endless sums found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the sum, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Geo.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // a + r × v, worked as a fraction
+  again(S,v){ const r=this.r(S); return this.frac(S.a*r[1]*v[1]+r[0]*v[0], r[1]*v[1]); },
+  slip(S,k,L){
+    const a=S.a, r=this.fs(this.r(S));
+    if(k==='plus') return \`\${L} is a/(1 + r), the sign in the bottom flipped. Taking rS from S leaves S(1 − r) = a, so the bottom is 1 − r.\`;
+    if(k==='noA') return \`\${L} is 1/(1 − r), the sum with a left out. That series starts from 1; this one starts from a = \${neg(a)}, so every term, and the sum, is \${neg(a)} times as big.\`;
+    if(k==='skip') return \`\${L} is ar/(1 − r), the sum from the second term on. The first term, a = \${neg(a)}, counts too.\`;
+    return \`\${L} is a × (1 − r), multiplied by 1 − r where it should be divided. S(1 − r) = a, so S = a ÷ (1 − r).\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), w=this.again(S,v);
+    return \`Check \${L}: if the sum were \${this.fs(v)}, then a + r × \${this.fs(v)} = \${neg(S.a)} + \${this.pf(this.r(S))} × \${this.pf(v)} = \${this.fs(w)}, not \${this.fs(v)}, so S = a + rS does not hold.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    const terms=[0,1,2,3].map(k=>{ const t=this.fs(this.term(S,k)); return k===0 ? t : (t[0]==='−' ? ' − '+t.slice(1) : ' + '+t); }).join('');
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="gqQ" style="text-align:center;font-size:18px;margin-bottom:2px">\${terms} + ⋯</div>\`;
+    out+=\`<div id="gqAr" class="small" style="text-align:center">The first term is a = \${neg(S.a)}, and each term is r = \${this.fs(this.r(S))} times the one before.</div>\`;
+    out+=\`<div id="gqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="GeoPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the sum':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), rr=this.r(B);
+      lines.push(\`That was it: a/(1 − r) = \${neg(B.a)}/(1 − \${this.pf(rr)}) = \${this.fs(v)}, and a + r × \${this.fs(v)} = \${neg(B.a)} + \${this.pf(rr)} × \${this.pf(v)} = \${this.fs(this.again(B,v))}, the sum again. Here is a new series.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="gqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const Geo = {
   SETS:[
     {id:'half', btn:'Halves', a:1, p:1, q:2},
@@ -19296,7 +19415,15 @@ const Geo = {
   open(){ UI.go('s-geo'); },
   pick(i){ this.si=i; this.n=this.START; this.touched=true; this.render(); },
   moveN(by){ const v=this.n+by; if(v<1 || v>this.N) return; this.n=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('gnTab').innerHTML=[['hand','🧮 Add it by hand','Add the terms one at a time and watch the running total'],['pick','🎯 Which sum?','See a series, and pick which of four numbers is its endless sum']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Geo.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['gnSets','gnFig','gnStep','gnRead','gnGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('gqBox').innerHTML=pick ? GeoPick.html() : '';
+    if(pick) return;
     document.getElementById('gnSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Geo.pick(\${i})" aria-label="\${s.btn}: start at \${s.a}, r = \${this.fr(s.p,s.q)}">\${s.btn}</button>\`).join('');
     document.getElementById('gnN').textContent=\`\${this.n} term\${this.n>1?'s':''}\`;
