@@ -7784,6 +7784,167 @@ const slicePickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which number in front? The swap workshop turned round. Every number is
+   read back off its button and checked against the slip it is named as,
+   worked from the integral here; the right one alone is the number in front,
+   found without the rule: k·(axᵐ + b)ⁿ⁺¹ is nudged, and only the right k has
+   the integrand as its slope. Each wrong number's check is worked again, its
+   chain rule product measured against a nudge. */
+const swapPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Swap = {render(){ env.renders++; }};" +
+    cut('const SwapPick = {', '/* ---------- The swap workshop: u-substitution') + 'return SwapPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const sup = n => '⁰¹²³⁴⁵⁶⁷⁸⁹'[n];
+  const xp = e => (e === 1 ? 'x' : 'x' + sup(e));
+  const co = a => (a === 1 ? '' : a === -1 ? '−' : ng(a));
+  const br = Q => `(${co(Q.a)}${xp(Q.m)} + ${Q.b})`;
+  const ig = Q => `${Q.c === 1 ? '' : Q.c}${xp(Q.m - 1)}${br(Q)}${sup(Q.n)}`;
+  const g = (Q, x) => Q.c * x ** (Q.m - 1) * (Q.a * x ** Q.m + Q.b) ** Q.n;
+  // every number, worked from the slip it stands for: n + 1 the new power, m·a the number du brings
+  const want = (k, Q) => { const { a, c, m, n } = Q;
+    return k === 'right' ? red(c, m * a * (n + 1)) : k === 'noDu' ? red(c, n + 1) : k === 'multDu' ? red(c * m * a, n + 1)
+      : k === 'old' ? red(c, m * a * n) : k === 'noA' ? red(c, m * (n + 1)) : k === 'noM' ? red(c, a * (n + 1))
+      : k === 'xToo' ? red(c, m * m * a * (n + 1)) : k === 'flip' ? red(m * a * (n + 1), c) : null; };
+  // the slope of k·(axᵐ + b)ⁿ⁺¹ at x, measured by a nudge
+  const nudge = (v, Q, x) => { const F = s => v[0] / v[1] * (Q.a * s ** Q.m + Q.b) ** (Q.n + 1), h = 1e-5; return (F(x + h) - F(x - h)) / (2 * h); };
+  const fits = (v, Q) => [0.3, 0.7, 1.1].every(x => Math.abs(nudge(v, Q, x) - g(Q, x)) <= 1e-5 * Math.max(1, Math.abs(g(Q, x))));
+  const slipOf = (k, L, Q) => { const { a, b, m, n } = Q, ma = m * a, inn = `${co(a)}${xp(m)} + ${b}`, xo = xp(m - 1), du = `${ng(ma)}${xo} dx`;
+    if (k === 'noDu') return `${L} swaps dx for du as if they were the same. du = ${du}, so ${xo} dx is du/${pn(ma)}, and that ÷ ${ng(ma)} has to stay.`;
+    if (k === 'multDu') return `${L} multiplies by ${ng(ma)} where it should divide. du = ${du}, so ${xo} dx is du ÷ ${pn(ma)}, not du × ${pn(ma)}.`;
+    if (k === 'old') return `${L} divides by ${n}, the power before it is raised. ∫ u${sup(n)} du is u${sup(n + 1)}/${n + 1}: raise the power first, then divide by the new one.`;
+    if (k === 'noA') return `${L} drops the ${ng(a)} from du. The slope of ${inn} is ${m} × ${pn(a)}${xo} = ${ng(ma)}${xo}, the ${ng(a)} included.`;
+    if (k === 'xToo') return `${L} integrates the ${xo} outside the bracket on its own as well, to ${xp(m)}/${m}, and so divides by ${m} again. That ${xo} is not left over to integrate: it went into du.`;
+    if (k === 'flip') return `${L} divides the wrong way round, ${ng(ma * (n + 1))} over ${Q.c}. k × ${pn(ma * (n + 1))} must come to ${Q.c}, so ${Q.c} goes on top.`;
+    return `${L} forgets the ${m} that ${xp(m)} brings down. The slope of ${inn} is ${m} × ${pn(a)}${xo} = ${ng(ma)}${xo}, not ${ng(a)}${xo}.`; };
+  const RULE = 'Swap u for the bracket, u = axᵐ + b. Its slope is du/dx = m·a·xᵐ⁻¹, and that power of x is the one standing outside the bracket, so xᵐ⁻¹ dx = du/(m·a). The integral becomes c/(m·a) × ∫ uⁿ du = c/(m·a) × uⁿ⁺¹/(n + 1): raise the power, then divide by the new one. Put the bracket back for u. Which number goes in front?';
+  if (S.RULE !== RULE) fail('swappick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('swappick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noDu', 'multDu', 'old', 'noA', 'noM', 'xToo', 'flip'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Bs = new Set(), Cs = new Set(), Ms = new Set(), Ns = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c); Ms.add(Q.m); Ns.add(Q.n);
+      if (![1, 2, 3].includes(Math.abs(Q.a)) || !(Q.b >= 1 && Q.b <= 9) || !(Q.c >= 1 && Q.c <= 36) || ![2, 3].includes(Q.m) || !(Q.n >= 2 && Q.n <= 5) || ![Q.a, Q.b, Q.c].every(Number.isInteger)) fail('swappick', key, `${sig} is not a whole integral of the kind dealt`);
+      if (prev && prev === sig) fail('swappick', key, 'the same integral comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('swappick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} ∫ ${ig(Q)} dx = k·${br(Q)}${sup(Q.n + 1)} + C Which number is k? A `)) fail('swappick', key, 'the rule and the integral are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SwapPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('swappick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('swappick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(v[0] / v[1]) > 200)) fail('swappick', key, 'a number is 0, or past 200');
+      if (new Set(vals.map(String)).size !== 4) fail('swappick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('swappick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('swappick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), seen = new Set([String(W)]), can = [];
+        for (const kk of SL) { const v = want(kk, Q); if (seen.has(String(v))) continue; seen.add(String(v)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1)) && tr.some(x => want(x, Q)[0] * W[0] > 0)) T.push(tr); }
+        // the right one's place is chosen first, so look only at the sets that give it the place it has
+        const rk = tr => tr.filter(x => { const v = want(x, Q); return v[0] * W[1] < W[0] * v[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('swappick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('swappick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== fits(vals[i], Q)) fail('swappick', key, `${btns[i][6]}·${br(Q)}${sup(Q.n + 1)} ${o.k === 'right' ? 'does not have' : 'has'} the integrand as its slope`);
+      });
+      if (k === 0 && txt(S.html().split('id="usRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('swappick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('swappick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="usRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('swappick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): by the chain rule the slope of k·(\(.+?\))(.) is k × (\d) × (\(.+?\))(.) × (−?\d+)(x.?), which must be the integrand (.+?), so k × (\d) × (\S+) = k × (\S+) must be (\d+)\. With k = (\S+) that is (\S+) × (\S+) = (\S+), not (\d+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('swappick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const N = Q.m * Q.a * (Q.n + 1);
+        if (cm[2] !== br(Q) || cm[3] !== sup(Q.n + 1) || +cm[4] !== Q.n + 1 || cm[5] !== br(Q) || cm[6] !== sup(Q.n) || cm[7] !== ng(Q.m * Q.a) || cm[8] !== xp(Q.m - 1)
+          || cm[9] !== ig(Q) || +cm[10] !== Q.n + 1 || cm[11] !== pn(Q.m * Q.a) || cm[12] !== pn(N) || +cm[13] !== Q.c || cm[14] !== fr(vals[i]) || cm[15] !== pf(vals[i]) || cm[16] !== pn(N) || +cm[18] !== Q.c) fail('swappick', key, `the check of ${o.k} is not worked for this integral: ${lines[1]}`);
+        // the chain rule product, measured: the nudged slope over the integrand is k × N divided by c
+        const X = rdv(cm[17]);
+        if (!X || String(X) !== String(red(vals[i][0] * N, vals[i][1]))) fail('swappick', key, `the check of ${o.k} gives ${cm[17]}`);
+        else if (Math.abs(nudge(vals[i], Q, 0.6) / g(Q, 0.6) * Q.c - X[0] / X[1]) > 1e-4 * Math.max(1, Math.abs(X[0] / X[1]))) fail('swappick', key, `k × ${N} = ${cm[17]} is not how far the slope of ${o.k} is off`);
+        if (X && X[1] === 1 && X[0] === Q.c) fail('swappick', key, 'a wrong number passes its check');
+        if (lines[1].includes(`k = ${fr(want('right', Q))} `) || lines[0].includes(` is ${fr(want('right', Q))},`)) fail('swappick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SwapPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the number in front"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('swappick', key, 'the missed numbers are not shut and told as not the number in front');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('swappick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('swappick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('swappick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('swappick', key, 'no fresh integral after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'BRACKET BREAKER / 5 integrals swapped') fail('swappick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} goes in front, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('swappick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="usRead"')[1].replace(/^[^>]*>/, ''));
+      const W = want('right', Q), N = Q.m * Q.a * (Q.n + 1);
+      const wantLine = `That was it: u = ${br(Q).slice(1, -1)} and du = ${ng(Q.m * Q.a)}${xp(Q.m - 1)} dx, so k = ${Q.c} ÷ ${pn(Q.m * Q.a)} ÷ ${Q.n + 1} = ${fr(W)}, and ${pf(W)} × ${pn(N)} = ${Q.c}, so the chain rule gives back the integrand. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('swappick', key, `after a pick: ${got}`);
+      if (W[0] * N !== Q.c * W[1]) fail('swappick', key, `${fr(W)} × ${N} is not ${Q.c}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same integral dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, b: 5, c: 12, m: 2, n: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"b":5,"c":12,"m":2,"n":2}') fail('swappick', 'repeat', 'the same integral is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of integrals: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++; if (W[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('swappick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('swappick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('swappick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 6 || Bs.size !== 9 || Cs.size < 20 || Ms.size !== 2 || Ns.size !== 4) fail('swappick', 'deal', `a ${[...As]}, b ${[...Bs]}, c ${Cs.size} values, m ${[...Ms]}, n ${[...Ns]} is not the whole deal`);
+  if (slots.size !== 4) fail('swappick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.1 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.15 && ranks[3] > rounds * 0.08)) fail('swappick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('swappick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('swappick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('swappick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('swappick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12545,6 +12706,7 @@ console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)
 console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-fits-best in the best fit workshop, every number read back off its button and checked against the slip it is named as, the right one alone the bottom of the squared misses; ${fitPickNotes.misses.toLocaleString()} wrong picks checked by the misses times their x gaps, ${fitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
+console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

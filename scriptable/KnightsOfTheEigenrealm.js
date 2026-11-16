@@ -1464,13 +1464,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SWAP WORKSHOP ============ -->
   <div class="screen" id="s-swap">
     <div class="panel"><h2>🔄 Swap Workshop</h2><div class="sub">u-substitution is a swap: trade a piece of the integrand for u, and its derivative for du. Pick a u and see what the swap leaves. The right one absorbs every x and turns the integral into one you know.</div></div>
+    <div id="swTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a u by hand or pick the number in front"></div>
     <div class="panel">
+      <div id="usBox"></div>
       <div id="swSets" class="wsModes" role="group" aria-label="Which integral"></div>
       <div id="swFig"></div>
       <div id="swOpts" class="wsModes" role="group" aria-label="Which u to try"></div>
       <div id="swRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="swGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="swGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14235,7 +14237,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔄 Swap Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Pick a u and see what u-substitution turns an integral into. The right u absorbs every x; a wrong one leaves the problem as hard as before.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pick a u and see what u-substitution turns an integral into. The right u absorbs every x; a wrong one leaves the problem as hard as before. Then turn it round: see an integral to swap, and pick which of four numbers goes in front of the answer.</div>
          <button class="btn sm" id="tomeSwap" style="width:auto;margin-top:8px" onclick="Swap.open()">Open the swap workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -20813,6 +20815,133 @@ const Lathe = {
   }
 };
 
+/* ---------- Which number in front? The swap workshop turned round ----------
+   An integral c·xᵐ⁻¹(axᵐ + b)ⁿ dx with m 2 or 3 and whole a, b, c and n, and
+   four numbers, one of them the k in k·(axᵐ + b)ⁿ⁺¹ + C, which is
+   c/(m·a·(n + 1)). The rule is stated first; the wrong numbers are the slips
+   people make with the swap: dx taken for du, the du number multiplied in,
+   the old power divided by, the a or the m dropped from du, the x outside
+   integrated again on its own, or the division turned upside down. A wrong pick is
+   checked by the chain rule, which must give back the integrand. Nothing is
+   saved. */
+const SwapPick = {
+  SLIPS:['noDu','multDu','old','noA','noM','xToo','flip'],
+  SUP:['⁰','¹','²','³','⁴','⁵','⁶','⁷'],
+  RULE:'Swap u for the bracket, u = axᵐ + b. Its slope is du/dx = m·a·xᵐ⁻¹, and that power of x is the one standing outside the bracket, so xᵐ⁻¹ dx = du/(m·a). The integral becomes c/(m·a) × ∫ uⁿ du = c/(m·a) × uⁿ⁺¹/(n + 1): raise the power, then divide by the new one. Put the bracket back for u. Which number goes in front?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,b,c,m,n}=S;
+    return k==='right' ? this.frac(c,m*a*(n+1)) : k==='noDu' ? this.frac(c,n+1) : k==='multDu' ? this.frac(c*m*a,n+1)
+      : k==='old' ? this.frac(c,m*a*n) : k==='noA' ? this.frac(c,m*(n+1)) : k==='noM' ? this.frac(c,a*(n+1))
+      : k==='xToo' ? this.frac(c,m*m*a*(n+1)) : this.frac(m*a*(n+1),c);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this integral can offer: each a number different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and one of its sign
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0)) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9), c:R.i(1,36), m:R.i(2,3), n:R.i(2,5)};
+      if(this.whole(this.val(S,'right'))!==wantWhole) continue;
+      if(['right',...this.SLIPS].some(k=>{ const v=this.val(S,k); return Math.abs(v[0]/v[1])>200; })) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, b:5, c:12, m:2, n:2};
+  },
+  cx(a){ return a===1 ? '' : a===-1 ? '−' : neg(a); },
+  xp(e){ return e===0 ? '' : e===1 ? 'x' : 'x'+this.SUP[e]; },
+  br(S){ return \`(\${this.cx(S.a)}\${this.xp(S.m)} + \${S.b})\`; },
+  integrand(S){ return \`\${S.c===1?'':S.c}\${this.xp(S.m-1)}\${this.br(S)}\${this.SUP[S.n]}\`; },
+  du(S){ return \`\${neg(S.m*S.a)}\${this.xp(S.m-1)} dx\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('BRACKET BREAKER', this.matched+' integrals swapped','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} goes in front, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Swap.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,b,c,m,n}=S, ma=m*a, inn=\`\${this.cx(a)}\${this.xp(m)} + \${b}\`, xo=this.xp(m-1);
+    if(k==='noDu') return \`\${L} swaps dx for du as if they were the same. du = \${this.du(S)}, so \${xo} dx is du/\${this.pn(ma)}, and that ÷ \${neg(ma)} has to stay.\`;
+    if(k==='multDu') return \`\${L} multiplies by \${neg(ma)} where it should divide. du = \${this.du(S)}, so \${xo} dx is du ÷ \${this.pn(ma)}, not du × \${this.pn(ma)}.\`;
+    if(k==='old') return \`\${L} divides by \${n}, the power before it is raised. ∫ u\${this.SUP[n]} du is u\${this.SUP[n+1]}/\${n+1}: raise the power first, then divide by the new one.\`;
+    if(k==='noA') return \`\${L} drops the \${neg(a)} from du. The slope of \${inn} is \${m} × \${this.pn(a)}\${xo} = \${neg(ma)}\${xo}, the \${neg(a)} included.\`;
+    if(k==='xToo') return \`\${L} integrates the \${xo} outside the bracket on its own as well, to \${this.xp(m)}/\${m}, and so divides by \${m} again. That \${xo} is not left over to integrate: it went into du.\`;
+    if(k==='flip') return \`\${L} divides the wrong way round, \${neg(m*a*(n+1))} over \${c}. k × \${this.pn(m*a*(n+1))} must come to \${c}, so \${c} goes on top.\`;
+    return \`\${L} forgets the \${m} that \${this.xp(m)} brings down. The slope of \${inn} is \${m} × \${this.pn(a)}\${xo} = \${neg(ma)}\${xo}, not \${neg(a)}\${xo}.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,c,m,n}=S, N=m*a*(n+1);
+    return \`Check \${L}: by the chain rule the slope of k·\${this.br(S)}\${this.SUP[n+1]} is k × \${n+1} × \${this.br(S)}\${this.SUP[n]} × \${neg(m*a)}\${this.xp(m-1)}, which must be the integrand \${this.integrand(S)}, so k × \${n+1} × \${this.pn(m*a)} = k × \${this.pn(N)} must be \${c}. With k = \${this.fs(v)} that is \${this.pf(v)} × \${this.pn(N)} = \${this.fs(this.frac(v[0]*N,v[1]))}, not \${c}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="usQ" style="text-align:center;font-size:16px;margin-bottom:2px">∫ \${this.integrand(S)} dx = k·\${this.br(S)}\${this.SUP[S.n+1]} + C</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which number is k?</div>\`;
+    out+=\`<div id="usPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="SwapPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the number in front':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N=B.m*B.a*(B.n+1);
+      lines.push(\`That was it: u = \${this.br(B).slice(1,-1)} and du = \${this.du(B)}, so k = \${B.c} ÷ \${this.pn(B.m*B.a)} ÷ \${B.n+1} = \${this.fs(v)}, and \${this.pf(v)} × \${this.pn(N)} = \${B.c}, so the chain rule gives back the integrand. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="usRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The swap workshop: u-substitution ----------
    Pick a u and see what its du turns the integral into. The right u is the
    inside piece whose derivative is already sitting in the integrand: then
@@ -20906,7 +21035,15 @@ const Swap = {
   open(){ UI.go('s-swap'); },
   pick(i){ this.si=i; this.oi=null; this.render(); },
   tryU(j){ this.oi=j; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('swTab').innerHTML=[['hand','🔄 Pick a u by hand','Pick a u by hand and see what the swap leaves'],['pick','🎯 Which number in front?','See an integral to swap, and pick which of four numbers goes in front of the answer']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Swap.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['swSets','swFig','swOpts','swRead','swGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('usBox').innerHTML=pick ? SwapPick.html() : '';
+    if(pick) return;
     const S=this.set();
     document.getElementById('swSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Swap.pick(\${i})" aria-label="\${s.I}">\${s.btn}</button>\`).join('');

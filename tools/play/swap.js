@@ -101,7 +101,7 @@ module.exports = {
       [...document.querySelectorAll('#swOpts button')].map(b => b.getAttribute('aria-label')).join(' | ')),
       'Try u = 1/x | Try u = x | Try u = ln x');
     t.eq('the pressed buttons say so', await t.ev(() =>
-      [...document.querySelectorAll('#s-swap button[aria-pressed="true"]')].map(b => b.innerText.trim()).join(' | ')), '(ln x)/x | u = ln x');
+      [...document.querySelectorAll('#s-swap button[aria-pressed="true"]')].map(b => b.innerText.trim()).join(' | ')), '🔄 Pick a u by hand | (ln x)/x | u = ln x');
 
     const fit = await t.ev(() => ({ w: document.documentElement.scrollWidth, vw: innerWidth }));
     t.ok('nothing runs off the side of a phone', fit.w <= fit.vw, JSON.stringify(fit));
