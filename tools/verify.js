@@ -4373,6 +4373,156 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
+   on screen is read back off its button as an exact fraction and checked
+   against the slip it is named as, worked out here from the ratio alone, and
+   the right one alone must be where the ratio really heads: it is checked
+   against the ratio itself a hair from the point. Every slope and fraction
+   in the readout is worked again from the numbers it shows. */
+const hopPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Hopital = {render(){ env.renders++; }};" +
+    cut('const HopPick = {', 'const Hopital = {') + 'return HopPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<\/span><span>/g, ' over ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const rat = (n, d) => { const w = `${ng(n)}/${pn(d)}`, v = fst(fr(n, d)); return v === w ? w : `${w} = ${v}`; };
+  // a quadratic as the workshop writes it, and its value and slope
+  const tm = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), b = (m === 1 && v ? '' : m) + v; return first ? (n < 0 ? '−' : '') + b : (n < 0 ? ' − ' : ' + ') + b; };
+  const poly = ([p, q, r]) => { const a = tm(p, 'x²', true), b = tm(q, 'x', !a), c = tm(r, '', !a && !b); return (a + b + c) || '0'; };
+  const at = (F, x) => F[0] * x * x + F[1] * x + F[2];
+  const sl = (F, x) => 2 * F[0] * x + F[1];
+  // each option, worked out here from the ratio alone
+  const want = {
+    right: Q => fr(sl(Q.f, Q.a), sl(Q.g, Q.a)),
+    flip: Q => fr(sl(Q.g, Q.a), sl(Q.f, Q.a)),
+    lead: Q => fr(Q.f[0], Q.g[0]),
+    zero: Q => fr(at(Q.f, 0), at(Q.g, 0)),
+    slope0: Q => fr(sl(Q.f, 0), sl(Q.g, 0))
+  };
+  // every "2 × p × x + q = s" and every "n/d = v" in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(/2 × (\(?−?\d+\)?) × (\(?−?\d+\)?) \+ (\(?−?\d+\)?) = (−?\d+)/g)) { n++;
+      if (2 * rd(m[1])[0] * rd(m[2])[0] + rd(m[3])[0] !== rd(m[4])[0]) fail('hoppick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(/(−?\d+)\/(\(?−?\d+\)?) = (−?\d+(?:\/\d+)?)(?![\d/])/g)) { n++;
+      if (!eq(fr(rd(m[1])[0], rd(m[2])[0]), rd(m[3]))) fail('hoppick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="hkRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, a) => ({ flip: `${L} is the ratio upside down, g′/f′. The top's slope goes on top, the bottom's underneath.`,
+    lead: `${L} is the ratio of the x² coefficients. That is where the ratio heads as x runs off to infinity, not as x closes in on ${ng(a)}.`,
+    zero: `${L} is f(0)/g(0), the ratio at x = 0. The limit asks about x closing in on ${ng(a)}, where top and bottom are both 0.`,
+    slope0: `${L} is f′(0)/g′(0), the slopes at x = 0. They have to be taken at x = ${ng(a)}, where top and bottom both reach 0.` }[k]);
+  const checkOf = (k, L, Q) => { const a = Q.a, f = Q.f, g = Q.g; return {
+    flip: `Check ${L}: g′(${ng(a)}) is on top and f′(${ng(a)}) underneath, so ${L} = ${rat(sl(g, a), sl(f, a))}.`,
+    lead: `Check ${L}: the x² coefficients give ${rat(f[0], g[0])}, and they do not depend on ${ng(a)} at all.`,
+    zero: `Check ${L}: put x = 0 in and only the constant terms are left, ${rat(f[2], g[2])}.`,
+    slope0: `Check ${L}: at x = 0 the slope 2px + q is just q, so ${L} is the x coefficients, ${rat(f[1], g[1])}.` }[k]; };
+  if (S.RULE !== 'Top and bottom are both 0 at the point x heads for, so near it each is almost its tangent line, and the ratio heads for the ratio of their slopes there, f′/g′: that is L\'Hôpital\'s rule. The slope of px² + qx + r is 2px + q. Which number is the limit?') fail('hoppick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('hoppick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracR = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), as = new Set(), wholes = new Set(), leads = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, a = Q.a, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; as.add(a); leads.add(Q.f[0] + '/' + Q.g[0]);
+      if ([a, ...Q.f, ...Q.g].some(x => !Number.isInteger(x)) || !a || Math.abs(a) > 3 || ![1, 2].includes(Q.f[0]) || ![1, 2].includes(Q.g[0])) fail('hoppick', key, `${poly(Q.f)} over ${poly(Q.g)} at ${a} is not small and whole`);
+      if (at(Q.f, a) !== 0 || at(Q.g, a) !== 0) fail('hoppick', key, `${poly(Q.f)} over ${poly(Q.g)} is not 0/0 at x = ${ng(a)}`);
+      if (!sl(Q.f, a) || !sl(Q.g, a)) fail('hoppick', key, 'a slope at the point is 0, so the rule gives nothing or 0');
+      const L = want.right(Q);
+      { // where the ratio really heads, a hair either side of the point
+        for (const h of [1e-6, -1e-6]) { const x = a + h, v = at(Q.f, x) / at(Q.g, x);
+          if (Math.abs(v - L[0] / L[1]) > 1e-4) fail('hoppick', key, `near x = ${ng(a)} the ratio is ${v}, not ${fst(L)}`); } }
+      if (L[1] === 1) wholes.add(L[0]); else fracR++;
+      if (prev && prev === sig) fail('hoppick', key, 'the same ratio comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('hoppick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` lim x→${ng(a)} ${poly(Q.f)} over ${poly(Q.g)} At x = ${ng(a)} the top is 0 and the bottom is 0. A`)) fail('hoppick', key, 'the rule, the ratio and its 0/0 are not shown first');
+      if (!h0.includes(`aria-label="The limit as x heads for ${ng(a)} of (${poly(Q.f)}) over (${poly(Q.g)})"`)) fail('hoppick', key, 'the ratio is not named for a screen reader');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="HopPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('hoppick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('hoppick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('hoppick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('hoppick', key, '0 is offered, and it is never the limit here');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('hoppick', key, `the limit is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('hoppick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('hoppick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('hoppick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the limit`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of ['flip', 'lead', 'zero', 'slope0']) { const d = s === 'zero' ? Q.g[2] : s === 'slope0' ? Q.g[1] : 1; if (!d) continue; const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('hoppick', key, 'a ratio with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('hoppick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('hoppick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, a)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('hoppick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, a)} ${checkOf(o.k, Lt, Q)}`);
+        worked += sums(rt, key);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="HopPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the limit"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('hoppick', key, 'the missed numbers are not shut and told as not the limit');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('hoppick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('hoppick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('hoppick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('hoppick', key, 'no fresh ratio after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LIMIT HUNTER / 5 limits run down') fail('hoppick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is the limit, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('hoppick', key, `the toast is ${env.toasts[nt]}`); }
+      const fa = sl(Q.f, a), ga = sl(Q.g, a), rt = read();
+      const after = `That was it: f′(${ng(a)}) = 2 × ${pn(Q.f[0])} × ${pn(a)} + ${pn(Q.f[1])} = ${ng(fa)}, and g′(${ng(a)}) = 2 × ${pn(Q.g[0])} × ${pn(a)} + ${pn(Q.g[1])} = ${ng(ga)}, so the ratio heads for ${rat(fa, ga)}. Here is a new ratio. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('hoppick', key, `after a pick: ${rt} | want ${after}`);
+      const n = sums(rt, key); if (n < 2) fail('hoppick', key, 'the right pick does not work both slopes');
+      worked += n;
+      prev = sig;
+    }
+  }
+  { // the same ratio dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 1, f: [1, -3, 2], g: [1, 1, -2] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":1,"f":[1,-3,2],"g":[1,1,-2]}') fail('hoppick', 'repeat', 'the same ratio is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['flip', 'lead', 'zero', 'slope0']) if (!kinds[k]) fail('hoppick', 'slips', `the slip ${k} is never offered`);
+  if (leads.size !== 4) fail('hoppick', 'deal', `the leading numbers top/bottom are only ever ${[...leads].sort().join(', ')}`);
+  if (as.size !== 6) fail('hoppick', 'deal', `x only ever heads for ${[...as].sort().join(', ')}`);
+  if (wholes.size < 8 || ![...wholes].some(w => w < 0)) fail('hoppick', 'deal', `the whole limits are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (fracR < rounds * 0.45 || fracR > rounds * 0.55) fail('hoppick', 'deal', `the limit is a fraction in ${fracR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left4.size !== 4) fail('hoppick', 'deal', `when a ratio has four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('hoppick', 'deal', `the limit only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('hoppick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracR };
+})();
+
 /* Which k? The pick-a-multiplier round in the elimination workshop. Every
    number on screen is read back off its button as an exact fraction and
    checked against the slip it is named as, worked out here from the two rows
@@ -8961,6 +9111,7 @@ console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)
 console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-c in the Gram–Schmidt workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone leaving w square to u₁, ${gramPickNotes.fracs.toLocaleString()} of them fractions; ${gramPickNotes.misses.toLocaleString()} wrong picks worked through w · u₁, ${gramPickNotes.worked.toLocaleString()} sums worked again from their own numbers)`);
 console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-det-A in the cofactor workshop, every number read back off its button and checked against the slip it is named as and against det A worked by Sarrus' rule; ${cofPickNotes.misses.toLocaleString()} wrong picks named and pointed to the quickest line, ${cofPickNotes.worked.toLocaleString()} minors and sums worked again from their own numbers)`);
 console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-k in the elimination workshop, every k read back off its button as an exact fraction and checked against the slip it is named as, the right one alone clearing x from row 2; ${elimPickNotes.misses.toLocaleString()} wrong picks checked, ${elimPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${elimPickNotes.fracK.toLocaleString()} rounds whose right k is a fraction)`);
+console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-limit in the L'Hôpital workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the ratio a hair from the point; ${hopPickNotes.misses.toLocaleString()} wrong picks checked, ${hopPickNotes.worked.toLocaleString()} slopes and fractions worked again from their own numbers, ${hopPickNotes.fracR.toLocaleString()} rounds whose limit is a fraction)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

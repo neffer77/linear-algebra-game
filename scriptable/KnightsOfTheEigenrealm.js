@@ -1252,17 +1252,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ L'HÔPITAL WORKSHOP ============ -->
   <div class="screen" id="s-hopital">
     <div class="panel"><h2>🔬 L'Hôpital Workshop</h2><div class="sub">When a ratio gives 0/0 at a point, look closer: near that point the top and bottom are each almost a straight line, so their ratio heads for the ratio of their slopes. Close h in toward 0 and watch, and find the ratio the rule gets wrong.</div></div>
+    <div id="hpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the limit"></div>
     <div class="panel">
+      <div id="hkBox"></div>
       <div id="hpSets" class="wsModes" role="group" aria-label="Which ratio"></div>
       <div id="hpFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="hpStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="hpHLo" onclick="Hopital.moveH(-1)" aria-label="Move h down a step">−</button>
           <b id="hpH" style="font-size:17px;min-width:0"></b>
           <button id="hpHHi" onclick="Hopital.moveH(1)" aria-label="Move h up a step">+</button></div>
       </div>
       <div id="hpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="hpGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="hpGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14049,7 +14051,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔬 L'Hôpital Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer. Then turn it round: see a 0/0 ratio, and pick which of four numbers is its limit.</div>
          <button class="btn sm" id="tomeHopital" style="width:auto;margin-top:8px" onclick="Hopital.open()">Open the L'Hôpital workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -18004,6 +18006,134 @@ const ChainPick = {
    ratio of the slopes, f′(a)/g′(a). The last ratio is not 0/0 at all, and the
    rule's answer is wrong there, so the player learns when the rule applies.
    Nothing here is saved. */
+/* ---------- Which limit? The L'Hôpital workshop turned round ----------
+ * A ratio of two quadratics that gives 0/0 at x = a, and four numbers. The
+ * limit is f′(a)/g′(a). The wrong numbers are the slips people make with
+ * the rule: the ratio upside down; the x² coefficients alone, which is where
+ * the ratio heads far away; the constant terms, f(0)/g(0); and the x
+ * coefficients, f′(0)/g′(0), the slopes taken at 0 instead of at a. A 0 is
+ * never offered, and the right number is a fraction about half the time, with
+ * another number of its form always beside it.
+ */
+const HopPick = {
+  SLIPS:['flip','lead','zero','slope0'],
+  RULE:'Top and bottom are both 0 at the point x heads for, so near it each is almost its tangent line, and the ratio heads for the ratio of their slopes there, f′/g′: that is L\\'Hôpital\\'s rule. The slope of px² + qx + r is 2px + q. Which number is the limit?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  // n/d written as it stands, then in lowest terms when that reads differently
+  rat(n,d){ const w=\`\${neg(n)}/\${this.pn(d)}\`, v=this.fs(this.frac(n,d)); return v===w ? w : \`\${w} = \${v}\`; },
+  // the polynomial px² + qx + r as the workshop writes it
+  poly([p,q,r]){
+    const t=(n,v,first)=>{ if(!n) return ''; const m=Math.abs(n), b=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+b : (n<0?' − ':' + ')+b; };
+    const a=t(p,'x²',true), b=t(q,'x',!a), c=t(r,'',!a&&!b);
+    return (a+b+c)||'0';
+  },
+  // f = A1(x − a)(x − p), g = A2(x − a)(x − q), expanded
+  expand(A,a,p){ return [A, -A*(a+p), A*a*p]; },
+  d(F,x){ return 2*F[0]*x+F[1]; },
+  // the number each option stands for, as a fraction; null where it has no value
+  val(S,k){
+    const [f,g]=[S.f,S.g], a=S.a, P=(n,m)=>m ? this.frac(n,m) : null;
+    return k==='right' ? P(this.d(f,a),this.d(g,a)) : k==='flip' ? P(this.d(g,a),this.d(f,a))
+      : k==='lead' ? P(f[0],g[0]) : k==='zero' ? P(f[2],g[2]) : P(f[1],g[1]);
+  },
+  key(v){ return v ? this.fs(v) : ''; },
+  // the slips this ratio can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!v || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantFrac=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const a=R.i(-3,3), p=R.i(-3,3), q=R.i(-3,3);
+      if(!a || p===a || q===a || p===q) continue;
+      const S={a, f:this.expand(R.i(1,2),a,p), g:this.expand(R.i(1,2),a,q)};
+      const L=this.val(S,'right');
+      if(this.whole(L)===wantFrac) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(L))) continue;
+      return S;
+    }
+    return {a:1, f:[1,-3,2], g:[1,1,-2]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,...S.f,...S.g].join()!==[prev.a,...prev.f,...prev.g].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('LIMIT HUNTER', this.matched+' limits run down','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the limit, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Hopital.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // a slope at a point, worked the way the rule says: 2px + q
+  slope(F,x,n){ return \`\${n}′(\${neg(x)}) = 2 × \${this.pn(F[0])} × \${this.pn(x)} + \${this.pn(F[1])} = \${neg(this.d(F,x))}\`; },
+  slip(S,k,L){
+    const a=neg(S.a);
+    if(k==='flip') return \`\${L} is the ratio upside down, g′/f′. The top's slope goes on top, the bottom's underneath.\`;
+    if(k==='lead') return \`\${L} is the ratio of the x² coefficients. That is where the ratio heads as x runs off to infinity, not as x closes in on \${a}.\`;
+    if(k==='zero') return \`\${L} is f(0)/g(0), the ratio at x = 0. The limit asks about x closing in on \${a}, where top and bottom are both 0.\`;
+    return \`\${L} is f′(0)/g′(0), the slopes at x = 0. They have to be taken at x = \${a}, where top and bottom both reach 0.\`;
+  },
+  check(S,k,L){
+    const [f,g]=[S.f,S.g];
+    if(k==='flip') return \`Check \${L}: g′(\${neg(S.a)}) is on top and f′(\${neg(S.a)}) underneath, so \${L} = \${this.rat(this.d(g,S.a),this.d(f,S.a))}.\`;
+    if(k==='lead') return \`Check \${L}: the x² coefficients give \${this.rat(f[0],g[0])}, and they do not depend on \${neg(S.a)} at all.\`;
+    if(k==='zero') return \`Check \${L}: put x = 0 in and only the constant terms are left, \${this.rat(f[2],g[2])}.\`;
+    return \`Check \${L}: at x = 0 the slope 2px + q is just q, so \${L} is the x coefficients, \${this.rat(f[1],g[1])}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss(), a=neg(S.a), F=this.poly(S.f), G=this.poly(S.g);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="hkQ" style="text-align:center;font-size:18px;margin-bottom:2px" aria-label="The limit as x heads for \${a} of (\${F}) over (\${G})">lim<sub>x→\${a}</sub> <span class="frac"><span>\${F}</span><span>\${G}</span></span></div>\`;
+    out+=\`<div id="hkZero" class="small" style="text-align:center">At x = \${a} the top is 0 and the bottom is 0.</div>\`;
+    out+=\`<div id="hkPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="HopPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the limit':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, fa=this.d(B.f,B.a), ga=this.d(B.g,B.a);
+      lines.push(\`That was it: \${this.slope(B.f,B.a,'f')}, and \${this.slope(B.g,B.a,'g')}, so the ratio heads for \${this.rat(fa,ga)}. Here is a new ratio.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="hkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Hopital = {
   SETS:[
     {id:'sq', btn:'Square', a:1, q:'(x² − 1)/(x − 1)', top:'x² − 1', bot:'x − 1', dtop:'2x', dbot:'1', fpaw:'2', gpaw:'1', fpa:2, gpa:1,
@@ -18070,7 +18200,15 @@ const Hopital = {
   open(){ UI.go('s-hopital'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveH(by){ const v=this.k+by; if(v<0 || v>=this.H.length) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('hpTab').innerHTML=[['hand','🔬 Close in by hand','Close in on the point by hand and watch the ratio'],['pick','🎯 Which limit?','See a 0/0 ratio, and pick which of four numbers is its limit']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Hopital.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['hpSets','hpFig','hpStep','hpRead','hpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('hkBox').innerHTML=pick ? HopPick.html() : '';
+    if(pick) return;
     const S=this.set(), x=this.x(), X=this.num(x);
     document.getElementById('hpSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Hopital.pick(\${i})" aria-label="\${s.btn}: \${s.q}">\${s.btn}</button>\`).join('');

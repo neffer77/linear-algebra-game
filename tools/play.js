@@ -114,6 +114,7 @@ const SUITES = [
   require('./play/grampick'), // see u₁ and u₂, pick which of four numbers is c
   require('./play/cofpick'), // see a 3×3 matrix, pick which of four numbers is det A
   require('./play/elimpick'), // see two rows, pick which of four numbers k clears x
+  require('./play/hoppick'), // see a 0/0 ratio, pick which of four numbers is its limit
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
