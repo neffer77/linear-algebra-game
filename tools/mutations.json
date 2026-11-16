@@ -1,179 +1,284 @@
 {
-  "change": "Euler's method as a fight topic: estimate y two or three steps on from y′ = px + qy.",
+  "change": "The Euler step workshop: walk y′ = y, y′ = −2y and y′ = x in Euler's steps by hand.",
   "mutations": [
     {
       "name": "a step adds the whole slope",
       "file": "index.html",
-      "find": "const y1=add(y, how==='noH'?s:mul(h,s));",
-      "replace": "const y1=add(y, s);",
+      "find": "y:this.r(p.y+h*s)}",
+      "replace": "y:this.r(p.y+s)}",
       "run": "verify"
     },
     {
-      "name": "every step reads its slope at the far end",
+      "name": "a step reads the slope at its far end",
       "file": "index.html",
-      "find": "at=how==='far'?F(k+1,hd):x;",
-      "replace": "at=F(k+1,hd);",
+      "find": "const p=out[j], s=S.f(p.x,p.y);",
+      "replace": "const p=out[j], s=S.f(p.x+h,p.y);",
       "run": "verify"
     },
     {
-      "name": "the slope swaps its two coefficients",
+      "name": "x does not move",
       "file": "index.html",
-      "find": "add(mul(F(p),x),mul(F(q),y))",
-      "replace": "add(mul(F(q),x),mul(F(p),y))",
+      "find": "out.push({x:this.r(p.x+h),",
+      "replace": "out.push({x:this.r(p.x),",
       "run": "verify"
     },
     {
-      "name": "the slope forgets x",
+      "name": "y′ = −2y decays at the wrong rate",
       "file": "index.html",
-      "find": "add(mul(F(p),x),mul(F(q),y))",
-      "replace": "mul(F(q),y)",
+      "find": "f:(x,y)=>-2*y,",
+      "replace": "f:(x,y)=>-y,",
       "run": "verify"
     },
     {
-      "name": "the answer is one step short",
+      "name": "y′ = x reads y",
       "file": "index.html",
-      "find": "A=W[n-1].y1;",
-      "replace": "A=W[n-2].y1;",
+      "find": "f:(x,y)=>x, sol",
+      "replace": "f:(x,y)=>y, sol",
       "run": "verify"
     },
     {
-      "name": "the four wrong answers may coincide",
+      "name": "the true solution of y′ = y is wrong",
       "file": "index.html",
-      "find": "new Set(keys).size!==5 || ",
+      "find": "sol:x=>Math.exp(x),",
+      "replace": "sol:x=>Math.exp(x)-0.01,",
+      "run": "verify"
+    },
+    {
+      "name": "the true solution of y′ = x is wrong",
+      "file": "index.html",
+      "find": "sol:x=>x*x/2,",
+      "replace": "sol:x=>x*x/2+0.01,",
+      "run": "verify"
+    },
+    {
+      "name": "the walk takes one step too many",
+      "file": "index.html",
+      "find": "return Math.round(this.set().end/this.h());",
+      "replace": "return Math.round(this.set().end/this.h())+1;",
+      "run": "verify"
+    },
+    {
+      "name": "the end comes a step early",
+      "file": "index.html",
+      "find": "atEnd(){ return this.k>=this.N(); },",
+      "replace": "atEnd(){ return this.k>=this.N()-1; },",
+      "run": "verify"
+    },
+    {
+      "name": "the steps are not halved each time",
+      "file": "index.html",
+      "find": "HS:[1, 0.5, 0.25, 0.125],",
+      "replace": "HS:[1, 0.5, 0.2, 0.125],",
+      "run": "verify"
+    },
+    {
+      "name": "a long decimal is written as a fraction",
+      "file": "index.html",
+      "find": "for(const d of [1,2,4,8,16])",
+      "replace": "for(const d of [1,2,4,8,16,32,64,128,256])",
+      "run": "verify"
+    },
+    {
+      "name": "a decimal is rounded to two places",
+      "file": "index.html",
+      "find": "num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },\n  is(v)",
+      "replace": "num(v,d=2){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },\n  is(v)",
+      "run": "verify"
+    },
+    {
+      "name": "a rounded number is said with =",
+      "file": "index.html",
+      "find": "return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v);",
+      "replace": "return '= '+this.fr(v);",
+      "run": "verify"
+    },
+    {
+      "name": "a negative is multiplied bare",
+      "file": "index.html",
+      "find": "× ${/[−/]/.test(s)?`(${s})`:s}",
+      "replace": "× ${s}",
+      "run": "verify"
+    },
+    {
+      "name": "the slope is written more exactly than its point",
+      "file": "index.html",
+      "find": "sv(p){ return this.exact(p.y)!==null ? this.fr(p.s) : this.num(p.s); },",
+      "replace": "sv(p){ return this.fr(p.s); },",
+      "run": "verify"
+    },
+    {
+      "name": "y′ = −2y's slope says = of a rounded number",
+      "file": "index.html",
+      "find": "${this.exact(p.y)!==null ? '=' : '≈'} ${s}`;",
+      "replace": "= ${s}`;",
+      "run": "verify"
+    },
+    {
+      "name": "the step's landing names the old x",
+      "file": "index.html",
+      "find": "at x = ${this.fr(q.x)}.`; },",
+      "replace": "at x = ${this.fr(p.x)}.`; },",
+      "run": "verify"
+    },
+    {
+      "name": "the readout shows only the last two steps",
+      "file": "index.html",
+      "find": "const from=Math.max(0,this.k-3);",
+      "replace": "const from=Math.max(0,this.k-2);",
+      "run": "verify"
+    },
+    {
+      "name": "the steps left are miscounted",
+      "file": "index.html",
+      "find": "out.push(`${N-this.k} step${N-this.k===1?'':'s'} to go.`)",
+      "replace": "out.push(`${N-this.k+1} step${N-this.k===1?'':'s'} to go.`)",
+      "run": "verify"
+    },
+    {
+      "name": "the miss is measured from the wrong end",
+      "file": "index.html",
+      "find": "miss=Math.abs(Y-T);",
+      "replace": "miss=Math.abs(Y-S.sol(S.end-this.h()));",
+      "run": "verify"
+    },
+    {
+      "name": "over and short are swapped",
+      "file": "index.html",
+      "find": "the walk is ${Y<T?'short':'over'}",
+      "replace": "the walk is ${Y<T?'over':'short'}",
+      "run": "verify"
+    },
+    {
+      "name": "the swing is told for a step of 1/2",
+      "file": "index.html",
+      "find": "if(this.hi===0) out.push(`The true curve never reaches 0, but h × slope is −2",
+      "replace": "if(this.hi<=1 && this.hi>=1) out.push(`The true curve never reaches 0, but h × slope is −2",
+      "run": "verify"
+    },
+    {
+      "name": "the share kept is 1 − h",
+      "file": "index.html",
+      "find": "Each step keeps 1 − 2h = ${this.fr(1-2*h)}",
+      "replace": "Each step keeps 1 − 2h = ${this.fr(1-h)}",
+      "run": "verify"
+    },
+    {
+      "name": "the misses forget the last walk",
+      "file": "index.html",
+      "find": "note(){ if(!this.atEnd()) return;",
+      "replace": "note(){ return;",
+      "run": "verify"
+    },
+    {
+      "name": "the misses keep only one walk",
+      "file": "index.html",
+      "find": "if(seen.length>1) out.push(",
+      "replace": "if(seen.length>2) out.push(",
+      "run": "verify"
+    },
+    {
+      "name": "a new equation keeps the old walk",
+      "file": "index.html",
+      "find": "pick(i){ this.si=i; this.k=0;",
+      "replace": "pick(i){ this.si=i;",
+      "run": "verify"
+    },
+    {
+      "name": "a new step keeps the old walk",
+      "file": "index.html",
+      "find": "setH(i){ this.hi=i; this.k=0;",
+      "replace": "setH(i){ this.hi=i;",
+      "run": "verify"
+    },
+    {
+      "name": "a step is taken past the end",
+      "file": "index.html",
+      "find": "step(){ if(this.atEnd()) return; this.k++;",
+      "replace": "step(){ this.k++;",
+      "run": "verify"
+    },
+    {
+      "name": "starting over leaves a step",
+      "file": "index.html",
+      "find": "again(){ this.k=0;",
+      "replace": "again(){ this.k=Math.min(this.k,1);",
+      "run": "verify"
+    },
+    {
+      "name": "the first walk counts with any step",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.hi===0 && K.atEnd()},",
+      "replace": "ok:K=>K.si===0 && K.atEnd()},",
+      "run": "verify"
+    },
+    {
+      "name": "closer needs no bigger step first",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.hi>0 && K.atEnd() && (K.hi-1) in (K.misses[0]||{})},",
+      "replace": "ok:K=>K.si===0 && K.hi>0 && K.atEnd()},",
+      "run": "verify"
+    },
+    {
+      "name": "the swing counts before a step",
+      "file": "index.html",
+      "find": "ok:K=>K.si===1 && K.hi===0 && K.k>=1},",
+      "replace": "ok:K=>K.si===1 && K.hi===0},",
+      "run": "verify"
+    },
+    {
+      "name": "the decay is tamed by landing on 0",
+      "file": "index.html",
+      "find": "K.walk().every(p=>p.y>0)}",
+      "replace": "K.walk().every(p=>p.y>=0)}",
+      "run": "verify"
+    },
+    {
+      "name": "the ramp counts halfway",
+      "file": "index.html",
+      "find": "ok:K=>K.si===2 && K.atEnd()}",
+      "replace": "ok:K=>K.si===2 && K.k>=1}",
+      "run": "verify"
+    },
+    {
+      "name": "a dash points along y′ at the wrong height",
+      "file": "index.html",
+      "find": "dy=-S.f(x,y)*sy,",
+      "replace": "dy=-S.f(x,c)*sy,",
+      "run": "verify"
+    },
+    {
+      "name": "the walk is drawn without its last point",
+      "file": "index.html",
+      "find": "points=\"${P.map(",
+      "replace": "points=\"${P.slice(0,-1).map(",
+      "run": "verify"
+    },
+    {
+      "name": "one dot is missing",
+      "file": "index.html",
+      "find": "P.forEach((p,i)=>{ out+=`<circle",
+      "replace": "P.slice(1).forEach((p,i)=>{ out+=`<circle",
+      "run": "verify"
+    },
+    {
+      "name": "the true solution is drawn as y′",
+      "file": "index.html",
+      "find": "pts.push(`${f(this.PX(x))},${f(this.PY(S.sol(x)))}`)",
+      "replace": "pts.push(`${f(this.PX(x))},${f(this.PY(S.f(x,S.sol(x))))}`)",
+      "run": "verify"
+    },
+    {
+      "name": "the workshop opens part way",
+      "file": "index.html",
+      "find": "  si:0, hi:0, k:0, touched:false,\n  done:new Set(), misses:{},",
+      "replace": "  si:0, hi:1, k:0, touched:false,\n  done:new Set(), misses:{},",
+      "run": "verify"
+    },
+    {
+      "name": "Euler's method has no workshop",
+      "file": "index.html",
+      "find": "    EulerWalk: [\"👣 Euler Step Workshop\", ['euler']],\n",
       "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "a wrong answer may be 0",
-      "file": "index.html",
-      "find": "dist.some(x=>x[0][0]===0) || ",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "the question says the wrong step",
-      "file": "index.html",
-      "find": "step h = ${show(h)} on",
-      "replace": "step h = ${show(F(1))} on",
-      "run": "verify"
-    },
-    {
-      "name": "the question says the wrong start",
-      "file": "index.html",
-      "find": "starting from y(0) = ${show(y0)}.",
-      "replace": "starting from y(0) = ${show(F(1))}.",
-      "run": "verify"
-    },
-    {
-      "name": "the question asks for the wrong point",
-      "file": "index.html",
-      "find": "What is its estimate of y(${show(F(n,hd))})?",
-      "replace": "What is its estimate of y(${show(F(n,1))})?",
-      "run": "verify"
-    },
-    {
-      "name": "the equation flips the sign of y",
-      "file": "index.html",
-      "find": "${q<0?'−':'+'} ${Math.abs(q)=",
-      "replace": "${q<0?'+':'−'} ${Math.abs(q)=",
-      "run": "verify"
-    },
-    {
-      "name": "the equation writes 1y",
-      "file": "index.html",
-      "find": "${Math.abs(q)===1?'':Math.abs(q)}y",
-      "replace": "${Math.abs(q)}y",
-      "run": "verify"
-    },
-    {
-      "name": "the equation writes 1x",
-      "file": "index.html",
-      "find": "${p===1?'':p===-1?'−':neg(p)}x ",
-      "replace": "${neg(p)}x ",
-      "run": "verify"
-    },
-    {
-      "name": "the working skips a step",
-      "file": "index.html",
-      "find": "work.join(' ')",
-      "replace": "work.slice(1).join(' ')",
-      "run": "verify"
-    },
-    {
-      "name": "the working lands a step in the wrong place",
-      "file": "index.html",
-      "find": "= ${show(st.y1)}.`",
-      "replace": "= ${show(st.y)}.`",
-      "run": "verify"
-    },
-    {
-      "name": "the step-size slip is offered when h is 1",
-      "file": "index.html",
-      "find": "if(hd>1) dist.push",
-      "replace": "if(hd>0) dist.push",
-      "run": "verify"
-    },
-    {
-      "name": "the answer is shown as a decimal",
-      "file": "index.html",
-      "find": "a:show(A),",
-      "replace": "a:String(A[0]/A[1]),",
-      "run": "verify"
-    },
-    {
-      "name": "the codex has no example",
-      "file": "index.html",
-      "find": "eg:'y′ = y from y(0) = 1 with h = 1/2: 1 → 1 + 1/2 × 1 = 3/2 → 3/2 + 1/2 × 3/2 = 9/4.'",
-      "replace": "eg:''",
-      "run": "verify"
-    },
-    {
-      "name": "a wrong answer has no reason",
-      "file": "index.html",
-      "find": "d:dist.map(([v,why])=>[show(v),why]),",
-      "replace": "d:dist.map(([v,why])=>[show(v),'']),",
-      "run": "verify"
-    },
-    {
-      "name": "Euler's method has no name",
-      "file": "index.html",
-      "find": ", euler:\"Euler's Method\"",
-      "replace": "",
-      "run": "verify"
-    },
-    {
-      "name": "no realm asks Euler's method",
-      "file": "index.html",
-      "find": "'secondDeriv','euler'],",
-      "replace": "'secondDeriv'],",
-      "run": "verify"
-    },
-    {
-      "name": "Euler's method is in no strand",
-      "file": "index.html",
-      "find": ",'optimisation','euler']]",
-      "replace": ",'optimisation']]",
-      "run": "verify"
-    },
-    {
-      "name": "an old code loses its history",
-      "file": "index.html",
-      "find": "if(sig!==this.sig() && !(nTop<T.length && sig===this.sigOf(nTop))){",
-      "replace": "if(sig!==this.sig()){",
-      "run": "verify"
-    },
-    {
-      "name": "an old code is read against the whole list",
-      "file": "index.html",
-      "find": "sig===this.sigOf(nTop))",
-      "replace": "sig===this.sigOf(T.length))",
-      "run": "verify"
-    },
-    {
-      "name": "the signature hashes one topic too many",
-      "file": "index.html",
-      "find": "this.topics().slice(0,n).join(',')",
-      "replace": "this.topics().slice(0,n+1).join(',')",
       "run": "verify"
     }
   ]

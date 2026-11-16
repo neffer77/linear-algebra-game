@@ -577,7 +577,7 @@ The game is built so that losing teaches you as much as winning.
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
-- **🧭 Workshop index** — the top of the Tome lists all forty-eight workshops
+- **🧭 Workshop index** — the top of the Tome lists all forty-nine workshops
   as chips, under the seven strands and in each strand's order, so any one is a
   tap away instead of a long scroll down. A chip turns green with a ✓ once every
   topic it covers is solid, and is ringed in gold while one of them needs work, as
@@ -1113,7 +1113,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Sixty-nine topics link to forty-eight workshops,
+  back button returns to the summary. Seventy topics link to forty-nine workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -1835,6 +1835,17 @@ The game is built so that losing teaches you as much as winning.
   back off its button as an exact fraction, checks it against the slip it is
   named as, checks the right one alone by nudging c·e^(kx) and comparing its
   slope with the exponential, and works every check in the readout again.
+- **👣 Euler Step Workshop** — walk a differential equation by hand. Pick
+  y′ = y, y′ = −2y or y′ = x and a step h of 1, 1/2, 1/4 or 1/8, then take
+  Euler's steps one tap at a time: the readout reads the slope where you
+  stand and works h × slope up to the next point, and the figure keeps every
+  dot against the slope field and the true solution in gold, so nothing has to
+  be held in the head. At the end the walk is set against the true value and
+  each walk's miss is laid beside the last. y′ = y falls short of e by less as
+  the step halves, a step of 1 on y′ = −2y jumps below zero and a step of 1/2
+  lands on 0 and stays, and y′ = x turns out to be a left Riemann sum short by
+  exactly h. Seven things to find, and a fight on Euler's method now offers it.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1999,7 +2010,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirty-six suites, about 5,460 checks, about a minute:
+loop only exists once the page is running. A hundred and thirty-seven suites, about 5,500 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2079,7 +2090,8 @@ loop only exists once the page is running. A hundred and thirty-six suites, abou
 | `logdiff` | the Tome opens the log slope workshop on xˣ at x = 1.5, where ln y = x·ln x, y′/y = ln x + 1 ≈ 1.405 and y′ = 1.837 × 1.405 ≈ 2.582, checked by a nudge; the power rule and the exponent rule are each caught missing one part, and the two parts add to the slope; at x = 1/e the tangent is flat; at x = 1 the power rule is right by luck; x²ˣ has slope 2 at x = 1; x^(1/x) peaks at x = e; all seven goals; the stepper stops at its ends; every button named; fits a phone; nothing saved |
 | `pathchain` | the Tome opens the path chain workshop on z = xy along x = t², y = t at t = 1, where the x part 1 × 2 and the y part 1 × 1 add to dz/dt = 3, checked by a nudge, with bars in the same proportion; keeping only one part and forgetting the speeds are each caught; at t = 0.5 forgetting the speeds is right by luck; on the circle the parts cancel at π/4; along x = t, y = 2 − t the top is at 4/3 and the y part wins at 5/3; all seven goals; the stepper stops at its ends; every button named; fits a phone; nothing saved |
 | `expint` | the Tome opens the growth integral workshop on e^(2x) with F = e^(2x), twice too steep and drawn blue across 88 slope dashes; a 2 in front is caught as the multiply slip; a 1/2 in front fits, turns green and names ∫ e^(2x) dx = (1/2)·e^(2x) + C; a lift of 1/2 keeps every slope and passes through (0, 1); raising the exponent as the power rule would is caught; e^(−2x) needs −1/2 and e^(x/2) needs 2; all seven goals; both steppers stop at their ends; every button named; fits a phone; nothing saved |
-| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 48 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
+| `eulerwalk` | the Tome opens the Euler step workshop on y′ = y with h = 1 and one dot; one step works 1 + 1 × 1 = 2 and sets it short of e by 0.7183; halving the step works 9/4 and lays both misses side by side; steps of 1/8 reach 2.5658 with the early steps left to the figure; on y′ = −2y a step of 1 jumps to −1 and swings back, 1/2 lands on 0 and stays, 1/4 keeps half of y each step; y′ = x falls short of 2 by exactly h; all seven goals, starting over, the ends, every button named, a phone's width, and nothing saved |
+| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 49 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |
 | `matpick` | the Tome says the matrix workshop can be turned round; the workshop opens on free play, and switching to which matrix puts away the steppers and goals and states the rule first; four matrices are offered, each named and read out row by row, and the shape is drawn dashed over the square, never given as numbers; a wrong pick says where it sends î and ĵ against the dashed ones, names its slip, is drawn in gold over the shape, is shut and told as not this one, and is not counted; the right pick reads its columns back, counts (not as a first try after a miss), toasts and deals a new shape with all four open; a first try counts as one, and the fifth pick brings MATRIX SPOTTER; every button is named, nothing runs off a phone, the matrices sit two by two with î and ĵ's colours on their columns, match the shape and free play come back, and the save is unchanged |
 | `eigspot` | the Tome says the eigenvector hunt can be turned round; the hunt opens on hunting by hand, and switching to spot one puts away the matrices, the arrow, the figure and the goals and states the rule first; the matrix is read out row by row; four arrows are offered, each named with where A sends it and drawn with v in green, A·v in gold and v's dotted line; a wrong pick is multiplied out, told how many degrees it is knocked off its line, shut, drawn in red, told as not an eigenvector and not counted; the right pick is written as λ times itself, counts (not as a first try after a miss), toasts and deals a new matrix with all four open; a first try counts as one, and the fifth spot brings EIGEN SPOTTER; every button is named, nothing runs off a phone, the arrows sit two by two, hunting by hand comes back, and the save is unchanged |

@@ -1908,6 +1908,26 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ EULER STEP WORKSHOP ============ -->
+  <div class="screen" id="s-eulerwalk">
+    <div class="panel"><h2>👣 Euler Step Workshop</h2><div class="sub">A differential equation gives the slope at every point but not the curve. Euler’s method walks it in straight steps: read the slope where you stand, move h along and h × slope up, and repeat. Pick an equation and a step size, take the steps by hand, and see where the walk lands against the true curve.</div></div>
+    <div class="panel">
+      <div id="ewSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which equation"></div>
+      <div id="ewHs" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which step size"></div>
+      <div id="ewFig"></div>
+      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk">
+        <button class="btn sm" id="ewStep" onclick="EulerWalk.step()" aria-label="Take one Euler step">👣 Take a step</button>
+        <button class="btn sm ghost" id="ewAll" onclick="EulerWalk.all()" aria-label="Take every step left, to the end">Walk to the end</button>
+        <button class="btn sm ghost" id="ewAgain" onclick="EulerWalk.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="ewRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="ewGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ GROWTH INTEGRAL WORKSHOP ============ -->
   <div class="screen" id="s-expint">
     <div class="panel"><h2>🪴 Growth Integral Workshop</h2><div class="sub">The short dashes show the slope of f(x) = e^(kx) wherever you stand. An antiderivative F has to run along every one. Pick the number in front of F and a lift + C, and see whether F fits the field. Then multiply by k or raise the exponent, as the power rule would, and catch each slip.</div></div>
@@ -4006,6 +4026,7 @@ const WORKSHOP_FOR = (() => {
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
+    EulerWalk: ["👣 Euler Step Workshop", ['euler']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13472,6 +13493,7 @@ const UI = {
     if(id==='s-logdiff') LogDiff.render();
     if(id==='s-pathchain') PathChain.render();
     if(id==='s-expint') ExpInt.render();
+    if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14296,6 +14318,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪴 Growth Integral Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Fit an antiderivative of e^(kx) to its slope field: pick the number in front and a lift + C, and watch F run along every dash. Then multiply by k or raise the exponent and catch each slip. Then turn it round: see an exponential, and pick which of four numbers goes in front of its antiderivative.</div>
          <button class="btn sm" id="tomeExpInt" style="width:auto;margin-top:8px" onclick="ExpInt.open()">Open the growth integral workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">👣 Euler Step Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, and y′ = x turn into a left Riemann sum.</div>
+         <button class="btn sm" id="tomeEulerWalk" style="width:auto;margin-top:8px" onclick="EulerWalk.open()">Open the Euler step workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -27134,6 +27161,142 @@ const PathChain = {
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
         Celebrate.banner('MASTER OF THE PATH','both reasons counted','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The Euler step workshop: walk a differential equation by hand ----------
+   Pick an equation and a step h, then take Euler's steps one at a time: read
+   the slope where you stand, move h along and h × slope up. The figure keeps
+   every point, so nothing has to be held in the head. y′ = y walks toward e
+   and falls short; y′ = −2y overshoots zero when h is too big; y′ = x turns
+   out to be a left Riemann sum. Nothing is saved. */
+const EulerWalk = {
+  SETS:[
+    {id:'grow', btn:'y′ = y', eq:'y′ = y', name:'y prime equals y, from y(0) = 1', y0:1, end:1,
+     f:(x,y)=>y, sol:x=>Math.exp(x), solS:'y = eˣ', trueS:'e ≈ 2.71828', D:[0,1], R:[0,3]},
+    {id:'decay', btn:'y′ = −2y', eq:'y′ = −2y', name:'y prime equals minus 2 y, from y(0) = 1', y0:1, end:2,
+     f:(x,y)=>-2*y, sol:x=>Math.exp(-2*x), solS:'y = e^(−2x)', trueS:'e^(−4) ≈ 0.01832', D:[0,2], R:[-1.3,1.3]},
+    {id:'ramp', btn:'y′ = x', eq:'y′ = x', name:'y prime equals x, from y(0) = 0', y0:0, end:2,
+     f:(x,y)=>x, sol:x=>x*x/2, solS:'y = x²/2', trueS:'2', D:[0,2], R:[-0.2,2.2]}
+  ],
+  HS:[1, 0.5, 0.25, 0.125],
+  si:0, hi:0, k:0, touched:false,
+  done:new Set(), misses:{},
+  GOALS:[
+    {id:'walk', t:'Walk y′ = y from 0 to 1 in a single step of 1.', toast:'Two, where e is 2.718',
+     ok:K=>K.si===0 && K.hi===0 && K.atEnd()},
+    {id:'closer', t:'Halve the step and land closer to e.', toast:'A smaller step, a smaller miss',
+     ok:K=>K.si===0 && K.hi>0 && K.atEnd() && (K.hi-1) in (K.misses[0]||{})},
+    {id:'eighth', t:'Reach e’s neighbourhood: walk y′ = y to x = 1 in steps of 1/8.', toast:'Eight small steps',
+     ok:K=>K.si===0 && K.hi===3 && K.atEnd()},
+    {id:'swing', t:'On y′ = −2y, take a step of 1 and watch the walk jump below zero.', toast:'Too big a step overshoots',
+     ok:K=>K.si===1 && K.hi===0 && K.k>=1},
+    {id:'flat', t:'On y′ = −2y, find the step that lands on 0 and stays there.', toast:'h × slope took all of y',
+     ok:K=>K.si===1 && K.hi===1 && K.k>=1},
+    {id:'tame', t:'On y′ = −2y, walk all the way to x = 2 without ever reaching 0.', toast:'Small steps follow the decay',
+     ok:K=>K.si===1 && K.atEnd() && K.walk().every(p=>p.y>0)},
+    {id:'ramp', t:'On y′ = x, reach x = 2 and see how far the walk falls short.', toast:'A left Riemann sum in disguise',
+     ok:K=>K.si===2 && K.atEnd()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  h(){ return this.HS[this.hi]; },
+  N(){ return Math.round(this.set().end/this.h()); },
+  atEnd(){ return this.k>=this.N(); },
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  /* every point of the walk so far, (x, y) with the slope read there */
+  walk(){
+    const S=this.set(), h=this.h(), out=[{x:0,y:S.y0}];
+    for(let j=0;j<this.k;j++){ const p=out[j], s=S.f(p.x,p.y); p.s=s; out.push({x:this.r(p.x+h), y:this.r(p.y+h*s)}); }
+    return out;
+  },
+  /* a number is written exactly when it is a short fraction, otherwise to four places */
+  exact(v){ const q=this.r(v); for(const d of [1,2,4,8,16]){ const n=Math.round(q*d); if(Math.abs(n/d-q)<1e-9) return d===1 ? neg(n) : (n<0?'−':'')+Math.abs(n)+'/'+d; } return null; },
+  fr(v){ const e=this.exact(v); return e!==null ? e : this.num(v); },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v); },
+  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },
+  /* the slope is written as exactly as the point it is read at */
+  sv(p){ return this.exact(p.y)!==null ? this.fr(p.s) : this.num(p.s); },
+  slopeWork(p){
+    const id=this.set().id, s=this.sv(p);
+    if(id==='grow') return `the slope is y = ${s}`;
+    if(id==='decay') return `the slope is −2 × ${this.pf(p.y)} ${this.exact(p.y)!==null ? '=' : '≈'} ${s}`;
+    return `the slope is x = ${s}`;
+  },
+  stepLine(j, P){ const p=P[j], q=P[j+1], s=this.sv(p);
+    return `Step ${j+1}: at (${this.fr(p.x)}, ${this.fr(p.y)}) ${this.slopeWork(p)}, so y goes to ${this.fr(p.y)} + ${this.fr(this.h())} × ${/[−/]/.test(s)?`(${s})`:s} ${this.is(q.y)} at x = ${this.fr(q.x)}.`; },
+  working(){
+    const S=this.set(), h=this.h(), N=this.N(), P=this.walk(), out=[];
+    out.push(`${S.eq}, starting from y(0) = ${neg(S.y0)}. Euler’s method walks it in straight steps of h = ${this.fr(h)}: read the slope where you stand, then move h along x and h × slope up. Reaching x = ${S.end} takes ${N} step${N===1?'':'s'}.`);
+    if(this.k===0){ out.push('Take the first step.'); return out; }
+    const from=Math.max(0,this.k-3);
+    if(from>0) out.push(from===1 ? 'Step 1 is the first dot on the figure.' : `Steps 1 to ${from} are the dots already on the figure.`);
+    for(let j=from;j<this.k;j++) out.push(this.stepLine(j,P));
+    if(!this.atEnd()){ out.push(`${N-this.k} step${N-this.k===1?'':'s'} to go.`); return out; }
+    const Y=P[N].y, T=S.sol(S.end), miss=Math.abs(Y-T);
+    out.push(`At x = ${S.end} Euler’s method gives y ${this.is(Y)}. The true solution is ${S.solS}, so y(${S.end}) = ${S.trueS}: the walk is ${Y<T?'short':'over'} by ${this.exact(miss)!==null ? 'exactly '+this.fr(miss) : 'about '+this.num(miss)}.`);
+    if(S.id==='grow') out.push(`Each step reads the slope where it starts, and on y′ = y the slope only grows as you climb, so every step rises too little and the walk falls short of e.`);
+    if(S.id==='decay'){
+      if(this.hi===0) out.push(`The true curve never reaches 0, but h × slope is −2 × ${this.fr(h)} × y = −2y here: each step takes away twice y, so the walk jumps to the other side of 0 and swings back.`);
+      else if(this.hi===1) out.push(`The true curve never reaches 0, but h × slope is −2 × ${this.fr(h)} × y = −y here: the first step takes away all of y and lands on 0, where the slope is 0, so the walk stays there.`);
+      else out.push(`Each step keeps 1 − 2h = ${this.fr(1-2*h)} of y, so the walk shrinks toward 0 without reaching it, as the true curve does.`);
+    }
+    if(S.id==='ramp') out.push(`The slope here does not depend on y, so each step adds a rectangle h wide and as tall as x at its left edge. Euler’s walk is the left Riemann sum for ∫₀² x dx = 2, and it falls short by exactly h = ${this.fr(h)}.`);
+    const M=this.misses[this.si]||{}, seen=Object.keys(M).map(Number).sort((a,b)=>a-b);
+    if(seen.length>1) out.push(`Misses so far on ${S.eq}: `+seen.map(i=>`h = ${this.fr(this.HS[i])} misses by ${this.num(M[i])}`).join(', ')+'.');
+    return out;
+  },
+  /* the slope field, the true solution and the walk */
+  L:30, T:12, W:310, Hh:230,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.T+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [a,b]=S.D, [c,d]=S.R, f=v=>v.toFixed(2), sx=this.W/(b-a), sy=this.Hh/(d-c), P=this.walk(), at=P[this.k];
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="The slope field of ${S.eq}, the true solution ${S.solS} in gold, and Euler’s walk in blue through ${P.length} point${P.length===1?'':'s'}, now at x = ${this.fr(at.x)}, y ${this.is(at.y)}">`;
+    if(c<=0 && d>=0) out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(this.PY(0))}" x2="${this.L+this.W}" y2="${f(this.PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${f(this.PX(0))}" y1="${this.T}" x2="${f(this.PX(0))}" y2="${this.T+this.Hh}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    /* each dash points along the slope at its own (x, y), 12 pixels long */
+    for(let i=0;i<=10;i++) for(let j=0;j<=7;j++){
+      const x=a+(b-a)*(i+0.5)/11, y=c+(d-c)*(j+0.5)/8, dx=sx, dy=-S.f(x,y)*sy, n=Math.hypot(dx,dy), ux=6*dx/n, uy=6*dy/n, X=this.PX(x), Y=this.PY(y);
+      out+=`<line data-k="dash" data-x="${x.toFixed(4)}" data-y="${y.toFixed(4)}" x1="${f(X-ux)}" y1="${f(Y-uy)}" x2="${f(X+ux)}" y2="${f(Y+uy)}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-linecap="round"/>`;
+    }
+    const pts=[]; for(let i=0;i<=120;i++){ const x=a+(b-a)*i/120; pts.push(`${f(this.PX(x))},${f(this.PY(S.sol(x)))}`); }
+    out+=`<polyline data-k="sol" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>`;
+    if(P.length>1) out+=`<polyline data-k="walk" points="${P.map(p=>`${f(this.PX(p.x))},${f(this.PY(p.y))}`).join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="3" stroke-linejoin="round"/>`;
+    P.forEach((p,i)=>{ out+=`<circle data-k="pt" data-i="${i}" cx="${f(this.PX(p.x))}" cy="${f(this.PY(p.y))}" r="${i===this.k?5:3.5}" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`; });
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-eulerwalk'); },
+  pick(i){ this.si=i; this.k=0; this.touched=true; this.render(); },
+  setH(i){ this.hi=i; this.k=0; this.touched=true; this.render(); },
+  step(){ if(this.atEnd()) return; this.k++; this.touched=true; this.note(); this.render(); },
+  all(){ if(this.atEnd()) return; this.k=this.N(); this.touched=true; this.note(); this.render(); },
+  again(){ this.k=0; this.touched=true; this.render(); },
+  /* the miss at the end of each walk, kept for the comparison while the page is open */
+  note(){ if(!this.atEnd()) return; const S=this.set(), P=this.walk();
+    (this.misses[this.si]=this.misses[this.si]||{})[this.hi]=Math.abs(P[this.N()].y-S.sol(S.end)); },
+  render(){
+    document.getElementById('ewSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="EulerWalk.pick(${i})" aria-label="${s.name}">${s.btn}</button>`).join('');
+    document.getElementById('ewHs').innerHTML=this.HS.map((h,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.hi}" onclick="EulerWalk.setH(${i})" aria-label="Steps of h = ${this.fr(h)}">h = ${this.fr(h)}</button>`).join('');
+    document.getElementById('ewStep').disabled=this.atEnd();
+    document.getElementById('ewAll').disabled=this.atEnd();
+    document.getElementById('ewAgain').disabled=this.k===0;
+    document.getElementById('ewFig').innerHTML=this.svg()+
+      `<div class="figcap">The short dashes show the slope y′ wherever you stand. The gold dashed curve is the true solution; the blue dots are Euler’s walk, one per step.</div>`;
+    document.getElementById('ewRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('ewGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF STEPS','every walk taken','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }
