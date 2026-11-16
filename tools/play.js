@@ -125,6 +125,7 @@ const SUITES = [
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
   require('./play/tailpick'), // see an endless area, pick which of four numbers it closes in on
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
+  require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

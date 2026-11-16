@@ -5871,6 +5871,183 @@ const growPickNotes = (() => {
   return { rounds, misses, worked, wholeR };
 })();
 
+/* Which coefficient? The pick-a-number round in the Taylor workshop. Every
+   number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from a, k and n
+   alone. The right number alone must be the coefficient: checked against the
+   series of a·e^(kx) summed out here, which it must match at many x once the
+   other terms are taken away. Every "c × n!" in the readout is worked again
+   from the numbers it shows. */
+const seriesPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};" +
+    "const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');" +
+    "const Taylor = {render(){ env.renders++; }};" +
+    cut('const SeriesPick = {', 'const Taylor = {') + 'return SeriesPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const cx = a => (a === 1 ? '' : a === -1 ? '−' : ng(a));
+  const SP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const sp = n => String(n).replace('-', '⁻').replace(/\d/g, d => SP[d]);
+  const fa = n => (n < 2 ? 1 : n * fa(n - 1));
+  const pr = n => Array.from({ length: n }, (_, i) => i + 1).join(' × ');
+  const kx = k => (k === 1 ? 'x' : k === -1 ? '−x' : `${ng(k)}x`);
+  const wv = Q => `${Q.a === 1 ? '' : Q.a}e^(${kx(Q.k)})`;
+  const tm = n => ['', '', 'twice', 'three times', 'four times'][n];
+  const want = {
+    right: Q => fr(Q.a * Q.k ** Q.n, fa(Q.n)),
+    noFact: Q => fr(Q.a * Q.k ** Q.n, 1),
+    noPow: Q => fr(Q.a * Q.k, fa(Q.n)),
+    byN: Q => fr(Q.a * Q.k ** Q.n, Q.n),
+    sign: Q => fr(-Q.a * Q.k ** Q.n, fa(Q.n)),
+    short: Q => fr(Q.a * Q.k ** Q.n, fa(Q.n - 1))
+  };
+  const SL = ['noFact', 'noPow', 'byN', 'sign', 'short'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "that is w × n = z" and ", and w × n = z" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`(?:that is|, and) \\(?${V}\\)? × (\\d+) = ${V}`, 'g'))) { n++;
+      const w = rd(m[1]), z = rd(m[3]);
+      if (!eq(fr(w[0] * +m[2], w[1]), z)) fail('seriespick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  // every "1 × 2 × … × n = n!" in a line, worked again
+  const facts = (t, key) => { for (const m of t.matchAll(/(\d)! = ((?:\d × )+\d) = (\d+)/g)) {
+      if (m[2] !== pr(+m[1]) || +m[3] !== fa(+m[1])) fail('seriespick', key, `${m[0]} is not ${m[1]} factorial`); } };
+  const read = () => txt(S.html().split('id="srRead"')[1].replace(/^[^>]*>/, ''));
+  // the coefficient of xⁿ, found by summing the series of a·e^(kx) here and taking every other term away
+  const coef = (Q, c) => [0.3, -0.45, 0.7].every(x => { let rest = Q.a * Math.exp(Q.k * x), term = Q.a;
+    for (let j = 0; j <= 40; j++) { if (j !== Q.n) rest -= term; term *= Q.k * x / (j + 1); }
+    return Math.abs(rest - c[0] / c[1] * x ** Q.n) < 1e-9 * (1 + Math.abs(rest)); });
+  const slipOf = (k, L, Q) => { const { k: m, n } = Q, f = fa(n), p = m ** n; return ({
+    noFact: `${L} forgets the factorial. The x${sp(n)} term of eˣ is x${sp(n)}/${n}!, and ${n}! = ${pr(n)} = ${f}, so divide by ${f}.`,
+    noPow: `${L} leaves k unraised. (${kx(m)})${sp(n)} is ${pn(m)}${sp(n)} · x${sp(n)}: the ${ng(m)} is raised to the power ${n} along with x, and ${pn(m)}${sp(n)} = ${ng(p)}.`,
+    byN: `${L} divides by ${n}, not by ${n}!. The factorial multiplies every whole number up to ${n}: ${n}! = ${pr(n)} = ${f}.`,
+    sign: `${L} has the sign turned round. ${pn(m)}${sp(n)} = ${ng(p)}: ${m < 0 ? (n % 2 ? 'a minus raised to an odd power stays minus' : 'a minus raised to an even power comes out plus') : 'a number above 0 stays above 0 at any power'}.`,
+    short: `${L} stops the factorial one short, at ${n - 1}! = ${fa(n - 1)}. The x${sp(n)} term divides by ${n}! = ${pr(n)} = ${f}.` })[k]; };
+  const checkOf = (k, L, Q) => { const v = want[k](Q), { a, k: m, n } = Q, f = fa(n), t = a * m ** n;
+    return `Check ${L}: taking the slope of ${wv(Q)} ${tm(n)} gives ${a} × ${pn(m)}${sp(n)} · e^(${kx(m)}), which is ${ng(t)} at 0, and Taylor's rule puts that over ${n}! = ${f} in front of x${sp(n)}, so c × ${f} must be ${ng(t)}. With c = ${fst(v)} that is ${pf(v)} × ${f} = ${fst(fr(v[0] * f, v[1]))}, not ${ng(t)}.`; };
+  if (S.RULE !== 'Put kx in place of x in eˣ = 1 + x + x²/2! + x³/3! + …. The xⁿ term of a·e^(kx) is then a·(kx)ⁿ/n! = a·kⁿ/n! · xⁿ: k is raised to the power n along with x, and you divide by n factorial, n! = 1 × 2 × … × n. Which number sits in front of xⁿ?') fail('seriespick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('seriespick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negK = 0, negC = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Ks = new Set(), Ns = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Ks.add(Q.k); Ns.add(Q.n); if (Q.k < 0) negK++;
+      if (![Q.a, Q.k, Q.n].every(Number.isInteger) || Q.a < 1 || Q.a > 6 || !Q.k || Math.abs(Q.k) > 3 || Q.n < 2 || Q.n > 4) fail('seriespick', key, `${sig} is not a whole a from 1 to 6, k up to 3 either way and n from 2 to 4`);
+      const L = want.right(Q);
+      if (!coef(Q, L)) fail('seriespick', key, `${fst(L)} is not the coefficient of x${sp(Q.n)} in ${wv(Q)}`);
+      if (L[0] < 0) negC++;
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('seriespick', key, 'the same term comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('seriespick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ${wv(Q)} = … + c·x${sp(Q.n)} + … Which number is c? A`)) fail('seriespick', key, 'the rule and the term are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SeriesPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('seriespick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('seriespick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('seriespick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('seriespick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('seriespick', key, `c is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('seriespick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('seriespick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== coef(Q, vals[i])) fail('seriespick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the coefficient`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('seriespick', key, 'a term with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('seriespick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('seriespick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('seriespick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('seriespick', key, 'a miss does not work c × n! out');
+        facts(rt, key);
+        if (vals[i][0] * fa(Q.n) === Q.a * Q.k ** Q.n * vals[i][1]) fail('seriespick', key, 'a wrong number passes the check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SeriesPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the coefficient"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('seriespick', key, 'the missed numbers are not shut and told as not the coefficient');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('seriespick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('seriespick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('seriespick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('seriespick', key, 'no fresh term after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SERIES READER / 5 coefficients found') fail('seriespick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the coefficient, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('seriespick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), t = Q.a * Q.k ** Q.n, raw = `${ng(t)}/${fa(Q.n)}`;
+      const after = `That was it: c = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and ${pf(L)} × ${fa(Q.n)} = ${ng(t)}, the slope of ${wv(Q)} taken ${tm(Q.n)} at 0. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('seriespick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('seriespick', key, 'the right pick does not work c × n! out');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same term dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 3, k: 2, n: 3 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":3,"k":2,"n":3}') fail('seriespick', 'repeat', 'the same term is dealt twice in a row');
+    S.build = real;
+  }
+  { // a term whose other-form slips could fill all three places still gets a number of its own form beside it
+    const real = S.build; let tight = 0;
+    for (let a = 1; a <= 6; a++) for (const m of [-3, -2, -1, 1, 2, 3]) for (let n = 2; n <= 4; n++) {
+      const Q = { a, k: m, n }, L = want.right(Q), seen = new Set([fst(L), '0']), can = [];
+      for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+      const mine = can.filter(s => (want[s](Q)[1] === 1) === (L[1] === 1)).length;
+      if (can.length < 3 || !mine || can.length - mine < 3) continue;
+      tight++; S.build = () => ({ ...Q });
+      for (let g = 0; g < 40; g++) { S.round = null; S.newRound();
+        if (!S.round.opts.some(o => o.k !== 'right' && (want[o.k](Q)[1] === 1) === (L[1] === 1))) { fail('seriespick', 'form', `${JSON.stringify(Q)} is dealt with c the only number of its form`); break; } }
+    }
+    S.build = real; S.round = null;
+    if (!tight) fail('seriespick', 'form', 'no term has three slips of the other form, so the form rule is never put to the test');
+  }
+  for (const k of SL) if (!kinds[k]) fail('seriespick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 6 || Ks.size !== 6 || Ns.size !== 3) fail('seriespick', 'deal', `a is only ever ${[...As]}, k ${[...Ks]}, n ${[...Ns]}`);
+  if (negK < rounds * 0.4 || negK > rounds * 0.6) fail('seriespick', 'deal', `k is negative in ${negK} of ${rounds} rounds`);
+  if (negC < rounds * 0.1) fail('seriespick', 'deal', `the coefficient is below 0 in only ${negC} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('seriespick', 'deal', `the whole coefficients are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('seriespick', 'deal', `c is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('seriespick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('seriespick', 'deal', `c only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('seriespick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10620,6 +10797,7 @@ console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 1
 console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
+console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

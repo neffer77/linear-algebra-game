@@ -1146,10 +1146,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TAYLOR WORKSHOP ============ -->
   <div class="screen" id="s-taylor">
     <div class="panel"><h2>🌀 Taylor Workshop</h2><div class="sub">eˣ, sin x and cos x can each be built from powers of x, one term at a time. Add terms, move x, and watch the polynomial close in on the curve, fast near 0 and slower far from it.</div></div>
+    <div id="tyTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build the series by hand or pick a coefficient"></div>
     <div class="panel">
+      <div id="srBox"></div>
       <div id="tyCurves" class="wsModes" role="group" aria-label="Function"></div>
       <div id="tyFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+      <div id="tyStep" class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
         <div class="wsCell"><button id="tyNLo" onclick="Taylor.moveN(-1)" aria-label="Lower the highest power of x">−</button>
           <b id="tyN" style="font-size:17px;min-width:0"></b>
           <button id="tyNHi" onclick="Taylor.moveN(1)" aria-label="Raise the highest power of x">+</button></div>
@@ -1159,7 +1161,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="tyRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="tyGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="tyGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14087,7 +14089,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -17420,6 +17422,119 @@ const Limit = {
    P built from the first terms of its Taylor series at 0, worked out at a
    chosen x and set against the function itself, so the player sees each new
    term close the gap, and sees where it takes more terms to get there. */
+/* ---------- Which coefficient? The Taylor workshop turned round ----------
+   An exponential a·e^(kx) with whole numbers, a power xⁿ, and four numbers,
+   one of them the coefficient of xⁿ in its series, a·kⁿ/n!. The rule is
+   stated first; the wrong numbers are the slips people make with it. A wrong
+   pick is checked by Taylor's rule: the slope taken n times at 0, over n!.
+   Nothing is saved. */
+const SeriesPick = {
+  SLIPS:['noFact','noPow','byN','sign','short'],
+  RULE:'Put kx in place of x in eˣ = 1 + x + x²/2! + x³/3! + …. The xⁿ term of a·e^(kx) is then a·(kx)ⁿ/n! = a·kⁿ/n! · xⁿ: k is raised to the power n along with x, and you divide by n factorial, n! = 1 × 2 × … × n. Which number sits in front of xⁿ?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  fact(n){ let p=1; for(let i=2;i<=n;i++) p*=i; return p; },
+  prod(n){ return Array.from({length:n},(_,i)=>i+1).join(' × '); },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,k:m,n}=S, t=a*m**n;
+    return k==='right' ? this.frac(t,this.fact(n)) : k==='noFact' ? this.frac(t,1) : k==='noPow' ? this.frac(a*m,this.fact(n))
+      : k==='byN' ? this.frac(t,n) : k==='sign' ? this.frac(-t,this.fact(n)) : this.frac(t,this.fact(n-1));
+  },
+  key(v){ return this.fs(v); },
+  // the slips this term can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,6), k:R.i(1,3)*(R.i(0,1)?1:-1), n:R.i(2,4)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:3, k:2, n:3};
+  },
+  kx(k){ return k===1 ? 'x' : k===-1 ? '−x' : `${neg(k)}x`; },
+  wave(S){ return `${S.a===1?'':S.a}e^(${this.kx(S.k)})`; },
+  times:n=>['','','twice','three times','four times'][n],
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.k,S.n].join()!==[prev.a,prev.k,prev.n].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SERIES READER', this.matched+' coefficients found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the coefficient, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Taylor.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {k:m,n}=S, f=this.fact(n), p=m**n;
+    if(k==='noFact') return `${L} forgets the factorial. The x${sup(n)} term of eˣ is x${sup(n)}/${n}!, and ${n}! = ${this.prod(n)} = ${f}, so divide by ${f}.`;
+    if(k==='noPow') return `${L} leaves k unraised. (${this.kx(m)})${sup(n)} is ${this.pn(m)}${sup(n)} · x${sup(n)}: the ${neg(m)} is raised to the power ${n} along with x, and ${this.pn(m)}${sup(n)} = ${neg(p)}.`;
+    if(k==='byN') return `${L} divides by ${n}, not by ${n}!. The factorial multiplies every whole number up to ${n}: ${n}! = ${this.prod(n)} = ${f}.`;
+    if(k==='sign') return `${L} has the sign turned round. ${this.pn(m)}${sup(n)} = ${neg(p)}: ${m<0 ? (n%2 ? 'a minus raised to an odd power stays minus' : 'a minus raised to an even power comes out plus') : 'a number above 0 stays above 0 at any power'}.`;
+    return `${L} stops the factorial one short, at ${n-1}! = ${this.fact(n-1)}. The x${sup(n)} term divides by ${n}! = ${this.prod(n)} = ${f}.`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,k:m,n}=S, f=this.fact(n), t=a*m**n;
+    return `Check ${L}: taking the slope of ${this.wave(S)} ${this.times(n)} gives ${a} × ${this.pn(m)}${sup(n)} · e^(${this.kx(m)}), which is ${neg(t)} at 0, and Taylor's rule puts that over ${n}! = ${f} in front of x${sup(n)}, so c × ${f} must be ${neg(t)}. With c = ${this.fs(v)} that is ${this.pf(v)} × ${f} = ${this.fs(this.frac(v[0]*f,v[1]))}, not ${neg(t)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="srQ" style="text-align:center;font-size:16px;margin-bottom:2px">${this.wave(S)} = … + c·x${sup(S.n)} + …</div>`;
+    out+=`<div class="small" style="text-align:center">Which number is c?</div>`;
+    out+=`<div id="srPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="SeriesPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the coefficient':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), f=this.fact(B.n), t=B.a*B.k**B.n, raw=`${neg(t)}/${f}`;
+      lines.push(`That was it: c = ${raw}${raw===this.fs(v)?'':' = '+this.fs(v)}, and ${this.pf(v)} × ${f} = ${neg(t)}, the slope of ${this.wave(B)} taken ${this.times(B.n)} at 0. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="srRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 const Taylor = {
   CURVES:[
     {id:'exp', at:'eˣ', f:{fn:'exp'},
@@ -17508,7 +17623,15 @@ const Taylor = {
   pick(i){ this.ci=i; this.touched=true; this.render(); },
   moveN(by){ const v=this.n+by; if(v<0||v>this.NMAX) return; this.n=v; this.touched=true; this.render(); },
   moveX(by){ const v=this.xi+by; if(v<0||v>=this.XS.length) return; this.xi=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Taylor.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['tyCurves','tyFig','tyStep','tyRead','tyGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('srBox').innerHTML=pick ? SeriesPick.html() : '';
+    if(pick) return;
     const C=this.curve(), n=this.n, x=this.x();
     document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.ci}" onclick="Taylor.pick(${i})">${c.at}</button>`).join('');
