@@ -1622,10 +1622,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ CROSS WORKSHOP ============ -->
   <div class="screen" id="s-cross">
     <div class="panel"><h2>✖️ Cross Product Workshop</h2><div class="sub">The cross product of two arrows in 3D is a third arrow, square to both. Turn v one part at a time and watch u × v worked out from the other two slots, check it is square to both, and see its length measure the area they span.</div></div>
+    <div id="crTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Turn v by hand or pick u × v"></div>
     <div class="panel">
+      <div id="ckBox"></div>
       <div id="crSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which u"></div>
       <div id="crFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="crSteps" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="crV0Lo" onclick="Cross.moveV(0,-1)" aria-label="Make v's first part 1 smaller">−</button>
           <b id="crV0" style="font-size:17px;min-width:0"></b>
           <button id="crV0Hi" onclick="Cross.moveV(0,1)" aria-label="Make v's first part 1 bigger">+</button></div>
@@ -1636,10 +1638,10 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
           <b id="crV2" style="font-size:17px;min-width:0"></b>
           <button id="crV2Hi" onclick="Cross.moveV(2,1)" aria-label="Make v's third part 1 bigger">+</button></div>
       </div>
-      <div class="wsModes" style="flex-wrap:wrap"><button id="crSwap" class="btn sm ghost" onclick="Cross.swap()" aria-pressed="false">Swap the order</button></div>
+      <div id="crSwapRow" class="wsModes" style="flex-wrap:wrap"><button id="crSwap" class="btn sm ghost" onclick="Cross.swap()" aria-pressed="false">Swap the order</button></div>
       <div id="crRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="crGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="crGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14098,7 +14100,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">✖️ Cross Product Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn v one part at a time and watch u × v come out square to both, worked from the other two slots. Point it straight up, set the area it measures, line v up with u, hit a target, and swap the order.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn v one part at a time and watch u × v come out square to both, worked from the other two slots. Point it straight up, set the area it measures, line v up with u, hit a target, and swap the order. Then turn it round: see u and v, and pick which of four arrows is u × v.</div>
          <button class="btn sm" id="tomeCross" style="width:auto;margin-top:8px" onclick="Cross.open()">Open the cross product workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -20597,6 +20599,123 @@ const Horizon = {
    other two slots. It always comes out square to both u and v, its length is
    the area of the parallelogram they span, and swapping the order turns it
    round. Drawn in 3D with the floor tilted toward you. Nothing is saved. */
+/* ---------- Which u × v? The cross product workshop turned round ----------
+   Two arrows u and v in 3D are shown, and four arrows, one of them u × v.
+   The others are the slips people make: v × u, the order swapped; every slot
+   added instead of taken away; the middle slot worked the wrong way round;
+   and matching parts multiplied, as if starting a dot product. A wrong pick
+   is shut and checked the way the rule says: by its dot product with u and
+   with v, which u × v makes 0 both times. Nothing is saved. */
+const CrossPick = {
+  LO:-3, HI:3,
+  SLIPS:['swap','plus','mid','parts'],
+  RULE:'u × v = ⟨u₂v₃ − u₃v₂, u₃v₁ − u₁v₃, u₁v₂ − u₂v₁⟩: each slot is worked from the other two, and each one takes away. The answer stands square to both u and v, so its dot product with each is 0, and swapping the order flips it. Which arrow is u × v?',
+  // the arrow each option stands for
+  arrow(c,k){
+    const [a,b,e]=c.u, [p,q,s]=c.v;
+    return k==='right' ? [b*s-e*q, e*p-a*s, a*q-b*p] : k==='swap' ? [e*q-b*s, a*s-e*p, b*p-a*q]
+      : k==='plus' ? [b*s+e*q, e*p+a*s, a*q+b*p] : k==='mid' ? [b*s-e*q, a*s-e*p, a*q-b*p] : [a*p, b*q, e*s];
+  },
+  dot:(x,y)=>x[0]*y[0]+x[1]*y[1]+x[2]*y[2],
+  key:w=>w.join(),
+  // the slips this pair can offer: each an arrow different from u × v and from every one kept before it,
+  // and, but for the swap, one that the dot-product check catches
+  slips(c){
+    const seen=new Set([this.key(this.arrow(c,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const w=this.arrow(c,k);
+      if(seen.has(this.key(w)) || (k!=='swap' && !this.dot(w,c.u) && !this.dot(w,c.v))) continue;
+      seen.add(this.key(w)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const w=()=>[R.i(this.LO,this.HI),R.i(this.LO,this.HI),R.i(this.LO,this.HI)];
+      const c={u:w(), v:w()};
+      if(c.u.filter(x=>x).length<2 || c.v.filter(x=>x).length<2) continue;   // an arrow with two parts at 0 hides most slips
+      if(this.slips(c).length<3) continue;   // parallel arrows land here too: their u × v is 0, and the swap and the middle slip both fall on it
+      return c;
+    }
+    return {u:[1,2,0],v:[0,1,3]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(c);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CROSS READER', this.matched+' cross products picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is u × v, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Cross.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>`⟨${w.map(neg).join(', ')}⟩`,
+  pn:n=>n<0?'('+neg(n)+')':String(n),
+  // a dot product worked out: L·u = 7·1 + (−2)·2 + 1·3 = 7 − 4 + 3 = 6
+  dotWork(w,x,L,X){
+    const P=this.pn, terms=w.map((y,i)=>y*x[i]);
+    let sum=neg(terms[0]); for(const t of terms.slice(1)) sum+=` ${t<0?'−':'+'} ${Math.abs(t)}`;
+    return `${L}·${X} = ${w.map((y,i)=>P(y)+'·'+P(x[i])).join(' + ')} = ${sum} = ${neg(this.dot(w,x))}`;
+  },
+  // u × v worked slot by slot
+  work(c){
+    const [a,b,e]=c.u, [p,q,s]=c.v, P=this.pn, w=this.arrow(c,'right');
+    return `u × v = ⟨${P(b)}·${P(s)} − ${P(e)}·${P(q)}, ${P(e)}·${P(p)} − ${P(a)}·${P(s)}, ${P(a)}·${P(q)} − ${P(b)}·${P(p)}⟩ = ${this.vec(w)}`;
+  },
+  slip(c,k,L){
+    const [a,b,e]=c.u, [p,q,s]=c.v, P=this.pn;
+    if(k==='swap') return `${L} is v × u, the order swapped. Swapping flips the cross product to point the other way, so v × u = −(u × v): every slot comes out with its sign changed.`;
+    if(k==='plus'){
+      const pr=[[b,s,e,q],[e,p,a,s],[a,q,b,p]], i=pr.findIndex(([x,y,z,t])=>z*t!==0), [x,y,z,t]=pr[i], nm=['first','middle','last'][i];
+      return `${L} adds where every slot should take away: its ${nm} slot is ${P(x)}·${P(y)} + ${P(z)}·${P(t)} = ${neg(x*y+z*t)}, where u × v has ${P(x)}·${P(y)} − ${P(z)}·${P(t)} = ${neg(x*y-z*t)}.`;
+    }
+    if(k==='mid') return `${L} works the middle slot the wrong way round, u₁v₃ − u₃v₁ = ${P(a)}·${P(s)} − ${P(e)}·${P(p)} = ${neg(a*s-e*p)}. The middle slot is u₃v₁ − u₁v₃ = ${neg(e*p-a*s)}: the slip of forgetting the minus sign on the middle term.`;
+    return `${L} multiplies matching parts, u₁v₁, u₂v₂ and u₃v₃, as if starting a dot product. A cross product never pairs a part with its own slot: each slot is built from the other two.`;
+  },
+  check(c,k,L){
+    const w=this.arrow(c,k);
+    if(k==='swap') return `${L} passes the square test, ${this.dotWork(w,c.u,L,'u')} and ${this.dotWork(w,c.v,L,'v')}, because it lies on the same line as u × v. But it points the other way: ${this.work(c)}.`;
+    return `Check ${L} by the square test: ${this.dotWork(w,c.u,L,'u')} and ${this.dotWork(w,c.v,L,'v')}. u × v has to give 0 both times, so ${L} is not square to both. ${this.work(c)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="ckUV" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0"><span style="color:${FIG_COL.a}">u = ${this.vec(c.u)}</span>, <span style="color:${FIG_COL.b}">v = ${this.vec(c.v)}</span></div>`;
+    out+=`<div id="ckPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), x=this.vec(this.arrow(c,o.k));
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="CrossPick.choose(${i})" aria-label="${'ABCD'[i]}: ${x}${gone?'. Not u × v':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${x}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const w=this.arrow(this.last.c,'right');
+      lines.push(`That was it: ${this.work(this.last.c)}, and it is square to both: ${this.dotWork(w,this.last.c.u,'(u × v)','u')}, ${this.dotWork(w,this.last.c.v,'(u × v)','v')}. Here is a new pair.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="ckRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 const Cross = {
   SETS:[
     {id:'floor', btn:'On the floor', u:[2,0,0], v:[1,1,1]},
@@ -20702,7 +20821,15 @@ const Cross = {
   pick(i){ this.si=i; this.v=this.SETS[i].v.slice(); this.sw=false; this.touched=true; this.render(); },
   moveV(i,by){ const c=this.v[i]+by; if(c<this.LO || c>this.HI) return; this.v=this.v.slice(); this.v[i]=c; this.touched=true; this.render(); },
   swap(){ this.sw=!this.sw; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('crTab').innerHTML=[['hand','✖️ Turn v by hand','Turn v by hand and watch u × v worked out'],['pick','🎯 Which u × v?','See u and v, and pick which of four arrows is u × v']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cross.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['crSets','crFig','crSteps','crSwapRow','crRead','crGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('ckBox').innerHTML=pick ? CrossPick.html() : '';
+    if(pick) return;
     document.getElementById('crSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Cross.pick(${i})" aria-label="${s.btn}: u = ${this.vec(s.u)}">${s.btn}</button>`).join('');
     [0,1,2].forEach(i=>{
