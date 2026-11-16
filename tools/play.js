@@ -131,6 +131,7 @@ const SUITES = [
   require('./play/pathpick'), // see a hill, a path and a moment, pick which of four numbers is dz/dt
   require('./play/powpick'), // see A, its eigenvectors and v, pick which of four vectors is Aⁿv
   require('./play/tanpick'), // see a surface and a point, pick which of four planes touches it there
+  require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

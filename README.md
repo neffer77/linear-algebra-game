@@ -931,6 +931,23 @@ The game is built so that losing teaches you as much as winning.
   35 states, adds up the area under each flow in thin strips and checks the total against
   it, checks F′ = f by a nudge and every turn of the total, checks every line of the
   readout, and checks that every goal can be found.
+
+  **🎯 Which total?** turns the workshop round: an empty cistern filled at
+  f(t) = ct² + at + b barrels an hour, an hour T, and four numbers, one of
+  them the total F(T). The rule is stated first: integrate term by term,
+  raising each power of t by one and dividing by the new power, then put in
+  T. The wrong numbers are the slips people make: the flow at hour T read as
+  the total, the flow held at its hour-T or starting value as a rectangle,
+  the 2 or the 3 not divided by, and the steady b dropped. Every number is
+  above 0, about half the totals are whole and half fractions, and a wrong
+  number of the same form always stands beside the right one. A wrong pick is
+  shut and checked by differentiating it: it is G(T) for some G, a total
+  climbs exactly as fast as the water flows, and G′ is not the flow at the
+  hour the check names. The right pick works F(T) out term by term. Nothing
+  is saved, and there is no clock. `npm test` reads every total back off its
+  button, checks it against the slip it is named as, checks the right one
+  alone against the area under the flow by Simpson's sum, and works every
+  check in the readout again.
 - **🔬 L'Hôpital Workshop** — a ratio that gives 0/0 at a point says nothing there,
   so step h toward 0 from either side and read the top, the bottom and their ratio at
   x = a + h. The figure draws the top in gold and the bottom in blue, both crossing 0 at
@@ -1728,7 +1745,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and twenty-one suites, about 5,010 checks, about a minute:
+loop only exists once the page is running. A hundred and twenty-two suites, about 5,040 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1844,6 +1861,7 @@ loop only exists once the page is running. A hundred and twenty-one suites, abou
 | `pathpick` | the Tome says the path chain workshop can be turned round; the workshop opens on walking it by hand, and switching to which rate puts away the hills, the drawing, the t stepper, the slip modes, the readout and the goals and states the rule first; the hill, the path and the moment are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by a nudge in t against the rise it would give, shut and told as not dz/dt, and is not counted; the right pick works both parts of dz/dt out, counts (not as a first try after a miss), toasts and deals a new hill and path; a first try counts as one, and the fifth brings PATHFINDER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `powpick` | the Tome says the diagonal workshop can be turned round; the workshop opens on building P by hand, and switching to which Aⁿv puts away the matrices, the drawing, the columns of P, the readout and the goals and states the rule first; A, its eigenvectors and v are shown, with the power asked for, and four vectors offered two by two, each named by its value; a wrong pick is named as its slip, checked in eigenvector parts, shut and told as not Aⁿv, and is not counted; the right pick works Aⁿv out part by part, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings POWER BROKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `tanpick` | the Tome says the tangent plane workshop can be turned round; the workshop opens on building a plane by hand, and switching to which plane puts away the surfaces, the slices, the plane, its steppers, the readout and the goals and states the rule first; the surface and the point are shown, and four planes offered one under another, each named by its plane; a wrong slope is named as its slip and checked by a step of 1, a wrong height named and checked at the point, each shut and told as not the tangent plane, and neither counted; the right pick works the height and both slopes out, counts (not as a first try after a miss), toasts and deals a new surface; a first try counts as one, and the fifth brings PLANE TOUCHER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `cisternpick` | the Tome says the cistern workshop can be turned round; the workshop opens on stepping a spring by hand, and switching to which total puts away the springs, the figure, the stepper, the readout and the goals and states the rule first; the flow is shown and four totals offered, each named by its number; two wrong picks are each named as their slip and checked by differentiating their G, shut and told as not the total, and not counted; the right pick works F(T) out term by term, counts (not as a first try after a miss), toasts and deals a new spring; a first try counts as one, and the fifth brings CISTERN KEEPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
