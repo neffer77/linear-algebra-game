@@ -8561,6 +8561,168 @@ const descentPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* How long? The arrow workshop turned round. Every length is read back off
+   its button and checked against the slip it is named as, worked from u, v
+   and k here; the right one alone is the length of k·u + v, measured with
+   Math.hypot on the arrow built part by part, not by the rule's formula.
+   Each wrong length's check is worked again: its square is not w₁² + w₂². */
+const arrowPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Arrow = {render(){ env.renders++; }};" +
+    cut('const ArrowPick = {', '/* ---------- The arrow workshop: adding') + 'return ArrowPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = p => `⟨${ng(p[0])}, ${ng(p[1])}⟩`;
+  const pw = c => (c < 0 ? `(${ng(c)})²` : `${c}²`);
+  const isSq = N => Number.isInteger(Math.sqrt(N));
+  const show = N => (isSq(N) ? String(Math.sqrt(N)) : `√${N}`);
+  // a length read off a button, as its square: a whole number, or √N with N not a square
+  const rdv = t => { let m = t.match(/^(\d+)$/); if (m) return +m[1] * +m[1];
+    m = t.match(/^√(\d+)$/); if (!m || isSq(+m[1])) return null; return +m[1]; };
+  const add = (p, q, a = 1, b = 1) => [a * p[0] + b * q[0], a * p[1] + b * q[1]];
+  const sq = p => p[0] * p[0] + p[1] * p[1];
+  // every length, built from the slip it stands for, as its square
+  const want = (k, Q) => { const w = add(Q.u, Q.v, Q.k);
+    return k === 'right' ? sq(w) : k === 'noK' ? sq(add(Q.u, Q.v)) : k === 'kv' ? sq(add(Q.u, Q.v, 1, Q.k)) : k === 'minus' ? sq(add(Q.u, Q.v, Q.k, -1))
+      : k === 'noV' ? sq(add(Q.u, [0, 0], Q.k)) : k === 'parts' ? (Math.abs(w[0]) + Math.abs(w[1])) ** 2 : k === 'sumFirst' ? (w[0] + w[1]) ** 2
+      : k === 'diffSq' ? Math.abs(w[0] ** 2 - w[1] ** 2) : null; };
+  const slipOf = (k, L, Q) => { const K = ng(Q.k);
+    if (k === 'noK') return `${L} leaves out k and measures u + v, as if k were 1. Stretch u first: every part of u is multiplied by ${K}.`;
+    if (k === 'kv') return `${L} stretches v where k belongs to u. In w = k·u + v only u is multiplied by ${K}; v is walked as it is.`;
+    if (k === 'minus') return `${L} takes v away where it is added. v is walked from the tip of k·u, so w = k·u + v.`;
+    if (k === 'noV') return `${L} is the length of k·u alone. It stops at the tip of k·u, before walking v from there.`;
+    if (k === 'parts') return `${L} adds the two parts as lengths, as if going across and then up were the straight way. The straight arrow is shorter: square each part, add, then take the root.`;
+    if (k === 'sumFirst') return `${L} adds the two parts before squaring. Pythagoras squares each part on its own: ‖w‖ = √(w₁² + w₂²), not √((w₁ + w₂)²).`;
+    return `${L} takes one square from the other. Pythagoras adds them: ‖w‖² = w₁² + w₂².`; };
+  const RULE = 'Stretch u by k: every part of u is multiplied by k. Walk v from the tip of k·u: add first with first and second with second, to get w = k·u + v. Its length comes from Pythagoras on the right triangle under it: square each part, add, then take the root, ‖w‖ = √(w₁² + w₂²). How long is w?';
+  if (S.RULE !== RULE) fail('arrowpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('arrowpick', 'open', 'a round is dealt before the mode is opened');
+  if (!script.includes("    for(const id of ['vwSets','vwFig','vwKRow','vwAddRow','vwRead','vwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('arrowpick', 'host', 'the hand workshop does not all step aside while the pick shows');
+  const SL = ['noK', 'kv', 'minus', 'noV', 'parts', 'sumFirst', 'diffSq'];
+  const tok = (W, s) => new RegExp(`(^|[^\\d√])${W}(?!\\d)`).test(s);
+  let rounds = 0, misses = 0, worked = 0, whole = 0, fives = 0;
+  const wl = {}, quads = [0, 0, 0, 0], leans = [0, 0], Us = new Set();
+  let multi = 0, firsts = 0;
+  const slots = new Set(), kinds = {}, Ks = new Set(), Ps = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), w = add(Q.u, Q.v, Q.k);
+      rounds++; Ks.add(Q.k); [...Q.u, ...Q.v].forEach(c => Ps.add(c)); Q.u.forEach(c => Us.add(c));
+      if (![-3, -2, -1, 2, 3].includes(Q.k) || ![...Q.u, ...Q.v].every(c => Number.isInteger(c) && Math.abs(c) <= 4) || !sq(Q.u) || !sq(Q.v)) fail('arrowpick', key, `${sig} is not a pair and a k of the kind dealt`);
+      if (w[0] === 0 || w[1] === 0 || sq(w) > 300) fail('arrowpick', key, `w = ${vec(w)} lies along an axis, or is longer than √300`);
+      if (prev && prev === sig) fail('arrowpick', key, 'the same pair comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('arrowpick', key, 'there are not four lengths, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} u = ${vec(Q.u)}, v = ${vec(Q.v)}, k = ${ng(Q.k)} How long is w = k·u + v? A `)) fail('arrowpick', key, 'the rule, u, v and k are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="ArrowPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('arrowpick', key, 'the four lengths are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('arrowpick', key, `a length is not a whole number or the root of a non-square: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v > 400)) fail('arrowpick', key, 'a length is past 20');
+      if (new Set(vals).size !== 4) fail('arrowpick', key, 'two lengths are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const W = btns[ri][6], len = vals.map(Math.sqrt);
+      if (isSq(vals[ri])) { whole++;
+        // the whole lengths come from every right triangle dealt, either way round and in every quarter of the plane
+        const w = [Q.k * Q.u[0] + Q.v[0], Q.k * Q.u[1] + Q.v[1]], L = Math.sqrt(vals[ri]);
+        wl[L] = (wl[L] || 0) + 1; quads[(w[0] > 0 ? 1 : 0) + (w[1] > 0 ? 2 : 0)]++; leans[Math.abs(w[0]) > Math.abs(w[1]) ? 1 : 0]++; }
+      // no number on the page, k or a part of u or v, is the answer
+      if ([Q.k, ...Q.u, ...Q.v].some(n => n * n === vals[ri])) fail('arrowpick', key, `the answer ${W} is named elsewhere on the page`);
+      // no wrong length is the right one squared, or squares to it, which would point at it
+      if (vals.some((v, i) => i !== ri && (v === vals[ri] ** 2 || v ** 2 === vals[ri]))) fail('arrowpick', key, `a wrong length is ${W} squared, or squares to it`);
+      if (!vals.some((v, i) => i !== ri && isSq(v) === isSq(vals[ri]))) fail('arrowpick', key, 'no wrong length is of the right one’s form, whole or root');
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let m = j + 1; m < 4; m++)
+        if (i !== j && i !== m && Math.abs(len[j] + len[m] - len[i]) < 1e-9) fail('arrowpick', key, `${btns[i][6]} is the sum of ${btns[j][6]} and ${btns[m][6]}`);
+      const below = vals.filter(v => v < vals[ri]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // among the trios that would put it there, the one dealt is not always the same
+        const T = S.trios(Q), mine = r.opts.filter(o => o.k !== 'right').map(o => o.k).sort().join(), fit = T.filter(t => t.filter(x => S.val(Q, x) < vals[ri]).length === below);
+        if (fit.length > 1) { multi++; if ([...fit[0]].sort().join() === mine) firsts++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const N = want(o.k, Q);
+        if (N === null) { fail('arrowpick', key, `a length is the unknown ${o.k}`); return; }
+        if (vals[i] !== N) fail('arrowpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        // the length measured on the arrow itself
+        if ((o.k === 'right') !== (Math.abs(Math.hypot(Q.k * Q.u[0] + Q.v[0], Q.k * Q.u[1] + Q.v[1]) - len[i]) < 1e-9)) fail('arrowpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the length of k·u + v`);
+      });
+      if (k === 0 && txt(S.html().split('id="awRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('arrowpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('arrowpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="awRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('arrowpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): (\S+)² = (\d+), so it would need w₁² \+ w₂² = (\d+)\. But w = (\S+)·⟨(\S+), (\S+)⟩ \+ ⟨(\S+), (\S+)⟩ = ⟨(\S+), (\S+)⟩, and (\S+) \+ (\S+) = (\d+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('arrowpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const v = vals[i];
+        if (cm[2] !== (isSq(v) ? String(Math.sqrt(v)) : `(√${v})`) || +cm[3] !== v || +cm[4] !== v || cm[5] !== ng(Q.k) || cm[6] !== ng(Q.u[0]) || cm[7] !== ng(Q.u[1])
+          || cm[8] !== ng(Q.v[0]) || cm[9] !== ng(Q.v[1]) || cm[10] !== ng(w[0]) || cm[11] !== ng(w[1]) || cm[12] !== pw(w[0]) || cm[13] !== pw(w[1])) fail('arrowpick', key, `the check of ${o.k} is not worked for this pair: ${lines[1]}`);
+        // the check, measured: the sum of the squares of the parts of the arrow built
+        if (+cm[14] !== Math.round(Math.hypot(...w) ** 2)) fail('arrowpick', key, `${cm[14]} is not w₁² + w₂²`);
+        else if (+cm[14] === v) fail('arrowpick', key, 'a wrong length passes its check');
+        if (tok(W, lines[0]) || tok(W, lines[1])) fail('arrowpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="ArrowPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the length of w"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('arrowpick', key, 'the missed lengths are not shut and told as not the length of w');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('arrowpick', key, 'tapping a missed length again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('arrowpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('arrowpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('arrowpick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'ARROW MEASURER / 5 arrows measured') fail('arrowpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the length of w, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('arrowpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="awRead"')[1].replace(/^[^>]*>/, ''));
+      const N = sq(w), wantLine = `That was it: w = ${ng(Q.k)}·${vec(Q.u)} + ${vec(Q.v)} = ${vec(add(Q.u, [0, 0], Q.k))} + ${vec(Q.v)} = ${vec(w)}, and ‖w‖ = √(${pw(w[0])} + ${pw(w[1])}) = √${N}${isSq(N) ? ` = ${Math.sqrt(N)}` : ''}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('arrowpick', key, `after a pick: ${got}`);
+      if (show(N) !== W) fail('arrowpick', key, `√${N} is not shown as ${W}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same pair dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { k: 2, u: [1, 3], v: [1, -2] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"k":2,"u":[1,3],"v":[1,-2]}') fail('arrowpick', 'repeat', 'the same pair is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of pairs: the answer's form even
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (isSq(want('right', Q))) sw++; }
+    if (sw < 9000 || sw > 11000) fail('arrowpick', 'sweep', `${sw} of 20000 lengths are whole, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('arrowpick', 'slips', `the slip ${k} is never offered`);
+  if (Ks.size !== 5 || Ps.size !== 9) fail('arrowpick', 'deal', `k ${[...Ks]} and parts ${[...Ps].sort((a, b) => a - b)} are not the whole deal`);
+  if (slots.size !== 4) fail('arrowpick', 'deal', `the length only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.08 && ranks[1] > rounds * 0.16 && ranks[2] > rounds * 0.3 && ranks[3] > rounds * 0.2 && [0, 1, 2, 3].every(i => ranks[i] < rounds * 0.45))) fail('arrowpick', 'deal', `the right length sits shortest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and longest ${ranks[3]} times of ${rounds}`);
+  for (const L of [5, 10, 13, 15]) if (!((wl[L] || 0) > whole * 0.04)) fail('arrowpick', 'deal', `a whole length of ${L} comes ${wl[L] || 0} times in ${whole} whole answers, too seldom`);
+  if (Object.keys(wl).some(L => ![5, 10, 13, 15].includes(+L))) fail('arrowpick', 'deal', `a whole length is not one of the four right triangles dealt: ${JSON.stringify(wl)}`);
+  if (quads.some(q => !(q > whole * 0.15))) fail('arrowpick', 'deal', `whole answers do not point into every quarter of the plane: ${quads}`);
+  if (leans.some(q => !(q > whole * 0.3))) fail('arrowpick', 'deal', `whole answers do not lean both ways: ${leans}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('arrowpick', 'deal', `${whole} of ${rounds} lengths are whole, not about half`);
+  if (Us.size !== 9) fail('arrowpick', 'deal', `u's parts are only ever ${[...Us].sort((a, b) => a - b)}`);
+  if (!(multi > 100 && firsts < multi * 0.75)) fail('arrowpick', 'deal', `of ${multi} rounds with a choice of trios, ${firsts} take the first one`);
+  if (fives !== 30) fail('arrowpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, ranks };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13327,6 +13489,7 @@ console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-step in the downhill workshop, every number read back off its button and checked against the slip it is named as, the right one alone a step against the slope measured from f, ${descentPickNotes.misses.toLocaleString()} wrong picks checked by the slope their step would need, ${descentPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 12)}  (rounds of how-long in the arrow workshop, every length read back off its button and checked against the slip it is named as, the right one alone the length of k·u + v measured on the arrow built part by part, ${arrowPickNotes.misses.toLocaleString()} wrong picks checked by Pythagoras backwards, ${arrowPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

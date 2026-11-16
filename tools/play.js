@@ -142,6 +142,7 @@ const SUITES = [
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on
+  require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

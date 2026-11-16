@@ -1629,18 +1629,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ARROW WORKSHOP ============ -->
   <div class="screen" id="s-arrow">
     <div class="panel"><h2>➡️ Arrow Workshop</h2><div class="sub">A vector is an arrow: how far across and how far up. Stretch one by a number k, walk a second from its tip, and see where you land. The straight arrow from start to finish is the sum, and Pythagoras gives its length.</div></div>
+    <div id="vwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build by hand or pick how long the sum is"></div>
     <div class="panel">
+      <div id="awBox"></div>
       <div id="vwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which pair of vectors"></div>
       <div id="vwFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="vwKRow" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="vwKLo" onclick="Arrow.moveK(-1)" aria-label="Make k smaller by a half">−</button>
           <b id="vwK" style="font-size:17px;min-width:0"></b>
           <button id="vwKHi" onclick="Arrow.moveK(1)" aria-label="Make k bigger by a half">+</button></div>
       </div>
-      <div class="wsModes" style="flex-wrap:wrap"><button id="vwAdd" class="btn sm ghost" onclick="Arrow.toggle()" aria-pressed="false">Add v at the tip</button></div>
+      <div class="wsModes" id="vwAddRow" style="flex-wrap:wrap"><button id="vwAdd" class="btn sm ghost" onclick="Arrow.toggle()" aria-pressed="false">Add v at the tip</button></div>
       <div id="vwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="vwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="vwGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14156,7 +14158,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">➡️ Arrow Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector. Then turn it round: see u, v and k, and pick which of four lengths is the length of k·u + v.</div>
          <button class="btn sm" id="tomeArrow" style="width:auto;margin-top:8px" onclick="Arrow.open()">Open the arrow workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -23602,6 +23604,151 @@ const Tracer = {
   }
 };
 
+/* ---------- How long? The arrow workshop turned round ----------
+   Two whole-number vectors u and v and a whole k, and four lengths, one of
+   them the length of w = k·u + v. The rule is stated first; the wrong
+   lengths are the slips people make with vectors: k left out, v stretched
+   instead of u, v taken away, v left off, the parts' lengths added as if
+   across-then-up were the straight way, the parts added before squaring, or
+   one square taken from the other. Every length is kept as its square, N,
+   and shown as a whole number when N is a square and as √N when it is not.
+   A wrong pick is checked by Pythagoras backwards: its square is not
+   w₁² + w₂². Nothing is saved. */
+const ArrowPick = {
+  SLIPS:['noK','kv','minus','noV','parts','sumFirst','diffSq'],
+  KS:[-3,-2,-1,2,3],
+  WHOLE:[[3,4],[6,8],[5,12],[9,12]],
+  RULE:'Stretch u by k: every part of u is multiplied by k. Walk v from the tip of k·u: add first with first and second with second, to get w = k·u + v. Its length comes from Pythagoras on the right triangle under it: square each part, add, then take the root, ‖w‖ = √(w₁² + w₂²). How long is w?',
+  vec:p=>`⟨${neg(p[0])}, ${neg(p[1])}⟩`,
+  pw:c=>c<0 ? `(${neg(c)})²` : `${c}²`,
+  sq(p){ return p[0]*p[0]+p[1]*p[1]; },
+  root(N){ const r=Math.round(Math.sqrt(N)); return r*r===N ? r : null; },
+  // a length kept as its square: 25 shows as 5, 20 as √20
+  fs(N){ const r=this.root(N); return r!==null ? String(r) : `√${N}`; },
+  w(S){ return [S.k*S.u[0]+S.v[0], S.k*S.u[1]+S.v[1]]; },
+  // the square of the length each option stands for
+  val(S,k){
+    const {u,v}=S, K=S.k, w=this.w(S);
+    return k==='right' ? this.sq(w) : k==='noK' ? this.sq([u[0]+v[0],u[1]+v[1]]) : k==='kv' ? this.sq([u[0]+K*v[0],u[1]+K*v[1]])
+      : k==='minus' ? this.sq([K*u[0]-v[0],K*u[1]-v[1]]) : k==='noV' ? K*K*this.sq(u)
+      : k==='parts' ? (Math.abs(w[0])+Math.abs(w[1]))**2 : k==='sumFirst' ? (w[0]+w[1])**2 : Math.abs(w[0]*w[0]-w[1]*w[1]);
+  },
+  key(N){ return this.fs(N); },
+  whole(N){ return this.root(N)!==null; },
+  // the slips this pair can offer: each a length other than 0, at most 20, and different from every one kept before it
+  slips(S){
+    const W=this.val(S,'right'), seen=new Set([this.key(W)]), keep=[];
+    for(const k of this.SLIPS){ const N=this.val(S,k);
+      if(N===0 || N>400 || seen.has(this.key(N))) continue;
+      // a slip that is the right length squared, or whose square is the right length, would point at it
+      if(N===this.root(W) || this.root(N)===W) continue;
+      seen.add(this.key(N)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four lengths is the sum of two others, which would point at it
+  sums(S,ks){
+    const L=ks.map(k=>Math.sqrt(this.val(S,k)));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++)
+      if(i!==j && i!==k && Math.abs(L[j]+L[k]-L[i])<1e-9) return true;
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or root, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], form=this.whole(this.val(S,'right'));
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the question names: k and the parts of u and v, as lengths they could be mistaken for
+  named(S){ return [S.k,...S.u,...S.v].map(n=>n*n); },
+  part:()=>R.i(-4,4),
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<2000;g++){
+      const k=this.KS[R.i(0,this.KS.length-1)], u=[this.part(),this.part()];
+      let v;
+      if(wantWhole){ const P=this.WHOLE[R.i(0,this.WHOLE.length-1)], sw=R.i(0,1), w=[(R.i(0,1)?1:-1)*P[sw], (R.i(0,1)?1:-1)*P[1-sw]];
+        v=[w[0]-k*u[0], w[1]-k*u[1]]; }
+      else v=[this.part(),this.part()];
+      const S={k,u,v}, w=this.w(S), N=this.val(S,'right');
+      if(this.sq(u)===0 || this.sq(v)===0 || v.some(c=>Math.abs(c)>4)) continue;
+      // w leans: neither part is 0, so its length is never just one of its parts
+      if(w[0]===0 || w[1]===0 || N>300 || this.whole(N)!==wantWhole) continue;
+      if(this.named(S).includes(N)) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {k:2, u:[1,3], v:[1,-2]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a length of the right one's form always stands beside it, so its form gives nothing away,
+    // and the right one sits short, long or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>this.val(S,x)<W).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('ARROW MEASURER', this.matched+' arrows measured','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the length of w, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Arrow.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const K=neg(S.k);
+    if(k==='noK') return `${L} leaves out k and measures u + v, as if k were 1. Stretch u first: every part of u is multiplied by ${K}.`;
+    if(k==='kv') return `${L} stretches v where k belongs to u. In w = k·u + v only u is multiplied by ${K}; v is walked as it is.`;
+    if(k==='minus') return `${L} takes v away where it is added. v is walked from the tip of k·u, so w = k·u + v.`;
+    if(k==='noV') return `${L} is the length of k·u alone. It stops at the tip of k·u, before walking v from there.`;
+    if(k==='parts') return `${L} adds the two parts as lengths, as if going across and then up were the straight way. The straight arrow is shorter: square each part, add, then take the root.`;
+    if(k==='sumFirst') return `${L} adds the two parts before squaring. Pythagoras squares each part on its own: ‖w‖ = √(w₁² + w₂²), not √((w₁ + w₂)²).`;
+    return `${L} takes one square from the other. Pythagoras adds them: ‖w‖² = w₁² + w₂².`;
+  },
+  check(S,k,L){
+    const N=this.val(S,k), w=this.w(S), r=this.root(N);
+    return `Check ${L}: ${r!==null?`${r}²`:`(√${N})²`} = ${N}, so it would need w₁² + w₂² = ${N}. But w = ${neg(S.k)}·${this.vec(S.u)} + ${this.vec(S.v)} = ${this.vec(w)}, and ${this.pw(w[0])} + ${this.pw(w[1])} = ${this.sq(w)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="awQ" style="text-align:center;font-size:16px;margin-bottom:2px">u = ${this.vec(S.u)}, v = ${this.vec(S.v)}, k = ${neg(S.k)}</div>`;
+    out+=`<div class="small" style="text-align:center">How long is w = k·u + v?</div>`;
+    out+=`<div id="awPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="ArrowPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the length of w':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, w=this.w(B), N=this.sq(w), rt=this.root(N), ku=[B.k*B.u[0],B.k*B.u[1]];
+      lines.push(`That was it: w = ${neg(B.k)}·${this.vec(B.u)} + ${this.vec(B.v)} = ${this.vec(ku)} + ${this.vec(B.v)} = ${this.vec(w)}, and ‖w‖ = √(${this.pw(w[0])} + ${this.pw(w[1])}) = √${N}${rt!==null?` = ${rt}`:''}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="awRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The arrow workshop: adding, stretching and measuring vectors ----------
    Stretch u by k, then walk v from the tip of k·u if you like. The green
    arrow w goes straight from the start to where you land. Its length comes
@@ -23704,12 +23851,20 @@ const Arrow = {
     return out+`</svg>`;
   },
   open(){ UI.go('s-arrow'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.START; this.m=false; this.touched=true; this.render(); },
   moveK(by){ const v=this.k+by; if(v<0 || v>=this.K.length) return; this.k=v; this.touched=true; this.render(); },
   toggle(){ this.m=!this.m; this.touched=true; this.render(); },
   render(){
     document.getElementById('vwSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Arrow.pick(${i})" aria-label="u = ${this.vec(s.u)} and v = ${this.vec(s.v)}">u = ${this.vec(s.u)}</button>`).join('');
+    document.getElementById('vwTab').innerHTML=[['hand','➡️ Build it by hand','Stretch and add the arrows by hand'],['pick','🎯 How long?','See u, v and k, and pick which of four lengths is the length of k·u + v']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Arrow.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['vwSets','vwFig','vwKRow','vwAddRow','vwRead','vwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('awBox').innerHTML=pick ? ArrowPick.html() : '';
+    if(pick) return;
     document.getElementById('vwK').textContent=`k = ${this.num(this.kv())}`;
     document.getElementById('vwKLo').disabled=this.k<=0;
     document.getElementById('vwKHi').disabled=this.k>=this.K.length-1;
