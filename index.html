@@ -1307,17 +1307,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ GRAM–SCHMIDT WORKSHOP ============ -->
   <div class="screen" id="s-gram">
     <div class="panel"><h2>📐 Gram–Schmidt Workshop</h2><div class="sub">Two arrows that lean on each other make a clumsy basis. Take copies of the first away from the second until what is left stands at a right angle to it. The right number of copies is the second arrow's shadow on the first, and taking it away is all Gram–Schmidt does.</div></div>
+    <div id="gsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Take copies away by hand or pick c"></div>
     <div class="panel">
+      <div id="gpBox"></div>
       <div id="gsSets" class="wsModes" role="group" aria-label="Which pair of arrows"></div>
       <div id="gsFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="gsStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="gsCLo" onclick="Gram.moveC(-1)" aria-label="Take half a copy of u₁ less">−</button>
           <b id="gsC" style="font-size:17px;min-width:0"></b>
           <button id="gsCHi" onclick="Gram.moveC(1)" aria-label="Take half a copy of u₁ more">+</button></div>
       </div>
       <div id="gsRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="gsGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="gsGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14004,7 +14006,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📐 Gram–Schmidt Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Take copies of one arrow away from another until what is left stands at a right angle, and see why the right amount is the shadow (u₂ · u₁)/(u₁ · u₁).</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Take copies of one arrow away from another until what is left stands at a right angle, and see why the right amount is the shadow (u₂ · u₁)/(u₁ · u₁). Then turn it round: see u₁ and u₂, and pick which of four numbers is c.</div>
          <button class="btn sm" id="tomeGram" style="width:auto;margin-top:8px" onclick="Gram.open()">Open the Gram–Schmidt workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -18557,6 +18559,124 @@ const Kernel = {
    watch w = u₂ − c·u₁: each copy lowers w · u₁ by u₁ · u₁, so exactly one c,
    (u₂ · u₁)/(u₁ · u₁), leaves w perpendicular to u₁, and that w is the
    shortest of them all. That one step is Gram–Schmidt. Nothing is saved. */
+/* ---------- Which c? The Gram–Schmidt workshop turned round ----------
+   u₁ and u₂ are shown, and four numbers, one of them the c that leaves
+   w = u₂ − c·u₁ at a right angle to u₁. The others are the slips people make
+   with (u₂ · u₁)/(u₁ · u₁): the fraction upside down; the division left out;
+   dividing by u₂ · u₂ instead; and the right size with the wrong sign. A
+   wrong pick is shut and checked the way the workshop checks w: each copy of
+   u₁ taken away lowers w · u₁ by u₁ · u₁, so w · u₁ = u₂ · u₁ − c × (u₁ · u₁),
+   which only the right c brings to 0. Nothing is saved. */
+const GramPick = {
+  LO:-3, HI:3,
+  SLIPS:['flip','nodiv','u2','sign'],
+  RULE:'Take c copies of u₁ away from u₂, and what is left is w = u₂ − c·u₁. Each copy taken away lowers w · u₁ by u₁ · u₁, so w is at a right angle to u₁ when c = (u₂ · u₁)/(u₁ · u₁): the length of u₂\'s shadow on u₁, counted in copies of u₁. Which c is it?',
+  dot:(p,q)=>p[0]*q[0]+p[1]*q[1],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  // a fraction p/q in lowest terms, with its sign on top
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  // the number each option stands for, as a fraction
+  val(P,k){
+    const dp=this.dot(P.u2,P.u1), nn=this.dot(P.u1,P.u1), mm=this.dot(P.u2,P.u2);
+    return this.frac(...(k==='right' ? [dp,nn] : k==='flip' ? [nn,dp] : k==='nodiv' ? [dp,1] : k==='u2' ? [dp,mm] : [-dp,nn]));
+  },
+  fs:([p,q])=>q===1 ? neg(p) : `${neg(p)}/${q}`,
+  key:f=>f.join('/'),
+  // the slips this pair can offer: each a number different from c and from every one kept before it
+  slips(P){
+    const seen=new Set([this.key(this.val(P,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const f=this.val(P,k);
+      if(seen.has(this.key(f))) continue;
+      seen.add(this.key(f)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const u1=[R.i(-2,2),R.i(-2,2)], u2=[R.i(this.LO,this.HI),R.i(this.LO,this.HI)], P={u1,u2};
+      if(!this.dot(u2,u1)) continue;   // u₂ already square to u₁: nothing to take away, and c = 0
+      if(u1[0]*u2[1]===u1[1]*u2[0]) continue;   // u₂ along u₁: w would be ⟨0, 0⟩
+      if(this.slips(P).length<3) continue;   // c = ±1 with u₁ one step long lands here: upside down and undivided are c again
+      return P;
+    }
+    return {u1:[2,1], u2:[3,4]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.P;
+    let P;
+    for(let g=0;g<50;g++){ P=this.build(); if(!prev||[...P.u1,...P.u2].join()!==[...prev.u1,...prev.u2].join()) break; }
+    const rest=this.slips(P);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={P,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SHADOW READER', this.matched+' shadows picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'PQRS'[i]} is c, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={P:r.P};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Gram.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>`⟨${neg(w[0])}, ${neg(w[1])}⟩`,
+  pn:n=>n<0?'('+neg(n)+')':neg(n),
+  // both dot products, worked out
+  dots(P){
+    const D=(p,q,a,b)=>`${a} · ${b} = ${neg(p[0])} × ${this.pn(q[0])} + ${this.pn(p[1])} × ${this.pn(q[1])} = ${neg(this.dot(p,q))}`;
+    return `${D(P.u2,P.u1,'u₂','u₁')}, and ${D(P.u1,P.u1,'u₁','u₁')}`;
+  },
+  slip(k,L){
+    if(k==='flip') return `${L} is (u₁ · u₁)/(u₂ · u₁), the fraction upside down. The shadow divides by u₁ · u₁, the arrow being taken away.`;
+    if(k==='nodiv') return `${L} is u₂ · u₁ with nothing divided out. Each copy of u₁ lowers w · u₁ by u₁ · u₁, not by 1, so u₂ · u₁ still has to be divided by it.`;
+    if(k==='u2') return `${L} divides by u₂ · u₂. The shadow is counted in copies of u₁, so it divides by u₁ · u₁.`;
+    return `${L} is the right size with the wrong sign, as if u₂ · u₁ had come out the other way. It moves w the wrong way along u₁.`;
+  },
+  // c as it stands in a sum: bracketed when it is negative or a fraction
+  ct(f){ return f[1]===1 ? this.pn(f[0]) : `(${this.fs(f)})`; },
+  // w = u₂ − c·u₁ for the number f, entry by entry as fractions
+  w(P,f){ return [0,1].map(i=>this.frac(P.u2[i]*f[1]-f[0]*P.u1[i], f[1])); },
+  // w · u₁ = u₂ · u₁ − c × (u₁ · u₁), worked for the number f
+  rest(P,f){
+    const dp=this.dot(P.u2,P.u1), nn=this.dot(P.u1,P.u1), cn=this.frac(f[0]*nn,f[1]), left=this.frac(dp*cn[1]-cn[0],cn[1]);
+    return `w · u₁ = u₂ · u₁ − c × (u₁ · u₁) = ${neg(dp)} − ${this.ct(f)} × ${nn} = ${this.fs(left)}`;
+  },
+  check(P,k,L){
+    const f=this.val(P,k), dp=this.dot(P.u2,P.u1), nn=this.dot(P.u1,P.u1), left=dp*f[1]-f[0]*nn;
+    return `Check ${L} the way the workshop checks w: ${this.dots(P)}, so with c = ${this.fs(f)}, ${this.rest(P,f)}, not 0: w ${left>0?'still leans along u₁':'leans back against u₁'}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, P=r.P, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="gpU" style="text-align:center;margin-bottom:4px;font-size:16px">u₁ = ${this.vec(P.u1)}, u₂ = ${this.vec(P.u2)}</div>`;
+    out+=`<div id="gpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), f=this.val(P,o.k), L='PQRS'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="GramPick.choose(${i})" aria-label="${L}: c = ${this.fs(f)}${gone?'. Not c':''}" style="margin:0"><b>${L}</b> c = ${this.fs(f)}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]), this.check(P,r.opts[m].k,'PQRS'[m]));
+    else if(this.last){ const B=this.last.P, f=this.val(B,'right'), w=this.w(B,f);
+      lines.push(`That was it: ${this.dots(B)}, so c = ${neg(this.dot(B.u2,B.u1))}/${this.dot(B.u1,B.u1)}${this.fs(f)===neg(this.dot(B.u2,B.u1))+'/'+this.dot(B.u1,B.u1)?'':' = '+this.fs(f)}. Then ${this.rest(B,f)}, and w = u₂ − ${this.ct(f)}·u₁ = ⟨${this.fs(w[0])}, ${this.fs(w[1])}⟩ stands at a right angle to u₁. Here is a new pair.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="gpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 const Gram = {
   SETS:[
     {id:'tilt', btn:'Tilted', u1:[2,1], u2:[3,4]},
@@ -18625,7 +18745,15 @@ const Gram = {
   open(){ UI.go('s-gram'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveC(by){ const v=this.k+by; if(v<0 || v>=this.C.length) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('gsTab').innerHTML=[['hand','📐 Take copies by hand','Take copies of u₁ away by hand until w stands at a right angle'],['pick','🎯 Which c?','See u₁ and u₂, and pick which of four numbers is c']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Gram.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['gsSets','gsFig','gsStep','gsRead','gsGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('gpBox').innerHTML=pick ? GramPick.html() : '';
+    if(pick) return;
     const S=this.set();
     document.getElementById('gsSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Gram.pick(${i})" aria-label="${s.btn}: u₁ = ${this.v(s.u1)}, u₂ = ${this.v(s.u2)}">${s.btn}</button>`).join('');
