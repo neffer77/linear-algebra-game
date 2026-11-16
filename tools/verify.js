@@ -6048,6 +6048,173 @@ const seriesPickNotes = (() => {
   return { rounds, misses, worked, wholeR };
 })();
 
+/* Which volume? The pick-a-volume round in the lathe workshop. Every volume
+   on screen is read back off its button as an exact fraction of π and checked
+   against the slip it is named as, worked out here from a, n and b alone. The
+   right one alone must be the volume: checked against the disks themselves,
+   π y² Δx added up here over thousands of thin slices. Every check in the
+   readout is worked again: the end disk from its own numbers, and each slip's
+   form in b read back, put to b and differentiated here. */
+const lathePickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};" +
+    "const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');" +
+    "const Lathe = {render(){ env.renders++; }};" +
+    cut('const LathePick = {', 'const Lathe = {') + 'return LathePick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const fst = f => (f[1] === 1 ? String(f[0]) : `${f[0]}/${f[1]}`);
+  const vl = f => (f[0] === 1 ? 'π' : `${f[0]}π`) + (f[1] === 1 ? '' : `/${f[1]}`);
+  // "4π/9", "π", "18π", "π/2" read back as the fraction in front of π
+  const rd = t => { const m = t.match(/^(\d*)π(?:\/(\d+))?$/); return m ? fr(m[1] ? +m[1] : 1, m[2] ? +m[2] : 1) : null; };
+  // a number known to be a fraction with a small bottom, found from its value
+  const near = x => { for (let q = 1; q <= 400; q++) { const p = Math.round(x * q); if (Math.abs(p / q - x) < 1e-6 * (1 + Math.abs(x))) return fr(p, q); } return null; };
+  const SP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const sp = n => String(n).replace(/\d/g, d => SP[d]);
+  const co = n => (n === 1 ? '' : String(n));
+  const xn = h => (h === 1 ? '√x' : h === 2 ? 'x' : `x${sp(h / 2)}`);
+  const xp = e => (e === 1 ? 'x' : `x${sp(e)}`);
+  const curve = Q => `${co(Q.a)}${xn(Q.h)}`;
+  // each option as a function of the end b, written from the slip it stands for
+  const at = {
+    right: (Q, b) => Q.a ** 2 * b ** (Q.h + 1) / (Q.h + 1),
+    noSq: (Q, b) => Q.a * b ** (Q.h / 2 + 1) / (Q.h / 2 + 1),
+    sqArea: (Q, b) => (Q.a * b ** (Q.h / 2 + 1) / (Q.h / 2 + 1)) ** 2,
+    noUp: (Q, b) => Q.a ** 2 * b ** (Q.h + 1) / Q.h,
+    noSqA: (Q, b) => Q.a * b ** (Q.h + 1) / (Q.h + 1),
+    cyl: (Q, b) => (Q.a * b ** (Q.h / 2)) ** 2 * b
+  };
+  const want = k => Q => near(at[k](Q, Q.b));
+  const SL = ['noSq', 'sqArea', 'noUp', 'noSqA', 'cyl'];
+  // the volume itself: thin disks π y² Δx added up by Simpson's rule, in units of π
+  const disks = Q => { const n = 4000, d = Q.b / n, y2 = x => (Q.a * Math.sqrt(x) ** Q.h) ** 2; let s = y2(0) + y2(Q.b);
+    for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * y2(i * d); return s * d / 3; };
+  const isVol = (Q, v) => Math.abs(disks(Q) - v[0] / v[1]) < 1e-6 * (1 + v[0] / v[1]);
+  const slope = (k, Q) => { const e = 1e-5; return near((at[k](Q, Q.b + e) - at[k](Q, Q.b - e)) / (2 * e)); };
+  // "(4/9)b⁶", "b^(3/2)", "18b²", "2√b" read back as K·b^E
+  const formOf = t => { const m = t.match(/^(?:([2-9]|\d\d+)|\((\d+)\/(\d+)\))?(?:(√b)|b(?:\^\((\d+)\/2\)|([²³⁴⁵⁶⁷⁸]))?)$/); if (!m) return null;
+    return { K: m[1] ? +m[1] : m[2] ? +m[2] / +m[3] : 1, E: m[4] ? 0.5 : m[5] ? +m[5] / 2 : m[6] ? SP.indexOf(m[6]) : 1 }; };
+  const same = (F, f) => [0.5, 1.7, 3.2].every(b => Math.abs(F.K * b ** F.E - f(b)) <= 1e-7 * (1 + Math.abs(f(b))));
+  const read = () => txt(S.html().split('id="vlRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => { const { a, h, b } = Q, sq = `${co(a * a)}${xp(h)}`, yb = a * Math.round(b ** (h / 2)); return ({
+    noSq: `${L} integrates y itself, not y². That is the area under the curve, a flat shape. Each disk holds π y² Δx, so square ${curve(Q)} to ${sq} first.`,
+    sqArea: `${L} integrates y first and squares the answer. The squaring belongs inside: each disk holds π y² Δx, and adding the slices up and then squaring is not the same as squaring each slice and adding.`,
+    noUp: `${L} divides by ${h}, the power of x in y² before it is raised. ∫ ${xp(h)} dx = ${xp(h + 1)}/${h + 1}: raise the power by one, then divide by the new power, ${h + 1}.`,
+    noSqA: `${L} squares ${xn(h)} but not the ${a} in front. y² = ${a}² · ${xp(h)} = ${sq}, so ${a * a} goes in front, not ${a}.`,
+    cyl: `${L} is the cylinder around the solid: radius y(${b}) = ${yb} and length ${b}, so π × ${yb}² × ${b}. The solid narrows to a point at 0, so it holds only 1/${h + 1} of that cylinder.` })[k]; };
+  const CHK = new RegExp('^Check ([ABCD]): push the end b out a little and the solid gains one more thin disk there, holding π·y\\(b\\)², so the volume worked out for any b must have the slope π·\\((\\S+)\\)² = (\\S+)·π\\. \\1, worked out for any b, is (\\S+)·π, whose slope in b is (\\S+)·π, not (\\S+)·π\\.$');
+  // a check, worked again: the end disk from the curve, and the slip's form read back, put to b and differentiated here
+  const checkOk = (line, k, L, Q, key) => { const m = line.match(CHK);
+    if (!m) { fail('lathepick', key, `the check of ${L} is not worded as it should be: ${line}`); return; }
+    const Y = formOf(m[3]), F = formOf(m[4]), Z = formOf(m[5]), y2 = b => (Q.a * b ** (Q.h / 2)) ** 2, e = 1e-5;
+    if (m[1] !== L || m[2] !== curve(Q).replace('x', 'b')) fail('lathepick', key, `the check of ${L} does not square the curve itself`);
+    if (!Y || !same(Y, y2) || m[6] !== m[3]) fail('lathepick', key, `π·(${m[2]})² is not ${m[3]}·π`);
+    if (!F || !same(F, b => at[k](Q, b))) fail('lathepick', key, `${m[4]} is not ${k} worked out for any b`);
+    if (!Z || !same(Z, b => (at[k](Q, b + e) - at[k](Q, b - e)) / (2 * e))) fail('lathepick', key, `the slope of ${m[4]} is not ${m[5]}`);
+    if (Z && same(Z, y2)) fail('lathepick', key, 'a wrong volume passes the check'); };
+  if (S.RULE !== 'Cut the solid into thin slices across the axis. Each spins into a disk whose radius is the height y of the curve, so it holds π y² Δx, and the disks add up to V = π∫ y² dx. Square y first: (a·xⁿ)² = a²·x²ⁿ. Then integrate from 0 to b: raise the power by one and divide by the new power. Which is the volume?') fail('lathepick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('lathepick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Hs = new Set(), Bs = new Set();
+  let b4 = 0, bOnly = 0;
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Hs.add(Q.h); Bs.add(Q.b);
+      if (Q.h > 1 && Q.b === 4) b4++;
+      if (prev) { const P0 = JSON.parse(prev); if (P0.a === Q.a && P0.h === Q.h && P0.b !== Q.b) bOnly++; }
+      if (![Q.a, Q.h, Q.b].every(Number.isInteger) || Q.a < 1 || Q.a > 4 || ![1, 2, 4, 6].includes(Q.h) || Q.b < 1 || Q.b > 4 || (Q.h === 1 && Q.b !== 1 && Q.b !== 4)) fail('lathepick', key, `${sig} is not a whole a up to 4, n of 1/2, 1, 2 or 3 and b up to 4, a square under √x`);
+      const W = want('right')(Q);
+      if (!W || !isVol(Q, W)) fail('lathepick', key, `${W && vl(W)} is not the volume of y = ${curve(Q)} spun from 0 to ${Q.b}`);
+      if (W[1] === 1) wholeR++;
+      if (prev && prev === sig) fail('lathepick', key, 'the same solid comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('lathepick', key, 'there are not four volumes, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` Spin y = ${curve(Q)} around the x-axis, from x = 0 to x = ${Q.b}. Which is the volume of the solid? A`)) fail('lathepick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="LathePick\.choose\((\d)\)" aria-label="([ABCD]): (\d*π(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (\d*π(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('lathepick', key, 'the four volumes are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || vl(v) !== btns[i][4])) fail('lathepick', key, 'a volume is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('lathepick', key, 'two volumes are the same');
+      if (vals.some(v => v[0] > 300 * v[1])) fail('lathepick', key, 'a volume over 300π is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (W[1] === 1))) fail('lathepick', key, `the volume is the only ${W[1] === 1 ? 'whole number' : 'fraction'} of π, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!at[o.k]) { fail('lathepick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want(o.k)(Q))) fail('lathepick', key, `${o.k} is shown as ${vl(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== isVol(Q, vals[i])) fail('lathepick', key, `${vl(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the volume`);
+      });
+      {
+        const can = [], seen = new Set([fst(W)]);
+        for (const s of SL) { const v = fst(want(s)(Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('lathepick', key, 'a solid with fewer than three slips is dealt');
+        if (['right', ...SL].some(s => { const v = want(s)(Q); return v[0] > 300 * v[1]; })) fail('lathepick', key, 'a solid with a volume over 300π among its slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('lathepick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('lathepick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="vlRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('lathepick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        checkOk(lines[1] || '', o.k, Lt, Q, key);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LathePick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the volume"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('lathepick', key, 'the missed volumes are not shut and told as not the volume');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('lathepick', key, 'tapping a missed volume again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('lathepick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('lathepick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('lathepick', key, 'no fresh solid after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'MASTER TURNER / 5 solids measured') fail('lathepick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the volume, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('lathepick', key, `the toast is ${env.toasts[nt]}`); }
+      const c = Q.a * Q.a, t = Math.round(c * Q.b ** (Q.h + 1)), sq = `${co(c)}${xp(Q.h)}`;
+      if (!eq(fr(t, Q.h + 1), W)) fail('lathepick', key, `${t}/${Q.h + 1} is not the volume`);
+      const after = `That was it: V = π∫₀${sp(Q.b)} ${sq} dx = π[${co(c)}${xp(Q.h + 1)}/${Q.h + 1}]₀${sp(Q.b)} = π × ${t}/${Q.h + 1} = ${vl(W)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('lathepick', key, `after a pick: ${read()} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same solid dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 2, h: 1, b: 4 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"h":1,"b":4}') fail('lathepick', 'repeat', 'the same solid is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('lathepick', 'slips', `the slip ${k} is never offered`);
+  if (!b4) fail('lathepick', 'deal', 'no curve but √x is ever spun out to b = 4');
+  if (!bOnly) fail('lathepick', 'deal', 'a curve never comes back with only its end b moved, so a new b is not counted as a new solid');
+  if (As.size !== 4 || Hs.size !== 4 || Bs.size !== 4) fail('lathepick', 'deal', `a is only ever ${[...As]}, 2n ${[...Hs]}, b ${[...Bs]}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('lathepick', 'deal', `the volume is a whole number of π in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('lathepick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('lathepick', 'deal', `the volume only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('lathepick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10798,6 +10965,7 @@ console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 1
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
+console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
