@@ -1469,17 +1469,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ IMPLICIT SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-implicit">
     <div class="panel"><h2>⭕ Implicit Slope Workshop</h2><div class="sub">A circle is not the graph of y = f(x), yet every point on it has a tangent. Differentiate both sides of its equation, letting every y term pick up a y′ by the chain rule, and solve for y′. Step a point around a curve and check each slope with a nudge.</div></div>
+    <div id="imTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step the point by hand or pick the slope"></div>
     <div class="panel">
+      <div id="iyBox"></div>
       <div id="imSets" class="wsModes" role="group" aria-label="Which curve"></div>
       <div id="imFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="imStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="imKLo" onclick="Implicit.move(-1)" aria-label="Step the point clockwise around the curve">−</button>
           <b id="imK" style="font-size:17px;min-width:0"></b>
           <button id="imKHi" onclick="Implicit.move(1)" aria-label="Step the point anticlockwise around the curve">+</button></div>
       </div>
       <div id="imRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="imGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="imGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14194,7 +14196,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step a point around a circle and find its slope without ever solving for y. Meet the flat tops, the tangents that stand straight up, and a curve that needs the product rule.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a point around a circle and find its slope without ever solving for y. Meet the flat tops, the tangents that stand straight up, and a curve that needs the product rule. Then turn it round: see a curve and a point, and pick which of four numbers is the slope there.</div>
          <button class="btn sm" id="tomeImplicit" style="width:auto;margin-top:8px" onclick="Implicit.open()">Open the implicit slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -20257,6 +20259,129 @@ const Swap = {
    Step a point around three curves, check each slope with a nudge along the
    curve, and find the flat tops, the tangents that stand straight up, and a
    curve whose xy term needs the product rule. Nothing is saved. */
+/* ---------- Which slope? The implicit slope workshop turned round ----------
+ * A curve a·x² + b·xy + c·y² = k with whole numbers, a whole-number point on
+ * it, and four numbers. The slope there is y′ = −(2ax + by)/(bx + 2cy). The
+ * wrong numbers are the slips people make with it: the minus left off; the
+ * fraction upside down; xy taken to x·y′ alone, or to y alone, each half of
+ * the product rule dropped; and the 2s the powers bring down forgotten. A
+ * wrong pick is checked by the line the rule comes from,
+ * 2ax + by + (bx + 2cy)·y′ = 0, which says the point stays on the curve. A 0
+ * is never offered, and the slope is a whole number about half the time, with
+ * another number of its form beside it.
+ */
+const ImpPick = {
+  SLIPS:['sign','flip','prodY','prodX','noTwo'],
+  RULE:'For a·x² + b·xy + c·y² = k, differentiate both sides in x, letting y depend on x: x² gives 2x, xy gives y + x·y′ by the product rule, and y² gives 2y·y′ by the chain rule. So 2ax + b(y + x·y′) + 2cy·y′ = 0, and gathering the y′ terms, y′ = −(2ax + by)/(bx + 2cy). Which number is y′, the slope of the tangent at the point?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // 2ax + by and bx + 2cy, the top and bottom of the slope
+  N(S){ return 2*S.a*S.x+S.b*S.y; },
+  D(S){ return S.b*S.x+2*S.c*S.y; },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,b,c,x,y}=S, N=this.N(S), D=this.D(S);
+    return k==='right' ? this.frac(-N,D) : k==='sign' ? this.frac(N,D) : k==='flip' ? this.frac(-D,N)
+      : k==='prodY' ? this.frac(-2*a*x,D) : k==='prodX' ? this.frac(-N,2*c*y) : this.frac(-(a*x+b*y),b*x+c*y);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this curve can offer: each a number other than 0, with a bottom, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[1]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  k(S){ return S.a*S.x*S.x+S.b*S.x*S.y+S.c*S.y*S.y; },
+  build(){
+    const wantWhole=R.i(0,1)===1, side=()=>R.i(1,4)*(R.i(0,1)?1:-1);
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,3), b:R.i(1,3)*(R.i(0,1)?1:-1), c:R.i(1,3), x:side(), y:side()};
+      if(this.k(S)<1 || this.N(S)===0 || this.D(S)===0) continue;
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole || Math.abs(W[0])>30) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:1, b:1, c:1, x:1, y:2};
+  },
+  eq(S){
+    const {a,b,c}=S, B=Math.abs(b);
+    return \`\${a===1?'':a}x² \${b<0?'−':'+'} \${B===1?'':B}xy + \${c===1?'':c}y² = \${this.k(S)}\`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.x,S.y].join()!==[prev.a,prev.b,prev.c,prev.x,prev.y].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SLOPE UNVEILER', this.matched+' hidden slopes found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the slope, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Implicit.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // 2ax + by + (bx + 2cy)·w, worked as a fraction
+  hold(S,w){ return this.frac(this.N(S)*w[1]+this.D(S)*w[0], w[1]); },
+  slip(S,k,L){
+    const {b,x,y}=S;
+    if(k==='sign') return \`\${L} is (2ax + by)/(bx + 2cy) with the minus left off. Taking 2ax + by over to the other side of the 0 brings a minus.\`;
+    if(k==='flip') return \`\${L} is −(bx + 2cy)/(2ax + by), upside down. The y′ terms gather to (bx + 2cy)·y′, so bx + 2cy is what y′ is divided out of: it goes underneath.\`;
+    if(k==='prodY') return \`\${L} takes xy to x·y′ alone and loses its y. By the product rule xy gives y + x·y′, so by = \${neg(b*y)} belongs on top.\`;
+    if(k==='prodX') return \`\${L} takes xy to y alone and loses its x·y′. By the product rule xy gives y + x·y′, so bx = \${neg(b*x)} belongs underneath.\`;
+    return \`\${L} forgets the 2s the powers bring down: x² gives 2x and y² gives 2y·y′, not x and y·y′.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), w=this.hold(S,v);
+    return \`Check \${L}: if y′ were \${this.fs(v)}, then 2ax + by + (bx + 2cy)·y′ = \${neg(this.N(S))} + \${this.pn(this.D(S))} × \${this.pf(v)} = \${this.fs(w)}, not 0, so the point would run off the curve.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="iyQ" style="text-align:center;font-size:16px;margin-bottom:2px">\${this.eq(S)}, at the point (\${neg(S.x)}, \${neg(S.y)}): a = \${S.a}, b = \${neg(S.b)}, c = \${S.c}.</div>\`;
+    out+=\`<div id="iyPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ImpPick.choose(\${i})" aria-label="\${L}: y′ = \${v}\${gone?'. Not the slope':''}" style="margin:0"><b>\${L}</b> y′ = \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), N=this.N(B), D=this.D(B);
+      lines.push(\`That was it: 2ax + by = 2 × \${B.a} × \${this.pn(B.x)} + \${this.pn(B.b)} × \${this.pn(B.y)} = \${neg(N)} and bx + 2cy = \${this.pn(B.b)} × \${this.pn(B.x)} + 2 × \${B.c} × \${this.pn(B.y)} = \${neg(D)}, so y′ = −\${this.pn(N)}/\${this.pn(D)} = \${this.fs(v)}, and 2ax + by + (bx + 2cy)·y′ = \${neg(N)} + \${this.pn(D)} × \${this.pf(v)} = \${this.fs(this.hold(B,v))}: the point stays on the curve. Here is a new curve.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="iyRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const Implicit = {
   SETS:[
     {id:'circle', btn:'Circle', eq:'x² + y² = 25', c:25,
@@ -20336,7 +20461,15 @@ const Implicit = {
   open(){ UI.go('s-implicit'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   move(by){ const m=this.set().P.length; this.k=(this.k+by+m)%m; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('imTab').innerHTML=[['hand','⭕ Step it by hand','Step a point around a curve and read its slope'],['pick','🎯 Which slope?','See a curve and a point, and pick which of four numbers is the slope there']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Implicit.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['imSets','imFig','imStep','imRead','imGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('iyBox').innerHTML=pick ? ImpPick.html() : '';
+    if(pick) return;
     document.getElementById('imSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Implicit.pick(\${i})" aria-label="\${s.btn}: \${s.eq}">\${s.btn}</button>\`).join('');
     const [x,y]=this.pt();

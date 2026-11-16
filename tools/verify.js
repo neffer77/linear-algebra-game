@@ -4978,6 +4978,160 @@ const ladPickNotes = (() => {
   if (fives !== 30) fail('ladpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Which slope? The pick-the-slope round in the implicit slope workshop. Every
+   number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from a, b, c and
+   the point alone. The right number alone must be the curve's real slope,
+   measured by solving the curve for y a hair either side of the point, and
+   every 2ax + by + (bx + 2cy)·y′ in the readout is worked again from the
+   numbers it shows. */
+const impPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Implicit = {render(){ env.renders++; }};" +
+    cut('const ImpPick = {', 'const Implicit = {') + 'return ImpPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const add = (f, g) => fr(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const mul = (f, g) => fr(f[0] * g[0], f[1] * g[1]);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const top = Q => 2 * Q.a * Q.x + Q.b * Q.y, bot = Q => Q.b * Q.x + 2 * Q.c * Q.y;
+  const kOf = Q => Q.a * Q.x * Q.x + Q.b * Q.x * Q.y + Q.c * Q.y * Q.y;
+  const want = {
+    right: Q => fr(-top(Q), bot(Q)),
+    sign: Q => fr(top(Q), bot(Q)),
+    flip: Q => fr(-bot(Q), top(Q)),
+    prodY: Q => fr(-2 * Q.a * Q.x, bot(Q)),
+    prodX: Q => fr(-top(Q), 2 * Q.c * Q.y),
+    noTwo: Q => fr(-(Q.a * Q.x + Q.b * Q.y), Q.b * Q.x + Q.c * Q.y)
+  };
+  const SL = ['sign', 'flip', 'prodY', 'prodX', 'noTwo'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "n + (d) × (w) = r" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`= (−?\\d+) \\+ \\(?(−?\\d+)\\)? × \\(?${V}\\)? = ${V}`, 'g'))) { n++;
+      if (!eq(add(rd(m[1]), mul(rd(m[2]), rd(m[3]))), rd(m[4]))) fail('imppick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="iyRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => ({
+    sign: `${L} is (2ax + by)/(bx + 2cy) with the minus left off. Taking 2ax + by over to the other side of the 0 brings a minus.`,
+    flip: `${L} is −(bx + 2cy)/(2ax + by), upside down. The y′ terms gather to (bx + 2cy)·y′, so bx + 2cy is what y′ is divided out of: it goes underneath.`,
+    prodY: `${L} takes xy to x·y′ alone and loses its y. By the product rule xy gives y + x·y′, so by = ${ng(Q.b * Q.y)} belongs on top.`,
+    prodX: `${L} takes xy to y alone and loses its x·y′. By the product rule xy gives y + x·y′, so bx = ${ng(Q.b * Q.x)} belongs underneath.`,
+    noTwo: `${L} forgets the 2s the powers bring down: x² gives 2x and y² gives 2y·y′, not x and y·y′.` }[k]);
+  const hold = (Q, v) => add([top(Q), 1], mul([bot(Q), 1], v));
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: if y′ were ${fst(v)}, then 2ax + by + (bx + 2cy)·y′ = ${ng(top(Q))} + ${pn(bot(Q))} × ${pf(v)} = ${fst(hold(Q, v))}, not 0, so the point would run off the curve.`; };
+  const eqOf = Q => `${Q.a === 1 ? '' : Q.a}x² ${Q.b < 0 ? '−' : '+'} ${Math.abs(Q.b) === 1 ? '' : Math.abs(Q.b)}xy + ${Q.c === 1 ? '' : Q.c}y² = ${kOf(Q)}`;
+  // the y on the curve at x nearest y0, by Newton's method in y
+  const yAt = (Q, x, y0) => { let y = y0; for (let i = 0; i < 60; i++) y -= (Q.a * x * x + Q.b * x * y + Q.c * y * y - kOf(Q)) / (Q.b * x + 2 * Q.c * y); return y; };
+  if (S.RULE !== 'For a·x² + b·xy + c·y² = k, differentiate both sides in x, letting y depend on x: x² gives 2x, xy gives y + x·y′ by the product rule, and y² gives 2y·y′ by the chain rule. So 2ax + b(y + x·y′) + 2cy·y′ = 0, and gathering the y′ terms, y′ = −(2ax + by)/(bx + 2cy). Which number is y′, the slope of the tangent at the point?') fail('imppick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('imppick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negB = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Bs = new Set(), Cs = new Set(), pts = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c); pts.add(Q.x + ',' + Q.y); if (Q.b < 0) negB++;
+      if ([Q.a, Q.c].some(n => !Number.isInteger(n) || n < 1 || n > 3) || ![-3, -2, -1, 1, 2, 3].includes(Q.b)
+        || [Q.x, Q.y].some(n => !Number.isInteger(n) || n === 0 || Math.abs(n) > 4) || kOf(Q) < 1) fail('imppick', key, `${JSON.stringify(Q)} is not a whole-number curve and point`);
+      const L = want.right(Q);
+      if (bot(Q) === 0 || L[0] === 0) fail('imppick', key, 'the tangent stands up or lies flat');
+      { // solve the curve for y a hair either side of the point, and measure the slope
+        const h = 1e-5, s = (yAt(Q, Q.x + h, Q.y) - yAt(Q, Q.x - h, Q.y)) / (2 * h);
+        if (Math.abs(s - L[0] / L[1]) > 1e-4) fail('imppick', key, `the curve really climbs at ${s}, not ${fst(L)}`); }
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('imppick', key, 'the same curve and point come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('imppick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ${eqOf(Q)}, at the point (${ng(Q.x)}, ${ng(Q.y)}): a = ${Q.a}, b = ${ng(Q.b)}, c = ${Q.c}. A`)) fail('imppick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="ImpPick\.choose\((\d)\)" aria-label="([ABCD]): y′ = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> y′ = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('imppick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('imppick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('imppick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('imppick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('imppick', key, `the slope is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('imppick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('imppick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('imppick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the slope`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const w = want[s](Q); if (w[1] === 0) continue; const v = fst(w); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('imppick', key, 'a curve with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('imppick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('imppick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('imppick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('imppick', key, 'a miss does not work 2ax + by + (bx + 2cy)·y′');
+        if (/= 0, not 0/.test(rt)) fail('imppick', key, 'a wrong slope keeps the point on the curve');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="ImpPick\\.choose\\(${i}\\)" aria-label="${Lt}: y′ = [^"]+\\. Not the slope"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('imppick', key, 'the missed numbers are not shut and told as not the slope');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('imppick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('imppick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('imppick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('imppick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SLOPE UNVEILER / 5 hidden slopes found') fail('imppick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the slope, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('imppick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), T = top(Q), B = bot(Q);
+      const after = `That was it: 2ax + by = 2 × ${Q.a} × ${pn(Q.x)} + ${pn(Q.b)} × ${pn(Q.y)} = ${ng(T)} and bx + 2cy = ${pn(Q.b)} × ${pn(Q.x)} + 2 × ${Q.c} × ${pn(Q.y)} = ${ng(B)}, so y′ = −${pn(T)}/${pn(B)} = ${fst(L)}, and 2ax + by + (bx + 2cy)·y′ = ${ng(T)} + ${pn(B)} × ${pf(L)} = 0: the point stays on the curve. Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('imppick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('imppick', key, 'the right pick does not work 2ax + by + (bx + 2cy)·y′');
+      if (!eq(fr(-T, B), L)) fail('imppick', key, `−${T}/${B} is not ${fst(L)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 1, b: 1, c: 1, x: 1, y: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":1,"b":1,"c":1,"x":1,"y":2}') fail('imppick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('imppick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 3 || Cs.size !== 3 || Bs.size !== 6) fail('imppick', 'deal', `a is only ever ${[...As]}, b ${[...Bs]}, c ${[...Cs]}`);
+  if (pts.size < 50) fail('imppick', 'deal', `only ${pts.size} points are ever dealt`);
+  if (negB < rounds * 0.3 || negB > rounds * 0.7) fail('imppick', 'deal', `b is negative in ${negB} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('imppick', 'deal', `the whole slopes are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('imppick', 'deal', `the slope is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('imppick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('imppick', 'deal', `the slope only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('imppick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -9721,6 +9875,7 @@ console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString()
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
+console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
