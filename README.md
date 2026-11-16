@@ -816,6 +816,20 @@ The game is built so that losing teaches you as much as winning.
   three steps from each system, 35,000 states: each row against its own arithmetic, each
   equation read back into numbers, the crossing still on both lines, undo putting the
   rows back, and 0 = c and 0 = 0 only on the systems that have them.
+
+  **🎯 Which k?** turns the workshop round: two rows with one crossing at whole
+  numbers, and four numbers, one of them the k that clears x out of row 2 when
+  k times row 1 is added to it. The rule is stated first,
+  k = −(row 2's x coefficient)/(row 1's). The wrong numbers are the slips
+  people make with it: the minus sign left off, so x doubles; the fraction
+  upside down; the division left out; and the k that clears y instead, which
+  can come out as a fraction. A 0 is never offered. A wrong pick is shut and
+  worked through row 2's x coefficient plus k times row 1's, which is not 0;
+  the right pick clears x, reads off y from what is left of row 2, and puts y
+  back in row 1 for x. Nothing is saved, and there is no clock. `npm test`
+  reads every number back off its button as an exact fraction, checks it
+  against the slip it is named as and that only the right one clears x, and
+  works every sum in the readout again.
 - **↩️ Undo Workshop** — build the matrix that puts a move back. Pick A (a shear, a
   quarter-turn, a flip, a tilt or a squash) and turn the four numbers of B from −2 to 2.
   The readout says where A sends î and ĵ, then works B on each, number by number, and
@@ -1443,7 +1457,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and three suites, about 4,470 checks, about a minute:
+loop only exists once the page is running. A hundred and four suites, about 4,500 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1541,6 +1555,7 @@ loop only exists once the page is running. A hundred and three suites, about 4,4
 | `nullpick` | the Tome says the null space workshop can be turned round; the workshop opens on setting v by hand, and switching to which is crushed puts away the matrices, v, the drawing, the readout and the goals and states the rule first; a flat A is drawn, and four arrows offered two by two, each named by its entries; a wrong pick is named as its slip, dotted with both rows to show where A sends it, shut and told as not crushed, and is not counted; the right pick dots to 0 with both rows, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings NULL SPACE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `grampick` | the Tome says the Gram–Schmidt workshop can be turned round; the workshop opens on taking copies by hand, and switching to which c puts away the pairs, the drawing, the stepper, the readout and the goals and states the rule first; u₁ and u₂ are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked through w · u₁ = u₂ · u₁ − c × (u₁ · u₁) to show which way w leans, shut and told as not c, and is not counted; the right pick brings w · u₁ to 0 and shows w, counts (not as a first try after a miss), toasts and deals a new pair; a first try counts as one, and the fifth brings SHADOW READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `cofpick` | the Tome says the cofactor workshop can be turned round; the workshop opens on expanding by hand, and switching to which det A puts away the matrices, the grid, the lines, the readout and the goals and states the rule first; A is shown three by three and named row by row, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, the quickest line is pointed out, and it is shut and told as not det A, and is not counted; the right pick works det A along the quickest line, minor by minor, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings DETERMINANT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `elimpick` | the Tome says the elimination workshop can be turned round; the workshop opens on row operations by hand, and switching to which k puts away the systems, the rows, k, the operations, the drawing, the readout and the goals and states the rule first; both rows are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked through row 2's x coefficient, shut and told as not clearing x, and is not counted; the right pick clears x, reads off y and then x, counts (not as a first try after a miss), toasts and deals new rows; a first try counts as one, and the fifth brings ROW CLEARER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |

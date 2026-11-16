@@ -1058,7 +1058,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ELIMINATION WORKSHOP ============ -->
   <div class="screen" id="s-elim">
     <div class="panel"><h2>⚖️ Elimination Workshop</h2><div class="sub">Two equations, two unknowns. Change one row at a time: add k times the other row to it, multiply or divide it by k, or swap the rows. Clear x out of one row, then y out of the other, and the answer is left standing. Each row is drawn as its line.</div></div>
+    <div id="elTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Row operations by hand or pick k"></div>
     <div class="panel">
+      <div id="epBox"></div>
       <div id="elSys" class="wsModes" role="group" aria-label="Which system"></div>
       <div id="elRows" class="elRows" role="group" aria-label="The row to change"></div>
       <div id="elK" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:200px" role="group" aria-label="The number k"></div>
@@ -1066,7 +1068,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="elFig"></div>
       <div id="elRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="elGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="elGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14012,7 +14014,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⚖️ Elimination Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put. Then turn it round: see two rows, and pick which of four numbers k clears x.</div>
          <button class="btn sm" id="tomeElim" style="width:auto;margin-top:8px" onclick="Elim.open()">Open the elimination workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -16336,6 +16338,130 @@ const Span = {
    each row as its line, so the player sees that the lines change while the
    point where they cross never does. Two of the systems have no single
    answer, and the row that says so turns up on its own. */
+/* ---------- Which k? The elimination workshop turned round ----------
+   Two equations are shown, and four numbers, one of them the k that clears x
+   out of row 2 when k times row 1 is added to it. The others are the slips
+   people make with k = −(row 2's x)/(row 1's x): the sign left off, so x
+   doubles; the fraction upside down; the division left out; and the k that
+   clears y instead. A wrong pick is shut and worked: row 2's x coefficient
+   plus k times row 1's, which only the right k brings to 0. The right pick
+   carries on to y and then x. Nothing is saved. */
+const ElimPick = {
+  SLIPS:['sign','flip','nodiv','y'],
+  RULE:'To clear x out of row 2, add k times row 1 to it. Each copy of row 1 adds its x coefficient to row 2\\'s, so x is gone when row 2\\'s x coefficient + k × row 1\\'s comes to 0: k = −(row 2\\'s x coefficient)/(row 1\\'s). Which k clears x?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  // a fraction p/q in lowest terms, with its sign on top
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const [[a,b],[d,e]]=S.rows;
+    return this.frac(...(k==='right' ? [-d,a] : k==='sign' ? [d,a] : k==='flip' ? [-a,d] : k==='nodiv' ? [-d,1] : [-e,b]));
+  },
+  fs:([p,q])=>q===1 ? neg(p) : \`\${neg(p)}/\${q}\`,
+  key:f=>f.join('/'),
+  // the slips this system can offer: each a number different from k and from every one kept before it,
+  // and never 0, which leaves row 2 as it is and so is never right
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0/1']), keep=[];
+    for(const k of this.SLIPS){
+      if(k==='y' && !S.rows[0][1]) continue;   // row 1 has no y to clear with
+      const f=this.val(S,k);
+      if(seen.has(this.key(f))) continue;
+      seen.add(this.key(f)); keep.push(k); }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      // half the time k is a whole number; otherwise row 1's x coefficient does not divide row 2's, and k is a fraction
+      const whole=R.i(0,1), a=(whole ? R.i(1,2) : R.i(2,3))*(R.i(0,1) ? 1 : -1),
+        d=whole ? -R.i(1,3)*(R.i(0,1) ? 1 : -1)*a : R.i(1,3)*(R.i(0,1) ? 1 : -1), b=R.i(-3,3), e=R.i(-3,3);
+      if(!whole && d%a===0) continue;
+      if(a*e===b*d) continue;   // no single crossing, and clearing x would clear y too
+      const x=R.i(-3,3), y=R.i(-3,3);
+      const S={rows:[[a,b,a*x+b*y],[d,e,d*x+e*y]], x, y};
+      if(this.slips(S).length<3) continue;
+      return S;
+    }
+    return {rows:[[1,2,5],[3,4,11]], x:1, y:2};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||S.rows.flat().join()!==prev.rows.flat().join()) break; }
+    const rest=this.slips(S);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('ROW CLEARER', this.matched+' rows cleared','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'PQRS'[i]} clears x, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Elim.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  pn:n=>n<0 ? '('+neg(n)+')' : neg(n),
+  // k as it stands in a sum: bracketed when it is negative or a fraction
+  ct(f){ return f[1]===1 ? this.pn(f[0]) : \`(\${this.fs(f)})\`; },
+  slip(k,L){
+    if(k==='sign') return \`\${L} leaves the minus sign off. Adding that many copies of row 1 doubles row 2's x coefficient instead of clearing it.\`;
+    if(k==='flip') return \`\${L} is the fraction upside down, row 1's x coefficient over row 2's. k counts copies of row 1, so row 1's x coefficient goes underneath.\`;
+    if(k==='nodiv') return \`\${L} is row 2's x coefficient with nothing divided out. Each copy of row 1 brings row 1's x coefficient, not 1, so it still has to be divided by that.\`;
+    return \`\${L} is the k that clears y, from row 2's y coefficient over row 1's. The question is x, so it is the x coefficients that count.\`;
+  },
+  // row 2's x coefficient after adding k times row 1: d + k × a
+  xco(S,f){ const [[a],[d]]=S.rows; return this.frac(d*f[1]+f[0]*a, f[1]); },
+  check(S,k,L){
+    const [[a],[d]]=S.rows, f=this.val(S,k), c=this.xco(S,f);
+    return \`Check \${L}: row 2 + \${this.ct(f)} × row 1 leaves x with \${neg(d)} + \${this.ct(f)} × \${this.pn(a)} = \${this.fs(c)}, not 0, so x is still in row 2.\`;
+  },
+  term(n,v,first){
+    if(!n) return '';
+    const m=Math.abs(n), body=(m===1?'':m)+v;
+    return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body;
+  },
+  eq(r){ const x=this.term(r[0],'x',true), y=this.term(r[1],'y',!x); return \`\${(x+y)||'0'} = \${neg(r[2])}\`; },
+  // the right k carried through: row 2 loses x, gives y, and row 1 gives x
+  worked(S){
+    const [[a,b,c],[d,e,f]]=S.rows, k=this.frac(-d,a), n1=this.frac(e*k[1]+k[0]*b,k[1]), n2=this.frac(f*k[1]+k[0]*c,k[1]);
+    const row2=n1[1]===1 ? this.eq([0,n1[0],n2[0]]) : \`(\${this.fs(n1)})y = \${this.fs(n2)}\`, top=n2[1]===1 ? neg(n2[0]) : \`(\${this.fs(n2)})\`;
+    return \`That was it: row 2 + \${this.ct(k)} × row 1 leaves x with \${neg(d)} + \${this.ct(k)} × \${this.pn(a)} = 0, and y with \${neg(e)} + \${this.ct(k)} × \${this.pn(b)} = \${this.fs(n1)}, so row 2 becomes \${row2} and y = \${top}/\${this.ct(n1)} = \${neg(S.y)}. \`+
+      \`Put y = \${neg(S.y)} back in row 1: \${this.term(a,'x',true)} = \${neg(c)} − \${this.pn(b)} × \${this.pn(S.y)} = \${neg(c-b*S.y)}, so x = \${neg(S.x)}. Here is a new pair of rows.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="epRows" style="text-align:center;margin-bottom:4px;font-size:16px;line-height:1.5"><div>row 1: \${this.eq(S.rows[0])}</div><div>row 2: \${this.eq(S.rows[1])}</div></div>\`;
+    out+=\`<div id="epPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), f=this.val(S,o.k), L='PQRS'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ElimPick.choose(\${i})" aria-label="\${L}: k = \${this.fs(f)}\${gone?'. Does not clear x':''}" style="margin:0"><b>\${L}</b> k = \${this.fs(f)}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(r.opts[m].k,'PQRS'[m]), this.check(S,r.opts[m].k,'PQRS'[m]));
+    else if(this.last) lines.push(this.worked(this.last.S));
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="epRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Elim = {
   SYSTEMS:[
     [[1,2,5],  [3,4,11]],
@@ -16470,7 +16596,15 @@ const Elim = {
     if(k<this.KLO || k>this.KHI) return;
     this.k=k; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('elTab').innerHTML=[['hand','⚖️ Row operations by hand','Change the rows by hand with row operations'],['pick','🎯 Which k?','See two rows, and pick which of four numbers k clears x']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Elim.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['elSys','elRows','elK','elOps','elFig','elRead','elGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('epBox').innerHTML=pick ? ElimPick.html() : '';
+    if(pick) return;
     const rows=this.R(), P=this.point();
     document.getElementById('elSys').innerHTML=this.SYSTEMS.map((S,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Elim.pickSys(\${i})"

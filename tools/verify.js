@@ -4373,6 +4373,151 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which k? The pick-a-multiplier round in the elimination workshop. Every
+   number on screen is read back off its button as an exact fraction and
+   checked against the slip it is named as, worked out here from the two rows
+   alone; the right one alone must bring row 2's x coefficient to 0. Every
+   sum in the readout is worked again from the numbers it shows, and the y and
+   x the right pick reaches must fit both rows. */
+const elimPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Elim = {render(){ env.renders++; }};" +
+    cut('const ElimPick = {', 'const Elim = {') + 'return ElimPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace('−', '-').match(/^(-?\d+)(?:\/(\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const ct = f => (f[1] === 1 ? pn(f[0]) : `(${fst(f)})`);
+  // an equation as the workshop writes it
+  const tm = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), b = (m === 1 ? '' : m) + v; return first ? (n < 0 ? '−' : '') + b : (n < 0 ? ' − ' : ' + ') + b; };
+  const eqn = r => { const x = tm(r[0], 'x', true), y = tm(r[1], 'y', !x); return `${(x + y) || '0'} = ${ng(r[2])}`; };
+  // each option, worked out here from the two rows alone
+  const want = {
+    right: Q => fr(-Q.rows[1][0], Q.rows[0][0]),
+    sign: Q => fr(Q.rows[1][0], Q.rows[0][0]),
+    flip: Q => fr(-Q.rows[0][0], Q.rows[1][0]),
+    nodiv: Q => fr(-Q.rows[1][0], 1),
+    y: Q => fr(-Q.rows[1][1], Q.rows[0][1])
+  };
+  const xLeft = (Q, f) => fr(Q.rows[1][0] * f[1] + f[0] * Q.rows[0][0], f[1]);   // row 2's x coefficient after adding f × row 1
+  // every "p + c × q = r" in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(/(−?\d+) \+ (\(?−?\d+(?:\/\d+)?\)?) × (\(?−?\d+\)?) = (−?\d+(?:\/\d+)?)/g)) { n++; const p = rd(m[1]), c = rd(m[2]), q = rd(m[3]), r = rd(m[4]);
+      if (!eq(fr(p[0] * c[1] + c[0] * q[0], c[1]), r)) fail('elimpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="epRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L) => ({ sign: `${L} leaves the minus sign off. Adding that many copies of row 1 doubles row 2's x coefficient instead of clearing it.`,
+    flip: `${L} is the fraction upside down, row 1's x coefficient over row 2's. k counts copies of row 1, so row 1's x coefficient goes underneath.`,
+    nodiv: `${L} is row 2's x coefficient with nothing divided out. Each copy of row 1 brings row 1's x coefficient, not 1, so it still has to be divided by that.`,
+    y: `${L} is the k that clears y, from row 2's y coefficient over row 1's. The question is x, so it is the x coefficients that count.` }[k]);
+  if (S.RULE !== 'To clear x out of row 2, add k times row 1 to it. Each copy of row 1 adds its x coefficient to row 2\'s, so x is gone when row 2\'s x coefficient + k × row 1\'s comes to 0: k = −(row 2\'s x coefficient)/(row 1\'s). Which k clears x?') fail('elimpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('elimpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracs = 0, fracK = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), ks = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, [[a, b, c], [d, e, f]] = Q.rows, key = `seed ${seed} round ${k}`;
+      rounds++;
+      if (Q.rows.flat().some(x => !Number.isInteger(x)) || ![1, 2, 3].includes(Math.abs(a)) || Math.abs(b) > 3 || Math.abs(e) > 3 || Math.abs(d) > 6) fail('elimpick', key, `${eqn(Q.rows[0])} and ${eqn(Q.rows[1])} are not small and whole`);
+      if (a * e === b * d) fail('elimpick', key, `${eqn(Q.rows[0])} and ${eqn(Q.rows[1])} have no single crossing`);
+      if (a * Q.x + b * Q.y !== c || d * Q.x + e * Q.y !== f) fail('elimpick', key, `x = ${Q.x}, y = ${Q.y} does not fit both rows`);
+      const kr = want.right(Q);
+      if (!kr[0] || Math.abs(kr[0]) > 3 * kr[1] || kr[1] > 3) fail('elimpick', key, `k = ${fst(kr)} is not a small number from −3 to 3`);
+      if (kr[1] === 1) ks.add(kr[0]); else fracK++;
+      if (e * a - b * d === 0 || e * kr[1] + kr[0] * b === 0) fail('elimpick', key, 'clearing x clears y too');
+      if (prev && JSON.stringify(prev) === JSON.stringify(Q.rows)) fail('elimpick', key, 'the same rows come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('elimpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` row 1: ${eqn(Q.rows[0])} row 2: ${eqn(Q.rows[1])} P`)) fail('elimpick', key, 'the rule and the rows are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="ElimPick\.choose\((\d)\)" aria-label="([PQRS]): k = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([PQRS])<\/b> k = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'PQRS'[i] || +x[2] !== i || x[3] !== 'PQRS'[i] || x[5] !== 'PQRS'[i] || x[4] !== x[6])) { fail('elimpick', key, 'the four numbers are not offered as they are, P to S'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('elimpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('elimpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('elimpick', key, 'k = 0 is offered, which never clears x');
+      if (vals.some(v => v[1] !== 1)) fracs++;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('elimpick', key, `an option is the unknown ${o.k}`); return; }
+        if (o.k === 'y' && !b) fail('elimpick', key, 'the clear-y slip is offered with no y in row 1');
+        if (!eq(vals[i], want[o.k](Q))) fail('elimpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== (xLeft(Q, vals[i])[0] === 0)) fail('elimpick', key, `k = ${fst(vals[i])} ${o.k === 'right' ? 'does not clear' : 'clears'} x`);
+      });
+      {
+        const can = [], seen = new Set([fst(kr), '0']);
+        for (const s of ['sign', 'flip', 'nodiv', 'y']) { if (s === 'y' && !b) continue; const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('elimpick', key, 'rows with fewer than three slips are dealt'); }
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('elimpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], v = vals[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('elimpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const ck = `Check ${L}: row 2 + ${ct(v)} × row 1 leaves x with ${ng(d)} + ${ct(v)} × ${pn(a)} = ${fst(xLeft(Q, v))}, not 0, so x is still in row 2.`;
+        if (rt !== `${slipOf(o.k, L)} ${ck} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('elimpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, L)} ${ck}`);
+        if (sums(rt, key) !== 1) fail('elimpick', key, 'a miss does not work row 2\'s x coefficient');
+        worked++;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="ElimPick\\.choose\\(${i}\\)" aria-label="${L}: k = [^"]+\\. Does not clear x"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('elimpick', key, 'the missed numbers are not shut and told as not clearing x');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('elimpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('elimpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('elimpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('elimpick', key, 'no fresh rows after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'ROW CLEARER / 5 rows cleared') fail('elimpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} clears x, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('elimpick', key, `the toast is ${env.toasts[nt]}`); }
+      const n1 = fr(e * kr[1] + kr[0] * b, kr[1]), n2 = fr(f * kr[1] + kr[0] * c, kr[1]), rt = read();
+      const row2 = n1[1] === 1 ? eqn([0, n1[0], n2[0]]) : `(${fst(n1)})y = ${fst(n2)}`, top = n2[1] === 1 ? ng(n2[0]) : `(${fst(n2)})`;
+      const after = `That was it: row 2 + ${ct(kr)} × row 1 leaves x with ${ng(d)} + ${ct(kr)} × ${pn(a)} = 0, and y with ${ng(e)} + ${ct(kr)} × ${pn(b)} = ${fst(n1)}, so row 2 becomes ${row2} and y = ${top}/${ct(n1)} = ${ng(Q.y)}. ` +
+        `Put y = ${ng(Q.y)} back in row 1: ${tm(a, 'x', true)} = ${ng(c)} − ${pn(b)} × ${pn(Q.y)} = ${ng(c - b * Q.y)}, so x = ${ng(Q.x)}. Here is a new pair of rows. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('elimpick', key, `after a pick: ${rt} | want ${after}`);
+      if (sums(rt, key) !== 2) fail('elimpick', key, 'the right pick does not work both coefficients');
+      if (!eq(n2, [n1[0] * Q.y, n1[1]]) || c - b * Q.y !== a * Q.x) fail('elimpick', key, 'the y and x reached do not follow from the rows');
+      worked += 2;
+      prev = Q.rows;
+    }
+  }
+  { // the same rows dealt again are turned away for fresh ones
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { rows: [[1, 2, 5], [3, 4, 11]], x: 1, y: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S.rows) === '[[1,2,5],[3,4,11]]') fail('elimpick', 'repeat', 'the same rows are dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['sign', 'flip', 'nodiv', 'y']) if (!kinds[k]) fail('elimpick', 'slips', `the slip ${k} is never offered`);
+  if (!fracs) fail('elimpick', 'deal', 'no wrong k is ever a fraction');
+  if (ks.size !== 6) fail('elimpick', 'deal', `the whole right k is only ever ${[...ks].sort().join(', ')}`);
+  if (fracK < rounds * 0.45 || fracK > rounds * 0.55) fail('elimpick', 'deal', `the right k is a fraction in ${fracK} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left4.size !== 4) fail('elimpick', 'deal', `when rows have four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('elimpick', 'deal', `the right k only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
+  if (fives !== 30) fail('elimpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracs, fracK };
+})();
+
 /* Which det A? The pick-a-determinant round in the cofactor workshop. Every
    number on screen is read back off its button and checked against the slip
    it is named as, worked out here from A alone (det A by Sarrus' rule, so it
@@ -8815,6 +8960,7 @@ console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
 console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-c in the Gram–Schmidt workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone leaving w square to u₁, ${gramPickNotes.fracs.toLocaleString()} of them fractions; ${gramPickNotes.misses.toLocaleString()} wrong picks worked through w · u₁, ${gramPickNotes.worked.toLocaleString()} sums worked again from their own numbers)`);
 console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-det-A in the cofactor workshop, every number read back off its button and checked against the slip it is named as and against det A worked by Sarrus' rule; ${cofPickNotes.misses.toLocaleString()} wrong picks named and pointed to the quickest line, ${cofPickNotes.worked.toLocaleString()} minors and sums worked again from their own numbers)`);
+console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-k in the elimination workshop, every k read back off its button as an exact fraction and checked against the slip it is named as, the right one alone clearing x from row 2; ${elimPickNotes.misses.toLocaleString()} wrong picks checked, ${elimPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${elimPickNotes.fracK.toLocaleString()} rounds whose right k is a fraction)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
