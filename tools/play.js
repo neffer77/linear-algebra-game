@@ -121,6 +121,7 @@ const SUITES = [
   require('./play/ladpick'), // see a ladder, pick which of four numbers is the top's speed
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
+  require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

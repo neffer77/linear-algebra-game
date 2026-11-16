@@ -1774,19 +1774,21 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRIG INTEGRAL WORKSHOP ============ -->
   <div class="screen" id="s-trigint">
     <div class="panel"><h2>🎢 Trig Integral Workshop</h2><div class="sub">To integrate sin(kx) or cos(kx), run the chain rule backwards: swap the wave and divide by the k inside. Guess F = c·sin(kx) or c·cos(kx) by hand and see whether its slope lands on f.</div></div>
+    <div id="itTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Undo a wave by hand or pick c"></div>
     <div class="panel">
+      <div id="iqBox"></div>
       <div id="itSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
       <div id="itFig"></div>
       <div id="itF" style="text-align:center;font-size:18px;font-weight:700;margin:6px 0"></div>
       <div id="itFun" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which wave F is"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="itStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="itCLo" onclick="TrigInt.moveC(-1)" aria-label="Make the number in front, c, smaller">−</button>
           <b id="itC" style="font-size:17px;min-width:0"></b>
           <button id="itCHi" onclick="TrigInt.moveC(1)" aria-label="Make the number in front, c, bigger">+</button></div>
       </div>
       <div id="itRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="itGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="itGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14168,7 +14170,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🎢 Trig Integral Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles. Then turn it round: see a wave to undo, and pick which of four numbers is c.</div>
          <button class="btn sm" id="tomeTrigInt" style="width:auto;margin-top:8px" onclick="TrigInt.open()">Open the trig integral workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -23418,6 +23420,124 @@ const Diag = {
    rule, and see whether it lands on the target. Multiplying by the k inside
    instead of dividing is the classic slip, the slope of cos carries a minus,
    and dividing by a half doubles. Nothing is saved. */
+/* ---------- Which c? The trig integral workshop turned round ----------
+ * A wave a·cos(kx) or a·sin(kx) with whole numbers, its antiderivative
+ * written c·sin(kx) or c·cos(kx), and four numbers. Running the chain rule
+ * backwards divides by the k inside: c = a/k for a cosine, and c = −a/k for a
+ * sine, since the slope of cos is −sin. The wrong numbers are the slips
+ * people make with it: multiplying by k instead of dividing; leaving k out;
+ * the minus got wrong; and k/a, the division turned over. A wrong pick is
+ * checked by differentiating its F back, which misses the wave. A 0 is never
+ * offered, and c is a whole number about half the time, with another number
+ * of its form beside it.
+ */
+const TrigPick = {
+  SLIPS:['mult','noK','sign','flip'],
+  RULE:'Run the chain rule backwards. The slope of c·sin(kx) is c·k·cos(kx), and the slope of c·cos(kx) is −c·k·sin(kx), so to undo a·cos(kx) take c = a/k, and to undo a·sin(kx) take c = −a/k: swap the wave and divide by the k inside. Which number is c?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // +1 when the wave to undo is a cosine, −1 for a sine
+  sg(S){ return S.g==='cos' ? 1 : -1; },
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a}=S, K=S.k, s=this.sg(S);
+    return k==='right' ? this.frac(s*a,K) : k==='mult' ? this.frac(s*a*K,1) : k==='noK' ? this.frac(s*a,1)
+      : k==='sign' ? this.frac(-s*a,K) : this.frac(s*K,a);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this wave can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={g:R.i(0,1)?'cos':'sin', a:R.i(1,12)*(R.i(0,1)?1:-1), k:R.i(2,6)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {g:'cos', a:6, k:3};
+  },
+  other(g){ return g==='sin' ? 'cos' : 'sin'; },
+  wave(a,g,k){ return \`\${a===1?'':a===-1?'−':neg(a)+' '}\${g}(\${k}x)\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.g,S.a,S.k].join()!==[prev.g,prev.a,prev.k].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('WAVE UNDOER', this.matched+' waves undone','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is c, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    TrigInt.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // the number in front of F′ when F = w·(the swapped wave): w·k, with the minus cos carries
+  back(S,w){ return this.frac(this.sg(S)*w[0]*S.k, w[1]); },
+  slip(S,k,L){
+    const {a}=S, K=S.k;
+    if(k==='mult') return \`\${L} multiplies by the \${K} inside instead of dividing. Differentiating multiplies by \${K}, so undoing it divides.\`;
+    if(k==='noK') return \`\${L} leaves the \${K} inside out. The chain rule brings a \${K} out in front of the slope, and c has to cancel it.\`;
+    if(k==='sign') return S.g==='cos' ? \`\${L} has a minus it should not. The slope of sin is cos with no minus, so undoing \${this.wave(a,'cos',K)} keeps the sign of \${neg(a)}.\`
+      : \`\${L} has the minus wrong. The slope of cos is −sin, so undoing a sine needs a minus in front that a cosine does not.\`;
+    return \`\${L} is \${K}/\${this.pf([a,1])} turned over. Undoing the \${K} inside divides \${neg(a)} by \${K}, so \${K} goes underneath.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), w=this.back(S,v), h=this.other(S.g);
+    return \`Check \${L}: if c were \${this.fs(v)}, F(x) = \${this.pf(v)}·\${h}(\${S.k}x) has slope \${S.g==='sin'?'−':''}\${this.pf(v)} × \${S.k} · \${S.g}(\${S.k}x) = \${this.fs(w)}·\${S.g}(\${S.k}x), not \${this.wave(S.a,S.g,S.k)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss(), h=this.other(S.g);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="iqQ" style="text-align:center;font-size:16px;margin-bottom:2px">∫ \${this.wave(S.a,S.g,S.k)} dx = c·\${h}(\${S.k}x) + C</div>\`;
+    out+=\`<div id="iqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="TrigPick.choose(\${i})" aria-label="\${L}: c = \${v}\${gone?'. Not c':''}" style="margin:0"><b>\${L}</b> c = \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), hb=this.other(B.g);
+      const raw=\`\${B.g==='sin'?'−':''}\${this.pf([B.a,1])}/\${B.k}\`;
+      lines.push(\`That was it: c = \${raw}\${raw===this.fs(v)?'':' = '+this.fs(v)}, and F(x) = \${this.pf(v)}·\${hb}(\${B.k}x) has slope \${B.g==='sin'?'−':''}\${this.pf(v)} × \${B.k} · \${B.g}(\${B.k}x) = \${this.fs(this.back(B,v))}·\${B.g}(\${B.k}x), the wave itself. Here is a new wave.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="iqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const TrigInt = {
   SETS:[
     {id:'cos2', btn:'cos 2x', g:'cos', a:1, k:2, X:2*Math.PI, y:[-4.5,4.5]},
@@ -23511,7 +23631,15 @@ const TrigInt = {
   pick(i){ this.si=i; this.start(); this.touched=true; this.render(); },
   fun(g){ this.g=g; this.touched=true; this.render(); },
   moveC(by){ const i=this.ci+by; if(i<0 || i>=this.C.length) return; this.ci=i; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('itTab').innerHTML=[['hand','🎢 Undo it by hand','Pick sin or cos and set c by hand'],['pick','🎯 Which c?','See a wave to undo, and pick which of four numbers is c']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="TrigInt.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['itSets','itFig','itF','itFun','itStep','itRead','itGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('iqBox').innerHTML=pick ? TrigPick.html() : '';
+    if(pick) return;
     document.getElementById('itSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TrigInt.pick(\${i})" aria-label="Target f(x) = \${this.wave(s.a,s.g,s.k)}">\${s.btn}</button>\`).join('');
     document.getElementById('itFun').innerHTML=['sin','cos'].map(g=>
