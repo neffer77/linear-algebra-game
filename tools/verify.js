@@ -3625,6 +3625,164 @@ const idNotes = (() => {
   return { ids };
 })();
 
+/* Which λ? The pick-a-pair round in the eigenvalue detective. Every matrix
+   is solved here from its own entries, by the quadratic formula, and the
+   eigenvalues must be two different whole numbers; A must not be
+   triangular, or its diagonal would give them away. Every pair on screen is
+   read back as two numbers and must be exactly the slip it is named as. The
+   picture is read back off its own ticks: the blue curve must be
+   det(A − λI) at every point it is drawn through, the gold rings must sit on
+   the axis at the eigenvalues, and each red dot must sit on the curve at the
+   number it stands for. */
+const lamPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const mat = A => '[' + A.map(r => r.join(' ')).join('; ') + ']';" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Detect = {render(){ env.renders++; }};" +
+    cut('const LamPick = {', '/* ---------- The eigenvalue detective') + 'return LamPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : String(n));
+  const num = s => +s.replace('−', '-');
+  // a pair as the player reads it, turned back into its two numbers
+  const pairOf = t => { const m = t.match(/^λ = (−?\d+) and (−?\d+)$/); return m && [num(m[1]), num(m[2])]; };
+  const tr = A => A[0][0] + A[1][1], dt = A => A[0][0] * A[1][1] - A[0][1] * A[1][0];
+  const P = (A, l) => l * l - tr(A) * l + dt(A);
+  // the eigenvalues, from the quadratic formula and nothing else
+  const solve = A => { const t = tr(A), d = dt(A), q = t * t - 4 * d, s = Math.round(Math.sqrt(q));
+    return q > 0 && s * s === q && (t + s) % 2 === 0 ? [(t - s) / 2, (t + s) / 2] : null; };
+  const srt = w => [...w].sort((x, y) => x - y);
+  const want = { right: c => c.roots, diag: c => srt([c.A[0][0], c.A[1][1]]), sign: c => srt(c.roots.map(x => -x)), trdet: c => srt([tr(c.A), dt(c.A)]) };
+  const poly = A => { const t = tr(A), d = dt(A);
+    return 'λ²' + (t === 0 ? '' : ` ${t > 0 ? '−' : '+'} ${Math.abs(t) === 1 ? '' : Math.abs(t)}λ`) + (d === 0 ? '' : ` ${d > 0 ? '+' : '−'} ${Math.abs(d)}`); };
+  const fac = l => (l === 0 ? 'λ' : `(λ ${l > 0 ? '−' : '+'} ${Math.abs(l)})`);
+  const work = c => { const [[a, b], [cc, d]] = c.A, [l, m] = c.roots;
+    return `trace = ${ng(a)} + ${pn(d)} = ${ng(tr(c.A))} and det A = ${pn(a)}·${pn(d)} − ${pn(b)}·${pn(cc)} = ${ng(dt(c.A))}, so det(A − λI) = ${poly(c.A)} = ${fac(l)}${fac(m)}, which is 0 at λ = ${ng(l)} and λ = ${ng(m)}`; };
+  const read = () => txt(S.html().split('id="lpRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'An eigenvalue is a λ where det(A − λI) = 0. For a 2×2 matrix that is λ² − (trace)λ + det A = 0, so the two eigenvalues add up to the trace a + d and multiply to det A = ad − bc. Which pair are the eigenvalues of A?') fail('lampick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('lampick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, dots = 0, halves = 0;
+  const slots = new Set(), kinds = {}, pairs = new Set(), mats = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = { A: r.c.A, roots: solve(r.c.A) }, key = `seed ${seed} round ${k}`;
+      rounds++;
+      if (!c.A.flat().every(x => Number.isInteger(x) && Math.abs(x) <= 9)) fail('lampick', key, `A has an entry that is not a whole number from −9 to 9`);
+      if (!c.A[0][1] || !c.A[1][0]) fail('lampick', key, 'A is triangular, so its eigenvalues sit on its diagonal');
+      if (!c.roots) { fail('lampick', key, `A = ${JSON.stringify(c.A)} does not have two different whole eigenvalues`); continue; }
+      if (JSON.stringify(c.roots) !== JSON.stringify(srt(r.c.lam))) fail('lampick', key, `the round says the eigenvalues are ${r.c.lam}, but A has ${c.roots}`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(r.c)) fail('lampick', key, 'the same matrix comes twice in a row');
+      pairs.add(c.roots.join()); mats.add(JSON.stringify(c.A));
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('lampick', key, 'there are not four pairs, one of them right');
+      const texts = r.opts.map(o => S.text(r.c, o.k)), got = texts.map(pairOf);
+      if (new Set(texts).size !== 4) fail('lampick', key, 'two pairs are written the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('lampick', key, `an option is the unknown ${o.k}`); return; }
+        if (!got[i]) { fail('lampick', key, `${texts[i]} does not read as two numbers`); return; }
+        if (got[i].join() !== want[o.k](c).join()) fail('lampick', key, `${o.k} is written ${texts[i]}, which is not that slip`);
+        if (got[i][0] >= got[i][1]) fail('lampick', key, `${texts[i]} does not name two different numbers, smaller first`);
+        if (o.k !== 'right' && got[i].every(x => P(c.A, x) === 0)) fail('lampick', key, `${texts[i]} are the eigenvalues too`);
+        if (o.k !== 'right' && got[i].some(x => P(c.A, x) === 0)) halves++;
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const h0 = S.html();
+      if (!txt(h0).startsWith(`${S.RULE} A = [${c.A.map(w => w.join(' ')).join('; ')}]`)) fail('lampick', key, 'the rule and A are not shown first');
+      const rows = `A has rows ${ng(c.A[0][0])}, ${ng(c.A[0][1])} and ${ng(c.A[1][0])}, ${ng(c.A[1][1])}`;
+      if (!h0.includes(`aria-label="${rows}"`)) fail('lampick', key, 'A is not read out');
+      if (/id="lpFig"/.test(h0)) fail('lampick', key, 'the curve is drawn before any miss, which would show the answer');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="LamPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+?)(\. Not the eigenvalues)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'ABCD'[i] || m[8] !== texts[i])) fail('lampick', key, 'the four pairs are not offered as they are, A to D');
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: ')) fail('lampick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length, r0 = env.renders;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt || env.renders !== r0 + 1) fail('lampick', key, 'a miss is counted, not crossed off, or not redrawn');
+        const [l, m] = c.roots, [x, y] = want[o.k](c), A = c.A;
+        const slip = {
+          diag: `${L} reads the eigenvalues off the diagonal, ${ng(A[0][0])} and ${ng(A[1][1])}. That only works when A is triangular. Here neither number off the diagonal is 0, so det(A − λI) is (a − λ)(d − λ) − bc, and the − bc moves the roots.`,
+          sign: `${L} flips the sign of the trace term, solving λ² + (trace)λ + det A = 0, and so gets ${ng(-m)} and ${ng(-l)}, each eigenvalue turned round. Opening up det(A − λI) gives − (a + d)λ, with a minus.`,
+          trdet: `${L} takes the trace and the determinant themselves, ${ng(tr(A))} and ${ng(dt(A))}. Those are what the two eigenvalues add up to and multiply to, not the eigenvalues.`
+        }[o.k];
+        const px = P(A, x), py = P(A, y);
+        const at = px === 0 ? `At λ = ${ng(x)}, det(A − λI) = 0, so ${ng(x)} is one eigenvalue, but at λ = ${ng(y)} it is ${ng(py)}: ${L} gets only one of the two, and its other red dot sits off the axis.`
+          : py === 0 ? `At λ = ${ng(y)}, det(A − λI) = 0, so ${ng(y)} is one eigenvalue, but at λ = ${ng(x)} it is ${ng(px)}: ${L} gets only one of the two, and its other red dot sits off the axis.`
+          : `At λ = ${ng(x)}, det(A − λI) = ${ng(px)}, and at λ = ${ng(y)} it is ${ng(py)}: neither is 0, so ${L}'s red dots sit off the axis.`;
+        const want2 = `${slip} ${at} ${work(c)}. Check: ${ng(l)} + ${pn(m)} = ${ng(l + m)} is the trace and ${pn(l)} × ${pn(m)} = ${ng(l * m)} is det A. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want2) fail('lampick', key, `the miss is explained as: ${read()} | want ${want2}`);
+        if (l + m !== tr(A) || l * m !== dt(A)) fail('lampick', key, 'the eigenvalues do not add up to the trace and multiply to det A');
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="LamPick\\.choose\\(${i}\\)" aria-label="${L}: [^"]+\\. Not the eigenvalues"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('lampick', key, 'the missed pairs are not shut and told as not the eigenvalues');
+        const outs = wrong.slice(0, q + 1).slice().sort();
+        if (!h.includes(`role="img" aria-label="det(A − λI) = ${poly(A)} in blue against λ, meeting the axis at the gold rings, λ = ${ng(l)} and ${ng(m)}; red dots for ${outs.map(j => 'ABCD'[j]).join(' and ')}">`)) fail('lampick', key, 'the curve is not read out');
+        // the picture, read back off its own ticks
+        const svg = (h.split('id="lpFig"')[1] || '').split('</svg>')[0];
+        const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10" fill="[^"]+" text-anchor="middle">([^<]+)<\/text>/g)].map(mm => [+mm[1], num(mm[2])]);
+        const yt = [...svg.matchAll(/<text x="([-\d.]+)" y="([-\d.]+)" font-size="9" fill="[^"]+" text-anchor="end">([^<]+)<\/text>/g)].map(mm => [+mm[2] - 3, num(mm[3]), +mm[1], mm[3]]);
+        if (xt.length < 2 || yt.length < 2 || !yt.some(p => p[1] === 0)) { fail('lampick', key, 'the axes are not marked, or 0 is not marked on the det axis'); continue; }
+        if (yt.some(p => p[2] - 5.2 * [...p[3]].length < 1)) fail('lampick', key, 'a label runs off the left edge of the picture');
+        const xe = xt[xt.length - 1], ye = yt[yt.length - 1], kx = (xe[0] - xt[0][0]) / (xe[1] - xt[0][1]), ky = (ye[0] - yt[0][0]) / (ye[1] - yt[0][1]);
+        if (!(kx > 0 && ky < 0)) fail('lampick', key, 'the curve is drawn back to front or upside down');
+        const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
+        const all = Object.keys(want).flatMap(kk => want[kk](c)), x0 = Math.min(...all) - 1, x1 = Math.max(...all) + 1;
+        const yr = Math.abs(yt[yt.length - 1][1] - yt[0][1]);
+        const path = (svg.match(/<path data-k="curve" d="([^"]+)" fill="none" stroke="#5aa9e6"/) || [])[1];
+        const pts = path ? [...path.matchAll(/[ML]([-\d.]+),([-\d.]+)/g)].map(mm => [ux(+mm[1]), uy(+mm[2])]) : [];
+        if (pts.length !== 81) fail('lampick', key, `the curve is drawn through ${pts.length} points, not 81`);
+        else pts.forEach((p, j) => { const lx = x0 + (x1 - x0) * j / 80;
+          if (Math.abs(p[0] - lx) > 0.01 * (x1 - x0) || Math.abs(p[1] - P(A, lx)) > 0.005 * yr) fail('lampick', key, `the curve at λ = ${lx.toFixed(2)} is drawn at ${p[1].toFixed(2)}, not det(A − λI) = ${P(A, lx).toFixed(2)}`); });
+        const rings = [...svg.matchAll(/<circle data-k="root" cx="([-\d.]+)" cy="([-\d.]+)" r="6" fill="none" stroke="#f2c14e"/g)].map(mm => [ux(+mm[1]), uy(+mm[2])]);
+        if (rings.length !== 2 || rings.some((p, j) => Math.abs(p[0] - c.roots[j]) > 0.02 || Math.abs(p[1]) > 0.005 * yr)) fail('lampick', key, 'the gold rings do not sit on the axis at the eigenvalues');
+        const drawn = [...new Set([...svg.matchAll(/data-k="miss-([ABCD])"/g)].map(mm => mm[1]))];
+        if (drawn.join() !== outs.map(j => 'ABCD'[j]).join()) fail('lampick', key, `the red dots are for ${drawn}`);
+        for (const j of outs) {
+          const Lj = 'ABCD'[j], w = want[r.opts[j].k](c);
+          const ds = [...svg.matchAll(new RegExp(`<circle data-k="miss-${Lj}" cx="([-\\d.]+)" cy="([-\\d.]+)" r="4" fill="#e5484d"/><text[^>]*>${Lj}</text>`, 'g'))].map(mm => [ux(+mm[1]), uy(+mm[2])]);
+          dots += ds.length;
+          if (ds.length !== 2 || ds.some((p, z) => Math.abs(p[0] - w[z]) > 0.02 || Math.abs(p[1] - P(A, w[z])) > 0.005 * yr)) fail('lampick', key, `${Lj}'s red dots do not sit on the curve at ${w}`);
+        }
+        const r1 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r1) fail('lampick', key, 'tapping a missed pair again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('lampick', key, 'a pick does not redraw the detective');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('lampick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('lampick', key, 'no fresh matrix after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'EIGENVALUE READER / 5 pairs picked') fail('lampick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} are the eigenvalues, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('lampick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${work(c)}. Here is a new matrix. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('lampick', key, `after a pick: ${read()}`);
+      prev = r.c;
+    }
+  }
+  // a matrix dealt twice running is dealt again: build is made to repeat itself
+  { const real = S.build; env.seed = 4242; S.round = null; S.start(); const c0 = S.round.c; let n = 0;
+    S.build = function () { return n++ < 3 ? JSON.parse(JSON.stringify(c0)) : real.call(S); };
+    S.newRound(); S.build = real;
+    if (JSON.stringify(S.round.c) === JSON.stringify(c0)) fail('lampick', 'repeat', 'the same matrix is dealt twice in a row'); }
+  for (const k of ['diag', 'sign', 'trdet']) if (!kinds[k]) fail('lampick', 'slips', `the slip ${k} is never offered`);
+  if (slots.size !== 4) fail('lampick', 'deal', `the right pair only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (pairs.size < 12) fail('lampick', 'deal', `only ${pairs.size} pairs of eigenvalues ever come up`);
+  if (mats.size < 80) fail('lampick', 'deal', `only ${mats.size} matrices ever come up`);
+  if (!halves) fail('lampick', 'deal', 'no slip ever happens to share one eigenvalue, so that explanation is never tried');
+  if (fives !== 30) fail('lampick', 'banner', `five pairs were picked ${fives} times, not 30`);
+  return { rounds, misses, dots, pairs: pairs.size };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -7363,6 +7521,7 @@ console.log(`  integrals picked  ${pad(intPickNotes.rounds.toLocaleString(), 15)
 console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${chainPickNotes.misses.toLocaleString()} wrong picks explained; ${chainPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
+console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);
