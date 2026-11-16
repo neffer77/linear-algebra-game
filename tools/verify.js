@@ -90,7 +90,7 @@ function loadGame() {
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcSets')")) + 'render(){}};exports.PathChain=PathChain;' +
-    ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiSets')")) + 'render(){}};exports.ExpInt=ExpInt;' +
+    ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
     ';const Limit={' + script.slice(script.indexOf('  FNS:[\n    {id:\'hole\''), script.indexOf('  open(){ UI.go(\'s-limit\'); },')) + '};exports.Limit=Limit;' +
@@ -5723,6 +5723,154 @@ const tailPickNotes = (() => {
   if (fives !== 30) fail('tailpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Which number in front? The pick-a-number round in the growth integral
+   workshop. Every number on screen is read back off its button as an exact
+   fraction and checked against the slip it is named as, worked out here from
+   a and k alone. The right number alone must undo the exponential: checked by
+   nudging c·e^(kx) and comparing its slope with a·e^(kx). Every "c × k" in the
+   readout is worked again from the numbers it shows. */
+const growPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const ExpInt = {render(){ env.renders++; }};" +
+    cut('const GrowPick = {', 'const ExpInt = {') + 'return GrowPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const cx = a => (a === 1 ? '' : a === -1 ? '−' : ng(a));
+  const ex = k => `e^(${ng(k)}x)`;
+  const want = {
+    right: Q => fr(Q.a, Q.k),
+    mult: Q => fr(Q.a * Q.k, 1),
+    noK: Q => fr(Q.a, 1),
+    flip: Q => fr(Q.k, Q.a),
+    up: Q => fr(Q.a, Q.k + 1),
+    sign: Q => fr(-Q.a, Q.k)
+  };
+  const SL = ['mult', 'noK', 'flip', 'up', 'sign'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "w × n = z" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`\\(?${V}\\)? × \\(?(−?\\d+)\\)? = ${V}`, 'g'))) { n++;
+      const w = rd(m[1]), z = rd(m[3]), k = +m[2].replace('−', '-');
+      if (!eq(fr(w[0] * k, w[1]), z)) fail('growpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="gwRead"')[1].replace(/^[^>]*>/, ''));
+  // the slope of c·e^(kx), by a nudge either side, against a·e^(kx) itself
+  const undoes = (Q, c) => [-0.7, 0, 0.4].every(x => { const h = 1e-5, F = t => c[0] / c[1] * Math.exp(Q.k * t);
+    return Math.abs((F(x + h) - F(x - h)) / (2 * h) - Q.a * Math.exp(Q.k * x)) < 1e-6 * (1 + Math.abs(Q.a * Math.exp(Q.k * x))); });
+  const slipOf = (k, L, Q) => { const { a, k: m } = Q, e = ex(m); return ({
+    mult: `${L} multiplies by ${ng(m)} where it should divide. The chain rule already brings a ${ng(m)} out in front when you take the slope, so undoing it means dividing by ${ng(m)}.`,
+    noK: `${L} leaves the ${ng(m)} out. The slope of ${cx(a)}${e} is ${ng(a)} × ${pn(m)} · ${e}, because the chain rule brings the ${ng(m)} inside the exponent out in front, so you must divide by ${ng(m)}.`,
+    flip: `${L} divides the wrong way round, ${ng(m)} over ${ng(a)}. c × ${pn(m)} must come to ${ng(a)}, so ${ng(a)} goes on top and ${ng(m)} underneath.`,
+    up: `${L} treats ${e} like a power of x, raising ${ng(m)}x to ${ng(m + 1)}x and dividing by ${ng(m + 1)}. The exponent of e is not a power of x: it stays ${ng(m)}x, and the chain rule asks you to divide by ${ng(m)}, not ${ng(m + 1)}.`,
+    sign: `${L} has the sign turned round. c × ${pn(m)} must come to ${ng(a)}, and a number of the other sign times ${ng(m)} gives ${ng(-a)} instead.` })[k]; };
+  const checkOf = (k, L, Q) => { const v = want[k](Q), { a, k: m } = Q, e = ex(m);
+    return `Check ${L}: the slope of c·${e} is c × ${pn(m)} · ${e}, which must be ${cx(a)}${e} itself, so c × ${pn(m)} must be ${ng(a)}. With c = ${fst(v)} that is ${pf(v)} × ${pn(m)} = ${fst(fr(v[0] * m, v[1]))}, not ${ng(a)}.`; };
+  if (S.RULE !== 'Run the chain rule backwards. The slope of c·e^(kx) is c·k·e^(kx): the k inside the exponent comes out in front. So to undo a·e^(kx), take c = a/k, which makes c × k = a. The exponent stays kx as it is; it is not a power of x, so nothing is raised. Which number goes in front?') fail('growpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('growpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negA = 0, negK = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Ks = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Ks.add(Q.k); if (Q.a < 0) negA++; if (Q.k < 0) negK++;
+      if (!Number.isInteger(Q.a) || !Number.isInteger(Q.k) || !Q.a || Math.abs(Q.a) > 12 || Math.abs(Q.k) < 2 || Math.abs(Q.k) > 6) fail('growpick', key, `${sig} is not a whole a times e to a whole k other than 0 and ±1`);
+      const L = want.right(Q);
+      if (!undoes(Q, L)) fail('growpick', key, `${fst(L)}·${ex(Q.k)} does not have the slope ${Q.a}·${ex(Q.k)}`);
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('growpick', key, 'the same exponential comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('growpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ∫ ${cx(Q.a)}${ex(Q.k)} dx = c·${ex(Q.k)} + C Which number is c? A`)) fail('growpick', key, 'the rule and the exponential are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="GrowPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('growpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('growpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('growpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('growpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('growpick', key, `c is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('growpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('growpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== undoes(Q, vals[i])) fail('growpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'does not undo' : 'undoes'} the exponential`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('growpick', key, 'an exponential with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('growpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('growpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('growpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('growpick', key, 'a miss does not work c × k out');
+        if (vals[i][0] * Q.k === Q.a * vals[i][1]) fail('growpick', key, 'a wrong number passes the check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="GrowPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the number in front"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('growpick', key, 'the missed numbers are not shut and told as not the number in front');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('growpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('growpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('growpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('growpick', key, 'no fresh exponential after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'GROWTH TAMER / 5 exponentials undone') fail('growpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} goes in front, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('growpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), raw = `${ng(Q.a)}/${pn(Q.k)}`;
+      const after = `That was it: c = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and ${pf(L)} × ${pn(Q.k)} = ${ng(Q.a)}, so ${pf(L)}·${ex(Q.k)} has the slope ${cx(Q.a)}${ex(Q.k)}, the exponential itself. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('growpick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('growpick', key, 'the right pick does not work c × k out');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same exponential dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 6, k: 4 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":6,"k":4}') fail('growpick', 'repeat', 'the same exponential is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('growpick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 24 || Ks.size !== 10) fail('growpick', 'deal', `a is only ever ${[...As]}, k ${[...Ks]}`);
+  if (negA < rounds * 0.4 || negA > rounds * 0.6) fail('growpick', 'deal', `a is negative in ${negA} of ${rounds} rounds`);
+  if (negK < rounds * 0.4 || negK > rounds * 0.6) fail('growpick', 'deal', `k is negative in ${negK} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('growpick', 'deal', `the whole numbers in front are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('growpick', 'deal', `c is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('growpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('growpick', 'deal', `c only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('growpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10471,6 +10619,7 @@ console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 
 console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the trig integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone making the slope of F land on the wave; ${trigPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their F back, ${trigPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${trigPickNotes.wholeR.toLocaleString()} rounds whose c is whole)`);
 console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
+console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
