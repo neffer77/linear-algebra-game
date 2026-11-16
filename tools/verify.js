@@ -8405,6 +8405,162 @@ const secantPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which step? The downhill workshop turned round. Every number is read back
+   off its button and checked against the slip it is named as, worked from
+   the valley here; the right one alone is where one step lands, found
+   without the rule's formula: the slope is measured from f itself, and the
+   step taken against it. Each wrong number's check is worked again: the
+   slope its step would need is not the slope there. */
+const descentPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Descent = {render(){ env.renders++; }};" +
+    cut('const DescentPick = {', '/* ============ DOWNHILL WORKSHOP') + 'return DescentPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const num = v => v[0] / v[1];
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const f = (Q, x) => Q.a * (x - Q.m) ** 2 + Q.c;
+  // the slope measured from f itself, by a small nudge either side
+  const slope = (Q, x) => (f(Q, x + 1e-4) - f(Q, x - 1e-4)) / 2e-4;
+  const poly = Q => `${Q.a === 1 ? '' : Q.a}${Q.m === 0 ? 'x²' : `(x ${Q.m < 0 ? '+' : '−'} ${Math.abs(Q.m)})²`}${Q.c === 0 ? '' : Q.c < 0 ? ` − ${-Q.c}` : ` + ${Q.c}`}`;
+  // every number, worked from the slip it stands for; η = en/ed
+  const want = (k, Q) => { const { x, a, m, c, en, ed } = Q, g = 2 * a * (x - m), h = a * (x - m) ** 2 + c;
+    return k === 'right' ? red(x * ed - en * g, ed) : k === 'up' ? red(x * ed + en * g, ed) : k === 'noTwo' ? red(x * ed - en * a * (x - m), ed)
+      : k === 'noEta' ? red(x - g, 1) : k === 'fval' ? red(x * ed - en * h, ed) : k === 'stepOnly' ? red(-en * g, ed)
+      : k === 'byEta' ? red(x * en - ed * g, en) : k === 'noM' ? red(x * ed - en * 2 * a * x, ed) : null; };
+  const slipOf = (k, L, Q) => { const { x, a, m } = Q, e = fr(red(Q.en, Q.ed)), g = 2 * a * (x - m);
+    if (k === 'up') return `${L} steps up the slope, to x + η·f′(x). f′(${ng(x)}) = ${ng(g)} points uphill, so downhill is the other way: take η·f′(x) away.`;
+    if (k === 'noTwo') return `${L} forgets the 2 that the square brings down. The slope of ${a === 1 ? '' : a}(x − m)² is 2 × ${a} × (x − m), not ${a === 1 ? '' : a + ' × '}(x − m).`;
+    if (k === 'noEta') return `${L} takes a whole slope's worth of step, x − f′(x), and forgets to scale it by η = ${e}.`;
+    if (k === 'fval') return `${L} steps by the height, η·f(x), where a step uses the slope, η·f′(x). How high you stand does not say which way is down.`;
+    if (k === 'stepOnly') return `${L} is the step on its own, −η·f′(x), and not where it lands: start from x = ${ng(x)} and add the step to it.`;
+    if (k === 'byEta') return `${L} divides the slope by η = ${e} where it should multiply, so a small η makes the step bigger, not smaller.`;
+    return `${L} drops the ${ng(m)} from the slope, as if the bottom were at 0: f′(x) = 2a(x − m) = 2 × ${a} × (${ng(x)} ${m < 0 ? '+' : '−'} ${Math.abs(m)}), not 2 × ${a} × ${x < 0 ? `(${ng(x)})` : x}.`; };
+  const RULE = 'Walk downhill: the slope f′(x) points uphill, so a step goes the other way. From x, one step of size η lands on x − η·f′(x). For the valley f(x) = a(x − m)² + c the slope is f′(x) = 2a(x − m): the square brings down a 2. Which x does one step land on?';
+  if (S.RULE !== RULE) fail('descentpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('descentpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['up', 'noTwo', 'noEta', 'fval', 'stepOnly', 'byEta', 'noM'];
+  const ETAS = ['1/10', '1/8', '1/6', '1/5', '1/4', '3/10', '1/3', '3/8', '2/5'];
+  let rounds = 0, misses = 0, worked = 0, whole = 0, negs = 0, fives = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Ms = new Set(), Cs = new Set(), Xs = new Set(), Es = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), E = red(Q.en, Q.ed);
+      rounds++; As.add(Q.a); Ms.add(Q.m); Cs.add(Q.c); Xs.add(Q.x); Es.add(fr(E));
+      if (![1, 2, 3].includes(Q.a) || !(Math.abs(Q.m) <= 3) || !(Q.c >= -2 && Q.c <= 4) || !(Math.abs(Q.x) <= 4) || Q.x === Q.m || !ETAS.includes(fr(E)) || ![Q.a, Q.m, Q.c, Q.x].every(Number.isInteger)) fail('descentpick', key, `${sig} is not a valley, start and step of the kind dealt`);
+      // every step goes downhill: η × 2a under 2, so it never jumps clean over and climbs
+      if (!(f(Q, Q.x - num(E) * slope(Q, Q.x)) < f(Q, Q.x))) fail('descentpick', key, 'the step does not go downhill');
+      if (prev && prev === sig) fail('descentpick', key, 'the same valley comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('descentpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = ${poly(Q)}, from x = ${ng(Q.x)}, with η = ${fr(E)} Which x does one step land on? A `)) fail('descentpick', key, 'the rule and the valley are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="DescentPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('descentpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('descentpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(num(v)) > 60)) fail('descentpick', key, 'a number is 0, or past 60');
+      if (new Set(vals.map(String)).size !== 4) fail('descentpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      const g = 2 * Q.a * (Q.x - Q.m), h = f(Q, Q.x);
+      // no number on the page, the valley's own, the start, the step size, the height or the slope there, is the answer
+      if ([[Q.a, 1], [Q.m, 1], [Q.c, 1], [Q.x, 1], E, [h, 1], [g, 1], [2, 1]].some(v => String(v) === String(vals[ri]))) fail('descentpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('descentpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('descentpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('descentpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('descentpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        // the step measured: from the slope f itself gives, against it, η of the way
+        if ((o.k === 'right') !== (Math.abs(Q.x - num(E) * slope(Q, Q.x) - num(vals[i])) < 1e-6)) fail('descentpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} one step downhill`);
+      });
+      if (k === 0 && txt(S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('descentpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, W = fr(want('right', Q));
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('descentpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('descentpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): a step from (\S+) to (\S+) moves (\S+), so the slope behind it would be \((\S+) − (\S+)\) ÷ (\S+) = (\S+) ÷ (\S+) = (\S+), but the slope at (\S+) is f′\((\S+)\) = (\S+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('descentpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const v = vals[i];
+        if (cm[2] !== ng(Q.x) || cm[3] !== fr(v) || cm[5] !== ng(Q.x) || cm[6] !== pf(v) || cm[7] !== pf(E) || cm[9] !== pf(E) || cm[11] !== ng(Q.x) || cm[12] !== ng(Q.x) || cm[13] !== ng(g)) fail('descentpick', key, `the check of ${o.k} is not worked for this valley: ${lines[1]}`);
+        // the check, measured: the move, the gap back to the start, and the slope that step would need
+        const mv = rdv(cm[4]), d = rdv(cm[8]), B = rdv(cm[10]);
+        if (!mv || Math.abs(num(mv) - (num(v) - Q.x)) > 1e-9) fail('descentpick', key, `${cm[4]} is not how far a step to ${fr(v)} moves`);
+        if (!d || Math.abs(num(d) - (Q.x - num(v))) > 1e-9) fail('descentpick', key, `${cm[8]} is not ${ng(Q.x)} − ${pf(v)}`);
+        if (!B || Math.abs(num(B) - (Q.x - num(v)) / num(E)) > 1e-9) fail('descentpick', key, `${cm[10]} is not the slope behind a step to ${fr(v)}`);
+        else if (Math.abs(num(B) - slope(Q, Q.x)) < 1e-6) fail('descentpick', key, 'a wrong number passes its check');
+        if (Math.abs(g - slope(Q, Q.x)) > 1e-6) fail('descentpick', key, `${g} is not the slope at ${ng(Q.x)}`);
+        if ([cm[4], cm[8], cm[10]].includes(W) || lines[0].includes(` ${W} `)) fail('descentpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="DescentPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not where the step lands"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('descentpick', key, 'the missed numbers are not shut and told as not where the step lands');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('descentpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('descentpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('descentpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('descentpick', key, 'no fresh valley after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'VALLEY STEPPER / 5 steps landed') fail('descentpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where the step lands, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('descentpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, ''));
+      const st = red(Q.en * g, Q.ed), V = want('right', Q), h1 = f(Q, num(V));
+      const h1s = (() => { const p = Q.a * (V[0] - Q.m * V[1]) ** 2 + Q.c * V[1] * V[1]; return fr(red(p, V[1] * V[1])); })();
+      const wantLine = `That was it: f′(${ng(Q.x)}) = 2 × ${Q.a} × ${Q.x - Q.m < 0 ? `(${ng(Q.x - Q.m)})` : Q.x - Q.m} = ${ng(g)}, so the step is ${pf(E)} × ${g < 0 ? `(${ng(g)})` : g} = ${fr(st)}, and ${ng(Q.x)} − ${pf(st)} = ${fr(V)}. f fell from ${ng(h)} to ${h1s}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('descentpick', key, `after a pick: ${got}`);
+      if (!(h1 < h) || Math.abs(num(rdv(h1s)) - h1) > 1e-9) fail('descentpick', key, `f at ${fr(V)} is not ${h1s}, below ${h}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same valley dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, m: 1, c: 3, x: -2, en: 1, ed: 5 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"m":1,"c":3,"x":-2,"en":1,"ed":5}') fail('descentpick', 'repeat', 'the same valley is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of valleys: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), V = want('right', Q); if (V[1] === 1) sw++; if (V[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('descentpick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('descentpick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('descentpick', 'slips', `the slip ${k} is offered in ${kinds[k] || 0} of ${rounds} rounds, too seldom`);
+  if (As.size !== 3 || Ms.size !== 7 || Cs.size !== 7 || Xs.size !== 9 || Es.size !== 9) fail('descentpick', 'deal', `a ${[...As]}, m ${Ms.size} values, c ${Cs.size} values, x ${Xs.size} values, η ${[...Es]} is not the whole deal`);
+  if (slots.size !== 4) fail('descentpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.06 && ranks[1] > rounds * 0.22 && ranks[2] > rounds * 0.22 && ranks[3] > rounds * 0.14)) fail('descentpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('descentpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('descentpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('descentpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13170,6 +13326,7 @@ console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 1
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-step in the downhill workshop, every number read back off its button and checked against the slip it is named as, the right one alone a step against the slope measured from f, ${descentPickNotes.misses.toLocaleString()} wrong picks checked by the slope their step would need, ${descentPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

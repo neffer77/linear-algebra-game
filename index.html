@@ -1110,16 +1110,18 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOWNHILL WORKSHOP ============ -->
   <div class="screen" id="s-descent">
     <div class="panel"><h2>⛰️ Downhill Workshop</h2><div class="sub">f(x, y) = (x − 1)² + 2(y + 1)² is a valley with its bottom at (1, −1). The gradient ∇f points straight uphill, so a step against it, of size η, heads down. Pick η and walk: too small crawls, too big overshoots.</div></div>
+    <div id="gdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk by hand or pick where a step lands"></div>
     <div class="panel">
+      <div id="dhBox"></div>
       <div id="gdEtas" class="wsModes" role="group" aria-label="Step size"></div>
       <div id="gdFig"></div>
-      <div class="wsModes" style="margin:8px 0">
+      <div class="wsModes" id="gdStepRow" style="margin:8px 0">
         <button class="btn sm" id="gdStep" onclick="Descent.step()">⬇ Step downhill</button>
         <button class="btn sm ghost" id="gdReset" onclick="Descent.reset()">↺ Start again</button>
       </div>
       <div id="gdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="gdGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="gdGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14254,7 +14256,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be. Then turn it round: see a valley, a start and a step size, and pick which of four numbers one step lands on.</div>
          <button class="btn sm" id="tomeDescent" style="width:auto;margin-top:8px" onclick="Descent.open()">Open the downhill workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -17404,6 +17406,146 @@ const Compose = {
   }
 };
 
+/* ---------- Which step? The downhill workshop turned round ----------
+   A valley f(x) = a(x − m)² + c with whole a, m and c, a start x₀ and a step
+   size η, and four numbers, one of them where one step of gradient descent
+   lands: x₀ − η·f′(x₀), with f′(x) = 2a(x − m). The rule is stated first;
+   the wrong numbers are the slips people make with a step: stepping up the
+   slope, forgetting the 2 the square brings down, forgetting η, stepping by
+   the height where it is the slope, giving the step without the start, and
+   dividing by η, or dropping the m from the slope. A wrong pick is checked backwards: the slope its step would
+   need, (x₀ − v) ÷ η, is not f′(x₀). Nothing is saved. */
+const DescentPick = {
+  SLIPS:['up','noTwo','noEta','fval','stepOnly','byEta','noM'],
+  ETAS:[[1,10],[1,8],[1,6],[1,5],[1,4],[3,10],[1,3],[3,8],[2,5]],
+  RULE:'Walk downhill: the slope f′(x) points uphill, so a step goes the other way. From x, one step of size η lands on x − η·f′(x). For the valley f(x) = a(x − m)² + c the slope is f′(x) = 2a(x − m): the square brings down a 2. Which x does one step land on?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  // the slope and the height at the start
+  g(S){ return 2*S.a*(S.x-S.m); },
+  h(S){ return S.a*(S.x-S.m)**2+S.c; },
+  // the number each option stands for, as a fraction; η = en/ed
+  val(S,k){
+    const {x,a,m,en,ed}=S, g=this.g(S);
+    return k==='right' ? this.frac(x*ed-en*g,ed) : k==='up' ? this.frac(x*ed+en*g,ed) : k==='noTwo' ? this.frac(x*ed-en*a*(x-m),ed)
+      : k==='noEta' ? this.frac(x-g,1) : k==='fval' ? this.frac(x*ed-en*this.h(S),ed) : k==='stepOnly' ? this.frac(-en*g,ed) : k==='byEta' ? this.frac(x*en-ed*g,en) : this.frac(x*ed-en*2*a*x,ed);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slope a step to v would need, worked backwards: (x − v) ÷ η
+  back(S,v){ return this.frac((S.x*v[1]-v[0])*S.ed,v[1]*S.en); },
+  // the numbers the question and the checks name: a, m, c, x₀, η, f(x₀) and f′(x₀)
+  named(S){ return [[S.a,1],[S.m,1],[S.c,1],[S.x,1],[S.en,S.ed],[this.h(S),1],[this.g(S),1],[2,1]]; },
+  // the slips this start can offer: each a number other than 0, no further out than 60,
+  // different from every one kept before it, and whose check does not name the answer
+  slips(S){
+    const W=this.val(S,'right'), seen=new Set([this.key(W)]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || Math.abs(v[0])>60*v[1] || seen.has(this.key(v))) continue;
+      const d=this.frac(S.x*v[1]-v[0],v[1]);
+      if([this.back(S,v),d,[-d[0],d[1]]].some(u=>this.key(u)===this.key(W))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and one of its sign
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0)) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1, wantNeg=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const E=this.ETAS[R.i(0,this.ETAS.length-1)];
+      const S={a:R.i(1,3), m:R.i(-3,3), c:R.i(-2,4), x:R.i(-4,4), en:E[0], ed:E[1]};
+      if(S.x===S.m) continue;
+      // a step that goes downhill: η × 2a stays under 2, so the walk never climbs
+      if(2*S.a*S.en>=2*S.ed) continue;
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole || (W[0]<0)!==wantNeg) continue;
+      // no number named on the page, the 2 the square brings down included, is the answer, so nothing gives it away
+      if(this.named(S).some(v=>this.key(v)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, m:1, c:3, x:-2, en:1, ed:5};
+  },
+  // the valley, written out: a(x − m)² + c
+  poly(S){ const {a,m,c}=S, sq=m===0 ? 'x²' : `(x ${m<0?'+':'−'} ${Math.abs(m)})²`;
+    return `${a===1?'':a}${sq}${c===0?'':c<0?` − ${-c}`:` + ${c}`}`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('VALLEY STEPPER', this.matched+' steps landed','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is where the step lands, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Descent.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {x,a,m}=S, e=this.fs([S.en,S.ed]), g=this.g(S);
+    if(k==='up') return `${L} steps up the slope, to x + η·f′(x). f′(${neg(x)}) = ${neg(g)} points uphill, so downhill is the other way: take η·f′(x) away.`;
+    if(k==='noTwo') return `${L} forgets the 2 that the square brings down. The slope of ${a===1?'':a}(x − m)² is 2 × ${a} × (x − m), not ${a===1?'':a+' × '}(x − m).`;
+    if(k==='noEta') return `${L} takes a whole slope's worth of step, x − f′(x), and forgets to scale it by η = ${e}.`;
+    if(k==='fval') return `${L} steps by the height, η·f(x), where a step uses the slope, η·f′(x). How high you stand does not say which way is down.`;
+    if(k==='stepOnly') return `${L} is the step on its own, −η·f′(x), and not where it lands: start from x = ${neg(x)} and add the step to it.`;
+    if(k==='byEta') return `${L} divides the slope by η = ${e} where it should multiply, so a small η makes the step bigger, not smaller.`;
+    return `${L} drops the ${neg(m)} from the slope, as if the bottom were at 0: f′(x) = 2a(x − m) = 2 × ${a} × (${neg(x)} ${m<0?'+':'−'} ${Math.abs(m)}), not 2 × ${a} × ${this.pn(x)}.`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {x}=S, E=[S.en,S.ed], B=this.back(S,v), d=this.frac(x*v[1]-v[0],v[1]);
+    return `Check ${L}: a step from ${neg(x)} to ${this.fs(v)} moves ${this.fs(this.frac(-d[0],d[1]))}, so the slope behind it would be (${neg(x)} − ${this.pf(v)}) ÷ ${this.pf(E)} = ${this.fs(d)} ÷ ${this.pf(E)} = ${this.fs(B)}, but the slope at ${neg(x)} is f′(${neg(x)}) = ${neg(this.g(S))}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="dhQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = ${this.poly(S)}, from x = ${neg(S.x)}, with η = ${this.fs([S.en,S.ed])}</div>`;
+    out+=`<div class="small" style="text-align:center">Which x does one step land on?</div>`;
+    out+=`<div id="dhPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="DescentPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not where the step lands':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), g=this.g(B), E=[B.en,B.ed], st=this.frac(B.en*g,B.ed), h1=this.frac(B.a*(v[0]-B.m*v[1])**2+B.c*v[1]*v[1],v[1]*v[1]);
+      lines.push(`That was it: f′(${neg(B.x)}) = 2 × ${B.a} × ${this.pn(B.x-B.m)} = ${neg(g)}, so the step is ${this.pf(E)} × ${this.pn(g)} = ${this.fs(st)}, and ${neg(B.x)} − ${this.pf(st)} = ${this.fs(v)}. f fell from ${neg(this.h(B))} to ${this.fs(h1)}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="dhRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ============ DOWNHILL WORKSHOP ============
    Where the two subjects meet: a valley f(x, y), its gradient as an arrow
    pointing straight uphill, and a walk against that arrow, one step of size η
@@ -17488,7 +17630,15 @@ const Descent = {
     if(this.stuck() || this.atBottom()) return;
     this.path.push(this.next().p); this.touched=true; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('gdTab').innerHTML=[['hand','⛰️ Walk it by hand','Walk down the valley by hand, one step at a time'],['pick','🎯 Which step?','See a valley, a start and a step size, and pick which of four numbers one step lands on']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Descent.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['gdEtas','gdFig','gdStepRow','gdRead','gdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dhBox').innerHTML=pick ? DescentPick.html() : '';
+    if(pick) return;
     const atBottom=this.atBottom();
     document.getElementById('gdEtas').innerHTML=this.ETAS.map((e,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.ei}" aria-label="Step size ${e}" onclick="Descent.pick(${i})">η = ${e}</button>`).join('');
