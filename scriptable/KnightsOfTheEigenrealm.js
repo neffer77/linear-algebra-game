@@ -1980,10 +1980,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
+    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the secant's slope"></div>
     <div class="panel">
+      <div id="sqBox"></div>
       <div id="slCurves" class="wsModes" role="group" aria-label="Curve"></div>
       <div id="slFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="slStep" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="slALo" onclick="Slope.moveA(-1)" aria-label="Move the point left">−</button>
           <b id="slA" style="font-size:19px;min-width:0"></b>
           <button id="slAHi" onclick="Slope.moveA(1)" aria-label="Move the point right">+</button></div>
@@ -1994,7 +1996,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <button class="btn sm ghost" id="slSide" onclick="Slope.flip()"></button>
       <div id="slRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="slGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="slGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14116,7 +14118,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope.</div>
          <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15259,6 +15261,145 @@ const MatPick = {
   }
 };
 
+/* ---------- Which slope? The slope workshop turned round ----------
+   A curve f(x) = cx² + px + q with whole c, p and q, a point a and a step h,
+   and four numbers, one of them the slope of the secant from a to a + h,
+   (f(a + h) − f(a))/h = c(2a + h) + p. The rule is stated first; the wrong
+   numbers are the slips people make with a secant: the tangent's slope at a
+   or at a + h taken for it, the rise left undivided by the run, run over
+   rise, (a + h)² taken as a² + h², or the px term dropped. A wrong pick is
+   checked the way the workshop draws it: a line of that slope from the
+   point at a does not reach the curve at a + h. Nothing is saved. */
+const SecantPick = {
+  SLIPS:['tangent','far','noDiv','flip','square','noP'],
+  HS:[[1,2],[1,1],[3,2],[2,1],[1,3],[2,3]],
+  RULE:'A secant joins two points on a curve, (a, f(a)) and (a + h, f(a + h)). Its slope is rise over run: (f(a + h) − f(a)) ÷ h. For f(x) = cx² + px + q the rise is c(2ah + h²) + ph, so the slope is c(2a + h) + p. Bring h towards 0 and it settles on the tangent\\'s slope, 2ca + p, but until then it is not. Which is the slope of this secant?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // f at x = n/d, as a fraction
+  f(S,n,d){ return this.frac(S.c*n*n+S.p*n*d+S.q*d*d,d*d); },
+  // the number each option stands for, as a fraction; h = hn/hd
+  val(S,k){
+    const {c,p,a,hn,hd}=S, s=c*(2*a*hd+hn)+p*hd;
+    return k==='right' ? this.frac(s,hd) : k==='tangent' ? this.frac(2*c*a+p,1) : k==='far' ? this.frac(2*c*(a*hd+hn)+p*hd,hd)
+      : k==='noDiv' ? this.frac(hn*s,hd*hd) : k==='flip' ? this.frac(hd,s) : k==='square' ? this.frac(c*hn+p*hd,hd) : this.frac(c*(2*a*hd+hn),hd);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this secant can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      // a slip whose check would name the answer is left out, so a check never hands it over
+      if(this.climb(S,k).some(u=>this.key(u)===this.key(this.val(S,'right')))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and one of its sign
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0)) out.push(t); }
+    return out;
+  },
+  // the numbers the question and the checks name: c, p, q, a, a + h, h, f(a) and f(a + h)
+  named(S){ const {a,hn,hd}=S; return [[S.c,1],[S.p,1],[S.q,1],[a,1],this.frac(a*hd+hn,hd),this.frac(hn,hd),this.f(S,a,1),this.f(S,a*hd+hn,hd)]; },
+  // what a line of a slip's slope rises over the step, and the height it reaches
+  climb(S,k){ const v=this.val(S,k), fa=this.f(S,S.a,1), up=this.frac(v[0]*S.hn,v[1]*S.hd);
+    return [up, this.frac(fa[0]*up[1]+up[0]*fa[1],fa[1]*up[1])]; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const H=this.HS[R.i(0,this.HS.length-1)], sg=R.i(0,1)?1:-1;
+      const S={c:R.i(1,3)*(R.i(0,1)?1:-1), p:R.i(-5,5), q:R.i(-4,4), a:R.i(-3,3), hn:sg*H[0], hd:H[1]};
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      // the secant is never flat, and no number named on the page is the answer, so nothing gives it away
+      if(this.named(S).some(v=>this.key(v)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {c:2, p:-3, q:1, a:1, hn:1, hd:2};
+  },
+  poly(S){
+    const t=[[S.c,'x²'],[S.p,'x'],[S.q,'']].filter(([n])=>n), out=[];
+    t.forEach(([n,x],i)=>{ const m=Math.abs(n), body=x && m===1 ? x : \`\${m}\${x}\`;
+      out.push(i===0 ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body); });
+    return out.join('');
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SECANT SEER', this.matched+' secants read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the secant's slope, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Slope.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {c,p,a}=S, h=this.fs(this.frac(S.hn,S.hd)), b=this.fs(this.frac(a*S.hd+S.hn,S.hd));
+    if(k==='tangent') return \`\${L} is the tangent's slope at \${neg(a)}, 2ca + p = \${neg(2*c*a+p)}: where the secant's slope heads as h closes in on 0. With h = \${h} it is not there yet.\`;
+    if(k==='far') return \`\${L} is the tangent's slope at the far end, \${b}. The secant joins the two points, and its slope is rise over run between them.\`;
+    if(k==='noDiv') return \`\${L} is the rise, f(\${b}) − f(\${neg(a)}), not yet divided by the run, h = \${h}.\`;
+    if(k==='flip') return \`\${L} divides the wrong way round, run over rise. Slope is rise over run: f(\${b}) − f(\${neg(a)}) on top, h underneath.\`;
+    if(k==='square') return \`\${L} takes (a + h)² as a² + h², dropping the 2ah. (a + h)² = a² + 2ah + h², so the rise keeps a c × 2ah.\`;
+    return \`\${L} drops the \${p===1?'':p===-1?'−':neg(p)}x. Over a step of h it changes by \${neg(p)} × h, which adds \${neg(p)} to the slope.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,hn,hd}=S, H=this.frac(hn,hd), fa=this.f(S,a,1), fb=this.f(S,a*hd+hn,hd), b=this.frac(a*hd+hn,hd);
+    const [up,y]=this.climb(S,k);
+    return \`Check \${L}: a line of slope \${this.fs(v)} from (\${neg(a)}, \${this.fs(fa)}) rises \${this.pf(v)} × \${this.pf(H)} = \${this.fs(up)} over the step to x = \${this.fs(b)}, reaching a height of \${this.fs(y)}, but the curve is at f(\${this.fs(b)}) = \${this.fs(fb)} there.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), b=this.fs(this.frac(S.a*S.hd+S.hn,S.hd));
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="sqQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.poly(S)}, from x = \${neg(S.a)} to x = \${b} (h = \${this.fs(this.frac(S.hn,S.hd))})</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which is the slope of the secant?</div>\`;
+    out+=\`<div id="sqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="SecantPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the secant\\'s slope':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), H=this.frac(B.hn,B.hd), fa=this.f(B,B.a,1), fb=this.f(B,B.a*B.hd+B.hn,B.hd), bb=this.frac(B.a*B.hd+B.hn,B.hd);
+      const rise=this.frac(fb[0]*fa[1]-fa[0]*fb[1],fb[1]*fa[1]);
+      lines.push(\`That was it: the rise is f(\${this.fs(bb)}) − f(\${neg(B.a)}) = \${this.fs(fb)} − \${this.pf(fa)} = \${this.fs(rise)} over a run of \${this.fs(H)}, so the slope is \${this.pf(rise)} ÷ \${this.pf(H)} = \${this.fs(v)}, and c(2a + h) + p gives the same. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="sqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------------------------- slope workshop ----------------------------- */
 /* The derivative, seen being made. A secant through (a, f(a)) and
    (a + h, f(a + h)) has slope (f(a + h) − f(a))/h, worked out in the readout
@@ -15307,7 +15448,15 @@ const Slope = {
   moveA(by){ const v=this.a+by; if(v<-2||v>2) return; this.a=v; this.render(); },
   moveH(by){ const v=this.hi+by; if(v<0||v>=this.HS.length) return; this.hi=v; this.render(); },
   flip(){ this.side=-this.side; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\\'s slope']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Slope.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['slCurves','slFig','slStep','slSide','slRead','slGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('sqBox').innerHTML=pick ? SecantPick.html() : '';
+    if(pick) return;
     const C=this.curve(), a=this.a, h=this.h(), b=a+h, fa=this.f(a), fb=this.f(b), m=this.secant(), d=this.dfa();
     const near=this.hi===this.HS.length-1;
     document.getElementById('slCurves').innerHTML=this.CURVES.map((c,i)=>

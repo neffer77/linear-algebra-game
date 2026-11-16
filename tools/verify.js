@@ -8255,6 +8255,156 @@ const partsPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which slope? The slope workshop turned round. Every number is read back
+   off its button and checked against the slip it is named as, worked from
+   the curve here; the right one alone is the secant's slope, found without
+   the rule: rise over run, from f measured at both ends. Each wrong number's
+   check is worked again: the line it draws really does miss the curve. */
+const secantPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Slope = {render(){ env.renders++; }};" +
+    cut('const SecantPick = {', '/* ---------------------------- slope workshop') + 'return SecantPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const num = v => v[0] / v[1];
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const f = (Q, x) => Q.c * x * x + Q.p * x + Q.q;
+  // f at n/d, exactly
+  const fx = (Q, n, d) => red(Q.c * n * n + Q.p * n * d + Q.q * d * d, d * d);
+  const poly = Q => { const out = []; [[Q.c, 'x²'], [Q.p, 'x'], [Q.q, '']].filter(([n]) => n).forEach(([n, x], i) => {
+    const m = Math.abs(n), body = x && m === 1 ? x : `${m}${x}`; out.push(i === 0 ? (n < 0 ? '−' : '') + body : (n < 0 ? ' − ' : ' + ') + body); }); return out.join(''); };
+  // every number, worked from the slip it stands for; h = hn/hd
+  const want = (k, Q) => { const { c, p, a, hn, hd } = Q, s = c * (2 * a * hd + hn) + p * hd;
+    return k === 'right' ? red(s, hd) : k === 'tangent' ? red(2 * c * a + p, 1) : k === 'far' ? red(2 * c * (a * hd + hn) + p * hd, hd)
+      : k === 'noDiv' ? red(hn * s, hd * hd) : k === 'flip' ? red(hd, s) : k === 'square' ? red(c * hn + p * hd, hd) : k === 'noP' ? red(c * (2 * a * hd + hn), hd) : null; };
+  // rise over run, measured from f at both ends
+  const secant = Q => { const h = Q.hn / Q.hd; return (f(Q, Q.a + h) - f(Q, Q.a)) / h; };
+  const slipOf = (k, L, Q) => { const { c, p, a } = Q, h = fr(red(Q.hn, Q.hd)), b = fr(red(a * Q.hd + Q.hn, Q.hd));
+    if (k === 'tangent') return `${L} is the tangent's slope at ${ng(a)}, 2ca + p = ${ng(2 * c * a + p)}: where the secant's slope heads as h closes in on 0. With h = ${h} it is not there yet.`;
+    if (k === 'far') return `${L} is the tangent's slope at the far end, ${b}. The secant joins the two points, and its slope is rise over run between them.`;
+    if (k === 'noDiv') return `${L} is the rise, f(${b}) − f(${ng(a)}), not yet divided by the run, h = ${h}.`;
+    if (k === 'flip') return `${L} divides the wrong way round, run over rise. Slope is rise over run: f(${b}) − f(${ng(a)}) on top, h underneath.`;
+    if (k === 'square') return `${L} takes (a + h)² as a² + h², dropping the 2ah. (a + h)² = a² + 2ah + h², so the rise keeps a c × 2ah.`;
+    return `${L} drops the ${p === 1 ? '' : p === -1 ? '−' : ng(p)}x. Over a step of h it changes by ${ng(p)} × h, which adds ${ng(p)} to the slope.`; };
+  const RULE = 'A secant joins two points on a curve, (a, f(a)) and (a + h, f(a + h)). Its slope is rise over run: (f(a + h) − f(a)) ÷ h. For f(x) = cx² + px + q the rise is c(2ah + h²) + ph, so the slope is c(2a + h) + p. Bring h towards 0 and it settles on the tangent\'s slope, 2ca + p, but until then it is not. Which is the slope of this secant?';
+  if (S.RULE !== RULE) fail('secantpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('secantpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['tangent', 'far', 'noDiv', 'flip', 'square', 'noP'];
+  const HS = ['1/2', '1', '3/2', '2', '1/3', '2/3'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Cs = new Set(), Ps = new Set(), Qs = new Set(), As = new Set(), Hs = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), H = red(Q.hn, Q.hd);
+      rounds++; Cs.add(Q.c); Ps.add(Q.p); Qs.add(Q.q); As.add(Q.a); Hs.add(fr(H));
+      if (![1, 2, 3].includes(Math.abs(Q.c)) || !(Math.abs(Q.p) <= 5) || !(Math.abs(Q.q) <= 4) || !(Math.abs(Q.a) <= 3) || !HS.includes(fr([Math.abs(H[0]), H[1]])) || ![Q.c, Q.p, Q.q, Q.a].every(Number.isInteger)) fail('secantpick', key, `${sig} is not a curve and step of the kind dealt`);
+      if (prev && prev === sig) fail('secantpick', key, 'the same secant comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('secantpick', key, 'there are not four numbers, one of them right');
+      const b = red(Q.a * Q.hd + Q.hn, Q.hd);
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = ${poly(Q)}, from x = ${ng(Q.a)} to x = ${fr(b)} (h = ${fr(H)}) Which is the slope of the secant? A `)) fail('secantpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SecantPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('secantpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('secantpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(num(v)) > 60)) fail('secantpick', key, 'a number is 0, or past 60');
+      if (new Set(vals.map(String)).size !== 4) fail('secantpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      // no number on the page, the curve's own, the ends, the step or the heights there, is the answer
+      if ([[Q.c, 1], [Q.p, 1], [Q.q, 1], [Q.a, 1], b, H, fx(Q, Q.a, 1), fx(Q, Q.a * Q.hd + Q.hn, Q.hd)].some(v => String(v) === String(vals[ri]))) fail('secantpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('secantpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('secantpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('secantpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('secantpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(secant(Q) - num(vals[i])) < 1e-9)) fail('secantpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} rise over run`);
+      });
+      if (k === 0 && txt(S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('secantpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, fa = fx(Q, Q.a, 1), fb = fx(Q, Q.a * Q.hd + Q.hn, Q.hd);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('secantpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('secantpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): a line of slope (\S+) from \((\S+), (\S+)\) rises (\S+) × (\S+) = (\S+) over the step to x = (\S+), reaching a height of (\S+), but the curve is at f\((\S+)\) = (\S+) there\.$/);
+        if (!cm || cm[1] !== Lt) { fail('secantpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        if (cm[2] !== fr(vals[i]) || cm[3] !== ng(Q.a) || cm[4] !== fr(fa) || cm[5] !== pf(vals[i]) || cm[6] !== pf(H) || cm[8] !== fr(b) || cm[10] !== fr(b) || cm[11] !== fr(fb)) fail('secantpick', key, `the check of ${o.k} is not worked for this secant: ${lines[1]}`);
+        // the line, measured: it climbs slope × h, from f(a), and so misses the curve at a + h
+        const up = rdv(cm[7]), y = rdv(cm[9]);
+        if (!up || Math.abs(num(up) - num(vals[i]) * Q.hn / Q.hd) > 1e-9) fail('secantpick', key, `${cm[7]} is not how far a slope of ${fr(vals[i])} rises over the step`);
+        if (!y || Math.abs(num(y) - (f(Q, Q.a) + num(vals[i]) * Q.hn / Q.hd)) > 1e-9) fail('secantpick', key, `${cm[9]} is not the height the line of ${o.k} reaches`);
+        else if (Math.abs(num(y) - f(Q, Q.a + Q.hn / Q.hd)) < 1e-9) fail('secantpick', key, 'a wrong number passes its check');
+        const W = fr(want('right', Q)), re = new RegExp(`(^|[\\s(])${W.replace('/', '\\/')}(?![\\d/])`);
+        if (re.test(lines[1].replace(/^Check [ABCD]: a line of slope \S+/, '')) || lines[0].includes(` is ${W},`)) fail('secantpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SecantPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the secant's slope"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('secantpick', key, 'the missed numbers are not shut and told as not the secant\'s slope');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('secantpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('secantpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('secantpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('secantpick', key, 'no fresh secant after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SECANT SEER / 5 secants read') fail('secantpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the secant's slope, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('secantpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, ''));
+      const W = want('right', Q), rise = red(fb[0] * fa[1] - fa[0] * fb[1], fb[1] * fa[1]);
+      const wantLine = `That was it: the rise is f(${fr(b)}) − f(${ng(Q.a)}) = ${fr(fb)} − ${pf(fa)} = ${fr(rise)} over a run of ${fr(H)}, so the slope is ${pf(rise)} ÷ ${pf(H)} = ${fr(W)}, and c(2a + h) + p gives the same. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('secantpick', key, `after a pick: ${got}`);
+      if (Math.abs(num(rise) / num(H) - num(W)) > 1e-9) fail('secantpick', key, `${fr(rise)} ÷ ${fr(H)} is not ${fr(W)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same secant dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { c: 2, p: -3, q: 1, a: 1, hn: 1, hd: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"c":2,"p":-3,"q":1,"a":1,"hn":1,"hd":2}') fail('secantpick', 'repeat', 'the same secant is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of secants: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++; if (W[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('secantpick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('secantpick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.3)) fail('secantpick', 'slips', `the slip ${k} is offered in ${kinds[k] || 0} of ${rounds} rounds, too seldom`);
+  if (Cs.size !== 6 || Ps.size !== 11 || Qs.size !== 9 || As.size !== 7 || Hs.size !== 12) fail('secantpick', 'deal', `c ${[...Cs]}, p ${Ps.size} values, q ${Qs.size} values, a ${As.size} values, h ${[...Hs]} is not the whole deal`);
+  if (slots.size !== 4) fail('secantpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.17 && ranks[1] > rounds * 0.26 && ranks[2] > rounds * 0.25 && ranks[3] > rounds * 0.17 && ranks[1] < rounds * 0.33 && ranks[2] < rounds * 0.33)) fail('secantpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('secantpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('secantpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('secantpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13019,6 +13169,7 @@ console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

@@ -140,6 +140,7 @@ const SUITES = [
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
+  require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
