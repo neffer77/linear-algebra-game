@@ -6215,6 +6215,167 @@ const lathePickNotes = (() => {
   return { rounds, misses, worked, wholeR };
 })();
 
+/* Which slope? The pick-a-slope round in the hillwalker workshop. Every number
+   on screen is read back off its button as an exact fraction and checked
+   against the slip it is named as, worked out here from p, q, the point and
+   the heading alone. The right one alone must be the slope: checked against f
+   itself, nudged a hair along û. Every check in the readout is worked again:
+   the step, the two heights, the bend, and the sum. */
+const hillPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Hill = {render(){ env.renders++; }};" +
+    cut('const HillPick = {', '/* ---------- The hillwalker workshop: the directional derivative') + 'return HillPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  // "−12/5", "38", "2/5" read back as a fraction
+  const rd = t => { const m = t.match(/^(−?)(\d+)(?:\/(\d+))?$/); return m ? fr((m[1] ? -1 : 1) * +m[2], m[3] ? +m[3] : 1) : null; };
+  const num = t => { const m = t.match(/^(−?)(\d+)$/); return m ? (m[1] ? -1 : 1) * +m[2] : null; };
+  const near = x => { for (let q = 1; q <= 50; q++) { const p = Math.round(x * q); if (Math.abs(p / q - x) < 1e-6 * (1 + Math.abs(x))) return fr(p, q); } return null; };
+  const F = (Q, x, y) => Q.p * x * x + Q.q * y * y;
+  // each option, written from the slip it stands for: the partials found by differentiating p x² and q y² here
+  const want = {
+    right: Q => fr(2 * Q.p * Q.x * Q.u + 2 * Q.q * Q.y * Q.v, 5),
+    noUnit: Q => fr(2 * Q.p * Q.x * Q.u + 2 * Q.q * Q.y * Q.v, 1),
+    swap: Q => fr(2 * Q.p * Q.x * Q.v + 2 * Q.q * Q.y * Q.u, 5),
+    xOnly: Q => fr(2 * Q.p * Q.x * Q.u, 5),
+    yOnly: Q => fr(2 * Q.q * Q.y * Q.v, 5),
+    noTwo: Q => fr(Q.p * Q.x * Q.u + Q.q * Q.y * Q.v, 5)
+  };
+  const SL = ['noUnit', 'swap', 'xOnly', 'yOnly', 'noTwo'];
+  // the slope itself: f nudged a hair either way along û
+  const slope = Q => { const e = 1e-5, ux = Q.u / 5, uy = Q.v / 5; return (F(Q, Q.x + e * ux, Q.y + e * uy) - F(Q, Q.x - e * ux, Q.y - e * uy)) / (2 * e); };
+  const isSlope = (Q, v) => Math.abs(slope(Q) - v[0] / v[1]) < 1e-5;
+  const cx = n => (n === 1 ? '' : n === -1 ? '−' : ng(n));
+  const hill = Q => `${cx(Q.p)}x² ${Q.q < 0 ? '−' : '+'} ${Math.abs(Q.q) === 1 ? '' : Math.abs(Q.q)}y²`;
+  const head = Q => `⟨${fst(fr(Q.u, 5))}, ${fst(fr(Q.v, 5))}⟩`;
+  const read = () => txt(S.html().split('id="dsRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => { const fu = fst(fr(Q.u, 5)), fv = fst(fr(Q.v, 5)); return ({
+    noUnit: `${L} uses ⟨${ng(Q.u)}, ${ng(Q.v)}⟩, which has length 5, not û. A heading has to have length 1, so divide by 5: û = ${head(Q)}.`,
+    swap: `${L} pairs the parts the wrong way round. ∂f/∂x goes with the east part of û, ${fu}, and ∂f/∂y with the north part, ${fv}.`,
+    xOnly: `${L} keeps only the east part, ∂f/∂x × ${fu}. Facing û you also go ${fv} north for each step, so add ∂f/∂y × ${fv} too.`,
+    yOnly: `${L} keeps only the north part, ∂f/∂y × ${fv}. Facing û you also go ${fu} east for each step, so add ∂f/∂x × ${fu} too.`,
+    noTwo: `${L} forgets the 2 that a square brings down: ∂f/∂x is ${cx(2 * Q.p)}x, not ${cx(Q.p)}x, and ∂f/∂y is ${cx(2 * Q.q)}y, not ${cx(Q.q)}y, so ∇f = ⟨${ng(2 * Q.p * Q.x)}, ${ng(2 * Q.q * Q.y)}⟩.` })[k]; };
+  const N = '(−?\\d+)', P = '(\\(?−?\\d+\\)?)';
+  const CHK = new RegExp(`^Check ([ABCD]): step 5 along û, from \\(${N}, ${N}\\) to \\(${N}, ${N}\\)\\. f goes from ${N} to ${N}, a rise of ${N}\\. A step that long always rises by 5 × the slope plus the bend ${N} × ${P}² \\+ ${P} × ${P}² = ${N}, so 5 × the slope \\+ ${P} must be ${N}\\. With the slope (−?\\d+(?:/\\d+)?) that is 5 × (\\(?−?\\d+(?:/\\d+)?\\)?) \\+ ${P} = ${N}, not ${N}\\.$`);
+  const un = t => num(t.replace(/^\((.*)\)$/, '$1'));
+  // a check, worked again: the step from the heading, both heights from f, the bend, and the sum with the slip's slope
+  const checkOk = (line, k, L, Q, v, key) => { const m = line.match(CHK);
+    if (!m) { fail('hillpick', key, `the check of ${L} is not worded as it should be: ${line}`); return; }
+    const [, Lt, x0, y0, x1, y1, f0, f1, rise, cp, u1, cq, v1, C, C2, rise2, sl, sl2, C3, z, rise3] = m;
+    const X = Q.x + Q.u, Y = Q.y + Q.v, d = F(Q, X, Y) - F(Q, Q.x, Q.y), bend = Q.p * Q.u ** 2 + Q.q * Q.v ** 2;
+    if (Lt !== L || +num(x0) !== Q.x || num(y0) !== Q.y || num(x1) !== X || num(y1) !== Y) fail('hillpick', key, `the check of ${L} does not step 5 along û from the point`);
+    if (num(f0) !== F(Q, Q.x, Q.y) || num(f1) !== F(Q, X, Y) || num(rise) !== d) fail('hillpick', key, `the check of ${L} does not read the heights off f`);
+    if (num(cp) !== Q.p || un(u1) !== Q.u || un(cq) !== Q.q || un(v1) !== Q.v || num(C) !== bend || un(C2) !== bend || un(C3) !== bend) fail('hillpick', key, `the bend in the check of ${L} is not pu² + qv²`);
+    if (num(rise2) !== d || num(rise3) !== d) fail('hillpick', key, `the check of ${L} does not hold the slip to the rise`);
+    if (Math.abs(d - (5 * slope(Q) + bend)) > 1e-6) fail('hillpick', key, 'the rise is not 5 × the slope plus the bend');
+    if (sl !== fst(v) || sl2 !== pf(v)) fail('hillpick', key, `the check of ${L} does not use its own slope ${fst(v)}`);
+    if (num(z) !== 5 * v[0] / v[1] + bend) fail('hillpick', key, `5 × ${sl2} + ${C3} is not ${z}`);
+    if (num(z) === d) fail('hillpick', key, 'a wrong slope passes the check'); };
+  if (S.RULE !== 'The slope facing a heading û of length 1 is ∇f · û. Find the gradient first: ∇f = ⟨∂f/∂x, ∂f/∂y⟩, each part found by differentiating in that letter alone, so px² + qy² has ∇f = ⟨2px, 2qy⟩. Then multiply part by part and add: ∂f/∂x times the east part of û, plus ∂f/∂y times its north part. Which is the slope?') fail('hillpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('hillpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, saddles = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), Ps = new Set(), Hs = new Set(), Xs = new Set(), Pp = new Set(), Pq = new Set(), Px = new Set(), Py = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; Ps.add(Q.p); Ps.add(Q.q); Hs.add(Q.u + ',' + Q.v); Xs.add(Q.x); Xs.add(Q.y); if (Q.p * Q.q < 0) saddles++; Pp.add(Q.p); Pq.add(Q.q); Px.add(Q.x); Py.add(Q.y);
+      if (![Q.p, Q.q, Q.x, Q.y].every(Number.isInteger) || [Q.p, Q.q].some(c => c === 0 || Math.abs(c) > 3) || [Q.x, Q.y].some(c => Math.abs(c) > 3)) fail('hillpick', key, `${sig} is not whole p and q up to 3 either way and a whole point up to 3 out`);
+      if (Q.u * Q.u + Q.v * Q.v !== 25 || Q.u === 0 || Q.v === 0) fail('hillpick', key, `⟨${Q.u}, ${Q.v}⟩/5 is not a heading of length 1 off the axes`);
+      const W = want.right(Q);
+      if (!isSlope(Q, W)) fail('hillpick', key, `${fst(W)} is not the slope of ${hill(Q)} at (${Q.x}, ${Q.y}) facing ${head(Q)}`);
+      if (W[1] === 1) wholeR++;
+      if (prev && prev === sig) fail('hillpick', key, 'the same hill comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('hillpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` Stand at (${ng(Q.x)}, ${ng(Q.y)}) on f(x, y) = ${hill(Q)} and face û = ${head(Q)}. Which is the slope that way? A`)) fail('hillpick', key, 'the rule and the hill are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="HillPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('hillpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('hillpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('hillpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('hillpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (W[1] === 1))) fail('hillpick', key, `the slope is the only ${W[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('hillpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('hillpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== isSlope(Q, vals[i])) fail('hillpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} the slope`);
+      });
+      {
+        const can = [], seen = new Set([fst(W), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('hillpick', key, 'a hill with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('hillpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('hillpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="dsRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('hillpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        checkOk(lines[1] || '', o.k, Lt, Q, vals[i], key);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="HillPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the slope"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('hillpick', key, 'the missed numbers are not shut and told as not the slope');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('hillpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('hillpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('hillpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('hillpick', key, 'no fresh hill after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TRAIL READER / 5 slopes read') fail('hillpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the slope, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('hillpick', key, `the toast is ${env.toasts[nt]}`); }
+      const gx = 2 * Q.p * Q.x, gy = 2 * Q.q * Q.y, bend = Q.p * Q.u ** 2 + Q.q * Q.v ** 2, d = F(Q, Q.x + Q.u, Q.y + Q.v) - F(Q, Q.x, Q.y);
+      const after = `That was it: ∇f = ⟨${ng(gx)}, ${ng(gy)}⟩ at (${ng(Q.x)}, ${ng(Q.y)}), and ∇f · û = ${ng(gx)} × ${pf(fr(Q.u, 5))} + ${pn(gy)} × ${pf(fr(Q.v, 5))} = ${fst(W)}. A step of 5 along û rises by 5 × ${pf(W)} + ${pn(bend)} = ${ng(d)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('hillpick', key, `after a pick: ${read()} | want ${after}`);
+      if (d !== 5 * W[0] / W[1] + bend) fail('hillpick', key, 'the worked step does not add up');
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same hill dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { p: 2, q: -1, x: 1, y: 2, u: 3, v: 4 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"p":2,"q":-1,"x":1,"y":2,"u":3,"v":4}') fail('hillpick', 'repeat', 'the same hill is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('hillpick', 'slips', `the slip ${k} is never offered`);
+  if (Pp.size !== 6 || Pq.size !== 6) fail('hillpick', 'deal', `p alone is only ever ${[...Pp]} and q alone ${[...Pq]}, not every whole number up to 3 either way`);
+  if (Px.size !== 7 || Py.size !== 7) fail('hillpick', 'deal', `x alone is only ever ${[...Px]} and y alone ${[...Py]}, not every whole number from −3 to 3`);
+  if (Ps.size !== 6 || Hs.size !== 8 || Xs.size !== 7) fail('hillpick', 'deal', `p and q are only ever ${[...Ps]}, the heading ${[...Hs].join(' ')}, the point ${[...Xs]}`);
+  if (saddles < rounds * 0.3) fail('hillpick', 'deal', `only ${saddles} of ${rounds} hills are saddles`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('hillpick', 'deal', `the slope is a whole number in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 5) fail('hillpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('hillpick', 'deal', `the slope only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('hillpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10966,6 +11127,7 @@ console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 1
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
