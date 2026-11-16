@@ -1118,6 +1118,22 @@ The game is built so that losing teaches you as much as winning.
   though 1/x falls to 0; and more each time under 1/√x. A bar per doubling
   and a gold limit line show it. Four curves and four things to find, and a
   fight where improper integrals fall now offers it.
+
+  **🎯 Where does it close in?** turns the workshop round: ∫₁^∞ a/xᵖ dx with
+  whole numbers and p from 2 to 7, and four numbers, one of them a/(p − 1).
+  The rule is stated first, with where it comes from: integrate out to b,
+  raising the power by one and dividing by the new power, then let b run to
+  ∞. The wrong numbers are the slips people make with it: dividing by p, the
+  power before it is raised; taking the power down instead of up, to
+  a/(p + 1); the sign turned round by the 0 − F(1); and multiplying by p − 1
+  instead of dividing. A 0 is never offered, the area is a whole number about
+  half the time, and another number of its form always stands beside it. A
+  wrong pick is shut and checked by the slope of the area out to b, which
+  must be the curve itself; the right pick works c × (p − 1) back to a.
+  Nothing is saved, and there is no clock. `npm test` reads every number back
+  off its button as an exact fraction, checks it against the slip it is named
+  as, checks the right one against the area added up by Simpson's rule, and
+  works every check in the readout again.
 - **🏺 Lathe Workshop** — spin a curve around the x-axis and measure the
   solid it sweeps out with disks. Double or halve the number of slices: each
   slice spins into a disk of radius f at its middle, holding π f(x)² Δx, and
@@ -1597,7 +1613,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirteen suites, about 4,770 checks, about a minute:
+loop only exists once the page is running. A hundred and fourteen suites, about 4,800 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1705,6 +1721,7 @@ loop only exists once the page is running. A hundred and thirteen suites, about 
 | `covpick` | the Tome says the cover-up workshop can be turned round; the workshop opens on covering up by hand, and switching to which A puts away the fractions, the drawing, the stepper, the keep button, the readout and the goals and states the rule first; the fraction is shown split as A and B, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked against the cleared equation at x = r, shut and told as not A, and is not counted; the right pick works the top and what is left of the bottom out and checks them, counts (not as a first try after a miss), toasts and deals a new fraction; a first try counts as one, and the fifth brings COVER-UP ARTIST; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `trigpick` | the Tome says the trig integral workshop can be turned round; the workshop opens on undoing a wave by hand, and switching to which c puts away the targets, the drawing, F, the wave buttons, the stepper, the readout and the goals and states the rule first; the wave is shown with its antiderivative, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by differentiating its F back, shut and told as not c, and is not counted; the right pick works its slope out and checks it, counts (not as a first try after a miss), toasts and deals a new wave; a first try counts as one, and the fifth brings WAVE UNDOER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `flippick` | the Tome says the bend workshop can be turned round; the workshop opens on sliding along by hand, and switching to where does it flip puts away the curves, the drawing, the stepper, the readout and the goals and states the rule first; the cubic is shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by putting it into f″, shut and told as not where it flips, and is not counted; the right pick works f″ out to 0 there, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings BEND SPOTTER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `tailpick` | the Tome says the endless area workshop can be turned round; the workshop opens on pushing b out by hand, and switching to where does it close in puts away the curves, the drawing, the stepper, the readout and the goals and states the rule first; the endless integral is shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by the slope of the area out to b, shut and told as not where it closes in, and is not counted; the right pick works c × (p − 1) back to a, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings TAIL TAMER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
