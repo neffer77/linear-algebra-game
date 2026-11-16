@@ -76,7 +76,7 @@ function loadGame() {
     ';const Hill={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Round bowl'"), script.indexOf("  open(){ UI.go('s-hill'); },")) + '};exports.Hill=Hill;' +
     ';const Cofactor={' + script.slice(script.indexOf("  SETS:[\n    {id:'gap', btn:'Two zeros'"), script.indexOf("  open(){ UI.go('s-cof'); },")) + '};exports.Cofactor=Cofactor;' +
     ';const Cover={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'Two factors'"), script.indexOf("  open(){ UI.go('s-cover'); },")) + '};exports.Cover=Cover;' +
-    ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  render(){\n    document.getElementById('scSets')")) + 'render(){}};exports.Slice=Slice;' +
+    ';const Slice={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'xy'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('scTab')")) + 'render(){}};exports.Slice=Slice;' +
     ';const Tracer={' + script.slice(script.indexOf("  SETS:[\n    {id:'sin', btn:'sin x'"), script.indexOf("  render(){\n    document.getElementById('tcSets')")) + 'render(){}};exports.Tracer=Tracer;' +
     ';const Arrow={' + script.slice(script.indexOf("  SETS:[\n    {id:'a', u:[3,4]"), script.indexOf("  render(){\n    document.getElementById('vwSets')")) + 'render(){}};exports.Arrow=Arrow;' +
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('hzTab')")) + 'render(){}};exports.Horizon=Horizon;' +
@@ -7613,6 +7613,177 @@ const buildPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which volume? The slice workshop turned round. Every volume is read back
+   off its button and checked against the slip it is named as, worked from
+   the plane and the rectangle here; the right one alone is the volume,
+   found without the rule: the plane's height at the middle of the rectangle
+   times its area. Each wrong volume's check is worked again: its G(t) and
+   G′(t) are read as formulas, G′ is measured against a nudge of G, and the
+   slice's area is integrated afresh by Simpson's rule straight from f. */
+const slicePickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Slice = {render(){ env.renders++; }};" +
+    cut('const SlicePick = {', '/* ---------- The slice workshop: a double integral') + 'return SlicePick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const sup = n => '⁰¹²³⁴⁵⁶⁷⁸⁹'[n];
+  // a formula as written, such as −6t² + 27t/2 or 2x − y + 5, read as code
+  const evalF = (str, vars) => Function(...Object.keys(vars), 'return ' + str.replace(/−/g, '-').replace(/(\d)([xyt])/g, '$1*$2').replace(/([xyt])²/g, '($1**2)'))(...Object.values(vars));
+  const simpson = (g, a, b, n = 40) => { if (a === b) return 0; const h = (b - a) / n; let s = g(a) + g(b); for (let i = 1; i < n; i++) s += (i % 2 ? 4 : 2) * g(a + i * h); return s * h / 3; };
+  const f = (Q, x, y) => Q.a * x + Q.b * y + Q.c;
+  // every volume, worked from the slip it stands for, in halves so it stays exact
+  const want2 = (k, Q) => { const { a, b, c, p, q } = Q;
+    return k === 'right' ? p * q * (a * p + b * q + 2 * c) : k === 'noHalfX' ? 2 * a * p * p * q + b * p * q * q + 2 * c * p * q
+      : k === 'noHalfY' ? a * p * p * q + 2 * b * p * q * q + 2 * c * p * q : k === 'noHalf' ? 2 * a * p * p * q + 2 * b * p * q * q + 2 * c * p * q
+      : k === 'swap' ? p * q * (a * q + b * p + 2 * c) : k === 'oneSlice' ? a * p * p + 2 * c * p : k === 'noC' ? p * q * (a * p + b * q + 2 * c) - 2 * c * p * q + 2 * c * p : null; };
+  const want = (k, Q) => { const w = want2(k, Q); return w === null ? null : red(w, 2); };
+  const area = (Q, t) => simpson(y => f(Q, t, y), 0, Q.q);
+  // G′ at t for a slip, measured by nudging the far edge
+  const slope = (k, Q, t) => { const h = 1e-3; return (want2(k, { ...Q, p: t + h }) - want2(k, { ...Q, p: t - h })) / (4 * h); };
+  const caught = (k, Q) => [Q.p, 0].some(t => Math.abs(slope(k, Q, t) - area(Q, t)) > 1e-6);
+  const lin = T => { const out = []; for (const [n, v] of T) { if (!n) continue; const m = Math.abs(n); out.push((out.length ? (n < 0 ? ' − ' : ' + ') : (n < 0 ? '−' : '')) + (v ? `${m === 1 ? '' : m}${v}` : String(m))); } return out.join('') || '0'; };
+  const half = (n, v) => `${lin([[n, v + '²']])}/2` + (n % 2 === 0 ? ` = ${lin([[n / 2, v + '²']])}` : '');
+  const slipOf = (k, L, Q) => { const { a, b, c, p, q } = Q;
+    if (k === 'noHalfX') return `${L} forgets to divide by 2 when it integrates ${lin([[a, 'x']])} across x: ∫ ${lin([[a, 'x']])} dx is ${half(a, 'x')}, not ${lin([[a, 'x²']])}.`;
+    if (k === 'noHalfY') return `${L} forgets to divide by 2 when it integrates ${lin([[b, 'y']])} across y: ∫ ${lin([[b, 'y']])} dy is ${half(b, 'y')}, not ${lin([[b, 'y²']])}.`;
+    if (k === 'noHalf') return `${L} forgets to divide by 2 in both: ∫ ${lin([[a, 'x']])} dx is ${half(a, 'x')} and ∫ ${lin([[b, 'y']])} dy is ${half(b, 'y')}.`;
+    if (k === 'swap') return `${L} runs x from 0 to ${q} and y from 0 to ${p}, the rectangle turned on its side. Here x runs to ${p} and y to ${q}.`;
+    if (k === 'oneSlice') return `${L} is one slice, the one standing on the edge y = 0: ∫₀${sup(p)} f(x, 0) dx. The volume sweeps a slice across every y from 0 to ${q} and adds them all up.`;
+    return `${L} counts the steady ${c} along one side only. Over the rectangle a steady height of ${c} fills ${c} × ${p} × ${q} = ${c * p * q}, not ${c} × ${p} = ${c * p}.`; };
+  const RULE = 'Hold x still and the solid is cut into a slice whose area is A(x) = ∫₀^q f(x, y) dy, an ordinary integral in y with x kept as a number. Sweep the slices from x = 0 to x = p and add them up: V = ∫₀ᵖ A(x) dx. Each integral raises a power by one and divides by the new power, so ax and by each pick up a ÷ 2, and the steady c is multiplied by both sides. Which is the volume?';
+  if (S.RULE !== RULE) fail('slicepick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('slicepick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noHalfX', 'noHalfY', 'noHalf', 'swap', 'oneSlice', 'noC'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0, near = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Bs = new Set(), Cs = new Set(), Ps = new Set(), Qs = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c); Ps.add(Q.p); Qs.add(Q.q);
+      if (![Q.a, Q.b].every(n => [1, 2, 3].includes(Math.abs(n))) || !(Q.c >= 1 && Q.c <= 9) || ![Q.p, Q.q].every(n => [1, 2, 3, 4].includes(n)) || ![Q.a, Q.b, Q.c, Q.p, Q.q].every(Number.isInteger)) fail('slicepick', key, `${sig} is not a whole plane over a whole rectangle`);
+      for (const [x, y] of [[0, 0], [Q.p, 0], [0, Q.q], [Q.p, Q.q]]) if (f(Q, x, y) < 1) fail('slicepick', key, `${sig} dips to ${f(Q, x, y)} at (${x}, ${y})`);
+      if (prev && prev === sig) fail('slicepick', key, 'the same solid comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('slicepick', key, 'there are not four volumes, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      const qm = head.match(/^(.*?) f\(x, y\) = (.+?) over 0 ≤ x ≤ (\d), 0 ≤ y ≤ (\d) Which is the volume under it\? A /);
+      if (!qm || qm[1] !== RULE || +qm[3] !== Q.p || +qm[4] !== Q.q) fail('slicepick', key, 'the rule, the plane and the rectangle are not shown first');
+      else for (const [x, y] of [[0, 0], [1, 2], [3, 1], [2, 4]]) if (evalF(qm[2], { x, y }) !== f(Q, x, y)) { fail('slicepick', key, `the plane is written as ${qm[2]}`); break; }
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SlicePick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('slicepick', key, 'the four volumes are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('slicepick', key, `a volume is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] <= 0 || v[0] / v[1] > 200)) fail('slicepick', key, 'a volume is 0 or less, or past 200');
+      if (new Set(vals.map(String)).size !== 4) fail('slicepick', key, 'two volumes are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('slicepick', key, 'no wrong volume is of the right one’s form, whole or fraction');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), seen = new Set([String(W)]), can = [];
+        for (const kk of SL) { const v = want(kk, Q); if (v[0] <= 0 || seen.has(String(v)) || !caught(kk, Q)) continue; seen.add(String(v)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1))) T.push(tr); }
+        // the right one's place is chosen first, so look only at the sets that give it the place it has
+        const rk = tr => tr.filter(x => { const v = want(x, Q); return v[0] * W[1] < W[0] * v[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      // the volume, without the rule: the plane's height at the middle of the rectangle, times its area
+      const V = f(Q, Q.p / 2, Q.q / 2) * Q.p * Q.q;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('slicepick', key, `a volume is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('slicepick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(vals[i][0] / vals[i][1] - V) < 1e-9)) fail('slicepick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the volume ${V}`);
+      });
+      if (k === 0 && txt(S.html().split('id="dqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('slicepick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('slicepick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="dqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('slicepick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): ([ABCD]) is G\((\d)\) for G\(t\) = (.+?)\. Push the far edge x = t out a little and the solid grows by its newest slice, so G′\(t\) must be that slice’s area, A\(t\) = ∫₀(.) f\(t, y\) dy = (.+?)\. Here G′\(t\) = (.+?), and at t = (\d) that is (.+?), not A\((\d)\) = (.+?)\.$/);
+        if (!cm || cm[1] !== Lt || cm[2] !== Lt || +cm[3] !== Q.p || cm[5] !== sup(Q.q) || cm[8] !== cm[10]) { fail('slicepick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const t = +cm[8], G = s => evalF(cm[4], { t: s }), Dg = s => evalF(cm[7], { t: s }), Aw = s => evalF(cm[6], { t: s });
+        if (![Q.p, 0].includes(t)) fail('slicepick', key, `the check of ${o.k} is made at t = ${t}, off the edges`);
+        // the far edge first, and the near edge only where the far one cannot catch the slip
+        if (t === 0) near++;
+        if ((Math.abs(slope(o.k, Q, Q.p) - area(Q, Q.p)) > 1e-9) !== (t === Q.p)) fail('slicepick', key, `the check of ${o.k} is made at t = ${t}, not at the far edge where it misses first`);
+        if (Math.abs(G(Q.p) - vals[i][0] / vals[i][1]) > 1e-9) fail('slicepick', key, `G(${Q.p}) = ${G(Q.p)}, not ${fr(vals[i])}`);
+        for (const s of [0, 1, 2.5, Q.p]) { const nud = (G(s + 1e-4) - G(s - 1e-4)) / 2e-4;
+          if (Math.abs(nud - Dg(s)) > 1e-5) fail('slicepick', key, `G′(t) = ${cm[7]} is not the slope of G(t) = ${cm[4]} at ${s}`);
+          if (Math.abs(Aw(s) - area(Q, s)) > 1e-6) fail('slicepick', key, `the slice’s area is written ${cm[6]}, which is ${Aw(s)} at ${s}, not ${area(Q, s)}`);
+          if (Math.abs(nud - slope(o.k, Q, s)) > 1e-5) fail('slicepick', key, `G(t) = ${cm[4]} is not how ${o.k} grows with the far edge`); }
+        const X = rdv(cm[9]), Y = rdv(cm[11]);
+        if (!X || !Y || Math.abs(X[0] / X[1] - Dg(t)) > 1e-9 || Math.abs(Y[0] / Y[1] - area(Q, t)) > 1e-9) fail('slicepick', key, `the check of ${o.k} gives ${cm[9]} and ${cm[11]} at t = ${t}`);
+        if (X && Y && String(X) === String(Y)) fail('slicepick', key, 'a wrong volume passes its check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SlicePick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the volume"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('slicepick', key, 'the missed volumes are not shut and told as not the volume');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('slicepick', key, 'tapping a missed volume again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('slicepick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('slicepick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('slicepick', key, 'no fresh solid after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'MASTER SLICER / 5 volumes swept') fail('slicepick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the volume, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('slicepick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="dqRead"')[1].replace(/^[^>]*>/, ''));
+      const am = got.match(/^That was it: hold x still and A\(x\) = ∫₀(.) \((.+?)\) dy = (.+?)\. Sweep it across: V = ∫₀(.) A\(x\) dx = \[(.+?)\]₀(.) = (.+?)\. Here is a new one\. (\d+) picked this visit, (\d+) on the first try\.$/);
+      if (!am || am[1] !== sup(Q.q) || am[4] !== sup(Q.p) || am[6] !== sup(Q.p) || am[7] !== fr(want('right', Q)) || +am[8] !== S.matched || +am[9] !== S.firstTry) fail('slicepick', key, `after a pick: ${got}`);
+      else for (const x of [0, 1, 2, Q.p]) {
+        if (evalF(am[2], { x: 1, y: x }) !== f(Q, 1, x)) { fail('slicepick', key, `the plane is written ${am[2]}`); break; }
+        if (Math.abs(evalF(am[3], { x }) - area(Q, x)) > 1e-9) { fail('slicepick', key, `A(x) is written ${am[3]}`); break; }
+        if (Math.abs(evalF(am[5], { x }) - simpson(s => area(Q, s), 0, x)) > 1e-9) { fail('slicepick', key, `the swept total is written ${am[5]}`); break; } }
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same solid dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, b: -1, c: 5, p: 3, q: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"b":-1,"c":5,"p":3,"q":2}') fail('slicepick', 'repeat', 'the same solid is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of solids: every one above the floor, the answer's form even, and three wrong volumes always there
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++;
+      if ([[0, 0], [Q.p, 0], [0, Q.q], [Q.p, Q.q]].some(([x, y]) => f(Q, x, y) < 1)) { fail('slicepick', 'sweep', `${JSON.stringify(Q)} dips below the floor`); break; } }
+    if (sw < 9000 || sw > 11000) fail('slicepick', 'sweep', `${sw} of 20000 answers are whole, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('slicepick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 6 || Bs.size !== 6 || Cs.size < 8 || Ps.size !== 4 || Qs.size !== 4) fail('slicepick', 'deal', `a ${[...As]}, b ${[...Bs]}, c ${[...Cs]}, p ${[...Ps]}, q ${[...Qs]} is not the whole deal`);
+  if (slots.size !== 4) fail('slicepick', 'deal', `the volume only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.1 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.1)) fail('slicepick', 'deal', `the right volume sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('slicepick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('slicepick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (!near) fail('slicepick', 'check', 'no check is ever made at the near edge');
+  if (fives !== 30) fail('slicepick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -12373,6 +12544,7 @@ console.log(`  flipped slopes     ${pad(invPickNotes.rounds.toLocaleString(), 12
 console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-head in the horizon workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching f at ten million; ${hzPickNotes.misses.toLocaleString()} wrong picks checked by the biggest-power part of the gap, ${hzPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-fits-best in the best fit workshop, every number read back off its button and checked against the slip it is named as, the right one alone the bottom of the squared misses; ${fitPickNotes.misses.toLocaleString()} wrong picks checked by the misses times their x gaps, ${fitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

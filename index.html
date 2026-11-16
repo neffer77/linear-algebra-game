@@ -1578,18 +1578,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLICE WORKSHOP ============ -->
   <div class="screen" id="s-slice">
     <div class="panel"><h2>🍞 Slice Workshop</h2><div class="sub">A double integral over a rectangle is done one variable at a time. Hold one still and the solid under f is cut into slices, each an ordinary integral in the other. Sweep the slices from edge to edge and their areas add up to the whole.</div></div>
+    <div id="scTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Sweep the slices by hand or pick the volume"></div>
     <div class="panel">
+      <div id="dqBox"></div>
       <div id="scSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which function"></div>
       <div id="scHold" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which variable to hold still"></div>
       <div id="scFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="scStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="scTLo" onclick="Slice.moveT(-1)" aria-label="Move the slice back">−</button>
           <b id="scT" style="font-size:17px;min-width:0"></b>
           <button id="scTHi" onclick="Slice.moveT(1)" aria-label="Move the slice on">+</button></div>
       </div>
       <div id="scRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="scGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="scGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14134,7 +14136,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🍞 Slice Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the solid under f(x, y) into slices, one variable held still, and sweep them across a rectangle until their areas add up to the double integral. Then slice it the other way and get the same answer. Then turn it round: see a plane over a rectangle, and pick which of four numbers is the volume under it.</div>
          <button class="btn sm" id="tomeSlice" style="width:auto;margin-top:8px" onclick="Slice.open()">Open the slice workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -22301,6 +22303,160 @@ const Cover = {
   }
 };
 
+/* ---------- Which volume? The slice workshop turned round ----------
+   A plane f(x, y) = ax + by + c, with whole a and b (not 0) and whole c,
+   that stays above the floor over the rectangle 0 ≤ x ≤ p, 0 ≤ y ≤ q, and
+   four volumes, one of them V = ∫₀ᵖ∫₀^q f dy dx = ap²q/2 + bpq²/2 + cpq. The
+   rule is stated first. The wrong volumes are the slips people make: a
+   missing ÷ 2 in x, in y or in both, the rectangle turned on its side, one
+   slice in place of all of them, and the steady part counted along one side
+   only. Each slip is a formula G in the far edge p, so a wrong pick is checked
+   the way the workshop teaches: push the far edge out and the solid grows by
+   its newest slice, so G′(t) must be the area of the slice at x = t, and it
+   is not. Nothing is saved. */
+const SlicePick = {
+  SLIPS:['noHalfX','noHalfY','noHalf','swap','oneSlice','noC'],
+  RULE:'Hold x still and the solid is cut into a slice whose area is A(x) = ∫₀^q f(x, y) dy, an ordinary integral in y with x kept as a number. Sweep the slices from x = 0 to x = p and add them up: V = ∫₀ᵖ A(x) dx. Each integral raises a power by one and divides by the new power, so ax and by each pick up a ÷ 2, and the steady c is multiplied by both sides. Which is the volume?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  f(S,x,y){ return S.a*x+S.b*y+S.c; },
+  // each volume as G(t) = (A t² + B t)/2, with t the far edge in x and q held as a number
+  co(S,k){
+    const {a,b,c,q}=S;
+    return k==='right' ? [a*q, b*q*q+2*c*q] : k==='noHalfX' ? [2*a*q, b*q*q+2*c*q] : k==='noHalfY' ? [a*q, 2*b*q*q+2*c*q]
+      : k==='noHalf' ? [2*a*q, 2*b*q*q+2*c*q] : k==='swap' ? [b*q, a*q*q+2*c*q] : k==='oneSlice' ? [a, 2*c] : [a*q, b*q*q+2*c];
+  },
+  at(C,t){ return C[0]*t*t+C[1]*t; },
+  // the slope of G at t, in halves
+  dat(C,t){ return 2*C[0]*t+C[1]; },
+  val(S,k){ return this.frac(this.at(this.co(S,k),S.p),2); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // where a slip's G′ first misses the slice's area: the far edge, or the near one
+  miss(S,k){ const C=this.co(S,k), R0=this.co(S,'right'); return [S.p,0].find(t=>this.dat(C,t)!==this.dat(R0,t)); },
+  // the slips this solid can offer: each a volume above 0, different from the answer and every one kept before it, and caught by its check
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]<=0 || seen.has(this.key(v)) || this.miss(S,k)===undefined) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that hold a volume of the right one's form, whole or fraction, so the form gives nothing away
+  trios(S){
+    const rest=this.slips(S), out=[], form=this.whole(this.val(S,'right'));
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form)) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,3)*(R.i(0,1)?1:-1), c:R.i(1,9), p:R.i(1,4), q:R.i(1,4)};
+      // the plane stands above the floor at every corner, so it does everywhere over the rectangle
+      if([[0,0],[S.p,0],[0,S.q],[S.p,S.q]].some(([x,y])=>this.f(S,x,y)<1)) continue;
+      if(this.whole(this.val(S,'right'))!==wantWhole) continue;
+      if(['right',...this.SLIPS].some(k=>{ const v=this.val(S,k); return Math.abs(v[0]/v[1])>200; })) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, b:-1, c:5, p:3, q:2};
+  },
+  // a linear expression from its terms, [[n, 'x'], [n, 'y'], [n, '']], with 0 terms left out
+  lin(T){
+    const out=[];
+    for(const [n,v] of T){ if(!n) continue; const m=Math.abs(n), body=v ? `${m===1?'':m}${v}` : String(m);
+      out.push((out.length ? (n<0?' − ':' + ') : (n<0?'−':''))+body); }
+    return out.length ? out.join('') : '0';
+  },
+  plane(S){ return this.lin([[S.a,'x'],[S.b,'y'],[S.c,'']]); },
+  // G(t) written out, from (A t² + B t)/2
+  gs(C,v){
+    const parts=[[C[0],v+'²'],[C[1],v]], out=[];
+    for(const [n,x] of parts){ if(!n) continue; const [p,q]=this.frac(n,2), m=Math.abs(p);
+      out.push((out.length ? (p<0?' − ':' + ') : (p<0?'−':''))+`${m===1?'':m}${x}${q>1?'/'+q:''}`); }
+    return out.length ? out.join('') : '0';
+  },
+  // a slope or slice area, D[1] t + D[2] counted in halves, written out
+  ds(D,v){
+    const out=[];
+    for(const [n,x] of [[D[1],v],[D[2],'']]){ if(!n) continue; const [p,q]=this.frac(n,2), m=Math.abs(p);
+      out.push((out.length ? (p<0?' − ':' + ') : (p<0?'−':''))+(x ? `${m===1&&q===1?'':m}${x}${q>1?'/'+q:''}` : `${m}${q>1?'/'+q:''}`)); }
+    return out.length ? out.join('') : '0';
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a volume of the right one's form always stands beside it, so the form gives nothing away
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('MASTER SLICER', this.matched+' volumes swept','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the volume, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Slice.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // ∫ nv dv written out: nv²/2, cut down when n is even
+  half(n,v){ return `${this.lin([[n,v+'²']])}/2`+(n%2===0 ? ` = ${this.lin([[n/2,v+'²']])}` : ''); },
+  slip(S,k,L){
+    const {a,b,c,p,q}=S;
+    if(k==='noHalfX') return `${L} forgets to divide by 2 when it integrates ${this.lin([[a,'x']])} across x: ∫ ${this.lin([[a,'x']])} dx is ${this.half(a,'x')}, not ${this.lin([[a,'x²']])}.`;
+    if(k==='noHalfY') return `${L} forgets to divide by 2 when it integrates ${this.lin([[b,'y']])} across y: ∫ ${this.lin([[b,'y']])} dy is ${this.half(b,'y')}, not ${this.lin([[b,'y²']])}.`;
+    if(k==='noHalf') return `${L} forgets to divide by 2 in both: ∫ ${this.lin([[a,'x']])} dx is ${this.half(a,'x')} and ∫ ${this.lin([[b,'y']])} dy is ${this.half(b,'y')}.`;
+    if(k==='swap') return `${L} runs x from 0 to ${q} and y from 0 to ${p}, the rectangle turned on its side. Here x runs to ${p} and y to ${q}.`;
+    if(k==='oneSlice') return `${L} is one slice, the one standing on the edge y = 0: ∫₀${'⁰¹²³⁴'[p]} f(x, 0) dx. The volume sweeps a slice across every y from 0 to ${q} and adds them all up.`;
+    return `${L} counts the steady ${c} along one side only. Over the rectangle a steady height of ${c} fills ${c} × ${p} × ${q} = ${c*p*q}, not ${c} × ${p} = ${c*p}.`;
+  },
+  check(S,k,L){
+    const C=this.co(S,k), R0=this.co(S,'right'), t=this.miss(S,k);
+    const D=[0,2*C[0],C[1]], A=[0,2*R0[0],R0[1]];
+    return `Check ${L}: ${L} is G(${S.p}) for G(t) = ${this.gs(C,'t')}. Push the far edge x = t out a little and the solid grows by its newest slice, so G′(t) must be that slice’s area, A(t) = ∫₀${'⁰¹²³⁴'[S.q]} f(t, y) dy = ${this.ds(A,'t')}. Here G′(t) = ${this.ds(D,'t')}, and at t = ${t} that is ${this.fs(this.frac(this.dat(C,t),2))}, not A(${t}) = ${this.fs(this.frac(this.dat(R0,t),2))}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="dqQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x, y) = ${this.plane(S)} over 0 ≤ x ≤ ${S.p}, 0 ≤ y ≤ ${S.q}</div>`;
+    out+=`<div class="small" style="text-align:center">Which is the volume under it?</div>`;
+    out+=`<div id="dqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="SlicePick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the volume':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, R0=this.co(B,'right'), A=[0,2*R0[0],R0[1]];
+      lines.push(`That was it: hold x still and A(x) = ∫₀${'⁰¹²³⁴'[B.q]} (${this.plane(B)}) dy = ${this.ds(A,'x')}. Sweep it across: V = ∫₀${'⁰¹²³⁴'[B.p]} A(x) dx = [${this.gs(R0,'x')}]₀${'⁰¹²³⁴'[B.p]} = ${this.fs(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="dqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The slice workshop: a double integral, one variable at a time ----------
    Over a rectangle, hold one variable still and the solid under f is cut
    into slices, each an ordinary integral in the other variable. Sweep the
@@ -22402,7 +22558,15 @@ const Slice = {
   turn(h){ if(h===this.hold) return; this.hold=h; this.k=this.START; this.seen=new Set([this.k]); this.touched=true; this.render(); },
   moveT(by){ const v=this.k+by; if(v<0 || v>this.steps()) return; this.k=v; this.seen.add(this.k);
     if(v===this.steps()) this.swept[this.si].add(this.hold); this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('scTab').innerHTML=[['hand','🍞 Sweep it by hand','Sweep the slices across by hand and watch their areas add up'],['pick','🎯 Which volume?','See a plane over a rectangle, and pick which of four numbers is the volume under it']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Slice.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['scSets','scHold','scFig','scStep','scRead','scGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dqBox').innerHTML=pick ? SlicePick.html() : '';
+    if(pick) return;
     document.getElementById('scSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Slice.pick(${i})" aria-label="f(x, y) = ${s.fs} over 0 to ${s.a} by 0 to ${s.b}">${s.btn}</button>`).join('');
     document.getElementById('scHold').innerHTML=['x','y'].map(h=>
