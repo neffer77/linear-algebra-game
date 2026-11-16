@@ -44,7 +44,7 @@ module.exports = {
       .every(c => { const [p, q] = c.dataset.cell.split(',').map(Number); return (p === q) === /gold/.test(c.getAttribute('style')); })));
     const labels = await t.ev(() => [...document.querySelectorAll('#txPick button')].map(b => b.getAttribute('aria-label')));
     t.eq('four matrices are offered', labels.length, 4);
-    t.ok('each is named by its shape and rows', labels.every((l, i) => new RegExp(`^${'ABCD'[i]}: [23]×[23], with rows \\S`).test(l)), labels.join(' | '));
+    t.ok('each is named by its shape and rows', labels.every((l, i) => new RegExp(`^${'PQRS'[i]}: [23]×[23], with rows \\S`).test(l)), labels.join(' | '));
     t.eq('nothing is picked yet', await read(t), '0 picked this visit, 0 on the first try.');
 
     // --- a wrong pick ---
@@ -52,7 +52,7 @@ module.exports = {
     const wrong = k.findIndex(x => x !== 'right');
     await opt(t, wrong);
     let r = await read(t);
-    const L = 'ABCD'[wrong];
+    const L = 'PQRS'[wrong];
     t.ok('a wrong pick is named as its slip', new RegExp(`^${L} (is A copied as it was|reads A across, row by row|flips A across the other diagonal|turns A a quarter turn)`).test(r), r);
     t.ok('and checked against A', new RegExp(`(Check ${L} at row \\d, column \\d: it holds −?\\d+\\. That slot of Aᵀ takes the entry from row \\d, column \\d of A, which is −?\\d+\\.|${L} is \\d×\\d, but Aᵀ is \\d×\\d\\.) Row 1 of A reads .+ across, so column 1 of Aᵀ reads .+ down\\.`).test(r), r);
     t.ok('and that matrix is shut and told as not Aᵀ', await t.ev(i => { const b = document.querySelectorAll('#txPick button')[i];
@@ -70,7 +70,7 @@ module.exports = {
     r = await read(t);
     t.ok('the right pick is worked out', /^That was it: row 1 of A, .+, stands as column 1, and row 2 of A, .+, stands as column 2.*\. Here is a new one\./.test(r), r);
     t.ok('and counted, but not as a first try', /1 picked this visit, 0 on the first try\.$/.test(r), r);
-    t.ok('with a toast', new RegExp(`✓ ${'ABCD'[ri]} is Aᵀ, picked in 2 tries\\. Here is another\\.`).test(await toast(t)), await toast(t));
+    t.ok('with a toast', new RegExp(`✓ ${'PQRS'[ri]} is Aᵀ, picked in 2 tries\\. Here is another\\.`).test(await toast(t)), await toast(t));
     t.ok('and a new A with all four open and nothing red', await t.ev(() => [...document.querySelectorAll('#txPick button')].every(b => !b.disabled) && !document.querySelector('#txPick [data-bad]'))
       && await t.ev(() => JSON.stringify(TransPick.round.A)) !== a0);
 

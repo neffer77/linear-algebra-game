@@ -43,7 +43,7 @@ module.exports = {
     t.ok('and no curve is drawn yet, which would show the answer', await t.ev(() => !document.getElementById('lpFig')));
     const labels = await t.ev(() => [...document.querySelectorAll('#lpPick button')].map(b => b.getAttribute('aria-label')));
     t.eq('four pairs are offered', labels.length, 4);
-    t.ok('each is named as a pair of numbers', labels.every((l, i) => new RegExp(`^${'ABCD'[i]}: λ = −?\\d+ and −?\\d+$`).test(l)), labels.join(' | '));
+    t.ok('each is named as a pair of numbers', labels.every((l, i) => new RegExp(`^${'PQRS'[i]}: λ = −?\\d+ and −?\\d+$`).test(l)), labels.join(' | '));
     t.eq('nothing is picked yet', await read(t), '0 picked this visit, 0 on the first try.');
 
     // --- a wrong pick ---
@@ -51,7 +51,7 @@ module.exports = {
     const wrong = k.findIndex(x => x !== 'right');
     await opt(t, wrong);
     let r = await read(t);
-    const L = 'ABCD'[wrong];
+    const L = 'PQRS'[wrong];
     t.ok('a wrong pick is named as its slip', new RegExp(`^${L} (reads the eigenvalues off the diagonal|flips the sign of the trace term|takes the trace and the determinant themselves)`).test(r), r);
     t.ok('and checked on the curve, then worked out', /At λ = −?\d+, det\(A − λI\) = .+ trace = .+ det A = .+ so det\(A − λI\) = λ².+ which is 0 at λ = −?\d+ and λ = −?\d+\. Check: /.test(r), r);
     t.ok('and det(A − λI) drawn, with gold rings and red dots', await t.ev(L => { const s = document.getElementById('lpFig');
@@ -68,7 +68,7 @@ module.exports = {
     r = await read(t);
     t.ok('the right pick is worked out', /^That was it: trace = .+, which is 0 at λ = −?\d+ and λ = −?\d+\. Here is a new matrix\./.test(r), r);
     t.ok('and counted, but not as a first try', /1 picked this visit, 0 on the first try\.$/.test(r), r);
-    t.ok('with a toast', new RegExp(`✓ ${'ABCD'[ri]} are the eigenvalues, picked in 2 tries\\. Here is another\\.`).test(await toast(t)), await toast(t));
+    t.ok('with a toast', new RegExp(`✓ ${'PQRS'[ri]} are the eigenvalues, picked in 2 tries\\. Here is another\\.`).test(await toast(t)), await toast(t));
     t.ok('and a new matrix with all four pairs open and the curve put away', await t.ev(() => [...document.querySelectorAll('#lpPick button')].every(b => !b.disabled) && !document.getElementById('lpFig'))
       && await t.ev(() => JSON.stringify(LamPick.round.c)) !== c0);
 

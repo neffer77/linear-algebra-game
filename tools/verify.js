@@ -3702,13 +3702,13 @@ const lamPickNotes = (() => {
       const rows = `A has rows ${ng(c.A[0][0])}, ${ng(c.A[0][1])} and ${ng(c.A[1][0])}, ${ng(c.A[1][1])}`;
       if (!h0.includes(`aria-label="${rows}"`)) fail('lampick', key, 'A is not read out');
       if (/id="lpFig"/.test(h0)) fail('lampick', key, 'the curve is drawn before any miss, which would show the answer');
-      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="LamPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+?)(\. Not the eigenvalues)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
-      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'ABCD'[i] || m[8] !== texts[i])) fail('lampick', key, 'the four pairs are not offered as they are, A to D');
+      const btns = [...h0.matchAll(/data-opt="([PQRS])" (disabled )?onclick="LamPick\.choose\((\d)\)" aria-label="([PQRS]): ([^"]+?)(\. Not the eigenvalues)?"[^>]*><b>([PQRS])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'PQRS'[i] || m[2] || +m[3] !== i || m[4] !== 'PQRS'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'PQRS'[i] || m[8] !== texts[i])) fail('lampick', key, 'the four pairs are not offered as they are, A to D');
       if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: ')) fail('lampick', key, `before a pick the readout says ${read()}`);
       const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
       const missN = (seed + k) % 4;
       for (let q = 0; q < missN; q++) {
-        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length, r0 = env.renders;
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], m0 = S.matched, nt = env.toasts.length, r0 = env.renders;
         S.choose(i); misses++;
         if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt || env.renders !== r0 + 1) fail('lampick', key, 'a miss is counted, not crossed off, or not redrawn');
         const [l, m] = c.roots, [x, y] = want[o.k](c), A = c.A;
@@ -3727,7 +3727,7 @@ const lamPickNotes = (() => {
         const h = S.html();
         if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="LamPick\\.choose\\(${i}\\)" aria-label="${L}: [^"]+\\. Not the eigenvalues"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('lampick', key, 'the missed pairs are not shut and told as not the eigenvalues');
         const outs = wrong.slice(0, q + 1).slice().sort();
-        if (!h.includes(`role="img" aria-label="det(A − λI) = ${poly(A)} in blue against λ, meeting the axis at the gold rings, λ = ${ng(l)} and ${ng(m)}; red dots for ${outs.map(j => 'ABCD'[j]).join(' and ')}">`)) fail('lampick', key, 'the curve is not read out');
+        if (!h.includes(`role="img" aria-label="det(A − λI) = ${poly(A)} in blue against λ, meeting the axis at the gold rings, λ = ${ng(l)} and ${ng(m)}; red dots for ${outs.map(j => 'PQRS'[j]).join(' and ')}">`)) fail('lampick', key, 'the curve is not read out');
         // the picture, read back off its own ticks
         const svg = (h.split('id="lpFig"')[1] || '').split('</svg>')[0];
         const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10" fill="[^"]+" text-anchor="middle">([^<]+)<\/text>/g)].map(mm => [+mm[1], num(mm[2])]);
@@ -3746,10 +3746,10 @@ const lamPickNotes = (() => {
           if (Math.abs(p[0] - lx) > 0.01 * (x1 - x0) || Math.abs(p[1] - P(A, lx)) > 0.005 * yr) fail('lampick', key, `the curve at λ = ${lx.toFixed(2)} is drawn at ${p[1].toFixed(2)}, not det(A − λI) = ${P(A, lx).toFixed(2)}`); });
         const rings = [...svg.matchAll(/<circle data-k="root" cx="([-\d.]+)" cy="([-\d.]+)" r="6" fill="none" stroke="#f2c14e"/g)].map(mm => [ux(+mm[1]), uy(+mm[2])]);
         if (rings.length !== 2 || rings.some((p, j) => Math.abs(p[0] - c.roots[j]) > 0.02 || Math.abs(p[1]) > 0.005 * yr)) fail('lampick', key, 'the gold rings do not sit on the axis at the eigenvalues');
-        const drawn = [...new Set([...svg.matchAll(/data-k="miss-([ABCD])"/g)].map(mm => mm[1]))];
-        if (drawn.join() !== outs.map(j => 'ABCD'[j]).join()) fail('lampick', key, `the red dots are for ${drawn}`);
+        const drawn = [...new Set([...svg.matchAll(/data-k="miss-([PQRS])"/g)].map(mm => mm[1]))];
+        if (drawn.join() !== outs.map(j => 'PQRS'[j]).join()) fail('lampick', key, `the red dots are for ${drawn}`);
         for (const j of outs) {
-          const Lj = 'ABCD'[j], w = want[r.opts[j].k](c);
+          const Lj = 'PQRS'[j], w = want[r.opts[j].k](c);
           const ds = [...svg.matchAll(new RegExp(`<circle data-k="miss-${Lj}" cx="([-\\d.]+)" cy="([-\\d.]+)" r="4" fill="#e5484d"/><text[^>]*>${Lj}</text>`, 'g'))].map(mm => [ux(+mm[1]), uy(+mm[2])]);
           dots += ds.length;
           if (ds.length !== 2 || ds.some((p, z) => Math.abs(p[0] - w[z]) > 0.02 || Math.abs(p[1] - P(A, w[z])) > 0.005 * yr)) fail('lampick', key, `${Lj}'s red dots do not sit on the curve at ${w}`);
@@ -3763,7 +3763,7 @@ const lamPickNotes = (() => {
       if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('lampick', key, 'the right pick is not counted');
       if (S.round === r || S.misses !== 0 || S.picked !== null) fail('lampick', key, 'no fresh matrix after the right pick');
       if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'EIGENVALUE READER / 5 pairs picked') fail('lampick', key, 'no banner at five'); }
-      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} are the eigenvalues, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} are the eigenvalues, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
         if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('lampick', key, `the toast is ${env.toasts[nt]}`); }
       if (read() !== `That was it: ${work(c)}. Here is a new matrix. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('lampick', key, `after a pick: ${read()}`);
       prev = r.c;
@@ -3775,7 +3775,7 @@ const lamPickNotes = (() => {
     S.newRound(); S.build = real;
     if (JSON.stringify(S.round.c) === JSON.stringify(c0)) fail('lampick', 'repeat', 'the same matrix is dealt twice in a row'); }
   for (const k of ['diag', 'sign', 'trdet']) if (!kinds[k]) fail('lampick', 'slips', `the slip ${k} is never offered`);
-  if (slots.size !== 4) fail('lampick', 'deal', `the right pair only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (slots.size !== 4) fail('lampick', 'deal', `the right pair only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
   if (pairs.size < 12) fail('lampick', 'deal', `only ${pairs.size} pairs of eigenvalues ever come up`);
   if (mats.size < 80) fail('lampick', 'deal', `only ${mats.size} matrices ever come up`);
   if (!halves) fail('lampick', 'deal', 'no slip ever happens to share one eigenvalue, so that explanation is never tried');
@@ -4301,8 +4301,8 @@ const transPickNotes = (() => {
       const btns = h0.split('id="txPick"')[1].split('id="txRead"')[0].split('<button').slice(1);
       if (btns.length !== 4) { fail('transpick', key, 'four matrices are not offered'); continue; }
       const mats = btns.map((b, i) => {
-        const m = b.match(/^ class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TransPick\.choose\((\d)\)" aria-label="([ABCD]): (\d)×(\d), with rows ([^"]+)" [^>]*><b>([ABCD])<\/b> /);
-        if (!m || m[1] !== 'ABCD'[i] || +m[2] !== i || m[3] !== 'ABCD'[i] || m[7] !== 'ABCD'[i]) return null;
+        const m = b.match(/^ class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="TransPick\.choose\((\d)\)" aria-label="([PQRS]): (\d)×(\d), with rows ([^"]+)" [^>]*><b>([PQRS])<\/b> /);
+        if (!m || m[1] !== 'PQRS'[i] || +m[2] !== i || m[3] !== 'PQRS'[i] || m[7] !== 'PQRS'[i]) return null;
         const c = cells(b), L = fromRows(m[6]);
         if (!c || !eq(c.M, L) || c.bad.length || +m[4] !== L.length || +m[5] !== L[0].length) return null;
         return L;
@@ -4320,7 +4320,7 @@ const transPickNotes = (() => {
       const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
       const missN = (seed + k) % 4, row1 = A[0].map(ng).join(', ');
       for (let q = 0; q < missN; q++) {
-        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
         S.choose(i); misses++;
         if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('transpick', key, 'a miss is counted, or not crossed off');
         const rt = read();
@@ -4352,7 +4352,7 @@ const transPickNotes = (() => {
       if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('transpick', key, 'the right pick is not counted');
       if (S.round === r || S.misses !== 0 || S.picked !== null) fail('transpick', key, 'no fresh A after the right pick');
       if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TRANSPOSE READER / 5 transposes picked') fail('transpick', key, 'no banner at five'); }
-      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} is Aᵀ, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} is Aᵀ, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
         if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('transpick', key, `the toast is ${env.toasts[nt]}`); }
       const said = A.map((row, i) => `row ${i + 1} of A, ${row.map(ng).join(', ')}, stands as column ${i + 1}`).join(', and ');
       if (read() !== `That was it: ${said}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('transpick', key, `after a pick: ${read()}`);
@@ -4368,7 +4368,7 @@ const transPickNotes = (() => {
   }
   for (const k of ['copy', 'reshape', 'anti', 'rot']) if (!kinds[k]) fail('transpick', 'slips', `the slip ${k} is never offered`);
   if (shapes.size !== 3) fail('transpick', 'deal', `A only ever comes as ${[...shapes].join(', ')}`);
-  if (slots.size !== 4) fail('transpick', 'deal', `the right matrix only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (slots.size !== 4) fail('transpick', 'deal', `the right matrix only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
   if (fives !== 30) fail('transpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, reds };
 })();

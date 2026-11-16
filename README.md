@@ -1027,8 +1027,9 @@ The game is built so that losing teaches you as much as winning.
   a miss, since the curve would show the answer. A wrong pick is shut and
   checked against det(A − λI) at its own two numbers, and the curve is drawn
   with gold rings on the axis at the eigenvalues and red dots at the wrong
-  pair, off the axis, or one on it when a slip happens to share one. Nothing
-  is saved, and there is no clock. `npm test` solves every matrix by the
+  pair, off the axis, or one on it when a slip happens to share one. The
+  four are lettered P to S, so none shares a name with A. Nothing is saved,
+  and there is no clock. `npm test` solves every matrix by the
   quadratic formula, reads every pair back as its slip, and reads the curve,
   the rings and the dots back off the picture's own ticks.
 - **🗺️ Hillwalker Workshop** — the directional derivative, by turning on a
@@ -1168,7 +1169,8 @@ The game is built so that losing teaches you as much as winning.
   was, A's entries poured into the new shape row by row, A flipped across the
   other diagonal, and A turned a quarter turn. A wrong pick is shut, the
   entries it has out of place turn red, and one of them is checked against A.
-  Nothing is saved, and there is no clock. `npm test` reads every matrix back
+  The four are lettered P to S, so none shares a name with A. Nothing is
+  saved, and there is no clock. `npm test` reads every matrix back
   from both its name and its cells, checks it against the slip it is named
   as, and checks that the red cells are exactly the entries out of place.
 - **🔑 Diagonal Workshop** — build P from two arrows by hand and watch

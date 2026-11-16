@@ -19369,7 +19369,7 @@ const LamPick = {
       Sfx.good();
       if(this.matched===5||this.matched===10||this.matched===25)
         Celebrate.banner('EIGENVALUE READER', this.matched+' pairs picked','var(--gold)',()=>Sfx.milestone());
-      else UI.toast(`✓ ${'ABCD'[i]} are the eigenvalues, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      else UI.toast(`✓ ${'PQRS'[i]} are the eigenvalues, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
       this.last={c:r.c};
       this.newRound();
     } else {
@@ -19420,7 +19420,7 @@ const LamPick = {
     for(const l of c.lam) s+=`<circle data-k="root" cx="${X(l)}" cy="${Y(0)}" r="6" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
     const r=this.round;
     [...r.out].sort().forEach(i=>{
-      const L='ABCD'[i];
+      const L='PQRS'[i];
       for(const x of this.pair(c,r.opts[i].k)) s+=`<circle data-k="miss-${L}" cx="${X(x)}" cy="${Y(this.p(c,x))}" r="4" fill="${FIG_COL.d}"/><text x="${(+X(x)+6).toFixed(1)}" y="${Math.min(H-18,Math.max(10,+Y(this.p(c,x))-5)).toFixed(1)}" font-size="10" font-weight="bold" fill="${FIG_COL.d}">${L}</text>`;
     });
     for(let x=Math.ceil(x0/xs)*xs;x<=x1;x+=xs) s+=`<text x="${X(x)}" y="${H-3}" font-size="10" fill="${FIG_COL.dim}" text-anchor="middle">${neg(x)}</text>`;
@@ -19432,13 +19432,13 @@ const LamPick = {
     const r=this.round, c=r.c, m=this.miss(), outs=[...r.out].sort();
     let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
     out+=`<div style="text-align:center;margin-bottom:4px" aria-label="A has rows ${neg(c.A[0][0])}, ${neg(c.A[0][1])} and ${neg(c.A[1][0])}, ${neg(c.A[1][1])}">A = ${mat(c.A)}</div>`;
-    if(outs.length) out+=`<svg id="lpFig" viewBox="0 0 300 190" style="width:100%;height:auto;display:block" role="img" aria-label="det(A − λI) = ${this.poly(c)} in blue against λ, meeting the axis at the gold rings, λ = ${neg(c.lam[0])} and ${neg(c.lam[1])}; red dots for ${outs.map(i=>'ABCD'[i]).join(' and ')}">${this.panel(c,300,190)}</svg>`;
+    if(outs.length) out+=`<svg id="lpFig" viewBox="0 0 300 190" style="width:100%;height:auto;display:block" role="img" aria-label="det(A − λI) = ${this.poly(c)} in blue against λ, meeting the axis at the gold rings, λ = ${neg(c.lam[0])} and ${neg(c.lam[1])}; red dots for ${outs.map(i=>'PQRS'[i]).join(' and ')}">${this.panel(c,300,190)}</svg>`;
     out+=`<div id="lpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
       const gone=r.out.has(i), x=this.text(c,o.k);
-      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="LamPick.choose(${i})" aria-label="${'ABCD'[i]}: ${x}${gone?'. Not the eigenvalues':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${x}</button>`;
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'PQRS'[i]}" ${gone?'disabled ':''}onclick="LamPick.choose(${i})" aria-label="${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}" style="margin:0"><b>${'PQRS'[i]}</b> ${x}</button>`;
     }).join('')+`</div>`;
     const lines=[];
-    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'PQRS'[m]), this.check(c,r.opts[m].k,'PQRS'[m]));
     else if(this.last) lines.push(`That was it: ${this.work(this.last.c)}. Here is a new matrix.`);
     lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
     out+=`<div id="lpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
@@ -21526,7 +21526,7 @@ const TransPick = {
       Sfx.good();
       if(this.matched===5||this.matched===10||this.matched===25)
         Celebrate.banner('TRANSPOSE READER', this.matched+' transposes picked','var(--gold)',()=>Sfx.milestone());
-      else UI.toast(`✓ ${'ABCD'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      else UI.toast(`✓ ${'PQRS'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
       this.last={A:r.A};
       this.newRound();
     } else {
@@ -21574,10 +21574,10 @@ const TransPick = {
     out+=`<div id="txA" role="img" aria-label="A is ${this.size(A)}, with rows ${this.rows(A)}" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0"><span style="margin-right:6px">A =</span>${this.grid(A,{diag:true})}</div>`;
     out+=`<div id="txPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
       const gone=r.out.has(i), M=this.mat(A,o.k);
-      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="TransPick.choose(${i})" aria-label="${'ABCD'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}" style="margin:0;padding:6px 2px;font-size:15px"><b>${'ABCD'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'PQRS'[i]}" ${gone?'disabled ':''}onclick="TransPick.choose(${i})" aria-label="${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}" style="margin:0;padding:6px 2px;font-size:15px"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;
     }).join('')+`</div>`;
     const lines=[];
-    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'ABCD'[m]), this.check(A,r.opts[m].k,'ABCD'[m]));
+    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));
     else if(this.last){ const B=this.last.A;
       lines.push(`That was it: ${B.map((row,i)=>`row ${i+1} of A, ${row.map(neg).join(', ')}, stands as column ${i+1}`).join(', and ')}. Here is a new one.`); }
     lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
