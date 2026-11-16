@@ -1951,7 +1951,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ARC LENGTH WORKSHOP ============ -->
   <div class="screen" id="s-arclen">
     <div class="panel"><h2>🧵 Arc Length Workshop</h2><div class="sub">How long is a curve? Lay straight chords along it, measure each by Pythagoras, √(run² + rise²), and add them up. More chords hug the curve closer, and the total climbs toward the true length, ∫ √(1 + f′(x)²) dx.</div></div>
+    <div id="arcwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Lay chords by hand or pick the integral that is the length"></div>
     <div class="panel">
+      <div id="alqBox"></div>
       <div id="arcwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="arcwFig"></div>
       <div id="arcwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How many chords">
@@ -14811,7 +14813,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🧵 Arc Length Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Lay straight chords along a line, a cubic and a quarter circle, measure each by Pythagoras, and add them up. Double the chords and watch the total climb toward the true length, ∫ √(1 + f′²) dx, and measure π/2 with nothing but right triangles.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Lay straight chords along a line, a cubic and a quarter circle, measure each by Pythagoras, and add them up. Double the chords and watch the total climb toward the true length, ∫ √(1 + f′²) dx, and measure π/2 with nothing but right triangles. Then turn it round: see a curve, and pick which of four integrals is its length.</div>
          <button class="btn sm" id="tomeArcLen" style="width:auto;margin-top:8px" onclick="ArcLen.open()">Open the arc length workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -28358,6 +28360,136 @@ const LogiGrow = {
   }
 };
 
+/* ---------- Which integral? The arc length workshop turned round ----------
+   A curve y = c·xᵖ from a to b, and four integrals, one of them its length,
+   ∫ₐᵇ √(1 + f′(x)²) dx. The rule is stated first; the wrong integrals are the
+   slips people make setting it up: the root left off, f squared in place of
+   f′, f′ not squared, only its number or only its power of x squared, the 1
+   dropped, or the area ∫ f dx taken for the length. Every integral shares
+   something with the right one, and the right one never shares the most, so
+   its look gives nothing away. A wrong pick is checked at one x, where a tiny
+   step's length is worked from the slope there. Nothing is saved. */
+const ArcPick = {
+  SLIPS:['noRoot','useF','noSquare','coefOnly','powOnly','noOne','area'],
+  CURVES:[[1,2],[1,3],[1,4],[2,2],[2,3],[2,4],[3,2]],
+  RULE:'A tiny step along y = f(x) runs dx and rises f′(x) dx, so by Pythagoras it is √(dx² + (f′(x) dx)²) = √(1 + f′(x)²) dx long. Add up the steps from a to b: the length is ∫ₐᵇ √(1 + f′(x)²) dx. Find f′, square all of it, add 1 and take the root. Which integral is the length?',
+  SB:'₀₁₂₃₄₅₆₇₈₉',
+  xp(e){ return e===0 ? '' : e===1 ? 'x' : 'x'+sup(e); },
+  term(k,e){ return e===0 ? String(k) : (k===1?'':String(k))+this.xp(e); },
+  fs(S){ return this.term(S.c,S.p); },
+  fps(S){ return this.term(S.c*S.p,S.p-1); },
+  // what each option is: under a root or not, with the 1 or not, and the term k·xᵉ
+  form(S,k){
+    const {c,p}=S, cp=c*p;
+    return k==='right' ? {root:true,one:true,k:cp*cp,e:2*p-2} : k==='noRoot' ? {root:false,one:true,k:cp*cp,e:2*p-2}
+      : k==='useF' ? {root:true,one:true,k:c*c,e:2*p} : k==='noSquare' ? {root:true,one:true,k:cp,e:p-1}
+      : k==='coefOnly' ? {root:true,one:true,k:cp*cp,e:p-1} : k==='powOnly' ? {root:true,one:true,k:cp,e:2*p-2}
+      : k==='noOne' ? {root:true,one:false,k:cp*cp,e:2*p-2} : {root:false,one:false,k:c,e:p};
+  },
+  inner(F){ return (F.one?'1 + ':'')+this.term(F.k,F.e); },
+  body(F){ return F.root ? `√(${this.inner(F)})` : F.one ? `(${this.inner(F)})` : this.inner(F); },
+  show(S,k){ return `∫${this.SB[S.a]}${sup(S.b)} ${this.body(this.form(S,k))} dx`; },
+  // the slips: with p ≥ 2 no two of them, and none of them and the length, are ever the same integral
+  slips(S){ return this.SLIPS.slice(); },
+  // how many features (root, the 1, the number, the power) option k shares with the others shown
+  share(S,k,shown){
+    const F=this.form(S,k);
+    return shown.filter(x=>x!==k).reduce((n,x)=>{ const G=this.form(S,x); return n+(G.root===F.root)+(G.one===F.one)+(G.k===F.k)+(G.e===F.e); },0);
+  },
+  // the sets of three slips that may stand beside the right one: two under a root as it is, each of its
+  // features found in some wrong one, and some wrong one sharing as much with the rest as the right one does
+  trios(S){
+    const rest=this.slips(S), out=[], R0=this.form(S,'right');
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]], F=t.map(x=>this.form(S,x)), shown=['right',...t];
+      if(F.filter(G=>G.root).length<2) continue;
+      if(!F.some(G=>G.one===R0.one&&G.root) || !F.some(G=>G.k===R0.k) || !F.some(G=>G.e===R0.e)) continue;
+      const r=this.share(S,'right',shown);
+      if(!t.some(x=>this.share(S,x,shown)>=r)) continue;
+      out.push(t);
+    }
+    return out;
+  },
+  build(){
+    for(let g=0;g<200;g++){
+      const [c,p]=this.CURVES[R.i(0,this.CURVES.length-1)], a=R.i(0,1), S={c,p,a,b:a+R.i(1,2)};
+      if(this.trios(S).length) return S;
+    }
+    return {c:3,p:2,a:0,b:2};
+  },
+  // where a wrong integral is checked: x = 2, or 3 where squaring f would agree with the length at 2
+  at(S){ return S.p===2 ? 3 : 2; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const T=this.trios(S), take=T[R.i(0,T.length-1)], opts=R.shuffle(['right',...take]).map(k=>({k}));
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CURVE MEASURER', this.matched+' lengths set up','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the length, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    ArcLen.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const cp=S.c*S.p, fp=this.fps(S), xo=this.xp(S.p-1);
+    if(k==='noRoot') return `${L} leaves off the square root. A tiny step is the long side of a triangle with run dx and rise f′(x) dx, so its length is √(1 + f′(x)²) dx: the 1 + f′(x)² goes under a root.`;
+    if(k==='useF') return `${L} squares f(x) = ${this.fs(S)}, the height, where the rise of a step needs the slope. The rise of a tiny step is f′(x) dx, and here f′(x) = ${fp}.`;
+    if(k==='noSquare') return `${L} puts f′(x) = ${fp} under the root without squaring it. Pythagoras squares the rise, so all of ${fp} has to be squared.`;
+    if(k==='coefOnly') return `${L} squares the ${cp} in f′(x) = ${fp} but leaves the ${xo} alone. Squaring ${xo} doubles its power as well.`;
+    if(k==='powOnly') return `${L} squares the ${xo} in f′(x) = ${fp} but leaves the ${cp} alone. Squaring ${fp} squares the ${cp} as well.`;
+    if(k==='noOne') return `${L} drops the 1, the run. √(f′(x)²) dx is only the rise of a tiny step; its length counts the run dx too, so it is √(1 + f′(x)²) dx.`;
+    return `${L} is the area under the curve, ∫ f(x) dx. The length adds up the slanted steps along the curve, √(1 + f′(x)²) dx each, not the heights.`;
+  },
+  // a whole number, or √n with n not a square
+  rt(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? String(s) : '√'+n; },
+  value(S,k,h){
+    const F=this.form(S,k), t=F.k*h**F.e, n=(F.one?1:0)+t, sum=`${F.one?'1 + ':''}${F.k===1?'':F.k+' × '}${h}${F.e===1?'':sup(F.e)}`;
+    if(!F.root) return F.one ? `${sum} = ${n}` : `${F.k===1?'':F.k+' × '}${h}${sup(F.e)} = ${n}`;
+    const r=this.rt(n);
+    return `√(${sum}) = ${r==='√'+n ? r : '√'+n+' = '+r}`;
+  },
+  check(S,k,L){
+    const h=this.at(S), m=S.c*S.p*h**(S.p-1), n=1+m*m;
+    return `Check ${L} at x = ${h}: there the slope is f′(${h}) = ${m}, so a tiny step is √(1 + ${m}²) = ${this.rt(n)==='√'+n?'√'+n:'√'+n+' = '+this.rt(n)} times its run. ${L}'s integrand at x = ${h} is ${this.value(S,k,h)}, not ${this.rt(n)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="alqQ" style="text-align:center;font-size:16px;margin-bottom:2px">y = ${this.fs(S)} from x = ${S.a} to x = ${S.b}</div>`;
+    out+=`<div class="small" style="text-align:center">Which integral is its length?</div>`;
+    out+=`<div id="alqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.show(S,o.k), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="ArcPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the length':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, F=this.form(B,'right');
+      lines.push(`That was it: f′(x) = ${this.fps(B)}, so 1 + f′(x)² = ${this.inner(F)}, and adding up its root from ${B.a} to ${B.b} gives the length. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="alqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The arc length workshop: measuring a curve with chords ----------
    Lay straight chords along a curve, measure each one by Pythagoras,
    √(run² + rise²), and add them up. A line (3/4)x from 0 to 4, the cubic
@@ -28457,7 +28589,15 @@ const ArcLen = {
   more(){ if(!this.can(1)) return; this.prev=this.j; this.j++; this.doubled=true; this.touched=true; this.render(); },
   fewer(){ if(!this.can(-1)) return; this.prev=this.j; this.j--; this.doubled=false; this.touched=true; this.render(); },
   again(){ this.j=0; this.prev=null; this.doubled=false; this.touched=true; this.render(); },
+  tab:'hand', // chords by hand, or which integral
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('arcwTab').innerHTML=[['hand','🧵 Lay chords by hand','Lay chords along a curve by hand and measure them'],['pick','🎯 Which integral?','See a curve, and pick which of four integrals is its length']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="ArcLen.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['arcwSets','arcwFig','arcwMoveRow','arcwRead','arcwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('alqBox').innerHTML=pick ? ArcPick.html() : '';
+    if(pick) return;
     document.getElementById('arcwSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="ArcLen.pick(${i})" aria-label="Measure ${s.name}">${s.btn}</button>`).join('');
     document.getElementById('arcwFewer').disabled=!this.can(-1);
@@ -29948,9 +30088,10 @@ const MixPick = {
     ['EulerPick','EulerWalk','👣 Euler Step Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
-    ['BuildPick','Optim','🏗️ Biggest Build Workshop']
+    ['BuildPick','Optim','🏗️ Biggest Build Workshop'],
+    ['ArcPick','ArcLen','🧵 Arc Length Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },

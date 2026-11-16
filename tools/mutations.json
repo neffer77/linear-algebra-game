@@ -1,214 +1,396 @@
 {
-  "change": "The logistic workshop: step a population toward its ceiling and watch the rate rise and fall.",
+  "change": "Which integral? The arc length workshop turned round: see a curve, and pick which of four integrals is its length.",
   "mutations": [
     {
-      "name": "r is 0.4",
+      "name": "the right integral leaves off the 1",
       "file": "index.html",
-      "find": "r:0.5, K:1000, TMAX:20,",
-      "replace": "r:0.4, K:1000, TMAX:20,",
+      "find": "return k==='right' ? {root:true,one:true,k:cp*cp,e:2*p-2}",
+      "replace": "return k==='right' ? {root:true,one:false,k:cp*cp,e:2*p-2}",
       "run": "verify"
     },
     {
-      "name": "the steps run to 21",
+      "name": "the right integral squares only the number",
       "file": "index.html",
-      "find": "r:0.5, K:1000, TMAX:20,",
-      "replace": "r:0.5, K:1000, TMAX:21,",
+      "find": "return k==='right' ? {root:true,one:true,k:cp*cp,e:2*p-2}",
+      "replace": "return k==='right' ? {root:true,one:true,k:cp*cp,e:p-1}",
       "run": "verify"
     },
     {
-      "name": "starting small is at 25",
+      "name": "the right integral squares f",
       "file": "index.html",
-      "find": "P0:20, Y:[0,1100],",
-      "replace": "P0:25, Y:[0,1100],",
+      "find": "return k==='right' ? {root:true,one:true,k:cp*cp,e:2*p-2}",
+      "replace": "return k==='right' ? {root:true,one:true,k:c*c,e:2*p}",
       "run": "verify"
     },
     {
-      "name": "A is the wrong way up",
+      "name": "the root slip keeps its root",
       "file": "index.html",
-      "find": "A(){ const P0=this.set().P0; return (this.K-P0)/P0; },",
-      "replace": "A(){ const P0=this.set().P0; return P0/(this.K-P0); },",
+      "find": "k==='noRoot' ? {root:false,one:true,k:cp*cp,e:2*p-2}",
+      "replace": "k==='noRoot' ? {root:true,one:true,k:cp*cp,e:2*p-2}",
       "run": "verify"
     },
     {
-      "name": "P uses e^(+rt)",
+      "name": "the f slip squares the power only once",
       "file": "index.html",
-      "find": "return this.K/(1+this.A()*Math.exp(-this.r*t));",
-      "replace": "return this.K/(1+this.A()*Math.exp(this.r*t));",
+      "find": "k==='useF' ? {root:true,one:true,k:c*c,e:2*p}",
+      "replace": "k==='useF' ? {root:true,one:true,k:c*c,e:p}",
       "run": "verify"
     },
     {
-      "name": "the rate has no ceiling",
+      "name": "the unsquared slip squares the number",
       "file": "index.html",
-      "find": "return this.r*P*(1-P/this.K); },",
-      "replace": "return this.r*P; },",
+      "find": "k==='noSquare' ? {root:true,one:true,k:cp,e:p-1}",
+      "replace": "k==='noSquare' ? {root:true,one:true,k:cp*cp,e:p-1}",
       "run": "verify"
     },
     {
-      "name": "the rate uses P/K",
+      "name": "the number-only slip squares the power too",
       "file": "index.html",
-      "find": "return this.r*P*(1-P/this.K); },",
-      "replace": "return this.r*P*(P/this.K); },",
+      "find": "k==='coefOnly' ? {root:true,one:true,k:cp*cp,e:p-1}",
+      "replace": "k==='coefOnly' ? {root:true,one:true,k:cp*cp,e:p}",
       "run": "verify"
     },
     {
-      "name": "starting above, A is told as 0.6",
+      "name": "the power-only slip squares the number too",
       "file": "index.html",
-      "find": "A = (1000 − 1600)/1600 = −0.375, so P(t) = 1000/(1 − 0.375·e^(−0.5t)).",
-      "replace": "A = (1000 − 1600)/1600 = −0.6, so P(t) = 1000/(1 − 0.6·e^(−0.5t)).",
+      "find": "k==='powOnly' ? {root:true,one:true,k:cp,e:2*p-2}",
+      "replace": "k==='powOnly' ? {root:true,one:true,k:cp*c,e:2*p-2}",
       "run": "verify"
     },
     {
-      "name": "e is told to two places",
+      "name": "the rise slip keeps the 1",
       "file": "index.html",
-      "find": "sig(v){ return String(+v.toPrecision(4)); },",
-      "replace": "sig(v){ return String(+v.toFixed(2)); },",
+      "find": "k==='noOne' ? {root:true,one:false,k:cp*cp,e:2*p-2}",
+      "replace": "k==='noOne' ? {root:true,one:true,k:cp*cp,e:2*p-2}",
       "run": "verify"
     },
     {
-      "name": "P is told to whole numbers",
+      "name": "the area slip is f′",
       "file": "index.html",
-      "find": "so P = 1000/(1 ${sg} ${Aw}${this.sig(e)}) ${this.is(P,1)}.`",
-      "replace": "so P = 1000/(1 ${sg} ${Aw}${this.sig(e)}) ${this.is(P,0)}.`",
+      "find": "{root:false,one:false,k:c,e:p};",
+      "replace": "{root:false,one:false,k:cp,e:p-1};",
       "run": "verify"
     },
     {
-      "name": "the room left is told as P/K",
+      "name": "a 1 in front of x is written",
       "file": "index.html",
-      "find": "const S=this.set(), t=this.t, P=this.P(), room=1-P/this.K,",
-      "replace": "const S=this.set(), t=this.t, P=this.P(), room=P/this.K,",
+      "find": "term(k,e){ return e===0 ? String(k) : (k===1?'':String(k))+this.xp(e); },",
+      "replace": "term(k,e){ return e===0 ? String(k) : String(k)+this.xp(e); },",
       "run": "verify"
     },
     {
-      "name": "a shrinking P is told as growing",
+      "name": "x to the first is written x¹",
       "file": "index.html",
-      "find": "(R>0 ? 'P is growing.' : 'below 0, so P is shrinking.'));",
-      "replace": "(R>-1 ? 'P is growing.' : 'below 0, so P is shrinking.'));",
+      "find": "xp(e){ return e===0 ? '' : e===1 ? 'x' : 'x'+sup(e); },",
+      "replace": "xp(e){ return e===0 ? '' : 'x'+sup(e); },",
       "run": "verify"
     },
     {
-      "name": "the step's growth is turned over",
+      "name": "the root's bracket is dropped",
       "file": "index.html",
-      "find": "${this.num(P/P0,4)} times as much",
-      "replace": "${this.num(P0/P,4)} times as much",
+      "find": "body(F){ return F.root ? `√(${this.inner(F)})`",
+      "replace": "body(F){ return F.root ? `√${this.inner(F)}`",
       "run": "verify"
     },
     {
-      "name": "the e^0.5 note shows on every step",
+      "name": "the unrooted 1 + loses its brackets",
       "file": "index.html",
-      "find": "if(S.id==='small' && t===1) note+=",
-      "replace": "if(S.id==='small' && t>=1) note+=",
+      "find": "F.one ? `(${this.inner(F)})` : this.inner(F); },",
+      "replace": "F.one ? this.inner(F) : this.inner(F); },",
       "run": "verify"
     },
     {
-      "name": "the rate is said to rise when it falls",
+      "name": "the integral runs from b to a",
       "file": "index.html",
-      "find": "out.push(R<R0 ? `The rate fell",
-      "replace": "out.push(R>R0 ? `The rate fell",
+      "find": "show(S,k){ return `∫${this.SB[S.a]}${sup(S.b)}",
+      "replace": "show(S,k){ return `∫${this.SB[S.b]}${sup(S.a)}",
       "run": "verify"
     },
     {
-      "name": "K/2 is passed at 400",
+      "name": "one wrong integral under a root is enough",
       "file": "index.html",
-      "find": "if(P0<500 && P>=500) out.push(",
-      "replace": "if(P0<400 && P>=400) out.push(",
+      "find": "if(F.filter(G=>G.root).length<2) continue;",
+      "replace": "if(F.filter(G=>G.root).length<1) continue;",
       "run": "verify"
     },
     {
-      "name": "the 1% mark is 2%",
+      "name": "the right one's power may be missing from the wrong ones",
       "file": "index.html",
-      "find": "if(Math.abs(this.K-P)<this.K/100) out.push(",
-      "replace": "if(Math.abs(this.K-P)<this.K/50) out.push(",
+      "find": "|| !F.some(G=>G.e===R0.e)) continue;",
+      "replace": ") continue;",
       "run": "verify"
     },
     {
-      "name": "rK/4 is told as rK/2",
+      "name": "the right one's number may be missing from the wrong ones",
       "file": "index.html",
-      "find": "where growth is fastest: rK/4 = 0.5 × 1000/4 = 125.`",
-      "replace": "where growth is fastest: rK/2 = 0.5 × 1000/2 = 250.`",
+      "find": "|| !F.some(G=>G.k===R0.k) ||",
+      "replace": "||",
       "run": "verify"
     },
     {
-      "name": "stepping back keeps the step note",
+      "name": "the right one may share the most",
       "file": "index.html",
-      "find": "this.t--; this.stepped=false;",
-      "replace": "this.t--;",
+      "find": "if(!t.some(x=>this.share(S,x,shown)>=r)) continue;",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "starting over keeps the step note",
+      "name": "sharing never counts the power",
       "file": "index.html",
-      "find": "again(){ this.t=0; this.stepped=false;",
-      "replace": "again(){ this.t=0;",
+      "find": "+(G.k===F.k)+(G.e===F.e); },0);",
+      "replace": "+(G.k===F.k); },0);",
       "run": "verify"
     },
     {
-      "name": "picking a start keeps t",
+      "name": "the curve is never x⁴",
       "file": "index.html",
-      "find": "pick(i){ this.si=i; this.t=0;",
-      "replace": "pick(i){ this.si=i;",
+      "find": "CURVES:[[1,2],[1,3],[1,4],[2,2],[2,3],[2,4],[3,2]],",
+      "replace": "CURVES:[[1,2],[1,3],[2,2],[2,3],[3,2]],",
       "run": "verify"
     },
     {
-      "name": "stepping forward is offered at 20",
+      "name": "the curve is never 3x²",
       "file": "index.html",
-      "find": "can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX; },",
-      "replace": "can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX+1; },",
+      "find": "[2,4],[3,2]],",
+      "replace": "[2,4]],",
       "run": "verify"
     },
     {
-      "name": "the ceiling is drawn at 900",
+      "name": "the curve always starts at 0",
       "file": "index.html",
-      "find": "y1=\"${f(this.PY(1000))}\" x2=\"${f(this.PX(this.TMAX))}\" y2=\"${f(this.PY(1000))}\"",
-      "replace": "y1=\"${f(this.PY(900))}\" x2=\"${f(this.PX(this.TMAX))}\" y2=\"${f(this.PY(900))}\"",
+      "find": "a=R.i(0,1), S={c,p,a,b:a+R.i(1,2)};",
+      "replace": "a=0, S={c,p,a,b:a+R.i(1,2)};",
       "run": "verify"
     },
     {
-      "name": "the tangent is twice as steep",
+      "name": "the curve always runs one across",
       "file": "index.html",
-      "find": "y1=\"${f(this.PY(P+R*(t1-t)))}\" x2=\"${f(this.PX(t2))}\" y2=\"${f(this.PY(P+R*(t2-t)))}\"",
-      "replace": "y1=\"${f(this.PY(P+2*R*(t1-t)))}\" x2=\"${f(this.PX(t2))}\" y2=\"${f(this.PY(P+2*R*(t2-t)))}\"",
+      "find": "S={c,p,a,b:a+R.i(1,2)};",
+      "replace": "S={c,p,a,b:a+1};",
       "run": "verify"
     },
     {
-      "name": "the dots stop a step short",
+      "name": "the same curve may come twice",
       "file": "index.html",
-      "find": "for(let k=0;k<=t;k++) out+=`<circle",
-      "replace": "for(let k=0;k<t;k++) out+=`<circle",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const T",
+      "replace": "break; }\n    const T",
       "run": "verify"
     },
     {
-      "name": "the curve runs to t = 10",
+      "name": "the slips are always the first trio",
       "file": "index.html",
-      "find": "for(let i=0;i<=160;i++){ const t=this.TMAX*i/160;",
-      "replace": "for(let i=0;i<=160;i++){ const t=this.TMAX*i/320;",
+      "find": "const T=this.trios(S), take=T[R.i(0,T.length-1)],",
+      "replace": "const T=this.trios(S), take=T[0],",
       "run": "verify"
     },
     {
-      "name": "the early goal needs two steps",
+      "name": "the length always sits first",
       "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.stepped && K.t===1},",
-      "replace": "ok:K=>K.si===0 && K.stepped && K.t===2},",
+      "find": "opts=R.shuffle(['right',...take]).map(k=>({k}));",
+      "replace": "opts=['right',...take].map(k=>({k}));",
       "run": "verify"
     },
     {
-      "name": "the slow goal counts a rising rate",
+      "name": "a miss is counted as picked",
       "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.stepped && K.rate()<K.rate(K.t-1)},",
-      "replace": "ok:K=>K.si===0 && K.stepped && K.rate()<=K.rate(K.t-1)+5},",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Arc",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Arc",
       "run": "verify"
     },
     {
-      "name": "the near goal is 10%",
+      "name": "a miss is not shut",
       "file": "index.html",
-      "find": "ok:K=>K.si===0 && K.K-K.P()<K.K/100},",
-      "replace": "ok:K=>K.si===0 && K.K-K.P()<K.K/10},",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Arc",
+      "replace": "this.misses++; this.last=null;\n    }\n    Arc",
       "run": "verify"
     },
     {
-      "name": "the above goal needs no step",
+      "name": "a shut integral can be picked again",
       "file": "index.html",
-      "find": "ok:K=>K.si===2 && K.stepped}",
-      "replace": "ok:K=>K.si===2}",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "run": "verify"
+    },
+    {
+      "name": "a first try is counted after a miss",
+      "file": "index.html",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "run": "verify"
+    },
+    {
+      "name": "the banner never comes at five",
+      "file": "index.html",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "run": "verify"
+    },
+    {
+      "name": "the toast miscounts tries",
+      "file": "index.html",
+      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('CU",
+      "run": "verify"
+    },
+    {
+      "name": "a right pick keeps the old curve",
+      "file": "index.html",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Arc",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Arc",
+      "run": "verify"
+    },
+    {
+      "name": "a pick does not redraw",
+      "file": "index.html",
+      "find": "    ArcLen.render();\n  },\n  missed()",
+      "replace": "  },\n  missed()",
+      "run": "verify"
+    },
+    {
+      "name": "the f slip names f′ as f",
+      "file": "index.html",
+      "find": "squares f(x) = ${this.fs(S)}, the height",
+      "replace": "squares f(x) = ${fp}, the height",
+      "run": "verify"
+    },
+    {
+      "name": "the unsquared slip names f",
+      "file": "index.html",
+      "find": "puts f′(x) = ${fp} under the root",
+      "replace": "puts f′(x) = ${this.fs(S)} under the root",
+      "run": "verify"
+    },
+    {
+      "name": "the number-only slip names the wrong number",
+      "file": "index.html",
+      "find": "${L} squares the ${cp} in f′(x)",
+      "replace": "${L} squares the ${S.c} in f′(x)",
+      "run": "verify"
+    },
+    {
+      "name": "the power-only slip names the wrong power",
+      "file": "index.html",
+      "find": "${L} squares the ${xo} in f′(x) = ${fp} but leaves the ${cp} alone",
+      "replace": "${L} squares the ${this.xp(S.p)} in f′(x) = ${fp} but leaves the ${cp} alone",
+      "run": "verify"
+    },
+    {
+      "name": "the slips are told the wrong way round",
+      "file": "index.html",
+      "find": "if(k==='coefOnly') return",
+      "replace": "if(k==='powOnly') return",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not explained",
+      "file": "index.html",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, F=this.f",
+      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, F=this.f",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not checked",
+      "file": "index.html",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, F=this.f",
+      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, F=this.f",
+      "run": "verify"
+    },
+    {
+      "name": "the check is made at x = 2 for x²",
+      "file": "index.html",
+      "find": "at(S){ return S.p===2 ? 3 : 2; },",
+      "replace": "at(S){ return 2; },",
+      "run": "verify"
+    },
+    {
+      "name": "the check squares f, not f′",
+      "file": "index.html",
+      "find": "const h=this.at(S), m=S.c*S.p*h**(S.p-1)",
+      "replace": "const h=this.at(S), m=S.c*h**S.p",
+      "run": "verify"
+    },
+    {
+      "name": "the check leaves off the 1",
+      "file": "index.html",
+      "find": "n=1+m*m;",
+      "replace": "n=m*m;",
+      "run": "verify"
+    },
+    {
+      "name": "the check works the wrong integrand without its 1",
+      "file": "index.html",
+      "find": "const F=this.form(S,k), t=F.k*h**F.e, n=(F.one?1:0)+t,",
+      "replace": "const F=this.form(S,k), t=F.k*h**F.e, n=t,",
+      "run": "verify"
+    },
+    {
+      "name": "a square root is not taken where it comes out whole",
+      "file": "index.html",
+      "find": "rt(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? String(s) : '√'+n; },",
+      "replace": "rt(n){ return '√'+n; },",
+      "run": "verify"
+    },
+    {
+      "name": "the check says a root where there is none",
+      "file": "index.html",
+      "find": "if(!F.root) return F.one ?",
+      "replace": "if(false) return F.one ?",
+      "run": "verify"
+    },
+    {
+      "name": "the right line squares only the number",
+      "file": "index.html",
+      "find": "so 1 + f′(x)² = ${this.inner(F)}",
+      "replace": "so 1 + f′(x)² = 1 + ${this.term(F.k,B.p-1)}",
+      "run": "verify"
+    },
+    {
+      "name": "the right line names f for f′",
+      "file": "index.html",
+      "find": "That was it: f′(x) = ${this.fps(B)}",
+      "replace": "That was it: f′(x) = ${this.fs(B)}",
+      "run": "verify"
+    },
+    {
+      "name": "the count line is lost",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"al",
+      "replace": "    out+=`<div id=\"al",
+      "run": "verify"
+    },
+    {
+      "name": "the rule is not shown",
+      "file": "index.html",
+      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"al",
+      "replace": "let out='';\n    out+=`<div id=\"al",
+      "run": "verify"
+    },
+    {
+      "name": "the rule forgets the 1",
+      "file": "index.html",
+      "find": "= √(1 + f′(x)²) dx long. Add up",
+      "replace": "= √(f′(x)²) dx long. Add up",
+      "run": "verify"
+    },
+    {
+      "name": "a shut integral keeps its name",
+      "file": "index.html",
+      "find": "${gone?'. Not the length':''}",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the hand workshop does not step aside",
+      "file": "index.html",
+      "find": "for(const id of ['arcwSets','arcwFig','arcwMoveRow','arcwRead','arcwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "",
+      "run": "play:arcpick"
+    },
+    {
+      "name": "the mix leaves the arc length workshop out",
+      "file": "index.html",
+      "find": "    ['BuildPick','Optim','🏗️ Biggest Build Workshop'],\n    ['ArcPick','ArcLen','🧵 Arc Length Workshop']\n",
+      "replace": "    ['BuildPick','Optim','🏗️ Biggest Build Workshop']\n",
       "run": "verify"
     }
   ]

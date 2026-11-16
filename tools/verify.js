@@ -92,7 +92,7 @@ function loadGame() {
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
     ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  render(){\n    document.getElementById('lgwSets')")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
-    ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  render(){\n    document.getElementById('arcwSets')")) + 'render(){}};exports.ArcLen=ArcLen;' +
+    ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  tab:'hand', // chords by hand")) + 'render(){}};exports.ArcLen=ArcLen;' +
     ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
@@ -8048,6 +8048,159 @@ const slicePickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which integral? The arc length workshop turned round. Every integral is
+   read back off its button, taken apart, and checked against the slip it is
+   named as, worked here from the curve; the right one alone is the length,
+   found without the rule: its integrand is measured against √(1 + f′²) with
+   f′ by a nudge, and against the chords of a fine split of the curve. No
+   integral's look gives it away: two wrong ones sit under a root, each part
+   of the right one turns up in a wrong one, and a wrong one always shares as
+   much with the rest. Each wrong one's check is worked again at its x. */
+const arcPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  R.shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R._r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const P = new Function('R', 'env',
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'}; const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const ArcLen = {render(){ env.renders++; }};" +
+    cut('const ArcPick = {', '/* ---------- The arc length workshop: measuring') + 'return ArcPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const SUPS = '⁰¹²³⁴⁵⁶⁷⁸⁹', SUBS = '₀₁₂₃₄₅₆₇₈₉';
+  const sp = e => String(e).split('').map(d => SUPS[d]).join('');
+  const xe = e => (e === 1 ? 'x' : 'x' + sp(e));
+  const tm = (k, e) => (k === 1 ? '' : String(k)) + xe(e);
+  // an integral taken apart: its ends, root, 1, number and power of x
+  const parse = s => {
+    const m = s.match(/^∫([₀-₉])([⁰¹²³⁴⁵⁶⁷⁸⁹]) (.+) dx$/); if (!m) return null;
+    let b = m[3], root = false, one = false;
+    if (/^√\(.+\)$/.test(b)) { root = true; b = b.slice(2, -1); } else if (/^\(.+\)$/.test(b)) b = b.slice(1, -1);
+    if (b.startsWith('1 + ')) { one = true; b = b.slice(4); }
+    const t = b.match(/^(\d*)x([⁰¹²³⁴⁵⁶⁷⁸⁹]*)$/); if (!t) return null;
+    if (!root && one && !/^\(/.test(m[3])) return null;
+    return { a: SUBS.indexOf(m[1]), b: SUPS.indexOf(m[2]), root, one, k: t[1] === '' ? 1 : +t[1], e: t[2] === '' ? 1 : [...t[2]].reduce((n, d) => n * 10 + SUPS.indexOf(d), 0) };
+  };
+  const g = (F, x) => { const v = (F.one ? 1 : 0) + F.k * x ** F.e; return F.root ? Math.sqrt(v) : v; };
+  // every integral, worked from the slip it stands for: f = c·xᵖ, f′ = cp·xᵖ⁻¹
+  const want = (k, Q) => { const { c, p } = Q, cp = c * p;
+    return k === 'right' ? { root: true, one: true, k: cp * cp, e: 2 * p - 2 } : k === 'noRoot' ? { root: false, one: true, k: cp * cp, e: 2 * p - 2 }
+      : k === 'useF' ? { root: true, one: true, k: c * c, e: 2 * p } : k === 'noSquare' ? { root: true, one: true, k: cp, e: p - 1 }
+      : k === 'coefOnly' ? { root: true, one: true, k: cp * cp, e: p - 1 } : k === 'powOnly' ? { root: true, one: true, k: cp, e: 2 * p - 2 }
+      : k === 'noOne' ? { root: true, one: false, k: cp * cp, e: 2 * p - 2 } : k === 'area' ? { root: false, one: false, k: c, e: p } : null; };
+  const same = (F, G) => F.root === G.root && F.one === G.one && F.k === G.k && F.e === G.e;
+  // the length found without the rule: √(1 + f′²) with f′ by a nudge, and the chords of a fine split
+  const f = (Q, x) => Q.c * x ** Q.p;
+  const isLength = (F, Q) => [0.3, 0.8, 1.4, 2.2].every(x => { const s = (f(Q, x + 1e-6) - f(Q, x - 1e-6)) / 2e-6, w = Math.sqrt(1 + s * s); return Math.abs(g(F, x) - w) <= 1e-6 * w; });
+  const chords = Q => { let s = 0; const N = 4000; for (let i = 1; i <= N; i++) { const x0 = Q.a + (Q.b - Q.a) * (i - 1) / N, x1 = Q.a + (Q.b - Q.a) * i / N; s += Math.hypot(x1 - x0, f(Q, x1) - f(Q, x0)); } return s; };
+  const simpson = (F, Q) => { const N = 2000, h = (Q.b - Q.a) / N; let s = g(F, Q.a) + g(F, Q.b); for (let i = 1; i < N; i++) s += (i % 2 ? 4 : 2) * g(F, Q.a + i * h); return s * h / 3; };
+  const rt = n => { const s = Math.round(Math.sqrt(n)); return s * s === n ? String(s) : '√' + n; };
+  const slipOf = (k, L, Q) => { const cp = Q.c * Q.p, fp = tm(cp, Q.p - 1), xo = xe(Q.p - 1);
+    if (k === 'noRoot') return `${L} leaves off the square root. A tiny step is the long side of a triangle with run dx and rise f′(x) dx, so its length is √(1 + f′(x)²) dx: the 1 + f′(x)² goes under a root.`;
+    if (k === 'useF') return `${L} squares f(x) = ${tm(Q.c, Q.p)}, the height, where the rise of a step needs the slope. The rise of a tiny step is f′(x) dx, and here f′(x) = ${fp}.`;
+    if (k === 'noSquare') return `${L} puts f′(x) = ${fp} under the root without squaring it. Pythagoras squares the rise, so all of ${fp} has to be squared.`;
+    if (k === 'coefOnly') return `${L} squares the ${cp} in f′(x) = ${fp} but leaves the ${xo} alone. Squaring ${xo} doubles its power as well.`;
+    if (k === 'powOnly') return `${L} squares the ${xo} in f′(x) = ${fp} but leaves the ${cp} alone. Squaring ${fp} squares the ${cp} as well.`;
+    if (k === 'noOne') return `${L} drops the 1, the run. √(f′(x)²) dx is only the rise of a tiny step; its length counts the run dx too, so it is √(1 + f′(x)²) dx.`;
+    return `${L} is the area under the curve, ∫ f(x) dx. The length adds up the slanted steps along the curve, √(1 + f′(x)²) dx each, not the heights.`; };
+  const RULE = 'A tiny step along y = f(x) runs dx and rises f′(x) dx, so by Pythagoras it is √(dx² + (f′(x) dx)²) = √(1 + f′(x)²) dx long. Add up the steps from a to b: the length is ∫ₐᵇ √(1 + f′(x)²) dx. Find f′, square all of it, add 1 and take the root. Which integral is the length?';
+  if (P.RULE !== RULE) fail('arcpick', 'rule', 'the rule is not stated as it should be');
+  if (P.round !== null || P.matched !== 0) fail('arcpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noRoot', 'useF', 'noSquare', 'coefOnly', 'powOnly', 'noOne', 'area'], CV = ['1,2', '1,3', '1,4', '2,2', '2,3', '2,4', '3,2'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0;
+  const slots = new Set(), kinds = {}, curves = new Set(), spans = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
+    P.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; curves.add(Q.c + ',' + Q.p); spans.add(Q.a + '-' + Q.b);
+      if (!CV.includes(Q.c + ',' + Q.p) || ![0, 1].includes(Q.a) || ![1, 2].includes(Q.b - Q.a)) fail('arcpick', key, `${sig} is not a curve of the kind dealt`);
+      if (prev && prev === sig) fail('arcpick', key, 'the same curve comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('arcpick', key, 'there are not four integrals, one of them right');
+      const h0 = P.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} y = ${tm(Q.c, Q.p)} from x = ${Q.a} to x = ${Q.b} Which integral is its length? A `)) fail('arcpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="ArcPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('arcpick', key, 'the four integrals are not offered as they are, A to D'); continue; }
+      const F = btns.map(x => parse(x[6]));
+      if (F.some(v => !v)) { fail('arcpick', key, `an integral cannot be read: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (F.some(v => v.a !== Q.a || v.b !== Q.b)) fail('arcpick', key, 'an integral does not run from a to b');
+      if (new Set(btns.map(x => x[6])).size !== 4) fail('arcpick', key, 'two integrals are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      F.forEach((v, i) => {
+        const o = r.opts[i], w = want(o.k, Q);
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!w) { fail('arcpick', key, `an integral is the unknown ${o.k}`); return; }
+        if (!same(v, w)) fail('arcpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((i === ri) !== isLength(v, Q)) fail('arcpick', key, `${btns[i][6]} ${i === ri ? 'is not' : 'is'} √(1 + f′²) for y = ${tm(Q.c, Q.p)}`);
+      });
+      if (Math.abs(simpson(F[ri], Q) - chords(Q)) > 1e-5 * chords(Q)) fail('arcpick', key, 'the right integral does not add up to what fine chords measure');
+      { // nothing in its look: two wrong ones under a root, each part of the right one in a wrong one, and a wrong one sharing as much
+        const W = F[ri], wr = F.filter((v, i) => i !== ri);
+        const share = i => F.reduce((n, v, j) => n + (j === i ? 0 : (v.root === F[i].root) + (v.one === F[i].one) + (v.k === F[i].k) + (v.e === F[i].e)), 0);
+        if (wr.filter(v => v.root).length < 2) fail('arcpick', key, 'fewer than two wrong integrals sit under a root');
+        if (!wr.some(v => v.root && v.one) || !wr.some(v => v.k === W.k) || !wr.some(v => v.e === W.e)) fail('arcpick', key, 'a part of the right integral is found in no wrong one');
+        if (![0, 1, 2, 3].some(i => i !== ri && share(i) >= share(ri))) fail('arcpick', key, 'the right integral shares the most with the rest, so its look gives it away'); }
+      if (k === 0 && txt(P.html().split('id="alqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('arcpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = P.matched, nt = env.toasts.length;
+        P.choose(i); misses++;
+        if (P.matched !== m0 || !P.round.out.has(i) || P.round !== r || env.toasts.length !== nt) fail('arcpick', key, 'a miss is counted, or not crossed off');
+        const lines = P.html().split('id="alqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${P.matched} picked this visit, ${P.firstTry} on the first try.`) fail('arcpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]) at x = (\d): there the slope is f′\((\d)\) = (\d+), so a tiny step is √\(1 \+ (\d+)²\) = √(\d+)( = (\d+))? times its run\. ([ABCD])'s integrand at x = (\d) is (.+), not (√?\d+)\.$/);
+        if (!cm || cm[1] !== Lt || cm[9] !== Lt) { fail('arcpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const h = +cm[2], s = (f(Q, h + 1e-6) - f(Q, h - 1e-6)) / 2e-6, n = 1 + Math.round(s) ** 2;
+        if (+cm[3] !== h || +cm[10] !== h || Math.abs(+cm[4] - s) > 1e-6 * s || +cm[5] !== +cm[4] || +cm[6] !== n || cm[11 + 1] !== rt(n)) fail('arcpick', key, `the check of ${o.k} is not worked for this curve: ${lines[1]}`);
+        if (cm[7] && (+cm[8]) ** 2 !== n) fail('arcpick', key, `√${n} is not ${cm[8]}`);
+        // what the wrong integrand comes to at x = h, measured off the integral as shown, and that it is not the step
+        const v = g(F[i], h), sv = cm[11].split(' = ').pop(), got = sv.startsWith('√') ? Math.sqrt(+sv.slice(1)) : +sv;
+        if (!(Math.abs(got - v) <= 1e-9 * Math.max(1, v))) fail('arcpick', key, `the check of ${o.k} says its integrand is ${cm[11]} at x = ${h}, but it is ${v}`);
+        if (sv.startsWith('√') && Number.isInteger(Math.sqrt(+sv.slice(1)))) fail('arcpick', key, `the check of ${o.k} leaves a whole root under its sign: ${cm[11]}`);
+        if (Math.abs(v - Math.sqrt(n)) < 1e-9) fail('arcpick', key, `${o.k} gives the step's own length at x = ${h}, so its check shows nothing`);
+        if (lines.join(' ').includes(btns[ri][6].replace(/^∫\S+ /, '').replace(/ dx$/, '')) || lines.join(' ').includes(tm(Q.c * Q.c * Q.p * Q.p, 2 * Q.p - 2))) fail('arcpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = P.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="ArcPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the length"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('arcpick', key, 'the missed integrals are not shut and told as not the length');
+        const r0 = env.renders; P.choose(i);
+        if (P.misses !== q + 1 || env.renders !== r0) fail('arcpick', key, 'tapping a missed integral again does something');
+      }
+      const m0 = P.matched, ft = P.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      P.choose(ri);
+      if (env.renders !== r0 + 1) fail('arcpick', key, 'a pick does not redraw the workshop');
+      if (P.matched !== m0 + 1 || P.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('arcpick', key, 'the right pick is not counted');
+      if (P.round === r || P.misses !== 0 || P.picked !== null) fail('arcpick', key, 'no fresh curve after the right pick');
+      if (P.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'CURVE MEASURER / 5 lengths set up') fail('arcpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the length, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('arcpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(P.html().split('id="alqRead"')[1].replace(/^[^>]*>/, ''));
+      const cp = Q.c * Q.p, wantLine = `That was it: f′(x) = ${tm(cp, Q.p - 1)}, so 1 + f′(x)² = 1 + ${tm(cp * cp, 2 * Q.p - 2)}, and adding up its root from ${Q.a} to ${Q.b} gives the length. Here is a new one. ${P.matched} picked this visit, ${P.firstTry} on the first try.`;
+      if (got !== wantLine) fail('arcpick', key, `after a pick: ${got}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = P.build; let c = 0;
+    P.build = () => (c++ < 3 ? { c: 3, p: 2, a: 0, b: 2 } : real.call(P));
+    P.round = null; P.newRound(); P.newRound();
+    if (JSON.stringify(P.round.S) === '{"c":3,"p":2,"a":0,"b":2}') fail('arcpick', 'repeat', 'the same curve is dealt twice in a row');
+    P.build = real;
+  }
+  for (const k of SL) if (!kinds[k] || kinds[k] < rounds * 0.05) fail('arcpick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
+  if (curves.size !== CV.length || spans.size !== 4) fail('arcpick', 'deal', `curves ${[...curves]}, spans ${[...spans]} is not the whole deal`);
+  if (slots.size !== 4) fail('arcpick', 'deal', `the length only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('arcpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which number in front? The swap workshop turned round. Every number is
    read back off its button and checked against the slip it is named as,
    worked from the integral here; the right one alone is the number in front,
@@ -15645,6 +15798,7 @@ console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12
 console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  lengths set up     ${pad(arcPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-integral in the arc length workshop, every integral read back off its button, taken apart and checked against the slip it is named as, the right one alone √(1 + f′²) with f′ nudged and adding up to what fine chords measure, no look giving it away; ${arcPickNotes.misses.toLocaleString()} wrong picks checked at one x, ${arcPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
