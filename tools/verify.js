@@ -4373,6 +4373,146 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which c? The pick-a-shadow round in the Gram–Schmidt workshop. Every
+   number on screen is read back off its button and checked against the slip
+   it is named as, worked out here from u₁ and u₂ alone as an exact fraction;
+   the right one alone must leave w · u₁ = 0. Every dot product and every
+   w · u₁ = u₂ · u₁ − c × (u₁ · u₁) in the readout is worked again from the
+   numbers it shows, and the w the right pick shows must stand square to u₁. */
+const gramPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Gram = {render(){ env.renders++; }};" +
+    cut('const GramPick = {', 'const Gram = {') + 'return GramPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const vec = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const dot = (p, q) => p[0] * q[0] + p[1] * q[1];
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  // a number as the readout writes it, read back as an exact fraction
+  const rd = t => { const m = t.replace(/[()]/g, '').replace('−', '-').match(/^(-?\d+)(?:\/(\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  // each option, worked out here from u₁ and u₂ alone
+  const want = {
+    right: P => fr(dot(P.u2, P.u1), dot(P.u1, P.u1)),
+    flip: P => fr(dot(P.u1, P.u1), dot(P.u2, P.u1)),
+    nodiv: P => fr(dot(P.u2, P.u1), 1),
+    u2: P => fr(dot(P.u2, P.u1), dot(P.u2, P.u2)),
+    sign: P => fr(-dot(P.u2, P.u1), dot(P.u1, P.u1))
+  };
+  const left = (P, f) => fr(dot(P.u2, P.u1) * f[1] - f[0] * dot(P.u1, P.u1), f[1]);   // w · u₁ for c = f
+  const ct = f => (f[1] === 1 ? pn(f[0]) : `(${fst(f)})`);
+  const dotsOf = P => [[P.u2, P.u1, 'u₂', 'u₁'], [P.u1, P.u1, 'u₁', 'u₁']].map(([p, q, a, b]) => `${a} · ${b} = ${ng(p[0])} × ${pn(q[0])} + ${pn(p[1])} × ${pn(q[1])} = ${ng(dot(p, q))}`).join(', and ');
+  const restOf = (P, f) => `w · u₁ = u₂ · u₁ − c × (u₁ · u₁) = ${ng(dot(P.u2, P.u1))} − ${ct(f)} × ${dot(P.u1, P.u1)} = ${fst(left(P, f))}`;
+  // every "p × q + r × s = t" and every "a − c × n = b" in a line, worked again from its own numbers
+  const sums = (t, key) => { let n = 0;
+    for (const m of t.matchAll(/(−?\d+) × (\(?−?\d+\)?) \+ (\(?−?\d+\)?) × (\(?−?\d+\)?) = (−?\d+)/g)) { n++; const f = i => +m[i].replace(/[()]/g, '').replace('−', '-');
+      if (f(1) * f(2) + f(3) * f(4) !== f(5)) fail('grampick', key, `${m[0]} is worked wrong`); }
+    for (const m of t.matchAll(/= (−?\d+) − (\(?−?\d+(?:\/\d+)?\)?) × (\d+) = (−?\d+(?:\/\d+)?)/g)) { n++; const a = rd(m[1]), c = rd(m[2]), b = rd(m[4]), nn = +m[3];
+      if (!eq(fr(a[0] * c[1] - c[0] * nn, c[1]), b)) fail('grampick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="gpRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L) => ({ flip: `${L} is (u₁ · u₁)/(u₂ · u₁), the fraction upside down. The shadow divides by u₁ · u₁, the arrow being taken away.`,
+    nodiv: `${L} is u₂ · u₁ with nothing divided out. Each copy of u₁ lowers w · u₁ by u₁ · u₁, not by 1, so u₂ · u₁ still has to be divided by it.`,
+    u2: `${L} divides by u₂ · u₂. The shadow is counted in copies of u₁, so it divides by u₁ · u₁.`,
+    sign: `${L} is the right size with the wrong sign, as if u₂ · u₁ had come out the other way. It moves w the wrong way along u₁.` }[k]);
+  if (S.RULE !== 'Take c copies of u₁ away from u₂, and what is left is w = u₂ − c·u₁. Each copy taken away lowers w · u₁ by u₁ · u₁, so w is at a right angle to u₁ when c = (u₂ · u₁)/(u₁ · u₁): the length of u₂\'s shadow on u₁, counted in copies of u₁. Which c is it?') fail('grampick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('grampick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, fracs = 0, wholes = 0;
+  const slots = new Set(), kinds = {}, left4 = new Set(), sides = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, P = r.P, key = `seed ${seed} round ${k}`, dp = dot(P.u2, P.u1);
+      rounds++;
+      if ([...P.u1, ...P.u2].some(x => !Number.isInteger(x)) || P.u1.some(x => Math.abs(x) > 2) || P.u2.some(x => Math.abs(x) > 3) || (!P.u1[0] && !P.u1[1])) fail('grampick', key, `u₁ = ${vec(P.u1)}, u₂ = ${vec(P.u2)} are not small and whole`);
+      if (!dp || P.u1[0] * P.u2[1] === P.u1[1] * P.u2[0]) fail('grampick', key, `u₂ = ${vec(P.u2)} is square to u₁ or along it`);
+      if (want.right(P)[1] === 1) wholes++; else fracs++;
+      if (prev && JSON.stringify(prev) === JSON.stringify(P)) fail('grampick', key, 'the same pair comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('grampick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` u₁ = ${vec(P.u1)}, u₂ = ${vec(P.u2)} P`)) fail('grampick', key, 'the rule and the pair are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="GramPick\.choose\((\d)\)" aria-label="([PQRS]): c = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([PQRS])<\/b> c = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'PQRS'[i] || +x[2] !== i || x[3] !== 'PQRS'[i] || x[5] !== 'PQRS'[i] || x[4] !== x[6])) { fail('grampick', key, 'the four numbers are not offered as they are, P to S'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some(v => !v || fst(v) !== btns[vals.indexOf(v)][4])) fail('grampick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('grampick', key, 'two numbers are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('grampick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](P))) fail('grampick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== (left(P, vals[i])[0] === 0)) fail('grampick', key, `c = ${fst(vals[i])} ${o.k === 'right' ? 'does not leave' : 'leaves'} w square to u₁`);
+      });
+      {
+        const can = [], seen = new Set([fst(want.right(P))]);
+        for (const s of ['flip', 'nodiv', 'u2', 'sign']) { const v = fst(want[s](P)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left4.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('grampick', key, 'a pair with fewer than three slips is dealt'); }
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('grampick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], f = vals[i], m0 = S.matched, nt = env.toasts.length, lf = left(P, f);
+        S.choose(i); misses++; sides.add(lf[0] > 0);
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('grampick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const ck = `Check ${L} the way the workshop checks w: ${dotsOf(P)}, so with c = ${fst(f)}, ${restOf(P, f)}, not 0: w ${lf[0] > 0 ? 'still leans along u₁' : 'leans back against u₁'}.`;
+        if (rt !== `${slipOf(o.k, L)} ${ck} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('grampick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, L)} ${ck}`);
+        if (sums(rt, key) !== 3) fail('grampick', key, 'a miss does not work both dot products and w · u₁');
+        worked += 3;
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="GramPick\\.choose\\(${i}\\)" aria-label="${L}: c = [^"]+\\. Not c"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('grampick', key, 'the missed numbers are not shut and told as not c');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('grampick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('grampick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('grampick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('grampick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SHADOW READER / 5 shadows picked') fail('grampick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} is c, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('grampick', key, `the toast is ${env.toasts[nt]}`); }
+      const c = vals[ri], W = [0, 1].map(j => fr(P.u2[j] * c[1] - c[0] * P.u1[j], c[1])), raw = `${ng(dp)}/${dot(P.u1, P.u1)}`, rt = read();
+      const after = `That was it: ${dotsOf(P)}, so c = ${raw}${fst(c) === raw ? '' : ' = ' + fst(c)}. Then ${restOf(P, c)}, and w = u₂ − ${ct(c)}·u₁ = ⟨${fst(W[0])}, ${fst(W[1])}⟩ stands at a right angle to u₁. Here is a new pair. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('grampick', key, `after a pick: ${rt} | want ${after}`);
+      if (sums(rt, key) !== 3 || !/ = 0, and w = /.test(rt)) fail('grampick', key, 'the right pick does not bring w · u₁ to 0');
+      { const m = rt.match(/·u₁ = ⟨(−?\d+(?:\/\d+)?), (−?\d+(?:\/\d+)?)⟩ stands/), w = m && [rd(m[1]), rd(m[2])];
+        if (!w || w[0][0] * w[1][1] * P.u1[0] + w[1][0] * w[0][1] * P.u1[1] !== 0) fail('grampick', key, 'the w shown is not square to u₁'); }
+      worked += 3;
+      prev = P;
+    }
+  }
+  { // the same pair dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { u1: [2, 1], u2: [3, 4] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.P) === '{"u1":[2,1],"u2":[3,4]}') fail('grampick', 'repeat', 'the same pair is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['flip', 'nodiv', 'u2', 'sign']) if (!kinds[k]) fail('grampick', 'slips', `the slip ${k} is never offered`);
+  if (!fracs || !wholes) fail('grampick', 'deal', `c is ${fracs ? 'never' : 'always'} a whole number, which gives it away`);
+  if (sides.size !== 2) fail('grampick', 'deal', 'a wrong c only ever leans one way');
+  if (left4.size !== 4) fail('grampick', 'deal', `when a pair has four slips, only ${[...left4].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('grampick', 'deal', `the right number only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
+  if (fives !== 30) fail('grampick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, fracs };
+})();
+
 /* Which arrow is crushed? The pick-a-null-vector round in the null space
    workshop. Every arrow on screen is read back off its button and checked
    against the slip it is named as, worked out here from A alone; the right one
@@ -8514,6 +8654,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-c in the Gram–Schmidt workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone leaving w square to u₁, ${gramPickNotes.fracs.toLocaleString()} of them fractions; ${gramPickNotes.misses.toLocaleString()} wrong picks worked through w · u₁, ${gramPickNotes.worked.toLocaleString()} sums worked again from their own numbers)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
