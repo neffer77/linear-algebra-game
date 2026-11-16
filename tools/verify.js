@@ -82,7 +82,7 @@ function loadGame() {
     ';const Horizon={' + script.slice(script.indexOf("  SETS:[\n    {id:'eq', btn:'Equal powers'"), script.indexOf("  render(){\n    document.getElementById('hzSets')")) + 'render(){}};exports.Horizon=Horizon;' +
     ';const Cross={' + script.slice(script.indexOf("  SETS:[\n    {id:'floor', btn:'On the floor'"), script.indexOf("  render(){\n    document.getElementById('crSets')")) + 'render(){}};exports.Cross=Cross;' +
     ';const Quot={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² over x + 1'"), script.indexOf("  render(){\n    document.getElementById('qoTab')")) + 'render(){}};exports.Quot=Quot;' +
-    ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adSets')")) + 'render(){}};exports.Anti=Anti;' +
+    ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adTab')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  render(){\n    if(!this.fill) this.start();")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
@@ -4080,6 +4080,158 @@ const dotPickNotes = (() => {
   return { rounds, misses, shadows };
 })();
 
+/* Which F? The pick-an-antiderivative round in the antiderivative workshop.
+   Every F on screen is read back as a number times a power of x and checked
+   against the slip it is named as, worked out here from f alone; the right
+   one must have f as its slope, and no slip may. Each slope in the readout is
+   worked again by the power rule from what the button shows. The picture is
+   read back off its own ticks: the gold dashes must lie on f, and after a miss
+   the red curve must lie on the slope of the F that was picked. */
+const antiPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    cut('const AntiPick = {', '/* ---------- The transpose workshop') + 'Anti.render = () => { env.renders++; }; return AntiPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => +t.replace('−', '-');
+  // fractions as written on the page, read back to numbers
+  const rd = t => { const m = t.match(/^(−?)(\d+)(?:\/(\d+))?$/); return m ? (m[1] ? -1 : 1) * m[2] / (m[3] || 1) : NaN; };
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  // read a written term back: 2x³, −x⁻¹, (3/2)x^(1/2), 5 → {k, p}
+  const parse = s => {
+    let m = s.match(/^(−?\d+(?:\/\d+)?)$/); if (m) return { k: rd(m[1]), p: 0 };
+    m = s.match(/^(?:\((−?\d+\/\d+)\)|(−?\d*))x(?:\^\((−?\d+\/\d+)\)|([⁻]?[⁰¹²³⁴⁵⁶⁷⁸⁹]+))?$/);
+    if (!m) return null;
+    const k = m[1] ? rd(m[1]) : m[2] === '' ? 1 : m[2] === '−' ? -1 : rd(m[2]);
+    const p = m[3] ? rd(m[3]) : m[4] ? (m[4][0] === '⁻' ? -1 : 1) * +[...m[4].replace('⁻', '')].map(ch => SUP.indexOf(ch)).join('') : 1;
+    return { k, p };
+  };
+  const same = (a, b) => Math.abs(a.k - b.k) < 1e-9 && Math.abs(a.p - b.p) < 1e-9;
+  const d = t => (t.p === 0 ? { k: 0, p: 0 } : { k: t.k * t.p, p: t.p - 1 });
+  const want = {
+    right: (a, m) => ({ k: a, p: m }), nodiv: (a, m) => ({ k: a * m, p: m }), olddiv: (a, m) => ({ k: a * m / (m - 1), p: m }),
+    deriv: (a, m) => ({ k: a * m * (m - 1), p: m - 2 }), mult: (a, m) => ({ k: a * m * m, p: m })
+  };
+  const read = () => txt(S.html().split('id="apRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'To undo a power of x, raise the power by one and divide by the new power: xⁿ has antiderivative xⁿ⁺¹/(n + 1). Check by taking the slope of F: it has to come back to f. Every F can carry a + C, which never changes its slope. Which F has slope f?') fail('antipick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('antipick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, curves = 0, negs = 0, thirds = 0;
+  const slots = new Set(), kinds = {}, powers = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = r.c, key = `seed ${seed} round ${k}`, f = { k: c.a * c.m, p: c.m - 1 };
+      rounds++; powers.add(c.m); if (c.a < 0) negs++;
+      if (c.m === 0 || c.m === 1) fail('antipick', key, `F has the power ${c.m}, which leaves f as 1/x or a number`);
+      if (!Number.isInteger(f.k) || !f.k) fail('antipick', key, `f's number in front is ${f.k}`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(c)) fail('antipick', key, 'the same f comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('antipick', key, 'there are not four F, one of them right');
+      const h0 = S.html();
+      const fs0 = h0.match(/font-weight:700;margin-bottom:4px">f\(x\) = ([^<]+)<\/div>/);
+      if (!fs0 || !parse(fs0[1]) || !same(parse(fs0[1]), f)) fail('antipick', key, `f is written as ${fs0 && fs0[1]}`);
+      if (!txt(h0).startsWith(`${S.RULE} f(x) = ${fs0 && fs0[1]}`)) fail('antipick', key, 'the rule and f are not shown first');
+      const lab = `f(x) = ${fs0 && fs0[1]} dashed in gold, for x from 0.5 to 2.5`;
+      if (!h0.includes(`role="img" aria-label="${lab}">`)) fail('antipick', key, 'the picture is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="AntiPick\.choose\((\d)\)" aria-label="([ABCD]): F\(x\) = ([^"]+?)(\. Its slope is not f)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== m[8] || m[6] || m[7] !== 'ABCD'[i])) { fail('antipick', key, 'the four F are not offered as they are, A to D'); continue; }
+      const terms = btns.map(m => parse(m[8]));
+      if (btns.some(m => /(^|[^\d/])−?1x/.test(m[8]))) fail('antipick', key, `a 1 in front is written out: ${btns.map(m => m[8]).join(' | ')}`);
+      if (btns.some(m => /\/3\)/.test(m[8]))) thirds++;
+      if (terms.some(t => !t)) { fail('antipick', key, `an F cannot be read back: ${btns.map(m => m[8]).join(' | ')}`); continue; }
+      if (new Set(terms.map(t => t.k + ',' + t.p)).size !== 4) fail('antipick', key, 'two F are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('antipick', key, `an option is the unknown ${o.k}`);
+        else if (!same(terms[i], want[o.k](c.a, c.m))) fail('antipick', key, `${o.k} is written ${btns[i][8]}, which is not that slip`);
+        if ((o.k === 'right') !== same(d(terms[i]), f)) fail('antipick', key, `${btns[i][8]} ${o.k === 'right' ? 'does not have' : 'has'} slope f`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      // the picture, read back off its own ticks
+      const pic = h => h.split('id="apFig"')[1].split('</svg>')[0];
+      const svg = pic(h0);
+      const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="10" fill="[^"]+" text-anchor="middle">([^<]+)<\/text>/g)].map(m => [+m[1], num(m[2])]);
+      const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="10" fill="[^"]+" text-anchor="end">([^<]+)<\/text>/g)].map(m => [+m[1] - 3, num(m[2])]);
+      if (JSON.stringify(xt.map(p => p[1])) !== '[1,2]' || yt.length !== 2 || yt[0][1] !== 0 || !yt[1][1]) { fail('antipick', key, 'the axes are not marked at 1 and 2 across and at 0 and one round number up'); continue; }
+      const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      if (!(kx > 0 && ky < 0)) fail('antipick', key, 'the picture is drawn back to front or upside down');
+      const P = (x, y) => [xt[0][1] + (+x - xt[0][0]) / kx, yt[0][1] + (+y - yt[0][0]) / ky];
+      const span = 176 / -ky;
+      if (Math.abs(yt[1][1]) > span) fail('antipick', key, `the round number ${yt[1][1]} is off the picture`);
+      const curve = (s, name) => [...s.matchAll(new RegExp(`<polyline data-k="${name}" points="([^"]+)" fill="none" stroke="([^"]+)"`, 'g'))].map(m => ({ col: m[2], pts: m[1].split(' ').map(q => P(...q.split(','))) }));
+      const onIt = (cs, t) => cs.length && cs.every(cv => cv.pts.every(([x, y]) => Math.abs(y - t.k * x ** t.p) < span * 0.01));
+      const gold = curve(svg, 'target');
+      if (!onIt(gold, f) || gold.some(cv => cv.col !== '#f2c14e')) fail('antipick', key, 'the gold dashes do not lie on f');
+      if (gold.reduce((n, cv) => n + cv.pts.length, 0) < 100) fail('antipick', key, 'most of f is off the picture');
+      if (/data-k="slope"/.test(svg)) fail('antipick', key, 'a red slope is drawn before any miss');
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: ')) fail('antipick', key, `before a pick the readout says ${read()}`);
+      // each slope worked again from the F the player sees
+      const work = (i) => { const t = terms[i], w = btns[i][8];
+        if (t.p === 0) return `${w} is a number on its own, so its slope is 0`;
+        const fr = v => { for (const q of [1, 2, 3, 4, 6, 8]) if (Math.abs(v * q - Math.round(v * q)) < 1e-9) return (v < 0 ? '−' : '') + (q === 1 ? Math.round(Math.abs(v)) : Math.round(Math.abs(v) * q) + '/' + q); };
+        const pr = v => (v < 0 || !Number.isInteger(v) ? `(${fr(v)})` : fr(v));
+        return `the slope of ${w} is ${pr(t.k)} · ${pr(t.p)}${t.p === 1 ? '' : ' · ' + S.T({ k: 1, p: t.p - 1 })} = `; };
+      const slopeTxt = i => { const s = read().match(new RegExp(`${work(i).replace(/[()^.*+?[\]\\/]/g, '\\$&')}([^,]+),`)); return s && s[1]; };
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('antipick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const slip = { nodiv: `${L} raises the power to `, olddiv: `${L} divides by the old power, `, deriv: `${L} takes the slope of f instead of undoing it`, mult: `${L} multiplies by the new power, ` }[o.k];
+        if (!rt.startsWith(slip)) fail('antipick', key, `${o.k} is explained as: ${rt}`);
+        const frw = v => { for (const q of [1, 2, 3, 4, 6, 8]) if (Math.abs(v * q - Math.round(v * q)) < 1e-9) return (v < 0 ? '−' : '') + (q === 1 ? Math.round(Math.abs(v)) : Math.round(Math.abs(v) * q) + '/' + q); };
+        if (o.k === 'olddiv' && !rt.startsWith(`${L} divides by the old power, ${frw(c.m - 1)}, instead of the new one, ${frw(c.m)}.`)) fail('antipick', key, `the old-power slip names the wrong powers: ${rt}`);
+        if (!rt.includes(`Check ${L} by its slope: ${work(i)}`) || !rt.includes(`, which is not f. But ${work(ri)}`) || !rt.endsWith(`, which is f exactly. ${S.matched} picked this visit, ${S.firstTry} on the first try.`)) fail('antipick', key, `the miss is not checked by its slope: ${rt}`);
+        const sw = slopeTxt(i), sr = slopeTxt(ri);
+        if (terms[i].p !== 0 && (!sw || !parse(sw) || !same(parse(sw), d(terms[i])))) fail('antipick', key, `the slope of ${btns[i][8]} is worked to ${sw}`);
+        if (!sr || !parse(sr) || !same(parse(sr), f)) fail('antipick', key, `the slope of the right F is worked to ${sr}`);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="AntiPick\\.choose\\(${i}\\)" aria-label="${L}: F\\(x\\) = [^"]+\\. Its slope is not f"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('antipick', key, 'the missed F are not shut and told as not having slope f');
+        const ds = d(terms[i]);
+        if (!h.includes(`aria-label="${lab}; the slope of ${L}, ${S.T(ds)}, in red, off f">`)) fail('antipick', key, 'the red slope is not read out');
+        const red = curve(pic(h), 'slope');
+        curves++;
+        // the red curve may run off the picture, but where it is drawn it lies on F′, and somewhere it is clear of f
+        const clip = red.every(cv => cv.pts.every(([x, y]) => Math.abs(y - (ds.p === 0 && ds.k === 0 ? 0 : ds.k * x ** ds.p)) < span * 0.01));
+        if (red.some(cv => cv.col !== '#e5484d') || !clip) fail('antipick', key, 'the red curve does not lie on the slope of the F that was picked');
+        if (red.length && red.every(cv => cv.pts.every(([x, y]) => Math.abs(y - f.k * x ** f.p) < span * 0.03))) fail('antipick', key, 'the red slope cannot be told apart from f');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('antipick', key, 'tapping a missed F again does something');
+      }
+      const rightWork = work(ri) + fs0[1];
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('antipick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('antipick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('antipick', key, 'no fresh f after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'ANTIDERIVATIVE READER / 5 antiderivatives picked') fail('antipick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} has slope f, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('antipick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${rightWork}, which is f. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('antipick', key, `after a pick: ${read()} | want ${rightWork}`);
+      prev = c;
+    }
+  }
+  for (const k of ['nodiv', 'olddiv', 'deriv', 'mult']) if (!kinds[k]) fail('antipick', 'slips', `the slip ${k} is never offered`);
+  if (!negs) fail('antipick', 'deal', 'f never has a minus in front');
+  if (!thirds) fail('antipick', 'deal', 'no F is ever written in thirds');
+  if (!powers.has(0.5) || !powers.has(1.5) || !powers.has(-1) || !powers.has(4)) fail('antipick', 'deal', `F only ever has the powers ${[...powers].join(' ')}`);
+  if (slots.size !== 4) fail('antipick', 'deal', `the right F only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('antipick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, curves };
+})();
+
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -7819,6 +7971,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);

@@ -106,6 +106,7 @@ const SUITES = [
   require('./play/lampick'),  // see a matrix, pick which of four pairs are its eigenvalues
   require('./play/spanpick'), // see two arrows and a ring, pick which of four mixes lands on it
   require('./play/dotpick'),  // see two arrows, pick which of four numbers is u·v
+  require('./play/antipick'), // see f, pick which of four F has f as its slope
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
