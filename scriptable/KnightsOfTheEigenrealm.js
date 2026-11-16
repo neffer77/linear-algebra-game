@@ -1121,15 +1121,17 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
+    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>
     <div class="panel">
-      <div class="small" style="margin-bottom:4px">First</div>
+      <div id="oqBox"></div>
+      <div class="small" id="cmFirstL" style="margin-bottom:4px">First</div>
       <div id="cmFirst" class="wsModes wrap" role="group" aria-label="First move"></div>
-      <div class="small" style="margin:8px 0 4px">Then</div>
+      <div class="small" id="cmThenL" style="margin:8px 0 4px">Then</div>
       <div id="cmThen" class="wsModes wrap" role="group" aria-label="Second move"></div>
       <div id="cmFig"></div>
       <div id="cmRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="cmGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="cmGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14077,7 +14079,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -17357,6 +17359,129 @@ const Fit = {
    built column by column from where they land, never from a recipe to
    remember; the other order is drawn dashed beside it, so the player sees
    for themselves that it usually lands somewhere else. */
+/* ---------- Which matrix? Order Matters turned round ----------
+   Two whole-number 2×2 matrices, A done first and B done second, and four
+   matrices, one of them BA, the one move that does both. The rule is stated
+   first; the wrong matrices are the slips people make when they multiply:
+   the order turned round (AB), the two added, the two multiplied entry by
+   entry, a row of B run along a row of A, a column of B run down a column
+   of A, and rows and columns swapped. The order slip is always offered. A
+   wrong pick is checked at the first entry it gets wrong, worked as a row
+   of B times a column of A. Nothing is saved. */
+const ComposePick = {
+  SLIPS:['sum','entry','rowrow','colcol','transp'],
+  RULE:'Doing a move A and then a move B is a single move, the matrix BA: the move done last is written on the left, since it acts on whatever the first one hands it. Each entry of BA is a row of B times a column of A: the entry in row i, column j multiplies row i of B with column j of A, matching entry by matching entry, and adds. Which matrix does both?',
+  E:[-2,-1,0,1,1,2,2,3],
+  mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],
+  tr:([[a,b],[c,d]])=>[[a,c],[b,d]],
+  // the matrix each option stands for
+  mat(S,k){
+    const {A,B}=S;
+    return k==='right' ? this.mul(B,A) : k==='order' ? this.mul(A,B) : k==='sum' ? A.map((r,i)=>r.map((x,j)=>x+B[i][j]))
+      : k==='entry' ? A.map((r,i)=>r.map((x,j)=>x*B[i][j])) : k==='rowrow' ? this.mul(B,this.tr(A))
+      : k==='colcol' ? this.mul(this.tr(B),A) : this.tr(this.mul(B,A));
+  },
+  key:M=>JSON.stringify(M),
+  // the slips these two can offer beside the order slip: each a matrix different from BA, from AB, from A and B, and from every one kept before it
+  slips(S){
+    const seen=new Set(['right','order'].map(k=>this.key(this.mat(S,k)))), keep=[];
+    seen.add(this.key(S.A)); seen.add(this.key(S.B));
+    for(const k of this.SLIPS){ const x=this.key(this.mat(S,k)); if(seen.has(x)) continue; seen.add(x); keep.push(k); }
+    return keep;
+  },
+  draw(){ const e=this.E; return [[R.pick(e),R.pick(e)],[R.pick(e),R.pick(e)]]; },
+  build(){
+    for(let g=0;g<500;g++){
+      const S={A:this.draw(), B:this.draw()}, P=this.mat(S,'right'), Q=this.mat(S,'order');
+      const I=this.key([[1,0],[0,1]]);
+      if(this.key(S.A)===this.key(S.B) || this.key(S.A)===I || this.key(S.B)===I) continue;
+      // neither move is flat, so each really moves the plane
+      if(S.A[0][0]*S.A[1][1]-S.A[0][1]*S.A[1][0]===0 || S.B[0][0]*S.B[1][1]-S.B[0][1]*S.B[1][0]===0) continue;
+      // the order matters for these two, and BA is not A or B, so nothing on the page is the answer
+      if(this.key(P)===this.key(Q) || [S.A,S.B].some(M=>this.key(M)===this.key(P))) continue;
+      if([P,Q].some(M=>M.flat().some(x=>Math.abs(x)>12))) continue;
+      if(this.slips(S).length<2) continue;
+      return S;
+    }
+    return {A:[[1,2],[0,1]], B:[[0,-1],[1,0]]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||this.key(S)!==this.key(prev)) break; }
+    const rest=this.slips(S);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    // the order turned round is always there: it is the slip this workshop is about
+    const opts=['right','order',...rest.slice(0,2)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('MOVE MAKER', this.matched+' pairs made one','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'PQRS'[i]} does both, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Compose.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  rows:M=>M.map(row=>row.map(neg).join(', ')).join('; '),
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // row i of B times column j of A, worked
+  dot(S,i,j){ const {A,B}=S; return \`\${this.pn(B[i][0])} × \${this.pn(A[0][j])} + \${this.pn(B[i][1])} × \${this.pn(A[1][j])}\`; },
+  // the entries of M that are not where BA has them
+  wrong(S,M){ const P=this.mat(S,'right'), out=[]; M.forEach((row,p)=>row.forEach((x,q)=>{ if(x!==P[p][q]) out.push([p,q]); })); return out; },
+  slip(S,k,L){
+    if(k==='order') return \`\${L} is AB, the moves the other way round: B first, then A. The move done last goes on the left, so A first, then B is BA, and for these two the order matters.\`;
+    if(k==='sum') return \`\${L} adds A and B entry by entry. One move after another does not add: each entry of BA is a row of B times a column of A.\`;
+    if(k==='entry') return \`\${L} multiplies A and B entry by entry, each number by the one in the same place. Each entry of BA takes a whole row of B and a whole column of A, multiplied pair by pair and added.\`;
+    if(k==='rowrow') return \`\${L} runs along a row of A where it should run down a column: it takes row i of B times row j of A. The entry in row i, column j of BA takes row i of B times column j of A.\`;
+    if(k==='colcol') return \`\${L} runs down a column of B where it should run along a row: it takes column i of B times column j of A. The entry in row i, column j of BA takes row i of B times column j of A.\`;
+    return \`\${L} has the rows and columns of BA swapped: its row i, column j holds what BA has in row j, column i. Row i of B times column j of A goes in row i, column j.\`;
+  },
+  at:(i,j)=>\`row \${i+1}, column \${j+1}\`,
+  check(S,k,L){
+    const M=this.mat(S,k), [[p,q]]=this.wrong(S,M), P=this.mat(S,'right');
+    return \`Check \${L} at \${this.at(p,q)}: it holds \${neg(M[p][q])}. That entry of BA is row \${p+1} of B, (\${S.B[p].map(neg).join(', ')}), times column \${q+1} of A, (\${neg(S.A[0][q])}, \${neg(S.A[1][q])}): \${this.dot(S,p,q)} = \${neg(P[p][q])}.\`;
+  },
+  grid(M,bad=[]){
+    const isBad=(p,q)=>bad.some(([a,b])=>a===p&&b===q);
+    return \`<span data-m="2x2" style="display:inline-grid;grid-template-columns:repeat(2,auto);gap:3px 4px;padding:3px 5px;border-left:2px solid var(--dim);border-right:2px solid var(--dim);border-radius:5px;vertical-align:middle">\`+
+      M.map((row,p)=>row.map((x,q)=>\`<span data-cell="\${p},\${q}"\${isBad(p,q)?' data-bad="1"':''} style="min-width:24px;text-align:center;padding:1px 2px;border:1px solid \${isBad(p,q)?FIG_COL.d:'transparent'};border-radius:4px;\${isBad(p,q)?'color:'+FIG_COL.d+';':''}">\${neg(x)}</span>\`).join('')).join('')+\`</span>\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="oqQ" role="img" aria-label="First A, with rows \${this.rows(S.A)}, then B, with rows \${this.rows(S.B)}" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0">First <span style="margin:0 4px">A =</span>\${this.grid(S.A)}<span style="margin:0 6px">, then</span><span style="margin-right:4px">B =</span>\${this.grid(S.B)}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which matrix does both, A first and then B?</div>\`;
+    out+=\`<div id="oqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), M=this.mat(S,o.k), L='PQRS'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ComposePick.choose(\${i})" aria-label="\${L}: rows \${this.rows(M)}\${gone?'. Not BA':''}" style="margin:0;padding:6px 2px;font-size:15px"><b>\${L}</b> \${this.grid(M,gone?this.wrong(S,M):[])}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'PQRS'[m]), this.check(S,r.opts[m].k,'PQRS'[m]));
+    else if(this.last){ const B=this.last.S, P=this.mat(B,'right');
+      lines.push(\`That was it: each entry is a row of B times a column of A. \${[[0,0],[0,1],[1,0],[1,1]].map(([i,j])=>\`\${i===0&&j===0?'R':'r'}ow \${i+1}, column \${j+1}: \${this.dot(B,i,j)} = \${neg(P[i][j])}\`).join('; ')}. So BA has rows \${this.rows(P)}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="oqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Compose = {
   MOVES:[
     {id:'turn',    btn:'↺ Turn',    m:[[0,-1],[1,0]], does:'turn a quarter-turn anticlockwise', is:'quarter-turn anticlockwise'},
@@ -17415,8 +17540,16 @@ const Compose = {
     return out;
   },
   open(){ UI.go('s-compose'); },
+  tab:'moves',
+  setTab(t){ this.tab=t; this.render(); },
   pick(which, i){ if(which==='first') this.fi=i; else this.si=i; this.touched=true; this.render(); },
   render(){
+    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Compose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';
+    if(pick) return;
     const row=(which, sel)=>this.MOVES.map((m,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===sel}" aria-label="\${which==='first'?'First':'Then'}: \${m.is}" onclick="Compose.pick('\${which}',\${i})">\${m.btn}</button>\`).join('');
     document.getElementById('cmFirst').innerHTML=row('first', this.fi);
@@ -27707,6 +27840,7 @@ const MixPick = {
     ['ElimPick','Elim','⚖️ Elimination Workshop'],
     ['UndoPick','Undo','↩️ Undo Workshop'],
     ['FitPick','Fit','📏 Best Fit Workshop'],
+    ['ComposePick','Compose','🔁 Order Matters'],
     ['DescentPick','Descent','⛰️ Downhill Workshop'],
     ['SplitPick','Castles','🏰 Two Castles Workshop'],
     ['SeriesPick','Taylor','🌀 Taylor Workshop'],
@@ -27745,7 +27879,7 @@ const MixPick = {
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },

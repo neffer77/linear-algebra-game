@@ -1,235 +1,298 @@
 {
-  "change": "Turn It Round, mixed: one question from a different workshop's pick mode each time, from the Tome.",
+  "change": "Order Matters, turned round: see A and B, and pick which of four matrices does A first, then B.",
   "mutations": [
     {
-      "name": "a pass does not wait for every workshop",
+      "name": "the right one is AB",
       "file": "index.html",
-      "find": "let pool=all.filter(i=>!this.seen.has(i));",
-      "replace": "let pool=all.filter(i=>i!==this.cur);",
+      "find": "return k==='right' ? this.mul(B,A)",
+      "replace": "return k==='right' ? this.mul(A,B)",
       "run": "verify"
     },
     {
-      "name": "a new pass can start on the last workshop",
+      "name": "the order slip is BA",
       "file": "index.html",
-      "find": "if(!pool.length){ this.seen.clear(); pool=all.filter(i=>i!==this.cur); }",
-      "replace": "if(!pool.length){ this.seen.clear(); pool=all; }",
+      "find": "k==='order' ? this.mul(A,B)",
+      "replace": "k==='order' ? this.mul(B,A)",
       "run": "verify"
     },
     {
-      "name": "a dealt workshop is not marked seen",
+      "name": "the sum slip takes away",
       "file": "index.html",
-      "find": "this.cur=pool[R.i(0,pool.length-1)]; this.seen.add(this.cur);",
-      "replace": "this.cur=pool[R.i(0,pool.length-1)];",
+      "find": "r.map((x,j)=>x+B[i][j])",
+      "replace": "r.map((x,j)=>x-B[i][j])",
       "run": "verify"
     },
     {
-      "name": "the pick is not dealt fresh",
+      "name": "the entry slip crosses its places",
       "file": "index.html",
-      "find": "const P=this.mod(); P.newRound(); P.last=null;",
-      "replace": "const P=this.mod(); P.last=null;",
+      "find": "r.map((x,j)=>x*B[i][j])",
+      "replace": "r.map((x,j)=>x*B[j][i])",
       "run": "verify"
     },
     {
-      "name": "the last working shows on a new question",
+      "name": "the row-row slip is the wrong product",
       "file": "index.html",
-      "find": "const P=this.mod(); P.newRound(); P.last=null;",
-      "replace": "const P=this.mod(); P.newRound();",
+      "find": "this.mul(B,this.tr(A))",
+      "replace": "this.mul(this.tr(B),this.tr(A))",
       "run": "verify"
     },
     {
-      "name": "a solve is never noticed",
+      "name": "the column-column slip is the wrong product",
       "file": "index.html",
-      "find": "    this.base=P.matched; this.done=false;",
-      "replace": "    this.base=P.matched+1; this.done=false;",
+      "find": "this.mul(this.tr(B),A)",
+      "replace": "this.mul(this.tr(A),B)",
       "run": "verify"
     },
     {
-      "name": "a new question opens solved",
+      "name": "the swapped slip swaps AB",
       "file": "index.html",
-      "find": "this.done=false; this.firstTry=false;\n    this.render();",
-      "replace": "this.done=true; this.firstTry=false;\n    this.render();",
+      "find": "this.tr(this.mul(B,A));",
+      "replace": "this.tr(this.mul(A,B));",
       "run": "verify"
     },
     {
-      "name": "the workshop behind is redrawn",
+      "name": "AB is not always offered",
       "file": "index.html",
-      "find": "    H.render=()=>{};\n",
+      "find": "const opts=['right','order',...rest.slice(0,2)]",
+      "replace": "const opts=['right',...rest.slice(0,3)]",
+      "run": "verify"
+    },
+    {
+      "name": "a slip may be A or B as it stands",
+      "file": "index.html",
+      "find": "seen.add(this.key(S.A)); seen.add(this.key(S.B));",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the workshop's redraw is not put back",
+      "name": "a move may flatten the plane",
       "file": "index.html",
-      "find": "finally { H.render=real; }",
-      "replace": "finally { }",
-      "run": "verify"
-    },
-    {
-      "name": "a miss counts as solved",
-      "file": "index.html",
-      "find": "    if(P.matched>this.base){",
-      "replace": "    if(P.matched>=this.base){",
-      "run": "verify"
-    },
-    {
-      "name": "first tries are never counted",
-      "file": "index.html",
-      "find": "this.firstTry=m0===0;",
-      "replace": "this.firstTry=false;",
-      "run": "verify"
-    },
-    {
-      "name": "every solve is a first try",
-      "file": "index.html",
-      "find": "this.firstTry=m0===0;",
-      "replace": "this.firstTry=true;",
-      "run": "verify"
-    },
-    {
-      "name": "the solved count stands still",
-      "file": "index.html",
-      "find": "this.solved++; if(this.firstTry)",
-      "replace": "if(this.firstTry)",
-      "run": "verify"
-    },
-    {
-      "name": "the workshops solved from are not counted",
-      "file": "index.html",
-      "find": "this.from.add(this.cur);\n",
-      "replace": "\n",
-      "run": "verify"
-    },
-    {
-      "name": "no banner at ten",
-      "file": "index.html",
-      "find": "if(this.solved===10||this.solved===25",
-      "replace": "if(this.solved===25",
-      "run": "verify"
-    },
-    {
-      "name": "ids are not prefixed",
-      "file": "index.html",
-      "find": ".replace(/ id=\"([^\"]+)\"/g,' id=\"mx-$1\"')",
+      "find": "if(S.A[0][0]*S.A[1][1]-S.A[0][1]*S.A[1][0]===0 || S.B[0][0]*S.B[1][1]-S.B[0][1]*S.B[1][0]===0) continue;",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "url(#) is not prefixed",
+      "name": "the order may not matter",
       "file": "index.html",
-      "find": ".replace(/url\\(#/g,'url(#mx-')",
+      "find": "this.key(P)===this.key(Q) || ",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the buttons call the workshop's own choose",
+      "name": "entries may run past 12",
       "file": "index.html",
-      "find": ".replace(new RegExp(`onclick=\"${name}\\\\.choose\\\\((\\\\d)\\\\)\"`,'g'),'onclick=\"MixPick.pick($1)\"');",
-      "replace": ";",
+      "find": "Math.abs(x)>12",
+      "replace": "Math.abs(x)>20",
       "run": "verify"
     },
     {
-      "name": "the count line is left in",
+      "name": "the numbers drawn run to 4",
       "file": "index.html",
-      "find": "return {h:h.slice(0,at)+h.slice(end+6),",
-      "replace": "return {h:h,",
+      "find": "E:[-2,-1,0,1,1,2,2,3]",
+      "replace": "E:[-2,-1,0,1,1,2,2,4]",
       "run": "verify"
     },
     {
-      "name": "the workshop is not named",
+      "name": "the stand-by pair every time",
       "file": "index.html",
-      "find": "let out=`<div class=\"small\" id=\"mxFrom\" style=\"margin-bottom:4px\">From the ${t}</div>`;",
-      "replace": "let out=`<div class=\"small\" id=\"mxFrom\" style=\"margin-bottom:4px\">From the workshop</div>`;",
+      "find": "for(let g=0;g<500;g++){\n      const S={A:this.draw()",
+      "replace": "for(let g=0;g<0;g++){\n      const S={A:this.draw()",
       "run": "verify"
     },
     {
-      "name": "a solve is not marked a first try",
+      "name": "BA always sits first",
       "file": "index.html",
-      "find": "<b>✓ Solved${this.firstTry?' on the first try':''}.</b>",
-      "replace": "<b>✓ Solved.</b>",
+      "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "replace": "    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
       "run": "verify"
     },
     {
-      "name": "the working is not shown after a solve",
+      "name": "the slips are always the first two",
       "file": "index.html",
-      "find": "</b></div>${B.read}</div>`;",
-      "replace": "</b></div></div>`;",
+      "find": "    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    /",
+      "replace": "    /",
       "run": "verify"
     },
     {
-      "name": "there is no way on after a solve",
+      "name": "the same pair can come twice",
       "file": "index.html",
-      "find": "      out+=`<button class=\"btn\" id=\"mxNext\"",
-      "replace": "      out+=`<button class=\"btn\" hidden id=\"mxNext\"",
+      "find": "if(!prev||this.key(S)!==this.key(prev)) break;",
+      "replace": "break;",
       "run": "verify"
     },
     {
-      "name": "there is no skip",
+      "name": "a miss is counted",
       "file": "index.html",
-      "find": "      out+=B.h+`<button class=\"btn sm ghost\" id=\"mxSkip\"",
-      "replace": "      out+=B.h+`<button class=\"btn sm ghost\" hidden id=\"mxSkip\"",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Com",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Com",
       "run": "verify"
     },
     {
-      "name": "the score forgets the first tries",
+      "name": "every pick counts as a first try",
       "file": "index.html",
-      "find": "${this.solved} solved this visit, ${this.first} on the first try,",
-      "replace": "${this.solved} solved this visit, ${this.solved} on the first try,",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
       "run": "verify"
     },
     {
-      "name": "the score counts the list, not the solves",
+      "name": "the banner is worded wrong",
       "file": "index.html",
-      "find": "from ${this.from.size} of ${this.LIST.length} workshops.",
-      "replace": "from ${this.seen.size} of ${this.LIST.length} workshops.",
+      "find": "this.matched+' pairs made one'",
+      "replace": "this.matched+' pairs made'",
       "run": "verify"
     },
     {
-      "name": "coming back deals a new question",
+      "name": "the toast names the wrong letter",
       "file": "index.html",
-      "find": "  enter(){ if(this.cur<0) this.next(); else this.render(); },",
-      "replace": "  enter(){ this.next(); },",
+      "find": "✓ ${'PQRS'[i]} does both",
+      "replace": "✓ ${'ABCD'[i]} does both",
       "run": "verify"
     },
     {
-      "name": "a workshop's pick is left out of the mix",
+      "name": "a missed matrix can be tapped again",
       "file": "index.html",
-      "find": "    ['ArrowPick','Arrow',",
-      "replace": "    ['ArrowPicked','Arrow',",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
       "run": "verify"
     },
     {
-      "name": "a workshop is listed with the wrong host",
+      "name": "AB is explained as the sum",
       "file": "index.html",
-      "find": "    ['ChainPick','Chain',",
-      "replace": "    ['ChainPick','Slope',",
+      "find": "if(k==='order') return",
+      "replace": "if(k==='sum') return",
       "run": "verify"
     },
     {
-      "name": "a workshop is listed by the wrong name",
+      "name": "the row-row slip is explained as the column-column",
       "file": "index.html",
-      "find": "    ['SwapPick','Swap','",
-      "replace": "    ['SwapPick','Swap','x",
+      "find": "if(k==='rowrow') return `${L} runs along",
+      "replace": "if(k==='colcol') return `${L} runs along",
       "run": "verify"
     },
     {
-      "name": "the screen does not deal on opening",
+      "name": "the check takes the last wrong entry",
       "file": "index.html",
-      "find": "    if(id==='s-mixpick') MixPick.enter();\n",
+      "find": "const M=this.mat(S,k), [[p,q]]=this.wrong(S,M)",
+      "replace": "const M=this.mat(S,k), [p,q]=this.wrong(S,M).pop()",
+      "run": "verify"
+    },
+    {
+      "name": "the working runs down a row of A",
+      "file": "index.html",
+      "find": "${this.pn(B[i][0])} × ${this.pn(A[0][j])} + ${this.pn(B[i][1])} × ${this.pn(A[1][j])}",
+      "replace": "${this.pn(B[i][0])} × ${this.pn(A[j][0])} + ${this.pn(B[i][1])} × ${this.pn(A[j][1])}",
+      "run": "verify"
+    },
+    {
+      "name": "the check names the wrong row of B",
+      "file": "index.html",
+      "find": "row ${p+1} of B, (${S.B[p].map(neg)",
+      "replace": "row ${p+1} of B, (${S.B[q].map(neg)",
+      "run": "verify"
+    },
+    {
+      "name": "the check gives the wrong entry of BA",
+      "file": "index.html",
+      "find": "= ${neg(P[p][q])}.`;",
+      "replace": "= ${neg(P[q][p])}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "a miss shows no red",
+      "file": "index.html",
+      "find": "this.grid(M,gone?this.wrong(S,M):[])",
+      "replace": "this.grid(M,[])",
+      "run": "verify"
+    },
+    {
+      "name": "the red marks the right entries",
+      "file": "index.html",
+      "find": "if(x!==P[p][q]) out.push",
+      "replace": "if(x===P[p][q]) out.push",
+      "run": "verify"
+    },
+    {
+      "name": "a shut matrix is not told as not BA",
+      "file": "index.html",
+      "find": "${gone?'. Not BA':''}",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the Tome has no way in",
+      "name": "a shut matrix can still be pressed",
       "file": "index.html",
-      "find": "onclick=\"MixPick.open()\">Mix them up</button>",
-      "replace": "onclick=\"MixPick.close()\">Mix them up</button>",
+      "find": "${gone?'disabled ':''}onclick=\"ComposePick",
+      "replace": "onclick=\"ComposePick",
       "run": "verify"
     },
     {
-      "name": "a pick's readout drops its count line",
+      "name": "A and B are read out the wrong way round",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"awRead\"",
-      "replace": "    out+=`<div id=\"awRead\"",
+      "find": "aria-label=\"First A, with rows ${this.rows(S.A)}, then B, with rows ${this.rows(S.B)}\"",
+      "replace": "aria-label=\"First A, with rows ${this.rows(S.B)}, then B, with rows ${this.rows(S.A)}\"",
+      "run": "verify"
+    },
+    {
+      "name": "B is drawn as A",
+      "file": "index.html",
+      "find": "B =</span>${this.grid(S.B)}",
+      "replace": "B =</span>${this.grid(S.A)}",
+      "run": "verify"
+    },
+    {
+      "name": "the working gives AB",
+      "file": "index.html",
+      "find": "So BA has rows ${this.rows(P)}",
+      "replace": "So BA has rows ${this.rows(this.mat(B,'order'))}",
+      "run": "verify"
+    },
+    {
+      "name": "the working names the wrong column",
+      "file": "index.html",
+      "find": "ow ${i+1}, column ${j+1}: ${this.dot(B,i,j)}",
+      "replace": "ow ${i+1}, column ${i+1}: ${this.dot(B,i,j)}",
+      "run": "verify"
+    },
+    {
+      "name": "the count line is dropped",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"oqRead\"",
+      "replace": "    out+=`<div id=\"oqRead\"",
+      "run": "verify"
+    },
+    {
+      "name": "the rule puts the last move on the right",
+      "file": "index.html",
+      "find": "the move done last is written on the left",
+      "replace": "the move done last is written on the right",
+      "run": "verify"
+    },
+    {
+      "name": "the goals stay up while the pick shows",
+      "file": "index.html",
+      "find": "'cmFig','cmRead','cmGoalPanel']",
+      "replace": "'cmFig','cmRead']",
+      "run": "verify"
+    },
+    {
+      "name": "the workshop opens on the pick",
+      "file": "index.html",
+      "find": "  tab:'moves',\n  setTab(t){ this.tab=t; this.render(); },",
+      "replace": "  tab:'pick',\n  setTab(t){ this.tab=t; this.render(); },",
+      "run": "verify"
+    },
+    {
+      "name": "the Tome does not tell of the pick",
+      "file": "index.html",
+      "find": " Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>",
+      "replace": "</div>",
+      "run": "verify"
+    },
+    {
+      "name": "the pick is left out of the mix",
+      "file": "index.html",
+      "find": "    ['ComposePick','Compose',",
+      "replace": "    ['ComposePicked','Compose',",
       "run": "verify"
     }
   ]

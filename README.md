@@ -574,7 +574,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: forty-four
+  question from a different workshop's turned-round mode each time: forty-five
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -680,6 +680,19 @@ The game is built so that losing teaches you as much as winning.
   and det = −2. `npm test` checks all 25 pairs against each move worked as what it does to
   a point: every column, the determinant against the signed area of where the square lands,
   whether the order matters, and what the pair makes.
+
+  **🎯 Which matrix?** turns the workshop round: A and B are shown, each a
+  2×2 move that really moves the plane, and four matrices offered, one of them
+  BA, the move that does A first and then B. AB, the order turned round, is
+  always one of the other three, and the pair is chosen so the two differ; the
+  rest are the slips people make when they multiply: A and B added, multiplied
+  entry by entry, a row of B run along a row of A, a column of B run down a
+  column of A, and BA with its rows and columns swapped. A wrong pick is shut,
+  the entries it gets wrong turn red, and the first of them is worked as a row
+  of B times a column of A. The right pick is worked entry by entry. Nothing is
+  saved, and there is no clock. `npm test` reads every matrix back from both
+  its name and its cells, checks it against the slip it is named as, and
+  checks that the red cells are exactly the entries that differ from BA.
 - **🌫️ Limit Workshop** — the idea under every slope: some formulas give no number at
   one point, and a limit is what f(x) closes in on there. Pick one of four formulas, choose
   a side, and bring h down from 1 to 0.001, with x = a − h from the left or a + h from the
@@ -1963,7 +1976,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirty-four suites, about 5,400 checks, about a minute:
+loop only exists once the page is running. A hundred and thirty-five suites, about 5,430 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2093,6 +2106,7 @@ loop only exists once the page is running. A hundred and thirty-four suites, abo
 | `descentpick` | the Tome says the downhill workshop can be turned round; the workshop opens on walking by hand, and switching to which step puts away the step sizes, the figure, the step buttons, the readout and the goals and states the rule first; the valley, the start and the step size are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the slope their step would need, shut and told as not where the step lands, and not counted; the right pick works the step through, counts (not as a first try after a miss), toasts and deals a new valley; a first try counts as one, and the fifth brings VALLEY STEPPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `arrowpick` | the Tome says the arrow workshop can be turned round; the workshop opens on building by hand, and switching to how long puts away the pairs, the figure, the k buttons, the add button, the readout and the goals and states the rule first; u, v and k are shown and four lengths offered, each named by its length; two wrong picks are each named as their slip and checked by Pythagoras backwards, shut and told as not the length of w, and not counted; the right pick builds w part by part and measures it, counts (not as a first try after a miss), toasts and deals a new pair; a first try counts as one, and the fifth brings ARROW MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `mixpick` | the Tome offers the mix with how many workshops are in it, more than forty; the mix opens on a question from a workshop named as the Tome names it, with its rule first, four named answers, a skip and no count line of its own; a wrong pick is shut, told as wrong and explained, and not solved; the right pick does not redraw the workshop behind it, is marked solved (not on the first try) with its working shown, counted, and the next workshop is one tap away; the next is from another workshop, and a first try is marked and counted as one; a skip deals from a workshop not yet seen and is not counted; the tenth solved brings ROUND THE REALM, from ten different workshops; every button is named, nothing runs off a phone, coming back keeps the same question, and the save is unchanged |
+| `composepick` | the Tome says Order Matters can be turned round; the mode is pressed and the moves, the figure, the readout and the goals step aside; the rule comes first; A and B are drawn and read out, and four matrices are offered, each named by its rows, AB among them; AB picked is named as the order turned round, checked as a row of B times a column of A, shut and told as not BA, with its wrong entries red, and not counted; the right pick is worked entry by entry, counted but not as a first try, toasted, and deals a new pair with nothing red; a first try is counted as one; the fifth brings MOVE MAKER; every button is named, it fits a phone with the four two by two, the moves come back with the four put away, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |

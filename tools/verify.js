@@ -8862,6 +8862,166 @@ const mixPickNotes = (() => {
   return { listed: M0.LIST.length, dealt: order.length + 24, real };
 })();
 
+/* Which matrix? Order Matters turned round. Every matrix on screen is read
+   back off its name and its cells and checked against the slip it is named
+   as, worked out here from A and B alone; the right one alone is BA, AB is
+   always offered beside it, and every miss is checked at the first entry it
+   gets wrong, worked as a row of B times a column of A. */
+const composePickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Compose = {render(){ env.renders++; }};" +
+    cut('const ComposePick = {', 'const Compose = {') + 'return ComposePick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const Compose = {', '\n};\n');
+  if (!html.includes('<div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>\n    <div class="panel">\n      <div id="oqBox"></div>')) fail('composepick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['cmFirstL', 'cmThenL', 'cmGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('composepick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'moves',\n  setTab(t){ this.tab=t; this.render(); },")) fail('composepick', 'host', 'the workshop does not open on the moves, or a tab does not switch');
+  if (!host.includes("[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="Compose.setTab(\'${t}\')"')) fail('composepick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('composepick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';\n    if(pick) return;")) fail('composepick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>')) fail('composepick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const num = t => +t.replace('−', '-');
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const mul = (X, Y) => X.map(r => Y[0].map((_, j) => r.reduce((s, x, k) => s + x * Y[k][j], 0)));
+  const T = X => X[0].map((_, j) => X.map(r => r[j]));
+  const want = {
+    right: (A, B) => mul(B, A), order: (A, B) => mul(A, B),
+    sum: (A, B) => A.map((r, i) => r.map((x, j) => x + B[i][j])), entry: (A, B) => A.map((r, i) => r.map((x, j) => x * B[i][j])),
+    rowrow: (A, B) => B.map(b => A.map(a => b[0] * a[0] + b[1] * a[1])),
+    colcol: (A, B) => T(B).map(b => T(A).map(a => b[0] * a[0] + b[1] * a[1])),
+    transp: (A, B) => T(mul(B, A))
+  };
+  const eq = (M, N) => JSON.stringify(M) === JSON.stringify(N);
+  const det = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+  // a grid on the page read back from its cells: its numbers and which cells are red
+  const cells = h => {
+    const g = h.match(/<span data-m="2x2" [^>]*>([\s\S]*?)<\/span><\/span>/); if (!g) return null;
+    const M = [[null, null], [null, null]], bad = [];
+    for (const c of (g[1] + '</span>').matchAll(/<span data-cell="(\d),(\d)"( data-bad="1")? style="([^"]*)">([^<]+)<\/span>/g)) {
+      M[+c[1]][+c[2]] = num(c[5]);
+      if (c[3]) { bad.push([+c[1], +c[2]]); if (!/border:1px solid #e5484d/.test(c[4])) return null; }
+      else if (!/border:1px solid transparent/.test(c[4])) return null;
+    }
+    return M.flat().some(x => x === null) ? null : { M, bad };
+  };
+  const fromRows = s => s.split('; ').map(r => r.split(', ').map(num));
+  const read = () => txt(S.html().split('id="oqRead"')[1].replace(/^[^>]*>/, ''));
+  const slipSays = {
+    order: L => `${L} is AB, the moves the other way round: B first, then A. The move done last goes on the left, so A first, then B is BA, and for these two the order matters.`,
+    sum: L => `${L} adds A and B entry by entry. One move after another does not add: each entry of BA is a row of B times a column of A.`,
+    entry: L => `${L} multiplies A and B entry by entry, each number by the one in the same place.`,
+    rowrow: L => `${L} runs along a row of A where it should run down a column: it takes row i of B times row j of A.`,
+    colcol: L => `${L} runs down a column of B where it should run along a row: it takes column i of B times column j of A.`,
+    transp: L => `${L} has the rows and columns of BA swapped: its row i, column j holds what BA has in row j, column i.`
+  };
+  if (S.RULE !== 'Doing a move A and then a move B is a single move, the matrix BA: the move done last is written on the left, since it acts on whatever the first one hands it. Each entry of BA is a row of B times a column of A: the entry in row i, column j multiplies row i of B with column j of A, matching entry by matching entry, and adds. Which matrix does both?') fail('composepick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('composepick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, reds = 0, fives = 0, fallbacks = 0;
+  const slots = [0, 0, 0, 0], kinds = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, { A, B } = r.S, key = `seed ${seed} round ${k}`, BA = mul(B, A), AB = mul(A, B);
+      rounds++;
+      if (eq(r.S, { A: [[1, 2], [0, 1]], B: [[0, -1], [1, 0]] })) fallbacks++;
+      if ([...A.flat(), ...B.flat()].some(x => !Number.isInteger(x) || x < -2 || x > 3)) fail('composepick', key, `A or B holds a number outside −2 to 3: ${JSON.stringify(r.S)}`);
+      if (eq(A, B) || [A, B].some(M => eq(M, [[1, 0], [0, 1]]) || det(M) === 0)) fail('composepick', key, `A and B are the same, or one does nothing, or flattens the plane: ${JSON.stringify(r.S)}`);
+      if (eq(BA, AB) || eq(BA, A) || eq(BA, B)) fail('composepick', key, `the order does not matter here, or BA is on the page already: ${JSON.stringify(r.S)}`);
+      if ([...BA.flat(), ...AB.flat()].some(x => Math.abs(x) > 12)) fail('composepick', key, `BA or AB holds a number past 12: ${JSON.stringify(r.S)}`);
+      if (prev && eq(prev, r.S)) fail('composepick', key, 'the same A and B come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1 || r.opts.filter(o => o.k === 'order').length !== 1) fail('composepick', key, 'there are not four matrices, one BA and one AB');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' First A =')) fail('composepick', key, 'the rule, then A, are not shown first');
+      const qBox = h0.split('id="oqQ"')[1].split('id="oqPick"')[0];
+      const qLab = qBox.match(/^ role="img" aria-label="First A, with rows ([^"]+), then B, with rows ([^"]+)" /);
+      if (!qLab || !eq(fromRows(qLab[1]), A) || !eq(fromRows(qLab[2]), B)) fail('composepick', key, 'A and B are not read out as they are');
+      const [aPart, bPart] = qBox.split('B =</span>'), aC = cells(aPart || ''), bC = cells(bPart || '');
+      if (!aC || !bC || !eq(aC.M, A) || !eq(bC.M, B) || aC.bad.length || bC.bad.length) fail('composepick', key, 'A and B are not drawn as they are');
+    
+      if (!h0.includes('<div class="small" style="text-align:center">Which matrix does both, A first and then B?</div>')) fail('composepick', key, 'the question is not asked');
+      const btns = h0.split('id="oqPick"')[1].split('id="oqRead"')[0].split('<button').slice(1);
+      if (btns.length !== 4) { fail('composepick', key, 'four matrices are not offered'); continue; }
+      const mats = btns.map((b, i) => {
+        const m = b.match(/^ class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="ComposePick\.choose\((\d)\)" aria-label="([PQRS]): rows ([^"]+)" [^>]*><b>([PQRS])<\/b> /);
+        if (!m || m[1] !== 'PQRS'[i] || +m[2] !== i || m[3] !== 'PQRS'[i] || m[5] !== 'PQRS'[i]) return null;
+        const c = cells(b), L = fromRows(m[4]);
+        if (!c || !eq(c.M, L) || c.bad.length) return null;
+        return L;
+      });
+      if (mats.some(x => !x)) { fail('composepick', key, 'a matrix is not named and drawn as it is, P to S'); continue; }
+      if (new Set(mats.map(x => JSON.stringify(x))).size !== 4) fail('composepick', key, 'two matrices are the same');
+      if (mats.some(M => eq(M, A) || eq(M, B))) fail('composepick', key, 'A or B is offered as it stands');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('composepick', key, `an option is the unknown ${o.k}`);
+        else if (!eq(mats[i], want[o.k](A, B))) fail('composepick', key, `${o.k} is drawn as ${JSON.stringify(mats[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(mats[i], BA)) fail('composepick', key, `${JSON.stringify(mats[i])} ${o.k === 'right' ? 'is not' : 'is'} BA`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('composepick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('composepick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (!slipSays[o.k] || !rt.startsWith(slipSays[o.k](L))) fail('composepick', key, `${o.k} is explained as: ${rt}`);
+        const out = M.flatMap((row, p) => row.map((x, qq) => [p, qq, x])).filter(([p, qq, x]) => x !== BA[p][qq]).map(([p, qq]) => [p, qq]);
+        const [p, qq] = out[0];
+        const ck = `Check ${L} at row ${p + 1}, column ${qq + 1}: it holds ${ng(M[p][qq])}. That entry of BA is row ${p + 1} of B, (${B[p].map(ng).join(', ')}), times column ${qq + 1} of A, (${ng(A[0][qq])}, ${ng(A[1][qq])}): ${pn(B[p][0])} × ${pn(A[0][qq])} + ${pn(B[p][1])} × ${pn(A[1][qq])} = ${ng(BA[p][qq])}. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (!rt.endsWith(' ' + ck)) fail('composepick', key, `the miss is not checked at its first wrong entry: ${rt}`);
+        if (rt.includes(`rows ${BA.map(row => row.map(ng).join(', ')).join('; ')}`)) fail('composepick', key, 'a miss hands over BA');
+        const h = S.html(), b = h.split('id="oqPick"')[1].split('<button').slice(1)[i];
+        if (!new RegExp(`^ class="btn sm ghost smOpt miss" data-opt="${L}" disabled onclick="ComposePick\\.choose\\(${i}\\)" aria-label="${L}: rows [^"]+\\. Not BA"`).test(b) || (h.match(/ disabled /g) || []).length !== q + 1) fail('composepick', key, 'the missed matrices are not shut and told as not BA');
+        const c = cells(b);
+        if (!c || !eq(c.M, M) || c.bad.map(x => x.join()).join(' ') !== out.map(x => x.join()).join(' ')) fail('composepick', key, `the red cells are ${c && c.bad.map(x => x.join()).join(' ')}, not ${out.map(x => x.join()).join(' ')}`);
+        reds += out.length;
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('composepick', key, 'tapping a missed matrix again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('composepick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('composepick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('composepick', key, 'no fresh A and B after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'MOVE MAKER / 5 pairs made one') fail('composepick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} does both, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('composepick', key, `the toast is ${env.toasts[nt]}`); }
+      const worked = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([i, j]) => `${i || j ? 'r' : 'R'}ow ${i + 1}, column ${j + 1}: ${pn(B[i][0])} × ${pn(A[0][j])} + ${pn(B[i][1])} × ${pn(A[1][j])} = ${ng(BA[i][j])}`).join('; ');
+      if (read() !== `That was it: each entry is a row of B times a column of A. ${worked}. So BA has rows ${BA.map(row => row.map(ng).join(', ')).join('; ')}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('composepick', key, `after a pick: ${read()}`);
+      prev = r.S;
+    }
+  }
+  { // the same A and B dealt again are turned away for a fresh pair
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { A: [[2, 1], [1, 1]], B: [[0, 1], [1, 0]] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (eq(S.round.S, { A: [[2, 1], [1, 1]], B: [[0, 1], [1, 0]] })) fail('composepick', 'repeat', 'the same A and B are dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['sum', 'entry', 'rowrow', 'colcol', 'transp']) if (!(kinds[k] > rounds * 0.25)) fail('composepick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  if (kinds.order !== rounds) fail('composepick', 'slips', 'AB is not offered every time');
+  if (slots.some(n => !(n > rounds * 0.2))) fail('composepick', 'slots', `BA sits in the four places ${slots.join(', ')} times, not evenly`);
+  if (fallbacks > rounds * 0.01) fail('composepick', 'deal', `the stand-by pair is dealt ${fallbacks} times`);
+  if (!fives) fail('composepick', 'banner', 'five is never reached');
+  return { rounds, misses, reds };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13630,6 +13790,7 @@ console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(),
 console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-step in the downhill workshop, every number read back off its button and checked against the slip it is named as, the right one alone a step against the slope measured from f, ${descentPickNotes.misses.toLocaleString()} wrong picks checked by the slope their step would need, ${descentPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 12)}  (rounds of how-long in the arrow workshop, every length read back off its button and checked against the slip it is named as, the right one alone the length of k·u + v measured on the arrow built part by part, ${arrowPickNotes.misses.toLocaleString()} wrong picks checked by Pythagoras backwards, ${arrowPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
+console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
