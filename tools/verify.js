@@ -88,7 +88,7 @@ function loadGame() {
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itTab')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tqTab')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('ivTab')")) + 'render(){}};exports.InvSlope=InvSlope;' +
-    ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
+    ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
@@ -9022,6 +9022,167 @@ const composePickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which slope of ln y? The log slope workshop turned round. Every number is
+   read back off its button and checked against the slip it is named as,
+   worked here from the curve's numbers; the right one alone is the slope of
+   ln y, found without the rule: ln y is nudged on either side of the point.
+   Each miss is checked at the first piece it gets wrong, worked again here. */
+const lnPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const LogDiff = {render(){ env.renders++; }};" +
+    cut('const LnPick = {', '/* ---------- The log slope workshop: when x is in the base') + 'return LnPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const LogDiff = {', '\n};\n');
+  if (!html.includes('<div id="lgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work xˣ by hand or pick the slope of ln y"></div>\n    <div class="panel">\n      <div id="lqBox"></div>')) fail('lnpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['lgXRow', 'lgGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('lnpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('lnpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','🪵 Work it by hand','Take ln of xˣ and its kin, and try each wrong rule'],['pick','🎯 Which slope of ln y?','See a product of powers, and pick which of four numbers is the slope of ln y']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="LogDiff.setTab(\'${t}\')"')) fail('lnpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['lgSets','lgFig','lgXRow','lgModes','lgRead','lgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('lnpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';\n    if(pick) return;")) fail('lnpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('see that the two halves add up to it. Then turn it round: see a product of powers, and pick which of four numbers is the slope of ln y.</div>')) fail('lnpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const sup = n => (n === 1 ? '' : String(n).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
+  const lin = (m, b) => `${m === 1 ? '' : m}x${b === 0 ? '' : b < 0 ? ' − ' + -b : ' + ' + b}`;
+  // the three pieces' slopes as each option takes them, worked from a, c, e, m, b, d and x
+  const pieces = (k, Q) => { const { a, c, e, m, b, d, x } = Q, u = x, v = m * x + b, w = x + d;
+    const T = { right: [[a, u], [c * m, v], [-e, w]], noPow: [[1, u], [m, v], [-1, w]], noChain: [[a, u], [c, v], [-e, w]], plus: [[a, u], [c * m, v], [e, w]],
+      noDiv: [[a, 1], [c * m, 1], [-e, 1]], less1: [[a - 1, u], [(c - 1) * m, v], [1 - e, w]], flip: [[u, a], [v, c * m], [-w, e]] }[k];
+    return T && T.map(([p, q]) => red(p, q)); };
+  const want = (k, Q) => { const t = pieces(k, Q); return t && plus(plus(t[0], t[1]), t[2]); };
+  // the slope of ln y at x, measured by a nudge, with no rule
+  const lnY = (Q, s) => Q.a * Math.log(s) + Q.c * Math.log(Q.m * s + Q.b) - Q.e * Math.log(s + Q.d);
+  const nudge = Q => { const h = 1e-6; return (lnY(Q, Q.x + h) - lnY(Q, Q.x - h)) / (2 * h); };
+  const pieceName = (Q, t) => [`${Q.a === 1 ? '' : Q.a + '·'}ln x`, `${Q.c}·ln(${lin(Q.m, Q.b)})`, `−${Q.e === 1 ? '' : Q.e + '·'}ln(${lin(1, Q.d)})`][t];
+  const pieceWorked = (Q, t) => { const T = fr(pieces('right', Q)[t]), u = Q.x, v = Q.m * Q.x + Q.b, w = Q.x + Q.d, ex = [`${Q.a}/${u}`, `${Q.c} × ${Q.m}/${v}`, `−${Q.e}/${w}`][t]; return ex === T ? ex : `${ex} = ${T}`; };
+  const slipOf = (k, L, Q) => { const { a, c, e, m } = Q, mb = lin(m, Q.b), xd = lin(1, Q.d), P = [a, c, e].filter(n => n > 1);
+    if (k === 'noPow') return `${L} drops the ${P.length === 1 ? `power ${P[0]}` : `powers ${P.slice(0, -1).join(', ')} and ${P[P.length - 1]}`}. Taking ln brings each power down in front, ln(uⁿ) = n·ln u, so each piece's slope is multiplied by its power.`;
+    if (k === 'noChain') return `${L} drops the ${m} inside ${mb}. The slope of ln(${mb}) is the slope of ${mb}, which is ${m}, over ${mb} itself.`;
+    if (k === 'plus') return `${L} adds the piece that divides. Dividing by (${xd})${sup(e)} takes away ${e === 1 ? '' : e + '·'}ln(${xd}), so its slope comes in with a minus.`;
+    if (k === 'noDiv') return `${L} brings the powers down but never divides by what is inside. The slope of ln u is u′ ÷ u, not u′ alone.`;
+    if (k === 'less1') return `${L} takes one off each power, as the power rule does to xⁿ. Taking ln brings each power down whole: the slope of n·ln u is n times u′ ÷ u.`;
+    return `${L} divides the wrong way round in each piece. The slope of n·ln u is n times u′, over u: what is inside goes underneath.`; };
+  const RULE = 'Taking ln turns a product into a sum and a power into a number in front: ln y = a·ln x + c·ln(mx + b) − e·ln(x + d), with a minus for the piece that divides. The slope of n·ln u is n times the slope of u, over u. Add the three pieces\' slopes and you have the slope of ln y, which is y′ ÷ y. Which is it here?';
+  if (S.RULE !== RULE) fail('lnpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('lnpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noPow', 'noChain', 'plus', 'noDiv', 'less1', 'flip'];
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, seen = { a: new Set(), c: new Set(), e: new Set(), m: new Set(), b: new Set(), d: new Set(), x: new Set() };
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; for (const n in seen) seen[n].add(Q[n]);
+      const u = Q.x, v = Q.m * Q.x + Q.b, w = Q.x + Q.d;
+      if (!(Q.a >= 1 && Q.a <= 4 && Q.c >= 2 && Q.c <= 4 && Q.e >= 1 && Q.e <= 3 && Q.m >= 1 && Q.m <= 3 && Q.b >= -3 && Q.b <= 5 && Q.d >= -2 && Q.d <= 4 && Q.x >= 1 && Q.x <= 4) || !Object.values(Q).every(Number.isInteger)) fail('lnpick', key, `${sig} is not a curve of the kind dealt`);
+      if (v < 1 || w < 1) fail('lnpick', key, `an inside is not positive at x = ${Q.x}, so its ln is not there`);
+      if (Q.d === 0 || (Q.m === 1 && (Q.b === 0 || Q.b === Q.d))) fail('lnpick', key, 'two of the three pieces are the same thing');
+      if (prev && prev === sig) fail('lnpick', key, 'the same curve comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('lnpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} y = x${sup(Q.a)}·(${lin(Q.m, Q.b)})${sup(Q.c)} ÷ (${lin(1, Q.d)})${sup(Q.e)}, at x = ${Q.x} Which is the slope of ln y, that is y′ ÷ y? A `)) fail('lnpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="LnPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('lnpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('lnpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('lnpick', key, 'a number is 0');
+      if (new Set(vals.map(String)).size !== 4) fail('lnpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('lnpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      if ([Q.a, Q.c, Q.e, Q.m, Q.b, Q.d, u, v, w].some(n => String([n, 1]) === String(vals[ri]))) fail('lnpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('lnpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('lnpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), have = new Set([String(W)]), can = [];
+        for (const kk of SL) { const x = want(kk, Q); if (x[0] === 0 || have.has(String(x))) continue; have.add(String(x)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1)) && tr.some(x => want(x, Q)[0] * W[0] > 0) && !sums([W, ...tr.map(x => want(x, Q))])) T.push(tr); }
+        const rk = tr => tr.filter(x => { const y = want(x, Q); return y[0] * W[1] < W[0] * y[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const x = want(o.k, Q);
+        if (!x) { fail('lnpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(x)) fail('lnpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(nudge(Q) - vals[i][0] / vals[i][1]) < 1e-6)) fail('lnpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the nudged slope of ln y`);
+      });
+      if (k === 0 && txt(S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('lnpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, RT = pieces('right', Q);
+      // a check names one piece's slope, so no piece's slope is the answer, and no check hands it over
+      if (RT.some(T => String(T) === String(want('right', Q)))) fail('lnpick', key, `a piece's slope is the answer ${fr(want('right', Q))}, so a check would hand it over`);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('lnpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const K = pieces(o.k, Q), t = [0, 1, 2].find(j => String(K[j]) !== String(RT[j]));
+        const ck = `Check ${Lt}: its slope for the piece ${pieceName(Q, t)} is ${fr(K[t])}, but at x = ${Q.x} that piece's slope is ${pieceWorked(Q, t)}.`;
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('lnpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LnPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the slope of ln y"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('lnpick', key, 'the missed numbers are not shut and told as not the slope of ln y');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('lnpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('lnpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('lnpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('lnpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LOG SPLITTER / 5 curves split') fail('lnpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the slope of ln y, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('lnpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ln y = ${pieceName(Q, 0)} + ${pieceName(Q, 1)} − ${pieceName(Q, 2).slice(1)}, and at x = ${Q.x} the pieces' slopes are ${[0, 1, 2].map(j => pieceWorked(Q, j)).join(', ')}, which add to ${fr(want('right', Q))}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('lnpick', key, `after a pick: ${got}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, c: 3, e: 1, m: 2, b: 1, d: 1, x: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"c":3,"e":1,"m":2,"b":1,"d":1,"x":1}') fail('lnpick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of curves: the answer's form even
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (want('right', Q)[1] === 1) sw++; }
+    if (sw < 9000 || sw > 11000) fail('lnpick', 'sweep', `${sw} of 20000 answers are whole, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('lnpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  const sizes = { a: 4, c: 3, e: 3, m: 3, b: 9, d: 6, x: 4 };
+  for (const n in sizes) if (seen[n].size !== sizes[n]) fail('lnpick', 'deal', `${n} is only ever ${[...seen[n]].sort((p, q) => p - q)}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('lnpick', 'deal', `the slope sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.05 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.1)) fail('lnpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('lnpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('lnpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (fives !== 30) fail('lnpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13791,6 +13952,7 @@ console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString()
 console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 12)}  (rounds of how-long in the arrow workshop, every length read back off its button and checked against the slip it is named as, the right one alone the length of k·u + v measured on the arrow built part by part, ${arrowPickNotes.misses.toLocaleString()} wrong picks checked by Pythagoras backwards, ${arrowPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
 console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
+console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

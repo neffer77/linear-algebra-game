@@ -1,298 +1,347 @@
 {
-  "change": "Order Matters, turned round: see A and B, and pick which of four matrices does A first, then B.",
+  "change": "The log slope workshop, turned round: see a product of powers at a point, and pick which of four numbers is the slope of ln y.",
   "mutations": [
     {
-      "name": "the right one is AB",
+      "name": "the right one forgets the powers",
       "file": "index.html",
-      "find": "return k==='right' ? this.mul(B,A)",
-      "replace": "return k==='right' ? this.mul(A,B)",
+      "find": "T={right:[[a,u],[c*m,v],[-e,w]]",
+      "replace": "T={right:[[1,u],[c*m,v],[-e,w]]",
       "run": "verify"
     },
     {
-      "name": "the order slip is BA",
+      "name": "the right one adds the bottom",
       "file": "index.html",
-      "find": "k==='order' ? this.mul(A,B)",
-      "replace": "k==='order' ? this.mul(B,A)",
+      "find": "T={right:[[a,u],[c*m,v],[-e,w]]",
+      "replace": "T={right:[[a,u],[c*m,v],[e,w]]",
       "run": "verify"
     },
     {
-      "name": "the sum slip takes away",
+      "name": "the power slip keeps the powers",
       "file": "index.html",
-      "find": "r.map((x,j)=>x+B[i][j])",
-      "replace": "r.map((x,j)=>x-B[i][j])",
+      "find": "noPow:[[1,u],[m,v],[-1,w]]",
+      "replace": "noPow:[[a,u],[m,v],[-1,w]]",
       "run": "verify"
     },
     {
-      "name": "the entry slip crosses its places",
+      "name": "the chain slip keeps the m",
       "file": "index.html",
-      "find": "r.map((x,j)=>x*B[i][j])",
-      "replace": "r.map((x,j)=>x*B[j][i])",
+      "find": "noChain:[[a,u],[c,v],[-e,w]]",
+      "replace": "noChain:[[a,u],[c*m,v],[-e,w]]",
       "run": "verify"
     },
     {
-      "name": "the row-row slip is the wrong product",
+      "name": "the plus slip takes away",
       "file": "index.html",
-      "find": "this.mul(B,this.tr(A))",
-      "replace": "this.mul(this.tr(B),this.tr(A))",
+      "find": "plus:[[a,u],[c*m,v],[e,w]]",
+      "replace": "plus:[[a,u],[c*m,v],[-e*2,w]]",
       "run": "verify"
     },
     {
-      "name": "the column-column slip is the wrong product",
+      "name": "the no-divide slip divides",
       "file": "index.html",
-      "find": "this.mul(this.tr(B),A)",
-      "replace": "this.mul(this.tr(A),B)",
+      "find": "noDiv:[[a,1],[c*m,1],[-e,1]]",
+      "replace": "noDiv:[[a,1],[c*m,1],[-e,w]]",
       "run": "verify"
     },
     {
-      "name": "the swapped slip swaps AB",
+      "name": "the less-one slip keeps the top power",
       "file": "index.html",
-      "find": "this.tr(this.mul(B,A));",
-      "replace": "this.tr(this.mul(A,B));",
+      "find": "less1:[[a-1,u],[(c-1)*m,v],[-(e-1),w]]",
+      "replace": "less1:[[a-1,u],[(c-1)*m,v],[-e,w]]",
       "run": "verify"
     },
     {
-      "name": "AB is not always offered",
+      "name": "the flip slip keeps the m below",
       "file": "index.html",
-      "find": "const opts=['right','order',...rest.slice(0,2)]",
-      "replace": "const opts=['right',...rest.slice(0,3)]",
+      "find": "flip:[[u,a],[v,c*m],[-w,e]]",
+      "replace": "flip:[[u,a],[v,c],[-w,e]]",
       "run": "verify"
     },
     {
-      "name": "a slip may be A or B as it stands",
+      "name": "the pieces add wrong",
       "file": "index.html",
-      "find": "seen.add(this.key(S.A)); seen.add(this.key(S.B));",
+      "find": "val(S,k){ const t=this.terms(S,k); return this.add(this.add(t[0],t[1]),t[2]); }",
+      "replace": "val(S,k){ const t=this.terms(S,k); return this.add(t[0],t[1]); }",
+      "run": "verify"
+    },
+    {
+      "name": "a slip may be 0",
+      "file": "index.html",
+      "find": "if(v[0]===0 || seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // whether one of the four numbers is the sum of two others, which would point at it\n  sums(S,ks){\n    const v=ks.map(k=>this.val(S,k));\n    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){\n      if(i===j||i===k) continue;\n      const s",
+      "replace": "if(seen.has(this.key(v))) continue;\n      seen.add(this.key(v)); keep.push(k); }\n    return keep;\n  },\n  // whether one of the four numbers is the sum of two others, which would point at it\n  sums(S,ks){\n    const v=ks.map(k=>this.val(S,k));\n    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){\n      if(i===j||i===k) continue;\n      const s",
+      "run": "verify"
+    },
+    {
+      "name": "the four may hold a sum",
+      "file": "index.html",
+      "find": "&& !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  // the numbers the p",
+      "replace": ") out.push(t); }\n    return out;\n  },\n  // the numbers the p",
+      "run": "verify"
+    },
+    {
+      "name": "the form may give it away",
+      "file": "index.html",
+      "find": "t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  /",
+      "replace": "t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  /",
+      "run": "verify"
+    },
+    {
+      "name": "the sign may give it away",
+      "file": "index.html",
+      "find": "t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  /",
+      "replace": "t.some(x=>this.whole(this.val(S,x))===form) && !this.sums(S,['right',...t])) out.push(t); }\n    return out;\n  },\n  /",
+      "run": "verify"
+    },
+    {
+      "name": "an inside may be 0 or less",
+      "file": "index.html",
+      "find": "if(v<1 || w<1 || S.d===0",
+      "replace": "if(S.d===0",
+      "run": "verify"
+    },
+    {
+      "name": "two pieces may be the same",
+      "file": "index.html",
+      "find": "if(v<1 || w<1 || S.d===0 || (S.m===1 && (S.b===0 || S.b===S.d))) continue;",
+      "replace": "if(v<1 || w<1) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "the answers are seldom whole",
+      "file": "index.html",
+      "find": "if(W[0]===0 || this.whole(W)!==wantWhole) continue;\n      i",
+      "replace": "if(W[0]===0) continue;\n      i",
+      "run": "verify"
+    },
+    {
+      "name": "a number on the page may be the answer",
+      "file": "index.html",
+      "find": "      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "a move may flatten the plane",
+      "name": "a piece's slope may be the answer",
       "file": "index.html",
-      "find": "if(S.A[0][0]*S.A[1][1]-S.A[0][1]*S.A[1][0]===0 || S.B[0][0]*S.B[1][1]-S.B[0][1]*S.B[1][0]===0) continue;",
+      "find": "      if(this.terms(S,'right').some(t=>this.key(t)===this.key(W))) continue;\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the order may not matter",
+      "name": "the powers stop at 3",
       "file": "index.html",
-      "find": "this.key(P)===this.key(Q) || ",
-      "replace": "",
+      "find": "S={a:R.i(1,4), c:R.i(2,4)",
+      "replace": "S={a:R.i(1,3), c:R.i(2,4)",
       "run": "verify"
     },
     {
-      "name": "entries may run past 12",
+      "name": "the point is always 1",
       "file": "index.html",
-      "find": "Math.abs(x)>12",
-      "replace": "Math.abs(x)>20",
+      "find": "x:R.i(1,4)};",
+      "replace": "x:1};",
       "run": "verify"
     },
     {
-      "name": "the numbers drawn run to 4",
+      "name": "the stand-by curve every time",
       "file": "index.html",
-      "find": "E:[-2,-1,0,1,1,2,2,3]",
-      "replace": "E:[-2,-1,0,1,1,2,2,4]",
+      "find": "for(let g=0;g<2000;g++){\n      const S={a:",
+      "replace": "for(let g=0;g<0;g++){\n      const S={a:",
       "run": "verify"
     },
     {
-      "name": "the stand-by pair every time",
+      "name": "the answer always sits first",
       "file": "index.html",
-      "find": "for(let g=0;g<500;g++){\n      const S={A:this.draw()",
-      "replace": "for(let g=0;g<0;g++){\n      const S={A:this.draw()",
+      "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
+      "replace": "    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
       "run": "verify"
     },
     {
-      "name": "BA always sits first",
+      "name": "the slips are always the first trio",
       "file": "index.html",
-      "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
-      "replace": "    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "find": "take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
+      "replace": "take=fit[0];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
       "run": "verify"
     },
     {
-      "name": "the slips are always the first two",
+      "name": "the answer always sits in the middle",
       "file": "index.html",
-      "find": "    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    /",
-      "replace": "    /",
+      "find": "want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
+      "replace": "want=ranks[0], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
       "run": "verify"
     },
     {
-      "name": "the same pair can come twice",
+      "name": "the same curve can come twice",
       "file": "index.html",
-      "find": "if(!prev||this.key(S)!==this.key(prev)) break;",
-      "replace": "break;",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
+      "replace": "break; }\n    // a number of the right one's form and sign always stands beside it, so neither gives anything away,\n    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away\n    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;\n    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=['right',...take].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('L",
       "run": "verify"
     },
     {
       "name": "a miss is counted",
       "file": "index.html",
-      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Com",
-      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Com",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Lo",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Lo",
       "run": "verify"
     },
     {
       "name": "every pick counts as a first try",
       "file": "index.html",
-      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
-      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
       "run": "verify"
     },
     {
       "name": "the banner is worded wrong",
       "file": "index.html",
-      "find": "this.matched+' pairs made one'",
-      "replace": "this.matched+' pairs made'",
+      "find": "this.matched+' curves split'",
+      "replace": "this.matched+' curves'",
       "run": "verify"
     },
     {
       "name": "the toast names the wrong letter",
       "file": "index.html",
-      "find": "✓ ${'PQRS'[i]} does both",
-      "replace": "✓ ${'ABCD'[i]} does both",
+      "find": "✓ ${'ABCD'[i]} is the slope of ln y",
+      "replace": "✓ ${'PQRS'[i]} is the slope of ln y",
       "run": "verify"
     },
     {
-      "name": "a missed matrix can be tapped again",
+      "name": "a missed number can be tapped again",
       "file": "index.html",
-      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
-      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('MO",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('LO",
       "run": "verify"
     },
     {
-      "name": "AB is explained as the sum",
+      "name": "the power slip lists a power of 1",
       "file": "index.html",
-      "find": "if(k==='order') return",
-      "replace": "if(k==='sum') return",
+      "find": "const P=[a,c,e].filter(n=>n>1)",
+      "replace": "const P=[a,c,e]",
       "run": "verify"
     },
     {
-      "name": "the row-row slip is explained as the column-column",
+      "name": "the chain slip is told as the plus slip",
       "file": "index.html",
-      "find": "if(k==='rowrow') return `${L} runs along",
-      "replace": "if(k==='colcol') return `${L} runs along",
+      "find": "if(k==='noChain') return",
+      "replace": "if(k==='plus') return",
       "run": "verify"
     },
     {
-      "name": "the check takes the last wrong entry",
+      "name": "the dividing piece is named without its power",
       "file": "index.html",
-      "find": "const M=this.mat(S,k), [[p,q]]=this.wrong(S,M)",
-      "replace": "const M=this.mat(S,k), [p,q]=this.wrong(S,M).pop()",
+      "find": "Dividing by (${xd})${this.sp(e)}",
+      "replace": "Dividing by (${xd})",
       "run": "verify"
     },
     {
-      "name": "the working runs down a row of A",
+      "name": "the check takes the last wrong piece",
       "file": "index.html",
-      "find": "${this.pn(B[i][0])} × ${this.pn(A[0][j])} + ${this.pn(B[i][1])} × ${this.pn(A[1][j])}",
-      "replace": "${this.pn(B[i][0])} × ${this.pn(A[j][0])} + ${this.pn(B[i][1])} × ${this.pn(A[j][1])}",
+      "find": "t=[0,1,2].find(i=>this.key(K[i])!==this.key(R0[i]))",
+      "replace": "t=[2,1,0].find(i=>this.key(K[i])!==this.key(R0[i]))",
       "run": "verify"
     },
     {
-      "name": "the check names the wrong row of B",
+      "name": "the check works the piece without its m",
       "file": "index.html",
-      "find": "row ${p+1} of B, (${S.B[p].map(neg)",
-      "replace": "row ${p+1} of B, (${S.B[q].map(neg)",
+      "find": "`${S.c} × ${S.m}/${v}`",
+      "replace": "`${S.c}/${v}`",
       "run": "verify"
     },
     {
-      "name": "the check gives the wrong entry of BA",
+      "name": "the check names the wrong point",
       "file": "index.html",
-      "find": "= ${neg(P[p][q])}.`;",
-      "replace": "= ${neg(P[q][p])}.`;",
+      "find": "but at x = ${S.x} that piece's slope",
+      "replace": "but at x = ${S.x+1} that piece's slope",
       "run": "verify"
     },
     {
-      "name": "a miss shows no red",
+      "name": "the curve shows the wrong power",
       "file": "index.html",
-      "find": "this.grid(M,gone?this.wrong(S,M):[])",
-      "replace": "this.grid(M,[])",
+      "find": "x${this.sp(S.a)}·(",
+      "replace": "x${this.sp(S.c)}·(",
       "run": "verify"
     },
     {
-      "name": "the red marks the right entries",
+      "name": "the curve drops the bottom's power",
       "file": "index.html",
-      "find": "if(x!==P[p][q]) out.push",
-      "replace": "if(x===P[p][q]) out.push",
+      "find": "÷ (${this.lin(1,S.d)})${this.sp(S.e)}`; }",
+      "replace": "÷ (${this.lin(1,S.d)})`; }",
       "run": "verify"
     },
     {
-      "name": "a shut matrix is not told as not BA",
+      "name": "the curve writes 1x",
       "file": "index.html",
-      "find": "${gone?'. Not BA':''}",
+      "find": "lin(m,b){ return `${m===1?'':m}x",
+      "replace": "lin(m,b){ return `${m}x",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number is not told as wrong",
+      "file": "index.html",
+      "find": "${gone?'. Not the slope of ln y':''}",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "a shut matrix can still be pressed",
+      "name": "a shut number can still be pressed",
       "file": "index.html",
-      "find": "${gone?'disabled ':''}onclick=\"ComposePick",
-      "replace": "onclick=\"ComposePick",
+      "find": "${gone?'disabled ':''}onclick=\"LnPick",
+      "replace": "onclick=\"LnPick",
       "run": "verify"
     },
     {
-      "name": "A and B are read out the wrong way round",
+      "name": "the working leaves out a piece",
       "file": "index.html",
-      "find": "aria-label=\"First A, with rows ${this.rows(S.A)}, then B, with rows ${this.rows(S.B)}\"",
-      "replace": "aria-label=\"First A, with rows ${this.rows(S.B)}, then B, with rows ${this.rows(S.A)}\"",
-      "run": "verify"
-    },
-    {
-      "name": "B is drawn as A",
-      "file": "index.html",
-      "find": "B =</span>${this.grid(S.B)}",
-      "replace": "B =</span>${this.grid(S.A)}",
-      "run": "verify"
-    },
-    {
-      "name": "the working gives AB",
-      "file": "index.html",
-      "find": "So BA has rows ${this.rows(P)}",
-      "replace": "So BA has rows ${this.rows(this.mat(B,'order'))}",
-      "run": "verify"
-    },
-    {
-      "name": "the working names the wrong column",
-      "file": "index.html",
-      "find": "ow ${i+1}, column ${j+1}: ${this.dot(B,i,j)}",
-      "replace": "ow ${i+1}, column ${i+1}: ${this.dot(B,i,j)}",
+      "find": "the pieces' slopes are ${[0,1,2].map(t=>this.worked(B,t)).join(', ')}",
+      "replace": "the pieces' slopes are ${[0,1].map(t=>this.worked(B,t)).join(', ')}",
       "run": "verify"
     },
     {
       "name": "the count line is dropped",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"oqRead\"",
-      "replace": "    out+=`<div id=\"oqRead\"",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"lqRead\"",
+      "replace": "    out+=`<div id=\"lqRead\"",
       "run": "verify"
     },
     {
-      "name": "the rule puts the last move on the right",
+      "name": "the rule adds the piece that divides",
       "file": "index.html",
-      "find": "the move done last is written on the left",
-      "replace": "the move done last is written on the right",
+      "find": "with a minus for the piece that divides",
+      "replace": "with a plus for the piece that divides",
       "run": "verify"
     },
     {
       "name": "the goals stay up while the pick shows",
       "file": "index.html",
-      "find": "'cmFig','cmRead','cmGoalPanel']",
-      "replace": "'cmFig','cmRead']",
+      "find": "'lgRead','lgGoalPanel']",
+      "replace": "'lgRead']",
+      "run": "verify"
+    },
+    {
+      "name": "the hand-worked curves are drawn under the pick",
+      "file": "index.html",
+      "find": "    document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';\n    if(pick) return;\n",
+      "replace": "    document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';\n",
       "run": "verify"
     },
     {
       "name": "the workshop opens on the pick",
       "file": "index.html",
-      "find": "  tab:'moves',\n  setTab(t){ this.tab=t; this.render(); },",
-      "replace": "  tab:'pick',\n  setTab(t){ this.tab=t; this.render(); },",
-      "run": "verify"
+      "find": "  open(){ UI.go('s-logdiff'); },\n  tab:'hand',",
+      "replace": "  open(){ UI.go('s-logdiff'); },\n  tab:'pick',",
+      "run": "play:lnpick"
     },
     {
       "name": "the Tome does not tell of the pick",
       "file": "index.html",
-      "find": " Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>",
+      "find": " Then turn it round: see a product of powers, and pick which of four numbers is the slope of ln y.</div>",
       "replace": "</div>",
       "run": "verify"
     },
     {
       "name": "the pick is left out of the mix",
       "file": "index.html",
-      "find": "    ['ComposePick','Compose',",
-      "replace": "    ['ComposePicked','Compose',",
+      "find": "    ['LnPick','LogDiff',",
+      "replace": "    ['LnPicked','LogDiff',",
       "run": "verify"
     }
   ]

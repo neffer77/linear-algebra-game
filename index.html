@@ -1867,10 +1867,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LOG SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-logdiff">
     <div class="panel"><h2>🪵 Log Slope Workshop</h2><div class="sub">In xˣ, x is in the base and in the power at once, so neither the power rule nor the exponent rule fits. Take ln of both sides to bring the power down, differentiate, then multiply back by y. Then try each wrong rule, catch it out, and add the two together.</div></div>
+    <div id="lgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work xˣ by hand or pick the slope of ln y"></div>
     <div class="panel">
+      <div id="lqBox"></div>
       <div id="lgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="lgFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="lgXRow" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="lgXLo" onclick="LogDiff.moveX(-1)" aria-label="Move x one step smaller">−</button>
           <b id="lgX" style="font-size:17px;min-width:0"></b>
           <button id="lgXHi" onclick="LogDiff.moveX(1)" aria-label="Move x one step bigger">+</button></div>
@@ -1878,7 +1880,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="lgModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
       <div id="lgRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="lgGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="lgGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14225,7 +14227,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪵 Log Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it. Then turn it round: see a product of powers, and pick which of four numbers is the slope of ln y.</div>
          <button class="btn sm" id="tomeLogDiff" style="width:auto;margin-top:8px" onclick="LogDiff.open()">Open the log slope workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -26480,6 +26482,160 @@ const InvSlope = {
   }
 };
 
+/* ---------- Which slope of ln y? The log slope workshop turned round ----------
+   y = xᵃ·(mx + b)ᶜ ÷ (x + d)ᵉ with whole powers and a whole point x, and four
+   numbers, one of them the slope of ln y there, which is y′ ÷ y:
+   a/x + c·m/(mx + b) − e/(x + d). Taking ln turns the product into a sum of
+   three pieces, so the slope is the pieces' slopes added. The rule is stated
+   first; the wrong numbers are the slips people make with it: the powers
+   dropped, the m inside left out, the piece that divides added, the slope of
+   ln u taken as u′ with no ÷ u, one taken off each power as the power rule
+   would, or each piece divided the wrong way round. A wrong pick is checked
+   at the first piece it gets wrong. Nothing is saved. */
+const LnPick = {
+  SLIPS:['noPow','noChain','plus','noDiv','less1','flip'],
+  SUP:{'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'},
+  RULE:'Taking ln turns a product into a sum and a power into a number in front: ln y = a·ln x + c·ln(mx + b) − e·ln(x + d), with a minus for the piece that divides. The slope of n·ln u is n times the slope of u, over u. Add the three pieces\' slopes and you have the slope of ln y, which is y′ ÷ y. Which is it here?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  // the inside of each piece at the point: x, mx + b and x + d
+  ins(S){ return [S.x, S.m*S.x+S.b, S.x+S.d]; },
+  // the three pieces' slopes, as each option takes them
+  terms(S,k){
+    const {a,c,e,m}=S, [u,v,w]=this.ins(S);
+    const T={right:[[a,u],[c*m,v],[-e,w]], noPow:[[1,u],[m,v],[-1,w]], noChain:[[a,u],[c,v],[-e,w]], plus:[[a,u],[c*m,v],[e,w]],
+      noDiv:[[a,1],[c*m,1],[-e,1]], less1:[[a-1,u],[(c-1)*m,v],[-(e-1),w]], flip:[[u,a],[v,c*m],[-w,e]]}[k];
+    return T.map(([p,q])=>this.frac(p,q));
+  },
+  val(S,k){ const t=this.terms(S,k); return this.add(this.add(t[0],t[1]),t[2]); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this curve can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page names: the powers, m, b, d, the point and the three insides
+  named(S){ return [S.a,S.c,S.e,S.m,S.b,S.d,...this.ins(S)].map(n=>[n,1]); },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<2000;g++){
+      const S={a:R.i(1,4), c:R.i(2,4), e:R.i(1,3), m:R.i(1,3), b:R.i(-3,5), d:R.i(-2,4), x:R.i(1,4)};
+      const [u,v,w]=this.ins(S);
+      // every inside is positive at the point, so each ln is there, and the three pieces are three different things
+      if(v<1 || w<1 || S.d===0 || (S.m===1 && (S.b===0 || S.b===S.d))) continue;
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      // a check names one piece's slope, so no piece's slope may be the answer, or a check would hand it over
+      if(this.terms(S,'right').some(t=>this.key(t)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, c:3, e:1, m:2, b:1, d:1, x:1};
+  },
+  sp(n){ return n===1 ? '' : String(n).split('').map(d=>this.SUP[d]).join(''); },
+  lin(m,b){ return `${m===1?'':m}x${b===0?'':b<0?' − '+(-b):' + '+b}`; },
+  // the curve as it is written: xᵃ·(mx + b)ᶜ ÷ (x + d)ᵉ
+  curve(S){ return `x${this.sp(S.a)}·(${this.lin(S.m,S.b)})${this.sp(S.c)} ÷ (${this.lin(1,S.d)})${this.sp(S.e)}`; },
+  // the pieces of ln y, by name
+  piece(S,t){ return [`${S.a===1?'':S.a+'·'}ln x`, `${S.c}·ln(${this.lin(S.m,S.b)})`, `−${S.e===1?'':S.e+'·'}ln(${this.lin(1,S.d)})`][t]; },
+  // a piece's slope, worked
+  worked(S,t){
+    const [u,v,w]=this.ins(S), T=this.fs(this.terms(S,'right')[t]), ex=[`${S.a}/${u}`, `${S.c} × ${S.m}/${v}`, `−${S.e}/${w}`][t];
+    return ex===T ? ex : `${ex} = ${T}`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('LOG SPLITTER', this.matched+' curves split','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is the slope of ln y, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    LogDiff.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,c,e,m}=S, mb=this.lin(m,S.b), xd=this.lin(1,S.d);
+    if(k==='noPow'){ const P=[a,c,e].filter(n=>n>1), ps=P.length===1 ? `power ${P[0]}` : `powers ${P.slice(0,-1).join(', ')} and ${P[P.length-1]}`;
+      return `${L} drops the ${ps}. Taking ln brings each power down in front, ln(uⁿ) = n·ln u, so each piece's slope is multiplied by its power.`; }
+    if(k==='noChain') return `${L} drops the ${m} inside ${mb}. The slope of ln(${mb}) is the slope of ${mb}, which is ${m}, over ${mb} itself.`;
+    if(k==='plus') return `${L} adds the piece that divides. Dividing by (${xd})${this.sp(e)} takes away ${e===1?'':e+'·'}ln(${xd}), so its slope comes in with a minus.`;
+    if(k==='noDiv') return `${L} brings the powers down but never divides by what is inside. The slope of ln u is u′ ÷ u, not u′ alone.`;
+    if(k==='less1') return `${L} takes one off each power, as the power rule does to xⁿ. Taking ln brings each power down whole: the slope of n·ln u is n times u′ ÷ u.`;
+    return `${L} divides the wrong way round in each piece. The slope of n·ln u is n times u′, over u: what is inside goes underneath.`;
+  },
+  check(S,k,L){
+    const R0=this.terms(S,'right'), K=this.terms(S,k), t=[0,1,2].find(i=>this.key(K[i])!==this.key(R0[i]));
+    return `Check ${L}: its slope for the piece ${this.piece(S,t)} is ${this.fs(K[t])}, but at x = ${S.x} that piece's slope is ${this.worked(S,t)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="lqQ" style="text-align:center;font-size:16px;margin-bottom:2px">y = ${this.curve(S)}, at x = ${S.x}</div>`;
+    out+=`<div class="small" style="text-align:center">Which is the slope of ln y, that is y′ ÷ y?</div>`;
+    out+=`<div id="lqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="LnPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not the slope of ln y':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S;
+      lines.push(`That was it: ln y = ${this.piece(B,0)} + ${this.piece(B,1)} ${this.piece(B,2).replace('−','− ')}, and at x = ${B.x} the pieces' slopes are ${[0,1,2].map(t=>this.worked(B,t)).join(', ')}, which add to ${this.fs(this.val(B,'right'))}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="lqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The log slope workshop: when x is in the base and the power ----------
    y = xˣ fits neither the power rule (a fixed power) nor the exponent rule (a
    fixed base). Taking ln of both sides brings the power down, the product
@@ -26603,10 +26759,18 @@ const LogDiff = {
     return out+`</svg>`;
   },
   open(){ UI.go('s-logdiff'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
   render(){
+    document.getElementById('lgTab').innerHTML=[['hand','🪵 Work it by hand','Take ln of xˣ and its kin, and try each wrong rule'],['pick','🎯 Which slope of ln y?','See a product of powers, and pick which of four numbers is the slope of ln y']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="LogDiff.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['lgSets','lgFig','lgXRow','lgModes','lgRead','lgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';
+    if(pick) return;
     document.getElementById('lgSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="LogDiff.pick(${i})" aria-label="y = ${s.name}">${s.btn}</button>`).join('');
     document.getElementById('lgModes').innerHTML=this.MODES.map((m,i)=>
@@ -27855,12 +28019,13 @@ const MixPick = {
     ['TrigPick','TrigInt','🎢 Trig Integral Workshop'],
     ['TanPick','TanPlane','🪁 Tangent Plane Workshop'],
     ['InvPick','InvSlope','🪩 Inverse Slope Workshop'],
+    ['LnPick','LogDiff','🪵 Log Slope Workshop'],
     ['PathPick','PathChain','🛤️ Path Chain Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },
