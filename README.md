@@ -584,7 +584,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: forty-six
+  question from a different workshop's turned-round mode each time: forty-seven
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1846,6 +1846,18 @@ The game is built so that losing teaches you as much as winning.
   lands on 0 and stays, and y′ = x turns out to be a left Riemann sum short by
   exactly h. Seven things to find, and a fight on Euler's method now offers it.
 
+  **🎯 Which estimate?** turns the workshop round: y′ = px + qy is shown with
+  a whole y(0) and a step h of 1 or 1/2, and four numbers offered, one of
+  them Euler's estimate two steps on. The rule comes first. The wrong numbers
+  are the slips people make: stopping a step short, keeping the first slope
+  for both steps, reading each slope at the far end of its step, adding the
+  whole slope with no × h, and taking h × slope as the new y instead of
+  adding it on. A wrong pick is shut and checked at the first step it gets
+  wrong; the right one is worked step by step. No check ever names the
+  estimate itself. Nothing is saved, and there is no clock. `npm test` checks
+  every number against the slip it is named as, and the right one alone
+  against the walk taken again in floating point.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -2010,7 +2022,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirty-seven suites, about 5,500 checks, about a minute:
+loop only exists once the page is running. A hundred and thirty-eight suites, about 5,530 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2091,6 +2103,7 @@ loop only exists once the page is running. A hundred and thirty-seven suites, ab
 | `pathchain` | the Tome opens the path chain workshop on z = xy along x = t², y = t at t = 1, where the x part 1 × 2 and the y part 1 × 1 add to dz/dt = 3, checked by a nudge, with bars in the same proportion; keeping only one part and forgetting the speeds are each caught; at t = 0.5 forgetting the speeds is right by luck; on the circle the parts cancel at π/4; along x = t, y = 2 − t the top is at 4/3 and the y part wins at 5/3; all seven goals; the stepper stops at its ends; every button named; fits a phone; nothing saved |
 | `expint` | the Tome opens the growth integral workshop on e^(2x) with F = e^(2x), twice too steep and drawn blue across 88 slope dashes; a 2 in front is caught as the multiply slip; a 1/2 in front fits, turns green and names ∫ e^(2x) dx = (1/2)·e^(2x) + C; a lift of 1/2 keeps every slope and passes through (0, 1); raising the exponent as the power rule would is caught; e^(−2x) needs −1/2 and e^(x/2) needs 2; all seven goals; both steppers stop at their ends; every button named; fits a phone; nothing saved |
 | `eulerwalk` | the Tome opens the Euler step workshop on y′ = y with h = 1 and one dot; one step works 1 + 1 × 1 = 2 and sets it short of e by 0.7183; halving the step works 9/4 and lays both misses side by side; steps of 1/8 reach 2.5658 with the early steps left to the figure; on y′ = −2y a step of 1 jumps to −1 and swings back, 1/2 lands on 0 and stays, 1/4 keeps half of y each step; y′ = x falls short of 2 by exactly h; all seven goals, starting over, the ends, every button named, a phone's width, and nothing saved |
+| `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 49 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |
 | `matpick` | the Tome says the matrix workshop can be turned round; the workshop opens on free play, and switching to which matrix puts away the steppers and goals and states the rule first; four matrices are offered, each named and read out row by row, and the shape is drawn dashed over the square, never given as numbers; a wrong pick says where it sends î and ĵ against the dashed ones, names its slip, is drawn in gold over the shape, is shut and told as not this one, and is not counted; the right pick reads its columns back, counts (not as a first try after a miss), toasts and deals a new shape with all four open; a first try counts as one, and the fifth pick brings MATRIX SPOTTER; every button is named, nothing runs off a phone, the matrices sit two by two with î and ĵ's colours on their columns, match the shape and free play come back, and the save is unchanged |

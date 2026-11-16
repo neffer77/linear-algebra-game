@@ -90,7 +90,7 @@ function loadGame() {
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('ivTab')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
-    ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewSets')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
+    ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
@@ -9249,6 +9249,176 @@ const lnPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which estimate? The Euler step workshop turned round. Every number is read
+   back off its button and checked against the slip it is named as, walked
+   again here from the equation's numbers; the right one alone is Euler's
+   estimate, walked once more in floating point. Each miss is checked at the
+   first step it gets wrong, worked again here, and no check names the
+   estimate itself. */
+const eulerPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const EulerWalk = {render(){ env.renders++; }};" +
+    cut('const EulerPick = {', '/* ---------- The Euler step workshop: walk a differential equation by hand') + 'return EulerPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const EulerWalk = {', '\n};\n');
+  if (!html.includes('<div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand or pick Euler’s estimate"></div>\n    <div class="panel">\n      <div id="euBox"></div>')) fail('eulerpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['ewWalkRow', 'ewGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('eulerpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('eulerpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab(\'${t}\')"')) fail('eulerpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('eulerpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n    if(pick) return;")) fail('eulerpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>')) fail('eulerpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const times = (f, g) => red(f[0] * g[0], f[1] * g[1]);
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const br = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // the walk as each option takes it, two steps from (0, y0) (one for a step short)
+  const walkOf = (k, Q) => { const h = [1, Q.hd], sl = (x, y) => plus(times([Q.p, 1], x), times([Q.q, 1], y));
+    let x = [0, 1], y = [Q.y0, 1]; const pts = [[x, y]], used = [], rise = [];
+    for (let j = 0; j < (k === 'short' ? 1 : 2); j++) {
+      const nx = red(j + 1, Q.hd), s = k === 'same' ? sl([0, 1], [Q.y0, 1]) : k === 'far' ? sl(nx, y) : sl(x, y);
+      const up = k === 'noH' ? s : times(h, s); y = k === 'noAdd' ? up : plus(y, up); x = nx;
+      used.push(s); rise.push(up); pts.push([x, y]); }
+    return { pts, used, rise }; };
+  const want = (k, Q) => { const w = walkOf(k, Q); return w.pts[w.pts.length - 1][1]; };
+  // Euler's estimate walked in floats, with no fractions at all
+  const float = Q => { const h = 1 / Q.hd; let x = 0, y = Q.y0; for (let j = 0; j < 2; j++) { y += h * (Q.p * x + Q.q * y); x += h; } return y; };
+  const eqOf = Q => `y′ = ${Q.p === 1 ? '' : Q.p === -1 ? '−' : ng(Q.p)}x ${Q.q < 0 ? '−' : '+'} ${Math.abs(Q.q) === 1 ? '' : Math.abs(Q.q)}y`;
+  const sw = (Q, x, y) => `${ng(Q.p)} × ${br(x)} + ${br([Q.q, 1])} × ${br(y)} = ${fr(plus(times([Q.p, 1], x), times([Q.q, 1], y)))}`;
+  const slipOf = (k, L, Q) => {
+    if (k === 'short') return `${L} stops after one step. Euler’s method keeps stepping until it reaches the x it was asked for, and x = ${fr(red(2, Q.hd))} is two steps of ${fr([1, Q.hd])} from 0.`;
+    if (k === 'same') return `${L} uses the starting slope for both steps. The slope changes as x and y change, so it is worked out again at each new point.`;
+    if (k === 'far') return `${L} reads each slope at the far end of its step. Euler’s method uses the slope where the step starts, the one point it already knows.`;
+    if (k === 'noH') return `${L} adds the whole slope at each step. A step of h rises by h × slope, and here h is ${fr([1, Q.hd])}.`;
+    return `${L} takes h × slope as the new y instead of adding it on. A step starts from the y where you stand: the new y is y + h × slope.`; };
+  const checkOf = (k, L, Q) => {
+    const h = fr([1, Q.hd]), W = walkOf('right', Q), K = walkOf(k, Q);
+    if (k === 'short') return `Check ${L}: that is y at x = ${h}, after one step. Reaching x = ${fr(red(2, Q.hd))} takes two steps of ${h}.`;
+    const t = String(K.used[0]) !== String(W.used[0]) || String(K.rise[0]) !== String(W.rise[0]) || String(K.pts[1][1]) !== String(W.pts[1][1]) ? 0 : 1;
+    const [x, y] = W.pts[t];
+    const did = { same: `it keeps the first slope, ${fr(K.used[t])}`, far: `it reads the slope at x = ${fr(W.pts[t + 1][0])}, the far end of the step`,
+      noH: `it adds the whole slope, ${fr(K.used[t])}`, noAdd: `it takes h × slope, ${fr(K.rise[t])}, as the new y` }[k];
+    return `Check ${L}: at step ${t + 1}, from (${fr(x)}, ${fr(y)}), ${did}. The slope at that point is ${sw(Q, x, y)}, so y rises by ${h} × ${br(W.used[t])}.`; };
+  const stepOf = (Q, j) => { const W = walkOf('right', Q), [x, y] = W.pts[j], [x1, y1] = W.pts[j + 1];
+    return `from (${fr(x)}, ${fr(y)}) the slope is ${sw(Q, x, y)}, so y goes to ${fr(y)} + ${fr([1, Q.hd])} × ${br(W.used[j])} = ${fr(y1)} at x = ${fr(x1)}`; };
+  const RULE = 'Euler’s method walks y′ = f(x, y) forward in straight steps: where you stand, work out the slope f(x, y), then move h along x and h × slope up. From the new point, do it again. Which is the estimate here?';
+  if (S.RULE !== RULE) fail('eulerpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('eulerpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['short', 'same', 'far', 'noH', 'noAdd'];
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, seen = { p: new Set(), q: new Set(), y0: new Set(), hd: new Set() };
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; for (const n in seen) seen[n].add(Q[n]);
+      if (![-2, -1, 1, 2, 3].includes(Q.p) || ![-3, -1, 1, 2, 3].includes(Q.q) || ![-2, -1, 1, 2, 3].includes(Q.y0) || ![1, 2].includes(Q.hd) || Object.keys(Q).length !== 4) fail('eulerpick', key, `${sig} is not an equation of the kind dealt`);
+      if (prev && prev === sig) fail('eulerpick', key, 'the same equation comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('eulerpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} ${eqOf(Q)}, y(0) = ${ng(Q.y0)}, step h = ${fr([1, Q.hd])} Which is Euler’s estimate of y(${fr(red(2, Q.hd))})? A `)) fail('eulerpick', key, `the rule and the equation are not shown first: ${head.slice(RULE.length, RULE.length + 90)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="EulerPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('eulerpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('eulerpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('eulerpick', key, 'a number is 0');
+      if (new Set(vals.map(String)).size !== 4) fail('eulerpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('eulerpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      const W = walkOf('right', Q);
+      // the page and the checks name p, q, y(0), h, 2h, the first landing and rise and the two slopes read, so none of those is the estimate
+      if ([[Q.p, 1], [Q.q, 1], [Q.y0, 1], [1, Q.hd], red(2, Q.hd), W.pts[1][1], W.rise[0], ...W.used].some(n => String(n) === String(vals[ri]))) fail('eulerpick', key, `the estimate ${fr(vals[ri])} is named elsewhere on the page or in a check`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('eulerpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('eulerpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const Wv = want('right', Q), have = new Set([String(Wv)]), can = [];
+        for (const kk of SL) { const x = want(kk, Q); if (x[0] === 0 || have.has(String(x))) continue; have.add(String(x)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (Wv[1] === 1)) && tr.some(x => want(x, Q)[0] * Wv[0] > 0) && !sums([Wv, ...tr.map(x => want(x, Q))])) T.push(tr); }
+        const rk = tr => tr.filter(x => { const y = want(x, Q); return y[0] * Wv[1] < Wv[0] * y[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!SL.includes(o.k) && o.k !== 'right') { fail('eulerpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(want(o.k, Q))) fail('eulerpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(float(Q) - vals[i][0] / vals[i][1]) < 1e-9)) fail('eulerpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} Euler’s estimate walked in floats`);
+      });
+      if (k === 0 && txt(S.html().split('id="euRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('eulerpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('eulerpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="euRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ck = checkOf(o.k, Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('eulerpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        // a check works one step, but never lands on the estimate
+        if (lines.slice(0, 2).join(' ').split(/[\s,.;:()]+/).includes(fr(want('right', Q)))) fail('eulerpick', key, `the check of ${o.k} names the estimate ${fr(want('right', Q))}`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="EulerPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not Euler’s estimate"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('eulerpick', key, 'the missed numbers are not shut and told as not Euler’s estimate');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('eulerpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('eulerpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('eulerpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('eulerpick', key, 'no fresh equation after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SURE-FOOTED / 5 walks read') fail('eulerpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is Euler’s estimate, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('eulerpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="euRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ${stepOf(Q, 0)}; then ${stepOf(Q, 1)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('eulerpick', key, `after a pick: ${got}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same equation dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { p: 2, q: -1, y0: 3, hd: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"p":2,"q":-1,"y0":3,"hd":2}') fail('eulerpick', 'repeat', 'the same equation is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of equations: the answer's form even
+    let sw2 = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (want('right', Q)[1] === 1) sw2++; }
+    if (sw2 < 9000 || sw2 > 11000) fail('eulerpick', 'sweep', `${sw2} of 20000 estimates are whole, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('eulerpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  const sizes = { p: 5, q: 5, y0: 5, hd: 2 };
+  for (const n in sizes) if (seen[n].size !== sizes[n]) fail('eulerpick', 'deal', `${n} is only ever ${[...seen[n]].sort((a, b) => a - b)}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('eulerpick', 'deal', `the estimate sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.05 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.05)) fail('eulerpick', 'deal', `the estimate sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('eulerpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the estimate its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('eulerpick', 'deal', `${whole} of ${rounds} estimates are whole, not about half`);
+  if (fives !== 30) fail('eulerpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -14151,6 +14321,7 @@ console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 
 console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
 console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
+console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
