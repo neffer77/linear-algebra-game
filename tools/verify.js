@@ -3783,6 +3783,165 @@ const lamPickNotes = (() => {
   return { rounds, misses, dots, pairs: pairs.size };
 })();
 
+/* Which mix? The pick-a-mix round in the span workshop. Every mix on screen
+   is read back as amounts of u and v and worked here: the right one must land
+   on the ring and each slip must be exactly the slip it is named as. u and v
+   must point different ways, so no two mixes land on the same point. The
+   picture is read back off its own ticks: u, v and the ring must sit where
+   the numbers say, and each red walk must go a lots of u, then b lots of v,
+   to the point its mix really reaches. */
+const spanPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Span = {render(){ env.renders++; }};" +
+    cut('const SpanPick = {', '/* ============ SPAN WORKSHOP') + 'return SpanPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const V = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : String(n));
+  // a mix as the player reads it, turned back into its two amounts
+  const amounts = t => {
+    const m = t.match(/^(−?)(\d?)u (\+|−) (\d?)v$/);
+    if (!m) return null;
+    return [(m[1] ? -1 : 1) * (m[2] ? +m[2] : 1), (m[3] === '−' ? -1 : 1) * (m[4] ? +m[4] : 1)];
+  };
+  const at = (c, a, b) => [a * c.u[0] + b * c.v[0], a * c.u[1] + b * c.v[1]];
+  const want = { right: c => [c.a, c.b], swap: c => [c.b, c.a], signa: c => [-c.a, c.b], signb: c => [c.a, -c.b], both: c => [-c.a, -c.b] };
+  const read = () => txt(S.html().split('id="skRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'A mix a·u + b·v walks a lots of u, then b lots of v from where it stopped. A negative amount walks that arrow backwards. Which mix lands on the gold ring?') fail('spanpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('spanpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, fives = 0, walks = 0;
+  const slots = new Set(), kinds = {}, signs = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, c = r.c, key = `seed ${seed} round ${k}`, t = at(c, c.a, c.b);
+      rounds++;
+      const short = w => Number.isInteger(w[0]) && Number.isInteger(w[1]) && Math.abs(w[0]) <= 2 && Math.abs(w[1]) <= 2 && (w[0] || w[1]) && !(Math.abs(w[0]) === 2 && Math.abs(w[1]) === 2);
+      if (!short(c.u) || !short(c.v)) fail('spanpick', key, `u = ${V(c.u)} or v = ${V(c.v)} is not a short whole arrow`);
+      if (c.u[0] * c.v[1] - c.u[1] * c.v[0] === 0) fail('spanpick', key, 'u and v lie on one line, so the ring may be reached more than one way or not at all');
+      if (c.u[0] * c.u[1] === 0 && c.v[0] * c.v[1] === 0) fail('spanpick', key, 'u and v both lie along the axes, so the amounts are just coordinates');
+      if (![-2, -1, 1, 2].includes(c.a) || ![-2, -1, 1, 2].includes(c.b)) fail('spanpick', key, `the amounts ${c.a}, ${c.b} are not −2, −1, 1 or 2`);
+      if (!t[0] && !t[1]) fail('spanpick', key, 'the ring sits on ⟨0, 0⟩');
+      if (prev && JSON.stringify(prev) === JSON.stringify(c)) fail('spanpick', key, 'the same pair and ring come twice in a row');
+      signs.add(Math.sign(c.a) + ',' + Math.sign(c.b));
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('spanpick', key, 'there are not four mixes, one of them right');
+      const texts = r.opts.map(o => S.text(c, o.k));
+      if (new Set(texts).size !== 4) fail('spanpick', key, 'two mixes are written the same');
+      const amts = texts.map(amounts);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('spanpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!amts[i]) { fail('spanpick', key, `${texts[i]} does not read as a mix of u and v`); return; }
+        if (amts[i].join() !== want[o.k](c).join()) fail('spanpick', key, `${o.k} is written ${texts[i]}, which is not that slip`);
+        if (S.amts(c, o.k).join() !== want[o.k](c).join()) fail('spanpick', key, `${o.k} is worked wrong`);
+        if (/(^|[^\d])1[uv]/.test(texts[i])) fail('spanpick', key, `${texts[i]} writes a 1 in front of an arrow`);
+        // every walk stays on the grid: its stop after u, and its end
+        const [a, b] = want[o.k](c), mid = [a * c.u[0], a * c.u[1]], e = at(c, a, b);
+        if ([...mid, ...e].some(z => Math.abs(z) > 5)) fail('spanpick', key, `${texts[i]} walks off the grid`);
+        if (o.k !== 'right' && e[0] === t[0] && e[1] === t[1]) fail('spanpick', key, `${texts[i]} lands on the ring too`);
+      });
+      const ends = amts.filter(Boolean).map(p => at(c, ...p).join());
+      if (new Set(ends).size !== 4) fail('spanpick', key, 'two mixes land on the same point');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const h0 = S.html();
+      if (!txt(h0).startsWith(`${S.RULE} u = ${V(c.u)}, v = ${V(c.v)}, ring at ${V(t)}`)) fail('spanpick', key, 'the rule, the arrows and the ring are not shown first');
+      const lab = `A grid from −6 to 6 with u = ${V(c.u)} in blue, v = ${V(c.v)} in green and a gold ring at ${V(t)}`;
+      if (!h0.includes(`role="img" aria-label="${lab}">`)) fail('spanpick', key, 'the picture is not read out');
+      const btns = [...h0.matchAll(/data-opt="([ABCD])" (disabled )?onclick="SpanPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+?)(\. Not on the ring)?"[^>]*><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'ABCD'[i] || m[2] || +m[3] !== i || m[4] !== 'ABCD'[i] || m[5] !== texts[i] || m[6] || m[7] !== 'ABCD'[i] || m[8] !== texts[i])) fail('spanpick', key, 'the four mixes are not offered as they are, A to D');
+      // the picture, read back off its own ticks
+      const pic = h => {
+        const svg = h.split('id="skFig"')[1].split('</svg>')[0];
+        const xt = [...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9" fill="[^"]+" text-anchor="middle">([^<]+)<\/text>/g)].map(m => [+m[1], +m[2].replace('−', '-')]);
+        const yt = [...svg.matchAll(/<text x="[-\d.]+" y="([-\d.]+)" font-size="9" fill="[^"]+" text-anchor="end">([^<]+)<\/text>/g)].map(m => [+m[1] - 3, +m[2].replace('−', '-')]);
+        return { svg, xt, yt };
+      };
+      const { svg, xt, yt } = pic(h0);
+      if (JSON.stringify(xt.map(p => p[1])) !== '[-4,-2,2,4]' || JSON.stringify(yt.map(p => p[1])) !== '[-4,-2,2,4]') { fail('spanpick', key, 'the axes are not marked at −4, −2, 2 and 4'); continue; }
+      // every y label fits inside the picture
+      if ([...svg.matchAll(/<text x="([-\d.]+)" y="[-\d.]+" font-size="9"[^>]*text-anchor="end"[^>]*>([^<]+)<\/text>/g)].some(m => +m[1] - 5.2 * [...m[2]].length < 1)) fail('spanpick', key, 'a y label runs off the left edge of the picture');
+      const kx = (xt[1][0] - xt[0][0]) / (xt[1][1] - xt[0][1]), ky = (yt[1][0] - yt[0][0]) / (yt[1][1] - yt[0][1]);
+      if (!(kx > 0 && ky < 0) || Math.abs(kx + ky) > 0.01) fail('spanpick', key, 'the grid is drawn back to front, upside down or squashed');
+      const ux = px => xt[0][1] + (px - xt[0][0]) / kx, uy = py => yt[0][1] + (py - yt[0][0]) / ky;
+      const P = (x, y) => [ux(+x), uy(+y)], close = (p, q) => Math.abs(p[0] - q[0]) < 0.02 && Math.abs(p[1] - q[1]) < 0.02;
+      const arrow = (s, name) => { const m = s.match(new RegExp(`<line data-k="${name}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)" stroke="([^"]+)" stroke-width="[\\d.]+"( stroke-dasharray="[^"]+")?/>`)); return m && { from: P(m[1], m[2]), to: P(m[3], m[4]), col: m[5], dash: !!m[6] }; };
+      const au = arrow(svg, 'u'), av = arrow(svg, 'v');
+      if (!au || !close(au.from, [0, 0]) || !close(au.to, c.u) || au.col !== '#5aa9e6' || au.dash) fail('spanpick', key, 'u is not drawn in blue from ⟨0, 0⟩ to where it should end');
+      if (!av || !close(av.from, [0, 0]) || !close(av.to, c.v) || av.col !== '#57cc7a' || av.dash) fail('spanpick', key, 'v is not drawn in green from ⟨0, 0⟩ to where it should end');
+      const ring = svg.match(/<circle data-k="ring" cx="([-\d.]+)" cy="([-\d.]+)" r="7" fill="none" stroke="#f2c14e"/);
+      if (!ring || !close(P(ring[1], ring[2]), t)) fail('spanpick', key, 'the gold ring is not at the point the right mix reaches');
+      if (/data-k="miss/.test(svg)) fail('spanpick', key, 'a red walk is drawn before any miss');
+      if (!/<text[^>]*fill="#5aa9e6"[^>]*>u<\/text>/.test(svg) || !/<text[^>]*fill="#57cc7a"[^>]*>v<\/text>/.test(svg)) fail('spanpick', key, 'u and v are not named on the picture');
+      if (k === 0 ? read() !== `${S.matched} picked this visit, ${S.firstTry} on the first try.` : !read().startsWith('That was it: ')) fail('spanpick', key, `before a pick the readout says ${read()}`);
+      const work = kk => { const [a, b] = want[kk](c); return `${S.text(c, kk)} = ${pn(a)}·${V(c.u)} + ${pn(b)}·${V(c.v)} = ${V([a * c.u[0], a * c.u[1]])} + ${V([b * c.v[0], b * c.v[1]])} = ${V(at(c, a, b))}`; };
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('spanpick', key, 'a miss is counted, or not crossed off');
+        const slip = {
+          swap: `${L} swaps the amounts: it takes ${ng(c.b)} of u and ${ng(c.a)} of v. The amount in front of u says how far to walk along u, so the two are not interchangeable.`,
+          signa: `${L} walks u the wrong way: it takes ${ng(-c.a)} of u, not ${ng(c.a)}. A minus in front of an amount turns that walk right round.`,
+          signb: `${L} walks v the wrong way: it takes ${ng(-c.b)} of v, not ${ng(c.b)}. A minus in front of an amount turns that walk right round.`,
+          both: `${L} turns both walks round, so it lands on the ring's mirror point through ⟨0, 0⟩: −(a·u + b·v) is the same mix walked backwards.`
+        }[o.k];
+        const want2 = `${slip} ${L} is ${work(o.k)}, drawn in red. The ring is at ${V(t)}. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (read() !== want2) fail('spanpick', key, `the miss is explained as: ${read()} | want ${want2}`);
+        if (o.k === 'both') { const e = at(c, ...want.both(c)); if (e[0] !== -t[0] || e[1] !== -t[1]) fail('spanpick', key, 'turning both walks round does not land on the mirror point'); }
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="SpanPick\\.choose\\(${i}\\)" aria-label="${L}: [^"]+\\. Not on the ring"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('spanpick', key, 'the missed mixes are not shut and told as not on the ring');
+        const outs = wrong.slice(0, q + 1).slice().sort();
+        if (!h.includes(`${lab}; red walks for ${outs.map(j => 'ABCD'[j]).join(' and ')}, each landing off the ring">`)) fail('spanpick', key, 'the red walks are not read out');
+        // each red walk goes a lots of u from ⟨0, 0⟩, then b lots of v from there, and is marked where it ends
+        const sv = pic(h).svg, drawn = [...sv.matchAll(/data-k="miss-u-([ABCD])"/g)].map(m => m[1]);
+        if (drawn.join() !== outs.map(j => 'ABCD'[j]).join()) fail('spanpick', key, `the red walks are ${drawn}`);
+        for (const j of outs) {
+          walks++;
+          const Lj = 'ABCD'[j], [a, b] = want[r.opts[j].k](c), mid = [a * c.u[0], a * c.u[1]], e = at(c, a, b);
+          const w1 = arrow(sv, 'miss-u-' + Lj), w2 = arrow(sv, 'miss-v-' + Lj);
+          if (!w1 || !close(w1.from, [0, 0]) || !close(w1.to, mid) || w1.col !== '#e5484d' || !w1.dash) fail('spanpick', key, `the red walk ${Lj} does not start with ${ng(a)} of u`);
+          if (!w2 || !close(w2.from, mid) || !close(w2.to, e) || w2.col !== '#e5484d' || !w2.dash) fail('spanpick', key, `the red walk ${Lj} does not go on with ${ng(b)} of v`);
+          const end = sv.match(new RegExp(`<circle data-k="end-${Lj}" cx="([-\\d.]+)" cy="([-\\d.]+)" r="4" fill="#e5484d"/><text[^>]*>${Lj}</text>`));
+          if (!end || !close(P(end[1], end[2]), e)) fail('spanpick', key, `where ${Lj} lands is not marked with its letter`);
+        }
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('spanpick', key, 'tapping a missed mix again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('spanpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('spanpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('spanpick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SPAN READER / 5 mixes picked') fail('spanpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'ABCD'[ri]} lands on the ring, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('spanpick', key, `the toast is ${env.toasts[nt]}`); }
+      if (read() !== `That was it: ${work('right')}, right on the ring. Here is a new pair. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('spanpick', key, `after a pick: ${read()}`);
+      prev = c;
+    }
+  }
+  // a pair dealt twice running is dealt again: build is made to repeat itself
+  { const real = S.build; env.seed = 4242; S.round = null; S.start(); const c0 = S.round.c; let n = 0;
+    S.build = function () { return n++ < 3 ? JSON.parse(JSON.stringify(c0)) : real.call(S); };
+    S.newRound(); S.build = real;
+    if (JSON.stringify(S.round.c) === JSON.stringify(c0)) fail('spanpick', 'repeat', 'the same pair and ring are dealt twice in a row'); }
+  for (const k of ['swap', 'signa', 'signb', 'both']) if (!kinds[k]) fail('spanpick', 'slips', `the slip ${k} is never offered`);
+  if (signs.size !== 4) fail('spanpick', 'deal', `the amounts only ever have the signs ${[...signs].join(' ')}`);
+  if (slots.size !== 4) fail('spanpick', 'deal', `the right mix only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('spanpick', 'banner', `five mixes were picked ${fives} times, not 30`);
+  return { rounds, misses, walks };
+})();
 /* Which matrix? The pick-a-matrix round in the matrix workshop: the shape is
    one matrix, and each of the other three is checked to be the slip it is
    named as by where it sends î and ĵ, worked out here from the shape alone;
@@ -7522,6 +7681,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
+console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);
 console.log(`  horizons reached        ${pad(horizonNotes.n.toLocaleString(), 10)}  (where each fraction heads worked from its powers, every worked line evaluated as written, the biggest terms by hand, every sentence, the drawing read back, ${horizonNotes.goals} goals findable)`);

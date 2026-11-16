@@ -1039,13 +1039,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SPAN WORKSHOP ============ -->
   <div class="screen" id="s-span">
     <div class="panel"><h2>🧭 Span Workshop</h2><div class="sub">A mix of two arrows is a·u + b·v: walk a of u, then b of v from where you stopped. Pick a pair, choose the amounts, and see which points the pair can reach together.</div></div>
+    <div id="spTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mix the arrows or pick the mix"></div>
     <div class="panel">
+      <div id="spPick"></div>
       <div id="spPairs" class="wsModes" role="group" aria-label="The two arrows"></div>
       <div id="spAmts" class="wsMat dtVecs" style="grid-template-columns:auto 1fr;max-width:220px" role="group" aria-label="The amounts a and b"></div>
       <div id="spFig"></div>
       <div id="spRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="spGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="spGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13989,7 +13991,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🧭 Span Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Mix two arrows, a of one and b of the other, to land on a target, and find the pair that can only ever reach a line.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Mix two arrows, a of one and b of the other, to land on a target, and find the pair that can only ever reach a line. Then turn it round: see two arrows and a ring, and pick which of four mixes lands on it.</div>
          <button class="btn sm" id="tomeSpan" style="width:auto;margin-top:8px" onclick="Span.open()">Open the span workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15894,6 +15896,151 @@ const EigSpot = {
   }
 };
 
+/* ---------------------- which mix? (span workshop) --------------------- */
+/* The workshop turned round: two arrows u and v, a gold ring, and four mixes
+   a·u + b·v. One lands on the ring. The others are the slips people make
+   with a mix: the amounts swapped between u and v, one arrow walked the wrong
+   way, or both, which lands on the mirror point through ⟨0, 0⟩. A wrong mix
+   is walked in red on the grid, a lots of u and then b lots of v from its
+   tip, so the player sees where it really lands. u and v always point
+   different ways, so every mix lands somewhere different and only one pair
+   of amounts reaches the ring. Every number is whole. Nothing is saved. */
+const SpanPick = {
+  DIRS:[[1,0],[0,1],[1,1],[1,-1],[2,1],[1,2],[2,-1],[1,-2],[-1,2],[-2,1],[0,2],[2,0]],
+  AMTS:[-2,-1,1,2],
+  SLIPS:['swap','signa','signb','both'],
+  L:6,
+  RULE:'A mix a·u + b·v walks a lots of u, then b lots of v from where it stopped. A negative amount walks that arrow backwards. Which mix lands on the gold ring?',
+  det:(u,v)=>u[0]*v[1]-u[1]*v[0],
+  at(c,a,b){ return [a*c.u[0]+b*c.v[0], a*c.u[1]+b*c.v[1]]; },
+  // the amounts each formula uses
+  amts(c,k){
+    const {a,b}=c;
+    return k==='right'?[a,b] : k==='swap'?[b,a] : k==='signa'?[-a,b] : k==='signb'?[a,-b] : [-a,-b];
+  },
+  fits(p){ return Math.abs(p[0])<=this.L-1 && Math.abs(p[1])<=this.L-1; },
+  // a mix fits if its stop after u and its end both sit inside the grid
+  walkFits(c,k){ const [a,b]=this.amts(c,k); return this.fits([a*c.u[0],a*c.u[1]]) && this.fits(this.at(c,a,b)); },
+  // the slips this pair can offer: each a different pair of amounts, and so a different point
+  slips(c){
+    const keep=[], seen=new Set([this.amts(c,'right').join()]);
+    for(const k of this.SLIPS){
+      const p=this.amts(c,k).join();
+      if(seen.has(p) || !this.walkFits(c,k)) continue;
+      seen.add(p); keep.push(k);
+    }
+    return keep;
+  },
+  build(){
+    for(let g=0;g<500;g++){
+      const u=R.pick(this.DIRS), v=R.pick(this.DIRS);
+      if(this.det(u,v)===0) continue;
+      if(u[0]*u[1]===0 && v[0]*v[1]===0) continue;    // î and ĵ give the answer away as coordinates
+      const c={u,v,a:R.pick(this.AMTS),b:R.pick(this.AMTS)};
+      const t=this.at(c,c.a,c.b);
+      if(!t[0] && !t[1]) continue;
+      if(!this.walkFits(c,'right') || this.slips(c).length<3) continue;
+      return c;
+    }
+    return {u:[2,1],v:[1,-1],a:1,b:2};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const rest=this.slips(c);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const opts=['right',...rest.slice(0,3)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SPAN READER', this.matched+' mixes picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} lands on the ring, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Span.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  vec:w=>\`⟨\${neg(w[0])}, \${neg(w[1])}⟩\`,
+  // a·u + b·v as it is written: 2u − v, −u + 2v
+  term(n,w,first){ const m=Math.abs(n), body=(m===1?'':m)+w; return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body; },
+  text(c,k){ const [a,b]=this.amts(c,k); return this.term(a,'u',true)+this.term(b,'v',false); },
+  // the mix worked for the numbers on screen
+  work(c,k){
+    const [a,b]=this.amts(c,k), pn=n=>n<0?'('+neg(n)+')':String(n);
+    return \`\${this.text(c,k)} = \${pn(a)}·\${this.vec(c.u)} + \${pn(b)}·\${this.vec(c.v)} = \${this.vec([a*c.u[0],a*c.u[1]])} + \${this.vec([b*c.v[0],b*c.v[1]])} = \${this.vec(this.at(c,a,b))}\`;
+  },
+  slip(c,k,L){
+    const [a,b]=this.amts(c,'right');
+    if(k==='swap') return \`\${L} swaps the amounts: it takes \${neg(b)} of u and \${neg(a)} of v. The amount in front of u says how far to walk along u, so the two are not interchangeable.\`;
+    if(k==='signa') return \`\${L} walks u the wrong way: it takes \${neg(-a)} of u, not \${neg(a)}. A minus in front of an amount turns that walk right round.\`;
+    if(k==='signb') return \`\${L} walks v the wrong way: it takes \${neg(-b)} of v, not \${neg(b)}. A minus in front of an amount turns that walk right round.\`;
+    return \`\${L} turns both walks round, so it lands on the ring's mirror point through ⟨0, 0⟩: −(a·u + b·v) is the same mix walked backwards.\`;
+  },
+  check(c,k,L){
+    const t=this.at(c,...this.amts(c,'right'));
+    return \`\${L} is \${this.work(c,k)}, drawn in red. The ring is at \${this.vec(t)}.\`;
+  },
+  // the grid from −L to L, the arrows u and v, the ring, and a red walk for each miss
+  panel(c,W){
+    const L=this.L, k=(W-24)/(2*L), o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o-y*k).toFixed(1);
+    let s='';
+    for(let i=-L;i<=L;i++) s+=\`<line x1="\${X(i)}" y1="\${Y(-L)}" x2="\${X(i)}" y2="\${Y(L)}" stroke="\${i?FIG_COL.grid:FIG_COL.axis}" stroke-width="\${i?1:1.4}"/><line x1="\${X(-L)}" y1="\${Y(i)}" x2="\${X(L)}" y2="\${Y(i)}" stroke="\${i?FIG_COL.grid:FIG_COL.axis}" stroke-width="\${i?1:1.4}"/>\`;
+    for(let i=-L+2;i<=L-2;i+=2) if(i){
+      s+=\`<text x="\${X(i)}" y="\${(+Y(0)+12).toFixed(1)}" font-size="9" fill="\${FIG_COL.dim}" text-anchor="middle">\${neg(i)}</text>\`;
+      s+=\`<text x="\${(+X(0)-4).toFixed(1)}" y="\${(+Y(i)+3).toFixed(1)}" font-size="9" fill="\${FIG_COL.dim}" text-anchor="end">\${neg(i)}</text>\`;
+    }
+    const arrow=(p,q,col,dash,key)=>{
+      const x1=+X(p[0]), y1=+Y(p[1]), x2=+X(q[0]), y2=+Y(q[1]), a=Math.atan2(y2-y1,x2-x1), h=8;
+      return \`<line data-k="\${key}" x1="\${x1}" y1="\${y1}" x2="\${x2}" y2="\${y2}" stroke="\${col}" stroke-width="2.6"\${dash?' stroke-dasharray="5 4"':''}/>\`+
+        \`<polygon points="\${x2},\${y2} \${(x2-h*Math.cos(a-0.45)).toFixed(1)},\${(y2-h*Math.sin(a-0.45)).toFixed(1)} \${(x2-h*Math.cos(a+0.45)).toFixed(1)},\${(y2-h*Math.sin(a+0.45)).toFixed(1)}" fill="\${col}"/>\`;
+    };
+    const r=this.round, t=this.at(c,c.a,c.b);
+    for(const i of [...r.out].sort()){
+      const [a,b]=this.amts(c,r.opts[i].k), m=[a*c.u[0],a*c.u[1]], e=this.at(c,a,b);
+      s+=arrow([0,0],m,'#e5484d',true,'miss-u-'+'ABCD'[i])+arrow(m,e,'#e5484d',true,'miss-v-'+'ABCD'[i]);
+      s+=\`<circle data-k="end-\${'ABCD'[i]}" cx="\${X(e[0])}" cy="\${Y(e[1])}" r="4" fill="#e5484d"/><text x="\${(+X(e[0])+7).toFixed(1)}" y="\${(+Y(e[1])-6).toFixed(1)}" font-size="12" font-weight="bold" fill="#e5484d">\${'ABCD'[i]}</text>\`;
+    }
+    s+=\`<circle data-k="ring" cx="\${X(t[0])}" cy="\${Y(t[1])}" r="7" fill="none" stroke="\${FIG_COL.b}" stroke-width="3"/>\`;
+    s+=arrow([0,0],c.u,FIG_COL.a,false,'u')+arrow([0,0],c.v,FIG_COL.c,false,'v');
+    s+=\`<text x="\${(+X(c.u[0])+(c.u[0]<0?-8:6)).toFixed(1)}" y="\${(+Y(c.u[1])+(c.u[1]<0?12:-5)).toFixed(1)}" font-size="13" font-weight="bold" fill="\${FIG_COL.a}" text-anchor="\${c.u[0]<0?'end':'start'}">u</text>\`;
+    s+=\`<text x="\${(+X(c.v[0])+(c.v[0]<0?-8:6)).toFixed(1)}" y="\${(+Y(c.v[1])+(c.v[1]<0?12:-5)).toFixed(1)}" font-size="13" font-weight="bold" fill="\${FIG_COL.c}" text-anchor="\${c.v[0]<0?'end':'start'}">v</text>\`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c, t=this.at(c,c.a,c.b), outs=[...r.out].sort();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div style="text-align:center;font-size:16px;margin-bottom:4px">u = \${this.vec(c.u)}, v = \${this.vec(c.v)}, ring at \${this.vec(t)}</div>\`;
+    out+=\`<svg id="skFig" viewBox="0 0 300 300" style="width:100%;max-width:340px;height:auto;display:block;margin:0 auto" role="img" aria-label="A grid from −6 to 6 with u = \${this.vec(c.u)} in blue, v = \${this.vec(c.v)} in green and a gold ring at \${this.vec(t)}\${outs.length?'; red walks for '+outs.map(i=>'ABCD'[i]).join(' and ')+', each landing off the ring':''}">\${this.panel(c,300)}</svg>\`;
+    out+=\`<div id="skPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), x=this.text(c,o.k);
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${'ABCD'[i]}" \${gone?'disabled ':''}onclick="SpanPick.choose(\${i})" aria-label="\${'ABCD'[i]}: \${x}\${gone?'. Not on the ring':''}" style="margin:0"><b>\${'ABCD'[i]}</b> \${x}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[], m=this.miss();
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(\`That was it: \${this.work(this.last.c,'right')}, right on the ring. Here is a new pair.\`);
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="skRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ============ SPAN WORKSHOP ============
    Two arrows, mixed: a of one and b of the other. The readout works a·u + b·v
    for the numbers on screen and says how far the gold target still is, then
@@ -15964,6 +16111,8 @@ const Span = {
     this.before = w && (w[0]!==this.a || w[1]!==this.b) ? w : null;
     if(!w) this.seen[k]=[this.a, this.b];
   },
+  tab:'mix',
+  setTab(t){ this.tab=t; this.render(); },
   open(){ UI.go('s-span'); },
   pick(i){ this.pi=i; this.moved=false; this.touched=true; this.look(); this.render(); },
   step(which, by){
@@ -15972,6 +16121,12 @@ const Span = {
     this[which]=x; this.touched=true; this.moved=this.moved || this.pi===3; this.look(); this.render();
   },
   render(){
+    document.getElementById('spTab').innerHTML=[['mix','🧭 Mix the arrows','Choose the amounts of two arrows and see which points they reach'],['pick','🎯 Which mix?','See two arrows and a ring, and pick which of four mixes lands on it']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Span.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['spPairs','spAmts','spFig','spRead','spGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('spPick').innerHTML=pick ? SpanPick.html() : '';
+    if(pick) return;
     const P=this.P(), names={a:'u', b:'v'};
     document.getElementById('spPairs').innerHTML=this.PAIRS.map((o,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.pi}" onclick="Span.pick(\${i})"

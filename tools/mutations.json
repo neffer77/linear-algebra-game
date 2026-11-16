@@ -1,221 +1,347 @@
 {
- "change": "Which λ? in the eigenvalue detective: see a matrix, pick which of four pairs are its eigenvalues",
+ "change": "Which mix? in the span workshop: see two arrows and a ring, pick which of four mixes lands on it",
  "mutations": [
   {
-   "name": "the trace adds the wrong entries",
+   "name": "a mix walks u twice",
    "file": "index.html",
-   "find": "  tr:A=>A[0][0]+A[1][1],\n  det:A=>A[0][0]*A[1][1]-A[0][1]*A[1][0],\n  p(c,l)",
-   "replace": "  tr:A=>A[0][0]+A[0][1],\n  det:A=>A[0][0]*A[1][1]-A[0][1]*A[1][0],\n  p(c,l)",
+   "find": "at(c,a,b){ return [a*c.u[0]+b*c.v[0], a*c.u[1]+b*c.v[1]]; },\n  // the amounts each formula uses",
+   "replace": "at(c,a,b){ return [a*c.u[0]+b*c.u[0], a*c.u[1]+b*c.u[1]]; },\n  // the amounts each formula uses",
    "run": "verify"
   },
   {
-   "name": "det A adds the cross term",
+   "name": "a mix mixes up x and y",
    "file": "index.html",
-   "find": "  tr:A=>A[0][0]+A[1][1],\n  det:A=>A[0][0]*A[1][1]-A[0][1]*A[1][0],\n  p(c,l)",
-   "replace": "  tr:A=>A[0][0]+A[1][1],\n  det:A=>A[0][0]*A[1][1]+A[0][1]*A[1][0],\n  p(c,l)",
+   "find": "at(c,a,b){ return [a*c.u[0]+b*c.v[0], a*c.u[1]+b*c.v[1]]; },\n  // the amounts each formula uses",
+   "replace": "at(c,a,b){ return [a*c.u[0]+b*c.v[1], a*c.u[1]+b*c.v[0]]; },\n  // the amounts each formula uses",
    "run": "verify"
   },
   {
-   "name": "the curve flips its trace term",
+   "name": "the swap slip is the right mix",
    "file": "index.html",
-   "find": "  p(c,l){ return l*l-this.tr(c.A)*l+this.det(c.A); },",
-   "replace": "  p(c,l){ return l*l+this.tr(c.A)*l+this.det(c.A); },",
+   "find": "k==='swap'?[b,a] : k==='signa'?[-a,b]",
+   "replace": "k==='swap'?[a,b] : k==='signa'?[-a,b]",
    "run": "verify"
   },
   {
-   "name": "the sign slip turns only one round",
+   "name": "u's slip turns v round",
    "file": "index.html",
-   "find": "k==='sign' ? [-l,-m] : [this.tr(A),this.det(A)];",
-   "replace": "k==='sign' ? [-l,m] : [this.tr(A),this.det(A)];",
+   "find": "k==='signa'?[-a,b] : k==='signb'?[a,-b]",
+   "replace": "k==='signa'?[a,-b] : k==='signb'?[a,-b]",
    "run": "verify"
   },
   {
-   "name": "the diagonal slip reads the other diagonal",
+   "name": "v's slip turns both round",
    "file": "index.html",
-   "find": "k==='diag' ? [A[0][0],A[1][1]] :",
-   "replace": "k==='diag' ? [A[0][1],A[1][0]] :",
+   "find": "k==='signb'?[a,-b] : [-a,-b];",
+   "replace": "k==='signb'?[-a,-b] : [-a,-b];",
    "run": "verify"
   },
   {
-   "name": "pairs are not put smaller first",
+   "name": "the mirror slip turns only u",
    "file": "index.html",
-   "find": "    return [...w].sort((x,y)=>x-y);\n  },\n  text(c,k){ const [x,y]=this.pair(c,k); return `λ = ",
-   "replace": "    return [...w];\n  },\n  text(c,k){ const [x,y]=this.pair(c,k); return `λ = ",
+   "find": "k==='signb'?[a,-b] : [-a,-b];",
+   "replace": "k==='signb'?[a,-b] : [-a,b];",
    "run": "verify"
   },
   {
-   "name": "P⁻¹ forgets its determinant",
+   "name": "the grid has one more square",
    "file": "index.html",
-   "find": "const Pi=[[P[1][1]*d,-P[0][1]*d],[-P[1][0]*d,P[0][0]*d]];",
-   "replace": "const Pi=[[P[1][1],-P[0][1]],[-P[1][0],P[0][0]]];",
+   "find": "fits(p){ return Math.abs(p[0])<=this.L-1 && Math.abs(p[1])<=this.L-1; },",
+   "replace": "fits(p){ return Math.abs(p[0])<=this.L && Math.abs(p[1])<=this.L; },",
    "run": "verify"
   },
   {
-   "name": "A is built as P·D·P",
+   "name": "two slips may land together",
    "file": "index.html",
-   "find": "const A=[0,1].map(i=>[0,1].map(j=>PD[i][0]*Pi[0][j]+PD[i][1]*Pi[1][j]));\n      const c={A,lam:[l,m]};",
-   "replace": "const A=[0,1].map(i=>[0,1].map(j=>PD[i][0]*P[0][j]+PD[i][1]*P[1][j]));\n      const c={A,lam:[l,m]};",
+   "find": "      if(seen.has(p) || !this.walkFits(c,k)) continue;",
+   "replace": "      if(!this.walkFits(c,k)) continue;",
    "run": "verify"
   },
   {
-   "name": "big entries are dealt",
+   "name": "a slip may walk off the grid",
    "file": "index.html",
-   "find": "      if(A.flat().some(x=>Math.abs(x)>9)) continue;\n      const ps=",
-   "replace": "      const ps=",
+   "find": "      if(seen.has(p) || !this.walkFits(c,k)) continue;",
+   "replace": "      if(seen.has(p)) continue;",
    "run": "verify"
   },
   {
-   "name": "two options may be the same pair",
+   "name": "u and v may lie on a line",
    "file": "index.html",
-   "find": "      if(new Set(ps.map(w=>w.join())).size!==4) continue;",
+   "find": "      if(this.det(u,v)===0) continue;\n",
    "replace": "",
    "run": "verify"
   },
   {
-   "name": "the same matrix may come twice",
+   "name": "the axis arrows are dealt",
    "file": "index.html",
-   "find": "    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const opts=['right',...this.SLIPS]",
-   "replace": "    c=this.build();\n    const opts=['right',...this.SLIPS]",
+   "find": "      if(u[0]*u[1]===0 && v[0]*v[1]===0) continue;    // î",
+   "replace": "      // î",
    "run": "verify"
   },
   {
-   "name": "the right pair always comes first",
+   "name": "a pair may offer two slips",
    "file": "index.html",
-   "find": "    const opts=['right',...this.SLIPS].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()};",
-   "replace": "    const opts=['right',...this.SLIPS].map(k=>({k}));\n    this.round={c,opts,out:new Set()};",
+   "find": "if(!this.walkFits(c,'right') || this.slips(c).length<3) continue;\n      return c;",
+   "replace": "if(!this.walkFits(c,'right')) continue;\n      return c;",
+   "run": "verify"
+  },
+  {
+   "name": "amounts are always positive",
+   "file": "index.html",
+   "find": "      const c={u,v,a:R.pick(this.AMTS),b:R.pick(this.AMTS)};",
+   "replace": "      const c={u,v,a:R.pick([1,2]),b:R.pick([1,2])};",
+   "run": "verify"
+  },
+  {
+   "name": "the same pair may come twice",
+   "file": "index.html",
+   "find": "return {u:[2,1],v:[1,-1],a:1,b:2};\n  },\n  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,\n  newRound(){\n    const prev=this.round && this.round.c;\n    let c;\n    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(c);",
+   "replace": "return {u:[2,1],v:[1,-1],a:1,b:2};\n  },\n  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,\n  newRound(){\n    const prev=this.round && this.round.c;\n    let c;\n    c=this.build();\n    const rest=this.slips(c);",
+   "run": "verify"
+  },
+  {
+   "name": "the mirror slip is never offered",
+   "file": "index.html",
+   "find": "return {u:[2,1],v:[1,-1],a:1,b:2};\n  },\n  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,\n  newRound(){\n    const prev=this.round && this.round.c;\n    let c;\n    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(c);\n    for(let i=rest.length-1;i>0;i--)",
+   "replace": "return {u:[2,1],v:[1,-1],a:1,b:2};\n  },\n  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,\n  newRound(){\n    const prev=this.round && this.round.c;\n    let c;\n    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }\n    const rest=this.slips(c).filter(k=>k!=='both');\n    for(let i=rest.length-1;i>0;i--)",
+   "run": "verify"
+  },
+  {
+   "name": "the right mix always comes first",
+   "file": "index.html",
+   "find": "    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
+   "replace": "    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
    "run": "verify"
   },
   {
    "name": "a miss counts as a pick",
    "file": "index.html",
-   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Detect.render();",
-   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Detect.render();",
+   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Span.render();",
+   "replace": "      r.out.add(i); this.misses++; this.last=null; this.matched++;\n    }\n    Span.render();",
    "run": "verify"
   },
   {
    "name": "a miss is not crossed off",
    "file": "index.html",
-   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Detect.render();",
-   "replace": "      this.misses++; this.last=null;\n    }\n    Detect.render();",
+   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Span.render();",
+   "replace": "      this.misses++; this.last=null;\n    }\n    Span.render();",
    "run": "verify"
   },
   {
-   "name": "a miss is not redrawn",
+   "name": "a pick does not redraw",
    "file": "index.html",
-   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Detect.render();",
-   "replace": "      r.out.add(i); this.misses++; this.last=null; return;\n    }\n    Detect.render();",
+   "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Span.render();",
+   "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }\n",
+   "run": "verify"
+  },
+  {
+   "name": "a missed mix can be picked again",
+   "file": "index.html",
+   "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
+   "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
+   "run": "verify"
+  },
+  {
+   "name": "the banner comes at four",
+   "file": "index.html",
+   "find": "Celebrate.banner('SPAN READER'",
+   "replace": "if(this.matched===4) Celebrate.banner('SPAN READER'",
    "run": "verify"
   },
   {
    "name": "a first try after a miss counts",
    "file": "index.html",
-   "find": "      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE READER'",
-   "replace": "      this.matched++;\n      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE READER'",
+   "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
+   "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('SPAN",
    "run": "verify"
   },
   {
-   "name": "no banner at five",
+   "name": "the toast miscounts the tries",
    "file": "index.html",
-   "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE READER'",
-   "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE READER'",
+   "find": "lands on the ring, picked ${tries===1?'on the first try':'in '+tries+' tries'}",
+   "replace": "lands on the ring, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}",
    "run": "verify"
   },
   {
-   "name": "a missed pair can be tapped again",
+   "name": "a 1 is written in front",
    "file": "index.html",
-   "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE",
-   "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('EIGENVALUE",
+   "find": "term(n,w,first){ const m=Math.abs(n), body=(m===1?'':m)+w;",
+   "replace": "term(n,w,first){ const m=Math.abs(n), body=m+w;",
    "run": "verify"
   },
   {
-   "name": "the poly writes the trace term with a plus",
+   "name": "a minus in front of u is lost",
    "file": "index.html",
-   "find": "  poly(c){ const t=this.tr(c.A), d=this.det(c.A);\n    return 'λ²'+(t===0?'':` ${t>0?'−':'+'} ${Math.abs(t)===1?'':Math.abs(t)}λ`)",
-   "replace": "  poly(c){ const t=this.tr(c.A), d=this.det(c.A);\n    return 'λ²'+(t===0?'':` ${t>0?'+':'−'} ${Math.abs(t)===1?'':Math.abs(t)}λ`)",
+   "find": "term(n,w,first){ const m=Math.abs(n), body=(m===1?'':m)+w; return first ? (n<0?'−':'')+body :",
+   "replace": "term(n,w,first){ const m=Math.abs(n), body=(m===1?'':m)+w; return first ? body :",
    "run": "verify"
   },
   {
-   "name": "a factor flips its sign",
+   "name": "v's minus becomes a plus",
    "file": "index.html",
-   "find": "  factor:l=>l===0?'λ':`(λ ${l>0?'−':'+'} ${Math.abs(l)})`,",
-   "replace": "  factor:l=>l===0?'λ':`(λ ${l>0?'+':'−'} ${Math.abs(l)})`,",
+   "find": ": (n<0?' − ':' + ')+body; },",
+   "replace": ": ' + '+body; },",
    "run": "verify"
   },
   {
-   "name": "the check adds the wrong numbers",
+   "name": "the working walks v with u's amount",
    "file": "index.html",
-   "find": "Check: ${neg(l)} + ${this.pn(m)} = ${neg(l+m)} is the trace",
-   "replace": "Check: ${neg(l)} + ${this.pn(m)} = ${neg(l-m)} is the trace",
+   "find": "+ ${pn(b)}·${this.vec(c.v)} = ${this.vec([a*c.u[0],a*c.u[1]])} + ${this.vec([b*c.v[0],b*c.v[1]])}",
+   "replace": "+ ${pn(b)}·${this.vec(c.v)} = ${this.vec([a*c.u[0],a*c.u[1]])} + ${this.vec([a*c.v[0],a*c.v[1]])}",
    "run": "verify"
   },
   {
-   "name": "the sign slip names the wrong numbers",
+   "name": "a negative amount loses its brackets",
    "file": "index.html",
-   "find": "and so gets ${neg(-m)} and ${neg(-l)}, each eigenvalue turned round",
-   "replace": "and so gets ${neg(m)} and ${neg(l)}, each eigenvalue turned round",
+   "find": "pn=n=>n<0?'('+neg(n)+')':String(n);\n    return `${this.text(c,k)} =",
+   "replace": "pn=n=>neg(n);\n    return `${this.text(c,k)} =",
    "run": "verify"
   },
   {
-   "name": "a shared eigenvalue reads as neither",
+   "name": "the swap is told the wrong way round",
    "file": "index.html",
-   "find": "    const at = px===0 ? `At λ",
-   "replace": "    const at = false ? `At λ",
+   "find": "it takes ${neg(b)} of u and ${neg(a)} of v.",
+   "replace": "it takes ${neg(a)} of u and ${neg(b)} of v.",
    "run": "verify"
   },
   {
-   "name": "the curve shows before a miss",
+   "name": "u's slip is told as v's",
    "file": "index.html",
-   "find": "    if(outs.length) out+=`<svg id=\"lpFig\"",
-   "replace": "    out+=`<svg id=\"lpFig\"",
+   "find": "if(k==='signa') return `${L} walks u the wrong way: it takes ${neg(-a)} of u, not ${neg(a)}.",
+   "replace": "if(k==='signa') return `${L} walks v the wrong way: it takes ${neg(-b)} of v, not ${neg(b)}.",
    "run": "verify"
   },
   {
-   "name": "the rings sit off the axis",
+   "name": "v's slip is told as the mirror",
    "file": "index.html",
-   "find": "s+=`<circle data-k=\"root\" cx=\"${X(l)}\" cy=\"${Y(0)}\"",
-   "replace": "s+=`<circle data-k=\"root\" cx=\"${X(l)}\" cy=\"${Y(1)}\"",
+   "find": "    if(k==='signb') return `${L} walks v",
+   "replace": "    if(k==='signbx') return `${L} walks v",
    "run": "verify"
   },
   {
-   "name": "a red dot sits on the axis",
+   "name": "the ring is told at the miss",
    "file": "index.html",
-   "find": "s+=`<circle data-k=\"miss-${L}\" cx=\"${X(x)}\" cy=\"${Y(this.p(c,x))}\"",
-   "replace": "s+=`<circle data-k=\"miss-${L}\" cx=\"${X(x)}\" cy=\"${Y(0)}\"",
+   "find": "    const t=this.at(c,...this.amts(c,'right'));\n    return `${L} is",
+   "replace": "    const t=this.at(c,...this.amts(c,k));\n    return `${L} is",
    "run": "verify"
   },
   {
-   "name": "the curve is drawn upside down",
+   "name": "y is drawn downwards",
    "file": "index.html",
-   "find": "Y=y=>(H-16-(y-lo)/(hi-lo)*(H-24)).toFixed(1);\n    let s='';\n    for(let x=x0;x<=x1;x++)",
-   "replace": "Y=y=>(8+(y-lo)/(hi-lo)*(H-24)).toFixed(1);\n    let s='';\n    for(let x=x0;x<=x1;x++)",
+   "find": "o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o-y*k).toFixed(1);",
+   "replace": "o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o+y*k).toFixed(1);",
    "run": "verify"
   },
   {
-   "name": "the window leaves out the slips",
+   "name": "the grid is squashed",
    "file": "index.html",
-   "find": "    const xs=['right',...this.SLIPS].flatMap(k=>this.pair(c,k)), x0=",
-   "replace": "    const xs=this.pair(c,'right'), x0=",
+   "find": "const L=this.L, k=(W-24)/(2*L), o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o-y*k)",
+   "replace": "const L=this.L, k=(W-24)/(2*L), o=W/2, X=x=>(o+x*k).toFixed(1), Y=y=>(o-y*k*0.9)",
    "run": "verify"
   },
   {
-   "name": "the y labels sit at the edge",
+   "name": "the y labels are one tick off",
    "file": "index.html",
-   "find": "s+=`<text x=\"${(+X(x0)-3).toFixed(1)}\" y=\"${(+Y(y)+3).toFixed(1)}\" font-size=\"9\" fill=\"${FIG_COL.dim}\" text-anchor=\"end\">${neg(y)}</text>`;\n    return s;\n  },\n  html(){\n    this.start();\n    const r=this.round, c=r.c, m=this.miss()",
-   "replace": "s+=`<text x=\"${(+X(x0)-23).toFixed(1)}\" y=\"${(+Y(y)+3).toFixed(1)}\" font-size=\"9\" fill=\"${FIG_COL.dim}\" text-anchor=\"end\">${neg(y)}</text>`;\n    return s;\n  },\n  html(){\n    this.start();\n    const r=this.round, c=r.c, m=this.miss()",
+   "find": "s+=`<text x=\"${(+X(0)-4).toFixed(1)}\" y=\"${(+Y(i)+3).toFixed(1)}\"",
+   "replace": "s+=`<text x=\"${(+X(0)-4).toFixed(1)}\" y=\"${(+Y(i+1)+3).toFixed(1)}\"",
    "run": "verify"
   },
   {
-   "name": "a missed pair is not told",
+   "name": "the red walk is one leg",
    "file": "index.html",
-   "find": "${gone?'. Not the eigenvalues':''}",
-   "replace": "${gone?'':''}",
+   "find": "s+=arrow([0,0],m,'#e5484d',true,'miss-u-'+'ABCD'[i])+arrow(m,e,'#e5484d',true,'miss-v-'+'ABCD'[i]);",
+   "replace": "s+=arrow([0,0],e,'#e5484d',true,'miss-u-'+'ABCD'[i])+arrow(m,e,'#e5484d',true,'miss-v-'+'ABCD'[i]);",
    "run": "verify"
   },
   {
-   "name": "A is not read out",
+   "name": "the second leg starts at 0",
    "file": "index.html",
-   "find": "aria-label=\"A has rows ${neg(c.A[0][0])}, ${neg(c.A[0][1])} and",
-   "replace": "aria-label=\"A has rows ${neg(c.A[0][0])}, ${neg(c.A[1][0])} and",
+   "find": "+arrow(m,e,'#e5484d',true,'miss-v-'+'ABCD'[i]);",
+   "replace": "+arrow([0,0],e,'#e5484d',true,'miss-v-'+'ABCD'[i]);",
+   "run": "verify"
+  },
+  {
+   "name": "the red walks are solid",
+   "file": "index.html",
+   "find": "s+=arrow([0,0],m,'#e5484d',true,'miss-u-'",
+   "replace": "s+=arrow([0,0],m,'#e5484d',false,'miss-u-'",
+   "run": "verify"
+  },
+  {
+   "name": "the miss's end is marked at the ring",
+   "file": "index.html",
+   "find": "s+=`<circle data-k=\"end-${'ABCD'[i]}\" cx=\"${X(e[0])}\" cy=\"${Y(e[1])}\"",
+   "replace": "s+=`<circle data-k=\"end-${'ABCD'[i]}\" cx=\"${X(t[0])}\" cy=\"${Y(t[1])}\"",
+   "run": "verify"
+  },
+  {
+   "name": "the ring sits on u",
+   "file": "index.html",
+   "find": "s+=`<circle data-k=\"ring\" cx=\"${X(t[0])}\" cy=\"${Y(t[1])}\"",
+   "replace": "s+=`<circle data-k=\"ring\" cx=\"${X(c.u[0])}\" cy=\"${Y(c.u[1])}\"",
+   "run": "verify"
+  },
+  {
+   "name": "v is drawn in blue",
+   "file": "index.html",
+   "find": "arrow([0,0],c.v,FIG_COL.c,false,'v');",
+   "replace": "arrow([0,0],c.v,FIG_COL.a,false,'v');",
+   "run": "verify"
+  },
+  {
+   "name": "u is drawn to v",
+   "file": "index.html",
+   "find": "s+=arrow([0,0],c.u,FIG_COL.a,false,'u')",
+   "replace": "s+=arrow([0,0],c.v,FIG_COL.a,false,'u')",
+   "run": "verify"
+  },
+  {
+   "name": "u is not named on the picture",
+   "file": "index.html",
+   "find": "fill=\"${FIG_COL.a}\" text-anchor=\"${c.u[0]<0?'end':'start'}\">u</text>",
+   "replace": "fill=\"${FIG_COL.a}\" text-anchor=\"${c.u[0]<0?'end':'start'}\"></text>",
+   "run": "verify"
+  },
+  {
+   "name": "the picture forgets the red walks",
+   "file": "index.html",
+   "find": "${outs.length?'; red walks for '+outs.map(i=>'ABCD'[i]).join(' and ')+', each landing off the ring':''}",
+   "replace": "",
+   "run": "verify"
+  },
+  {
+   "name": "a missed mix is not told as off the ring",
+   "file": "index.html",
+   "find": "aria-label=\"${'ABCD'[i]}: ${x}${gone?'. Not on the ring':''}\"",
+   "replace": "aria-label=\"${'ABCD'[i]}: ${x}\"",
+   "run": "verify"
+  },
+  {
+   "name": "a missed mix stays open",
+   "file": "index.html",
+   "find": "data-opt=\"${'ABCD'[i]}\" ${gone?'disabled ':''}onclick=\"SpanPick",
+   "replace": "data-opt=\"${'ABCD'[i]}\" onclick=\"SpanPick",
+   "run": "verify"
+  },
+  {
+   "name": "the miss is not explained",
+   "file": "index.html",
+   "find": "if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.last.c,'right')}, right on the ring.",
+   "replace": "if(m!==null) lines.push(this.check(c,r.opts[m].k,'ABCD'[m]));\n    else if(this.last) lines.push(`That was it: ${this.work(this.last.c,'right')}, right on the ring.",
+   "run": "verify"
+  },
+  {
+   "name": "the right pick's working shows the new pair",
+   "file": "index.html",
+   "find": "lines.push(`That was it: ${this.work(this.last.c,'right')}, right on the ring.",
+   "replace": "lines.push(`That was it: ${this.work(c,'right')}, right on the ring.",
+   "run": "verify"
+  },
+  {
+   "name": "the rule is lost",
+   "file": "index.html",
+   "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div style=\"text-align:center;font-size:16px;margin-bottom:4px\">u =",
+   "replace": "let out='';\n    out+=`<div style=\"text-align:center;font-size:16px;margin-bottom:4px\">u =",
    "run": "verify"
   }
  ]
