@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-one topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy in the game, drawing from all of them would build a run
+have actually met — with seventy-one in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,12 +277,22 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**70 problem generators** in total, each producing randomised problems at three difficulty
+**71 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
+
+**Euler's method**, the newest, is where calculus starts to compute. A differential
+equation y′ = px + qy and a starting value are given, with a step h of 1 or 1/2, and the
+question is what Euler's method estimates two or three steps on. Every step is worked in
+exact fractions, and the working shows each one: the slope read where the step starts,
+then h along and h × slope up. The wrong answers are the slips people make: stopping a
+step short, keeping the first slope for every step, reading each slope at the far end of
+its step, and adding the whole slope without multiplying by h. It joins the Applications
+strand and the Infinite Expanse. Knight codes now tolerate a topic added at the end of
+the list, so a code made before it arrived still carries every topic's history.
 
 ---
 
@@ -548,7 +558,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Sixty-seven of the seventy topics
+  where every answer would echo is asked the plain way. Sixty-eight of the seventy-one topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -573,6 +583,18 @@ The game is built so that losing teaches you as much as winning.
   topic it covers is solid, and is ringed in gold while one of them needs work, as
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
+- **🎲 Turn It Round, Mixed** — just under the index, one button deals a
+  question from a different workshop's turned-round mode each time: forty-six
+  of them, every one but the matrix match (which needs its figure). Each comes
+  with its workshop's name and its rule stated first, and is played exactly as
+  in that workshop: a wrong pick is shut and explained, the right one is marked
+  solved with its working shown, and the next workshop is one tap away (a skip
+  is too). No workshop comes twice running, and every one is dealt once before
+  any comes back, because mixing the kinds is what makes each one stick. The
+  page counts how many are solved, how many on the first try, and from how many
+  workshops; ten solved brings ROUND THE REALM. Nothing is saved, and there is
+  no clock. `npm test` reads the list against the page, so a new pick mode with
+  no place in the mix fails, and plays real picks through it.
 - **🛠 Matrix Workshop** — opened from the Tome. A 2×2 matrix you turn by hand, four
   numbers from −4 to 4 each with a − and a + button, and the plane redrawn on every tap.
   Beside it: where î and ĵ land (the first column is coloured like î and the second like
@@ -668,6 +690,19 @@ The game is built so that losing teaches you as much as winning.
   and det = −2. `npm test` checks all 25 pairs against each move worked as what it does to
   a point: every column, the determinant against the signed area of where the square lands,
   whether the order matters, and what the pair makes.
+
+  **🎯 Which matrix?** turns the workshop round: A and B are shown, each a
+  2×2 move that really moves the plane, and four matrices offered, one of them
+  BA, the move that does A first and then B. AB, the order turned round, is
+  always one of the other three, and the pair is chosen so the two differ; the
+  rest are the slips people make when they multiply: A and B added, multiplied
+  entry by entry, a row of B run along a row of A, a column of B run down a
+  column of A, and BA with its rows and columns swapped. A wrong pick is shut,
+  the entries it gets wrong turn red, and the first of them is worked as a row
+  of B times a column of A. The right pick is worked entry by entry. Nothing is
+  saved, and there is no clock. `npm test` reads every matrix back from both
+  its name and its cells, checks it against the slip it is named as, and
+  checks that the red cells are exactly the entries that differ from BA.
 - **🌫️ Limit Workshop** — the idea under every slope: some formulas give no number at
   one point, and a limit is what f(x) closes in on there. Pick one of four formulas, choose
   a side, and bring h down from 1 to 0.001, with x = a − h from the left or a + h from the
@@ -693,6 +728,26 @@ The game is built so that losing teaches you as much as winning.
   states: the derivative against the curve itself, the secant against its two points,
   the printed working against the printed numbers to the last digit, and that the
   closest h really is within 0.01 of the tangent everywhere it says so.
+
+  **🎯 Which slope?** turns the workshop round: a curve f(x) = cx² + px + q
+  with whole c, p and q, a point a and a step h (a half, a third, two thirds,
+  1, 3/2 or 2, either way), and four numbers, one of them the slope of the
+  secant from a to a + h. The rule is stated first: the slope is rise over
+  run, (f(a + h) − f(a)) ÷ h, which for this curve is c(2a + h) + p, and it
+  only settles on the tangent's slope 2ca + p as h closes in on 0. The wrong
+  numbers are the slips people make with a secant: the tangent's slope at a
+  or at a + h taken for it, the rise left undivided by the run, run over
+  rise, (a + h)² taken as a² + h², and the px term dropped. About half the
+  answers are whole and half below 0, with a wrong number of the same form
+  and the same sign beside the right one; no number on the page (c, p, q, a,
+  a + h, h, or the curve's height at either end) is ever the answer, and the
+  right one sits lowest, highest or between as often as the slips allow. A
+  wrong pick is shut and checked by the line it draws: from (a, f(a)) a line
+  of that slope reaches a height at a + h where the curve is not. The right
+  pick works rise over run through. Nothing is saved, and there is no clock.
+  `npm test` reads every number back off its button, checks it against the
+  slip it is named as, measures rise over run from f at both ends so only
+  the right one matches, and works every check's line again.
 - **🏺 Area Workshop** — the Tome's third workshop, and the integral's turn. Pick a curve
   (x² from 0 to 3, 4 − x² from 0 to 2, or x³ from −1 to 2), choose where each rectangle
   takes its height (its left edge, middle or right edge), and step from 1 rectangle to
@@ -810,6 +865,28 @@ The game is built so that losing teaches you as much as winning.
   crawl that is still above 0.5 after five steps, and f run past 100. `npm test` walks
   every step size from the start, 94 states, and checks f, ∇f and each step against its
   own sums, the next point against the step, and each verdict against f before and after.
+
+  **🎯 Which step?** turns the workshop round on a valley along one line:
+  f(x) = a(x − m)² + c with whole a, m and c, a start x and a step size η
+  (a tenth, an eighth, a sixth, a fifth, a quarter, 3/10, a third, 3/8 or
+  2/5), and four numbers, one of them where one step lands. The rule is
+  stated first: the slope f′(x) = 2a(x − m) points uphill, so one step lands
+  on x − η·f′(x). The wrong numbers are the slips people make with a step:
+  stepping up the slope, forgetting the 2 the square brings down, forgetting
+  η, stepping by the height f(x) where it is the slope, giving the step
+  without the start, dividing by η, and dropping the m from the slope. Every
+  step dealt goes downhill. About half the answers are whole and half below
+  0, with a wrong number of the same form and the same sign beside the right
+  one; no number on the page (a, m, c, the start, η, the height, the slope
+  there or the 2 the square brings down) is ever the answer, and the right
+  one sits lowest, highest or
+  between as often as the slips allow. A wrong pick is shut and checked
+  backwards: the slope its step would need, (x − v) ÷ η, is not f′(x). The
+  right pick works the step through and shows f falling. Nothing is saved,
+  and there is no clock. `npm test` reads every number back off its button,
+  checks it against the slip it is named as, measures the slope from f
+  itself so only the right number is one step against it, and works every
+  check again.
 - **🧭 Span Workshop** — a mix of two arrows, a·u + b·v, walked out: a of u from the
   origin in blue, then b of v from its tip in green, and the gold sum. Pick one of four
   pairs and set a and b from −2 to 2 to land on the gold ring. The readout works the mix
@@ -1469,6 +1546,24 @@ The game is built so that losing teaches you as much as winning.
   gives the unit vector, and stretching by k stretches the length by |k|.
   Adding u and v shows that lengths do not add the way parts do. Six things to
   find, and fights on adding, scaling, length and unit vectors now offer it.
+
+  **🎯 How long?** turns the workshop round: two whole-number vectors u and
+  v, a whole k, and four lengths, one of them the length of w = k·u + v. The
+  rule is stated first: stretch u by k, add v part by part, then Pythagoras.
+  The wrong lengths are the slips people make with vectors: leaving out k,
+  stretching v instead of u, taking v away, leaving v off, adding the two
+  parts as lengths, adding them before squaring, and taking one square from
+  the other. w always leans, so its length is never just one of its parts;
+  about half the answers are whole and half are roots, with a wrong length of
+  the same form beside the right one; no number on the page is the answer, no
+  wrong length is the answer squared or squares to it, none is the sum of two
+  others, and the right one sits shortest, longest or between as often as the
+  slips allow. A wrong pick is shut and checked by Pythagoras backwards: its
+  square is not w₁² + w₂². The right pick builds w part by part and measures
+  it. Nothing is saved, and there is no clock. `npm test` reads every length
+  back off its button, checks it against the slip it is named as, measures
+  the arrow itself so only the right length fits it, and works every check
+  again.
 - **🌅 Horizon Workshop** — limits at infinity. Step x out from 1 to a million,
   ten times further each press, and watch a fraction's biggest terms take over
   from the rest. Equal powers head for the ratio of their numbers, a bigger
@@ -1679,6 +1774,19 @@ The game is built so that losing teaches you as much as winning.
   they make the whole of it. Find the bottom of xˣ at 1/e and the top of
   x^(1/x) at e. Seven things to find, and a fight on logarithmic
   differentiation now offers it.
+
+  **🎯 Which slope of ln y?** turns the workshop round: a product of powers,
+  y = xᵃ·(mx + b)ᶜ ÷ (x + d)ᵉ, is shown at a whole point, and four numbers
+  offered, one of them the slope of ln y there, which is y′ ÷ y. Taking ln
+  splits it into three pieces, and their slopes add. The wrong numbers are
+  the slips people make: the powers dropped, the m inside left out, the piece
+  that divides added, ln u's slope taken as u′ with no ÷ u, one taken off each
+  power as the power rule would, and each piece divided the wrong way round.
+  A wrong pick is shut and checked at the first piece it gets wrong; the right
+  one is worked piece by piece. No piece's slope is ever the answer, so a
+  check never hands it over. Nothing is saved, and there is no clock.
+  `npm test` checks every number against the slip it is named as, and the
+  right one alone against ln y nudged on either side of the point.
 - **🛤️ Path Chain Workshop** — walk a point along a path over a hill
   z = f(x, y) and watch dz/dt come from two parts: the x part
   (∂z/∂x)(dx/dt) and the y part (∂z/∂y)(dy/dt), drawn as bars that add up,
@@ -1737,10 +1845,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy bars.
+  reading seventy-one bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Seventy-one topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
@@ -1891,7 +1999,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and thirty suites, about 5,280 checks, about a minute:
+loop only exists once the page is running. A hundred and thirty-six suites, about 5,460 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1978,7 +2086,8 @@ loop only exists once the page is running. A hundred and thirty suites, about 5,
 | `intpick` | the Tome says the area workshop can be turned round; the workshop opens on closing in with rectangles, and switching to which integral puts away the curves, the figure, the stepper, the rules, the readout and the goals and states the rule first; the curve is named with its ends and the picture is read out, saying where it crosses and that part is under the axis; four numbers are offered two by two, each named; a wrong pick is shut, told which slip it is and not counted; the right pick shows F worked at both ends, counts (not as a first try after a miss), toasts and deals a new curve with all four open; a first try counts as one, and the fifth brings INTEGRAL READER; every button is named, nothing runs off a phone, closing in comes back, and the save is unchanged |
 | `chainpick` | the Tome says the chain rule workshop can be turned round; the workshop opens on the two links, and switching to which dy/dx puts away the pairs, the figure, the rules, the x stepper, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′(u) and g′(x) out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings CHAIN READER; every button is named, the eigenvalue detective still draws into its own panel while a curve is up, nothing runs off a phone, the two links come back, and the save is unchanged |
 | `productpick` | the Tome says the product rule workshop can be turned round; the workshop opens on growing the field, and switching to which dy/dx puts away the fields, the figure, the h stepper, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′ and g′ out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings PRODUCT READER; every button is named, nothing runs off a phone, the field comes back, and the save is unchanged |
-| `quotpick` | the Tome says the quotient rule workshop can be turned round; the workshop opens on working the slope, and switching to which dy/dx puts away the sets, the figure, the x stepper, the modes, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′ and g′ out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings QUOTIENT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |\n| `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
+| `quotpick` | the Tome says the quotient rule workshop can be turned round; the workshop opens on working the slope, and switching to which dy/dx puts away the sets, the figure, the x stepper, the modes, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′ and g′ out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings QUOTIENT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
 | `lampick` | the Tome says the eigenvalue detective can be turned round; the detective opens on hunting them down, and switching to which λ puts away the matrices, the curve, the stepper, the readout and the goals and states the rule first; A is written and read out, with no curve yet; four pairs are offered two by two, each named as λ = x and y; a wrong pick is named as its slip, checked at its own two numbers and worked out, draws det(A − λI) with two gold rings and red dots at the pair that the picture names, is shut and not counted; the right pick works the trace and det A out, counts (not as a first try after a miss), toasts and deals a new matrix with all four open and the curve put away; a first try counts as one, and the fifth brings EIGENVALUE READER; every button is named, nothing runs off a phone, the hunt comes back, and the save is unchanged |
 | `spanpick` | the Tome says the span workshop can be turned round; the workshop opens on mixing the arrows, and switching to which mix puts away the pairs, the amounts, the plane, the readout and the goals and states the rule first; u, v and the ring are written and drawn, and the picture is read out; four mixes are offered two by two, each named as a mix of u and v; a wrong pick is named as its slip, worked to where it lands, walked in red in two legs to a marked end that the picture names, shut and not counted; the right pick works the mix, counts (not as a first try after a miss), toasts and deals a new pair with all four open and no red walk; a first try counts as one, and the fifth brings SPAN READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `dotpick` | the Tome says the dot product workshop can be turned round; the workshop opens on setting the arrows, and switching to which u·v puts away the steppers, the plane, the readout, Start again and the goals and states the rule first; u and v are written and drawn with no shadow, and the picture is read out; four numbers are offered two by two, each named as u·v; a wrong pick is named as its slip, set beside the right sum and its sign, draws u's shadow on v's line that the picture names, is shut and not counted; the right pick works the sum, counts (not as a first try after a miss), toasts and deals a new pair with all four open and no shadow; a first try counts as one, and the fifth brings DOT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
@@ -2016,6 +2125,12 @@ loop only exists once the page is running. A hundred and thirty suites, about 5,
 | `swappick` | the Tome says the swap workshop can be turned round; the workshop opens on picking a u by hand, and switching to which number in front puts away the integrals, the figure, the u buttons, the readout and the goals and states the rule first; an integral and its answer with k in front are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the chain rule, shut and told as not the number in front, and not counted; the right pick works the swap through, counts (not as a first try after a miss), toasts and deals a new integral; a first try counts as one, and the fifth brings BRACKET BREAKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `splitpick` | the Tome says the two castles workshop can be turned round; the workshop opens on running the nights by hand, and switching to which split puts away the rules, the figure, the steppers, the readout and the goals and states the rule first; how the knights ride is shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by riding one night from them, shut and told as not the steady split, and not counted; the right pick works the balance through, counts (not as a first try after a miss), toasts and deals a new rule; a first try counts as one, and the fifth brings KEEPER OF THE SPLIT; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `partspick` | the Tome says the parts workshop can be turned round; the workshop opens on picking a split by hand, and switching to which number alone puts away the integrals, the figure, the split buttons, the readout and the goals and states the rule first; the integral and its answer with B alone are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the product rule, shut and told as not the number alone, and not counted; the right pick works the parts through, counts (not as a first try after a miss), toasts and deals a new integral; a first try counts as one, and the fifth brings PARTS MASTER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `secantpick` | the Tome says the slope workshop can be turned round; the workshop opens on closing in by hand, and switching to which slope puts away the curves, the figure, the steppers, the side switch, the readout and the goals and states the rule first; the curve and the step are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the line they draw from the first point, shut and told as not the secant's slope, and not counted; the right pick works rise over run through, counts (not as a first try after a miss), toasts and deals a new secant; a first try counts as one, and the fifth brings SECANT SEER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `descentpick` | the Tome says the downhill workshop can be turned round; the workshop opens on walking by hand, and switching to which step puts away the step sizes, the figure, the step buttons, the readout and the goals and states the rule first; the valley, the start and the step size are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the slope their step would need, shut and told as not where the step lands, and not counted; the right pick works the step through, counts (not as a first try after a miss), toasts and deals a new valley; a first try counts as one, and the fifth brings VALLEY STEPPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `arrowpick` | the Tome says the arrow workshop can be turned round; the workshop opens on building by hand, and switching to how long puts away the pairs, the figure, the k buttons, the add button, the readout and the goals and states the rule first; u, v and k are shown and four lengths offered, each named by its length; two wrong picks are each named as their slip and checked by Pythagoras backwards, shut and told as not the length of w, and not counted; the right pick builds w part by part and measures it, counts (not as a first try after a miss), toasts and deals a new pair; a first try counts as one, and the fifth brings ARROW MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `mixpick` | the Tome offers the mix with how many workshops are in it, more than forty; the mix opens on a question from a workshop named as the Tome names it, with its rule first, four named answers, a skip and no count line of its own; a wrong pick is shut, told as wrong and explained, and not solved; the right pick does not redraw the workshop behind it, is marked solved (not on the first try) with its working shown, counted, and the next workshop is one tap away; the next is from another workshop, and a first try is marked and counted as one; a skip deals from a workshop not yet seen and is not counted; the tenth solved brings ROUND THE REALM, from ten different workshops; every button is named, nothing runs off a phone, coming back keeps the same question, and the save is unchanged |
+| `composepick` | the Tome says Order Matters can be turned round; the mode is pressed and the moves, the figure, the readout and the goals step aside; the rule comes first; A and B are drawn and read out, and four matrices are offered, each named by its rows, AB among them; AB picked is named as the order turned round, checked as a row of B times a column of A, shut and told as not BA, with its wrong entries red, and not counted; the right pick is worked entry by entry, counted but not as a first try, toasted, and deals a new pair with nothing red; a first try is counted as one; the fifth brings MOVE MAKER; every button is named, it fits a phone with the four two by two, the moves come back with the four put away, and the save is unchanged |
+| `lnpick` | the Tome says the log slope workshop can be turned round; the mode is pressed and the curves, the figure, the x steps, the rules, the readout and the goals step aside; the rule comes first; the curve is shown at a point and four numbers are offered, each named; a wrong pick is named as its slip, checked at the first piece it gets wrong, shut and told as not the slope of ln y, and not counted; the right pick is worked piece by piece, counted but not as a first try, toasted, and deals a new curve; a first try is counted as one; the fifth brings LOG SPLITTER; every button is named, it fits a phone with the four two by two, the hand-worked curves come back with the four put away, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |
@@ -2194,7 +2309,8 @@ The generators were also checked by:
   while a genuinely fresh browser stays fresh rather than inventing a save.
 - **Save isolation on a shared browser** — two knights kept apart through switching back
   and forth, erasing one leaving the other intact, a pre-profiles save adopted without loss,
-  a knight carried to an empty browser by code, and a corrupted code refused rather than
+  a knight carried to an empty browser by code, a code made when the game held seventy
+  topics still read with its history, and a corrupted code refused rather than
   overwriting anything. Plus the shared-device footgun itself: cancelling the "start over"
   prompt has to leave the save untouched.
 - **Layout at six viewports** from a 320px iPhone SE to a 768px iPad and 844×390 landscape,

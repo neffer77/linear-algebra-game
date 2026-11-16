@@ -88,7 +88,7 @@ function loadGame() {
     ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itTab')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tqTab')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('ivTab')")) + 'render(){}};exports.InvSlope=InvSlope;' +
-    ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
+    ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
@@ -321,6 +321,8 @@ for (const key of Object.keys(GEN)) {
       }
       if (q.codex !== undefined && (!q.codex.rule || q.codex.rule.length > 200))
         fail('contract', key, 'codex needs a rule of at most 200 characters');
+      if (q.codex !== undefined && !String(q.codex.eg || '').trim())
+        fail('contract', key, 'codex needs a worked example');
       if (q.fig !== undefined) {
         figKeys.add(key); figKinds.add(q.fig.kind); figsChecked++;
         checkFigure(q.fig, key, 'fig');
@@ -1106,6 +1108,27 @@ Object.assign(ANALYSIS, {
     valueCheck('geoSeries', sum, p.a, 1e-6);
   },
 
+  // Euler's method, walked again here in floating point from the question's
+  // own numbers: from (0, y0), each step adds h × (px + qy) to y and h to x.
+  euler: p => {
+    const t = String(p.q).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const m = t.match(/h = (\d+(?:\/\d+)?) on y′ = (-?\d*)x ([+-]) (\d*)y, starting from y\(0\) = (-?\d+)\. What is its estimate of y\((\d+(?:\/\d+)?)\)\?/);
+    if (!m) { fail('analysis', 'euler', `the question does not read as Euler's method: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const h = val(m[1]), cx = m[2] === '' ? 1 : m[2] === '-' ? -1 : +m[2], cy = (m[3] === '-' ? -1 : 1) * (m[4] === '' ? 1 : +m[4]);
+    let x = 0, y = +m[5];
+    const end = val(m[6]);
+    const ys = [];
+    while (x < end - 1e-9) { y += h * (cx * x + cy * y); x += h; ys.push(y); }
+    valueCheck('euler', y, p.a, 1e-9);
+    // The working takes every step, each landing where the walk does.
+    const w = String(p.ex).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const got = [...w.matchAll(/the slope is [^,]* = (-?\d+(?:\/\d+)?), so y\([^)]*\) ≈ [^=]* = (-?\d+(?:\/\d+)?)\./g)].map(q => val(q[2]));
+    if (got.length !== ys.length || got.some((v, k) => Math.abs(v - ys[k]) > 1e-9))
+      fail('analysis', 'euler', `the working does not take each of the ${ys.length} steps: ${w}`);
+  },
   taylor: p => {
     const t = flat(p.q);
     const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
@@ -1127,6 +1150,20 @@ for (const [key, check] of Object.entries(ANALYSIS)) {
   for (let i = 0; i < REPS; i++) {
     const p = GEN[key](2);
     try { check(p); } catch (e) { fail('analysis', key, `threw: ${e.message} — q was ${p.q}`); break; }
+  }
+}
+
+// Euler's method at every depth, read straight off the generator: the answer
+// and its four slips are five different exact numbers, none of them 0. A slip
+// that matched the answer (adding the whole slope when h is 1 does) would be
+// a second right answer, and a decimal would give the answer away.
+for (let d = 1; d <= 3; d++) {
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.euler(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'euler', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => /^−?0$/.test(v))) fail('analysis', 'euler', `0 is offered: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v))) fail('analysis', 'euler', `a number is not exact: ${vals.join(', ')}`);
   }
 }
 
@@ -1157,15 +1194,16 @@ let codeNotes = null;
       // its own list precisely so that it can be lifted in here without the
       // eight tables of foe curves that SETTINGS itself drags along.
       arr('const SETTING_ORDER = [') + ';' +
+      arr('const STRANDS = [') + ';' +
       cut('const B32 =', 'const Profiles = {') +
       ';var Game={fresh:()=>({topicStats:{}})};' +
       'exports.Codec=Codec;exports.QR=QR;exports.TOPIC_LABEL=TOPIC_LABEL;' +
       'exports.CRESTS=CRESTS;exports.CREST_COLS=CREST_COLS;exports.REALMS=REALMS;' +
-      'exports.SETTING_ORDER=SETTING_ORDER;')(out);
+      'exports.SETTING_ORDER=SETTING_ORDER;exports.STRANDS=STRANDS;')(out);
   } catch (e) {
     return fail('codes', 'load', `could not load the codec: ${e.message}`);
   }
-  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS, SETTING_ORDER } = out;
+  const { Codec, QR, TOPIC_LABEL, CRESTS, CREST_COLS, REALMS, SETTING_ORDER, STRANDS } = out;
 
   /* 1. The topic list is what the mastery half of a code is indexed by, and a
         code carries a 16-bit fingerprint of it. Changing the list is allowed —
@@ -1173,7 +1211,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 70, sig: 0x502a };
+  const PINNED = { count: 71, sig: 0x6193 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -1181,6 +1219,15 @@ let codeNotes = null;
       `pinned at ${PINNED.count} and 0x${PINNED.sig.toString(16)}). Knight codes already in the ` +
       `wild will import without their topic history. If that is intended, update PINNED in tools/verify.js.`);
   }
+  // A new topic has to be fought somewhere and filed somewhere: one in no
+  // realm's pool is only ever met in Training, and one in no strand drops out
+  // of every screen that is grouped by strand.
+  const pooled = new Set(REALMS.flatMap(r => r.pool));
+  const unpooled = keys.filter(k => !pooled.has(k));
+  if (unpooled.length) fail('codes', 'realms', `no realm asks ${unpooled.join(', ')}`);
+  const filed = STRANDS.flatMap(([, ks]) => ks);
+  const misfiled = keys.filter(k => filed.filter(f => f === k).length !== 1);
+  if (misfiled.length) fail('codes', 'strands', `${misfiled.join(', ')} not in exactly one strand`);
 
   /* 2. base32 has to be exactly reversible, or a code is a coin toss.
         Every length mod 5 leaves a different number of bits over into the last
@@ -1267,6 +1314,17 @@ let codeNotes = null;
   if (!dv1.ok) fail('codes', 'compat', `a v1 code no longer decodes (${dv1.why})`);
   else if (dv1.g.rev !== 0) fail('codes', 'compat', `a v1 code decoded with rev ${dv1.g.rev}, expected 0`);
   else if (dv1.g.lvl !== 7) fail('codes', 'compat', `a v1 code decoded with lvl ${dv1.g.lvl}, expected 7`);
+
+  /* A code made when the list held seventy topics, before Euler's method was
+     added at its end. The list only grows at the end, so the old code still
+     names the same topics at the same places and must keep its history:
+     practice on the dot product, matrix multiplication and Taylor. */
+  const OLD70 = 'KE7-A5ICVDNUDUCUE63DEEBBW6ZDFCQJWQAXRCIGQQD2YAQEAIKMQAJIBEFQVAAQAAAAAKAAAAAAAACAEABAAIACAAQAEABAAIAGQAAAYPN4AAACGCBAAAAAAAAAAABGACL7QUAVIAB76AUASACEAAFASAAAAMAQAAAAAAAAAAAAAAAAAKLK';
+  const d70 = Codec.decode(OLD70);
+  if (!d70.ok) fail('codes', 'append', `a code from before the last topic was added no longer decodes (${d70.why})`);
+  else if (d70.lostTopics || Object.keys(d70.g.topicStats).sort().join() !== 'dot,matMul,taylor')
+    fail('codes', 'append', `a code from before the last topic was added lost its topic history: ${Object.keys(d70.g.topicStats).join(', ') || 'none'}`);
+  else if (d70.g.topicStats.dot.seen !== 12 || d70.g.gold !== 777) fail('codes', 'append', 'a code from before the last topic was added came back changed');
 
   /* 3. The QR encoder was checked module-for-module against an independent
         implementation across versions 1–25, at every mask. That cannot run
@@ -8255,6 +8313,934 @@ const partsPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which slope? The slope workshop turned round. Every number is read back
+   off its button and checked against the slip it is named as, worked from
+   the curve here; the right one alone is the secant's slope, found without
+   the rule: rise over run, from f measured at both ends. Each wrong number's
+   check is worked again: the line it draws really does miss the curve. */
+const secantPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Slope = {render(){ env.renders++; }};" +
+    cut('const SecantPick = {', '/* ---------------------------- slope workshop') + 'return SecantPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const num = v => v[0] / v[1];
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const f = (Q, x) => Q.c * x * x + Q.p * x + Q.q;
+  // f at n/d, exactly
+  const fx = (Q, n, d) => red(Q.c * n * n + Q.p * n * d + Q.q * d * d, d * d);
+  const poly = Q => { const out = []; [[Q.c, 'x²'], [Q.p, 'x'], [Q.q, '']].filter(([n]) => n).forEach(([n, x], i) => {
+    const m = Math.abs(n), body = x && m === 1 ? x : `${m}${x}`; out.push(i === 0 ? (n < 0 ? '−' : '') + body : (n < 0 ? ' − ' : ' + ') + body); }); return out.join(''); };
+  // every number, worked from the slip it stands for; h = hn/hd
+  const want = (k, Q) => { const { c, p, a, hn, hd } = Q, s = c * (2 * a * hd + hn) + p * hd;
+    return k === 'right' ? red(s, hd) : k === 'tangent' ? red(2 * c * a + p, 1) : k === 'far' ? red(2 * c * (a * hd + hn) + p * hd, hd)
+      : k === 'noDiv' ? red(hn * s, hd * hd) : k === 'flip' ? red(hd, s) : k === 'square' ? red(c * hn + p * hd, hd) : k === 'noP' ? red(c * (2 * a * hd + hn), hd) : null; };
+  // rise over run, measured from f at both ends
+  const secant = Q => { const h = Q.hn / Q.hd; return (f(Q, Q.a + h) - f(Q, Q.a)) / h; };
+  const slipOf = (k, L, Q) => { const { c, p, a } = Q, h = fr(red(Q.hn, Q.hd)), b = fr(red(a * Q.hd + Q.hn, Q.hd));
+    if (k === 'tangent') return `${L} is the tangent's slope at ${ng(a)}, 2ca + p = ${ng(2 * c * a + p)}: where the secant's slope heads as h closes in on 0. With h = ${h} it is not there yet.`;
+    if (k === 'far') return `${L} is the tangent's slope at the far end, ${b}. The secant joins the two points, and its slope is rise over run between them.`;
+    if (k === 'noDiv') return `${L} is the rise, f(${b}) − f(${ng(a)}), not yet divided by the run, h = ${h}.`;
+    if (k === 'flip') return `${L} divides the wrong way round, run over rise. Slope is rise over run: f(${b}) − f(${ng(a)}) on top, h underneath.`;
+    if (k === 'square') return `${L} takes (a + h)² as a² + h², dropping the 2ah. (a + h)² = a² + 2ah + h², so the rise keeps a c × 2ah.`;
+    return `${L} drops the ${p === 1 ? '' : p === -1 ? '−' : ng(p)}x. Over a step of h it changes by ${ng(p)} × h, which adds ${ng(p)} to the slope.`; };
+  const RULE = 'A secant joins two points on a curve, (a, f(a)) and (a + h, f(a + h)). Its slope is rise over run: (f(a + h) − f(a)) ÷ h. For f(x) = cx² + px + q the rise is c(2ah + h²) + ph, so the slope is c(2a + h) + p. Bring h towards 0 and it settles on the tangent\'s slope, 2ca + p, but until then it is not. Which is the slope of this secant?';
+  if (S.RULE !== RULE) fail('secantpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('secantpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['tangent', 'far', 'noDiv', 'flip', 'square', 'noP'];
+  const HS = ['1/2', '1', '3/2', '2', '1/3', '2/3'];
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, negs = 0, choice = 0, later = 0;
+  const slots = new Set(), kinds = {}, Cs = new Set(), Ps = new Set(), Qs = new Set(), As = new Set(), Hs = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), H = red(Q.hn, Q.hd);
+      rounds++; Cs.add(Q.c); Ps.add(Q.p); Qs.add(Q.q); As.add(Q.a); Hs.add(fr(H));
+      if (![1, 2, 3].includes(Math.abs(Q.c)) || !(Math.abs(Q.p) <= 5) || !(Math.abs(Q.q) <= 4) || !(Math.abs(Q.a) <= 3) || !HS.includes(fr([Math.abs(H[0]), H[1]])) || ![Q.c, Q.p, Q.q, Q.a].every(Number.isInteger)) fail('secantpick', key, `${sig} is not a curve and step of the kind dealt`);
+      if (prev && prev === sig) fail('secantpick', key, 'the same secant comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('secantpick', key, 'there are not four numbers, one of them right');
+      const b = red(Q.a * Q.hd + Q.hn, Q.hd);
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = ${poly(Q)}, from x = ${ng(Q.a)} to x = ${fr(b)} (h = ${fr(H)}) Which is the slope of the secant? A `)) fail('secantpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="SecantPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('secantpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('secantpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(num(v)) > 60)) fail('secantpick', key, 'a number is 0, or past 60');
+      if (new Set(vals.map(String)).size !== 4) fail('secantpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      // no number on the page, the curve's own, the ends, the step or the heights there, is the answer
+      if ([[Q.c, 1], [Q.p, 1], [Q.q, 1], [Q.a, 1], b, H, fx(Q, Q.a, 1), fx(Q, Q.a * Q.hd + Q.hn, Q.hd)].some(v => String(v) === String(vals[ri]))) fail('secantpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('secantpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('secantpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('secantpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('secantpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(secant(Q) - num(vals[i])) < 1e-9)) fail('secantpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} rise over run`);
+      });
+      if (k === 0 && txt(S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('secantpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, fa = fx(Q, Q.a, 1), fb = fx(Q, Q.a * Q.hd + Q.hn, Q.hd);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('secantpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('secantpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): a line of slope (\S+) from \((\S+), (\S+)\) rises (\S+) × (\S+) = (\S+) over the step to x = (\S+), reaching a height of (\S+), but the curve is at f\((\S+)\) = (\S+) there\.$/);
+        if (!cm || cm[1] !== Lt) { fail('secantpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        if (cm[2] !== fr(vals[i]) || cm[3] !== ng(Q.a) || cm[4] !== fr(fa) || cm[5] !== pf(vals[i]) || cm[6] !== pf(H) || cm[8] !== fr(b) || cm[10] !== fr(b) || cm[11] !== fr(fb)) fail('secantpick', key, `the check of ${o.k} is not worked for this secant: ${lines[1]}`);
+        // the line, measured: it climbs slope × h, from f(a), and so misses the curve at a + h
+        const up = rdv(cm[7]), y = rdv(cm[9]);
+        if (!up || Math.abs(num(up) - num(vals[i]) * Q.hn / Q.hd) > 1e-9) fail('secantpick', key, `${cm[7]} is not how far a slope of ${fr(vals[i])} rises over the step`);
+        if (!y || Math.abs(num(y) - (f(Q, Q.a) + num(vals[i]) * Q.hn / Q.hd)) > 1e-9) fail('secantpick', key, `${cm[9]} is not the height the line of ${o.k} reaches`);
+        else if (Math.abs(num(y) - f(Q, Q.a + Q.hn / Q.hd)) < 1e-9) fail('secantpick', key, 'a wrong number passes its check');
+        const W = fr(want('right', Q)), re = new RegExp(`(^|[\\s(])${W.replace('/', '\\/')}(?![\\d/])`);
+        if (re.test(lines[1].replace(/^Check [ABCD]: a line of slope \S+/, '')) || lines[0].includes(` is ${W},`)) fail('secantpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="SecantPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the secant's slope"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('secantpick', key, 'the missed numbers are not shut and told as not the secant\'s slope');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('secantpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('secantpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('secantpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('secantpick', key, 'no fresh secant after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SECANT SEER / 5 secants read') fail('secantpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the secant's slope, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('secantpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="sqRead"')[1].replace(/^[^>]*>/, ''));
+      const W = want('right', Q), rise = red(fb[0] * fa[1] - fa[0] * fb[1], fb[1] * fa[1]);
+      const wantLine = `That was it: the rise is f(${fr(b)}) − f(${ng(Q.a)}) = ${fr(fb)} − ${pf(fa)} = ${fr(rise)} over a run of ${fr(H)}, so the slope is ${pf(rise)} ÷ ${pf(H)} = ${fr(W)}, and c(2a + h) + p gives the same. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('secantpick', key, `after a pick: ${got}`);
+      if (Math.abs(num(rise) / num(H) - num(W)) > 1e-9) fail('secantpick', key, `${fr(rise)} ÷ ${fr(H)} is not ${fr(W)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same secant dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { c: 2, p: -3, q: 1, a: 1, hn: 1, hd: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"c":2,"p":-3,"q":1,"a":1,"hn":1,"hd":2}') fail('secantpick', 'repeat', 'the same secant is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of secants: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), W = want('right', Q); if (W[1] === 1) sw++; if (W[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('secantpick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('secantpick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.3)) fail('secantpick', 'slips', `the slip ${k} is offered in ${kinds[k] || 0} of ${rounds} rounds, too seldom`);
+  if (Cs.size !== 6 || Ps.size !== 11 || Qs.size !== 9 || As.size !== 7 || Hs.size !== 12) fail('secantpick', 'deal', `c ${[...Cs]}, p ${Ps.size} values, q ${Qs.size} values, a ${As.size} values, h ${[...Hs]} is not the whole deal`);
+  if (slots.size !== 4) fail('secantpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.17 && ranks[1] > rounds * 0.26 && ranks[2] > rounds * 0.25 && ranks[3] > rounds * 0.17 && ranks[1] < rounds * 0.33 && ranks[2] < rounds * 0.33)) fail('secantpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('secantpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('secantpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('secantpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
+/* Which step? The downhill workshop turned round. Every number is read back
+   off its button and checked against the slip it is named as, worked from
+   the valley here; the right one alone is where one step lands, found
+   without the rule's formula: the slope is measured from f itself, and the
+   step taken against it. Each wrong number's check is worked again: the
+   slope its step would need is not the slope there. */
+const descentPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Descent = {render(){ env.renders++; }};" +
+    cut('const DescentPick = {', '/* ============ DOWNHILL WORKSHOP') + 'return DescentPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const pf = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const num = v => v[0] / v[1];
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const f = (Q, x) => Q.a * (x - Q.m) ** 2 + Q.c;
+  // the slope measured from f itself, by a small nudge either side
+  const slope = (Q, x) => (f(Q, x + 1e-4) - f(Q, x - 1e-4)) / 2e-4;
+  const poly = Q => `${Q.a === 1 ? '' : Q.a}${Q.m === 0 ? 'x²' : `(x ${Q.m < 0 ? '+' : '−'} ${Math.abs(Q.m)})²`}${Q.c === 0 ? '' : Q.c < 0 ? ` − ${-Q.c}` : ` + ${Q.c}`}`;
+  // every number, worked from the slip it stands for; η = en/ed
+  const want = (k, Q) => { const { x, a, m, c, en, ed } = Q, g = 2 * a * (x - m), h = a * (x - m) ** 2 + c;
+    return k === 'right' ? red(x * ed - en * g, ed) : k === 'up' ? red(x * ed + en * g, ed) : k === 'noTwo' ? red(x * ed - en * a * (x - m), ed)
+      : k === 'noEta' ? red(x - g, 1) : k === 'fval' ? red(x * ed - en * h, ed) : k === 'stepOnly' ? red(-en * g, ed)
+      : k === 'byEta' ? red(x * en - ed * g, en) : k === 'noM' ? red(x * ed - en * 2 * a * x, ed) : null; };
+  const slipOf = (k, L, Q) => { const { x, a, m } = Q, e = fr(red(Q.en, Q.ed)), g = 2 * a * (x - m);
+    if (k === 'up') return `${L} steps up the slope, to x + η·f′(x). f′(${ng(x)}) = ${ng(g)} points uphill, so downhill is the other way: take η·f′(x) away.`;
+    if (k === 'noTwo') return `${L} forgets the 2 that the square brings down. The slope of ${a === 1 ? '' : a}(x − m)² is 2 × ${a} × (x − m), not ${a === 1 ? '' : a + ' × '}(x − m).`;
+    if (k === 'noEta') return `${L} takes a whole slope's worth of step, x − f′(x), and forgets to scale it by η = ${e}.`;
+    if (k === 'fval') return `${L} steps by the height, η·f(x), where a step uses the slope, η·f′(x). How high you stand does not say which way is down.`;
+    if (k === 'stepOnly') return `${L} is the step on its own, −η·f′(x), and not where it lands: start from x = ${ng(x)} and add the step to it.`;
+    if (k === 'byEta') return `${L} divides the slope by η = ${e} where it should multiply, so a small η makes the step bigger, not smaller.`;
+    return `${L} drops the ${ng(m)} from the slope, as if the bottom were at 0: f′(x) = 2a(x − m) = 2 × ${a} × (${ng(x)} ${m < 0 ? '+' : '−'} ${Math.abs(m)}), not 2 × ${a} × ${x < 0 ? `(${ng(x)})` : x}.`; };
+  const RULE = 'Walk downhill: the slope f′(x) points uphill, so a step goes the other way. From x, one step of size η lands on x − η·f′(x). For the valley f(x) = a(x − m)² + c the slope is f′(x) = 2a(x − m): the square brings down a 2. Which x does one step land on?';
+  if (S.RULE !== RULE) fail('descentpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('descentpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['up', 'noTwo', 'noEta', 'fval', 'stepOnly', 'byEta', 'noM'];
+  const ETAS = ['1/10', '1/8', '1/6', '1/5', '1/4', '3/10', '1/3', '3/8', '2/5'];
+  let rounds = 0, misses = 0, worked = 0, whole = 0, negs = 0, fives = 0;
+  const slots = new Set(), kinds = {}, As = new Set(), Ms = new Set(), Cs = new Set(), Xs = new Set(), Es = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), E = red(Q.en, Q.ed);
+      rounds++; As.add(Q.a); Ms.add(Q.m); Cs.add(Q.c); Xs.add(Q.x); Es.add(fr(E));
+      if (![1, 2, 3].includes(Q.a) || !(Math.abs(Q.m) <= 3) || !(Q.c >= -2 && Q.c <= 4) || !(Math.abs(Q.x) <= 4) || Q.x === Q.m || !ETAS.includes(fr(E)) || ![Q.a, Q.m, Q.c, Q.x].every(Number.isInteger)) fail('descentpick', key, `${sig} is not a valley, start and step of the kind dealt`);
+      // every step goes downhill: η × 2a under 2, so it never jumps clean over and climbs
+      if (!(f(Q, Q.x - num(E) * slope(Q, Q.x)) < f(Q, Q.x))) fail('descentpick', key, 'the step does not go downhill');
+      if (prev && prev === sig) fail('descentpick', key, 'the same valley comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('descentpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} f(x) = ${poly(Q)}, from x = ${ng(Q.x)}, with η = ${fr(E)} Which x does one step land on? A `)) fail('descentpick', key, 'the rule and the valley are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="DescentPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('descentpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('descentpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0 || Math.abs(num(v)) > 60)) fail('descentpick', key, 'a number is 0, or past 60');
+      if (new Set(vals.map(String)).size !== 4) fail('descentpick', key, 'two numbers are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (vals[ri][1] === 1) whole++;
+      if (vals[ri][0] < 0) negs++;
+      const g = 2 * Q.a * (Q.x - Q.m), h = f(Q, Q.x);
+      // no number on the page, the valley's own, the start, the step size, the height or the slope there, is the answer
+      if ([[Q.a, 1], [Q.m, 1], [Q.c, 1], [Q.x, 1], E, [h, 1], [g, 1], [2, 1]].some(v => String(v) === String(vals[ri]))) fail('descentpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (vals[ri][1] === 1))) fail('descentpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((v, i) => i !== ri && v[0] * vals[ri][0] > 0)) fail('descentpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(v => v[0] * vals[ri][1] < vals[ri][0] * v[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const w = want(o.k, Q);
+        if (!w) { fail('descentpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(w)) fail('descentpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        // the step measured: from the slope f itself gives, against it, η of the way
+        if ((o.k === 'right') !== (Math.abs(Q.x - num(E) * slope(Q, Q.x) - num(vals[i])) < 1e-6)) fail('descentpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} one step downhill`);
+      });
+      if (k === 0 && txt(S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('descentpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, W = fr(want('right', Q));
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('descentpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('descentpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): a step from (\S+) to (\S+) moves (\S+), so the slope behind it would be \((\S+) − (\S+)\) ÷ (\S+) = (\S+) ÷ (\S+) = (\S+), but the slope at (\S+) is f′\((\S+)\) = (\S+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('descentpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const v = vals[i];
+        if (cm[2] !== ng(Q.x) || cm[3] !== fr(v) || cm[5] !== ng(Q.x) || cm[6] !== pf(v) || cm[7] !== pf(E) || cm[9] !== pf(E) || cm[11] !== ng(Q.x) || cm[12] !== ng(Q.x) || cm[13] !== ng(g)) fail('descentpick', key, `the check of ${o.k} is not worked for this valley: ${lines[1]}`);
+        // the check, measured: the move, the gap back to the start, and the slope that step would need
+        const mv = rdv(cm[4]), d = rdv(cm[8]), B = rdv(cm[10]);
+        if (!mv || Math.abs(num(mv) - (num(v) - Q.x)) > 1e-9) fail('descentpick', key, `${cm[4]} is not how far a step to ${fr(v)} moves`);
+        if (!d || Math.abs(num(d) - (Q.x - num(v))) > 1e-9) fail('descentpick', key, `${cm[8]} is not ${ng(Q.x)} − ${pf(v)}`);
+        if (!B || Math.abs(num(B) - (Q.x - num(v)) / num(E)) > 1e-9) fail('descentpick', key, `${cm[10]} is not the slope behind a step to ${fr(v)}`);
+        else if (Math.abs(num(B) - slope(Q, Q.x)) < 1e-6) fail('descentpick', key, 'a wrong number passes its check');
+        if (Math.abs(g - slope(Q, Q.x)) > 1e-6) fail('descentpick', key, `${g} is not the slope at ${ng(Q.x)}`);
+        if ([cm[4], cm[8], cm[10]].includes(W) || lines[0].includes(` ${W} `)) fail('descentpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="DescentPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not where the step lands"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('descentpick', key, 'the missed numbers are not shut and told as not where the step lands');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('descentpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('descentpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('descentpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('descentpick', key, 'no fresh valley after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'VALLEY STEPPER / 5 steps landed') fail('descentpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where the step lands, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('descentpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="dhRead"')[1].replace(/^[^>]*>/, ''));
+      const st = red(Q.en * g, Q.ed), V = want('right', Q), h1 = f(Q, num(V));
+      const h1s = (() => { const p = Q.a * (V[0] - Q.m * V[1]) ** 2 + Q.c * V[1] * V[1]; return fr(red(p, V[1] * V[1])); })();
+      const wantLine = `That was it: f′(${ng(Q.x)}) = 2 × ${Q.a} × ${Q.x - Q.m < 0 ? `(${ng(Q.x - Q.m)})` : Q.x - Q.m} = ${ng(g)}, so the step is ${pf(E)} × ${g < 0 ? `(${ng(g)})` : g} = ${fr(st)}, and ${ng(Q.x)} − ${pf(st)} = ${fr(V)}. f fell from ${ng(h)} to ${h1s}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('descentpick', key, `after a pick: ${got}`);
+      if (!(h1 < h) || Math.abs(num(rdv(h1s)) - h1) > 1e-9) fail('descentpick', key, `f at ${fr(V)} is not ${h1s}, below ${h}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same valley dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, m: 1, c: 3, x: -2, en: 1, ed: 5 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"m":1,"c":3,"x":-2,"en":1,"ed":5}') fail('descentpick', 'repeat', 'the same valley is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of valleys: the answer's form and sign even
+    let sw = 0, sn = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(), V = want('right', Q); if (V[1] === 1) sw++; if (V[0] < 0) sn++; }
+    if (sw < 9000 || sw > 11000) fail('descentpick', 'sweep', `${sw} of 20000 answers are whole, not about half`);
+    if (sn < 9000 || sn > 11000) fail('descentpick', 'sweep', `${sn} of 20000 answers are below 0, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('descentpick', 'slips', `the slip ${k} is offered in ${kinds[k] || 0} of ${rounds} rounds, too seldom`);
+  if (As.size !== 3 || Ms.size !== 7 || Cs.size !== 7 || Xs.size !== 9 || Es.size !== 9) fail('descentpick', 'deal', `a ${[...As]}, m ${Ms.size} values, c ${Cs.size} values, x ${Xs.size} values, η ${[...Es]} is not the whole deal`);
+  if (slots.size !== 4) fail('descentpick', 'deal', `the number only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.06 && ranks[1] > rounds * 0.22 && ranks[2] > rounds * 0.22 && ranks[3] > rounds * 0.14)) fail('descentpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('descentpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (negs < rounds * 0.4 || negs > rounds * 0.6) fail('descentpick', 'deal', `${negs} of ${rounds} answers are below 0, not about half`);
+  if (fives !== 30) fail('descentpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
+/* How long? The arrow workshop turned round. Every length is read back off
+   its button and checked against the slip it is named as, worked from u, v
+   and k here; the right one alone is the length of k·u + v, measured with
+   Math.hypot on the arrow built part by part, not by the rule's formula.
+   Each wrong length's check is worked again: its square is not w₁² + w₂². */
+const arrowPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Arrow = {render(){ env.renders++; }};" +
+    cut('const ArrowPick = {', '/* ---------- The arrow workshop: adding') + 'return ArrowPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = p => `⟨${ng(p[0])}, ${ng(p[1])}⟩`;
+  const pw = c => (c < 0 ? `(${ng(c)})²` : `${c}²`);
+  const isSq = N => Number.isInteger(Math.sqrt(N));
+  const show = N => (isSq(N) ? String(Math.sqrt(N)) : `√${N}`);
+  // a length read off a button, as its square: a whole number, or √N with N not a square
+  const rdv = t => { let m = t.match(/^(\d+)$/); if (m) return +m[1] * +m[1];
+    m = t.match(/^√(\d+)$/); if (!m || isSq(+m[1])) return null; return +m[1]; };
+  const add = (p, q, a = 1, b = 1) => [a * p[0] + b * q[0], a * p[1] + b * q[1]];
+  const sq = p => p[0] * p[0] + p[1] * p[1];
+  // every length, built from the slip it stands for, as its square
+  const want = (k, Q) => { const w = add(Q.u, Q.v, Q.k);
+    return k === 'right' ? sq(w) : k === 'noK' ? sq(add(Q.u, Q.v)) : k === 'kv' ? sq(add(Q.u, Q.v, 1, Q.k)) : k === 'minus' ? sq(add(Q.u, Q.v, Q.k, -1))
+      : k === 'noV' ? sq(add(Q.u, [0, 0], Q.k)) : k === 'parts' ? (Math.abs(w[0]) + Math.abs(w[1])) ** 2 : k === 'sumFirst' ? (w[0] + w[1]) ** 2
+      : k === 'diffSq' ? Math.abs(w[0] ** 2 - w[1] ** 2) : null; };
+  const slipOf = (k, L, Q) => { const K = ng(Q.k);
+    if (k === 'noK') return `${L} leaves out k and measures u + v, as if k were 1. Stretch u first: every part of u is multiplied by ${K}.`;
+    if (k === 'kv') return `${L} stretches v where k belongs to u. In w = k·u + v only u is multiplied by ${K}; v is walked as it is.`;
+    if (k === 'minus') return `${L} takes v away where it is added. v is walked from the tip of k·u, so w = k·u + v.`;
+    if (k === 'noV') return `${L} is the length of k·u alone. It stops at the tip of k·u, before walking v from there.`;
+    if (k === 'parts') return `${L} adds the two parts as lengths, as if going across and then up were the straight way. The straight arrow is shorter: square each part, add, then take the root.`;
+    if (k === 'sumFirst') return `${L} adds the two parts before squaring. Pythagoras squares each part on its own: ‖w‖ = √(w₁² + w₂²), not √((w₁ + w₂)²).`;
+    return `${L} takes one square from the other. Pythagoras adds them: ‖w‖² = w₁² + w₂².`; };
+  const RULE = 'Stretch u by k: every part of u is multiplied by k. Walk v from the tip of k·u: add first with first and second with second, to get w = k·u + v. Its length comes from Pythagoras on the right triangle under it: square each part, add, then take the root, ‖w‖ = √(w₁² + w₂²). How long is w?';
+  if (S.RULE !== RULE) fail('arrowpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('arrowpick', 'open', 'a round is dealt before the mode is opened');
+  if (!script.includes("    for(const id of ['vwSets','vwFig','vwKRow','vwAddRow','vwRead','vwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('arrowpick', 'host', 'the hand workshop does not all step aside while the pick shows');
+  const SL = ['noK', 'kv', 'minus', 'noV', 'parts', 'sumFirst', 'diffSq'];
+  const tok = (W, s) => new RegExp(`(^|[^\\d√])${W}(?!\\d)`).test(s);
+  let rounds = 0, misses = 0, worked = 0, whole = 0, fives = 0;
+  const wl = {}, quads = [0, 0, 0, 0], leans = [0, 0], Us = new Set();
+  let multi = 0, firsts = 0;
+  const slots = new Set(), kinds = {}, Ks = new Set(), Ps = new Set(), ranks = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), w = add(Q.u, Q.v, Q.k);
+      rounds++; Ks.add(Q.k); [...Q.u, ...Q.v].forEach(c => Ps.add(c)); Q.u.forEach(c => Us.add(c));
+      if (![-3, -2, -1, 2, 3].includes(Q.k) || ![...Q.u, ...Q.v].every(c => Number.isInteger(c) && Math.abs(c) <= 4) || !sq(Q.u) || !sq(Q.v)) fail('arrowpick', key, `${sig} is not a pair and a k of the kind dealt`);
+      if (w[0] === 0 || w[1] === 0 || sq(w) > 300) fail('arrowpick', key, `w = ${vec(w)} lies along an axis, or is longer than √300`);
+      if (prev && prev === sig) fail('arrowpick', key, 'the same pair comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('arrowpick', key, 'there are not four lengths, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} u = ${vec(Q.u)}, v = ${vec(Q.v)}, k = ${ng(Q.k)} How long is w = k·u + v? A `)) fail('arrowpick', key, 'the rule, u, v and k are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="ArrowPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('arrowpick', key, 'the four lengths are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('arrowpick', key, `a length is not a whole number or the root of a non-square: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v > 400)) fail('arrowpick', key, 'a length is past 20');
+      if (new Set(vals).size !== 4) fail('arrowpick', key, 'two lengths are the same');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      const W = btns[ri][6], len = vals.map(Math.sqrt);
+      if (isSq(vals[ri])) { whole++;
+        // the whole lengths come from every right triangle dealt, either way round and in every quarter of the plane
+        const w = [Q.k * Q.u[0] + Q.v[0], Q.k * Q.u[1] + Q.v[1]], L = Math.sqrt(vals[ri]);
+        wl[L] = (wl[L] || 0) + 1; quads[(w[0] > 0 ? 1 : 0) + (w[1] > 0 ? 2 : 0)]++; leans[Math.abs(w[0]) > Math.abs(w[1]) ? 1 : 0]++; }
+      // no number on the page, k or a part of u or v, is the answer
+      if ([Q.k, ...Q.u, ...Q.v].some(n => n * n === vals[ri])) fail('arrowpick', key, `the answer ${W} is named elsewhere on the page`);
+      // no wrong length is the right one squared, or squares to it, which would point at it
+      if (vals.some((v, i) => i !== ri && (v === vals[ri] ** 2 || v ** 2 === vals[ri]))) fail('arrowpick', key, `a wrong length is ${W} squared, or squares to it`);
+      if (!vals.some((v, i) => i !== ri && isSq(v) === isSq(vals[ri]))) fail('arrowpick', key, 'no wrong length is of the right one’s form, whole or root');
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let m = j + 1; m < 4; m++)
+        if (i !== j && i !== m && Math.abs(len[j] + len[m] - len[i]) < 1e-9) fail('arrowpick', key, `${btns[i][6]} is the sum of ${btns[j][6]} and ${btns[m][6]}`);
+      const below = vals.filter(v => v < vals[ri]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // among the trios that would put it there, the one dealt is not always the same
+        const T = S.trios(Q), mine = r.opts.filter(o => o.k !== 'right').map(o => o.k).sort().join(), fit = T.filter(t => t.filter(x => S.val(Q, x) < vals[ri]).length === below);
+        if (fit.length > 1) { multi++; if ([...fit[0]].sort().join() === mine) firsts++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const N = want(o.k, Q);
+        if (N === null) { fail('arrowpick', key, `a length is the unknown ${o.k}`); return; }
+        if (vals[i] !== N) fail('arrowpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        // the length measured on the arrow itself
+        if ((o.k === 'right') !== (Math.abs(Math.hypot(Q.k * Q.u[0] + Q.v[0], Q.k * Q.u[1] + Q.v[1]) - len[i]) < 1e-9)) fail('arrowpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the length of k·u + v`);
+      });
+      if (k === 0 && txt(S.html().split('id="awRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('arrowpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('arrowpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="awRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('arrowpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        const cm = (lines[1] || '').match(/^Check ([ABCD]): (\S+)² = (\d+), so it would need w₁² \+ w₂² = (\d+)\. But w = (\S+)·⟨(\S+), (\S+)⟩ \+ ⟨(\S+), (\S+)⟩ = ⟨(\S+), (\S+)⟩, and (\S+) \+ (\S+) = (\d+)\.$/);
+        if (!cm || cm[1] !== Lt) { fail('arrowpick', key, `the check of ${o.k} is: ${lines[1]}`); continue; }
+        const v = vals[i];
+        if (cm[2] !== (isSq(v) ? String(Math.sqrt(v)) : `(√${v})`) || +cm[3] !== v || +cm[4] !== v || cm[5] !== ng(Q.k) || cm[6] !== ng(Q.u[0]) || cm[7] !== ng(Q.u[1])
+          || cm[8] !== ng(Q.v[0]) || cm[9] !== ng(Q.v[1]) || cm[10] !== ng(w[0]) || cm[11] !== ng(w[1]) || cm[12] !== pw(w[0]) || cm[13] !== pw(w[1])) fail('arrowpick', key, `the check of ${o.k} is not worked for this pair: ${lines[1]}`);
+        // the check, measured: the sum of the squares of the parts of the arrow built
+        if (+cm[14] !== Math.round(Math.hypot(...w) ** 2)) fail('arrowpick', key, `${cm[14]} is not w₁² + w₂²`);
+        else if (+cm[14] === v) fail('arrowpick', key, 'a wrong length passes its check');
+        if (tok(W, lines[0]) || tok(W, lines[1])) fail('arrowpick', key, `the explanation of ${o.k} hands over the answer`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="ArrowPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the length of w"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('arrowpick', key, 'the missed lengths are not shut and told as not the length of w');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('arrowpick', key, 'tapping a missed length again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('arrowpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('arrowpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('arrowpick', key, 'no fresh pair after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'ARROW MEASURER / 5 arrows measured') fail('arrowpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the length of w, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('arrowpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="awRead"')[1].replace(/^[^>]*>/, ''));
+      const N = sq(w), wantLine = `That was it: w = ${ng(Q.k)}·${vec(Q.u)} + ${vec(Q.v)} = ${vec(add(Q.u, [0, 0], Q.k))} + ${vec(Q.v)} = ${vec(w)}, and ‖w‖ = √(${pw(w[0])} + ${pw(w[1])}) = √${N}${isSq(N) ? ` = ${Math.sqrt(N)}` : ''}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('arrowpick', key, `after a pick: ${got}`);
+      if (show(N) !== W) fail('arrowpick', key, `√${N} is not shown as ${W}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same pair dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { k: 2, u: [1, 3], v: [1, -2] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"k":2,"u":[1,3],"v":[1,-2]}') fail('arrowpick', 'repeat', 'the same pair is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of pairs: the answer's form even
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (isSq(want('right', Q))) sw++; }
+    if (sw < 9000 || sw > 11000) fail('arrowpick', 'sweep', `${sw} of 20000 lengths are whole, not about half`); }
+  for (const k of SL) if (!kinds[k]) fail('arrowpick', 'slips', `the slip ${k} is never offered`);
+  if (Ks.size !== 5 || Ps.size !== 9) fail('arrowpick', 'deal', `k ${[...Ks]} and parts ${[...Ps].sort((a, b) => a - b)} are not the whole deal`);
+  if (slots.size !== 4) fail('arrowpick', 'deal', `the length only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (!(ranks[0] > rounds * 0.08 && ranks[1] > rounds * 0.16 && ranks[2] > rounds * 0.3 && ranks[3] > rounds * 0.2 && [0, 1, 2, 3].every(i => ranks[i] < rounds * 0.45))) fail('arrowpick', 'deal', `the right length sits shortest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and longest ${ranks[3]} times of ${rounds}`);
+  for (const L of [5, 10, 13, 15]) if (!((wl[L] || 0) > whole * 0.04)) fail('arrowpick', 'deal', `a whole length of ${L} comes ${wl[L] || 0} times in ${whole} whole answers, too seldom`);
+  if (Object.keys(wl).some(L => ![5, 10, 13, 15].includes(+L))) fail('arrowpick', 'deal', `a whole length is not one of the four right triangles dealt: ${JSON.stringify(wl)}`);
+  if (quads.some(q => !(q > whole * 0.15))) fail('arrowpick', 'deal', `whole answers do not point into every quarter of the plane: ${quads}`);
+  if (leans.some(q => !(q > whole * 0.3))) fail('arrowpick', 'deal', `whole answers do not lean both ways: ${leans}`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('arrowpick', 'deal', `${whole} of ${rounds} lengths are whole, not about half`);
+  if (Us.size !== 9) fail('arrowpick', 'deal', `u's parts are only ever ${[...Us].sort((a, b) => a - b)}`);
+  if (!(multi > 100 && firsts < multi * 0.75)) fail('arrowpick', 'deal', `of ${multi} rounds with a choice of trios, ${firsts} take the first one`);
+  if (fives !== 30) fail('arrowpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, ranks };
+})();
+
+/* Turn It Round, mixed. The list is read against the page: every pick of
+   four but the matrix one is in it once, with the workshop its choose
+   redraws and that workshop's own title in the Tome. Then it is dealt with
+   stand-in picks: no workshop twice running, every one once per pass, a
+   wrong pick shut and explained without the pick's count line, a right one
+   counted with the workshop behind it never redrawn, and the working shown
+   with the next workshop one tap away. Last, two real picks, the arrow's and
+   the chain rule's, are played through it: their buttons point here and
+   every id, and every url(#…) that names one, is prefixed. */
+const mixPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const mixSrc = cut('const MixPick = {', '/* ------------------------------- calculator');
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  // --- the list, read against the page ---
+  const M0 = new Function('R', 'env', mixSrc + 'return MixPick;')(R, env);
+  const tome = {};
+  for (const m of html.matchAll(/<h2 style="font-size:16px;color:var\(--gold\)">([^<]+)<\/h2>[\s\S]{0,1500}?onclick="(\w+)\.open\(\)"/g)) if (!(m[2] in tome)) tome[m[2]] = m[1];
+  const picks = [];
+  for (const m of script.matchAll(/const (\w+Pick) = \{/g)) {
+    const b = script.slice(m.index, script.indexOf('\n};', m.index));
+    picks.push({ name: m[1], host: (b.slice(b.indexOf('  choose(')).match(/(\w+)\.render\(\);/) || [])[1], body: b });
+  }
+  const inList = new Map(M0.LIST.map(r => [r[0], r]));
+  if (inList.size !== M0.LIST.length) fail('mixpick', 'list', 'a pick is in the mix twice');
+  for (const p of picks) {
+    if (p.name === 'MixPick') continue;
+    if (p.name === 'MatPick') { if (inList.has('MatPick')) fail('mixpick', 'list', 'the matrix pick, which needs its figure, is in the mix'); continue; }
+    const r = inList.get(p.name);
+    if (!r) { fail('mixpick', 'list', `${p.name} is not in the mix`); continue; }
+    if (r[1] !== p.host) fail('mixpick', 'list', `${p.name} is listed with ${r[1]}, but redraws ${p.host}`);
+    if (r[2] !== tome[p.host]) fail('mixpick', 'list', `${p.name} is listed as ${r[2]}, but the Tome calls it ${tome[p.host]}`);
+    // what the mix leans on: buttons that call its choose, and a readout whose last line is the count
+    if (!p.body.includes(`onclick="${p.name}.choose(`)) fail('mixpick', p.name, 'its buttons do not call its choose');
+    const ll = [...p.body.matchAll(/lines\.push\(/g)].pop();
+    if (!ll || !p.body.slice(ll.index).startsWith('lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);')) fail('mixpick', p.name, 'its readout does not end on the count line');
+  }
+  for (const r of M0.LIST) if (!picks.some(p => p.name === r[0])) fail('mixpick', 'list', `${r[0]} is in the mix but not on the page`);
+  const refs = mixSrc.match(/refs\(\)\{ return \{([^}]*)\}; \}/);
+  const named = refs ? refs[1].split(',').map(s => s.trim()) : [];
+  for (const r of M0.LIST) for (const n of [r[0], r[1]]) if (!named.includes(n)) fail('mixpick', 'refs', `${n} cannot be reached from the mix`);
+  if (!/<button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick\.open\(\)">Mix them up<\/button>/.test(script)) fail('mixpick', 'tome', 'the Tome has no way into the mix');
+  if (!script.includes("    if(id==='s-mixpick') MixPick.enter();\n")) fail('mixpick', 'go', 'opening the screen does not deal');
+  // --- dealt with stand-in picks ---
+  const N = 6, hostRenders = [];
+  const fake = j => ({ matched: 0, firstTry: 0, misses: 0, round: null, last: null, picked: null, dealt: 0,
+    newRound() { this.dealt++; this.round = { out: new Set(), right: (this.dealt + j) % 4 }; this.misses = 0; this.picked = null; },
+    choose(i) { const r = this.round; if (r.out.has(i)) return; this.picked = i;
+      if (i === r.right) { this.matched++; if (!this.misses) this.firstTry++; this.last = { j }; this.newRound(); } else { r.out.add(i); this.misses++; this.last = null; }
+      F[`H${j}`].render(); },
+    html() { const r = this.round, miss = this.picked !== null && r.out.has(this.picked);
+      return `<div class="small">${this.RULE}</div><div id="q${j}" style="x">Q${j}.${this.dealt}</div><div id="p${j}">` +
+        [0, 1, 2, 3].map(i => `<button ${r.out.has(i) ? 'disabled ' : ''}onclick="F${j}Pick.choose(${i})" aria-label="${'ABCD'[i]}">${'ABCD'[i]}</button>`).join('') +
+        `</div><svg><clipPath id="c${j}"></clipPath><g clip-path="url(#c${j})"></g></svg><div id="r${j}" aria-live="polite" style="y">` +
+        (miss ? `<div>slip ${this.picked}</div><div>check ${this.picked}</div>` : this.last ? `<div>That was it ${j}.</div>` : '') +
+        `<div>${this.matched} picked this visit, ${this.firstTry} on the first try.</div></div>`; },
+    RULE: `Rule ${j}.` });
+  const F = {};
+  for (let j = 0; j < N; j++) { F[`F${j}Pick`] = fake(j); F[`H${j}`] = { render() { hostRenders.push(j); } }; }
+  const X = new Function('R', 'env', 'F', "const UI = {go(){}}; const Sfx = {milestone(){}}; const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" + mixSrc + 'return MixPick;')(R, env, F);
+  X.LIST = [...Array(N).keys()].map(j => [`F${j}Pick`, `H${j}`, `🧪 Test Workshop ${j}`]);
+  X.refs = () => F; X.render = () => {};
+  env.seed = 4242;
+  X.enter(); if (X.cur < 0) fail('mixpick', 'enter', 'opening the mix does not deal');
+  { const c = X.cur, d = F[`F${c}Pick`].dealt; X.enter(); if (X.cur !== c || F[`F${c}Pick`].dealt !== d) fail('mixpick', 'enter', 'coming back deals a new question instead of keeping the one shown'); }
+  X.cur = -1; X.seen.clear();
+  const order = [];
+  for (let n = 0; n < N * 5; n++) { X.next(); order.push(X.cur); }
+  for (let n = 1; n < order.length; n++) if (order[n] === order[n - 1]) fail('mixpick', 'deal', 'the same workshop comes twice running');
+  for (let p = 0; p < 5; p++) if (new Set(order.slice(p * N, p * N + N)).size !== N) fail('mixpick', 'deal', `pass ${p + 1} does not take every workshop once: ${order.slice(p * N, p * N + N)}`);
+  const visit = new Set();
+  for (let n = 0; n < 24; n++) {
+    X.next(); const j = X.cur, P = F[`F${j}Pick`], key = `deal ${n}`;
+    if (P.last !== null || P.misses !== 0) fail('mixpick', key, 'the pick is not dealt fresh');
+    let h = X.html();
+    if (!h.startsWith(`<div class="small" id="mxFrom" style="margin-bottom:4px">From the 🧪 Test Workshop ${j}</div><div class="small">Rule ${j}.</div>`)) fail('mixpick', key, 'the workshop and its rule are not shown first');
+    if ((h.match(/onclick="MixPick\.pick\(\d\)"/g) || []).length !== 4 || h.includes('.choose(')) fail('mixpick', key, 'the buttons do not point at the mix');
+    if ([...h.matchAll(/ id="([^"]+)"/g)].some(m => !m[1].startsWith('mx'))) fail('mixpick', key, 'an id is not prefixed');
+    if (!h.includes(`clip-path="url(#mx-c${j})"`) || !h.includes(`<clipPath id="mx-c${j}">`)) fail('mixpick', key, 'a url(#…) no longer names its prefixed id');
+    if (h.includes('picked this visit')) fail('mixpick', key, 'the pick’s own count line is shown');
+    if (!h.endsWith('<button class="btn sm ghost" id="mxSkip" style="width:auto;margin-top:8px" onclick="MixPick.next()" aria-label="Skip this one and take a question from another workshop">Skip to another workshop</button>') || h.includes('id="mxNext"')) fail('mixpick', key, 'before a pick it does not offer a skip');
+    const misses = n % 3, r0 = hostRenders.length, s0 = X.solved, f0 = X.first;
+    const wrong = [0, 1, 2, 3].filter(i => i !== P.round.right);
+    for (let q = 0; q < misses; q++) {
+      X.pick(wrong[q]); h = X.html();
+      if (X.done || X.solved !== s0) fail('mixpick', key, 'a miss is counted as solved');
+      if (!txt(h).includes(`slip ${wrong[q]} check ${wrong[q]}`) || h.includes('picked this visit')) fail('mixpick', key, 'a miss is not explained as the pick explains it');
+      if ((h.match(/ disabled /g) || []).length !== q + 1) fail('mixpick', key, 'a missed button is not shut');
+    }
+    X.pick(P.round.right); h = X.html(); visit.add(j);
+    if (hostRenders.length !== r0) fail('mixpick', key, 'the workshop behind the pick is redrawn');
+    if (F[`H${j}`].render === undefined || hostRenders.length !== r0) fail('mixpick', key, 'the workshop’s own redraw is not put back');
+    F[`H${j}`].render(); if (hostRenders.length !== r0 + 1) fail('mixpick', key, 'the workshop’s own redraw is not put back');
+    hostRenders.pop();
+    if (!X.done || X.solved !== s0 + 1 || X.first !== f0 + (misses ? 0 : 1)) fail('mixpick', key, 'the right pick is not counted');
+    if (txt(h) !== `From the 🧪 Test Workshop ${j} ✓ Solved${misses ? '' : ' on the first try'}. That was it ${j}. Next workshop →`) fail('mixpick', key, `after a pick: ${txt(h)}`);
+    if (h.includes('id="mxSkip"') || !h.endsWith('<button class="btn" id="mxNext" style="margin-top:8px" onclick="MixPick.next()">Next workshop →</button>')) fail('mixpick', key, 'after a pick the next workshop is not one tap away');
+    if (X.score() !== `${X.solved} solved this visit, ${X.first} on the first try, from ${visit.size} of ${N} workshops.`) fail('mixpick', key, `the score reads ${X.score()}`);
+    if (X.solved === 10 && env.banners[env.banners.length - 1] !== 'ROUND THE REALM / 10 turned round, mixed') fail('mixpick', key, 'no banner at ten');
+  }
+  if (env.banners.length !== 1) fail('mixpick', 'banner', `${env.banners.length} banners in 24 solved, not 1`);
+  // --- two real picks through it ---
+  const env2 = { toasts: [], banners: [], renders: 0, seed: 99 };
+  const R2 = { _r: () => { env2.seed = (env2.seed * 1664525 + 1013904223) >>> 0; return env2.seed / 4294967296; } };
+  R2.i = (a, b) => Math.floor(R2._r() * (b - a + 1)) + a; R2.pick = a => a[Math.floor(R2._r() * a.length)];
+  const Y = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻','+':'⁺'}; const sup = n => String(n).split('').map(c=>SUP[c]||c).join('');" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m), go(){}}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)}; const Chain = {render(){ env.renders++; }}; const Arrow = {render(){ env.renders++; }};" +
+    cut('const ChainPick = {', "/* ---------- The L'Hôpital workshop") + cut('const ArrowPick = {', '/* ---------- The arrow workshop: adding') + mixSrc +
+    "MixPick.refs = () => ({ChainPick, ArrowPick, Chain, Arrow}); MixPick.render = () => {}; return MixPick;")(R2, env2);
+  Y.LIST = Y.LIST.filter(r => r[0] === 'ChainPick' || r[0] === 'ArrowPick');
+  let real = 0;
+  for (let n = 0; n < 40; n++) {
+    Y.next(); const name = Y.LIST[Y.cur][0], P = Y.mod(), key = `real ${name} ${n}`;
+    let h = Y.html();
+    const own = P.html();
+    const ids = [...own.matchAll(/ id="([^"]+)"/g)].map(m => m[1]);
+    if (!ids.length || ids.some(id => !h.includes(` id="mx-${id}"`)) || [...h.matchAll(/ id="([^"]+)"/g)].some(m => !m[1].startsWith('mx'))) fail('mixpick', key, 'an id is not prefixed');
+    for (const m of own.matchAll(/url\(#([^)]+)\)/g)) if (!h.includes(`url(#mx-${m[1]})`) || !ids.includes(m[1])) fail('mixpick', key, `url(#${m[1]}) does not follow its id`);
+    if ((h.match(/onclick="MixPick\.pick\(\d\)"/g) || []).length !== 4 || h.includes(`${name}.choose(`)) fail('mixpick', key, 'the real pick’s buttons do not point at the mix');
+    if (h.includes('picked this visit')) fail('mixpick', key, 'the real pick’s count line is shown');
+    const ri = P.round.opts.findIndex(o => o.k === 'right'), wi = (ri + 1) % 4, r0 = env2.renders;
+    Y.pick(wi); h = Y.html();
+    if (Y.done || !txt(h).includes(txt(P.slip(P.round.S || P.round.c, P.round.opts[wi].k, 'ABCD'[wi])).slice(0, 40))) fail('mixpick', key, 'a real miss is not explained by its slip');
+    Y.pick(ri); h = Y.html();
+    if (env2.renders !== r0) fail('mixpick', key, 'the real pick’s workshop is redrawn');
+    if (!Y.done || !/^From the \S+ (Chain Rule|Arrow) Workshop ✓ Solved\. That was it: .+ Here is a new \w+\. Next workshop →$/.test(txt(h))) fail('mixpick', key, `after a real pick: ${txt(h)}`);
+    real++;
+  }
+  return { listed: M0.LIST.length, dealt: order.length + 24, real };
+})();
+
+/* Which matrix? Order Matters turned round. Every matrix on screen is read
+   back off its name and its cells and checked against the slip it is named
+   as, worked out here from A and B alone; the right one alone is BA, AB is
+   always offered beside it, and every miss is checked at the first entry it
+   gets wrong, worked as a row of B times a column of A. */
+const composePickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const FIG_COL = {grid:'#2c2547', axis:'#6b5f92', dim:'#a99ccb', a:'#5aa9e6', b:'#f2c14e', c:'#57cc7a', d:'#e5484d', ink:'#e8e2f5'};" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Compose = {render(){ env.renders++; }};" +
+    cut('const ComposePick = {', 'const Compose = {') + 'return ComposePick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const Compose = {', '\n};\n');
+  if (!html.includes('<div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>\n    <div class="panel">\n      <div id="oqBox"></div>')) fail('composepick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['cmFirstL', 'cmThenL', 'cmGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('composepick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'moves',\n  setTab(t){ this.tab=t; this.render(); },")) fail('composepick', 'host', 'the workshop does not open on the moves, or a tab does not switch');
+  if (!host.includes("[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="Compose.setTab(\'${t}\')"')) fail('composepick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('composepick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';\n    if(pick) return;")) fail('composepick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>')) fail('composepick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const num = t => +t.replace('−', '-');
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const mul = (X, Y) => X.map(r => Y[0].map((_, j) => r.reduce((s, x, k) => s + x * Y[k][j], 0)));
+  const T = X => X[0].map((_, j) => X.map(r => r[j]));
+  const want = {
+    right: (A, B) => mul(B, A), order: (A, B) => mul(A, B),
+    sum: (A, B) => A.map((r, i) => r.map((x, j) => x + B[i][j])), entry: (A, B) => A.map((r, i) => r.map((x, j) => x * B[i][j])),
+    rowrow: (A, B) => B.map(b => A.map(a => b[0] * a[0] + b[1] * a[1])),
+    colcol: (A, B) => T(B).map(b => T(A).map(a => b[0] * a[0] + b[1] * a[1])),
+    transp: (A, B) => T(mul(B, A))
+  };
+  const eq = (M, N) => JSON.stringify(M) === JSON.stringify(N);
+  const det = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+  // a grid on the page read back from its cells: its numbers and which cells are red
+  const cells = h => {
+    const g = h.match(/<span data-m="2x2" [^>]*>([\s\S]*?)<\/span><\/span>/); if (!g) return null;
+    const M = [[null, null], [null, null]], bad = [];
+    for (const c of (g[1] + '</span>').matchAll(/<span data-cell="(\d),(\d)"( data-bad="1")? style="([^"]*)">([^<]+)<\/span>/g)) {
+      M[+c[1]][+c[2]] = num(c[5]);
+      if (c[3]) { bad.push([+c[1], +c[2]]); if (!/border:1px solid #e5484d/.test(c[4])) return null; }
+      else if (!/border:1px solid transparent/.test(c[4])) return null;
+    }
+    return M.flat().some(x => x === null) ? null : { M, bad };
+  };
+  const fromRows = s => s.split('; ').map(r => r.split(', ').map(num));
+  const read = () => txt(S.html().split('id="oqRead"')[1].replace(/^[^>]*>/, ''));
+  const slipSays = {
+    order: L => `${L} is AB, the moves the other way round: B first, then A. The move done last goes on the left, so A first, then B is BA, and for these two the order matters.`,
+    sum: L => `${L} adds A and B entry by entry. One move after another does not add: each entry of BA is a row of B times a column of A.`,
+    entry: L => `${L} multiplies A and B entry by entry, each number by the one in the same place.`,
+    rowrow: L => `${L} runs along a row of A where it should run down a column: it takes row i of B times row j of A.`,
+    colcol: L => `${L} runs down a column of B where it should run along a row: it takes column i of B times column j of A.`,
+    transp: L => `${L} has the rows and columns of BA swapped: its row i, column j holds what BA has in row j, column i.`
+  };
+  if (S.RULE !== 'Doing a move A and then a move B is a single move, the matrix BA: the move done last is written on the left, since it acts on whatever the first one hands it. Each entry of BA is a row of B times a column of A: the entry in row i, column j multiplies row i of B with column j of A, matching entry by matching entry, and adds. Which matrix does both?') fail('composepick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('composepick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, reds = 0, fives = 0, fallbacks = 0;
+  const slots = [0, 0, 0, 0], kinds = {};
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, { A, B } = r.S, key = `seed ${seed} round ${k}`, BA = mul(B, A), AB = mul(A, B);
+      rounds++;
+      if (eq(r.S, { A: [[1, 2], [0, 1]], B: [[0, -1], [1, 0]] })) fallbacks++;
+      if ([...A.flat(), ...B.flat()].some(x => !Number.isInteger(x) || x < -2 || x > 3)) fail('composepick', key, `A or B holds a number outside −2 to 3: ${JSON.stringify(r.S)}`);
+      if (eq(A, B) || [A, B].some(M => eq(M, [[1, 0], [0, 1]]) || det(M) === 0)) fail('composepick', key, `A and B are the same, or one does nothing, or flattens the plane: ${JSON.stringify(r.S)}`);
+      if (eq(BA, AB) || eq(BA, A) || eq(BA, B)) fail('composepick', key, `the order does not matter here, or BA is on the page already: ${JSON.stringify(r.S)}`);
+      if ([...BA.flat(), ...AB.flat()].some(x => Math.abs(x) > 12)) fail('composepick', key, `BA or AB holds a number past 12: ${JSON.stringify(r.S)}`);
+      if (prev && eq(prev, r.S)) fail('composepick', key, 'the same A and B come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1 || r.opts.filter(o => o.k === 'order').length !== 1) fail('composepick', key, 'there are not four matrices, one BA and one AB');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' First A =')) fail('composepick', key, 'the rule, then A, are not shown first');
+      const qBox = h0.split('id="oqQ"')[1].split('id="oqPick"')[0];
+      const qLab = qBox.match(/^ role="img" aria-label="First A, with rows ([^"]+), then B, with rows ([^"]+)" /);
+      if (!qLab || !eq(fromRows(qLab[1]), A) || !eq(fromRows(qLab[2]), B)) fail('composepick', key, 'A and B are not read out as they are');
+      const [aPart, bPart] = qBox.split('B =</span>'), aC = cells(aPart || ''), bC = cells(bPart || '');
+      if (!aC || !bC || !eq(aC.M, A) || !eq(bC.M, B) || aC.bad.length || bC.bad.length) fail('composepick', key, 'A and B are not drawn as they are');
+    
+      if (!h0.includes('<div class="small" style="text-align:center">Which matrix does both, A first and then B?</div>')) fail('composepick', key, 'the question is not asked');
+      const btns = h0.split('id="oqPick"')[1].split('id="oqRead"')[0].split('<button').slice(1);
+      if (btns.length !== 4) { fail('composepick', key, 'four matrices are not offered'); continue; }
+      const mats = btns.map((b, i) => {
+        const m = b.match(/^ class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="ComposePick\.choose\((\d)\)" aria-label="([PQRS]): rows ([^"]+)" [^>]*><b>([PQRS])<\/b> /);
+        if (!m || m[1] !== 'PQRS'[i] || +m[2] !== i || m[3] !== 'PQRS'[i] || m[5] !== 'PQRS'[i]) return null;
+        const c = cells(b), L = fromRows(m[4]);
+        if (!c || !eq(c.M, L) || c.bad.length) return null;
+        return L;
+      });
+      if (mats.some(x => !x)) { fail('composepick', key, 'a matrix is not named and drawn as it is, P to S'); continue; }
+      if (new Set(mats.map(x => JSON.stringify(x))).size !== 4) fail('composepick', key, 'two matrices are the same');
+      if (mats.some(M => eq(M, A) || eq(M, B))) fail('composepick', key, 'A or B is offered as it stands');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) fail('composepick', key, `an option is the unknown ${o.k}`);
+        else if (!eq(mats[i], want[o.k](A, B))) fail('composepick', key, `${o.k} is drawn as ${JSON.stringify(mats[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(mats[i], BA)) fail('composepick', key, `${JSON.stringify(mats[i])} ${o.k === 'right' ? 'is not' : 'is'} BA`);
+      });
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('composepick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('composepick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (!slipSays[o.k] || !rt.startsWith(slipSays[o.k](L))) fail('composepick', key, `${o.k} is explained as: ${rt}`);
+        const out = M.flatMap((row, p) => row.map((x, qq) => [p, qq, x])).filter(([p, qq, x]) => x !== BA[p][qq]).map(([p, qq]) => [p, qq]);
+        const [p, qq] = out[0];
+        const ck = `Check ${L} at row ${p + 1}, column ${qq + 1}: it holds ${ng(M[p][qq])}. That entry of BA is row ${p + 1} of B, (${B[p].map(ng).join(', ')}), times column ${qq + 1} of A, (${ng(A[0][qq])}, ${ng(A[1][qq])}): ${pn(B[p][0])} × ${pn(A[0][qq])} + ${pn(B[p][1])} × ${pn(A[1][qq])} = ${ng(BA[p][qq])}. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+        if (!rt.endsWith(' ' + ck)) fail('composepick', key, `the miss is not checked at its first wrong entry: ${rt}`);
+        if (rt.includes(`rows ${BA.map(row => row.map(ng).join(', ')).join('; ')}`)) fail('composepick', key, 'a miss hands over BA');
+        const h = S.html(), b = h.split('id="oqPick"')[1].split('<button').slice(1)[i];
+        if (!new RegExp(`^ class="btn sm ghost smOpt miss" data-opt="${L}" disabled onclick="ComposePick\\.choose\\(${i}\\)" aria-label="${L}: rows [^"]+\\. Not BA"`).test(b) || (h.match(/ disabled /g) || []).length !== q + 1) fail('composepick', key, 'the missed matrices are not shut and told as not BA');
+        const c = cells(b);
+        if (!c || !eq(c.M, M) || c.bad.map(x => x.join()).join(' ') !== out.map(x => x.join()).join(' ')) fail('composepick', key, `the red cells are ${c && c.bad.map(x => x.join()).join(' ')}, not ${out.map(x => x.join()).join(' ')}`);
+        reds += out.length;
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('composepick', key, 'tapping a missed matrix again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('composepick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('composepick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('composepick', key, 'no fresh A and B after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'MOVE MAKER / 5 pairs made one') fail('composepick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} does both, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('composepick', key, `the toast is ${env.toasts[nt]}`); }
+      const worked = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([i, j]) => `${i || j ? 'r' : 'R'}ow ${i + 1}, column ${j + 1}: ${pn(B[i][0])} × ${pn(A[0][j])} + ${pn(B[i][1])} × ${pn(A[1][j])} = ${ng(BA[i][j])}`).join('; ');
+      if (read() !== `That was it: each entry is a row of B times a column of A. ${worked}. So BA has rows ${BA.map(row => row.map(ng).join(', ')).join('; ')}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('composepick', key, `after a pick: ${read()}`);
+      prev = r.S;
+    }
+  }
+  { // the same A and B dealt again are turned away for a fresh pair
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { A: [[2, 1], [1, 1]], B: [[0, 1], [1, 0]] } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (eq(S.round.S, { A: [[2, 1], [1, 1]], B: [[0, 1], [1, 0]] })) fail('composepick', 'repeat', 'the same A and B are dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['sum', 'entry', 'rowrow', 'colcol', 'transp']) if (!(kinds[k] > rounds * 0.25)) fail('composepick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  if (kinds.order !== rounds) fail('composepick', 'slips', 'AB is not offered every time');
+  if (slots.some(n => !(n > rounds * 0.2))) fail('composepick', 'slots', `BA sits in the four places ${slots.join(', ')} times, not evenly`);
+  if (fallbacks > rounds * 0.01) fail('composepick', 'deal', `the stand-by pair is dealt ${fallbacks} times`);
+  if (!fives) fail('composepick', 'banner', 'five is never reached');
+  return { rounds, misses, reds };
+})();
+
+/* Which slope of ln y? The log slope workshop turned round. Every number is
+   read back off its button and checked against the slip it is named as,
+   worked here from the curve's numbers; the right one alone is the slope of
+   ln y, found without the rule: ln y is nudged on either side of the point.
+   Each miss is checked at the first piece it gets wrong, worked again here. */
+const lnPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const LogDiff = {render(){ env.renders++; }};" +
+    cut('const LnPick = {', '/* ---------- The log slope workshop: when x is in the base') + 'return LnPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const LogDiff = {', '\n};\n');
+  if (!html.includes('<div id="lgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work xˣ by hand or pick the slope of ln y"></div>\n    <div class="panel">\n      <div id="lqBox"></div>')) fail('lnpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['lgXRow', 'lgGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('lnpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('lnpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','🪵 Work it by hand','Take ln of xˣ and its kin, and try each wrong rule'],['pick','🎯 Which slope of ln y?','See a product of powers, and pick which of four numbers is the slope of ln y']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="LogDiff.setTab(\'${t}\')"')) fail('lnpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['lgSets','lgFig','lgXRow','lgModes','lgRead','lgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('lnpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';\n    if(pick) return;")) fail('lnpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('see that the two halves add up to it. Then turn it round: see a product of powers, and pick which of four numbers is the slope of ln y.</div>')) fail('lnpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  const sup = n => (n === 1 ? '' : String(n).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]));
+  const lin = (m, b) => `${m === 1 ? '' : m}x${b === 0 ? '' : b < 0 ? ' − ' + -b : ' + ' + b}`;
+  // the three pieces' slopes as each option takes them, worked from a, c, e, m, b, d and x
+  const pieces = (k, Q) => { const { a, c, e, m, b, d, x } = Q, u = x, v = m * x + b, w = x + d;
+    const T = { right: [[a, u], [c * m, v], [-e, w]], noPow: [[1, u], [m, v], [-1, w]], noChain: [[a, u], [c, v], [-e, w]], plus: [[a, u], [c * m, v], [e, w]],
+      noDiv: [[a, 1], [c * m, 1], [-e, 1]], less1: [[a - 1, u], [(c - 1) * m, v], [1 - e, w]], flip: [[u, a], [v, c * m], [-w, e]] }[k];
+    return T && T.map(([p, q]) => red(p, q)); };
+  const want = (k, Q) => { const t = pieces(k, Q); return t && plus(plus(t[0], t[1]), t[2]); };
+  // the slope of ln y at x, measured by a nudge, with no rule
+  const lnY = (Q, s) => Q.a * Math.log(s) + Q.c * Math.log(Q.m * s + Q.b) - Q.e * Math.log(s + Q.d);
+  const nudge = Q => { const h = 1e-6; return (lnY(Q, Q.x + h) - lnY(Q, Q.x - h)) / (2 * h); };
+  const pieceName = (Q, t) => [`${Q.a === 1 ? '' : Q.a + '·'}ln x`, `${Q.c}·ln(${lin(Q.m, Q.b)})`, `−${Q.e === 1 ? '' : Q.e + '·'}ln(${lin(1, Q.d)})`][t];
+  const pieceWorked = (Q, t) => { const T = fr(pieces('right', Q)[t]), u = Q.x, v = Q.m * Q.x + Q.b, w = Q.x + Q.d, ex = [`${Q.a}/${u}`, `${Q.c} × ${Q.m}/${v}`, `−${Q.e}/${w}`][t]; return ex === T ? ex : `${ex} = ${T}`; };
+  const slipOf = (k, L, Q) => { const { a, c, e, m } = Q, mb = lin(m, Q.b), xd = lin(1, Q.d), P = [a, c, e].filter(n => n > 1);
+    if (k === 'noPow') return `${L} drops the ${P.length === 1 ? `power ${P[0]}` : `powers ${P.slice(0, -1).join(', ')} and ${P[P.length - 1]}`}. Taking ln brings each power down in front, ln(uⁿ) = n·ln u, so each piece's slope is multiplied by its power.`;
+    if (k === 'noChain') return `${L} drops the ${m} inside ${mb}. The slope of ln(${mb}) is the slope of ${mb}, which is ${m}, over ${mb} itself.`;
+    if (k === 'plus') return `${L} adds the piece that divides. Dividing by (${xd})${sup(e)} takes away ${e === 1 ? '' : e + '·'}ln(${xd}), so its slope comes in with a minus.`;
+    if (k === 'noDiv') return `${L} brings the powers down but never divides by what is inside. The slope of ln u is u′ ÷ u, not u′ alone.`;
+    if (k === 'less1') return `${L} takes one off each power, as the power rule does to xⁿ. Taking ln brings each power down whole: the slope of n·ln u is n times u′ ÷ u.`;
+    return `${L} divides the wrong way round in each piece. The slope of n·ln u is n times u′, over u: what is inside goes underneath.`; };
+  const RULE = 'Taking ln turns a product into a sum and a power into a number in front: ln y = a·ln x + c·ln(mx + b) − e·ln(x + d), with a minus for the piece that divides. The slope of n·ln u is n times the slope of u, over u. Add the three pieces\' slopes and you have the slope of ln y, which is y′ ÷ y. Which is it here?';
+  if (S.RULE !== RULE) fail('lnpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('lnpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['noPow', 'noChain', 'plus', 'noDiv', 'less1', 'flip'];
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, seen = { a: new Set(), c: new Set(), e: new Set(), m: new Set(), b: new Set(), d: new Set(), x: new Set() };
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; for (const n in seen) seen[n].add(Q[n]);
+      const u = Q.x, v = Q.m * Q.x + Q.b, w = Q.x + Q.d;
+      if (!(Q.a >= 1 && Q.a <= 4 && Q.c >= 2 && Q.c <= 4 && Q.e >= 1 && Q.e <= 3 && Q.m >= 1 && Q.m <= 3 && Q.b >= -3 && Q.b <= 5 && Q.d >= -2 && Q.d <= 4 && Q.x >= 1 && Q.x <= 4) || !Object.values(Q).every(Number.isInteger)) fail('lnpick', key, `${sig} is not a curve of the kind dealt`);
+      if (v < 1 || w < 1) fail('lnpick', key, `an inside is not positive at x = ${Q.x}, so its ln is not there`);
+      if (Q.d === 0 || (Q.m === 1 && (Q.b === 0 || Q.b === Q.d))) fail('lnpick', key, 'two of the three pieces are the same thing');
+      if (prev && prev === sig) fail('lnpick', key, 'the same curve comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('lnpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} y = x${sup(Q.a)}·(${lin(Q.m, Q.b)})${sup(Q.c)} ÷ (${lin(1, Q.d)})${sup(Q.e)}, at x = ${Q.x} Which is the slope of ln y, that is y′ ÷ y? A `)) fail('lnpick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="LnPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('lnpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('lnpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('lnpick', key, 'a number is 0');
+      if (new Set(vals.map(String)).size !== 4) fail('lnpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('lnpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      if ([Q.a, Q.c, Q.e, Q.m, Q.b, Q.d, u, v, w].some(n => String([n, 1]) === String(vals[ri]))) fail('lnpick', key, `the answer ${fr(vals[ri])} is named elsewhere on the page`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('lnpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('lnpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const W = want('right', Q), have = new Set([String(W)]), can = [];
+        for (const kk of SL) { const x = want(kk, Q); if (x[0] === 0 || have.has(String(x))) continue; have.add(String(x)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (W[1] === 1)) && tr.some(x => want(x, Q)[0] * W[0] > 0) && !sums([W, ...tr.map(x => want(x, Q))])) T.push(tr); }
+        const rk = tr => tr.filter(x => { const y = want(x, Q); return y[0] * W[1] < W[0] * y[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        const x = want(o.k, Q);
+        if (!x) { fail('lnpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(x)) fail('lnpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(nudge(Q) - vals[i][0] / vals[i][1]) < 1e-6)) fail('lnpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} the nudged slope of ln y`);
+      });
+      if (k === 0 && txt(S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('lnpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4, RT = pieces('right', Q);
+      // a check names one piece's slope, so no piece's slope is the answer, and no check hands it over
+      if (RT.some(T => String(T) === String(want('right', Q)))) fail('lnpick', key, `a piece's slope is the answer ${fr(want('right', Q))}, so a check would hand it over`);
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('lnpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const K = pieces(o.k, Q), t = [0, 1, 2].find(j => String(K[j]) !== String(RT[j]));
+        const ck = `Check ${Lt}: its slope for the piece ${pieceName(Q, t)} is ${fr(K[t])}, but at x = ${Q.x} that piece's slope is ${pieceWorked(Q, t)}.`;
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('lnpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="LnPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not the slope of ln y"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('lnpick', key, 'the missed numbers are not shut and told as not the slope of ln y');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('lnpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('lnpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('lnpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('lnpick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'LOG SPLITTER / 5 curves split') fail('lnpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is the slope of ln y, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('lnpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="lqRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ln y = ${pieceName(Q, 0)} + ${pieceName(Q, 1)} − ${pieceName(Q, 2).slice(1)}, and at x = ${Q.x} the pieces' slopes are ${[0, 1, 2].map(j => pieceWorked(Q, j)).join(', ')}, which add to ${fr(want('right', Q))}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('lnpick', key, `after a pick: ${got}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { a: 2, c: 3, e: 1, m: 2, b: 1, d: 1, x: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":2,"c":3,"e":1,"m":2,"b":1,"d":1,"x":1}') fail('lnpick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of curves: the answer's form even
+    let sw = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (want('right', Q)[1] === 1) sw++; }
+    if (sw < 9000 || sw > 11000) fail('lnpick', 'sweep', `${sw} of 20000 answers are whole, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('lnpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  const sizes = { a: 4, c: 3, e: 3, m: 3, b: 9, d: 6, x: 4 };
+  for (const n in sizes) if (seen[n].size !== sizes[n]) fail('lnpick', 'deal', `${n} is only ever ${[...seen[n]].sort((p, q) => p - q)}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('lnpick', 'deal', `the slope sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.05 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.1)) fail('lnpick', 'deal', `the right number sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('lnpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the right one its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('lnpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (fives !== 30) fail('lnpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -13019,6 +14005,12 @@ console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  steady splits      ${pad(splitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-split in the two castles workshop, every number read back off its button and checked against the slip it is named as, the right one alone where four hundred nights settle, ${splitPickNotes.misses.toLocaleString()} wrong picks checked by a night, measured, ${splitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  numbers alone      ${pad(partsPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-alone in the parts workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${partsPickNotes.misses.toLocaleString()} wrong picks checked by the product rule, measured, ${partsPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  secants read       ${pad(secantPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone rise over run from f at both ends, ${secantPickNotes.misses.toLocaleString()} wrong picks checked by the line they draw, measured, ${secantPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  steps landed       ${pad(descentPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-step in the downhill workshop, every number read back off its button and checked against the slip it is named as, the right one alone a step against the slope measured from f, ${descentPickNotes.misses.toLocaleString()} wrong picks checked by the slope their step would need, ${descentPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 12)}  (rounds of how-long in the arrow workshop, every length read back off its button and checked against the slip it is named as, the right one alone the length of k·u + v measured on the arrow built part by part, ${arrowPickNotes.misses.toLocaleString()} wrong picks checked by Pythagoras backwards, ${arrowPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
+console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
+console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

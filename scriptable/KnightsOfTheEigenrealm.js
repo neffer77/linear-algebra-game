@@ -982,6 +982,15 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ TURN IT ROUND, MIXED ============ -->
+  <div class="screen" id="s-mixpick">
+    <div class="panel"><h2>🎲 Turn It Round</h2><div class="sub">One question from a different workshop each time, with its rule stated first. Work it out, read why, then move on: mixing the kinds is what makes each one stick.</div></div>
+    <div class="panel"><div id="mxBox"></div></div>
+    <div class="center small" id="mxScore"></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ AREA WORKSHOP ============ -->
   <div class="screen" id="s-area">
     <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
@@ -1112,15 +1121,17 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
+    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>
     <div class="panel">
-      <div class="small" style="margin-bottom:4px">First</div>
+      <div id="oqBox"></div>
+      <div class="small" id="cmFirstL" style="margin-bottom:4px">First</div>
       <div id="cmFirst" class="wsModes wrap" role="group" aria-label="First move"></div>
-      <div class="small" style="margin:8px 0 4px">Then</div>
+      <div class="small" id="cmThenL" style="margin:8px 0 4px">Then</div>
       <div id="cmThen" class="wsModes wrap" role="group" aria-label="Second move"></div>
       <div id="cmFig"></div>
       <div id="cmRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="cmGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="cmGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -1129,16 +1140,18 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOWNHILL WORKSHOP ============ -->
   <div class="screen" id="s-descent">
     <div class="panel"><h2>⛰️ Downhill Workshop</h2><div class="sub">f(x, y) = (x − 1)² + 2(y + 1)² is a valley with its bottom at (1, −1). The gradient ∇f points straight uphill, so a step against it, of size η, heads down. Pick η and walk: too small crawls, too big overshoots.</div></div>
+    <div id="gdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk by hand or pick where a step lands"></div>
     <div class="panel">
+      <div id="dhBox"></div>
       <div id="gdEtas" class="wsModes" role="group" aria-label="Step size"></div>
       <div id="gdFig"></div>
-      <div class="wsModes" style="margin:8px 0">
+      <div class="wsModes" id="gdStepRow" style="margin:8px 0">
         <button class="btn sm" id="gdStep" onclick="Descent.step()">⬇ Step downhill</button>
         <button class="btn sm ghost" id="gdReset" onclick="Descent.reset()">↺ Start again</button>
       </div>
       <div id="gdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="gdGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="gdGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -1646,18 +1659,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ARROW WORKSHOP ============ -->
   <div class="screen" id="s-arrow">
     <div class="panel"><h2>➡️ Arrow Workshop</h2><div class="sub">A vector is an arrow: how far across and how far up. Stretch one by a number k, walk a second from its tip, and see where you land. The straight arrow from start to finish is the sum, and Pythagoras gives its length.</div></div>
+    <div id="vwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build by hand or pick how long the sum is"></div>
     <div class="panel">
+      <div id="awBox"></div>
       <div id="vwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which pair of vectors"></div>
       <div id="vwFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="vwKRow" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="vwKLo" onclick="Arrow.moveK(-1)" aria-label="Make k smaller by a half">−</button>
           <b id="vwK" style="font-size:17px;min-width:0"></b>
           <button id="vwKHi" onclick="Arrow.moveK(1)" aria-label="Make k bigger by a half">+</button></div>
       </div>
-      <div class="wsModes" style="flex-wrap:wrap"><button id="vwAdd" class="btn sm ghost" onclick="Arrow.toggle()" aria-pressed="false">Add v at the tip</button></div>
+      <div class="wsModes" id="vwAddRow" style="flex-wrap:wrap"><button id="vwAdd" class="btn sm ghost" onclick="Arrow.toggle()" aria-pressed="false">Add v at the tip</button></div>
       <div id="vwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="vwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="vwGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -1871,10 +1886,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LOG SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-logdiff">
     <div class="panel"><h2>🪵 Log Slope Workshop</h2><div class="sub">In xˣ, x is in the base and in the power at once, so neither the power rule nor the exponent rule fits. Take ln of both sides to bring the power down, differentiate, then multiply back by y. Then try each wrong rule, catch it out, and add the two together.</div></div>
+    <div id="lgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work xˣ by hand or pick the slope of ln y"></div>
     <div class="panel">
+      <div id="lqBox"></div>
       <div id="lgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="lgFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="lgXRow" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="lgXLo" onclick="LogDiff.moveX(-1)" aria-label="Move x one step smaller">−</button>
           <b id="lgX" style="font-size:17px;min-width:0"></b>
           <button id="lgXHi" onclick="LogDiff.moveX(1)" aria-label="Move x one step bigger">+</button></div>
@@ -1882,7 +1899,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="lgModes" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How to work the slope"></div>
       <div id="lgRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="lgGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="lgGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -1980,10 +1997,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-slope">
     <div class="panel"><h2>📈 Slope Workshop</h2><div class="sub">A derivative is the slope a secant heads for as its two points close in. Pick a curve and a point, then bring h closer and watch.</div></div>
+    <div id="slTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the secant's slope"></div>
     <div class="panel">
+      <div id="sqBox"></div>
       <div id="slCurves" class="wsModes" role="group" aria-label="Curve"></div>
       <div id="slFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="slStep" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="slALo" onclick="Slope.moveA(-1)" aria-label="Move the point left">−</button>
           <b id="slA" style="font-size:19px;min-width:0"></b>
           <button id="slAHi" onclick="Slope.moveA(1)" aria-label="Move the point right">+</button></div>
@@ -1994,7 +2013,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <button class="btn sm ghost" id="slSide" onclick="Slope.flip()"></button>
       <div id="slRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="slGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="slGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -3781,6 +3800,56 @@ taylor(d){
       : fn==='cos' ? \`f(0) = 1, f′ = −\${k}sin(\${kx}) so f′(0) = 0, and f″ = −\${k*k}cos(\${kx}) so f″(0) = −\${k*k}.\`
       : \`f(0) = 0, f′ = \${k}/(1 + \${kx}) so f′(0) = \${k}, and f″ = −\${k*k}/(1 + \${kx})² so f″(0) = −\${k*k}.\`
     } Then P₂(x) = f(0) + f′(0)x + f″(0)x²/2 = \${A}. The 2! underneath is what makes the second derivative come out right.\`};
+},
+/* Euler's method: walk a differential equation forward in straight steps.
+   From (0, y₀) on y′ = px + qy, each step reads the slope where it stands and
+   moves h along x and h × slope up. Two steps of 1, two of 1/2, or three of
+   1/2, worked in exact fractions. The wrong answers are the slips people make:
+   stopping a step short, keeping the first slope for every step, adding the
+   slope without multiplying by h, and reading the slope at the far end of the
+   step instead of where it starts. */
+euler(d){
+  const n=d===3?3:2, hd=d===1?1:2;
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1], u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0], u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), inB=u=>u[0]<0?\`(\${show(u)})\`:show(u), key=u=>u[0]+'/'+u[1];
+  const h=F(1,hd);
+  for(let g=0;;g++){
+    const p=R.pick([-2,-1,1,2,3]), q=R.pick([-2,-1,1,2]), y0=F(R.pick([-2,-1,1,2,3]));
+    const slope=(x,y)=>add(mul(F(p),x),mul(F(q),y));
+    // the walk, kept step by step for the working; how(k) varies the rule
+    const walk=(how)=>{
+      let y=y0; const out=[];
+      for(let k=0;k<n;k++){
+        const x=F(k,hd), at=how==='far'?F(k+1,hd):x;
+        const s=how==='same'?slope(F(0),y0):slope(at,y);
+        const y1=add(y, how==='noH'?s:mul(h,s));
+        out.push({x,y,s,y1}); y=y1;
+      }
+      return out;
+    };
+    const W=walk('right'), A=W[n-1].y1;
+    const dist=[[W[n-2].y1,\`that is y(\${show(F(n-1,hd))}), one step short: \${n} steps of \${show(h)} are needed to reach x = \${show(F(n,hd))}\`],
+      [walk('same')[n-1].y1,'that keeps the first slope for every step; the slope has to be worked out again at each new point'],
+      [walk('far')[n-1].y1,'that reads each slope at the far end of its step; Euler\\'s method uses the slope where the step starts']];
+    if(hd>1) dist.push([walk('noH')[n-1].y1,\`that adds the whole slope at each step; it has to be multiplied by the step size h = \${show(h)} first\`]);
+    else dist.push([add(A,F(n)),'that adds h as well as h × slope at each step; a step rises by h × slope alone']);
+    const keys=[key(A),...dist.map(x=>key(x[0]))];
+    // four different numbers, none of them 0, and no wild walks
+    if(new Set(keys).size!==5 || A[0]===0 || dist.some(x=>x[0][0]===0) || [A,...dist.map(x=>x[0])].some(u=>Math.abs(u[0]/u[1])>60)){ if(g<200) continue; }
+    const eq=\`y′ = \${p===1?'':p===-1?'−':neg(p)}x \${q<0?'−':'+'} \${Math.abs(q)===1?'':Math.abs(q)}y\`;
+    const work=W.map((st,k)=>
+      \`At (\${show(st.x)}, \${show(st.y)}) the slope is \${neg(p)} × \${inB(st.x)} + \${inB(F(q))} × \${inB(st.y)} = \${show(st.s)}, so y(\${show(F(k+1,hd))}) ≈ \${show(st.y)} + \${show(h)} × \${inB(st.s)} = \${show(st.y1)}.\`);
+    return {topic:'Euler\\'s Method',
+      codex:{rule:'Euler\\'s method walks y′ = f(x, y) forward in straight steps: read the slope where you stand, then move h along x and h × slope up. Repeat from the new point.',
+             eg:'y′ = y from y(0) = 1 with h = 1/2: 1 → 1 + 1/2 × 1 = 3/2 → 3/2 + 1/2 × 3/2 = 9/4.'},
+      q:\`Use Euler's method with step h = \${show(h)} on \${eq}, starting from y(0) = \${show(y0)}.<br>What is its estimate of y(\${show(F(n,hd))})?\`,
+      a:show(A),
+      d:dist.map(([v,why])=>[show(v),why]),
+      ex:\`Each step reads the slope where it starts and moves \${show(h)} along x and \${show(h)} × slope up. \`+work.join(' ')+
+         \` So after \${n} steps Euler's method estimates y(\${show(F(n,hd))}) ≈ \${show(A)}.\`};
+  }
 }
 };
 
@@ -3894,7 +3963,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials'
+  taylor:'Taylor Polynomials', euler:"Euler's Method"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -3907,7 +3976,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4490,7 +4559,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
@@ -4591,8 +4660,13 @@ const Codec = {
       time, so two different topic sets can never claim the same one. */
   sig(){
     if(this._sig!=null) return this._sig;
-    return this._sig = this.hash(this.topics().join(',')) & 0xffff;
+    return this._sig = this.sigOf(this.topics().length);
   },
+  /* The fingerprint of the first n topics. The list only ever grows at its
+     end, so a code written before a topic was added still names the same
+     topics at the same places, and its fingerprint is that of the list as it
+     stood then. */
+  sigOf(n){ return this.hash(this.topics().slice(0,n).join(',')) & 0xffff; },
   hash(s){
     let h=0x811c9dc5;
     for(let i=0;i<s.length;i++){
@@ -4874,9 +4948,11 @@ const Codec = {
     const nTop=b.bits(16);
     g.topicStats={};
     let lostTopics=false;
-    if(sig!==this.sig()){
+    if(sig!==this.sig() && !(nTop<T.length && sig===this.sigOf(nTop))){
       // The topic list has changed shape, so the indices in this code no
-      // longer name the same things. Everything else still comes across.
+      // longer name the same things. Everything else still comes across. A
+      // code from before a topic was added at the end is not this: it is the
+      // same list, shorter, and keeps its history.
       lostTopics=true;
     }else{
       const has=[];
@@ -8470,7 +8546,7 @@ const Codex = {
  *   2. The explanation. Every generator writes \`ex\` as the arithmetic of THIS
  *      instance rather than a restated rule, and they are written sequentially:
  *      the rule, then the numbers, then what it means. Split on sentences, that
- *      is a genuine derivation, and all seventy split into two to five parts.
+ *      is a genuine derivation, and all seventy-one split into two to five parts.
  *
  * The codex rule rides on top as a heading where the topic has one, because a
  * derivation is easier to follow when you have been told what you are doing. */
@@ -8520,7 +8596,7 @@ const Working = {
   },
 
   // Every question can be worked. If this ever returns false the button must
-  // not be offered, and the suite checks it never does across all seventy.
+  // not be offered, and the suite checks it never does across all seventy-one.
   has(st){ const w=this.forStep(st); return !!(w && w.steps.length && w.answer!=null); },
 
   /* A nudge: the first step of the working, stopped short of the answer.
@@ -13402,6 +13478,7 @@ const UI = {
     if(id==='s-slice') Slice.render();
     if(id==='s-tracer') Tracer.render();
     if(id==='s-arrow') Arrow.render();
+    if(id==='s-mixpick') MixPick.enter();
     if(id==='s-horizon') Horizon.render();
     if(id==='s-cross') Cross.render();
     if(id==='s-quot') Quot.render();
@@ -14030,6 +14107,11 @@ const UI = {
        </div>\` +
       WorkshopIndex.html() +
       \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🎲 Turn It Round, Mixed</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">\${MixPick.LIST.length} workshops can each be turned round. Here they come mixed: one question from a different workshop each time, its rule stated first, and every workshop once before any comes back.</div>
+         <button class="btn sm" id="tomeMix" style="width:auto;margin-top:8px" onclick="MixPick.open()">Mix them up</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🛠 Matrix Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Turn a matrix by hand and watch the plane bend, with its determinant and the directions it keeps. Then turn it round: see a shape, and pick which of four matrices makes it.</div>
          <button class="btn sm" id="tomeWorkshop" style="width:auto;margin-top:8px" onclick="Workshop.open()">Open the workshop</button>
@@ -14056,7 +14138,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -14116,7 +14198,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📈 Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Watch a secant turn into a tangent as h closes in, and see its slope settle on the derivative. Then turn it round: see a curve and a step, and pick which of four numbers is the secant's slope.</div>
          <button class="btn sm" id="tomeSlope" style="width:auto;margin-top:8px" onclick="Slope.open()">Open the slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -14171,7 +14253,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">➡️ Arrow Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Stretch a vector by k and walk another from its tip. See the sum land, measure it with Pythagoras, and shrink it to a unit vector. Then turn it round: see u, v and k, and pick which of four lengths is the length of k·u + v.</div>
          <button class="btn sm" id="tomeArrow" style="width:auto;margin-top:8px" onclick="Arrow.open()">Open the arrow workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -14221,7 +14303,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪵 Log Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Differentiate xˣ, x²ˣ and x^(1/x) by taking ln of both sides first. Find the bottom of xˣ and the top of x^(1/x), catch the power rule and the exponent rule each missing half the slope, and see that the two halves add up to it. Then turn it round: see a product of powers, and pick which of four numbers is the slope of ln y.</div>
          <button class="btn sm" id="tomeLogDiff" style="width:auto;margin-top:8px" onclick="LogDiff.open()">Open the log slope workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -14271,7 +14353,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be. Then turn it round: see a valley, a start and a step size, and pick which of four numbers one step lands on.</div>
          <button class="btn sm" id="tomeDescent" style="width:auto;margin-top:8px" onclick="Descent.open()">Open the downhill workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -15259,6 +15341,145 @@ const MatPick = {
   }
 };
 
+/* ---------- Which slope? The slope workshop turned round ----------
+   A curve f(x) = cx² + px + q with whole c, p and q, a point a and a step h,
+   and four numbers, one of them the slope of the secant from a to a + h,
+   (f(a + h) − f(a))/h = c(2a + h) + p. The rule is stated first; the wrong
+   numbers are the slips people make with a secant: the tangent's slope at a
+   or at a + h taken for it, the rise left undivided by the run, run over
+   rise, (a + h)² taken as a² + h², or the px term dropped. A wrong pick is
+   checked the way the workshop draws it: a line of that slope from the
+   point at a does not reach the curve at a + h. Nothing is saved. */
+const SecantPick = {
+  SLIPS:['tangent','far','noDiv','flip','square','noP'],
+  HS:[[1,2],[1,1],[3,2],[2,1],[1,3],[2,3]],
+  RULE:'A secant joins two points on a curve, (a, f(a)) and (a + h, f(a + h)). Its slope is rise over run: (f(a + h) − f(a)) ÷ h. For f(x) = cx² + px + q the rise is c(2ah + h²) + ph, so the slope is c(2a + h) + p. Bring h towards 0 and it settles on the tangent\\'s slope, 2ca + p, but until then it is not. Which is the slope of this secant?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // f at x = n/d, as a fraction
+  f(S,n,d){ return this.frac(S.c*n*n+S.p*n*d+S.q*d*d,d*d); },
+  // the number each option stands for, as a fraction; h = hn/hd
+  val(S,k){
+    const {c,p,a,hn,hd}=S, s=c*(2*a*hd+hn)+p*hd;
+    return k==='right' ? this.frac(s,hd) : k==='tangent' ? this.frac(2*c*a+p,1) : k==='far' ? this.frac(2*c*(a*hd+hn)+p*hd,hd)
+      : k==='noDiv' ? this.frac(hn*s,hd*hd) : k==='flip' ? this.frac(hd,s) : k==='square' ? this.frac(c*hn+p*hd,hd) : this.frac(c*(2*a*hd+hn),hd);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this secant can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      // a slip whose check would name the answer is left out, so a check never hands it over
+      if(this.climb(S,k).some(u=>this.key(u)===this.key(this.val(S,'right')))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and one of its sign
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0)) out.push(t); }
+    return out;
+  },
+  // the numbers the question and the checks name: c, p, q, a, a + h, h, f(a) and f(a + h)
+  named(S){ const {a,hn,hd}=S; return [[S.c,1],[S.p,1],[S.q,1],[a,1],this.frac(a*hd+hn,hd),this.frac(hn,hd),this.f(S,a,1),this.f(S,a*hd+hn,hd)]; },
+  // what a line of a slip's slope rises over the step, and the height it reaches
+  climb(S,k){ const v=this.val(S,k), fa=this.f(S,S.a,1), up=this.frac(v[0]*S.hn,v[1]*S.hd);
+    return [up, this.frac(fa[0]*up[1]+up[0]*fa[1],fa[1]*up[1])]; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const H=this.HS[R.i(0,this.HS.length-1)], sg=R.i(0,1)?1:-1;
+      const S={c:R.i(1,3)*(R.i(0,1)?1:-1), p:R.i(-5,5), q:R.i(-4,4), a:R.i(-3,3), hn:sg*H[0], hd:H[1]};
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      // the secant is never flat, and no number named on the page is the answer, so nothing gives it away
+      if(this.named(S).some(v=>this.key(v)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {c:2, p:-3, q:1, a:1, hn:1, hd:2};
+  },
+  poly(S){
+    const t=[[S.c,'x²'],[S.p,'x'],[S.q,'']].filter(([n])=>n), out=[];
+    t.forEach(([n,x],i)=>{ const m=Math.abs(n), body=x && m===1 ? x : \`\${m}\${x}\`;
+      out.push(i===0 ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body); });
+    return out.join('');
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SECANT SEER', this.matched+' secants read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the secant's slope, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Slope.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {c,p,a}=S, h=this.fs(this.frac(S.hn,S.hd)), b=this.fs(this.frac(a*S.hd+S.hn,S.hd));
+    if(k==='tangent') return \`\${L} is the tangent's slope at \${neg(a)}, 2ca + p = \${neg(2*c*a+p)}: where the secant's slope heads as h closes in on 0. With h = \${h} it is not there yet.\`;
+    if(k==='far') return \`\${L} is the tangent's slope at the far end, \${b}. The secant joins the two points, and its slope is rise over run between them.\`;
+    if(k==='noDiv') return \`\${L} is the rise, f(\${b}) − f(\${neg(a)}), not yet divided by the run, h = \${h}.\`;
+    if(k==='flip') return \`\${L} divides the wrong way round, run over rise. Slope is rise over run: f(\${b}) − f(\${neg(a)}) on top, h underneath.\`;
+    if(k==='square') return \`\${L} takes (a + h)² as a² + h², dropping the 2ah. (a + h)² = a² + 2ah + h², so the rise keeps a c × 2ah.\`;
+    return \`\${L} drops the \${p===1?'':p===-1?'−':neg(p)}x. Over a step of h it changes by \${neg(p)} × h, which adds \${neg(p)} to the slope.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,hn,hd}=S, H=this.frac(hn,hd), fa=this.f(S,a,1), fb=this.f(S,a*hd+hn,hd), b=this.frac(a*hd+hn,hd);
+    const [up,y]=this.climb(S,k);
+    return \`Check \${L}: a line of slope \${this.fs(v)} from (\${neg(a)}, \${this.fs(fa)}) rises \${this.pf(v)} × \${this.pf(H)} = \${this.fs(up)} over the step to x = \${this.fs(b)}, reaching a height of \${this.fs(y)}, but the curve is at f(\${this.fs(b)}) = \${this.fs(fb)} there.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), b=this.fs(this.frac(S.a*S.hd+S.hn,S.hd));
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="sqQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.poly(S)}, from x = \${neg(S.a)} to x = \${b} (h = \${this.fs(this.frac(S.hn,S.hd))})</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which is the slope of the secant?</div>\`;
+    out+=\`<div id="sqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="SecantPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the secant\\'s slope':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), H=this.frac(B.hn,B.hd), fa=this.f(B,B.a,1), fb=this.f(B,B.a*B.hd+B.hn,B.hd), bb=this.frac(B.a*B.hd+B.hn,B.hd);
+      const rise=this.frac(fb[0]*fa[1]-fa[0]*fb[1],fb[1]*fa[1]);
+      lines.push(\`That was it: the rise is f(\${this.fs(bb)}) − f(\${neg(B.a)}) = \${this.fs(fb)} − \${this.pf(fa)} = \${this.fs(rise)} over a run of \${this.fs(H)}, so the slope is \${this.pf(rise)} ÷ \${this.pf(H)} = \${this.fs(v)}, and c(2a + h) + p gives the same. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="sqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------------------------- slope workshop ----------------------------- */
 /* The derivative, seen being made. A secant through (a, f(a)) and
    (a + h, f(a + h)) has slope (f(a + h) − f(a))/h, worked out in the readout
@@ -15307,7 +15528,15 @@ const Slope = {
   moveA(by){ const v=this.a+by; if(v<-2||v>2) return; this.a=v; this.render(); },
   moveH(by){ const v=this.hi+by; if(v<0||v>=this.HS.length) return; this.hi=v; this.render(); },
   flip(){ this.side=-this.side; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('slTab').innerHTML=[['hand','📈 Close in by hand','Close h in by hand and watch the secant turn into the tangent'],['pick','🎯 Which slope?','See a curve and a step, and pick which of four numbers is the secant\\'s slope']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Slope.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['slCurves','slFig','slStep','slSide','slRead','slGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('sqBox').innerHTML=pick ? SecantPick.html() : '';
+    if(pick) return;
     const C=this.curve(), a=this.a, h=this.h(), b=a+h, fa=this.f(a), fb=this.f(b), m=this.secant(), d=this.dfa();
     const near=this.hi===this.HS.length-1;
     document.getElementById('slCurves').innerHTML=this.CURVES.map((c,i)=>
@@ -17189,6 +17418,129 @@ const Fit = {
    built column by column from where they land, never from a recipe to
    remember; the other order is drawn dashed beside it, so the player sees
    for themselves that it usually lands somewhere else. */
+/* ---------- Which matrix? Order Matters turned round ----------
+   Two whole-number 2×2 matrices, A done first and B done second, and four
+   matrices, one of them BA, the one move that does both. The rule is stated
+   first; the wrong matrices are the slips people make when they multiply:
+   the order turned round (AB), the two added, the two multiplied entry by
+   entry, a row of B run along a row of A, a column of B run down a column
+   of A, and rows and columns swapped. The order slip is always offered. A
+   wrong pick is checked at the first entry it gets wrong, worked as a row
+   of B times a column of A. Nothing is saved. */
+const ComposePick = {
+  SLIPS:['sum','entry','rowrow','colcol','transp'],
+  RULE:'Doing a move A and then a move B is a single move, the matrix BA: the move done last is written on the left, since it acts on whatever the first one hands it. Each entry of BA is a row of B times a column of A: the entry in row i, column j multiplies row i of B with column j of A, matching entry by matching entry, and adds. Which matrix does both?',
+  E:[-2,-1,0,1,1,2,2,3],
+  mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],
+  tr:([[a,b],[c,d]])=>[[a,c],[b,d]],
+  // the matrix each option stands for
+  mat(S,k){
+    const {A,B}=S;
+    return k==='right' ? this.mul(B,A) : k==='order' ? this.mul(A,B) : k==='sum' ? A.map((r,i)=>r.map((x,j)=>x+B[i][j]))
+      : k==='entry' ? A.map((r,i)=>r.map((x,j)=>x*B[i][j])) : k==='rowrow' ? this.mul(B,this.tr(A))
+      : k==='colcol' ? this.mul(this.tr(B),A) : this.tr(this.mul(B,A));
+  },
+  key:M=>JSON.stringify(M),
+  // the slips these two can offer beside the order slip: each a matrix different from BA, from AB, from A and B, and from every one kept before it
+  slips(S){
+    const seen=new Set(['right','order'].map(k=>this.key(this.mat(S,k)))), keep=[];
+    seen.add(this.key(S.A)); seen.add(this.key(S.B));
+    for(const k of this.SLIPS){ const x=this.key(this.mat(S,k)); if(seen.has(x)) continue; seen.add(x); keep.push(k); }
+    return keep;
+  },
+  draw(){ const e=this.E; return [[R.pick(e),R.pick(e)],[R.pick(e),R.pick(e)]]; },
+  build(){
+    for(let g=0;g<500;g++){
+      const S={A:this.draw(), B:this.draw()}, P=this.mat(S,'right'), Q=this.mat(S,'order');
+      const I=this.key([[1,0],[0,1]]);
+      if(this.key(S.A)===this.key(S.B) || this.key(S.A)===I || this.key(S.B)===I) continue;
+      // neither move is flat, so each really moves the plane
+      if(S.A[0][0]*S.A[1][1]-S.A[0][1]*S.A[1][0]===0 || S.B[0][0]*S.B[1][1]-S.B[0][1]*S.B[1][0]===0) continue;
+      // the order matters for these two, and BA is not A or B, so nothing on the page is the answer
+      if(this.key(P)===this.key(Q) || [S.A,S.B].some(M=>this.key(M)===this.key(P))) continue;
+      if([P,Q].some(M=>M.flat().some(x=>Math.abs(x)>12))) continue;
+      if(this.slips(S).length<2) continue;
+      return S;
+    }
+    return {A:[[1,2],[0,1]], B:[[0,-1],[1,0]]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||this.key(S)!==this.key(prev)) break; }
+    const rest=this.slips(S);
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    // the order turned round is always there: it is the slip this workshop is about
+    const opts=['right','order',...rest.slice(0,2)].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('MOVE MAKER', this.matched+' pairs made one','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'PQRS'[i]} does both, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Compose.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  rows:M=>M.map(row=>row.map(neg).join(', ')).join('; '),
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // row i of B times column j of A, worked
+  dot(S,i,j){ const {A,B}=S; return \`\${this.pn(B[i][0])} × \${this.pn(A[0][j])} + \${this.pn(B[i][1])} × \${this.pn(A[1][j])}\`; },
+  // the entries of M that are not where BA has them
+  wrong(S,M){ const P=this.mat(S,'right'), out=[]; M.forEach((row,p)=>row.forEach((x,q)=>{ if(x!==P[p][q]) out.push([p,q]); })); return out; },
+  slip(S,k,L){
+    if(k==='order') return \`\${L} is AB, the moves the other way round: B first, then A. The move done last goes on the left, so A first, then B is BA, and for these two the order matters.\`;
+    if(k==='sum') return \`\${L} adds A and B entry by entry. One move after another does not add: each entry of BA is a row of B times a column of A.\`;
+    if(k==='entry') return \`\${L} multiplies A and B entry by entry, each number by the one in the same place. Each entry of BA takes a whole row of B and a whole column of A, multiplied pair by pair and added.\`;
+    if(k==='rowrow') return \`\${L} runs along a row of A where it should run down a column: it takes row i of B times row j of A. The entry in row i, column j of BA takes row i of B times column j of A.\`;
+    if(k==='colcol') return \`\${L} runs down a column of B where it should run along a row: it takes column i of B times column j of A. The entry in row i, column j of BA takes row i of B times column j of A.\`;
+    return \`\${L} has the rows and columns of BA swapped: its row i, column j holds what BA has in row j, column i. Row i of B times column j of A goes in row i, column j.\`;
+  },
+  at:(i,j)=>\`row \${i+1}, column \${j+1}\`,
+  check(S,k,L){
+    const M=this.mat(S,k), [[p,q]]=this.wrong(S,M), P=this.mat(S,'right');
+    return \`Check \${L} at \${this.at(p,q)}: it holds \${neg(M[p][q])}. That entry of BA is row \${p+1} of B, (\${S.B[p].map(neg).join(', ')}), times column \${q+1} of A, (\${neg(S.A[0][q])}, \${neg(S.A[1][q])}): \${this.dot(S,p,q)} = \${neg(P[p][q])}.\`;
+  },
+  grid(M,bad=[]){
+    const isBad=(p,q)=>bad.some(([a,b])=>a===p&&b===q);
+    return \`<span data-m="2x2" style="display:inline-grid;grid-template-columns:repeat(2,auto);gap:3px 4px;padding:3px 5px;border-left:2px solid var(--dim);border-right:2px solid var(--dim);border-radius:5px;vertical-align:middle">\`+
+      M.map((row,p)=>row.map((x,q)=>\`<span data-cell="\${p},\${q}"\${isBad(p,q)?' data-bad="1"':''} style="min-width:24px;text-align:center;padding:1px 2px;border:1px solid \${isBad(p,q)?FIG_COL.d:'transparent'};border-radius:4px;\${isBad(p,q)?'color:'+FIG_COL.d+';':''}">\${neg(x)}</span>\`).join('')).join('')+\`</span>\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="oqQ" role="img" aria-label="First A, with rows \${this.rows(S.A)}, then B, with rows \${this.rows(S.B)}" style="text-align:center;font-size:17px;font-weight:700;margin:6px 0">First <span style="margin:0 4px">A =</span>\${this.grid(S.A)}<span style="margin:0 6px">, then</span><span style="margin-right:4px">B =</span>\${this.grid(S.B)}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which matrix does both, A first and then B?</div>\`;
+    out+=\`<div id="oqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), M=this.mat(S,o.k), L='PQRS'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ComposePick.choose(\${i})" aria-label="\${L}: rows \${this.rows(M)}\${gone?'. Not BA':''}" style="margin:0;padding:6px 2px;font-size:15px"><b>\${L}</b> \${this.grid(M,gone?this.wrong(S,M):[])}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'PQRS'[m]), this.check(S,r.opts[m].k,'PQRS'[m]));
+    else if(this.last){ const B=this.last.S, P=this.mat(B,'right');
+      lines.push(\`That was it: each entry is a row of B times a column of A. \${[[0,0],[0,1],[1,0],[1,1]].map(([i,j])=>\`\${i===0&&j===0?'R':'r'}ow \${i+1}, column \${j+1}: \${this.dot(B,i,j)} = \${neg(P[i][j])}\`).join('; ')}. So BA has rows \${this.rows(P)}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="oqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 const Compose = {
   MOVES:[
     {id:'turn',    btn:'↺ Turn',    m:[[0,-1],[1,0]], does:'turn a quarter-turn anticlockwise', is:'quarter-turn anticlockwise'},
@@ -17247,8 +17599,16 @@ const Compose = {
     return out;
   },
   open(){ UI.go('s-compose'); },
+  tab:'moves',
+  setTab(t){ this.tab=t; this.render(); },
   pick(which, i){ if(which==='first') this.fi=i; else this.si=i; this.touched=true; this.render(); },
   render(){
+    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Compose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';
+    if(pick) return;
     const row=(which, sel)=>this.MOVES.map((m,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===sel}" aria-label="\${which==='first'?'First':'Then'}: \${m.is}" onclick="Compose.pick('\${which}',\${i})">\${m.btn}</button>\`).join('');
     document.getElementById('cmFirst').innerHTML=row('first', this.fi);
@@ -17271,6 +17631,146 @@ const Compose = {
         Celebrate.banner('ORDER KEEPER','every pair placed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\\.(?!\\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Which step? The downhill workshop turned round ----------
+   A valley f(x) = a(x − m)² + c with whole a, m and c, a start x₀ and a step
+   size η, and four numbers, one of them where one step of gradient descent
+   lands: x₀ − η·f′(x₀), with f′(x) = 2a(x − m). The rule is stated first;
+   the wrong numbers are the slips people make with a step: stepping up the
+   slope, forgetting the 2 the square brings down, forgetting η, stepping by
+   the height where it is the slope, giving the step without the start, and
+   dividing by η, or dropping the m from the slope. A wrong pick is checked backwards: the slope its step would
+   need, (x₀ − v) ÷ η, is not f′(x₀). Nothing is saved. */
+const DescentPick = {
+  SLIPS:['up','noTwo','noEta','fval','stepOnly','byEta','noM'],
+  ETAS:[[1,10],[1,8],[1,6],[1,5],[1,4],[3,10],[1,3],[3,8],[2,5]],
+  RULE:'Walk downhill: the slope f′(x) points uphill, so a step goes the other way. From x, one step of size η lands on x − η·f′(x). For the valley f(x) = a(x − m)² + c the slope is f′(x) = 2a(x − m): the square brings down a 2. Which x does one step land on?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // the slope and the height at the start
+  g(S){ return 2*S.a*(S.x-S.m); },
+  h(S){ return S.a*(S.x-S.m)**2+S.c; },
+  // the number each option stands for, as a fraction; η = en/ed
+  val(S,k){
+    const {x,a,m,en,ed}=S, g=this.g(S);
+    return k==='right' ? this.frac(x*ed-en*g,ed) : k==='up' ? this.frac(x*ed+en*g,ed) : k==='noTwo' ? this.frac(x*ed-en*a*(x-m),ed)
+      : k==='noEta' ? this.frac(x-g,1) : k==='fval' ? this.frac(x*ed-en*this.h(S),ed) : k==='stepOnly' ? this.frac(-en*g,ed) : k==='byEta' ? this.frac(x*en-ed*g,en) : this.frac(x*ed-en*2*a*x,ed);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slope a step to v would need, worked backwards: (x − v) ÷ η
+  back(S,v){ return this.frac((S.x*v[1]-v[0])*S.ed,v[1]*S.en); },
+  // the numbers the question and the checks name: a, m, c, x₀, η, f(x₀) and f′(x₀)
+  named(S){ return [[S.a,1],[S.m,1],[S.c,1],[S.x,1],[S.en,S.ed],[this.h(S),1],[this.g(S),1],[2,1]]; },
+  // the slips this start can offer: each a number other than 0, no further out than 60,
+  // different from every one kept before it, and whose check does not name the answer
+  slips(S){
+    const W=this.val(S,'right'), seen=new Set([this.key(W)]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || Math.abs(v[0])>60*v[1] || seen.has(this.key(v))) continue;
+      const d=this.frac(S.x*v[1]-v[0],v[1]);
+      if([this.back(S,v),d,[-d[0],d[1]]].some(u=>this.key(u)===this.key(W))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and one of its sign
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0)) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1, wantNeg=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const E=this.ETAS[R.i(0,this.ETAS.length-1)];
+      const S={a:R.i(1,3), m:R.i(-3,3), c:R.i(-2,4), x:R.i(-4,4), en:E[0], ed:E[1]};
+      if(S.x===S.m) continue;
+      // a step that goes downhill: η × 2a stays under 2, so the walk never climbs
+      if(2*S.a*S.en>=2*S.ed) continue;
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole || (W[0]<0)!==wantNeg) continue;
+      // no number named on the page, the 2 the square brings down included, is the answer, so nothing gives it away
+      if(this.named(S).some(v=>this.key(v)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, m:1, c:3, x:-2, en:1, ed:5};
+  },
+  // the valley, written out: a(x − m)² + c
+  poly(S){ const {a,m,c}=S, sq=m===0 ? 'x²' : \`(x \${m<0?'+':'−'} \${Math.abs(m)})²\`;
+    return \`\${a===1?'':a}\${sq}\${c===0?'':c<0?\` − \${-c}\`:\` + \${c}\`}\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('VALLEY STEPPER', this.matched+' steps landed','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is where the step lands, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Descent.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {x,a,m}=S, e=this.fs([S.en,S.ed]), g=this.g(S);
+    if(k==='up') return \`\${L} steps up the slope, to x + η·f′(x). f′(\${neg(x)}) = \${neg(g)} points uphill, so downhill is the other way: take η·f′(x) away.\`;
+    if(k==='noTwo') return \`\${L} forgets the 2 that the square brings down. The slope of \${a===1?'':a}(x − m)² is 2 × \${a} × (x − m), not \${a===1?'':a+' × '}(x − m).\`;
+    if(k==='noEta') return \`\${L} takes a whole slope's worth of step, x − f′(x), and forgets to scale it by η = \${e}.\`;
+    if(k==='fval') return \`\${L} steps by the height, η·f(x), where a step uses the slope, η·f′(x). How high you stand does not say which way is down.\`;
+    if(k==='stepOnly') return \`\${L} is the step on its own, −η·f′(x), and not where it lands: start from x = \${neg(x)} and add the step to it.\`;
+    if(k==='byEta') return \`\${L} divides the slope by η = \${e} where it should multiply, so a small η makes the step bigger, not smaller.\`;
+    return \`\${L} drops the \${neg(m)} from the slope, as if the bottom were at 0: f′(x) = 2a(x − m) = 2 × \${a} × (\${neg(x)} \${m<0?'+':'−'} \${Math.abs(m)}), not 2 × \${a} × \${this.pn(x)}.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {x}=S, E=[S.en,S.ed], B=this.back(S,v), d=this.frac(x*v[1]-v[0],v[1]);
+    return \`Check \${L}: a step from \${neg(x)} to \${this.fs(v)} moves \${this.fs(this.frac(-d[0],d[1]))}, so the slope behind it would be (\${neg(x)} − \${this.pf(v)}) ÷ \${this.pf(E)} = \${this.fs(d)} ÷ \${this.pf(E)} = \${this.fs(B)}, but the slope at \${neg(x)} is f′(\${neg(x)}) = \${neg(this.g(S))}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="dhQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.poly(S)}, from x = \${neg(S.x)}, with η = \${this.fs([S.en,S.ed])}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which x does one step land on?</div>\`;
+    out+=\`<div id="dhPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="DescentPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not where the step lands':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), g=this.g(B), E=[B.en,B.ed], st=this.frac(B.en*g,B.ed), h1=this.frac(B.a*(v[0]-B.m*v[1])**2+B.c*v[1]*v[1],v[1]*v[1]);
+      lines.push(\`That was it: f′(\${neg(B.x)}) = 2 × \${B.a} × \${this.pn(B.x-B.m)} = \${neg(g)}, so the step is \${this.pf(E)} × \${this.pn(g)} = \${this.fs(st)}, and \${neg(B.x)} − \${this.pf(st)} = \${this.fs(v)}. f fell from \${neg(this.h(B))} to \${this.fs(h1)}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="dhRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
   }
 };
 
@@ -17358,7 +17858,15 @@ const Descent = {
     if(this.stuck() || this.atBottom()) return;
     this.path.push(this.next().p); this.touched=true; this.render();
   },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('gdTab').innerHTML=[['hand','⛰️ Walk it by hand','Walk down the valley by hand, one step at a time'],['pick','🎯 Which step?','See a valley, a start and a step size, and pick which of four numbers one step lands on']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Descent.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['gdEtas','gdFig','gdStepRow','gdRead','gdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dhBox').innerHTML=pick ? DescentPick.html() : '';
+    if(pick) return;
     const atBottom=this.atBottom();
     document.getElementById('gdEtas').innerHTML=this.ETAS.map((e,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.ei}" aria-label="Step size \${e}" onclick="Descent.pick(\${i})">η = \${e}</button>\`).join('');
@@ -23322,6 +23830,151 @@ const Tracer = {
   }
 };
 
+/* ---------- How long? The arrow workshop turned round ----------
+   Two whole-number vectors u and v and a whole k, and four lengths, one of
+   them the length of w = k·u + v. The rule is stated first; the wrong
+   lengths are the slips people make with vectors: k left out, v stretched
+   instead of u, v taken away, v left off, the parts' lengths added as if
+   across-then-up were the straight way, the parts added before squaring, or
+   one square taken from the other. Every length is kept as its square, N,
+   and shown as a whole number when N is a square and as √N when it is not.
+   A wrong pick is checked by Pythagoras backwards: its square is not
+   w₁² + w₂². Nothing is saved. */
+const ArrowPick = {
+  SLIPS:['noK','kv','minus','noV','parts','sumFirst','diffSq'],
+  KS:[-3,-2,-1,2,3],
+  WHOLE:[[3,4],[6,8],[5,12],[9,12]],
+  RULE:'Stretch u by k: every part of u is multiplied by k. Walk v from the tip of k·u: add first with first and second with second, to get w = k·u + v. Its length comes from Pythagoras on the right triangle under it: square each part, add, then take the root, ‖w‖ = √(w₁² + w₂²). How long is w?',
+  vec:p=>\`⟨\${neg(p[0])}, \${neg(p[1])}⟩\`,
+  pw:c=>c<0 ? \`(\${neg(c)})²\` : \`\${c}²\`,
+  sq(p){ return p[0]*p[0]+p[1]*p[1]; },
+  root(N){ const r=Math.round(Math.sqrt(N)); return r*r===N ? r : null; },
+  // a length kept as its square: 25 shows as 5, 20 as √20
+  fs(N){ const r=this.root(N); return r!==null ? String(r) : \`√\${N}\`; },
+  w(S){ return [S.k*S.u[0]+S.v[0], S.k*S.u[1]+S.v[1]]; },
+  // the square of the length each option stands for
+  val(S,k){
+    const {u,v}=S, K=S.k, w=this.w(S);
+    return k==='right' ? this.sq(w) : k==='noK' ? this.sq([u[0]+v[0],u[1]+v[1]]) : k==='kv' ? this.sq([u[0]+K*v[0],u[1]+K*v[1]])
+      : k==='minus' ? this.sq([K*u[0]-v[0],K*u[1]-v[1]]) : k==='noV' ? K*K*this.sq(u)
+      : k==='parts' ? (Math.abs(w[0])+Math.abs(w[1]))**2 : k==='sumFirst' ? (w[0]+w[1])**2 : Math.abs(w[0]*w[0]-w[1]*w[1]);
+  },
+  key(N){ return this.fs(N); },
+  whole(N){ return this.root(N)!==null; },
+  // the slips this pair can offer: each a length other than 0, at most 20, and different from every one kept before it
+  slips(S){
+    const W=this.val(S,'right'), seen=new Set([this.key(W)]), keep=[];
+    for(const k of this.SLIPS){ const N=this.val(S,k);
+      if(N===0 || N>400 || seen.has(this.key(N))) continue;
+      // a slip that is the right length squared, or whose square is the right length, would point at it
+      if(N===this.root(W) || this.root(N)===W) continue;
+      seen.add(this.key(N)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four lengths is the sum of two others, which would point at it
+  sums(S,ks){
+    const L=ks.map(k=>Math.sqrt(this.val(S,k)));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++)
+      if(i!==j && i!==k && Math.abs(L[j]+L[k]-L[i])<1e-9) return true;
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or root, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], form=this.whole(this.val(S,'right'));
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the question names: k and the parts of u and v, as lengths they could be mistaken for
+  named(S){ return [S.k,...S.u,...S.v].map(n=>n*n); },
+  part:()=>R.i(-4,4),
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<2000;g++){
+      const k=this.KS[R.i(0,this.KS.length-1)], u=[this.part(),this.part()];
+      let v;
+      if(wantWhole){ const P=this.WHOLE[R.i(0,this.WHOLE.length-1)], sw=R.i(0,1), w=[(R.i(0,1)?1:-1)*P[sw], (R.i(0,1)?1:-1)*P[1-sw]];
+        v=[w[0]-k*u[0], w[1]-k*u[1]]; }
+      else v=[this.part(),this.part()];
+      const S={k,u,v}, w=this.w(S), N=this.val(S,'right');
+      if(this.sq(u)===0 || this.sq(v)===0 || v.some(c=>Math.abs(c)>4)) continue;
+      // w leans: neither part is 0, so its length is never just one of its parts
+      if(w[0]===0 || w[1]===0 || N>300 || this.whole(N)!==wantWhole) continue;
+      if(this.named(S).includes(N)) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {k:2, u:[1,3], v:[1,-2]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a length of the right one's form always stands beside it, so its form gives nothing away,
+    // and the right one sits short, long or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>this.val(S,x)<W).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('ARROW MEASURER', this.matched+' arrows measured','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the length of w, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Arrow.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const K=neg(S.k);
+    if(k==='noK') return \`\${L} leaves out k and measures u + v, as if k were 1. Stretch u first: every part of u is multiplied by \${K}.\`;
+    if(k==='kv') return \`\${L} stretches v where k belongs to u. In w = k·u + v only u is multiplied by \${K}; v is walked as it is.\`;
+    if(k==='minus') return \`\${L} takes v away where it is added. v is walked from the tip of k·u, so w = k·u + v.\`;
+    if(k==='noV') return \`\${L} is the length of k·u alone. It stops at the tip of k·u, before walking v from there.\`;
+    if(k==='parts') return \`\${L} adds the two parts as lengths, as if going across and then up were the straight way. The straight arrow is shorter: square each part, add, then take the root.\`;
+    if(k==='sumFirst') return \`\${L} adds the two parts before squaring. Pythagoras squares each part on its own: ‖w‖ = √(w₁² + w₂²), not √((w₁ + w₂)²).\`;
+    return \`\${L} takes one square from the other. Pythagoras adds them: ‖w‖² = w₁² + w₂².\`;
+  },
+  check(S,k,L){
+    const N=this.val(S,k), w=this.w(S), r=this.root(N);
+    return \`Check \${L}: \${r!==null?\`\${r}²\`:\`(√\${N})²\`} = \${N}, so it would need w₁² + w₂² = \${N}. But w = \${neg(S.k)}·\${this.vec(S.u)} + \${this.vec(S.v)} = \${this.vec(w)}, and \${this.pw(w[0])} + \${this.pw(w[1])} = \${this.sq(w)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="awQ" style="text-align:center;font-size:16px;margin-bottom:2px">u = \${this.vec(S.u)}, v = \${this.vec(S.v)}, k = \${neg(S.k)}</div>\`;
+    out+=\`<div class="small" style="text-align:center">How long is w = k·u + v?</div>\`;
+    out+=\`<div id="awPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ArrowPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the length of w':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, w=this.w(B), N=this.sq(w), rt=this.root(N), ku=[B.k*B.u[0],B.k*B.u[1]];
+      lines.push(\`That was it: w = \${neg(B.k)}·\${this.vec(B.u)} + \${this.vec(B.v)} = \${this.vec(ku)} + \${this.vec(B.v)} = \${this.vec(w)}, and ‖w‖ = √(\${this.pw(w[0])} + \${this.pw(w[1])}) = √\${N}\${rt!==null?\` = \${rt}\`:''}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="awRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The arrow workshop: adding, stretching and measuring vectors ----------
    Stretch u by k, then walk v from the tip of k·u if you like. The green
    arrow w goes straight from the start to where you land. Its length comes
@@ -23424,12 +24077,20 @@ const Arrow = {
     return out+\`</svg>\`;
   },
   open(){ UI.go('s-arrow'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.START; this.m=false; this.touched=true; this.render(); },
   moveK(by){ const v=this.k+by; if(v<0 || v>=this.K.length) return; this.k=v; this.touched=true; this.render(); },
   toggle(){ this.m=!this.m; this.touched=true; this.render(); },
   render(){
     document.getElementById('vwSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Arrow.pick(\${i})" aria-label="u = \${this.vec(s.u)} and v = \${this.vec(s.v)}">u = \${this.vec(s.u)}</button>\`).join('');
+    document.getElementById('vwTab').innerHTML=[['hand','➡️ Build it by hand','Stretch and add the arrows by hand'],['pick','🎯 How long?','See u, v and k, and pick which of four lengths is the length of k·u + v']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Arrow.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['vwSets','vwFig','vwKRow','vwAddRow','vwRead','vwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('awBox').innerHTML=pick ? ArrowPick.html() : '';
+    if(pick) return;
     document.getElementById('vwK').textContent=\`k = \${this.num(this.kv())}\`;
     document.getElementById('vwKLo').disabled=this.k<=0;
     document.getElementById('vwKHi').disabled=this.k>=this.K.length-1;
@@ -25897,6 +26558,160 @@ const InvSlope = {
   }
 };
 
+/* ---------- Which slope of ln y? The log slope workshop turned round ----------
+   y = xᵃ·(mx + b)ᶜ ÷ (x + d)ᵉ with whole powers and a whole point x, and four
+   numbers, one of them the slope of ln y there, which is y′ ÷ y:
+   a/x + c·m/(mx + b) − e/(x + d). Taking ln turns the product into a sum of
+   three pieces, so the slope is the pieces' slopes added. The rule is stated
+   first; the wrong numbers are the slips people make with it: the powers
+   dropped, the m inside left out, the piece that divides added, the slope of
+   ln u taken as u′ with no ÷ u, one taken off each power as the power rule
+   would, or each piece divided the wrong way round. A wrong pick is checked
+   at the first piece it gets wrong. Nothing is saved. */
+const LnPick = {
+  SLIPS:['noPow','noChain','plus','noDiv','less1','flip'],
+  SUP:{'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹'},
+  RULE:'Taking ln turns a product into a sum and a power into a number in front: ln y = a·ln x + c·ln(mx + b) − e·ln(x + d), with a minus for the piece that divides. The slope of n·ln u is n times the slope of u, over u. Add the three pieces\\' slopes and you have the slope of ln y, which is y′ ÷ y. Which is it here?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  // the inside of each piece at the point: x, mx + b and x + d
+  ins(S){ return [S.x, S.m*S.x+S.b, S.x+S.d]; },
+  // the three pieces' slopes, as each option takes them
+  terms(S,k){
+    const {a,c,e,m}=S, [u,v,w]=this.ins(S);
+    const T={right:[[a,u],[c*m,v],[-e,w]], noPow:[[1,u],[m,v],[-1,w]], noChain:[[a,u],[c,v],[-e,w]], plus:[[a,u],[c*m,v],[e,w]],
+      noDiv:[[a,1],[c*m,1],[-e,1]], less1:[[a-1,u],[(c-1)*m,v],[-(e-1),w]], flip:[[u,a],[v,c*m],[-w,e]]}[k];
+    return T.map(([p,q])=>this.frac(p,q));
+  },
+  val(S,k){ const t=this.terms(S,k); return this.add(this.add(t[0],t[1]),t[2]); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this curve can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page names: the powers, m, b, d, the point and the three insides
+  named(S){ return [S.a,S.c,S.e,S.m,S.b,S.d,...this.ins(S)].map(n=>[n,1]); },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<2000;g++){
+      const S={a:R.i(1,4), c:R.i(2,4), e:R.i(1,3), m:R.i(1,3), b:R.i(-3,5), d:R.i(-2,4), x:R.i(1,4)};
+      const [u,v,w]=this.ins(S);
+      // every inside is positive at the point, so each ln is there, and the three pieces are three different things
+      if(v<1 || w<1 || S.d===0 || (S.m===1 && (S.b===0 || S.b===S.d))) continue;
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole) continue;
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      // a check names one piece's slope, so no piece's slope may be the answer, or a check would hand it over
+      if(this.terms(S,'right').some(t=>this.key(t)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {a:2, c:3, e:1, m:2, b:1, d:1, x:1};
+  },
+  sp(n){ return n===1 ? '' : String(n).split('').map(d=>this.SUP[d]).join(''); },
+  lin(m,b){ return \`\${m===1?'':m}x\${b===0?'':b<0?' − '+(-b):' + '+b}\`; },
+  // the curve as it is written: xᵃ·(mx + b)ᶜ ÷ (x + d)ᵉ
+  curve(S){ return \`x\${this.sp(S.a)}·(\${this.lin(S.m,S.b)})\${this.sp(S.c)} ÷ (\${this.lin(1,S.d)})\${this.sp(S.e)}\`; },
+  // the pieces of ln y, by name
+  piece(S,t){ return [\`\${S.a===1?'':S.a+'·'}ln x\`, \`\${S.c}·ln(\${this.lin(S.m,S.b)})\`, \`−\${S.e===1?'':S.e+'·'}ln(\${this.lin(1,S.d)})\`][t]; },
+  // a piece's slope, worked
+  worked(S,t){
+    const [u,v,w]=this.ins(S), T=this.fs(this.terms(S,'right')[t]), ex=[\`\${S.a}/\${u}\`, \`\${S.c} × \${S.m}/\${v}\`, \`−\${S.e}/\${w}\`][t];
+    return ex===T ? ex : \`\${ex} = \${T}\`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('LOG SPLITTER', this.matched+' curves split','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the slope of ln y, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    LogDiff.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,c,e,m}=S, mb=this.lin(m,S.b), xd=this.lin(1,S.d);
+    if(k==='noPow'){ const P=[a,c,e].filter(n=>n>1), ps=P.length===1 ? \`power \${P[0]}\` : \`powers \${P.slice(0,-1).join(', ')} and \${P[P.length-1]}\`;
+      return \`\${L} drops the \${ps}. Taking ln brings each power down in front, ln(uⁿ) = n·ln u, so each piece's slope is multiplied by its power.\`; }
+    if(k==='noChain') return \`\${L} drops the \${m} inside \${mb}. The slope of ln(\${mb}) is the slope of \${mb}, which is \${m}, over \${mb} itself.\`;
+    if(k==='plus') return \`\${L} adds the piece that divides. Dividing by (\${xd})\${this.sp(e)} takes away \${e===1?'':e+'·'}ln(\${xd}), so its slope comes in with a minus.\`;
+    if(k==='noDiv') return \`\${L} brings the powers down but never divides by what is inside. The slope of ln u is u′ ÷ u, not u′ alone.\`;
+    if(k==='less1') return \`\${L} takes one off each power, as the power rule does to xⁿ. Taking ln brings each power down whole: the slope of n·ln u is n times u′ ÷ u.\`;
+    return \`\${L} divides the wrong way round in each piece. The slope of n·ln u is n times u′, over u: what is inside goes underneath.\`;
+  },
+  check(S,k,L){
+    const R0=this.terms(S,'right'), K=this.terms(S,k), t=[0,1,2].find(i=>this.key(K[i])!==this.key(R0[i]));
+    return \`Check \${L}: its slope for the piece \${this.piece(S,t)} is \${this.fs(K[t])}, but at x = \${S.x} that piece's slope is \${this.worked(S,t)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="lqQ" style="text-align:center;font-size:16px;margin-bottom:2px">y = \${this.curve(S)}, at x = \${S.x}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which is the slope of ln y, that is y′ ÷ y?</div>\`;
+    out+=\`<div id="lqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="LnPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the slope of ln y':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S;
+      lines.push(\`That was it: ln y = \${this.piece(B,0)} + \${this.piece(B,1)} \${this.piece(B,2).replace('−','− ')}, and at x = \${B.x} the pieces' slopes are \${[0,1,2].map(t=>this.worked(B,t)).join(', ')}, which add to \${this.fs(this.val(B,'right'))}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="lqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The log slope workshop: when x is in the base and the power ----------
    y = xˣ fits neither the power rule (a fixed power) nor the exponent rule (a
    fixed base). Taking ln of both sides brings the power down, the product
@@ -26020,10 +26835,18 @@ const LogDiff = {
     return out+\`</svg>\`;
   },
   open(){ UI.go('s-logdiff'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.SETS[i].start; this.mode=0; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.set().X.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
   render(){
+    document.getElementById('lgTab').innerHTML=[['hand','🪵 Work it by hand','Take ln of xˣ and its kin, and try each wrong rule'],['pick','🎯 Which slope of ln y?','See a product of powers, and pick which of four numbers is the slope of ln y']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="LogDiff.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['lgSets','lgFig','lgXRow','lgModes','lgRead','lgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('lqBox').innerHTML=pick ? LnPick.html() : '';
+    if(pick) return;
     document.getElementById('lgSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogDiff.pick(\${i})" aria-label="y = \${s.name}">\${s.btn}</button>\`).join('');
     document.getElementById('lgModes').innerHTML=this.MODES.map((m,i)=>
@@ -27216,6 +28039,120 @@ const Train = {
     document.getElementById('tScore').textContent=\`✅ \${this.c}   ❌ \${this.w}\`;
   },
   quit(){ this.renderPick(); }
+};
+
+/* ---------- Turn It Round: every workshop's pick, mixed ----------
+   Each workshop can be turned round into a pick of four. This screen deals
+   them mixed: one question from a different workshop each time, never the
+   same one twice running, and every workshop once before any comes back.
+   Each comes with its own rule stated first, its own slips and its own
+   checks, so a wrong pick is explained just as it is in the workshop. Its
+   buttons are pointed here, and the workshop it belongs to is not redrawn
+   while it is away; its ids are prefixed so nothing on the page is named
+   twice. After a right pick the working is shown and the next workshop is
+   one tap away. The matrix workshop's pick needs its figure, so it stays in
+   its workshop. Nothing is saved. */
+const MixPick = {
+  LIST:[
+    ['SecantPick','Slope','📈 Slope Workshop'],
+    ['IntPick','Area','🏺 Area Workshop'],
+    ['DotPick','Dot','🎯 Dot Product Workshop'],
+    ['SpanPick','Span','🧭 Span Workshop'],
+    ['ElimPick','Elim','⚖️ Elimination Workshop'],
+    ['UndoPick','Undo','↩️ Undo Workshop'],
+    ['FitPick','Fit','📏 Best Fit Workshop'],
+    ['ComposePick','Compose','🔁 Order Matters'],
+    ['DescentPick','Descent','⛰️ Downhill Workshop'],
+    ['SplitPick','Castles','🏰 Two Castles Workshop'],
+    ['SeriesPick','Taylor','🌀 Taylor Workshop'],
+    ['NewtonPick','Newton','🔎 Newton\\'s Method Workshop'],
+    ['ChainPick','Chain','⛓️ Chain Rule Workshop'],
+    ['HopPick','Hopital','🔬 L\\'Hôpital Workshop'],
+    ['ProductPick','Product','🌾 Product Rule Workshop'],
+    ['LadPick','Ladder','🪜 Ladder Workshop'],
+    ['NullPick','Kernel','🕳️ Null Space Workshop'],
+    ['GramPick','Gram','📐 Gram–Schmidt Workshop'],
+    ['GeoPick','Geo','🧮 Geometric Series Workshop'],
+    ['FlipPick','Bend','〰️ Bend Workshop'],
+    ['AvgPick','Avg','🌊 Water Level Workshop'],
+    ['TailPick','Tail','♾️ Endless Area Workshop'],
+    ['LathePick','Lathe','🏺 Lathe Workshop'],
+    ['SwapPick','Swap','🔄 Swap Workshop'],
+    ['ImpPick','Implicit','⭕ Implicit Slope Workshop'],
+    ['PartsPick','Parts','✂️ Parts Workshop'],
+    ['LamPick','Detect','🔍 Eigenvalue Detective'],
+    ['HillPick','Hill','🗺️ Hillwalker Workshop'],
+    ['CofPick','Cofactor','♟️ Cofactor Workshop'],
+    ['CovPick','Cover','🙈 Cover-up Workshop'],
+    ['SlicePick','Slice','🍞 Slice Workshop'],
+    ['ArrowPick','Arrow','➡️ Arrow Workshop'],
+    ['HzPick','Horizon','🌅 Horizon Workshop'],
+    ['CrossPick','Cross','✖️ Cross Product Workshop'],
+    ['QuotPick','Quot','➗ Quotient Rule Workshop'],
+    ['AntiPick','Anti','🪃 Antiderivative Workshop'],
+    ['TransPick','Transpose','🪞 Transpose Workshop'],
+    ['PowPick','Diag','🔑 Diagonal Workshop'],
+    ['TrigPick','TrigInt','🎢 Trig Integral Workshop'],
+    ['TanPick','TanPlane','🪁 Tangent Plane Workshop'],
+    ['InvPick','InvSlope','🪩 Inverse Slope Workshop'],
+    ['LnPick','LogDiff','🪵 Log Slope Workshop'],
+    ['PathPick','PathChain','🛤️ Path Chain Workshop'],
+    ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
+    ['CisternPick','Cistern','💧 Cistern Workshop'],
+    ['BuildPick','Optim','🏗️ Biggest Build Workshop']
+  ],
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
+  mod(){ return this.refs()[this.LIST[this.cur][0]]; },
+  host(){ return this.refs()[this.LIST[this.cur][1]]; },
+  open(){ UI.go('s-mixpick'); },
+  enter(){ if(this.cur<0) this.next(); else this.render(); },
+  // a workshop not yet dealt in this pass through all of them, and never the one just shown
+  next(){
+    const n=this.LIST.length, all=[...Array(n).keys()];
+    let pool=all.filter(i=>!this.seen.has(i));
+    if(!pool.length){ this.seen.clear(); pool=all.filter(i=>i!==this.cur); }
+    this.cur=pool[R.i(0,pool.length-1)]; this.seen.add(this.cur);
+    const P=this.mod(); P.newRound(); P.last=null;
+    this.base=P.matched; this.done=false; this.firstTry=false;
+    this.render();
+  },
+  pick(i){
+    const P=this.mod(), H=this.host(), real=H.render, m0=P.misses;
+    // the workshop behind it is off the page, so it is not redrawn
+    H.render=()=>{};
+    try { P.choose(i); } finally { H.render=real; }
+    if(P.matched>this.base){
+      this.done=true; this.firstTry=m0===0; this.solved++; if(this.firstTry) this.first++; this.from.add(this.cur);
+      if(this.solved===10||this.solved===25||this.solved===50)
+        Celebrate.banner('ROUND THE REALM', this.solved+' turned round, mixed','var(--gold)',()=>Sfx.milestone());
+    }
+    this.render();
+  },
+  // the pick's own page, its buttons pointed here and its ids prefixed; the readout loses its own count line
+  body(){
+    const name=this.LIST[this.cur][0];
+    const h=this.mod().html().replace(/ id="([^"]+)"/g,' id="mx-$1"').replace(/url\\(#/g,'url(#mx-')
+      .replace(new RegExp(\`onclick="\${name}\\\\.choose\\\\((\\\\d)\\\\)"\`,'g'),'onclick="MixPick.pick($1)"');
+    const at=h.lastIndexOf('<div>'), end=h.indexOf('</div>',at);
+    return {h:h.slice(0,at)+h.slice(end+6), read:h.slice(h.indexOf('>',h.indexOf('aria-live="polite"'))+1, at)};
+  },
+  html(){
+    const t=this.LIST[this.cur][2], B=this.body();
+    let out=\`<div class="small" id="mxFrom" style="margin-bottom:4px">From the \${t}</div>\`;
+    if(this.done){
+      out+=\`<div id="mxDone" aria-live="polite" style="font-size:14px;line-height:1.6"><div><b>✓ Solved\${this.firstTry?' on the first try':''}.</b></div>\${B.read}</div>\`;
+      out+=\`<button class="btn" id="mxNext" style="margin-top:8px" onclick="MixPick.next()">Next workshop →</button>\`;
+    } else {
+      out+=B.h+\`<button class="btn sm ghost" id="mxSkip" style="width:auto;margin-top:8px" onclick="MixPick.next()" aria-label="Skip this one and take a question from another workshop">Skip to another workshop</button>\`;
+    }
+    return out;
+  },
+  score(){ return \`\${this.solved} solved this visit, \${this.first} on the first try, from \${this.from.size} of \${this.LIST.length} workshops.\`; },
+  render(){
+    document.getElementById('mxBox').innerHTML=this.html();
+    document.getElementById('mxScore').textContent=this.score();
+  }
 };
 
 /* ------------------------------- calculator ------------------------------- */

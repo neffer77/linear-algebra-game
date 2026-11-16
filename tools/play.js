@@ -140,6 +140,12 @@ const SUITES = [
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
+  require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
+  require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on
+  require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v
+  require('./play/mixpick'), // the Tome's mix: one question from a different workshop's pick mode each time
+  require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
+  require('./play/lnpick'), // see a product of powers, pick which of four numbers is the slope of ln y
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14
