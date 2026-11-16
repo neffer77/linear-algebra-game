@@ -89,7 +89,7 @@ function loadGame() {
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
-    ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcSets')")) + 'render(){}};exports.PathChain=PathChain;' +
+    ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
@@ -6376,6 +6376,161 @@ const hillPickNotes = (() => {
   return { rounds, misses, worked, wholeR };
 })();
 
+/* Which rate? The pick-a-rate round in the path chain workshop. Every number
+   on screen is read back off its button and checked against the slip it is
+   named as, worked out here from the hill and the path alone. The right one
+   alone must be dz/dt: checked against z put along the path and nudged a
+   hair either way. Every check in the readout is worked again: the nudge,
+   both heights, the rise and what the slip would make of it. */
+const pathPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const PathChain = {render(){ env.renders++; }};" +
+    cut('const PathPick = {', '/* ---------- The path chain workshop: z changes for two reasons') + 'return PathPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const num = t => { const m = t.match(/^(−?)(\d+(?:\.\d+)?)$/); return m ? (m[1] ? -1 : 1) * +m[2] : null; };
+  const co = n => (n === 1 ? '' : n === -1 ? '−' : ng(n));
+  // the hill along the path, and everything about it worked out here
+  const X = (Q, t) => Q.al * t + Q.be, Y = (Q, t) => Q.ga * t * t + Q.de;
+  const z = (Q, t) => Q.k * X(Q, t) ** Q.m * Y(Q, t) ** Q.n;
+  const parts = Q => { const x = X(Q, Q.t), y = Y(Q, Q.t);
+    return { x, y, dx: Q.al, dy: 2 * Q.ga * Q.t, zx: Q.k * Q.m * x ** (Q.m - 1) * y ** Q.n, zy: Q.k * Q.n * x ** Q.m * y ** (Q.n - 1) }; };
+  const want = {
+    right: Q => { const p = parts(Q); return p.zx * p.dx + p.zy * p.dy; },
+    xOnly: Q => { const p = parts(Q); return p.zx * p.dx; },
+    yOnly: Q => { const p = parts(Q); return p.zy * p.dy; },
+    noSpeed: Q => { const p = parts(Q); return p.zx + p.zy; },
+    swap: Q => { const p = parts(Q); return p.zx * p.dy + p.zy * p.dx; },
+    noPow: Q => { const p = parts(Q); return Q.k * p.x ** (Q.m - 1) * p.y ** Q.n * p.dx + Q.k * p.x ** Q.m * p.y ** (Q.n - 1) * p.dy; },
+    noTwo: Q => { const p = parts(Q); return p.zx * p.dx + p.zy * Q.ga * Q.t; }
+  };
+  const SL = ['xOnly', 'yOnly', 'noSpeed', 'swap', 'noPow', 'noTwo'];
+  // dz/dt itself: z along the path, nudged a hair either way
+  const rate = Q => { const e = 1e-5; return (z(Q, Q.t + e) - z(Q, Q.t - e)) / (2 * e); };
+  const isRate = (Q, v) => Math.abs(rate(Q) - v) < 1e-4 * (1 + Math.abs(v));
+  const zs = Q => `${co(Q.k)}${Q.m === 2 ? 'x²' : 'x'}${Q.n === 2 ? 'y²' : 'y'}`;
+  const zxs = Q => `${co(Q.k * Q.m)}${Q.m === 2 ? 'x' : ''}${Q.n === 2 ? 'y²' : 'y'}`;
+  const zys = Q => `${co(Q.k * Q.n)}${Q.m === 2 ? 'x²' : 'x'}${Q.n === 2 ? 'y' : ''}`;
+  const tail = b => (b ? (b < 0 ? ' − ' : ' + ') + Math.abs(b) : '');
+  const lin = Q => `${co(Q.al)}t${tail(Q.be)}`, quad = Q => `${co(Q.ga)}t²${tail(Q.de)}`;
+  const read = () => txt(S.html().split('id="rtRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => { const p = parts(Q); return ({
+    xOnly: `${L} keeps only the x part, (∂z/∂x)(dx/dt) = ${ng(p.zx)} × ${pn(p.dx)}. y moves too, at dy/dt = ${ng(p.dy)}, so add the y part, (∂z/∂y)(dy/dt) = ${ng(p.zy)} × ${pn(p.dy)}.`,
+    yOnly: `${L} keeps only the y part, (∂z/∂y)(dy/dt) = ${ng(p.zy)} × ${pn(p.dy)}. x moves too, at dx/dt = ${ng(p.dx)}, so add the x part, (∂z/∂x)(dx/dt) = ${ng(p.zx)} × ${pn(p.dx)}.`,
+    noSpeed: `${L} adds the two slopes, ∂z/∂x + ∂z/∂y = ${ng(p.zx)} + ${pn(p.zy)}, and forgets the speeds. Each slope counts only as fast as its letter moves, so multiply by dx/dt = ${ng(p.dx)} and dy/dt = ${ng(p.dy)}.`,
+    swap: `${L} multiplies each slope by the other letter's speed. ∂z/∂x goes with dx/dt = ${ng(p.dx)}, and ∂z/∂y with dy/dt = ${ng(p.dy)}.`,
+    noPow: `${L} forgets to bring the power down. ∂z/∂x of ${zs(Q)} is ${zxs(Q)} and ∂z/∂y is ${zys(Q)}: the 2 on ${Q.m === 2 ? 'x' : 'y'} comes down in front.`,
+    noTwo: `${L} forgets the 2 that t² brings down: y = ${quad(Q)} has dy/dt = ${co(2 * Q.ga)}t, which is ${ng(p.dy)} at t = ${ng(Q.t)}, not ${ng(p.dy / 2)}.` })[k]; };
+  const D = '(−?\\d+(?:\\.\\d+)?)';
+  const CHK = new RegExp(`^Check ([ABCD]): nudge t from ${D} to ${D}, a change of 0\\.002\\. z goes from ${D} to ${D}, a rise of about ${D}\\. If dz/dt were ${D}, z would rise about ${D} × 0\\.002 = ${D}, not ${D}\\.$`);
+  const near = (a, b, d) => a !== null && Math.abs(a - b) <= 0.5 * 10 ** -d + 1e-9;
+  // a check, worked again: the nudge, both heights off the path, the rise, and the slip's own rise
+  const checkOk = (line, k, L, Q, v, key) => { const m = line.match(CHK);
+    if (!m) { fail('pathpick', key, `the check of ${L} is not worded as it should be: ${line}`); return; }
+    const [, Lt, t0, t1, z0, z1, rise, v1, v2, guess, rise2] = m, h = 0.001, a = z(Q, Q.t - h), b = z(Q, Q.t + h);
+    if (Lt !== L || !near(num(t0), Q.t - h, 3) || !near(num(t1), Q.t + h, 3)) fail('pathpick', key, `the check of ${L} does not nudge t a hair either way`);
+    if (!near(num(z0), a, 4) || !near(num(z1), b, 4)) fail('pathpick', key, `the check of ${L} does not read z off the path`);
+    if (!near(num(rise), b - a, 4) || rise2 !== rise) fail('pathpick', key, `the rise in the check of ${L} is not ${b - a}`);
+    if (num(v1) !== v || num(v2) !== v) fail('pathpick', key, `the check of ${L} does not use its own number ${v}`);
+    if (!near(num(guess), v * 0.002, 4)) fail('pathpick', key, `${v} × 0.002 is not ${guess}`);
+    if (guess === rise) fail('pathpick', key, 'a wrong rate passes the check');
+    if (Math.abs((b - a) / 0.002 - rate(Q)) > 1e-3) fail('pathpick', key, 'the nudge does not measure dz/dt'); };
+  if (S.RULE !== 'A point moving along a path moves both x and y, so z changes for two reasons. dz/dt = (∂z/∂x)(dx/dt) + (∂z/∂y)(dy/dt): how steep z is along x times how fast x moves, plus the same for y. Find each partial by the power rule, holding the other letter still, find each speed by differentiating the path in t, and put in the point. Which is dz/dt?') fail('pathpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('pathpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), Ks = new Set(), MNs = new Set(), As = new Set(), Gs = new Set(), Ts = new Set(), Bs = new Set(), Ds = new Set(), NP = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), p = parts(Q);
+      rounds++; Ks.add(Q.k); MNs.add(Q.m + ',' + Q.n); As.add(Q.al); Gs.add(Q.ga); Ts.add(Q.t); Bs.add(Q.be); Ds.add(Q.de);
+      if (![Q.k, Q.al, Q.be, Q.ga, Q.de, Q.t].every(Number.isInteger) || Q.k < 1 || Q.k > 3 || !['1,1', '2,1', '1,2'].includes(Q.m + ',' + Q.n)
+        || !Q.al || Math.abs(Q.al) > 3 || Math.abs(Q.be) > 2 || !Q.ga || Math.abs(Q.ga) > 2 || Math.abs(Q.de) > 2 || ![-2, -1, 1, 2].includes(Q.t)) fail('pathpick', key, `${sig} is not a whole hill and path as dealt`);
+      if (p.x === 0 || p.y === 0) fail('pathpick', key, 'the point sits on an axis');
+      const W = want.right(Q);
+      if (!Number.isInteger(W) || !isRate(Q, W)) fail('pathpick', key, `${W} is not dz/dt of ${zs(Q)} along x = ${lin(Q)}, y = ${quad(Q)} at t = ${Q.t}`);
+      if (prev && prev === sig) fail('pathpick', key, 'the same hill and path come twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('pathpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` z = ${zs(Q)}, along x = ${lin(Q)}, y = ${quad(Q)}, at t = ${ng(Q.t)}. Which is dz/dt there? A`)) fail('pathpick', key, 'the rule, the hill and the path are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="PathPick\.choose\((\d)\)" aria-label="([ABCD]): (−?\d+)" style="margin:0"><b>([ABCD])<\/b> (−?\d+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('pathpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => num(x[4]));
+      if (new Set(vals).size !== 4) fail('pathpick', key, 'two numbers are the same');
+      if (vals.some(v => v === 0)) fail('pathpick', key, '0 is offered');
+      if (vals.some(v => Math.abs(v) > 300)) fail('pathpick', key, 'a number past 300 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (o.k === 'noPow') NP.add(Q.m + ',' + Q.n);
+        if (!want[o.k]) { fail('pathpick', key, `an option is the unknown ${o.k}`); return; }
+        if (vals[i] !== want[o.k](Q)) fail('pathpick', key, `${o.k} is shown as ${vals[i]}, which is not that slip`);
+        if ((o.k === 'right') !== isRate(Q, vals[i])) fail('pathpick', key, `${vals[i]} ${o.k === 'right' ? 'is not' : 'is'} dz/dt`);
+      });
+      {
+        const can = [], seen = new Set([String(W), '0']);
+        for (const s of SL) { const v = String(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('pathpick', key, 'a hill and path with fewer than three slips are dealt');
+        if (['right', ...SL].some(s => Math.abs(want[s](Q)) > 300)) fail('pathpick', key, 'a hill and path with a number past 300 among their slips are dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('pathpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('pathpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="rtRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('pathpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)}`);
+        checkOk(lines[1] || '', o.k, Lt, Q, vals[i], key);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="PathPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not dz/dt"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('pathpick', key, 'the missed numbers are not shut and told as not dz/dt');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('pathpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('pathpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('pathpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('pathpick', key, 'no fresh hill and path after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'PATHFINDER / 5 rates found') fail('pathpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is dz/dt, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('pathpick', key, `the toast is ${env.toasts[nt]}`); }
+      const after = `That was it: at t = ${ng(Q.t)} the point is (${ng(p.x)}, ${ng(p.y)}), moving at dx/dt = ${ng(p.dx)} and dy/dt = ${co(2 * Q.ga)}t = ${ng(p.dy)}. There ∂z/∂x = ${zxs(Q)} = ${ng(p.zx)} and ∂z/∂y = ${zys(Q)} = ${ng(p.zy)}, so dz/dt = ${ng(p.zx)} × ${pn(p.dx)} + ${pn(p.zy)} × ${pn(p.dy)} = ${ng(W)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (read() !== after) fail('pathpick', key, `after a pick: ${read()} | want ${after}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same hill and path dealt again are turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { k: 2, m: 2, n: 1, al: 3, be: -1, ga: 1, de: 2, t: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"k":2,"m":2,"n":1,"al":3,"be":-1,"ga":1,"de":2,"t":1}') fail('pathpick', 'repeat', 'the same hill and path are dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('pathpick', 'slips', `the slip ${k} is never offered`);
+  if (!NP.has('2,1') || !NP.has('1,2')) fail('pathpick', 'slips', `the power slip is only offered on hills ${[...NP].join(' ')}, not on both kx²y and kxy², so a slip that keeps the power is not counted`);
+  if (Ks.size !== 3 || MNs.size !== 3 || As.size !== 6 || Gs.size !== 4 || Ts.size !== 4 || Bs.size !== 5 || Ds.size !== 5) fail('pathpick', 'deal', `k ${[...Ks]}, powers ${[...MNs].join(' ')}, α ${[...As]}, γ ${[...Gs]}, t ${[...Ts]}, β ${[...Bs]}, δ ${[...Ds]} is not the whole deal`);
+  if (left.size !== 6) fail('pathpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('pathpick', 'deal', `dz/dt only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('pathpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -11128,6 +11283,7 @@ console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 1
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  path rates         ${pad(pathPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-rate in the path chain workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching z nudged along the path; ${pathPickNotes.misses.toLocaleString()} wrong picks checked by a nudge in t, ${pathPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
