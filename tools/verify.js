@@ -4373,6 +4373,145 @@ const transPickNotes = (() => {
   return { rounds, misses, reds };
 })();
 
+/* Which A⁻¹? The pick-an-inverse round in the undo workshop. Every matrix on
+   screen is read back from both its name and its cells, and checked against
+   the slip it is named as, worked out here from A alone; the right one alone
+   must send Aî and Aĵ home. A miss is checked the way the workshop checks B,
+   on the first arrow that does not come home, and every product is worked
+   again. */
+const undoPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    cut('function mat(rows){', 'const vec = a =>') +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Undo = {render(){ env.renders++; }};" +
+    cut('const UndoPick = {', 'const Undo = {') + 'return UndoPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const num = t => +t.replace('−', '-');
+  const pn = n => (n < 0 ? '(' + ng(n) + ')' : ng(n));
+  const vec = w => `⟨${ng(w[0])}, ${ng(w[1])}⟩`;
+  const rows = M => `rows ${ng(M[0][0])}, ${ng(M[0][1])} and ${ng(M[1][0])}, ${ng(M[1][1])}`;
+  const det = M => M[0][0] * M[1][1] - M[0][1] * M[1][0];
+  const mul = (M, N) => [[M[0][0] * N[0][0] + M[0][1] * N[1][0], M[0][0] * N[0][1] + M[0][1] * N[1][1]], [M[1][0] * N[0][0] + M[1][1] * N[1][0], M[1][0] * N[0][1] + M[1][1] * N[1][1]]];
+  const isI = M => M[0][0] === 1 && M[0][1] === 0 && M[1][0] === 0 && M[1][1] === 1;
+  // each option, worked out here from A alone
+  const want = {
+    right: ([[a, b], [c, d]]) => { const t = a * d - b * c; return [[d / t, -b / t], [-c / t, a / t]]; },
+    noswap: ([[a, b], [c, d]]) => { const t = a * d - b * c; return [[a / t, -b / t], [-c / t, d / t]]; },
+    noneg: ([[a, b], [c, d]]) => { const t = a * d - b * c; return [[d / t, b / t], [c / t, a / t]]; },
+    trans: ([[a, b], [c, d]]) => [[a, c], [b, d]],
+    nodiv: ([[a, b], [c, d]]) => [[d, -b], [-c, a]]
+  };
+  const z = M => M.map(r => r.map(x => x + 0));   // no −0
+  const workOf = A => { const [[a, b], [c, d]] = A, t = det(A);
+    return `det A = ${ng(a)}·${pn(d)} − ${pn(b)}·${pn(c)} = ${ng(t)}, so A⁻¹ = (1/${pn(t)})·[${ng(d)} ${ng(-b)}; ${ng(-c)} ${ng(a)}], with ${rows(z(want.right(A)))}`; };
+  const sendOf = (M, A, j, L) => { const v = [A[0][j], A[1][j]], e = [M[0][0] * v[0] + M[0][1] * v[1], M[1][0] * v[0] + M[1][1] * v[1]];
+    return `${L} sends A${j ? 'ĵ' : 'î'} = ${vec(v)} to ⟨${ng(M[0][0])}·${pn(v[0])} + ${pn(M[0][1])}·${pn(v[1])}, ${ng(M[1][0])}·${pn(v[0])} + ${pn(M[1][1])}·${pn(v[1])}⟩ = ${vec(e)}`; };
+  // every "⟨p·q + r·s, t·u + v·w⟩ = ⟨x, y⟩" in a line, worked again from its own numbers
+  const sends = (t, key) => { let n = 0; for (const m of t.matchAll(/⟨(\(?−?\d+\)?)·(\(?−?\d+\)?) \+ (\(?−?\d+\)?)·(\(?−?\d+\)?), (\(?−?\d+\)?)·(\(?−?\d+\)?) \+ (\(?−?\d+\)?)·(\(?−?\d+\)?)⟩ = ⟨(−?\d+), (−?\d+)⟩/g)) {
+    n++; const f = i => num(m[i].replace(/[()]/g, ''));
+    if (f(1) * f(2) + f(3) * f(4) !== f(9) || f(5) * f(6) + f(7) * f(8) !== f(10)) fail('undopick', key, `${m[0]} is worked wrong`); } return n; };
+  // a matrix as mat() draws it, read back cell by cell (it is drawn column by column)
+  const cells = h => { const cols = [...h.matchAll(/<span class="col">((?:<span>[^<]*<\/span>)+)<\/span>/g)].map(c => [...c[1].matchAll(/<span>([^<]*)<\/span>/g)].map(x => num(x[1])));
+    return cols.length === 2 && cols.every(c => c.length === 2) ? [[cols[0][0], cols[1][0]], [cols[0][1], cols[1][1]]] : null; };
+  const read = () => txt(S.html().split('id="uiRead"')[1].replace(/^[^>]*>/, ''));
+  if (S.RULE !== 'For A with rows a, b and c, d, the undo is A⁻¹ = (1/det A)·[d −b; −c a]: swap a and d, change the signs of b and c, and divide by det A = ad − bc. Here det A is 1 or −1, so dividing by it keeps every sign or flips them all. A⁻¹ sends Aî back to ⟨1, 0⟩ and Aĵ back to ⟨0, 1⟩. Which matrix is A⁻¹?') fail('undopick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('undopick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, negs = 0;
+  const slots = new Set(), kinds = {}, left = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, A = r.A, key = `seed ${seed} round ${k}`, t = det(A);
+      rounds++; if (t === -1) negs++;
+      if (A.flat().some(x => !Number.isInteger(x) || Math.abs(x) > 3) || Math.abs(t) !== 1 || A.flat().filter(x => x).length < 3) fail('undopick', key, `A = ${JSON.stringify(A)} is not small and whole with det ±1 and at most one 0`);
+      if (prev && JSON.stringify(prev) === JSON.stringify(A)) fail('undopick', key, 'the same A comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('undopick', key, 'there are not four matrices, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ' A =') || !h0.includes(`id="uiA" style="text-align:center;margin-bottom:4px" aria-label="A has ${rows(A)}">A = `)) fail('undopick', key, 'the rule and A are not shown first');
+      const shownA = cells(h0.split('id="uiA"')[1].split('</div>')[0]);
+      if (!shownA || JSON.stringify(shownA) !== JSON.stringify(A)) fail('undopick', key, `A is drawn as ${JSON.stringify(shownA)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([PQRS])" onclick="UndoPick\.choose\((\d)\)" aria-label="([PQRS]): rows (−?\d+), (−?\d+) and (−?\d+), (−?\d+)" style="margin:0"><b>([PQRS])<\/b> (<span class="mtx">.*?<\/span><\/span><\/span>)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((m, i) => m[1] !== 'PQRS'[i] || +m[2] !== i || m[3] !== 'PQRS'[i] || m[8] !== 'PQRS'[i])) { fail('undopick', key, 'the four matrices are not offered as they are, P to S'); continue; }
+      const mats = btns.map(m => { const said = [[num(m[4]), num(m[5])], [num(m[6]), num(m[7])]], drawn = cells(m[9]);
+        if (JSON.stringify(said) !== JSON.stringify(drawn)) fail('undopick', key, `a matrix is named ${JSON.stringify(said)} but drawn ${JSON.stringify(drawn)}`);
+        return said; });
+      if (new Set(mats.map(M => M.join())).size !== 4) fail('undopick', key, 'two matrices are the same');
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('undopick', key, `an option is the unknown ${o.k}`); return; }
+        if (JSON.stringify(mats[i]) !== JSON.stringify(z(want[o.k](A)))) fail('undopick', key, `${o.k} is shown as ${JSON.stringify(mats[i])}, which is not that slip`);
+        if ((o.k === 'right') !== isI(mul(mats[i], A))) fail('undopick', key, `${JSON.stringify(mats[i])} ${o.k === 'right' ? 'does not undo' : 'undoes'} A`);
+        if (o.k === 'nodiv' && t !== -1) fail('undopick', key, 'the forgot-to-divide slip is offered when det A is 1');
+      });
+      {
+        const can = []; const seen = new Set([JSON.stringify(z(want.right(A)))]);
+        for (const s of ['noswap', 'noneg', 'trans', 'nodiv']) { const w = JSON.stringify(z(want[s](A))); if (!seen.has(w)) { seen.add(w); can.push(s); } }
+        if (can.length === 4) { const shown = r.opts.map(o => o.k); left.add(can.find(s => !shown.includes(s))); }
+        if (can.length < 3) fail('undopick', key, 'an A with fewer than three slips is dealt'); }
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('undopick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], L = 'PQRS'[i], M = mats[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('undopick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        const slip = { noswap: `${L} leaves a and d where they were, ${ng(A[0][0])} top-left and ${ng(A[1][1])} bottom-right. The undo swaps them: d goes top-left.`,
+          noneg: `${L} swaps a and d but leaves b and c with their signs. The undo changes the signs of b and c: −b top-right, −c bottom-left.`,
+          trans: `${L} is A turned on its side, Aᵀ: its rows are A's columns. Turning a matrix over is not undoing it.`,
+          nodiv: `${L} swaps a and d and changes the signs of b and c, but forgets to divide by det A = −1, which flips every sign.` }[o.k];
+        const P = mul(M, A), j = P[0][0] === 1 && P[1][0] === 0 ? 1 : 0;
+        const ck = `Check ${L} the way B is checked: ${sendOf(M, A, j, L)}, but ${j ? 'ĵ' : 'î'} has to come back to ${j ? '⟨0, 1⟩' : '⟨1, 0⟩'}. ${workOf(A)}.`;
+        if (rt !== `${slip} ${ck} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('undopick', key, `${o.k} is explained as: ${rt} | want ${slip} ${ck}`);
+        worked += sends(rt, key);
+        const h = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${L}" disabled onclick="UndoPick\\.choose\\(${i}\\)" aria-label="${L}: rows [^"]+\\. Not A⁻¹"`).test(h) || (h.match(/ disabled /g) || []).length !== q + 1) fail('undopick', key, 'the missed matrices are not shut and told as not A⁻¹');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('undopick', key, 'tapping a missed matrix again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('undopick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('undopick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('undopick', key, 'no fresh A after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'INVERSE READER / 5 undos picked') fail('undopick', key, 'no banner at five'); }
+      else { const tries = missN + 1, w = `✓ ${'PQRS'[ri]} is A⁻¹, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== w || env.banners.length !== nb) fail('undopick', key, `the toast is ${env.toasts[nt]}`); }
+      const W = mats[ri], rt = read();
+      const after = `That was it: ${workOf(A)}. ${sendOf(W, A, 0, 'It')}, and ${sendOf(W, A, 1, 'it')}: both come home. Here is a new A. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('undopick', key, `after a pick: ${rt} | want ${after}`);
+      if (sends(rt, key) !== 2) fail('undopick', key, 'the right pick does not work both arrows');
+      worked += 2;
+      prev = A;
+    }
+  }
+  { // the same A dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? [[2, 1], [1, 1]] : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.A) === '[[2,1],[1,1]]') fail('undopick', 'repeat', 'the same A is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of ['noswap', 'noneg', 'trans', 'nodiv']) if (!kinds[k]) fail('undopick', 'slips', `the slip ${k} is never offered`);
+  if (!negs || negs === rounds) fail('undopick', 'deal', 'det A is always the same sign');
+  if (left.size !== 4) fail('undopick', 'deal', `when an A has four slips, only ${[...left].join(', ')} are ever the one left out`);
+  if (slots.size !== 4) fail('undopick', 'deal', `the right matrix only ever sits at ${[...slots].sort().map(i => 'PQRS'[i]).join(', ')}`);
+  if (fives !== 30) fail('undopick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which u × v? The pick-a-cross-product round in the cross product workshop.
    Every arrow on screen is read back off its button and checked against the
    slip it is named as, worked out here from u and v alone; the right one must
@@ -8244,6 +8383,7 @@ console.log(`  slopes picked     ${pad(chainPickNotes.rounds.toLocaleString(), 1
 console.log(`  product slopes    ${pad(productPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the product rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as; ${productPickNotes.misses.toLocaleString()} wrong picks explained; ${productPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  quotient slopes   ${pad(quotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-dy/dx in the quotient rule workshop, every formula read back as maths and checked against a nudge of y or against the slip it is named as, with g kept clear of 0; ${quotPickNotes.misses.toLocaleString()} wrong picks explained; ${quotPickNotes.lines.toLocaleString()} red lines read back off their ticks)`);
 console.log(`  dot products      ${pad(dotPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u·v in the dot product workshop, every number checked against the sum it stands for and each slip worked out from the numbers on screen; ${dotPickNotes.misses.toLocaleString()} wrong picks explained; ${dotPickNotes.shadows.toLocaleString()} gold shadows read back off their ticks, dropped square onto v's line)`);
+console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);

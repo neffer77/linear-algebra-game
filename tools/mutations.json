@@ -1,102 +1,277 @@
 {
-  "change": "Which Aᵀ? and which λ? letter their options P to S, so no option shares the name of the matrix A",
+  "change": "Which A⁻¹? in the undo workshop: see A, pick which of four matrices is A⁻¹",
   "mutations": [
     {
-      "name": "which Aᵀ letters its options A to D again (line 1, place 1)",
+      "name": "the rule leaves out the sign change",
       "file": "index.html",
-      "find": "      else UI.toast(`✓ ${'PQRS'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);",
-      "replace": "      else UI.toast(`✓ ${'ABCD'[i]} is Aᵀ, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);",
+      "find": "  RULE:'For A with rows a, b and c, d, the undo is A⁻¹ = (1/det A)·[d −b; −c a]: swap a and d, change the signs of b and c, and divide by det A = ad − bc.",
+      "replace": "  RULE:'For A with rows a, b and c, d, the undo is A⁻¹ = (1/det A)·[d −b; −c a]: swap a and d, and divide by det A = ad − bc.",
       "run": "verify"
     },
     {
-      "name": "which Aᵀ letters its options A to D again (line 2, place 1)",
+      "name": "A⁻¹ forgets to swap",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'ABCD'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
+      "find": "return k==='right' ? [[t*d,-t*b],[-t*c,t*a]]",
+      "replace": "return k==='right' ? [[t*a,-t*b],[-t*c,t*d]]",
       "run": "verify"
     },
     {
-      "name": "which Aᵀ letters its options A to D again (line 2, place 2)",
+      "name": "A⁻¹ forgets the sign of det A",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'ABCD'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
+      "find": "return k==='right' ? [[t*d,-t*b],[-t*c,t*a]]",
+      "replace": "return k==='right' ? [[d,-b],[-c,a]]",
       "run": "verify"
     },
     {
-      "name": "which Aᵀ letters its options A to D again (line 2, place 3)",
+      "name": "the no-swap slip swaps",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'PQRS'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"TransPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${this.size(M)}, with rows ${this.rows(M)}${gone?'. Not Aᵀ':''}\" style=\"margin:0;padding:6px 2px;font-size:15px\"><b>${'ABCD'[i]}</b> ${this.grid(M,{bad:gone?this.wrong(A,M):[]})}</button>`;",
+      "find": "k==='noswap' ? [[t*a,-t*b],[-t*c,t*d]]",
+      "replace": "k==='noswap' ? [[t*d,-t*b],[-t*c,t*a]]",
       "run": "verify"
     },
     {
-      "name": "which Aᵀ letters its options A to D again (line 3, place 1)",
+      "name": "the no-sign slip changes one sign",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));",
-      "replace": "    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'ABCD'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));",
+      "find": "k==='noneg' ? [[t*d,t*b],[t*c,t*a]]",
+      "replace": "k==='noneg' ? [[t*d,-t*b],[t*c,t*a]]",
       "run": "verify"
     },
     {
-      "name": "which Aᵀ letters its options A to D again (line 3, place 2)",
+      "name": "the turned-over slip is A itself",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'PQRS'[m]));",
-      "replace": "    if(m!==null) lines.push(this.slip(A,r.opts[m].k,'PQRS'[m]), this.check(A,r.opts[m].k,'ABCD'[m]));",
+      "find": "k==='trans' ? [[a,c],[b,d]]",
+      "replace": "k==='trans' ? [[a,b],[c,d]]",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 1, place 1)",
+      "name": "the no-divide slip divides",
       "file": "index.html",
-      "find": "      else UI.toast(`✓ ${'PQRS'[i]} are the eigenvalues, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);",
-      "replace": "      else UI.toast(`✓ ${'ABCD'[i]} are the eigenvalues, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);",
+      "find": "[[a,c],[b,d]] : [[d,-b],[-c,a]];",
+      "replace": "[[a,c],[b,d]] : [[t*d,-t*b],[-t*c,t*a]];",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 2, place 1)",
+      "name": "a slip equal to A⁻¹ is kept",
       "file": "index.html",
-      "find": "      const L='PQRS'[i];",
-      "replace": "      const L='ABCD'[i];",
+      "find": "      if(seen.has(this.key(M))) continue;\n      seen.add(this.key(M)); keep.push(k); }",
+      "replace": "      if(seen.has(this.key(M))&&k!=='nodiv') continue;\n      seen.add(this.key(M)); keep.push(k); }",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 3, place 1)",
+      "name": "entries may run past three",
       "file": "index.html",
-      "find": "    if(outs.length) out+=`<svg id=\"lpFig\" viewBox=\"0 0 300 190\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI) = ${this.poly(c)} in blue against λ, meeting the axis at the gold rings, λ = ${neg(c.lam[0])} and ${neg(c.lam[1])}; red dots for ${outs.map(i=>'PQRS'[i]).join(' and ')}\">${this.panel(c,300,190)}</svg>`;",
-      "replace": "    if(outs.length) out+=`<svg id=\"lpFig\" viewBox=\"0 0 300 190\" style=\"width:100%;height:auto;display:block\" role=\"img\" aria-label=\"det(A − λI) = ${this.poly(c)} in blue against λ, meeting the axis at the gold rings, λ = ${neg(c.lam[0])} and ${neg(c.lam[1])}; red dots for ${outs.map(i=>'ABCD'[i]).join(' and ')}\">${this.panel(c,300,190)}</svg>`;",
+      "find": "const r=()=>R.i(this.LO,this.HI), A=[[r(),r()],[r(),r()]];",
+      "replace": "const r=()=>R.i(this.LO,this.HI+1), A=[[r(),r()],[r(),r()]];",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 4, place 1)",
+      "name": "A with too few slips is dealt",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'PQRS'[i]}</b> ${x}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'ABCD'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'PQRS'[i]}</b> ${x}</button>`;",
+      "find": "      if(this.slips(A).length<3) continue;   // det A = 0",
+      "replace": "      if(this.slips(A).length<2) continue;   // det A = 0",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 4, place 2)",
+      "name": "the same A may come twice",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'PQRS'[i]}</b> ${x}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'ABCD'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'PQRS'[i]}</b> ${x}</button>`;",
+      "find": "for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }",
+      "replace": "A=this.build();",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 4, place 3)",
+      "name": "the same test compares the wrong thing",
       "file": "index.html",
-      "find": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'PQRS'[i]}</b> ${x}</button>`;",
-      "replace": "      return `<button class=\"btn sm ghost smOpt${gone?' miss':''}\" data-opt=\"${'PQRS'[i]}\" ${gone?'disabled ':''}onclick=\"LamPick.choose(${i})\" aria-label=\"${'PQRS'[i]}: ${x}${gone?'. Not the eigenvalues':''}\" style=\"margin:0\"><b>${'ABCD'[i]}</b> ${x}</button>`;",
+      "find": "same(M,N){ return this.key(M)===this.key(N); },",
+      "replace": "same(M,N){ return this.key(M)===this.key(M); },",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 5, place 1)",
+      "name": "one option is dropped",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'PQRS'[m]), this.check(c,r.opts[m].k,'PQRS'[m]));",
-      "replace": "    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'PQRS'[m]));",
+      "find": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
+      "replace": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,2)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
       "run": "verify"
     },
     {
-      "name": "which λ letters its options A to D again (line 5, place 2)",
+      "name": "the right matrix always sits first",
       "file": "index.html",
-      "find": "    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'PQRS'[m]), this.check(c,r.opts[m].k,'PQRS'[m]));",
-      "replace": "    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'PQRS'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));",
+      "find": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
+      "replace": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    this.round={A,opts",
+      "run": "verify"
+    },
+    {
+      "name": "the slips always come in one order",
+      "file": "index.html",
+      "find": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
+      "replace": "    for(let g=0;g<50;g++){ A=this.build(); if(!prev||!this.same(A,prev)) break; }\n    const rest=this.slips(A);\n    const opts=['right',...rest.slice(0,3)].map(k=>({k}));\n    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }\n    this.round={A,opts",
+      "run": "verify"
+    },
+    {
+      "name": "a crossed-off matrix can be picked again",
+      "file": "index.html",
+      "find": "    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "replace": "    if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "run": "verify"
+    },
+    {
+      "name": "a miss still counts as first try",
+      "file": "index.html",
+      "find": "      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "replace": "      this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "run": "verify"
+    },
+    {
+      "name": "the banner never comes at five",
+      "file": "index.html",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('INVERSE",
+      "run": "verify"
+    },
+    {
+      "name": "the toast counts the wrong tries",
+      "file": "index.html",
+      "find": "else UI.toast(`✓ ${'PQRS'[i]} is A⁻¹, picked ${tries===1?'on the first try':'in '+tries+' tries'}",
+      "replace": "else UI.toast(`✓ ${'PQRS'[i]} is A⁻¹, picked ${tries===1?'on the first try':'in '+this.misses+' tries'}",
+      "run": "verify"
+    },
+    {
+      "name": "A stays after the right pick",
+      "file": "index.html",
+      "find": "      else UI.toast(`✓ ${'PQRS'[i]} is A⁻¹, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};\n      this.newRound();",
+      "replace": "      else UI.toast(`✓ ${'PQRS'[i]} is A⁻¹, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);\n      this.last={A:r.A};",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not crossed off",
+      "file": "index.html",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Undo.render();",
+      "replace": "      this.misses++; this.last=null;\n    }\n    Undo.render();",
+      "run": "verify"
+    },
+    {
+      "name": "the workshop is not redrawn",
+      "file": "index.html",
+      "find": "      r.out.add(i); this.misses++; this.last=null;\n    }\n    Undo.render();",
+      "replace": "      r.out.add(i); this.misses++; this.last=null;\n    }",
+      "run": "verify"
+    },
+    {
+      "name": "an arrow is sent with a part dropped",
+      "file": "index.html",
+      "find": "return `${L} sends A${nm} = ${this.vec(v)} to ⟨${neg(M[0][0])}·${P(v[0])} + ${P(M[0][1])}·${P(v[1])}",
+      "replace": "return `${L} sends A${nm} = ${this.vec(v)} to ⟨${neg(M[0][0])}·${P(v[0])} + ${P(M[0][1])}·${P(v[0])}",
+      "run": "verify"
+    },
+    {
+      "name": "the check follows the wrong arrow",
+      "file": "index.html",
+      "find": "j=e[0]===1 && e[1]===0 ? 1 : 0, nm=j?'ĵ':'î';",
+      "replace": "j=e[0]===1 && e[1]===0 ? 0 : 1, nm=j?'ĵ':'î';",
+      "run": "verify"
+    },
+    {
+      "name": "the arrows are taken from A's rows",
+      "file": "index.html",
+      "find": "col:(M,j)=>[M[0][j],M[1][j]],\n  app:([[a,b],[c,d]],[x,y])=>[a*x+b*y, c*x+d*y],\n  // the slips this A",
+      "replace": "col:(M,j)=>[M[j][0],M[j][1]],\n  app:([[a,b],[c,d]],[x,y])=>[a*x+b*y, c*x+d*y],\n  // the slips this A",
+      "run": "verify"
+    },
+    {
+      "name": "the worked det takes the wrong product",
+      "file": "index.html",
+      "find": "return `det A = ${neg(a)}·${P(d)} − ${P(b)}·${P(c)} = ${neg(t)}",
+      "replace": "return `det A = ${neg(a)}·${P(b)} − ${P(c)}·${P(d)} = ${neg(t)}",
+      "run": "verify"
+    },
+    {
+      "name": "the worked A⁻¹ keeps b's sign",
+      "file": "index.html",
+      "find": "so A⁻¹ = (1/${P(t)})·[${neg(d)} ${neg(-b)}; ${neg(-c)} ${neg(a)}]",
+      "replace": "so A⁻¹ = (1/${P(t)})·[${neg(d)} ${neg(b)}; ${neg(-c)} ${neg(a)}]",
+      "run": "verify"
+    },
+    {
+      "name": "brackets are dropped round a negative",
+      "file": "index.html",
+      "find": "pn:n=>n<0?'('+neg(n)+')':neg(n),\n  rows:M=>",
+      "replace": "pn:n=>neg(n),\n  rows:M=>",
+      "run": "verify"
+    },
+    {
+      "name": "the no-swap slip names the wrong corners",
+      "file": "index.html",
+      "find": "${L} leaves a and d where they were, ${neg(a)} top-left and ${neg(d)} bottom-right.",
+      "replace": "${L} leaves a and d where they were, ${neg(d)} top-left and ${neg(a)} bottom-right.",
+      "run": "verify"
+    },
+    {
+      "name": "the turned-over slip is told as another",
+      "file": "index.html",
+      "find": "if(k==='trans') return `${L} is A turned on its side, Aᵀ:",
+      "replace": "if(k==='trans') return `${L} swaps a and d but leaves b and c with their signs:",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not worked against the rule",
+      "file": "index.html",
+      "find": "has to come back to ${j?'⟨0, 1⟩':'⟨1, 0⟩'}. ${this.work(A)}.`;",
+      "replace": "has to come back to ${j?'⟨0, 1⟩':'⟨1, 0⟩'}.`;",
+      "run": "verify"
+    },
+    {
+      "name": "A is not drawn",
+      "file": "index.html",
+      "find": "out+=`<div id=\"uiA\" style=\"text-align:center;margin-bottom:4px\" aria-label=\"A has ${this.rows(A)}\">A = ${mat(A)}</div>`;",
+      "replace": "out+=`<div id=\"uiA\" style=\"text-align:center;margin-bottom:4px\" aria-label=\"A has ${this.rows(A)}\">A</div>`;",
+      "run": "verify"
+    },
+    {
+      "name": "a matrix is named by A's rows",
+      "file": "index.html",
+      "find": "aria-label=\"${L}: ${this.rows(M)}${gone?'. Not A⁻¹':''}\"",
+      "replace": "aria-label=\"${L}: ${this.rows(A)}${gone?'. Not A⁻¹':''}\"",
+      "run": "verify"
+    },
+    {
+      "name": "a crossed-off matrix is not shut",
+      "file": "index.html",
+      "find": "${gone?'disabled ':''}onclick=\"UndoPick.choose",
+      "replace": "onclick=\"UndoPick.choose",
+      "run": "verify"
+    },
+    {
+      "name": "the right pick works only î",
+      "file": "index.html",
+      "find": "${this.send(W,B,0,'It')}, and ${this.send(W,B,1,'it')}: both come home.",
+      "replace": "${this.send(W,B,0,'It')}, and ${this.send(W,B,0,'it')}: both come home.",
+      "run": "verify"
+    },
+    {
+      "name": "the count is not shown",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"uiRead\"",
+      "replace": "    out+=`<div id=\"uiRead\"",
+      "run": "verify"
+    },
+    {
+      "name": "the tab leaves the hand workshop showing",
+      "file": "index.html",
+      "find": "['uvMats','uvBLabel','uvB','uvFig','uvRead','uvGoalPanel']",
+      "replace": "['uvMats','uvBLabel','uvFig','uvRead','uvGoalPanel']",
+      "run": "play"
+    },
+    {
+      "name": "the check always follows î",
+      "file": "index.html",
+      "find": "j=e[0]===1 && e[1]===0 ? 1 : 0, nm=j?'ĵ':'î';",
+      "replace": "j=0, nm=j?'ĵ':'î';",
+      "run": "verify"
+    },
+    {
+      "name": "det A may be 2",
+      "file": "index.html",
+      "find": "if(Math.abs(this.det(A))!==1) continue;",
+      "replace": "if(Math.abs(this.det(A))>2) continue;",
       "run": "verify"
     }
   ]
