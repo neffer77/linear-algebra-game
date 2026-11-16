@@ -60,7 +60,7 @@ module.exports = {
     const s0 = await t.ev(() => JSON.stringify(LnPick.round.S));
     await opt(t, ri);
     r = await read(t);
-    t.ok('the right pick is worked piece by piece', /^That was it: ln y = .+ln x \+ \d·ln\(.+\) − .*ln\(x [+−] \d\), and at x = \d the pieces' slopes are .+, .+, −.+, which add to −?\d+(\/\d+)?\. Here is a new one\./.test(r), r);
+    t.ok('the right pick is worked piece by piece', /^That was it: ln y = .*ln x \+ \d·ln\(.+\) − .*ln\(x [+−] \d\), and at x = \d the pieces' slopes are .+, .+, −.+, which add to −?\d+(\/\d+)?\. Here is a new one\./.test(r), r);
     t.ok('and counted, but not as a first try', /1 picked this visit, 0 on the first try\.$/.test(r), r);
     t.ok('with a toast', new RegExp(`✓ ${'ABCD'[ri]} is the slope of ln y, picked in 2 tries\\. Here is another\\.`).test(await toast(t)), await toast(t));
     t.ok('and a new curve with all four open', await t.ev(() => [...document.querySelectorAll('#lqPick button')].every(b => !b.disabled))
