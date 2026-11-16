@@ -5428,6 +5428,153 @@ const trigPickNotes = (() => {
   if (fives !== 30) fail('trigpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Where does it flip? The pick-x round in the bend workshop. Every number on
+   screen is read back off its button as an exact fraction and checked against
+   the slip it is named as, worked out here from a and b alone. The right
+   number alone must be where f″ changes sign, checked on f itself by second
+   differences either side, and every f″ in the readout is worked again from
+   the numbers it shows. */
+const flipPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Bend = {render(){ env.renders++; }};" +
+    cut('const FlipPick = {', 'const Bend = {') + 'return FlipPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const f2 = (Q, v) => fr(6 * Q.a * v[0] + 2 * Q.b * v[1], v[1]);
+  const want = {
+    right: Q => fr(-Q.b, 3 * Q.a),
+    sign: Q => fr(Q.b, 3 * Q.a),
+    noTwo: Q => fr(-Q.b, 6 * Q.a),
+    noSix: Q => fr(-2 * Q.b, Q.a),
+    vertex: Q => fr(-Q.b, 2 * Q.a)
+  };
+  const SL = ['sign', 'noTwo', 'noSix', 'vertex'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "(6a) × (v) + (2b) = w" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`(−?\\d+) × \\(?${V}\\)? \\+ \\(?(−?\\d+)\\)? = ${V}`, 'g'))) { n++;
+      const v = rd(m[2]), w = rd(m[4]), A = rd(m[1])[0], B = rd(m[3])[0];
+      if (!eq(fr(A * v[0] + B * v[1], v[1]), w)) fail('flippick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="bkRead"')[1].replace(/^[^>]*>/, ''));
+  const poly = Q => { const t = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), w = (m === 1 && v ? '' : m) + v; return first ? (n < 0 ? '−' : '') + w : (n < 0 ? ' − ' : ' + ') + w; };
+    return t(Q.a, 'x³', true) + t(Q.b, 'x²', false) + t(Q.c, 'x', false) + t(Q.d, '', false); };
+  const fpp = Q => `f″(x) = ${ng(6 * Q.a)}x + ${pn(2 * Q.b)}`;
+  const slipOf = (k, L, Q) => ({
+    sign: `${L} loses the sign of b. ${fpp(Q)} is 0 where ${ng(6 * Q.a)}x = ${ng(-2 * Q.b)}, so x carries the opposite sign to b/a.`,
+    noTwo: `${L} drops the 2 that bx² brings down. The slope of ${ng(Q.b)}x² is ${ng(2 * Q.b)}x, and its slope is ${ng(2 * Q.b)}, not ${ng(Q.b)}.`,
+    noSix: `${L} drops the 6 that x³ brings down over two slopes: x³ gives 3x² and then 6x, so ${ng(Q.a)}x³ gives ${ng(6 * Q.a)}x in f″, not ${ng(Q.a)}x.`,
+    vertex: `${L} is −b/(2a), the middle of a parabola. That is where a quadratic turns; a cubic bends where f″ = 0, and f″ = 6ax + 2b puts it at −b/(3a).` }[k]);
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: ${fpp(Q)}, and at x = ${fst(v)} that is ${ng(6 * Q.a)} × ${pf(v)} + ${pn(2 * Q.b)} = ${fst(f2(Q, v))}, not 0.`; };
+  const fx = (Q, x) => Q.a * x ** 3 + Q.b * x ** 2 + Q.c * x + Q.d;
+  if (S.RULE !== 'The bend flips where the slope of the slope changes sign, so where f″ = 0. Differentiate f(x) = ax³ + bx² + cx + d twice: f′(x) = 3ax² + 2bx + c and f″(x) = 6ax + 2b, which is 0 at x = −2b/(6a) = −b/(3a). c and d drop out. Which number is x?') fail('flippick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('flippick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negA = 0, negB = 0, zeroC = 0, zeroD = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Bs = new Set(), Cs = new Set(), Ds = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Bs.add(Q.b); Cs.add(Q.c); Ds.add(Q.d); if (Q.a < 0) negA++; if (Q.b < 0) negB++; if (!Q.c) zeroC++; if (!Q.d) zeroD++;
+      if (![Q.a, Q.b, Q.c, Q.d].every(Number.isInteger) || !Q.a || !Q.b || Math.abs(Q.a) > 3 || Math.abs(Q.b) > 9 || Math.abs(Q.c) > 6 || Math.abs(Q.d) > 5) fail('flippick', key, `${JSON.stringify(Q)} is not a whole-number cubic`);
+      const L = want.right(Q), x0 = L[0] / L[1], h = 0.01;
+      // second differences of f itself change sign across the right x
+      const dd = x => fx(Q, x + h) - 2 * fx(Q, x) + fx(Q, x - h);
+      if (Math.sign(dd(x0 - 0.3)) === Math.sign(dd(x0 + 0.3)) || Math.abs(dd(x0)) > 1e-6) fail('flippick', key, `the bend of f does not flip at x = ${fst(L)}`);
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('flippick', key, 'the same curve comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('flippick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` f(x) = ${poly(Q)} Where does the bend flip? A`)) fail('flippick', key, 'the rule and the curve are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="FlipPick\.choose\((\d)\)" aria-label="([ABCD]): x = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> x = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('flippick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('flippick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('flippick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('flippick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('flippick', key, `x is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('flippick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('flippick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('flippick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} where it flips`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('flippick', key, 'a curve with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('flippick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('flippick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('flippick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('flippick', key, 'a miss does not work f″ out');
+        if (f2(Q, vals[i])[0] === 0) fail('flippick', key, 'a wrong x passes the check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="FlipPick\\.choose\\(${i}\\)" aria-label="${Lt}: x = [^"]+\\. Not where it flips"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('flippick', key, 'the missed numbers are not shut and told as not where it flips');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('flippick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('flippick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('flippick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('flippick', key, 'no fresh curve after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'BEND SPOTTER / 5 bends found') fail('flippick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where it flips, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('flippick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), raw = `${ng(-2 * Q.b)}/${pn(6 * Q.a)}`;
+      const after = `That was it: ${fpp(Q)} is 0 at x = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and ${ng(6 * Q.a)} × ${pf(L)} + ${pn(2 * Q.b)} = 0, so the bend flips there. Here is a new curve. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('flippick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('flippick', key, 'the right pick does not work f″ out');
+      if (f2(Q, L)[0] !== 0) fail('flippick', key, `f″ is not 0 at ${fst(L)}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same curve dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { a: 1, b: -6, c: 2, d: 1 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"a":1,"b":-6,"c":2,"d":1}') fail('flippick', 'repeat', 'the same curve is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('flippick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 6 || Bs.size !== 18 || Cs.size !== 13 || Ds.size !== 11) fail('flippick', 'deal', `a is only ever ${[...As]}, b ${[...Bs]}, c ${[...Cs]}, d ${[...Ds]}`);
+  if (!zeroC || !zeroD) fail('flippick', 'deal', 'c or d is never 0, so a curve is never written short');
+  if (negA < rounds * 0.4 || negA > rounds * 0.6 || negB < rounds * 0.4 || negB > rounds * 0.6) fail('flippick', 'deal', `a is negative in ${negA} and b in ${negB} of ${rounds} rounds`);
+  if (wholes.size < 6) fail('flippick', 'deal', `the whole values of x are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('flippick', 'deal', `x is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 4) fail('flippick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('flippick', 'deal', `x only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('flippick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10174,6 +10321,7 @@ console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);
 console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the trig integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone making the slope of F land on the wave; ${trigPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their F back, ${trigPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${trigPickNotes.wholeR.toLocaleString()} rounds whose c is whole)`);
+console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

@@ -1357,17 +1357,19 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BEND WORKSHOP ============ -->
   <div class="screen" id="s-bend">
     <div class="panel"><h2>〰️ Bend Workshop</h2><div class="sub">The first derivative is the slope. The second, f″, is how fast that slope is changing. Slide a point along a curve and watch its tangent: where the slope rises the curve bends up like a cup, where it falls it bends down like a cap, and where the bend flips over the tangent cuts straight through.</div></div>
+    <div id="bdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Slide along by hand or pick where it flips"></div>
     <div class="panel">
+      <div id="bkBox"></div>
       <div id="bdSets" class="wsModes" role="group" aria-label="Which curve"></div>
       <div id="bdFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div id="bdStep" class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="bdXLo" onclick="Bend.moveX(-1)" aria-label="Move the point half a step left">−</button>
           <b id="bdX" style="font-size:17px;min-width:0"></b>
           <button id="bdXHi" onclick="Bend.moveX(1)" aria-label="Move the point half a step right">+</button></div>
       </div>
       <div id="bdRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="bdGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="bdGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14206,7 +14208,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">〰️ Bend Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Slide along a curve and watch the slope of its slope: where it rises the curve bends up like a cup, where it falls it bends down like a cap. Find where the bend flips, and the flat spot that only looks like it does.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide along a curve and watch the slope of its slope: where it rises the curve bends up like a cup, where it falls it bends down like a cap. Find where the bend flips, and the flat spot that only looks like it does. Then turn it round: see a cubic, and pick which of four numbers is where its bend flips.</div>
          <button class="btn sm" id="tomeBend" style="width:auto;margin-top:8px" onclick="Bend.open()">Open the bend workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -19562,6 +19564,126 @@ const Geo = {
    it is falling, f″ < 0 and the curve bends down like a cap, below it. Where
    the bend flips over the tangent crosses the curve: an inflection point. But
    f″ = 0 alone is not enough, as x⁴/4 shows. Nothing is saved. */
+/* ---------- Where does it flip? The bend workshop turned round ----------
+ * A cubic f(x) = ax³ + bx² + cx + d with whole numbers, and four numbers. The
+ * bend flips where the slope of the slope changes sign: f″(x) = 6ax + 2b is 0
+ * at x = −2b/(6a) = −b/(3a). The wrong numbers are the slips people make
+ * with it: the sign of b lost; the 2 that bx² brings down dropped, giving
+ * −b/(6a); the 6 that x³ brings down dropped, giving −2b/a; and −b/(2a), the
+ * middle of a parabola, which is where a quadratic turns, not where a cubic
+ * bends. c and d never matter, and the workshop says so. A wrong pick is
+ * checked by putting it into f″, which misses 0. A 0 is never offered, and
+ * the right number is whole about half the time, with another number of its
+ * form beside it.
+ */
+const FlipPick = {
+  SLIPS:['sign','noTwo','noSix','vertex'],
+  RULE:'The bend flips where the slope of the slope changes sign, so where f″ = 0. Differentiate f(x) = ax³ + bx² + cx + d twice: f′(x) = 3ax² + 2bx + c and f″(x) = 6ax + 2b, which is 0 at x = −2b/(6a) = −b/(3a). c and d drop out. Which number is x?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,b}=S;
+    return k==='right' ? this.frac(-b,3*a) : k==='sign' ? this.frac(b,3*a) : k==='noTwo' ? this.frac(-b,6*a)
+      : k==='noSix' ? this.frac(-2*b,a) : this.frac(-b,2*a);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this cubic can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,3)*(R.i(0,1)?1:-1), b:R.i(1,9)*(R.i(0,1)?1:-1), c:R.i(-6,6), d:R.i(-5,5)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:1, b:-6, c:2, d:1};
+  },
+  // f as the workshop writes it, with no 1s and no + −
+  poly(S){
+    const t=(n,v,first)=>{ if(!n) return ''; const m=Math.abs(n), w=(m===1&&v?'':m)+v; return first ? (n<0?'−':'')+w : (n<0?' − ':' + ')+w; };
+    return t(S.a,'x³',true)+t(S.b,'x²',false)+t(S.c,'x',false)+t(S.d,'',false);
+  },
+  // f″ at x = v, as a fraction: 6a·v + 2b
+  f2(S,v){ return this.frac(6*S.a*v[0]+2*S.b*v[1], v[1]); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.b,S.c,S.d].join()!==[prev.a,prev.b,prev.c,prev.d].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('BEND SPOTTER', this.matched+' bends found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is where it flips, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Bend.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,b}=S;
+    if(k==='sign') return `${L} loses the sign of b. f″(x) = ${neg(6*a)}x + ${this.pn(2*b)} is 0 where ${neg(6*a)}x = ${neg(-2*b)}, so x carries the opposite sign to b/a.`;
+    if(k==='noTwo') return `${L} drops the 2 that bx² brings down. The slope of ${neg(b)}x² is ${neg(2*b)}x, and its slope is ${neg(2*b)}, not ${neg(b)}.`;
+    if(k==='noSix') return `${L} drops the 6 that x³ brings down over two slopes: x³ gives 3x² and then 6x, so ${neg(a)}x³ gives ${neg(6*a)}x in f″, not ${neg(a)}x.`;
+    return `${L} is −b/(2a), the middle of a parabola. That is where a quadratic turns; a cubic bends where f″ = 0, and f″ = 6ax + 2b puts it at −b/(3a).`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k);
+    return `Check ${L}: f″(x) = ${neg(6*S.a)}x + ${this.pn(2*S.b)}, and at x = ${this.fs(v)} that is ${neg(6*S.a)} × ${this.pf(v)} + ${this.pn(2*S.b)} = ${this.fs(this.f2(S,v))}, not 0.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="bkQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = ${this.poly(S)}</div>`;
+    out+=`<div class="small" style="text-align:center">Where does the bend flip?</div>`;
+    out+=`<div id="bkPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="FlipPick.choose(${i})" aria-label="${L}: x = ${v}${gone?'. Not where it flips':''}" style="margin:0"><b>${L}</b> x = ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), raw=`${neg(-2*B.b)}/${this.pn(6*B.a)}`;
+      lines.push(`That was it: f″(x) = ${neg(6*B.a)}x + ${this.pn(2*B.b)} is 0 at x = ${raw}${raw===this.fs(v)?'':' = '+this.fs(v)}, and ${neg(6*B.a)} × ${this.pf(v)} + ${this.pn(2*B.b)} = 0, so the bend flips there. Here is a new curve.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="bkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
 const Bend = {
   SETS:[
     {id:'s', btn:'S-curve', fs:'x³ − 3x', d1s:'3x² − 3', d2s:'6x',
@@ -19647,7 +19769,15 @@ const Bend = {
   open(){ UI.go('s-bend'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('bdTab').innerHTML=[['hand','〰️ Slide it by hand','Slide a point along a curve by hand and watch its tangent'],['pick','🎯 Where does it flip?','See a cubic, and pick which of four numbers is where its bend flips']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Bend.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['bdSets','bdFig','bdStep','bdRead','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('bkBox').innerHTML=pick ? FlipPick.html() : '';
+    if(pick) return;
     document.getElementById('bdSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Bend.pick(${i})" aria-label="${s.btn}: f(x) = ${s.fs}">${s.btn}</button>`).join('');
     document.getElementById('bdX').textContent=`x = ${this.num(this.x())}`;
