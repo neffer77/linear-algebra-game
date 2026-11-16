@@ -138,6 +138,7 @@ const SUITES = [
   require('./play/buildpick'), // see a fence and a paddock count, pick which of four widths holds the most
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
+  require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

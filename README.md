@@ -926,6 +926,24 @@ The game is built so that losing teaches you as much as winning.
   multiplying by the matrix, checks each steady split is left alone and each other
   eigenvalue is the trace less 1, checks every line of the readout, and checks that every
   goal can be found.
+  **🎯 Which split?** turns the workshop round: each night P% of the knights
+  in Castle A ride to B and Q% of those in B ride to A, with P and Q in fives
+  and never equal, and four numbers, one of them A's count at the steady
+  split. The rule is stated first: as many ride out of A as ride in, so
+  P × A = Q × (100 − A) and A = 100 × Q/(P + Q). The wrong numbers are the
+  slips people make: the balance turned round, the knights who stay balanced
+  in place of the ones who ride (either way round), B taken as all 100, and A
+  after one night or two from an even split. Every number is a count between
+  0 and 100; about half the answers are whole, with a wrong number of the
+  same form beside the right one; no single pair of the four adds up to 100,
+  so a pair never points at the answer; and the right one sits lowest,
+  highest or between as often as the slips allow. A wrong pick is shut and
+  checked by riding one night from it: the riders out and in do not match,
+  so that split still moves. The right pick works the balance through.
+  Nothing is saved, and there is no clock. `npm test` reads every number
+  back off its button, checks it against the slip it is named as, checks the
+  right one alone as where four hundred nights from an even split settle,
+  and rides every checked night again.
 - **🏗️ Biggest Build Workshop** — with a fixed 40 m of fence or a 12 cm sheet of card,
   what you build depends on one length x. Step x in halves; the readout writes what the
   build holds as a formula in x, works it at this x from its own lengths and half a unit
@@ -1853,7 +1871,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and twenty-eight suites, about 5,220 checks, about a minute:
+loop only exists once the page is running. A hundred and twenty-nine suites, about 5,250 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -1976,6 +1994,7 @@ loop only exists once the page is running. A hundred and twenty-eight suites, ab
 | `buildpick` | the Tome says the biggest build workshop can be turned round; the workshop opens on stepping x by hand, and switching to which width holds most puts away the builds, the figure, the stepper, the readout and the goals and states the rule first; a fence and a paddock count are shown and four widths offered, each named by its width; two wrong picks are each named as their slip and checked by the slope of the area, shut and told as not holding the most, and not counted; the right pick solves A′(x) = 0, counts (not as a first try after a miss), toasts and deals a new pen; a first try counts as one, and the fifth brings PADDOCK PLANNER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `slicepick` | the Tome says the slice workshop can be turned round; the workshop opens on sweeping by hand, and switching to which volume puts away the functions, the hold, the figure, the stepper, the readout and the goals and states the rule first; a plane and a rectangle are shown and four volumes offered, each named by its volume; two wrong picks are each named as their slip and checked by how the volume grows with its far edge, shut and told as not the volume, and not counted; the right pick sweeps the slices across, counts (not as a first try after a miss), toasts and deals a new solid; a first try counts as one, and the fifth brings MASTER SLICER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `swappick` | the Tome says the swap workshop can be turned round; the workshop opens on picking a u by hand, and switching to which number in front puts away the integrals, the figure, the u buttons, the readout and the goals and states the rule first; an integral and its answer with k in front are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the chain rule, shut and told as not the number in front, and not counted; the right pick works the swap through, counts (not as a first try after a miss), toasts and deals a new integral; a first try counts as one, and the fifth brings BRACKET BREAKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `splitpick` | the Tome says the two castles workshop can be turned round; the workshop opens on running the nights by hand, and switching to which split puts away the rules, the figure, the steppers, the readout and the goals and states the rule first; how the knights ride is shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by riding one night from them, shut and told as not the steady split, and not counted; the right pick works the balance through, counts (not as a first try after a miss), toasts and deals a new rule; a first try counts as one, and the fifth brings KEEPER OF THE SPLIT; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `area` | the Tome opens the area workshop on x² from 0 to 3 with four left-edge rectangles; the readout works Δx = 0.75 and the sum 0.75 × 7.875 = 5.90625, short of 9 by 3.09375; nothing is found before anything is turned; the middle gives 8.859375, eight rectangles 8.96484375 and sixteen ≈ 8.9912, short by about 0.0088, ticking within 0.1 and within 0.01, and the toast keeps the 0.1 whole; at 64 it says the sum closes in and the count stops; right edges overshoot; x³ puts a rectangle under the axis; one rectangle is worked as 3 × (−1) = −3; both counts stop at their ends; the steppers are named and the pressed curve and rule are marked; it fits a phone; nothing is saved |
 | `taylor` | the Tome opens the Taylor workshop on eˣ up to x¹ at x = 1; the readout names the series, writes P₁(x) = 1 + x, works P₁(1) = 1 + 1 = 2 and says it is short of eˣ ≈ 2.7183 by about 0.7183; nothing is found before anything is turned; up to x³ the terms are 1, 1, 0.5 and 0.1667 ≈ 2.6667, and up to x⁶ e is within 0.001, with a toast that keeps the 0.001; at x = 0 every term but the first is 0 and P is exactly right; at x = −2 P₆ is over and P₇ short, inside 0.01; sin x names its odd powers and says it has no x⁸ term; at x = 3, P₉ comes within 0.01 and P₁ = 3 alone is worse than nothing, which it says and explains; P₀ of sin x is 0; both steppers stop at their ends, even when pressed past them; every button is named; it fits a phone; nothing is saved |
 | `lesson` | a topic climbs meet → true-or-false → choose → build one rung an answer, the rung is derived and never stored, a first meeting draws no blood, and a fight ends by saying what it taught, under a heading that calls it a fight; a rite's trail draws each rung's matrices as the matrices that were asked |

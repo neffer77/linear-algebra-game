@@ -1236,10 +1236,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TWO CASTLES WORKSHOP ============ -->
   <div class="screen" id="s-castles">
     <div class="panel"><h2>🏰 Two Castles Workshop</h2><div class="sub">A hundred knights live in two castles, and each night some ride from one to the other by a fixed rule. A night is a matrix times the split, so many nights are a power of that matrix. Run the nights and watch the split settle on the one split the matrix leaves alone: its eigenvector with λ = 1.</div></div>
+    <div id="csTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Run the nights by hand or pick the steady split"></div>
     <div class="panel">
+      <div id="kpBox"></div>
       <div id="csRules" class="wsModes" role="group" aria-label="The rule for each night"></div>
       <div id="csFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+      <div id="csStep" class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
         <div class="wsCell"><button id="csALo" onclick="Castles.moveA(-1)" aria-label="Start with 5 fewer knights in Castle A">−</button>
           <b id="csA" style="font-size:15px;min-width:0"></b>
           <button id="csAHi" onclick="Castles.moveA(1)" aria-label="Start with 5 more knights in Castle A">+</button></div>
@@ -1249,7 +1251,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="csRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="csGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="csGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14087,7 +14089,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏰 Two Castles Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Knights ride between two castles every night. Run the nights, watch the split settle, and meet the eigenvector that never moves and the eigenvalue that sets the pace.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Knights ride between two castles every night. Run the nights, watch the split settle, and meet the eigenvector that never moves and the eigenvalue that sets the pace. Then turn it round: see how the knights ride, and pick which of four numbers is the steady split.</div>
          <button class="btn sm" id="tomeCastles" style="width:auto;margin-top:8px" onclick="Castles.open()">Open the two castles workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -17385,6 +17387,136 @@ const Descent = {
    numbers on screen; at a itself the formula gives no number at all. Only
    once both sides have been watched up close does it say whether they agree,
    because a limit is exactly that agreement. */
+/* ---------- Which split? The two castles workshop turned round ----------
+   A hundred knights, and each night P% of those in Castle A ride to B and Q%
+   of those in B ride to A, with P and Q multiples of 5 and never equal. Four
+   numbers, one of them A's count at the steady split, where as many ride out
+   of A as ride in: P% of A = Q% of (100 − A), so A = 100·Q/(P + Q). The rule
+   is stated first; the wrong numbers are the slips people make with it: the
+   balance turned round, which gives B's count; the knights who stay balanced
+   in place of the ones who ride, either way round; B taken as all 100; and A
+   after one night or two from an even split. Every number is a count between 0
+   and 100, so no sign or size gives one away; about half the answers are
+   whole, with a wrong number of the same form beside the right one, and the
+   right one sits low, high or between as often as the slips allow. A wrong
+   pick is checked by riding one night from it: the riders out and in do not
+   match, so that split still moves. Nothing is saved. */
+const SplitPick = {
+  SLIPS:['swap','keep','keepB','noB','night','night2'],
+  RULE:'At the steady split nothing changes, so each night as many knights ride out of A as ride in: P% of A = Q% of B. With A + B = 100 that is P × A = Q × (100 − A), so A = 100 × Q/(P + Q). That split is the eigenvector of the night\\'s matrix with λ = 1. Which is A?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  // the number each option stands for, as a fraction; P and Q are percents
+  val(S,k){
+    const {P,Q}=S;
+    return k==='right' ? this.frac(100*Q,P+Q) : k==='swap' ? this.frac(100*P,P+Q) : k==='keep' ? this.frac(100*(100-Q),200-P-Q)
+      : k==='keepB' ? this.frac(100*(100-P),200-P-Q) : k==='noB' ? this.frac(100*Q,P) : k==='night' ? this.frac(100-P+Q,2)
+      : this.frac((100-P+Q)*(100-P-Q)+200*Q,200);
+  },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  // the slips this rule can offer: each a count strictly between 0 and 100, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]<=0 || v[0]>=100*v[1] || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // how many pairs among these add up to 100, as A's and B's counts at one split do
+  pairs(S,ks){ const v=ks.map(k=>this.val(S,k)); let n=0;
+    for(let i=0;i<v.length;i++) for(let j=i+1;j<v.length;j++) if(v[i][0]*v[j][1]+v[j][0]*v[i][1]===100*v[i][1]*v[j][1]) n++;
+    return n; },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, and
+  // either no two of the four adding up to 100 or two such pairs, so a pair never points at the right one
+  trios(S){
+    const rest=this.slips(S), out=[], form=this.whole(this.val(S,'right'));
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && this.pairs(S,['right',...t])!==1) out.push(t); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={P:5*R.i(1,19), Q:5*R.i(1,19)};
+      if(S.P===S.Q) continue;
+      if(this.whole(this.val(S,'right'))!==wantWhole) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {P:10, Q:30};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||S.P!==prev.P||S.Q!==prev.Q) break; }
+    // a number of the right one's form always stands beside it, so the form gives nothing away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('KEEPER OF THE SPLIT', this.matched+' steady splits found','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the steady split, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Castles.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // the riders each way in one night from a split with v in A
+  ride(S,v){ return [this.frac(S.P*v[0],100*v[1]), this.frac(S.Q*(100*v[1]-v[0]),100*v[1])]; },
+  slip(S,k,L){
+    const {P,Q}=S;
+    if(k==='swap') return \`\${L} balances it the wrong way round, \${P}% of B against \${Q}% of A. The knights leaving A are \${P}% of A, and the ones arriving are \${Q}% of B.\`;
+    if(k==='keep') return \`\${L} balances the knights who stay, \${100-P}% of A against \${100-Q}% of B. What has to match is the riding: the \${P}% of A who leave against the \${Q}% of B who arrive.\`;
+    if(k==='keepB') return \`\${L} balances the knights who stay, and the wrong way round too: \${100-P}% of B against \${100-Q}% of A. What has to match is the riding: the \${P}% of A who leave against the \${Q}% of B who arrive.\`;
+    if(k==='noB') return \`\${L} sets \${P}% of A against \${Q}% of all 100 knights. Only the knights in B ride to A, and B is 100 − A.\`;
+    if(k==='night2') return \`\${L} is A after two nights from an even 50 and 50: one night takes A to \${this.fs(this.val(S,'night'))}, and a second takes it to \${this.fs(this.val(S,k))}. Two nights still move the split only part of the way; the steady split is where it stops moving.\`;
+    return \`\${L} is A after one night from an even 50 and 50: it keeps \${100-P}% of 50 and gains \${Q}% of 50. One night moves the split only part of the way; the steady split is where it stops moving.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), [o,n]=this.ride(S,v), d=this.frac(n[0]*o[1]-o[0]*n[1],n[1]*o[1]);
+    return \`Check \${L}: with \${this.fs(v)} in A and 100 − \${this.fs(v)} in B, one night sends \${S.P}% of \${this.fs(v)} = \${this.fs(o)} out of A and brings \${S.Q}% of (100 − \${this.fs(v)}) = \${this.fs(n)} in. Those do not match, so A \${d[0]>0?'gains':'loses'} \${this.fs([Math.abs(d[0]),d[1]])} that night: the split still moves.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="kpQ" style="text-align:center;font-size:16px;margin-bottom:2px">Each night \${S.P}% of the knights in Castle A ride to B, and \${S.Q}% of those in B ride to A.</div>\`;
+    out+=\`<div class="small" style="text-align:center">Of the 100 knights, how many are in A at the steady split?</div>\`;
+    out+=\`<div id="kpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="SplitPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the steady split':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), w=this.frac(100*v[1]-v[0],v[1]), [o]=this.ride(B,v);
+      lines.push(\`That was it: \${B.P} × A = \${B.Q} × (100 − A), so A = 100 × \${B.Q}/(\${B.P} + \${B.Q}) = \${this.fs(v)}. Each night \${B.P}% of \${this.fs(v)} = \${this.fs(o)} ride out of A and \${B.Q}% of \${this.fs(w)} = \${this.fs(o)} ride in, so nothing changes. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="kpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ============ TWO CASTLES WORKSHOP ============
    A hundred knights live in two castles, and each night some ride from one
    to the other. The split after each night is a matrix times the split
@@ -17458,7 +17590,15 @@ const Castles = {
   pick(i){ this.ri=i; this.touched=true; this.render(); },
   moveA(by){ const v=this.ah+by; if(v<this.ALO || v>this.AHI) return; this.ah=v; this.touched=true; this.render(); },
   moveN(by){ const v=this.n+by; if(v<0 || v>this.NMAX) return; this.n=v; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('csTab').innerHTML=[['hand','🏰 Run the nights by hand','Run the nights by hand and watch the split settle'],['pick','🎯 Which split?','See how the knights ride, and pick which of four numbers is the steady split']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Castles.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['csRules','csFig','csStep','csRead','csGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('kpBox').innerHTML=pick ? SplitPick.html() : '';
+    if(pick) return;
     const R=this.rule(), n=this.n, S=this.star();
     document.getElementById('csRules').innerHTML=this.RULES.map((r,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.ri}" onclick="Castles.pick(\${i})" aria-label="\${r.btn}: \${r.say}">\${r.btn}</button>\`).join('');
