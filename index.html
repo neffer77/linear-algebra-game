@@ -1929,6 +1929,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ ARC LENGTH WORKSHOP ============ -->
+  <div class="screen" id="s-arclen">
+    <div class="panel"><h2>🧵 Arc Length Workshop</h2><div class="sub">How long is a curve? Lay straight chords along it, measure each by Pythagoras, √(run² + rise²), and add them up. More chords hug the curve closer, and the total climbs toward the true length, ∫ √(1 + f′(x)²) dx.</div></div>
+    <div class="panel">
+      <div id="arcwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="arcwFig"></div>
+      <div id="arcwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How many chords">
+        <button class="btn sm ghost" id="arcwFewer" onclick="ArcLen.fewer()" aria-label="Halve the number of chords">◀ Halve the chords</button>
+        <button class="btn sm" id="arcwMore" onclick="ArcLen.more()" aria-label="Double the number of chords">Double the chords ▶</button>
+        <button class="btn sm ghost" id="arcwAgain" onclick="ArcLen.again()" aria-label="Go back to one chord">Start over</button>
+      </div>
+      <div id="arcwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="arcwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="arcwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ TANGENT LINE WORKSHOP ============ -->
   <div class="screen" id="s-tanline">
     <div class="panel"><h2>🪡 Tangent Line Workshop</h2><div class="sub">Near a, a curve and its tangent line are almost the same, so f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve, step x away from a, and watch how far the tangent's estimate misses, and which way.</div></div>
@@ -4384,6 +4403,7 @@ const WORKSHOP_FOR = (() => {
     Doubling: ["⏳ Doubling Workshop", ['growth']],
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
+    ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13854,6 +13874,7 @@ const UI = {
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
+    if(id==='s-arclen') ArcLen.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14693,6 +14714,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪡 Tangent Line Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Estimate √x, 1/x and sin x from a tangent line, L(x) = f(a) + f′(a)(x − a), and watch how far it misses. See why √x is always overshot and 1/x always undershot, and halve the step to cut the miss to a quarter, or on sin x to an eighth.</div>
          <button class="btn sm" id="tomeTanLine" style="width:auto;margin-top:8px" onclick="TanLine.open()">Open the tangent line workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🧵 Arc Length Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Lay straight chords along a line, a cubic and a quarter circle, measure each by Pythagoras, and add them up. Double the chords and watch the total climb toward the true length, ∫ √(1 + f′²) dx, and measure π/2 with nothing but right triangles.</div>
+         <button class="btn sm" id="tomeArcLen" style="width:auto;margin-top:8px" onclick="ArcLen.open()">Open the arc length workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -28117,6 +28143,128 @@ const ChordPick = {
     return out;
   }
 };
+/* ---------- The arc length workshop: measuring a curve with chords ----------
+   Lay straight chords along a curve, measure each one by Pythagoras,
+   √(run² + rise²), and add them up. A line (3/4)x from 0 to 4, the cubic
+   x³/6 + 1/(2x) from 1 to 2, whose true length ∫√(1 + f′²) dx is 17/12, and a
+   quarter circle, whose length is π/2. Double or halve the chords and watch
+   the total close in on the true length from below: each chord cuts a corner,
+   so chords always come up short. On the line one chord is already exact; on
+   the cubic doubling cuts the gap to about a quarter; on the circle, which
+   stands straight up at x = 1, only to about a third. With four chords or
+   fewer every chord is worked in the readout, so nothing is held in the head,
+   and the runs alone are added too, to show the slip of forgetting the rise.
+   Nothing is saved. */
+const ArcLen = {
+  SETS:[
+    {id:'line', btn:'Line', name:'the line y = 3/4 x from 0 to 4', fs:'(3/4)x', a:0, b:4, f:x=>0.75*x, T:5, Ts:'5',
+     intro:'y = (3/4)x from 0 to 4. f′(x) = 3/4, so the true length is ∫₀⁴ √(1 + 9/16) dx = (5/4) × 4 = 5.',
+     X:[-0.2,4.2], Y:[-0.2,3.2], ticks:[0,1,2,3,4]},
+    {id:'cubic', btn:'Cubic', name:'the curve y = x cubed over 6 plus 1 over 2x from 1 to 2', fs:'x³/6 + 1/(2x)', a:1, b:2, f:x=>x**3/6+1/(2*x), T:17/12, Ts:'17/12',
+     intro:'y = x³/6 + 1/(2x) from 1 to 2. Here 1 + f′² = (x²/2 + 1/(2x²))², a perfect square, so the true length is ∫₁² (x²/2 + 1/(2x²)) dx = 17/12 ≈ 1.4167.',
+     X:[0.9,2.1], Y:[0.55,1.7], ticks:[1,1.5,2]},
+    {id:'circle', btn:'Quarter circle', name:'a quarter circle y = square root of 1 minus x squared from 0 to 1', fs:'√(1 − x²)', a:0, b:1, f:x=>Math.sqrt(Math.max(0,1-x*x)), T:Math.PI/2, Ts:'π/2',
+     intro:'y = √(1 − x²) from 0 to 1, a quarter of a circle of radius 1. Its true length is a quarter of 2π, π/2 ≈ 1.5708.',
+     X:[-0.08,1.08], Y:[-0.08,1.08], ticks:[0,0.5,1]}
+  ],
+  MAXJ:5,
+  si:0, j:0, prev:null, doubled:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'line', t:'On the line, double the chords and see the total stay exactly 5.', toast:'A line is its own chord',
+     ok:K=>K.si===0 && K.doubled},
+    {id:'short', t:'On the cubic, see the chords come up short of 17/12.', toast:'Chords cut corners',
+     ok:K=>K.si===1},
+    {id:'close', t:'On the cubic, come within 0.001 of 17/12.', toast:'Within 0.001',
+     ok:K=>K.si===1 && K.gap()<0.001},
+    {id:'quarter', t:'On the cubic, double the chords and watch the gap fall to about a quarter.', toast:'Double the chords, quarter the gap',
+     ok:K=>K.si===1 && K.doubled},
+    {id:'pi', t:'On the quarter circle, measure π/2 to two decimal places.', toast:'π/2 ≈ 1.57',
+     ok:K=>K.si===2 && K.total().toFixed(2)==='1.57'},
+    {id:'third', t:'On the quarter circle, double the chords and see the gap fall only to about a third.', toast:'Steep ends shrink slowly',
+     ok:K=>K.si===2 && K.doubled}
+  ],
+  set(){ return this.SETS[this.si]; },
+  n(j=this.j){ return 2**j; },
+  xs(j=this.j){ const S=this.set(), n=this.n(j), out=[]; for(let i=0;i<=n;i++) out.push(S.a+(S.b-S.a)*i/n); return out; },
+  total(j=this.j){ const S=this.set(), xs=this.xs(j); let s=0; for(let i=1;i<xs.length;i++) s+=Math.hypot(xs[i]-xs[i-1],S.f(xs[i])-S.f(xs[i-1])); return s; },
+  /* how far the chords fall short of the true length */
+  gap(j=this.j){ return this.set().T-this.total(j); },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  /* a gap, small as it gets, to five places */
+  g5(v){ return neg(Math.round(v*1e5)/1e5); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? `(${s})` : s; },
+  working(){
+    const S=this.set(), n=this.n(), xs=this.xs(), out=[S.intro], run=(S.b-S.a)/n;
+    if(n<=4){
+      for(let i=1;i<=n;i++){
+        const r=xs[i]-xs[i-1], h=S.f(xs[i])-S.f(xs[i-1]);
+        out.push(`Chord ${i}, from x = ${this.num(xs[i-1])} to ${this.num(xs[i])}: run ${this.num(r)}, rise ${this.num(h)}, length √(${this.pf(r)}² + ${this.pf(h)}²) ${this.is(Math.hypot(r,h))}.`);
+      }
+    } else out.push(`${n} chords, each with run (b − a)/${n} ${this.is(run)}: too many to list one by one, so only their total is shown.`);
+    const lead=n===1 ? 'The one chord measures' : `Together the ${n} chords measure`, t=this.total();
+    if(S.id==='line') out.push(`${lead} exactly 5, the true length: a straight line is its own chord.`);
+    else out.push(`${lead} ${this.is(t)}, short of the true length by about ${this.g5(this.gap())}: each chord cuts a corner off the curve, so chords always come up short.`);
+    out.push(`The runs alone add up to b − a = ${this.num(S.b-S.a)}, far less: forget the rise and you measure only the width.`);
+    if(this.doubled){
+      if(S.id==='line') out.push(`You doubled the chords from ${n/2} to ${n}, and the total is still exactly 5: a straight line has no corners to cut.`);
+      else {
+        const g0=this.gap(this.prev), g1=this.gap();
+        out.push(`You doubled the chords from ${n/2} to ${n}, and the gap went from ${this.g5(g0)} to ${this.g5(g1)}, ${this.num(g1/g0)} times as much. `+
+          (S.id==='cubic' ? 'Each chord is half as long and cuts a corner about an eighth as deep, and there are twice as many, so the gap falls to about a quarter.'
+            : 'Near x = 1 the circle stands straight up, so the chords there cut deeper corners than anywhere else, and the gap falls only to about a third.'));
+      }
+    }
+    return out;
+  },
+  /* the curve, and the chords laid along it, on one scale both ways */
+  L:20, TOP:10, W:310, Hh:230,
+  sc(){ const S=this.set(); return Math.min(this.W/(S.X[1]-S.X[0]), this.Hh/(S.Y[1]-S.Y[0])); },
+  PX(t){ return this.L+(t-this.set().X[0])*this.sc(); },
+  PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc(); },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), n=this.n(), xs=this.xs(), y0=this.PY(Math.max(0,S.Y[0]));
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="${S.name} in gold, with ${n===1?'one straight chord':`${n} straight chords`} in blue joining points on it">`;
+    out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(y0)}" x2="${f(this.PX(S.X[1]))}" y2="${f(y0)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(const t of S.ticks) out+=`<text data-k="tick" x="${f(this.PX(t))}" y="${f(Math.min(this.TOP+this.Hh+12,y0+12))}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${neg(t)}</text>`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=S.a+(S.b-S.a)*i/120; pts.push(`${f(this.PX(t))},${f(this.PY(S.f(t)))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="3"/>`;
+    for(let i=1;i<xs.length;i++)
+      out+=`<line data-k="chord" x1="${f(this.PX(xs[i-1]))}" y1="${f(this.PY(S.f(xs[i-1])))}" x2="${f(this.PX(xs[i]))}" y2="${f(this.PY(S.f(xs[i])))}" stroke="${FIG_COL.a}" stroke-width="1.8"/>`;
+    for(const x of xs) out+=`<circle data-k="node" cx="${f(this.PX(x))}" cy="${f(this.PY(S.f(x)))}" r="${n>8?2:3.5}" fill="${FIG_COL.a}"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-arclen'); },
+  can(dj){ const j=this.j+dj; return j>=0 && j<=this.MAXJ; },
+  pick(i){ this.si=i; this.j=0; this.prev=null; this.doubled=false; this.touched=true; this.render(); },
+  more(){ if(!this.can(1)) return; this.prev=this.j; this.j++; this.doubled=true; this.touched=true; this.render(); },
+  fewer(){ if(!this.can(-1)) return; this.prev=this.j; this.j--; this.doubled=false; this.touched=true; this.render(); },
+  again(){ this.j=0; this.prev=null; this.doubled=false; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('arcwSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="ArcLen.pick(${i})" aria-label="Measure ${s.name}">${s.btn}</button>`).join('');
+    document.getElementById('arcwFewer').disabled=!this.can(-1);
+    document.getElementById('arcwMore').disabled=!this.can(1);
+    document.getElementById('arcwAgain').disabled=this.j===0 && this.prev===null;
+    document.getElementById('arcwFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold curve is f from a to b, and the blue chords join points on it. Each chord is measured by Pythagoras; their total is the estimate of the curve's length.</div>`;
+    document.getElementById('arcwRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('arcwGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE MEASURE','every curve laid straight','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The tangent line workshop: linear approximation by hand ----------
    Near a, f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve (√x near 4, 1/x
    near 1, sin x near 0) and step x away from a a tenth or a whole one at a

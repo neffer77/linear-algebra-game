@@ -1,201 +1,236 @@
 {
-  "change": "Arc length as a fight topic: measure a curve with the integral of √(1 + f′²).",
+  "change": "The Arc Length Workshop: lay straight chords along a curve, measure each by Pythagoras, and watch the total close in on ∫√(1 + f′²) dx.",
   "mutations": [
     {
-      "name": "the line's length forgets the root",
+      "name": "the line's slope is 4/3",
       "file": "index.html",
-      "find": "ans=mul(r,W);",
-      "replace": "ans=mul(W,add(F(1),mul(m,m)));",
+      "find": "f:x=>0.75*x, T:5,",
+      "replace": "f:x=>x*4/3, T:5,",
       "run": "verify"
     },
     {
-      "name": "the line's length is the run",
+      "name": "the cubic's second term is 1/x",
       "file": "index.html",
-      "find": "ans=mul(r,W);",
-      "replace": "ans=W;",
+      "find": "f:x=>x**3/6+1/(2*x),",
+      "replace": "f:x=>x**3/6+1/x,",
       "run": "verify"
     },
     {
-      "name": "the line's slope is q/p",
+      "name": "the cubic's true length is 17/11",
       "file": "index.html",
-      "find": "const m=F(sg*p,q), r=F(h,q)",
-      "replace": "const m=F(sg*q,p), r=F(h,q)",
+      "find": "T:17/12, Ts:'17/12',",
+      "replace": "T:17/11, Ts:'17/12',",
       "run": "verify"
     },
     {
-      "name": "depth 2 drops the 2/3",
+      "name": "the circle's true length is π",
       "file": "index.html",
-      "find": "ans=mul(F(2,3),D);",
-      "replace": "ans=D;",
+      "find": "T:Math.PI/2, Ts:'π/2',",
+      "replace": "T:Math.PI, Ts:'π/2',",
       "run": "verify"
     },
     {
-      "name": "depth 2 leaves off the lower end",
+      "name": "the circle runs to 0.9",
       "file": "index.html",
-      "find": "const D=F(B**3-A**3);",
-      "replace": "const D=F(B**3);",
+      "find": "a:0, b:1, f:x=>Math.sqrt(Math.max(0,1-x*x)),",
+      "replace": "a:0, b:0.9, f:x=>Math.sqrt(Math.max(0,1-x*x)),",
       "run": "verify"
     },
     {
-      "name": "depth 2 starts from A, not A² − 1",
+      "name": "the cubic's opening forgets the square",
       "file": "index.html",
-      "find": "a=F(A*A-1); b=F(B*B-1);",
-      "replace": "a=F(A*A); b=F(B*B-1);",
+      "find": "so the true length is ∫₁² (x²/2 + 1/(2x²)) dx = 17/12",
+      "replace": "so the true length is ∫₁² √(x²/2 + 1/(2x²)) dx = 17/12",
       "run": "verify"
     },
     {
-      "name": "depth 3 gives the rise",
+      "name": "the chords can reach 64",
       "file": "index.html",
-      "find": "ans=sub(G(b),G(a));",
-      "replace": "ans=sub(fx(b),fx(a));",
+      "find": "MAXJ:5,",
+      "replace": "MAXJ:6,",
       "run": "verify"
     },
     {
-      "name": "depth 3's antiderivative keeps the +",
+      "name": "each chord is run plus rise",
       "file": "index.html",
-      "find": "G=x=>sub(mul(pow(x,3),F(1,3*c)),",
-      "replace": "G=x=>add(mul(pow(x,3),F(1,3*c)),",
+      "find": "s+=Math.hypot(xs[i]-xs[i-1],S.f(xs[i])-S.f(xs[i-1]));",
+      "replace": "s+=Math.abs(xs[i]-xs[i-1])+Math.abs(S.f(xs[i])-S.f(xs[i-1]));",
       "run": "verify"
     },
     {
-      "name": "depth 3's curve is written with 4x for c/(4x)",
+      "name": "a chord's length is told as run plus rise",
       "file": "index.html",
-      "find": "const t1=`x³/${3*c}`, t2=over('x');",
-      "replace": "const t1=`x³/${3*c}`, t2=`1/(4x)`;",
+      "find": "length √(${this.pf(r)}² + ${this.pf(h)}²) ${this.is(Math.hypot(r,h))}.",
+      "replace": "length √(${this.pf(r)}² + ${this.pf(h)}²) ${this.is(Math.abs(r)+Math.abs(h))}.",
       "run": "verify"
     },
     {
-      "name": "depth 3's curve is written with x³/c",
+      "name": "the rise is f at the end alone",
       "file": "index.html",
-      "find": "const t1=`x³/${3*c}`,",
-      "replace": "const t1=`x³/${c}`,",
+      "find": "const r=xs[i]-xs[i-1], h=S.f(xs[i])-S.f(xs[i-1]);",
+      "replace": "const r=xs[i]-xs[i-1], h=S.f(xs[i]);",
       "run": "verify"
     },
     {
-      "name": "the question names the wrong b",
+      "name": "the chords are listed up to 8",
       "file": "index.html",
-      "find": "from x = ${show(a)} to x = ${show(b)}.`,",
-      "replace": "from x = ${show(a)} to x = ${show(add(b,F(1)))}.`,",
+      "find": "if(n<=4){",
+      "replace": "if(n<=8){",
       "run": "verify"
     },
     {
-      "name": "the answers are always whole",
+      "name": "the gap is the wrong way round",
       "file": "index.html",
-      "find": "const whole=d<3 && R.chance(0.5);",
-      "replace": "const whole=d<3;",
+      "find": "gap(j=this.j){ return this.set().T-this.total(j); },",
+      "replace": "gap(j=this.j){ return this.total(j)-this.set().T; },",
       "run": "verify"
     },
     {
-      "name": "the answers are seldom whole",
+      "name": "the runs add up to the wrong width",
       "file": "index.html",
-      "find": "const whole=d<3 && R.chance(0.5);",
-      "replace": "const whole=d<3 && R.chance(0.1);",
+      "find": "The runs alone add up to b − a = ${this.num(S.b-S.a)}",
+      "replace": "The runs alone add up to b − a = ${this.num(S.b)}",
       "run": "verify"
     },
     {
-      "name": "depth 3 may be whole",
+      "name": "the doubling ratio is upside down",
       "file": "index.html",
-      "find": "const whole=d<3 && R.chance(0.5);",
-      "replace": "const whole=R.chance(0.5);",
+      "find": "${this.num(g1/g0)} times as much",
+      "replace": "${this.num(g0/g1)} times as much",
       "run": "verify"
     },
     {
-      "name": "depth 1 runs a whole step even for fractions",
+      "name": "the circle is said to fall to a quarter",
       "file": "index.html",
-      "find": "const w=whole ? q*(q<=5?R.i(1,2):1) : R.i(1,9);",
-      "replace": "const w=q*(q<=5?R.i(1,2):1);",
+      "find": "(S.id==='cubic' ? 'Each chord is half as long",
+      "replace": "(S.id!=='line' ? 'Each chord is half as long",
       "run": "verify"
     },
     {
-      "name": "the form may give it away",
+      "name": "the doubling note stays after halving",
       "file": "index.html",
-      "find": "same<2 || sign<2) && g<400) continue;\n    i",
-      "replace": "sign<2) && g<400) continue;\n    i",
+      "find": "this.prev=this.j; this.j--; this.doubled=false;",
+      "replace": "this.prev=this.j; this.j--;",
       "run": "verify"
     },
     {
-      "name": "only three wrong answers",
+      "name": "an exact total is told as about",
       "file": "index.html",
-      "find": "dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form and one of its sign\n    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;\n    if((dist.length<4 || M",
-      "replace": "dist.length<3 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form and one of its sign\n    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;\n    if((dist.length<4 || M",
+      "find": "is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },\n  /",
+      "replace": "is(v){ return '≈ '+this.num(v); },\n  /",
       "run": "verify"
     },
     {
-      "name": "the line's no-root slip keeps the root",
+      "name": "the count names the run as b − a",
       "file": "index.html",
-      "find": "[mul(W,add(F(1),mul(m,m))),`that is ∫(1 + f′²) dx",
-      "replace": "[mul(W,F(h+1,q)),`that is ∫(1 + f′²) dx",
+      "find": "each with run (b − a)/${n} ${this.is(run)}:",
+      "replace": "each with run (b − a)/${n} ${this.is(run*n)}:",
       "run": "verify"
     },
     {
-      "name": "the line's run-plus-rise slip doubles the run",
+      "name": "picking a curve keeps the chords",
       "file": "index.html",
-      "find": "[add(W,rise),`that adds the run ${w}",
-      "replace": "[add(W,W),`that adds the run ${w}",
+      "find": "pick(i){ this.si=i; this.j=0;",
+      "replace": "pick(i){ this.si=i;",
       "run": "verify"
     },
     {
-      "name": "depth 2's no-root slip uses B⁴ − A⁴",
+      "name": "starting over keeps the doubling note",
       "file": "index.html",
-      "find": "F((B*B-1)**2-(A*A-1)**2,2)",
-      "replace": "F(B**4-A**4,2)",
+      "find": "again(){ this.j=0; this.prev=null; this.doubled=false;",
+      "replace": "again(){ this.j=0; this.prev=null;",
       "run": "verify"
     },
     {
-      "name": "depth 2's 3/2 slip uses 1/2",
+      "name": "doubling is not noted",
       "file": "index.html",
-      "find": "[mul(F(3,2),D),`that puts 3/2",
-      "replace": "[mul(F(1,2),D),`that puts 3/2",
+      "find": "this.prev=this.j; this.j++; this.doubled=true;",
+      "replace": "this.prev=this.j; this.j++; this.doubled=false;",
       "run": "verify"
     },
     {
-      "name": "depth 2's lower-end slip takes A³",
+      "name": "the y scale is stretched",
       "file": "index.html",
-      "find": "slips.push([mul(F(2,3),F(B**3)),",
-      "replace": "slips.push([mul(F(2,3),F(A**3)),",
+      "find": "PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc(); },",
+      "replace": "PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc()*1.1; },",
       "run": "verify"
     },
     {
-      "name": "depth 3's no-root slip forgets the 1/2",
+      "name": "the chords start one point late",
       "file": "index.html",
-      "find": "add(mul(pow(x,5),F(1,5*c*c)),mul(x,F(1,2)))",
-      "replace": "add(mul(pow(x,5),F(1,5*c*c)),x)",
+      "find": "x1=\"${f(this.PX(xs[i-1]))}\" y1=\"${f(this.PY(S.f(xs[i-1])))}\"",
+      "replace": "x1=\"${f(this.PX(xs[i]))}\" y1=\"${f(this.PY(S.f(xs[i])))}\"",
       "run": "verify"
     },
     {
-      "name": "depth 3's run slip is twice the run",
+      "name": "a node sits on the axis",
       "file": "index.html",
-      "find": "[W,`that is the run b − a = ${show(W)}",
-      "replace": "[mul(W,F(2)),`that is the run b − a = ${show(W)}",
+      "find": "<circle data-k=\"node\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(S.f(x)))}\"",
+      "replace": "<circle data-k=\"node\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(0))}\"",
       "run": "verify"
     },
     {
-      "name": "the working forgets the root",
+      "name": "the figure counts the chords wrong",
       "file": "index.html",
-      "find": "f′(x) = √x, so √(1 + f′²) = √(1 + x).",
-      "replace": "f′(x) = √x, so 1 + f′² = 1 + x.",
+      "find": "with ${n===1?'one straight chord':`${n} straight chords`} in blue",
+      "replace": "with ${n===1?'one straight chord':`${n+1} straight chords`} in blue",
       "run": "verify"
     },
     {
-      "name": "the line's working ends on the run",
+      "name": "within 0.001 is found at 0.01",
       "file": "index.html",
-      "find": "The length is ${show(r)} × (b − a) = ${show(r)} × ${w} = ${show(ans)}`;",
-      "replace": "The length is ${show(r)} × (b − a) = ${show(r)} × ${w} = ${w}`;",
+      "find": "ok:K=>K.si===1 && K.gap()<0.001},\n    {id:'q",
+      "replace": "ok:K=>K.si===1 && K.gap()<0.01},\n    {id:'q",
       "run": "verify"
     },
     {
-      "name": "no realm asks arc length",
+      "name": "π/2 is found to one place",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox','arcLength'],",
-      "replace": "'growth','meanValue','linApprox'],",
+      "find": "ok:K=>K.si===2 && K.total().toFixed(2)==='1.57'},",
+      "replace": "ok:K=>K.si===2 && K.total().toFixed(1)==='1.6'},",
       "run": "verify"
     },
     {
-      "name": "arc length is in no strand",
+      "name": "the third is found on the cubic",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox','arcLength']]",
-      "replace": "'growth','meanValue','linApprox']]",
+      "find": "ok:K=>K.si===2 && K.doubled}",
+      "replace": "ok:K=>K.si>0 && K.doubled}",
       "run": "verify"
+    },
+    {
+      "name": "the line's goal is found without doubling",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.doubled},",
+      "replace": "ok:K=>K.si===0},",
+      "run": "verify"
+    },
+    {
+      "name": "the Tome does not offer it",
+      "file": "index.html",
+      "find": "onclick=\"ArcLen.open()\">Open the arc length workshop</button>",
+      "replace": "onclick=\"UI.go('s-title')\">Open the arc length workshop</button>",
+      "run": "play:arclen"
+    },
+    {
+      "name": "the screen opens unrendered",
+      "file": "index.html",
+      "find": "    if(id==='s-arclen') ArcLen.render();\n",
+      "replace": "",
+      "run": "play:arclen"
+    },
+    {
+      "name": "doubling never stops at 32",
+      "file": "index.html",
+      "find": "document.getElementById('arcwMore').disabled=!this.can(1);",
+      "replace": "",
+      "run": "play:arclen"
+    },
+    {
+      "name": "the goals never show as found",
+      "file": "index.html",
+      "find": "<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE ME",
+      "replace": "<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE ME",
+      "run": "play:arclen"
     }
   ]
 }

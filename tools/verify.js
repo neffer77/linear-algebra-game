@@ -91,6 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  render(){\n    document.getElementById('arcwSets')")) + 'render(){}};exports.ArcLen=ArcLen;' +
     ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
     ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
@@ -113,7 +114,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine, ArcLen } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -11337,6 +11338,130 @@ const doublingNotes = (() => {
   return { n, moves, points, goals: Object.keys(found).length };
 })();
 
+/* The arc length workshop: every curve, every count of chords, and every
+   move from each count. Each curve is measured again here from its own
+   formula, in plain floats, never from the workshop's numbers: each chord by
+   Pythagoras, their total, how far it falls short of the true length, the
+   runs alone, and the doubling note with its quarter or third, which are
+   checked to be true; and each goal. The curve, the chords and their ends are
+   read back off the drawing, on one scale both ways. */
+const arcLenNotes = (() => {
+  const M = ArcLen;
+  const val = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const near = (t, v, e = 6e-5) => Math.abs(val(t) - v) < e;
+  const exact4 = v => Math.abs(Math.round(v * 1e4) - v * 1e4) < 1e-6;
+  // a, b, f, the true length, the opening line
+  const CURVE = {
+    line: [0, 4, x => 3 * x / 4, 5, 'y = (3/4)x from 0 to 4. f′(x) = 3/4, so the true length is ∫₀⁴ √(1 + 9/16) dx = (5/4) × 4 = 5.'],
+    cubic: [1, 2, x => x * x * x / 6 + 1 / (2 * x), 17 / 12, 'y = x³/6 + 1/(2x) from 1 to 2. Here 1 + f′² = (x²/2 + 1/(2x²))², a perfect square, so the true length is ∫₁² (x²/2 + 1/(2x²)) dx = 17/12 ≈ 1.4167.'],
+    circle: [0, 1, x => Math.sqrt(1 - x * x), Math.PI / 2, 'y = √(1 − x²) from 0 to 1, a quarter of a circle of radius 1. Its true length is a quarter of 2π, π/2 ≈ 1.5708.'],
+  };
+  // the true lengths, checked against ∫√(1 + f′²) by Simpson's rule with f′ by a nudge (the circle's steep end taken by its angle)
+  for (const [id, [a, b, f, T]] of Object.entries(CURVE)) {
+    if (id === 'circle') continue;
+    const g = x => Math.sqrt(1 + ((f(x + 1e-6) - f(x - 1e-6)) / 2e-6) ** 2), N = 2000, h = (b - a) / N;
+    let s = g(a) + g(b); for (let i = 1; i < N; i++) s += (i % 2 ? 4 : 2) * g(a + i * h);
+    if (Math.abs(s * h / 3 - T) > 1e-6) fail('arclen', id, `the true length is not ${T}`);
+  }
+  const TAIL = {
+    cubic: 'Each chord is half as long and cuts a corner about an eighth as deep, and there are twice as many, so the gap falls to about a quarter.',
+    circle: 'Near x = 1 the circle stands straight up, so the chords there cut deeper corners than anywhere else, and the gap falls only to about a third.',
+  };
+  if (M.SETS.map(S => S.id).join() !== 'line,cubic,circle') fail('arclen', 'sets', M.SETS.map(S => S.id).join());
+  if (M.si !== 0 || M.j !== 0 || M.prev !== null || M.doubled) fail('arclen', 'open', 'the workshop does not open on the line with one chord');
+  const reset = () => { M.touched = false; M.si = 0; M.j = 0; M.prev = null; M.doubled = false; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('arclen', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, counts = 0, chords = 0;
+  // measured here: the ends, the chords and their total
+  const measure = (a, b, f, N) => { const xs = [], ls = []; for (let i = 0; i <= N; i++) xs.push(a + (b - a) * i / N); for (let i = 1; i <= N; i++) ls.push(Math.hypot(xs[i] - xs[i - 1], f(xs[i]) - f(xs[i - 1]))); return { xs, ls, sum: ls.reduce((p, q) => p + q, 0) }; };
+  M.SETS.forEach((S, si) => {
+    const [a, b, f, T, intro] = CURVE[S.id];
+    if (S.a !== a || S.b !== b) fail('arclen', S.id, `the curve runs from ${S.a} to ${S.b}, not ${a} to ${b}`);
+    reset(); M.more(); M.pick(si);
+    if (M.j !== 0 || M.prev !== null || M.doubled) fail('arclen', S.id, 'picking a curve does not start it again at one chord');
+    for (let j0 = 0; j0 <= 5; j0++) {
+      counts++;
+      for (const dj of [-1, 1]) {
+        // a halving starts from a count just doubled to, so that its doubling note has to go
+        reset(); M.pick(si); M.j = j0; M.doubled = dj < 0 && j0 > 0; M.prev = M.doubled ? j0 - 1 : null; M.touched = false;
+        const ok = j0 + dj >= 0 && j0 + dj <= 5;
+        if (M.can(dj) !== ok) fail('arclen', `${S.id} ${2 ** j0}`, `${dj > 0 ? 'doubling' : 'halving'} is ${ok ? 'not ' : ''}offered`);
+        if (dj > 0) M.more(); else M.fewer();
+        if (!ok) { if (M.j !== j0) fail('arclen', `${S.id} ${2 ** j0}`, 'a move is taken that is not offered'); continue; }
+        n++;
+        const j = j0 + dj, N = 2 ** j, key = `${S.id} ${2 ** j0}→${N}`, got = M.working(), { xs, ls, sum } = measure(a, b, f, N), gap = T - sum;
+        if (M.j !== j) fail('arclen', key, `the chords end at ${2 ** M.j}`);
+        if (got[0] !== intro) fail('arclen', key, `the true length is told wrong: ${got[0]}`);
+        let r = 1;
+        if (N <= 4) {
+          for (let i = 1; i <= N; i++, r++) {
+            const m = (got[r] || '').match(/^Chord (\d+), from x = (\S+) to (\S+): run (\S+), rise (\S+), length √\((\S+)² \+ (\S+)²\) ([=≈]) (\S+)\.$/), rise = f(xs[i]) - f(xs[i - 1]);
+            if (!m || +m[1] !== i || !near(m[2], xs[i - 1]) || !near(m[3], xs[i]) || !near(m[4], xs[i] - xs[i - 1]) || !near(m[5], rise) || m[6] !== m[4] || val(m[7]) !== val(m[5])
+              || !near(m[9], ls[i - 1]) || (m[8] === '=') !== exact4(ls[i - 1])) fail('arclen', key, `chord ${i} is measured wrong: ${got[r]}`);
+            chords++;
+          }
+        } else {
+          const m = (got[r] || '').match(/^(\d+) chords, each with run \(b − a\)\/(\d+) ([=≈]) (\S+): too many to list one by one, so only their total is shown\.$/), run = (b - a) / N;
+          if (!m || +m[1] !== N || +m[2] !== N || !near(m[4], run) || (m[3] === '=') !== exact4(run)) fail('arclen', key, `the count of chords is told wrong: ${got[r]}`);
+          r++;
+        }
+        const lead = N === 1 ? 'The one chord measures' : `Together the ${N} chords measure`;
+        if (S.id === 'line') {
+          if (Math.abs(sum - 5) > 1e-9) fail('arclen', key, `the line's chords measure ${sum}, not 5`);
+          if (got[r] !== `${lead} exactly 5, the true length: a straight line is its own chord.`) fail('arclen', key, `the line's total is told wrong: ${got[r]}`);
+        } else {
+          const m = (got[r] || '').match(/^(.+?) ([=≈]) (\S+), short of the true length by about (\S+): each chord cuts a corner off the curve, so chords always come up short\.$/);
+          if (!(gap > 0)) fail('arclen', key, 'the chords do not come up short');
+          if (!m || m[1] !== lead || !near(m[3], sum) || (m[2] === '=') !== exact4(sum) || !near(m[4], gap, 6e-6)) fail('arclen', key, `the total is told wrong: ${got[r]}`);
+        }
+        r++;
+        if (got[r] !== `The runs alone add up to b − a = ${b - a}, far less: forget the rise and you measure only the width.`) fail('arclen', key, `the runs are told wrong: ${got[r]}`);
+        r++;
+        if (dj > 0) {
+          if (S.id === 'line') {
+            if (got[r] !== `You doubled the chords from ${N / 2} to ${N}, and the total is still exactly 5: a straight line has no corners to cut.`) fail('arclen', key, `the doubling is told wrong: ${got[r]}`);
+          } else {
+            const g0 = T - measure(a, b, f, N / 2).sum, q = gap / g0;
+            // the note is true: a quarter on the cubic, a third on the circle
+            if (S.id === 'cubic' ? !(q > 0.24 && q < 0.28) : !(q > 0.32 && q < 0.36)) fail('arclen', key, `doubling cuts the gap to ${q.toFixed(3)} of itself, which the note does not say`);
+            const m = (got[r] || '').match(/^You doubled the chords from (\d+) to (\d+), and the gap went from (\S+) to (\S+), (\S+) times as much\. (.+)$/);
+            if (!m || +m[1] !== N / 2 || +m[2] !== N || !near(m[3], g0, 6e-6) || !near(m[4], gap, 6e-6) || !near(m[5], q) || m[6] !== TAIL[S.id]) fail('arclen', key, `the doubling is told wrong: ${got[r]}`);
+          }
+          r++;
+        }
+        if (got.length !== r) fail('arclen', key, `a line is told that should not be: ${got.slice(r).join(' ')}`);
+        // the drawing, on one scale both ways
+        const sc = Math.min(M.W / (S.X[1] - S.X[0]), M.Hh / (S.Y[1] - S.Y[0])), PX = t => M.L + (t - S.X[0]) * sc, PY = v => M.TOP + M.Hh - (v - S.Y[0]) * sc;
+        const inside = (X, Y) => X >= M.L - 0.01 && X <= M.L + M.W + 0.01 && Y >= M.TOP - 0.01 && Y <= M.TOP + M.Hh + 0.01;
+        const svg = M.svg();
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || cv[1].split(' ').some(c => { const [cx, cy] = c.split(',').map(Number), x = S.X[0] + (cx - M.L) / sc; return x < a - 1e-3 || x > b + 1e-3 || Math.abs(cy - PY(f(Math.min(b, Math.max(a, x))))) > 0.05 || !inside(cx, cy); })) fail('arclen', key, 'the curve leaves f or the figure');
+        const cl = [...svg.matchAll(/data-k="chord" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/g)];
+        if (cl.length !== N || cl.some((c, i) => Math.abs(+c[1] - PX(xs[i])) > 0.01 || Math.abs(+c[2] - PY(f(xs[i]))) > 0.01 || Math.abs(+c[3] - PX(xs[i + 1])) > 0.01 || Math.abs(+c[4] - PY(f(xs[i + 1]))) > 0.01))
+          fail('arclen', key, `the ${N} chords are not drawn from point to point on the curve`);
+        const nd = [...svg.matchAll(/data-k="node" cx="([\d.-]+)" cy="([\d.-]+)"/g)];
+        if (nd.length !== N + 1 || nd.some((c, i) => Math.abs(+c[1] - PX(xs[i])) > 0.01 || Math.abs(+c[2] - PY(f(xs[i]))) > 0.01 || !inside(+c[1], +c[2]))) fail('arclen', key, 'the chords\' ends are not on the curve');
+        if (!svg.includes(`with ${N === 1 ? 'one straight chord' : `${N} straight chords`} in blue joining points on it"`)) fail('arclen', key, 'the figure is named wrong');
+        // every goal, decided here
+        const truth = {
+          line: S.id === 'line' && dj > 0, short: S.id === 'cubic', close: S.id === 'cubic' && gap < 0.001,
+          quarter: S.id === 'cubic' && dj > 0, pi: S.id === 'circle' && Math.round(sum * 100) === 157, third: S.id === 'circle' && dj > 0,
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('arclen', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('arclen', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.j !== 0 || M.prev !== null || M.doubled) fail('arclen', key, 'starting over does not go back to one chord');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('arclen', g.id, 'can never be found');
+  reset();
+  return { n, counts, chords, goals: Object.keys(found).length };
+})();
+
 /* The tangent line workshop: every curve, every stop x can take, and every
    move from each stop, halving included. Each curve is worked again here
    from its own formula, in plain floats, never from the workshop's numbers:
@@ -15299,6 +15424,7 @@ console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (
 console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
 console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (every move from every stop the point can take on x², x³ and 4/x, ${meanValueNotes.stops.toLocaleString()} stops: the chord's slope and the tangent's worked again in floats, which side of c, every note, the point, chord and tangent read back off the drawing, ${meanValueNotes.goals} goals findable)`);
 console.log(`  tangent stops    ${pad(tanLineNotes.n.toLocaleString(), 15)}  (every move and every halving from every stop x can take on √x, 1/x and sin x, ${tanLineNotes.stops.toLocaleString()} stops: L(x), the curve's value and the miss worked again in floats, which way it misses against the bend, the quarter and the eighth, the curve, tangent, estimate and gap read back off the drawing, ${tanLineNotes.goals} goals findable)`);
+console.log(`  chord counts     ${pad(arcLenNotes.n.toLocaleString(), 15)}  (every doubling and halving from every count of chords on the line, the cubic and the quarter circle, ${arcLenNotes.counts.toLocaleString()} counts: each of ${arcLenNotes.chords.toLocaleString()} chords measured again by Pythagoras, the total and its gap against the true length worked by Simpson's rule, the quarter and the third checked true, every chord and its ends read back off the drawing, ${arcLenNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
