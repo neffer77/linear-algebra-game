@@ -1887,10 +1887,12 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ GROWTH INTEGRAL WORKSHOP ============ -->
   <div class="screen" id="s-expint">
     <div class="panel"><h2>🪴 Growth Integral Workshop</h2><div class="sub">The short dashes show the slope of f(x) = e^(kx) wherever you stand. An antiderivative F has to run along every one. Pick the number in front of F and a lift + C, and see whether F fits the field. Then multiply by k or raise the exponent, as the power rule would, and catch each slip.</div></div>
+    <div id="xiTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Fit F by hand or pick the number in front"></div>
     <div class="panel">
+      <div id="gwBox"></div>
       <div id="xiSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which exponential"></div>
       <div id="xiFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
+      <div id="xiStep" class="wsMat" style="grid-template-columns:1fr 1fr;border:none;padding:0">
         <div class="wsCell"><button id="xiCLo" onclick="ExpInt.moveC(-1)" aria-label="Make the number in front of F one step smaller">−</button>
           <b id="xiC" style="font-size:15px;min-width:0"></b>
           <button id="xiCHi" onclick="ExpInt.moveC(1)" aria-label="Make the number in front of F one step bigger">+</button></div>
@@ -1901,7 +1903,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       <div id="xiForms" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="What to do with the exponent"></div>
       <div id="xiRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="xiGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="xiGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -14199,7 +14201,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪴 Growth Integral Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fit an antiderivative of e^(kx) to its slope field: pick the number in front and a lift + C, and watch F run along every dash. Then multiply by k or raise the exponent and catch each slip.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fit an antiderivative of e^(kx) to its slope field: pick the number in front and a lift + C, and watch F run along every dash. Then multiply by k or raise the exponent and catch each slip. Then turn it round: see an exponential, and pick which of four numbers goes in front of its antiderivative.</div>
          <button class="btn sm" id="tomeExpInt" style="width:auto;margin-top:8px" onclick="ExpInt.open()">Open the growth integral workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -24528,6 +24530,116 @@ const PathChain = {
    antiderivative F has to run along every one of them. Pick the number in
    front of F and a lift + C, keep the exponent or raise it as the power rule
    would, and see whether F fits the field. Nothing is saved. */
+/* ---------- Which number in front? The growth integral workshop turned round ----------
+   An exponential a·e^(kx) with whole numbers, and four numbers, one of them the
+   c in ∫ a·e^(kx) dx = c·e^(kx) + C, which is a/k. The rule is stated first; the
+   wrong numbers are the slips people make with it. A wrong pick is checked by
+   the chain rule, which must give back the exponential. Nothing is saved. */
+const GrowPick = {
+  SLIPS:['mult','noK','flip','up','sign'],
+  RULE:'Run the chain rule backwards. The slope of c·e^(kx) is c·k·e^(kx): the k inside the exponent comes out in front. So to undo a·e^(kx), take c = a/k, which makes c × k = a. The exponent stays kx as it is; it is not a power of x, so nothing is raised. Which number goes in front?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0||f[1]!==1 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  // the number each option stands for, as a fraction
+  val(S,k){
+    const {a,k:m}=S;
+    return k==='right' ? this.frac(a,m) : k==='mult' ? this.frac(a*m,1) : k==='noK' ? this.frac(a,1)
+      : k==='flip' ? this.frac(m,a) : k==='up' ? this.frac(a,m+1) : this.frac(-a,m);
+  },
+  key(v){ return this.fs(v); },
+  // the slips this exponential can offer: each a number other than 0, different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right')),'0']), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  whole(v){ return v[1]===1; },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const S={a:R.i(1,12)*(R.i(0,1)?1:-1), k:R.i(2,6)*(R.i(0,1)?1:-1)};
+      const W=this.val(S,'right');
+      if(this.whole(W)!==wantWhole) continue;
+      const rest=this.slips(S);
+      if(rest.length<3 || !rest.some(k=>this.whole(this.val(S,k))===this.whole(W))) continue;
+      return S;
+    }
+    return {a:6, k:4};
+  },
+  ex(k){ return \`e^(\${neg(k)}x)\`; },
+  cx(a){ return a===1 ? '' : a===-1 ? '−' : neg(a); },
+  wave(S){ return \`\${this.cx(S.a)}\${this.ex(S.k)}\`; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||[S.a,S.k].join()!==[prev.a,prev.k].join()) break; }
+    const rest=this.slips(S), form=this.whole(this.val(S,'right'));
+    for(let i=rest.length-1;i>0;i--){ const j=R.i(0,i); [rest[i],rest[j]]=[rest[j],rest[i]]; }
+    const take=rest.slice(0,3);
+    // a number of the right one's form always stands beside it, so the form gives nothing away
+    if(!take.some(k=>this.whole(this.val(S,k))===form)) take[2]=rest.find(k=>this.whole(this.val(S,k))===form);
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('GROWTH TAMER', this.matched+' exponentials undone','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} goes in front, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    ExpInt.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const {a,k:m}=S, e=this.ex(m);
+    if(k==='mult') return \`\${L} multiplies by \${neg(m)} where it should divide. The chain rule already brings a \${neg(m)} out in front when you take the slope, so undoing it means dividing by \${neg(m)}.\`;
+    if(k==='noK') return \`\${L} leaves the \${neg(m)} out. The slope of \${this.cx(a)}\${e} is \${neg(a)} × \${this.pn(m)} · \${e}, because the chain rule brings the \${neg(m)} inside the exponent out in front, so you must divide by \${neg(m)}.\`;
+    if(k==='flip') return \`\${L} divides the wrong way round, \${neg(m)} over \${neg(a)}. c × \${this.pn(m)} must come to \${neg(a)}, so \${neg(a)} goes on top and \${neg(m)} underneath.\`;
+    if(k==='up') return \`\${L} treats \${e} like a power of x, raising \${neg(m)}x to \${neg(m+1)}x and dividing by \${neg(m+1)}. The exponent of e is not a power of x: it stays \${neg(m)}x, and the chain rule asks you to divide by \${neg(m)}, not \${neg(m+1)}.\`;
+    return \`\${L} has the sign turned round. c × \${this.pn(m)} must come to \${neg(a)}, and a number of the other sign times \${neg(m)} gives \${neg(-a)} instead.\`;
+  },
+  check(S,k,L){
+    const v=this.val(S,k), {a,k:m}=S, e=this.ex(m);
+    return \`Check \${L}: the slope of c·\${e} is c × \${this.pn(m)} · \${e}, which must be \${this.cx(a)}\${e} itself, so c × \${this.pn(m)} must be \${neg(a)}. With c = \${this.fs(v)} that is \${this.pf(v)} × \${this.pn(m)} = \${this.fs(this.frac(v[0]*m,v[1]))}, not \${neg(a)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.miss();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="gwQ" style="text-align:center;font-size:16px;margin-bottom:2px">∫ \${this.wave(S)} dx = c·\${this.ex(S.k)} + C</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which number is c?</div>\`;
+    out+=\`<div id="gwPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="GrowPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the number in front':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, v=this.val(B,'right'), raw=\`\${neg(B.a)}/\${this.pn(B.k)}\`;
+      lines.push(\`That was it: c = \${raw}\${raw===this.fs(v)?'':' = '+this.fs(v)}, and \${this.pf(v)} × \${this.pn(B.k)} = \${neg(B.a)}, so \${this.pf(v)}·\${this.ex(B.k)} has the slope \${this.wave(B)}, the exponential itself. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="gwRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
 const ExpInt = {
   SETS:[
     {id:'two', btn:'e^(2x)', k:2, ks:'2', ex:'2x', up:'3x', name:'f(x) = e to the 2x',
@@ -24634,7 +24746,15 @@ const ExpInt = {
   moveC(by){ const v=this.ci+by; if(v<0 || v>=this.set().C.length) return; this.ci=v; this.touched=true; this.render(); },
   moveL(by){ const v=this.li+by; if(v<0 || v>=this.LIFT.length) return; this.li=v; this.touched=true; this.render(); },
   setForm(m){ this.form=m; this.touched=true; this.render(); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('xiTab').innerHTML=[['hand','🪴 Fit it by hand','Fit F to the slope field by hand'],['pick','🎯 Which number in front?','See an exponential, and pick which of four numbers goes in front of its antiderivative']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="ExpInt.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['xiSets','xiFig','xiStep','xiForms','xiRead','xiGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('gwBox').innerHTML=pick ? GrowPick.html() : '';
+    if(pick) return;
     document.getElementById('xiSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="ExpInt.pick(\${i})" aria-label="\${s.name}">\${s.btn}</button>\`).join('');
     document.getElementById('xiForms').innerHTML=this.FORMS.map((m,i)=>
