@@ -1,186 +1,214 @@
 {
-  "change": "Logistic growth as a fight topic: growth with a ceiling, dP/dt = rP(1 − P/K).",
+  "change": "The logistic workshop: step a population toward its ceiling and watch the rate rise and fall.",
   "mutations": [
     {
-      "name": "depth 1 gives rP",
+      "name": "r is 0.4",
       "file": "index.html",
-      "find": "ans=mul(mul(r,P),room);",
-      "replace": "ans=mul(r,P);",
+      "find": "r:0.5, K:1000, TMAX:20,",
+      "replace": "r:0.4, K:1000, TMAX:20,",
       "run": "verify"
     },
     {
-      "name": "depth 1 uses P/K for the room left",
+      "name": "the steps run to 21",
       "file": "index.html",
-      "find": "Ps=show(P), room=sub(one,dv(P,K));",
-      "replace": "Ps=show(P), room=dv(P,K);",
+      "find": "r:0.5, K:1000, TMAX:20,",
+      "replace": "r:0.5, K:1000, TMAX:21,",
       "run": "verify"
     },
     {
-      "name": "depth 2 gives rK/2",
+      "name": "starting small is at 25",
       "file": "index.html",
-      "find": "ans=mul(mul(r,K),F(1,4));",
-      "replace": "ans=mul(mul(r,K),F(1,2));",
+      "find": "P0:20, Y:[0,1100],",
+      "replace": "P0:25, Y:[0,1100],",
       "run": "verify"
     },
     {
-      "name": "depth 2 gives the population K/2",
+      "name": "A is the wrong way up",
       "file": "index.html",
-      "find": "ans=mul(mul(r,K),F(1,4));",
-      "replace": "ans=half;",
+      "find": "A(){ const P0=this.set().P0; return (this.K-P0)/P0; },",
+      "replace": "A(){ const P0=this.set().P0; return P0/(this.K-P0); },",
       "run": "verify"
     },
     {
-      "name": "depth 3 turns A upside down",
+      "name": "P uses e^(+rt)",
       "file": "index.html",
-      "find": "ans=sol(dv(A,E));",
-      "replace": "ans=sol(dv(dv(P0,sub(K,P0)),E));",
+      "find": "return this.K/(1+this.A()*Math.exp(-this.r*t));",
+      "replace": "return this.K/(1+this.A()*Math.exp(this.r*t));",
       "run": "verify"
     },
     {
-      "name": "depth 3 uses e^(rt)",
+      "name": "the rate has no ceiling",
       "file": "index.html",
-      "find": "ans=sol(dv(A,E));",
-      "replace": "ans=sol(mul(A,E));",
+      "find": "return this.r*P*(1-P/this.K); },",
+      "replace": "return this.r*P; },",
       "run": "verify"
     },
     {
-      "name": "depth 3's A is K/P(0)",
+      "name": "the rate uses P/K",
       "file": "index.html",
-      "find": "A=dv(sub(K,P0),P0)",
-      "replace": "A=dv(K,P0)",
+      "find": "return this.r*P*(1-P/this.K); },",
+      "replace": "return this.r*P*(P/this.K); },",
       "run": "verify"
     },
     {
-      "name": "the question shows r to one place",
+      "name": "starting above, A is told as 0.6",
       "file": "index.html",
-      "find": "const dec=u=>String(+(u[0]/u[1]).toFixed(3));",
-      "replace": "const dec=u=>String(+(u[0]/u[1]).toFixed(1));",
+      "find": "A = (1000 − 1600)/1600 = −0.375, so P(t) = 1000/(1 − 0.375·e^(−0.5t)).",
+      "replace": "A = (1000 − 1600)/1600 = −0.6, so P(t) = 1000/(1 − 0.6·e^(−0.5t)).",
       "run": "verify"
     },
     {
-      "name": "the question's K is off by one",
+      "name": "e is told to two places",
       "file": "index.html",
-      "find": "const eq=`dP/dt = ${rs}P(1 − P/${Ks})`;",
-      "replace": "const eq=`dP/dt = ${rs}P(1 − P/${show(add(K,one))})`;",
+      "find": "sig(v){ return String(+v.toPrecision(4)); },",
+      "replace": "sig(v){ return String(+v.toFixed(2)); },",
       "run": "verify"
     },
     {
-      "name": "depth 3 asks e^(rt) with another r",
+      "name": "P is told to whole numbers",
       "file": "index.html",
-      "find": "Find P at the moment e^(${rs}t) = ${Es}.`;",
-      "replace": "Find P at the moment e^(${dec(add(r,F(1,10)))}t) = ${Es}.`;",
+      "find": "so P = 1000/(1 ${sg} ${Aw}${this.sig(e)}) ${this.is(P,1)}.`",
+      "replace": "so P = 1000/(1 ${sg} ${Aw}${this.sig(e)}) ${this.is(P,0)}.`",
       "run": "verify"
     },
     {
-      "name": "the answers are always whole",
+      "name": "the room left is told as P/K",
       "file": "index.html",
-      "find": "const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    c",
-      "replace": "const whole=true;\n  for(let g=0;;g++){\n    c",
+      "find": "const S=this.set(), t=this.t, P=this.P(), room=1-P/this.K,",
+      "replace": "const S=this.set(), t=this.t, P=this.P(), room=P/this.K,",
       "run": "verify"
     },
     {
-      "name": "the answers are seldom whole",
+      "name": "a shrinking P is told as growing",
       "file": "index.html",
-      "find": "const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    c",
-      "replace": "const whole=R.chance(0.1);\n  for(let g=0;;g++){\n    c",
+      "find": "(R>0 ? 'P is growing.' : 'below 0, so P is shrinking.'));",
+      "replace": "(R>-1 ? 'P is growing.' : 'below 0, so P is shrinking.'));",
       "run": "verify"
     },
     {
-      "name": "depth 2's K is always round",
+      "name": "the step's growth is turned over",
       "file": "index.html",
-      "find": "R.pick(d===2?[30,50,70,90,100,150,200,250,300,350,500]:",
-      "replace": "R.pick(d===2?[100,200,300,400,500,600,800,1000,1200]:",
+      "find": "${this.num(P/P0,4)} times as much",
+      "replace": "${this.num(P0/P,4)} times as much",
       "run": "verify"
     },
     {
-      "name": "the form may give it away",
+      "name": "the e^0.5 note shows on every step",
       "file": "index.html",
-      "find": "same<2 || (ans[1]===1)!==whole",
-      "replace": "(ans[1]===1)!==whole",
+      "find": "if(S.id==='small' && t===1) note+=",
+      "replace": "if(S.id==='small' && t>=1) note+=",
       "run": "verify"
     },
     {
-      "name": "only three wrong answers",
+      "name": "the rate is said to rise when it falls",
       "file": "index.html",
-      "find": "dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form\n",
-      "replace": "dist.length<3 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }\n    // any three of the four wrong answers shown hold one of the answer's form\n",
+      "find": "out.push(R<R0 ? `The rate fell",
+      "replace": "out.push(R>R0 ? `The rate fell",
       "run": "verify"
     },
     {
-      "name": "depth 1's no-ceiling slip keeps the ceiling",
+      "name": "K/2 is passed at 400",
       "file": "index.html",
-      "find": "[mul(r,P),`that is rP alone",
-      "replace": "[mul(mul(r,P),room),`that is rP alone",
+      "find": "if(P0<500 && P>=500) out.push(",
+      "replace": "if(P0<400 && P>=400) out.push(",
       "run": "verify"
     },
     {
-      "name": "depth 1's share slip uses the room",
+      "name": "the 1% mark is 2%",
       "file": "index.html",
-      "find": "[mul(mul(r,P),dv(P,K)),`that uses P/K",
-      "replace": "[mul(mul(r,P),sub(one,dv(P,K))),`that uses P/K",
+      "find": "if(Math.abs(this.K-P)<this.K/100) out.push(",
+      "replace": "if(Math.abs(this.K-P)<this.K/50) out.push(",
       "run": "verify"
     },
     {
-      "name": "depth 1's ÷ K slip divides by 2",
+      "name": "rK/4 is told as rK/2",
       "file": "index.html",
-      "find": "[mul(mul(r,P),sub(K,P)),`that leaves off",
-      "replace": "[mul(mul(r,P),dv(sub(K,P),F(2))),`that leaves off",
+      "find": "where growth is fastest: rK/4 = 0.5 × 1000/4 = 125.`",
+      "replace": "where growth is fastest: rK/2 = 0.5 × 1000/2 = 250.`",
       "run": "verify"
     },
     {
-      "name": "depth 2's rP-at-K slip halves",
+      "name": "stepping back keeps the step note",
       "file": "index.html",
-      "find": "[mul(r,K),`that is rP at P = K",
-      "replace": "[mul(r,half),`that is rP at P = K",
+      "find": "this.t--; this.stepped=false;",
+      "replace": "this.t--;",
       "run": "verify"
     },
     {
-      "name": "depth 2's no-r slip is K/2",
+      "name": "starting over keeps the step note",
       "file": "index.html",
-      "find": "[mul(K,F(1,4)),`that leaves out r",
-      "replace": "[mul(K,F(1,2)),`that leaves out r",
+      "find": "again(){ this.t=0; this.stepped=false;",
+      "replace": "again(){ this.t=0;",
       "run": "verify"
     },
     {
-      "name": "depth 3's no-ceiling slip adds",
+      "name": "picking a start keeps t",
       "file": "index.html",
-      "find": "[mul(P0,E),`that is P(0) × e^",
-      "replace": "[add(P0,E),`that is P(0) × e^",
+      "find": "pick(i){ this.si=i; this.t=0;",
+      "replace": "pick(i){ this.si=i;",
       "run": "verify"
     },
     {
-      "name": "depth 3's K/P(0) slip forgets the E",
+      "name": "stepping forward is offered at 20",
       "file": "index.html",
-      "find": "[sol(dv(dv(K,P0),E)),`that takes A",
-      "replace": "[sol(dv(K,P0)),`that takes A",
+      "find": "can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX; },",
+      "replace": "can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX+1; },",
       "run": "verify"
     },
     {
-      "name": "depth 3's e^(rt) slip divides",
+      "name": "the ceiling is drawn at 900",
       "file": "index.html",
-      "find": "[sol(mul(A,E)),`that uses e^",
-      "replace": "[sol(dv(A,mul(E,E))),`that uses e^",
+      "find": "y1=\"${f(this.PY(1000))}\" x2=\"${f(this.PX(this.TMAX))}\" y2=\"${f(this.PY(1000))}\"",
+      "replace": "y1=\"${f(this.PY(900))}\" x2=\"${f(this.PX(this.TMAX))}\" y2=\"${f(this.PY(900))}\"",
       "run": "verify"
     },
     {
-      "name": "depth 3's working ends on P(0)",
+      "name": "the tangent is twice as steep",
       "file": "index.html",
-      "find": "P = ${Ks}/(1 + ${A[1]===1?show(A):`(${show(A)})`}/${Es}) = ${show(ans)}`;",
-      "replace": "P = ${Ks}/(1 + ${A[1]===1?show(A):`(${show(A)})`}/${Es}) = ${P0s}`;",
+      "find": "y1=\"${f(this.PY(P+R*(t1-t)))}\" x2=\"${f(this.PX(t2))}\" y2=\"${f(this.PY(P+R*(t2-t)))}\"",
+      "replace": "y1=\"${f(this.PY(P+2*R*(t1-t)))}\" x2=\"${f(this.PX(t2))}\" y2=\"${f(this.PY(P+2*R*(t2-t)))}\"",
       "run": "verify"
     },
     {
-      "name": "no realm asks logistic growth",
+      "name": "the dots stop a step short",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox','arcLength','logistic'],",
-      "replace": "'growth','meanValue','linApprox','arcLength'],",
+      "find": "for(let k=0;k<=t;k++) out+=`<circle",
+      "replace": "for(let k=0;k<t;k++) out+=`<circle",
       "run": "verify"
     },
     {
-      "name": "logistic growth is in no strand",
+      "name": "the curve runs to t = 10",
       "file": "index.html",
-      "find": "'growth','meanValue','linApprox','arcLength','logistic']]",
-      "replace": "'growth','meanValue','linApprox','arcLength']]",
+      "find": "for(let i=0;i<=160;i++){ const t=this.TMAX*i/160;",
+      "replace": "for(let i=0;i<=160;i++){ const t=this.TMAX*i/320;",
+      "run": "verify"
+    },
+    {
+      "name": "the early goal needs two steps",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.stepped && K.t===1},",
+      "replace": "ok:K=>K.si===0 && K.stepped && K.t===2},",
+      "run": "verify"
+    },
+    {
+      "name": "the slow goal counts a rising rate",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.stepped && K.rate()<K.rate(K.t-1)},",
+      "replace": "ok:K=>K.si===0 && K.stepped && K.rate()<=K.rate(K.t-1)+5},",
+      "run": "verify"
+    },
+    {
+      "name": "the near goal is 10%",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.K-K.P()<K.K/100},",
+      "replace": "ok:K=>K.si===0 && K.K-K.P()<K.K/10},",
+      "run": "verify"
+    },
+    {
+      "name": "the above goal needs no step",
+      "file": "index.html",
+      "find": "ok:K=>K.si===2 && K.stepped}",
+      "replace": "ok:K=>K.si===2}",
       "run": "verify"
     }
   ]

@@ -1948,6 +1948,25 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ LOGISTIC WORKSHOP ============ -->
+  <div class="screen" id="s-logistic">
+    <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
+    <div class="panel">
+      <div id="lgwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Where the population starts"></div>
+      <div id="lgwFig"></div>
+      <div id="lgwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step through time">
+        <button class="btn sm ghost" id="lgwBack" onclick="LogiGrow.back()" aria-label="Step back one unit of time">◀ Step back</button>
+        <button class="btn sm" id="lgwFwd" onclick="LogiGrow.fwd()" aria-label="Step forward one unit of time">Step forward ▶</button>
+        <button class="btn sm ghost" id="lgwAgain" onclick="LogiGrow.again()" aria-label="Go back to t = 0">Start over</button>
+      </div>
+      <div id="lgwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="lgwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="lgwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ ARC LENGTH WORKSHOP ============ -->
   <div class="screen" id="s-arclen">
     <div class="panel"><h2>🧵 Arc Length Workshop</h2><div class="sub">How long is a curve? Lay straight chords along it, measure each by Pythagoras, √(run² + rise²), and add them up. More chords hug the curve closer, and the total climbs toward the true length, ∫ √(1 + f′(x)²) dx.</div></div>
@@ -4496,6 +4515,7 @@ const WORKSHOP_FOR = (() => {
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
     ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
+    LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -13967,6 +13987,7 @@ const UI = {
     if(id==='s-mvt') MeanValue.render();
     if(id==='s-tanline') TanLine.render();
     if(id==='s-arclen') ArcLen.render();
+    if(id==='s-logistic') LogiGrow.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14811,6 +14832,11 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🧵 Arc Length Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Lay straight chords along a line, a cubic and a quarter circle, measure each by Pythagoras, and add them up. Double the chords and watch the total climb toward the true length, ∫ √(1 + f′²) dx, and measure π/2 with nothing but right triangles.</div>
          <button class="btn sm" id="tomeArcLen" style="width:auto;margin-top:8px" onclick="ArcLen.open()">Open the arc length workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step.</div>
+         <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -28235,6 +28261,122 @@ const ChordPick = {
     return out;
   }
 };
+/* ---------- The logistic workshop: growth with a ceiling, step by step ----------
+   dP/dt = 0.5P(1 − P/1000), solved exactly: P(t) = 1000/(1 + A·e^(−0.5t)) with
+   A = (1000 − P(0))/P(0). Start small at 20, start half way at 500, or start
+   above the ceiling at 1600, and step t forward a whole unit at a time. Each
+   step works e^(−0.5t), P, the room left 1 − P/1000 and the rate rP(1 − P/K),
+   and draws the tangent at the point, as steep as the rate. Small, P grows
+   almost like e^(0.5t); past 500 the room left shrinks faster than P grows, so
+   the rate falls; and from either side P settles on 1000. Nothing is saved. */
+const LogiGrow = {
+  r:0.5, K:1000, TMAX:20,
+  SETS:[
+    {id:'small', btn:'Start small', name:'starting small at P(0) = 20', P0:20, Y:[0,1100],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 20. A = (1000 − 20)/20 = 49, so P(t) = 1000/(1 + 49·e^(−0.5t)).'},
+    {id:'half', btn:'Start half way', name:'starting half way at P(0) = 500', P0:500, Y:[0,1100],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 500. A = (1000 − 500)/500 = 1, so P(t) = 1000/(1 + e^(−0.5t)).'},
+    {id:'above', btn:'Start above', name:'starting above the ceiling at P(0) = 1600', P0:1600, Y:[0,1700],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 1600, above the ceiling. A = (1000 − 1600)/1600 = −0.375, so P(t) = 1000/(1 − 0.375·e^(−0.5t)).'}
+  ],
+  si:0, t:0, stepped:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'early', t:'Starting small, step once and see P grow almost as if there were no ceiling.', toast:'Small means nearly exponential',
+     ok:K=>K.si===0 && K.stepped && K.t===1},
+    {id:'half', t:'Starting small, step P past half the ceiling, 500.', toast:'Past K/2',
+     ok:K=>K.si===0 && K.stepped && K.P(K.t-1)<500 && K.P()>=500},
+    {id:'slow', t:'Starting small, step until the rate is lower than a step before.', toast:'Growth slows',
+     ok:K=>K.si===0 && K.stepped && K.rate()<K.rate(K.t-1)},
+    {id:'near', t:'Starting small, come within 1% of the ceiling.', toast:'Within 1% of K',
+     ok:K=>K.si===0 && K.K-K.P()<K.K/100},
+    {id:'peak', t:'Starting half way, step once and see the rate fall from its peak, rK/4 = 125.', toast:'Fastest at K/2',
+     ok:K=>K.si===1 && K.stepped},
+    {id:'above', t:'Starting above the ceiling, step once and see P fall toward it.', toast:'Down to the ceiling',
+     ok:K=>K.si===2 && K.stepped}
+  ],
+  set(){ return this.SETS[this.si]; },
+  A(){ const P0=this.set().P0; return (this.K-P0)/P0; },
+  P(t=this.t){ return this.K/(1+this.A()*Math.exp(-this.r*t)); },
+  rate(t=this.t){ const P=this.P(t); return this.r*P*(1-P/this.K); },
+  /* a number to d places, with = when that is exact and ≈ when it is not */
+  num(v,d){ const q=Math.round(v*10**d)/10**d; return neg(Object.is(q,-0)?0:q); },
+  is(v,d){ return (Math.abs(Math.round(v*10**d)-v*10**d)<1e-6 ? '= ' : '≈ ')+this.num(v,d); },
+  working(){
+    const S=this.set(), t=this.t, P=this.P(), room=1-P/this.K, R=this.rate(), e=Math.exp(-this.r*t), A=this.A();
+    const Aw=S.id==='half' ? '' : \`\${neg(Math.abs(A))} × \`, sg=A<0?'−':'+';
+    const out=[S.intro];
+    out.push(t===0 ? \`At t = 0, e^0 = 1, so P = 1000/(1 \${sg} \${neg(Math.abs(A))}) = \${this.num(P,1)}, the start.\`
+      : \`At t = \${t}, e^(−0.5 × \${t}) ≈ \${this.sig(e)}, so P = 1000/(1 \${sg} \${Aw}\${this.sig(e)}) \${this.is(P,1)}.\`);
+    out.push(\`The room left is 1 − P/1000 \${this.is(room,4)}, so the rate is 0.5 × \${this.num(P,1)} × \${this.pf(room)} \${this.is(R,1)}: \`+
+      (R>0 ? 'P is growing.' : 'below 0, so P is shrinking.'));
+    if(this.stepped){
+      const P0=this.P(t-1), R0=this.rate(t-1);
+      let note=\`From t = \${t-1} to \${t}, P went from \${this.num(P0,1)} to \${this.num(P,1)}, \${this.num(P/P0,4)} times as much\`;
+      if(S.id==='small' && t===1) note+=\`: almost e^0.5 ≈ 1.6487, as if there were no ceiling, since with P small the room left is nearly 1.\`;
+      else if(S.id==='above') note+=\`: above the ceiling the room left is below 0, so P falls back toward 1000.\`;
+      else note+='.';
+      out.push(note);
+      if(R0>0 && R>0) out.push(R<R0 ? \`The rate fell from \${this.num(R0,1)} to \${this.num(R,1)}: past 500, the room left is shrinking faster than P is growing.\`
+        : \`The rate rose from \${this.num(R0,1)} to \${this.num(R,1)}: below 500, P is growing faster than the room left is shrinking.\`);
+      if(P0<500 && P>=500) out.push(\`P passed K/2 = 500 in this step, where growth is fastest: rK/4 = 0.5 × 1000/4 = 125.\`);
+    }
+    if(Math.abs(this.K-P)<this.K/100) out.push(\`P is within 1% of the ceiling, 1000, and keeps closing in without ever reaching it.\`);
+    return out;
+  },
+  /* a small number to four significant figures */
+  sig(v){ return String(+v.toPrecision(4)); },
+  pf(v){ const s=this.num(v,4); return /−/.test(s) ? \`(\${s})\` : s; },
+  /* P against t, the ceiling dashed, a dot at each whole t, the tangent at t */
+  L:42, TOP:10, W:296, Hh:220,
+  PX(t){ return this.L+t*this.W/this.TMAX; },
+  PY(v){ const Y=this.set().Y; return this.TOP+this.Hh-(v-Y[0])*this.Hh/(Y[1]-Y[0]); },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), y0=this.PY(0);
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="P against t from 0 to \${this.TMAX} in gold, \${S.name}, with the ceiling 1000 dashed, a blue dot at each whole t up to t = \${this.t}, and the tangent there in red">\`;
+    out+=\`<line data-k="taxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(y0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="paxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${this.L}" y2="\${this.TOP}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of [0,5,10,15,20]) out+=\`<text data-k="tick" x="\${f(this.PX(t))}" y="\${f(y0+13)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${t}</text>\`;
+    for(const v of [500,1000].concat(S.Y[1]>1500?[1500]:[])) out+=\`<text data-k="tick" x="\${this.L-4}" y="\${f(this.PY(v)+3)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="end">\${v}</text>\`;
+    out+=\`<line data-k="ceiling" x1="\${this.L}" y1="\${f(this.PY(1000))}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(this.PY(1000))}" stroke="\${FIG_COL.dim}" stroke-width="1.2" stroke-dasharray="5 4"/>\`;
+    out+=\`<line data-k="half" x1="\${this.L}" y1="\${f(this.PY(500))}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(this.PY(500))}" stroke="\${FIG_COL.dim}" stroke-width="0.8" stroke-dasharray="2 4"/>\`;
+    const pts=[]; for(let i=0;i<=160;i++){ const t=this.TMAX*i/160; pts.push(\`\${f(this.PX(t))},\${f(this.PY(this.P(t)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    // the tangent through (t, P) with slope the rate, one unit of t either side, kept inside the figure
+    const t=this.t, P=this.P(), R=this.rate(), t1=Math.max(0,t-1), t2=Math.min(this.TMAX,t+1);
+    out+=\`<line data-k="tan" x1="\${f(this.PX(t1))}" y1="\${f(this.PY(P+R*(t1-t)))}" x2="\${f(this.PX(t2))}" y2="\${f(this.PY(P+R*(t2-t)))}" stroke="\${FIG_COL.d}" stroke-width="2"/>\`;
+    for(let k=0;k<=t;k++) out+=\`<circle data-k="\${k===t?'now':'dot'}" cx="\${f(this.PX(k))}" cy="\${f(this.PY(this.P(k)))}" r="\${k===t?4.5:2.6}" fill="\${FIG_COL.a}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-logistic'); },
+  can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX; },
+  pick(i){ this.si=i; this.t=0; this.stepped=false; this.touched=true; this.render(); },
+  fwd(){ if(!this.can(1)) return; this.t++; this.stepped=true; this.touched=true; this.render(); },
+  back(){ if(!this.can(-1)) return; this.t--; this.stepped=false; this.touched=true; this.render(); },
+  again(){ this.t=0; this.stepped=false; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('lgwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogiGrow.pick(\${i})" aria-label="Grow a population \${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('lgwBack').disabled=!this.can(-1);
+    document.getElementById('lgwFwd').disabled=!this.can(1);
+    document.getElementById('lgwAgain').disabled=this.t===0;
+    document.getElementById('lgwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is P(t); the dashed line is the ceiling, 1000, and the dotted one half of it. The blue dots are P at each whole t so far, and the red line is the tangent at the last, as steep as the rate dP/dt.</div>\`;
+    document.getElementById('lgwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('lgwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('KEEPER OF THE CEILING','every population brought to rest','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The arc length workshop: measuring a curve with chords ----------
    Lay straight chords along a curve, measure each one by Pythagoras,
    √(run² + rise²), and add them up. A line (3/4)x from 0 to 4, the cubic

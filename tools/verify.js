@@ -91,6 +91,7 @@ function loadGame() {
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
     ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const LogiGrow={' + script.slice(script.indexOf("  r:0.5, K:1000, TMAX:20,\n  SETS:["), script.indexOf("  render(){\n    document.getElementById('lgwSets')")) + 'render(){}};exports.LogiGrow=LogiGrow;' +
     ';const ArcLen={' + script.slice(script.indexOf("  SETS:[\n    {id:'line', btn:'Line'"), script.indexOf("  render(){\n    document.getElementById('arcwSets')")) + 'render(){}};exports.ArcLen=ArcLen;' +
     ';const TanLine={' + script.slice(script.indexOf("  SETS:[\n    {id:'root', btn:'√x near 4'"), script.indexOf("  render(){\n    document.getElementById('tlwSets')")) + 'render(){}};exports.TanLine=TanLine;' +
     ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtTab')")) + 'render(){}};exports.MeanValue=MeanValue;' +
@@ -114,7 +115,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine, ArcLen } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue, TanLine, ArcLen, LogiGrow } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -11388,6 +11389,137 @@ const doublingNotes = (() => {
   return { n, moves, points, goals: Object.keys(found).length };
 })();
 
+/* The logistic workshop: every start, every whole t from 0 to 20, and every
+   step forward and back. P is worked again here from K·P(0)/(P(0) + (K − P(0))
+   e^(−rt)), in plain floats, never from the workshop's numbers, and checked to
+   satisfy dP/dt = rP(1 − P/K) by a nudge; then each line of the readout, the
+   rate, the step's growth, whether the rate rose or fell, K/2 passed and the
+   1% mark, and each goal. The curve, the dots and the tangent are read back
+   off the drawing. */
+const logiNotes = (() => {
+  const M = LogiGrow, r = 0.5, K = 1000;
+  const val = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const near = (t, v, d) => Math.abs(val(t) - v) <= 0.5 * 10 ** -d + 1e-9;
+  const exact = (v, d) => Math.abs(Math.round(v * 10 ** d) - v * 10 ** d) < 1e-6;
+  const START = { small: [20, '49', '+'], half: [500, '1', '+'], above: [1600, '0.375', '−'] };
+  const INTRO = {
+    small: 'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 20. A = (1000 − 20)/20 = 49, so P(t) = 1000/(1 + 49·e^(−0.5t)).',
+    half: 'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 500. A = (1000 − 500)/500 = 1, so P(t) = 1000/(1 + e^(−0.5t)).',
+    above: 'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 1600, above the ceiling. A = (1000 − 1600)/1600 = −0.375, so P(t) = 1000/(1 − 0.375·e^(−0.5t)).',
+  };
+  if (M.r !== r || M.K !== K || M.TMAX !== 20) fail('logistic', 'law', 'r, K or the last t is not 0.5, 1000 and 20');
+  if (M.SETS.map(S => S.id).join() !== 'small,half,above') fail('logistic', 'sets', M.SETS.map(S => S.id).join());
+  if (M.si !== 0 || M.t !== 0 || M.stepped) fail('logistic', 'open', 'the workshop does not open starting small at t = 0');
+  const reset = () => { M.touched = false; M.si = 0; M.t = 0; M.stepped = false; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('logistic', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, stops = 0;
+  M.SETS.forEach((S, si) => {
+    const [P0, Aw, sg] = START[S.id];
+    const P = t => K * P0 / (P0 + (K - P0) * Math.exp(-r * t)), rate = t => r * P(t) * (1 - P(t) / K);
+    // P solves the equation: its slope by a nudge is the rate
+    for (let t = 0; t <= 20; t += 0.5) { const sl = (P(t + 1e-5) - P(t - 1e-5)) / 2e-5; if (Math.abs(sl - rate(t)) > 1e-4 * Math.max(1, Math.abs(sl))) fail('logistic', S.id, `P does not solve dP/dt = rP(1 − P/K) at t = ${t}`); }
+    if (S.P0 !== P0) fail('logistic', S.id, `the start is ${S.P0}, not ${P0}`);
+    reset(); M.fwd(); M.pick(si);
+    if (M.t !== 0 || M.stepped) fail('logistic', S.id, 'picking a start does not go back to t = 0');
+    for (let t0 = 0; t0 <= 20; t0++) {
+      stops++;
+      for (const dt of [-1, 1]) {
+        // a step back starts from a step just taken, so that its step note has to go
+        reset(); M.pick(si); M.t = t0; M.stepped = dt < 0 && t0 > 0; M.touched = false;
+        const ok = t0 + dt >= 0 && t0 + dt <= 20;
+        if (M.can(dt) !== ok) fail('logistic', `${S.id} ${t0}`, `${dt > 0 ? 'stepping forward' : 'stepping back'} is ${ok ? 'not ' : ''}offered`);
+        if (dt > 0) M.fwd(); else M.back();
+        if (!ok) { if (M.t !== t0) fail('logistic', `${S.id} ${t0}`, 'a step is taken that is not offered'); continue; }
+        n++;
+        const t = t0 + dt, key = `${S.id} ${t0}→${t}`, got = M.working(), p = P(t), R = rate(t), room = 1 - p / K, e = Math.exp(-r * t);
+        if (M.t !== t) fail('logistic', key, `t ends at ${M.t}`);
+        if (Math.abs(M.P() - p) > 1e-9 * K) fail('logistic', key, `P is ${M.P()}, not ${p}`);
+        if (got[0] !== INTRO[S.id]) fail('logistic', key, `the start is told wrong: ${got[0]}`);
+        let L = 1;
+        if (t === 0) { if (got[L] !== `At t = 0, e^0 = 1, so P = 1000/(1 ${sg} ${Aw}) = ${P0}, the start.`) fail('logistic', key, `t = 0 is told wrong: ${got[L]}`); }
+        else {
+          const m = (got[L] || '').match(/^At t = (\d+), e\^\(−0\.5 × (\d+)\) ≈ (\S+), so P = 1000\/\(1 ([+−]) (?:(\S+) × )?(\S+)\) ([=≈]) (\S+)\.$/);
+          if (!m || +m[1] !== t || +m[2] !== t || Math.abs(+m[3] - e) > e * 6e-4 || m[4] !== sg || (m[5] || '1') !== Aw || m[6] !== m[3] || !near(m[8], p, 1) || (m[7] === '=') !== exact(p, 1))
+            fail('logistic', key, `P at t is told wrong: ${got[L]}`);
+        }
+        L++;
+        {
+          const m = (got[L] || '').match(/^The room left is 1 − P\/1000 ([=≈]) (\S+), so the rate is 0\.5 × (\S+) × (\S+) ([=≈]) (\S+): (P is growing\.|below 0, so P is shrinking\.)$/);
+          if (!m || !near(m[2], room, 4) || (m[1] === '=') !== exact(room, 4) || !near(m[3], p, 1) || val(m[4]) !== val(m[2]) || !near(m[6], R, 1) || (m[5] === '=') !== exact(R, 1)
+            || (m[7] === 'P is growing.') !== (R > 0)) fail('logistic', key, `the rate is told wrong: ${got[L]}`);
+        }
+        L++;
+        if (dt > 0) {
+          const p0 = P(t - 1), R0 = rate(t - 1);
+          const m = (got[L] || '').match(/^From t = (\d+) to (\d+), P went from (\S+) to (\S+), (\S+) times as much(.*)$/);
+          const tail = S.id === 'small' && t === 1 ? ': almost e^0.5 ≈ 1.6487, as if there were no ceiling, since with P small the room left is nearly 1.'
+            : S.id === 'above' ? ': above the ceiling the room left is below 0, so P falls back toward 1000.' : '.';
+          if (!m || +m[1] !== t - 1 || +m[2] !== t || !near(m[3], p0, 1) || !near(m[4], p, 1) || !near(m[5], p / p0, 4) || m[6] !== tail) fail('logistic', key, `the step is told wrong: ${got[L]}`);
+          // the e^0.5 note is true: with P small the step grows nearly as e^0.5
+          if (S.id === 'small' && t === 1 && !(Math.abs(p / p0 - Math.exp(0.5)) < 0.03)) fail('logistic', key, 'the first step is not close to e^0.5');
+          L++;
+          if (R0 > 0 && R > 0) {
+            const up = R > R0, line = up ? `The rate rose from ${M.num(R0, 1)} to ${M.num(R, 1)}: below 500, P is growing faster than the room left is shrinking.`
+              : `The rate fell from ${M.num(R0, 1)} to ${M.num(R, 1)}: past 500, the room left is shrinking faster than P is growing.`;
+            if (!near(M.num(R0, 1), R0, 1) || !near(M.num(R, 1), R, 1)) fail('logistic', key, 'the rates are rounded wrong');
+            // rising and falling agree with which side of 500 the step lies
+            if (up ? !(p0 < 500) : !(p > 500)) fail('logistic', key, `the rate ${up ? 'rose' : 'fell'} on the wrong side of 500`);
+            if (got[L] !== line) fail('logistic', key, `the rate's change is told wrong: ${got[L]}`);
+            L++;
+          }
+          if (p0 < 500 && p >= 500) {
+            if (got[L] !== 'P passed K/2 = 500 in this step, where growth is fastest: rK/4 = 0.5 × 1000/4 = 125.') fail('logistic', key, `K/2 is not told: ${got[L]}`);
+            L++;
+          }
+        }
+        if (Math.abs(K - p) < 10) {
+          if (got[L] !== 'P is within 1% of the ceiling, 1000, and keeps closing in without ever reaching it.') fail('logistic', key, `the 1% mark is not told: ${got[L]}`);
+          L++;
+        }
+        if (got.length !== L) fail('logistic', key, `a line is told that should not be: ${got.slice(L).join(' ')}`);
+        // the drawing
+        const Y = S.Y, PX = x => M.L + x * M.W / 20, PY = v => M.TOP + M.Hh - (v - Y[0]) * M.Hh / (Y[1] - Y[0]);
+        const inside = (X, Yp) => X >= M.L - 0.01 && X <= M.L + M.W + 0.01 && Yp >= M.TOP - 0.01 && Yp <= M.TOP + M.Hh + 0.01;
+        const svg = M.svg();
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || cv[1].split(' ').some(c => { const [cx, cy] = c.split(',').map(Number), x = (cx - M.L) * 20 / M.W; return Math.abs(cy - PY(P(x))) > 0.05 || !inside(cx, cy); })) fail('logistic', key, 'the curve leaves P or the figure');
+        else { const xs = cv[1].split(' ').map(c => +c.split(',')[0]); if (Math.abs(xs[0] - M.L) > 0.01 || Math.abs(xs[xs.length - 1] - (M.L + M.W)) > 0.01) fail('logistic', key, 'the curve does not run from t = 0 to t = 20'); }
+        const ce = svg.match(/data-k="ceiling" x1="[\d.]+" y1="([\d.]+)"/), hf = svg.match(/data-k="half" x1="[\d.]+" y1="([\d.]+)"/);
+        if (!ce || Math.abs(+ce[1] - PY(1000)) > 0.01 || !hf || Math.abs(+hf[1] - PY(500)) > 0.01) fail('logistic', key, 'the ceiling or its half is drawn at the wrong height');
+        const dots = [...svg.matchAll(/data-k="(dot|now)" cx="([\d.-]+)" cy="([\d.-]+)"/g)];
+        if (dots.length !== t + 1 || dots.some((d, k) => (d[1] === 'now') !== (k === t) || Math.abs(+d[2] - PX(k)) > 0.01 || Math.abs(+d[3] - PY(P(k))) > 0.01 || !inside(+d[2], +d[3])))
+          fail('logistic', key, `the ${t + 1} dots are not P at t = 0 to ${t}`);
+        const tn = svg.match(/data-k="tan" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!tn) fail('logistic', key, 'no tangent is drawn');
+        else {
+          const [x1, y1, x2, y2] = tn.slice(1).map(Number), slope = -((y2 - y1) / (M.Hh / (Y[1] - Y[0]))) / ((x2 - x1) * 20 / M.W);
+          const mid = (PY(p) - y1) - (PX(t) - x1) * (y2 - y1) / (x2 - x1);
+          if (Math.abs(slope - R) > 0.1 + 0.01 * Math.abs(R) || Math.abs(mid) > 0.05) fail('logistic', key, `the tangent is not through P at t with slope ${R.toFixed(2)}`);
+          if (!inside(x1, y1) || !inside(x2, y2)) fail('logistic', key, 'the tangent leaves the figure');
+        }
+        if (!svg.includes(`up to t = ${t}, and the tangent there in red"`)) fail('logistic', key, 'the figure is named wrong');
+        // every goal, decided here
+        const fwd = dt > 0;
+        const truth = {
+          early: S.id === 'small' && fwd && t === 1, half: S.id === 'small' && fwd && P(t - 1) < 500 && p >= 500,
+          slow: S.id === 'small' && fwd && R < rate(t - 1), near: S.id === 'small' && K - p < 10,
+          peak: S.id === 'half' && fwd, above: S.id === 'above' && fwd,
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('logistic', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('logistic', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.t !== 0 || M.stepped) fail('logistic', key, 'starting over does not go back to t = 0');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('logistic', g.id, 'can never be found');
+  reset();
+  return { n, stops, goals: Object.keys(found).length };
+})();
+
 /* The arc length workshop: every curve, every count of chords, and every
    move from each count. Each curve is measured again here from its own
    formula, in plain floats, never from the workshop's numbers: each chord by
@@ -15499,6 +15631,7 @@ console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (e
 console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (every move from every stop the point can take on x², x³ and 4/x, ${meanValueNotes.stops.toLocaleString()} stops: the chord's slope and the tangent's worked again in floats, which side of c, every note, the point, chord and tangent read back off the drawing, ${meanValueNotes.goals} goals findable)`);
 console.log(`  tangent stops    ${pad(tanLineNotes.n.toLocaleString(), 15)}  (every move and every halving from every stop x can take on √x, 1/x and sin x, ${tanLineNotes.stops.toLocaleString()} stops: L(x), the curve's value and the miss worked again in floats, which way it misses against the bend, the quarter and the eighth, the curve, tangent, estimate and gap read back off the drawing, ${tanLineNotes.goals} goals findable)`);
 console.log(`  chord counts     ${pad(arcLenNotes.n.toLocaleString(), 15)}  (every doubling and halving from every count of chords on the line, the cubic and the quarter circle, ${arcLenNotes.counts.toLocaleString()} counts: each of ${arcLenNotes.chords.toLocaleString()} chords measured again by Pythagoras, the total and its gap against the true length worked by Simpson's rule, the quarter and the third checked true, every chord and its ends read back off the drawing, ${arcLenNotes.goals} goals findable)`);
+console.log(`  logistic steps   ${pad(logiNotes.n.toLocaleString(), 15)}  (every step forward and back from every whole t on the three starts, ${logiNotes.stops.toLocaleString()} stops: P worked again from its formula and checked to solve the equation, the rate, the growth of each step, the rise and fall either side of 500, K/2 and the 1% mark, the curve, the dots and the tangent read back off the drawing, ${logiNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
