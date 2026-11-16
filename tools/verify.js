@@ -85,7 +85,7 @@ function loadGame() {
     ';const Anti={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'6x²'"), script.indexOf("  render(){\n    document.getElementById('adTab')")) + 'render(){}};exports.Anti=Anti;' +
     ';const Transpose={' + script.slice(script.indexOf("  SETS:[\n    {id:'wide', btn:'Wide'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('tpTab')")) + 'render(){}};exports.Transpose=Transpose;' +
     ';const Diag={' + script.slice(script.indexOf("  SETS:[\n    {id:'sym', btn:'Symmetric'"), script.indexOf("  render(){\n    if(!this.c) this.start();")) + 'render(){}};exports.Diag=Diag;' +
-    ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itSets')")) + 'render(){}};exports.TrigInt=TrigInt;' +
+    ';const TrigInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'cos2', btn:'cos 2x'"), script.indexOf("  render(){\n    document.getElementById('itTab')")) + 'render(){}};exports.TrigInt=TrigInt;' +
     ';const TanPlane={' + script.slice(script.indexOf("  SETS:[\n    {id:'bowl', btn:'Bowl', name:'a bowl'"), script.indexOf("  render(){\n    document.getElementById('tqSets')")) + 'render(){}};exports.TanPlane=TanPlane;' +
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  render(){\n    document.getElementById('ivSets')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgSets')")) + 'render(){}};exports.LogDiff=LogDiff;' +
@@ -5282,6 +5282,152 @@ const covPickNotes = (() => {
   if (fives !== 30) fail('covpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+/* Which c? The pick-c round in the trig integral workshop. Every number on
+   screen is read back off its button as an exact fraction and checked
+   against the slip it is named as, worked out here from the wave alone. The
+   right number alone must make the slope of F land on the wave at a spread of
+   x, and every c × k in the readout is worked again from the numbers it shows. */
+const trigPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a; R.pick = a => a[Math.floor(R._r() * a.length)];
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TrigInt = {render(){ env.renders++; }};" +
+    cut('const TrigPick = {', 'const TrigInt = {') + 'return TrigPick;')(R, env);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = t => { const m = t.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(-?\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const eq = (f, g) => f && g && f[0] * g[1] === g[0] * f[1];
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const sg = Q => (Q.g === 'cos' ? 1 : -1);
+  const oth = g => (g === 'sin' ? 'cos' : 'sin');
+  const wave = (a, g, k) => `${a === 1 ? '' : a === -1 ? '−' : ng(a) + ' '}${g}(${k}x)`;
+  const want = {
+    right: Q => fr(sg(Q) * Q.a, Q.k),
+    mult: Q => [sg(Q) * Q.a * Q.k, 1],
+    noK: Q => [sg(Q) * Q.a, 1],
+    sign: Q => fr(-sg(Q) * Q.a, Q.k),
+    flip: Q => fr(sg(Q) * Q.k, Q.a)
+  };
+  const SL = ['mult', 'noK', 'sign', 'flip'];
+  const V = '(−?\\d+(?:\\/\\d+)?)';
+  // every "slope (−)(c) × k · g(kx) = w·g(kx)" in a line, worked again from its own numbers
+  const holds = (t, key) => { let n = 0;
+    for (const m of t.matchAll(new RegExp(`slope (−?)\\(?${V}\\)? × (\\d) · (sin|cos)\\((\\d)x\\) = ${V}·(sin|cos)\\((\\d)x\\)`, 'g'))) { n++;
+      const c = rd(m[2]), w = rd(m[6]);
+      if (m[3] !== m[5] || m[5] !== m[8] || m[4] !== m[7] || !eq(fr((m[1] ? -1 : 1) * c[0] * +m[3], c[1]), w)) fail('trigpick', key, `${m[0]} is worked wrong`); }
+    return n; };
+  const read = () => txt(S.html().split('id="iqRead"')[1].replace(/^[^>]*>/, ''));
+  const slipOf = (k, L, Q) => ({
+    mult: `${L} multiplies by the ${Q.k} inside instead of dividing. Differentiating multiplies by ${Q.k}, so undoing it divides.`,
+    noK: `${L} leaves the ${Q.k} inside out. The chain rule brings a ${Q.k} out in front of the slope, and c has to cancel it.`,
+    sign: Q.g === 'cos' ? `${L} has a minus it should not. The slope of sin is cos with no minus, so undoing ${wave(Q.a, 'cos', Q.k)} keeps the sign of ${ng(Q.a)}.`
+      : `${L} has the minus wrong. The slope of cos is −sin, so undoing a sine needs a minus in front that a cosine does not.`,
+    flip: `${L} is ${Q.k}/${Q.a < 0 ? '(' + ng(Q.a) + ')' : Q.a} turned over. Undoing the ${Q.k} inside divides ${ng(Q.a)} by ${Q.k}, so ${Q.k} goes underneath.` }[k]);
+  const back = (Q, v) => fr(sg(Q) * v[0] * Q.k, v[1]);
+  const checkOf = (k, L, Q) => { const v = want[k](Q); return `Check ${L}: if c were ${fst(v)}, F(x) = ${pf(v)}·${oth(Q.g)}(${Q.k}x) has slope ${Q.g === 'sin' ? '−' : ''}${pf(v)} × ${Q.k} · ${Q.g}(${Q.k}x) = ${fst(back(Q, v))}·${Q.g}(${Q.k}x), not ${wave(Q.a, Q.g, Q.k)}.`; };
+  if (S.RULE !== 'Run the chain rule backwards. The slope of c·sin(kx) is c·k·cos(kx), and the slope of c·cos(kx) is −c·k·sin(kx), so to undo a·cos(kx) take c = a/k, and to undo a·sin(kx) take c = −a/k: swap the wave and divide by the k inside. Which number is c?') fail('trigpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('trigpick', 'open', 'a round is dealt before the mode is opened');
+  let rounds = 0, misses = 0, worked = 0, fives = 0, wholeR = 0, negA = 0, sines = 0;
+  const slots = new Set(), kinds = {}, left = new Set(), As = new Set(), Ks = new Set(), wholes = new Set();
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; As.add(Q.a); Ks.add(Q.k); if (Q.a < 0) negA++; if (Q.g === 'sin') sines++;
+      if (!['sin', 'cos'].includes(Q.g) || !Number.isInteger(Q.a) || !Number.isInteger(Q.k) || Q.a === 0 || Math.abs(Q.a) > 12 || Q.k < 2 || Q.k > 6) fail('trigpick', key, `${JSON.stringify(Q)} is not a whole-number wave`);
+      const L = want.right(Q), h = oth(Q.g);
+      for (const x of [-2.3, -0.7, 0.4, 1.9, 3.6]) { // the slope of F lands on the wave
+        const dF = Q.g === 'cos' ? L[0] / L[1] * Q.k * Math.cos(Q.k * x) : -L[0] / L[1] * Q.k * Math.sin(Q.k * x);
+        const f = Q.a * (Q.g === 'cos' ? Math.cos(Q.k * x) : Math.sin(Q.k * x));
+        if (Math.abs(dF - f) > 1e-9) fail('trigpick', key, `at x = ${x} the slope of F is ${dF}, not ${f}`); }
+      if (L[1] === 1) { wholes.add(L[0]); wholeR++; }
+      if (prev && prev === sig) fail('trigpick', key, 'the same wave comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('trigpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html();
+      if (!txt(h0).startsWith(S.RULE + ` ∫ ${wave(Q.a, Q.g, Q.k)} dx = c·${h}(${Q.k}x) + C A`)) fail('trigpick', key, 'the rule and the wave are not shown first');
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TrigPick\.choose\((\d)\)" aria-label="([ABCD]): c = (−?\d+(?:\/\d+)?)" style="margin:0"><b>([ABCD])<\/b> c = (−?\d+(?:\/\d+)?)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('trigpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rd(x[4]));
+      if (vals.some((v, i) => !v || fst(v) !== btns[i][4])) fail('trigpick', key, 'a number is not written in lowest terms');
+      if (new Set(vals.map(fst)).size !== 4) fail('trigpick', key, 'two numbers are the same');
+      if (vals.some(v => v[0] === 0)) fail('trigpick', key, '0 is offered');
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      if (!vals.some((v, i) => i !== ri && (v[1] === 1) === (L[1] === 1))) fail('trigpick', key, `c is the only ${L[1] === 1 ? 'whole number' : 'fraction'}, so its form gives it away`);
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!want[o.k]) { fail('trigpick', key, `an option is the unknown ${o.k}`); return; }
+        if (!eq(vals[i], want[o.k](Q))) fail('trigpick', key, `${o.k} is shown as ${fst(vals[i])}, which is not that slip`);
+        if ((o.k === 'right') !== eq(vals[i], L)) fail('trigpick', key, `${fst(vals[i])} ${o.k === 'right' ? 'is not' : 'is'} c`);
+      });
+      {
+        const can = [], seen = new Set([fst(L), '0']);
+        for (const s of SL) { const v = fst(want[s](Q)); if (!seen.has(v)) { seen.add(v); can.push(s); } }
+        const shown = r.opts.map(o => o.k); for (const s of can) if (!shown.includes(s)) left.add(s);
+        if (can.length < 3) fail('trigpick', key, 'a wave with fewer than three slips is dealt'); }
+      if (k === 0 && read() !== '0 picked this visit, 0 on the first try.') fail('trigpick', key, `before a pick the readout says ${read()}`);
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('trigpick', key, 'a miss is counted, or not crossed off');
+        const rt = read();
+        if (rt !== `${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)} ${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('trigpick', key, `${o.k} is explained as: ${rt} | want ${slipOf(o.k, Lt, Q)} ${checkOf(o.k, Lt, Q)}`);
+        if (holds(rt, key) !== 1) fail('trigpick', key, 'a miss does not work the slope of F');
+        if (eq(back(Q, vals[i]), [Q.a, 1])) fail('trigpick', key, 'a wrong c passes the check');
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="TrigPick\\.choose\\(${i}\\)" aria-label="${Lt}: c = [^"]+\\. Not c"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('trigpick', key, 'the missed numbers are not shut and told as not c');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('trigpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('trigpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('trigpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('trigpick', key, 'no fresh wave after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'WAVE UNDOER / 5 waves undone') fail('trigpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is c, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('trigpick', key, `the toast is ${env.toasts[nt]}`); }
+      const rt = read(), mn = Q.g === 'sin' ? '−' : '', raw = `${mn}${Q.a < 0 ? '(' + ng(Q.a) + ')' : Q.a}/${Q.k}`;
+      const after = `That was it: c = ${raw}${raw === fst(L) ? '' : ' = ' + fst(L)}, and F(x) = ${pf(L)}·${h}(${Q.k}x) has slope ${mn}${pf(L)} × ${Q.k} · ${Q.g}(${Q.k}x) = ${fst(back(Q, L))}·${Q.g}(${Q.k}x), the wave itself. Here is a new wave. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (rt !== after) fail('trigpick', key, `after a pick: ${rt} | want ${after}`);
+      if (holds(rt, key) !== 1) fail('trigpick', key, 'the right pick does not work the slope of F');
+      if (!eq(back(Q, L), [Q.a, 1])) fail('trigpick', key, `${fst(L)} does not undo the wave`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same wave dealt again is turned away for a fresh one
+    const real = S.build; let n = 0;
+    S.build = () => (n++ < 3 ? { g: 'cos', a: 6, k: 3 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"g":"cos","a":6,"k":3}') fail('trigpick', 'repeat', 'the same wave is dealt twice in a row');
+    S.build = real;
+  }
+  for (const k of SL) if (!kinds[k]) fail('trigpick', 'slips', `the slip ${k} is never offered`);
+  if (As.size !== 24 || Ks.size !== 5) fail('trigpick', 'deal', `a is only ever ${[...As]}, k ${[...Ks]}`);
+  if (negA < rounds * 0.4 || negA > rounds * 0.6) fail('trigpick', 'deal', `a is negative in ${negA} of ${rounds} rounds`);
+  if (sines < rounds * 0.4 || sines > rounds * 0.6) fail('trigpick', 'deal', `a sine is dealt in ${sines} of ${rounds} rounds`);
+  if (wholes.size < 10) fail('trigpick', 'deal', `the whole values of c are only ever ${[...wholes].sort((x, y) => x - y).join(', ')}`);
+  if (wholeR < rounds * 0.45 || wholeR > rounds * 0.55) fail('trigpick', 'deal', `c is whole in ${wholeR} of ${rounds} rounds, so the form of the number gives it away`);
+  if (left.size !== 4) fail('trigpick', 'deal', `only ${[...left].join(', ')} are ever left out`);
+  if (slots.size !== 4) fail('trigpick', 'deal', `c only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
+  if (fives !== 30) fail('trigpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked, wholeR };
+})();
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10027,6 +10173,7 @@ console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 1
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);
+console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the trig integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone making the slope of F land on the wave; ${trigPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their F back, ${trigPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${trigPickNotes.wholeR.toLocaleString()} rounds whose c is whole)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
