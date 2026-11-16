@@ -1462,18 +1462,20 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ EIGENVALUE DETECTIVE ============ -->
   <div class="screen" id="s-detect">
     <div class="panel"><h2>🔍 Eigenvalue Detective</h2><div class="sub">An eigenvalue is a λ where A − λI crushes some arrow flat, which is exactly where det(A − λI) = 0. Step λ along and watch that determinant trace out a curve, the characteristic polynomial, and run down where it meets the axis.</div></div>
+    <div id="dcTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt the eigenvalues or pick them"></div>
     <div class="panel">
+      <div id="dcPick"></div>
       <div id="cpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
       <div id="cpMat" aria-hidden="true" style="text-align:center;margin:4px 0 6px"></div>
       <div id="cpFig"></div>
-      <div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0">
+      <div class="wsMat" id="cpStep" style="grid-template-columns:1fr;border:none;padding:0">
         <div class="wsCell"><button id="cpLLo" onclick="Detect.move(-1)" aria-label="Lower λ by a half">−</button>
           <b id="cpL" style="font-size:17px;min-width:0"></b>
           <button id="cpLHi" onclick="Detect.move(1)" aria-label="Raise λ by a half">+</button></div>
       </div>
       <div id="cpRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="cpGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="cpGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -13953,7 +13955,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔍 Eigenvalue Detective</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant. Then turn it round: see a matrix, and pick which of four pairs are its eigenvalues.</div>
          <button class="btn sm" id="tomeDetect" style="width:auto;margin-top:8px" onclick="Detect.open()">Open the eigenvalue detective</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -18981,6 +18983,151 @@ const Parts = {
   }
 };
 
+/* --------------- which λ? (eigenvalue detective) --------------- */
+/* The detective turned round: a 2×2 matrix A and four pairs of numbers, one
+   of them its eigenvalues. The others are the slips people make: reading
+   them off the diagonal, which only works for a triangular matrix (and A is
+   never triangular here); flipping the sign of the trace term and so getting
+   both eigenvalues negated; or taking the trace and the determinant
+   themselves, which are what the eigenvalues add up to and multiply to. A is
+   built as P·D·P⁻¹ with whole P of determinant ±1, so every entry and every
+   eigenvalue is a whole number and the two eigenvalues differ. A wrong pick
+   draws det(A − λI) against λ: the gold rings where it meets the axis are the
+   eigenvalues, and the red dots at the wrong pair sit off it. Nothing is saved. */
+const LamPick = {
+  LAMS:[-3,-2,-1,0,1,2,3,4,5],
+  PS:[[[1,1],[0,1]],[[1,0],[1,1]],[[1,-1],[0,1]],[[1,0],[-1,1]],[[2,1],[1,1]],[[1,1],[1,2]],[[1,1],[2,1]],[[1,2],[1,1]],[[1,2],[0,1]],[[2,1],[1,0]],[[1,-1],[1,0]],[[0,1],[1,1]],[[2,-1],[1,0]],[[1,-2],[0,1]],[[2,1],[3,2]],[[3,1],[2,1]],[[1,2],[1,3]],[[1,-1],[-1,2]],[[2,-1],[-1,1]],[[1,0],[2,1]],[[1,0],[-2,1]]],
+  SLIPS:['diag','sign','trdet'],
+  LO:-8, HI:12,
+  RULE:'An eigenvalue is a λ where det(A − λI) = 0. For a 2×2 matrix that is λ² − (trace)λ + det A = 0, so the two eigenvalues add up to the trace a + d and multiply to det A = ad − bc. Which pair are the eigenvalues of A?',
+  tr:A=>A[0][0]+A[1][1],
+  det:A=>A[0][0]*A[1][1]-A[0][1]*A[1][0],
+  p(c,l){ return l*l-this.tr(c.A)*l+this.det(c.A); },
+  // the two numbers each option stands for, smaller first
+  pair(c,k){
+    const A=c.A, [l,m]=c.lam;
+    const w = k==='right' ? [l,m] : k==='diag' ? [A[0][0],A[1][1]] : k==='sign' ? [-l,-m] : [this.tr(A),this.det(A)];
+    return [...w].sort((x,y)=>x-y);
+  },
+  text(c,k){ const [x,y]=this.pair(c,k); return `λ = ${neg(x)} and ${neg(y)}`; },
+  build(){
+    for(let g=0;g<500;g++){
+      let l=R.pick(this.LAMS), m=R.pick(this.LAMS);
+      if(l===m) continue;
+      if(l>m) [l,m]=[m,l];
+      const P=R.pick(this.PS), d=P[0][0]*P[1][1]-P[0][1]*P[1][0];
+      const Pi=[[P[1][1]*d,-P[0][1]*d],[-P[1][0]*d,P[0][0]*d]];
+      const PD=[[P[0][0]*l,P[0][1]*m],[P[1][0]*l,P[1][1]*m]];
+      const A=[0,1].map(i=>[0,1].map(j=>PD[i][0]*Pi[0][j]+PD[i][1]*Pi[1][j]));
+      const c={A,lam:[l,m]};
+      if(!A[0][1] || !A[1][0]) continue;                 // a triangular A wears its eigenvalues on its diagonal
+      if(A.flat().some(x=>Math.abs(x)>9)) continue;
+      const ps=['right',...this.SLIPS].map(k=>this.pair(c,k));
+      if(new Set(ps.map(w=>w.join())).size!==4) continue;
+      if(ps.some(w=>w[0]===w[1])) continue;              // every option names two different numbers
+      if(ps.flat().some(x=>x<this.LO || x>this.HI)) continue;
+      return c;
+    }
+    return {A:[[4,1],[2,3]],lam:[2,5]};
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.c;
+    let c;
+    for(let g=0;g<50;g++){ c=this.build(); if(!prev||JSON.stringify(c)!==JSON.stringify(prev)) break; }
+    const opts=['right',...this.SLIPS].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={c,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('EIGENVALUE READER', this.matched+' pairs picked','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} are the eigenvalues, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={c:r.c};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Detect.render();
+  },
+  miss(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  pn:n=>n<0?'('+neg(n)+')':String(n),
+  // λ² − tλ + d, written the way it is read
+  poly(c){ const t=this.tr(c.A), d=this.det(c.A);
+    return 'λ²'+(t===0?'':` ${t>0?'−':'+'} ${Math.abs(t)===1?'':Math.abs(t)}λ`)+(d===0?'':` ${d>0?'+':'−'} ${Math.abs(d)}`); },
+  factor:l=>l===0?'λ':`(λ ${l>0?'−':'+'} ${Math.abs(l)})`,
+  work(c){
+    const A=c.A, [[a,b],[cc,d]]=A, t=this.tr(A), D=this.det(A), [l,m]=c.lam, P=this.pn;
+    return `trace = ${neg(a)} + ${P(d)} = ${neg(t)} and det A = ${P(a)}·${P(d)} − ${P(b)}·${P(cc)} = ${neg(D)}, so det(A − λI) = ${this.poly(c)} = ${this.factor(l)}${this.factor(m)}, which is 0 at λ = ${neg(l)} and λ = ${neg(m)}`;
+  },
+  slip(c,k,L){
+    const A=c.A, [l,m]=c.lam;
+    if(k==='diag') return `${L} reads the eigenvalues off the diagonal, ${neg(A[0][0])} and ${neg(A[1][1])}. That only works when A is triangular. Here neither number off the diagonal is 0, so det(A − λI) is (a − λ)(d − λ) − bc, and the − bc moves the roots.`;
+    if(k==='sign') return `${L} flips the sign of the trace term, solving λ² + (trace)λ + det A = 0, and so gets ${neg(-m)} and ${neg(-l)}, each eigenvalue turned round. Opening up det(A − λI) gives − (a + d)λ, with a minus.`;
+    return `${L} takes the trace and the determinant themselves, ${neg(this.tr(A))} and ${neg(this.det(A))}. Those are what the two eigenvalues add up to and multiply to, not the eigenvalues.`;
+  },
+  check(c,k,L){
+    const [x,y]=this.pair(c,k), [l,m]=c.lam;
+    const px=this.p(c,x), py=this.p(c,y);
+    const at = px===0 ? `At λ = ${neg(x)}, det(A − λI) = 0, so ${neg(x)} is one eigenvalue, but at λ = ${neg(y)} it is ${neg(py)}: ${L} gets only one of the two, and its other red dot sits off the axis.`
+      : py===0 ? `At λ = ${neg(y)}, det(A − λI) = 0, so ${neg(y)} is one eigenvalue, but at λ = ${neg(x)} it is ${neg(px)}: ${L} gets only one of the two, and its other red dot sits off the axis.`
+      : `At λ = ${neg(x)}, det(A − λI) = ${neg(px)}, and at λ = ${neg(y)} it is ${neg(py)}: neither is 0, so ${L}'s red dots sit off the axis.`;
+    return `${at} ${this.work(c)}. Check: ${neg(l)} + ${this.pn(m)} = ${neg(l+m)} is the trace and ${this.pn(l)} × ${this.pn(m)} = ${neg(l*m)} is det A.`;
+  },
+  // the window: every number offered, with a step either side
+  view(c){
+    const xs=['right',...this.SLIPS].flatMap(k=>this.pair(c,k)), x0=Math.min(...xs)-1, x1=Math.max(...xs)+1;
+    let lo=0, hi=0; for(let j=0;j<=80;j++){ const v=this.p(c,x0+(x1-x0)*j/80); lo=Math.min(lo,v); hi=Math.max(hi,v); }
+    const step=[1,2,5,10,20,50].find(s=>(hi-lo)/s<=6);
+    return {x0,x1,lo:Math.floor(lo/step)*step,hi:Math.ceil(hi/step)*step,step};
+  },
+  panel(c,W,H){
+    const {x0,x1,lo,hi,step}=this.view(c), xs=x1-x0>9?2:1;
+    const X=x=>(30+(x-x0)/(x1-x0)*(W-38)).toFixed(1), Y=y=>(H-16-(y-lo)/(hi-lo)*(H-24)).toFixed(1);
+    let s='';
+    for(let x=x0;x<=x1;x++) s+=`<line x1="${X(x)}" y1="${Y(lo)}" x2="${X(x)}" y2="${Y(hi)}" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+    for(let y=lo;y<=hi;y+=step) s+=`<line x1="${X(x0)}" y1="${Y(y)}" x2="${X(x1)}" y2="${Y(y)}" stroke="${y?FIG_COL.grid:FIG_COL.axis}" stroke-width="${y?1:1.4}"/>`;
+    if(x0<0&&x1>0) s+=`<line x1="${X(0)}" y1="${Y(lo)}" x2="${X(0)}" y2="${Y(hi)}" stroke="${FIG_COL.axis}" stroke-width="1.4"/>`;
+    let d=''; for(let j=0;j<=80;j++){ const x=x0+(x1-x0)*j/80; d+=(j?' L':'M')+X(x)+','+Y(this.p(c,x)); }
+    s+=`<path data-k="curve" d="${d}" fill="none" stroke="#5aa9e6" stroke-width="2.2"/>`;
+    for(const l of c.lam) s+=`<circle data-k="root" cx="${X(l)}" cy="${Y(0)}" r="6" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+    const r=this.round;
+    [...r.out].sort().forEach(i=>{
+      const L='ABCD'[i];
+      for(const x of this.pair(c,r.opts[i].k)) s+=`<circle data-k="miss-${L}" cx="${X(x)}" cy="${Y(this.p(c,x))}" r="4" fill="${FIG_COL.d}"/><text x="${(+X(x)+6).toFixed(1)}" y="${Math.min(H-18,Math.max(10,+Y(this.p(c,x))-5)).toFixed(1)}" font-size="10" font-weight="bold" fill="${FIG_COL.d}">${L}</text>`;
+    });
+    for(let x=Math.ceil(x0/xs)*xs;x<=x1;x+=xs) s+=`<text x="${X(x)}" y="${H-3}" font-size="10" fill="${FIG_COL.dim}" text-anchor="middle">${neg(x)}</text>`;
+    for(let y=lo;y<=hi;y+=step) s+=`<text x="${(+X(x0)-3).toFixed(1)}" y="${(+Y(y)+3).toFixed(1)}" font-size="9" fill="${FIG_COL.dim}" text-anchor="end">${neg(y)}</text>`;
+    return s;
+  },
+  html(){
+    this.start();
+    const r=this.round, c=r.c, m=this.miss(), outs=[...r.out].sort();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div style="text-align:center;margin-bottom:4px" aria-label="A has rows ${neg(c.A[0][0])}, ${neg(c.A[0][1])} and ${neg(c.A[1][0])}, ${neg(c.A[1][1])}">A = ${mat(c.A)}</div>`;
+    if(outs.length) out+=`<svg id="lpFig" viewBox="0 0 300 190" style="width:100%;height:auto;display:block" role="img" aria-label="det(A − λI) = ${this.poly(c)} in blue against λ, meeting the axis at the gold rings, λ = ${neg(c.lam[0])} and ${neg(c.lam[1])}; red dots for ${outs.map(i=>'ABCD'[i]).join(' and ')}">${this.panel(c,300,190)}</svg>`;
+    out+=`<div id="lpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), x=this.text(c,o.k);
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${'ABCD'[i]}" ${gone?'disabled ':''}onclick="LamPick.choose(${i})" aria-label="${'ABCD'[i]}: ${x}${gone?'. Not the eigenvalues':''}" style="margin:0"><b>${'ABCD'[i]}</b> ${x}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(c,r.opts[m].k,'ABCD'[m]), this.check(c,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(`That was it: ${this.work(this.last.c)}. Here is a new matrix.`);
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="lpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+
 /* ---------- The eigenvalue detective: the characteristic polynomial ----------
    Step λ along a line and watch det(A − λI). Where it hits 0, A − λI crushes
    some arrow to ⟨0, 0⟩, and that arrow is an eigenvector A only stretches by
@@ -19066,10 +19213,18 @@ const Detect = {
     out+=`<circle data-k="pt" cx="${PX(l).toFixed(2)}" cy="${PY(p).toFixed(2)}" r="5" fill="${p===0?FIG_COL.c:FIG_COL.b}"/>`;
     return out+`</svg>`;
   },
+  tab:'hunt',
+  setTab(t){ this.tab=t; this.render(); },
   open(){ UI.go('s-detect'); },
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; this.touched=true; this.render(); },
   render(){
+    document.getElementById('dcTab').innerHTML=[['hunt','🔍 Hunt them down','Step λ along a curve and find where det(A − λI) is 0'],['pick','🎯 Which λ?','See a matrix, and pick which of four pairs are its eigenvalues']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Detect.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['cpSets','cpMat','cpFig','cpStep','cpRead','cpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('dcPick').innerHTML=pick ? LamPick.html() : '';
+    if(pick) return;
     document.getElementById('cpSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Detect.pick(${i})" aria-label="${s.btn}: A has ${this.rows(s.A)}">${s.btn}</button>`).join('');
     document.getElementById('cpL').textContent=`λ = ${neg(this.lam())}`;
