@@ -1,257 +1,341 @@
 {
-  "change": "The trapezoid workshop: cut an area into strips, add up the trapezoids, and watch the gap quarter as the strips double.",
+  "change": "Which estimate? The trapezoid workshop turned round: see a curve, its strips and their heights, and pick which of four numbers is T.",
   "mutations": [
     {
-      "name": "the strips run to 32",
+      "name": "T doubles the ends too",
       "file": "index.html",
-      "find": "NS:[1,2,4,8,16],",
-      "replace": "NS:[1,2,4,8,16,32],",
+      "find": "return k==='right' ? this.mul(half,this.add(ends,this.mul([2,1],ins)))",
+      "replace": "return k==='right' ? this.mul(half,this.mul([2,1],all))",
       "run": "verify"
     },
     {
-      "name": "x² is worked as x³",
+      "name": "T forgets the half",
       "file": "index.html",
-      "find": "fq:([t,b])=>[t*t,b*b], I:[64,3]",
-      "replace": "fq:([t,b])=>[t*t*t,b*b*b], I:[64,3]",
+      "find": "return k==='right' ? this.mul(half,this.add(ends,this.mul([2,1],ins)))",
+      "replace": "return k==='right' ? this.mul(h,this.add(ends,this.mul([2,1],ins)))",
       "run": "verify"
     },
     {
-      "name": "the area under x² is 64/4",
+      "name": "the undoubled slip doubles the inside",
       "file": "index.html",
-      "find": "I:[64,3], d0:[0,1], d4:[8,1]",
-      "replace": "I:[64,4], d0:[0,1], d4:[8,1]",
+      "find": "k==='noDouble' ? this.mul(half,all)",
+      "replace": "k==='noDouble' ? this.mul(half,this.add(ends,this.mul([2,1],ins)))",
       "run": "verify"
     },
     {
-      "name": "4x − x² is worked as 4x + x²",
+      "name": "the no-half slip keeps the half",
       "file": "index.html",
-      "find": "fq:([t,b])=>[4*t*b-t*t,b*b]",
-      "replace": "fq:([t,b])=>[4*t*b+t*t,b*b]",
+      "find": "k==='noHalf' ? this.mul(h,this.add(ends,this.mul([2,1],ins)))",
+      "replace": "k==='noHalf' ? this.mul(half,this.add(ends,this.mul([2,1],ins)))",
       "run": "verify"
     },
     {
-      "name": "the line is worked as x/2",
+      "name": "the all-doubled slip is h times the sum once",
       "file": "index.html",
-      "find": "fq:([t,b])=>[t+2*b,2*b]",
-      "replace": "fq:([t,b])=>[t,2*b]",
+      "find": "k==='allDouble' ? this.mul(h,all)",
+      "replace": "k==='allDouble' ? this.mul(half,all)",
       "run": "verify"
     },
     {
-      "name": "the slope of 4x − x² at 4 is 4",
+      "name": "the left sum takes the right heights",
       "file": "index.html",
-      "find": "I:[32,3], d0:[4,1], d4:[-4,1]",
-      "replace": "I:[32,3], d0:[4,1], d4:[4,1]",
+      "find": "k==='left' ? this.mul(h,this.sum(y.slice(0,n)))",
+      "replace": "k==='left' ? this.mul(h,this.sum(y.slice(1)))",
       "run": "verify"
     },
     {
-      "name": "a fraction is never brought to its lowest terms",
+      "name": "the right sum takes the left heights",
       "file": "index.html",
-      "find": "k=g(t,b)*(b<0?-1:1); return [t/k,b/k]; },",
-      "replace": "k=(b<0?-1:1); return [t/k,b/k]; },",
+      "find": "k==='rightHand' ? this.mul(h,this.sum(y.slice(1)))",
+      "replace": "k==='rightHand' ? this.mul(h,this.sum(y.slice(0,n)))",
       "run": "verify"
     },
     {
-      "name": "adding multiplies the tops",
+      "name": "one trapezoid forgets the half",
       "file": "index.html",
-      "find": "add(u,v){ return this.q(u[0]*v[1]+v[0]*u[1],u[1]*v[1]); },",
-      "replace": "add(u,v){ return this.q(u[0]*v[1]*v[0]*u[1],u[1]*v[1]); },",
+      "find": "k==='one' ? this.mul(this.mul(this.add(b,[-S.a,1]),[1,2]),ends)",
+      "replace": "k==='one' ? this.mul(this.add(b,[-S.a,1]),ends)",
       "run": "verify"
     },
     {
-      "name": "h is 4/(n + 1)",
+      "name": "the exact area loses its third",
       "file": "index.html",
-      "find": "h(){ return this.q(this.B-this.A,this.n()); },",
-      "replace": "h(){ return this.q(this.B-this.A,this.n()+1); },",
+      "find": "this.add(this.mul([S.c,3],x3),this.mul([S.k,1],x))",
+      "replace": "this.add(this.mul([S.c,1],x3),this.mul([S.k,1],x))",
       "run": "verify"
     },
     {
-      "name": "the heights stop a strip short",
+      "name": "the exact area loses the k",
       "file": "index.html",
-      "find": "return [...Array(n+1)].map((_,i)=>this.q(4*i,n)); },",
-      "replace": "return [...Array(n)].map((_,i)=>this.q(4*i,n)); },",
+      "find": "this.add(this.mul([S.c,3],x3),this.mul([S.k,1],x))",
+      "replace": "this.mul([S.c,3],x3)",
       "run": "verify"
     },
     {
-      "name": "the inside heights are not doubled",
+      "name": "the curve drops its k",
       "file": "index.html",
-      "find": "for(let i=1;i<m;i++) s=this.add(s,this.mul([2,1],ys[i]));",
-      "replace": "for(let i=1;i<m;i++) s=this.add(s,ys[i]);",
+      "find": "f(S,x){ return this.add(this.mul([S.c,1],this.mul(x,x)),[S.k,1]); },",
+      "replace": "f(S,x){ return this.mul([S.c,1],this.mul(x,x)); },",
       "run": "verify"
     },
     {
-      "name": "T is not halved",
+      "name": "the curve is written without its number",
       "file": "index.html",
-      "find": "const out=this.mul(this.mul(h,[1,2]),s);",
-      "replace": "const out=this.mul(h,s);",
+      "find": "fw(S){ return `${S.c===1?'':S.c}x²",
+      "replace": "fw(S){ return `x²",
       "run": "verify"
     },
     {
-      "name": "the ends are doubled too",
+      "name": "the left and right sums may stand together",
       "file": "index.html",
-      "find": "let s=this.add(ys[0],ys[m]);",
-      "replace": "let s=this.mul([2,1],this.add(ys[0],ys[m]));",
-      "run": "verify"
-    },
-    {
-      "name": "the gap is the area minus T",
-      "file": "index.html",
-      "find": "return this.add(this.T(n),[-I[0],I[1]]); },",
-      "replace": "return this.add(I,[-this.T(n)[0],this.T(n)[1]]); },",
-      "run": "verify"
-    },
-    {
-      "name": "the inside sum takes the ends",
-      "file": "index.html",
-      "find": "let ins=[0,1]; for(let i=1;i<n;i++) ins=this.add(ins,ys[i]);",
-      "replace": "let ins=[0,1]; for(let i=0;i<=n;i++) ins=this.add(ins,ys[i]);",
-      "run": "verify"
-    },
-    {
-      "name": "a whole number is given a ≈",
-      "file": "index.html",
-      "find": "return Number.isInteger(v) ? '' : ` ≈ ${neg(+v.toFixed(3))}`; },",
-      "replace": "return ` ≈ ${neg(+v.toFixed(3))}`; },",
-      "run": "verify"
-    },
-    {
-      "name": "over and under are swapped",
-      "file": "index.html",
-      "find": "out.push(g[0]>0\n        ? `T is over",
-      "replace": "out.push(g[0]<0\n        ? `T is over",
-      "run": "verify"
-    },
-    {
-      "name": "the percent is of T, not the area",
-      "file": "index.html",
-      "find": "pc=Math.abs(g[0]/g[1])/(I[0]/I[1])*100",
-      "replace": "pc=Math.abs(g[0]/g[1])/(T[0]/T[1])*100",
-      "run": "verify"
-    },
-    {
-      "name": "the check leaves h unsquared",
-      "file": "index.html",
-      "find": "this.fr(this.mul(this.mul(h,h),this.mul([1,12],dd)))",
-      "replace": "this.fr(this.mul(h,this.mul([1,12],dd)))",
-      "run": "verify"
-    },
-    {
-      "name": "the check uses f′(0) − f′(4)",
-      "file": "index.html",
-      "find": "const dd=this.add(C.d4,[-C.d0[0],C.d0[1]])",
-      "replace": "const dd=this.add(C.d0,[-C.d4[0],C.d4[1]])",
-      "run": "verify"
-    },
-    {
-      "name": "doubling compares with the wrong count",
-      "file": "index.html",
-      "find": "const m=this.moved>0 ? this.NS[this.ni-1] : this.NS[this.ni+1]",
-      "replace": "const m=this.moved>0 ? this.NS[this.ni+1] : this.NS[this.ni-1]",
-      "run": "verify"
-    },
-    {
-      "name": "the move note is never told",
-      "file": "index.html",
-      "find": "    if(this.moved){\n      const m=",
-      "replace": "    if(false){\n      const m=",
-      "run": "verify"
-    },
-    {
-      "name": "the heights are listed past four strips",
-      "file": "index.html",
-      "find": "out.push(n<=4\n",
-      "replace": "out.push(n<=8\n",
-      "run": "verify"
-    },
-    {
-      "name": "more strips is offered at sixteen",
-      "file": "index.html",
-      "find": "can(dn){ const k=this.ni+dn; return k>=0 && k<this.NS.length; },",
-      "replace": "can(dn){ const k=this.ni+dn; return k>=0 && k<=this.NS.length; },",
-      "run": "verify"
-    },
-    {
-      "name": "picking a curve keeps the move",
-      "file": "index.html",
-      "find": "pick(i){ this.ci=i; this.moved=0;",
-      "replace": "pick(i){ this.ci=i;",
-      "run": "verify"
-    },
-    {
-      "name": "one strip keeps the count",
-      "file": "index.html",
-      "find": "again(){ this.ni=0; this.moved=0;",
-      "replace": "again(){ this.moved=0;",
-      "run": "verify"
-    },
-    {
-      "name": "fewer strips counts as doubling",
-      "file": "index.html",
-      "find": "fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=-1;",
-      "replace": "fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=1;",
-      "run": "verify"
-    },
-    {
-      "name": "the quarter is found on the line",
-      "file": "index.html",
-      "find": "ok:K=>K.moved>0 && K.cur().id!=='line'},",
-      "replace": "ok:K=>K.moved>0},",
-      "run": "verify"
-    },
-    {
-      "name": "within 1% is within 10%",
-      "file": "index.html",
-      "find": "Math.abs(g[0]/g[1])<I[0]/I[1]/100; }},",
-      "replace": "Math.abs(g[0]/g[1])<I[0]/I[1]/10; }},",
-      "run": "verify"
-    },
-    {
-      "name": "one strip is found on opening",
-      "file": "index.html",
-      "find": "ok:K=>K.touched && K.n()===1",
-      "replace": "ok:K=>K.n()===1",
-      "run": "verify"
-    },
-    {
-      "name": "the trapezoid tops are drawn flat",
-      "file": "index.html",
-      "find": "${f(this.PX(b))},${f(this.PY(C.f(b)))} ${f(this.PX(b))},${f(y0)}\" fill",
-      "replace": "${f(this.PX(b))},${f(this.PY(C.f(a)))} ${f(this.PX(b))},${f(y0)}\" fill",
-      "run": "verify"
-    },
-    {
-      "name": "the slivers are drawn on the line",
-      "file": "index.html",
-      "find": "      if(C.id!=='line'){\n",
-      "replace": "      if(true){\n",
-      "run": "verify"
-    },
-    {
-      "name": "the dots stop short",
-      "file": "index.html",
-      "find": "for(const x of xs) out+=`<circle data-k=\"dot\"",
-      "replace": "for(const x of xs.slice(1)) out+=`<circle data-k=\"dot\"",
-      "run": "verify"
-    },
-    {
-      "name": "the curve stops at 3",
-      "file": "index.html",
-      "find": "const x=4*i/160; pts.push(",
-      "replace": "const x=3*i/160; pts.push(",
-      "run": "verify"
-    },
-    {
-      "name": "the mix leaves no tie to the workshop",
-      "file": "index.html",
-      "find": "    Trap: [\"🪟 Trapezoid Workshop\", ['trapezoid']],\n",
+      "find": "if(t.includes('left') && t.includes('rightHand')) continue;",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "the screen does not draw on opening",
+      "name": "one number of T's form is enough",
       "file": "index.html",
-      "find": "    if(id==='s-trapezoid') Trap.render();\n",
+      "find": "if(V.filter(v=>this.whole(v)===form).length<2) continue;",
+      "replace": "if(V.filter(v=>this.whole(v)===form).length<1) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "a wrong number may be two others added",
+      "file": "index.html",
+      "find": "if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;\n      out.push(t);\n    }\n    return out;\n  },\n  H",
+      "replace": "\n      out.push(t);\n    }\n    return out;\n  },\n  H",
+      "run": "verify"
+    },
+    {
+      "name": "a slip may be T itself",
+      "file": "index.html",
+      "find": "const seen=new Set([this.key(this.v(S,'right'))]), keep=[];",
+      "replace": "const seen=new Set(), keep=[];",
+      "run": "verify"
+    },
+    {
+      "name": "a slip whose check shows T may be offered",
+      "file": "index.html",
+      "find": "if(line.includes(` ${T},`) || line.includes(` ${T}.`)) continue;",
       "replace": "",
-      "run": "play:trapezoid"
+      "run": "verify"
+    },
+    {
+      "name": "a slip may be 0",
+      "file": "index.html",
+      "find": "if(v[0]<=0 || this.big(v) || seen.has(this.key(v))) continue;",
+      "replace": "if(this.big(v) || seen.has(this.key(v))) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "T is always whole",
+      "file": "index.html",
+      "find": "const wantWhole=R.i(0,1)===1;\n    for(let g=0;g<500;g++){\n      const n",
+      "replace": "const wantWhole=true;\n    for(let g=0;g<500;g++){\n      const n",
+      "run": "verify"
+    },
+    {
+      "name": "the strips may run past 4",
+      "file": "index.html",
+      "find": "if(n*h[0]/h[1]>4) continue;",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "there are always two strips",
+      "file": "index.html",
+      "find": "const n=R.i(2,4), h=",
+      "replace": "const n=2, h=",
+      "run": "verify"
+    },
+    {
+      "name": "the curve always starts at 0",
+      "file": "index.html",
+      "find": "a:R.i(0,1), n, h};",
+      "replace": "a:0, n, h};",
+      "run": "verify"
+    },
+    {
+      "name": "T always sits lowest",
+      "file": "index.html",
+      "find": "const ranks=[...new Set(T.map(rk))], want=ranks[this.pickW(ranks.map(x=>this.PLACE[x]))], fit=T.filter(t=>rk(t)===want);\n    c",
+      "replace": "const ranks=[...new Set(T.map(rk))], want=Math.min(...ranks), fit=T.filter(t=>rk(t)===want);\n    c",
+      "run": "verify"
+    },
+    {
+      "name": "the same curve may come twice",
+      "file": "index.html",
+      "find": "if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }\n    const T=this.trios(S), W",
+      "replace": "break; }\n    const T=this.trios(S), W",
+      "run": "verify"
+    },
+    {
+      "name": "T always sits first",
+      "file": "index.html",
+      "find": "const opts=R.shuffle(['right',...fit[R.i(0,fit.length-1)]]).map(k=>({k}));",
+      "replace": "const opts=['right',...fit[R.i(0,fit.length-1)]].map(k=>({k}));",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is counted as picked",
+      "file": "index.html",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Trap",
+      "replace": "r.out.add(i); this.misses++; this.matched++; this.last=null;\n    }\n    Trap",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not shut",
+      "file": "index.html",
+      "find": "r.out.add(i); this.misses++; this.last=null;\n    }\n    Trap",
+      "replace": "this.misses++; this.last=null;\n    }\n    Trap",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number can be picked again",
+      "file": "index.html",
+      "find": "if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "replace": "if(!r) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "run": "verify"
+    },
+    {
+      "name": "a first try is counted after a miss",
+      "file": "index.html",
+      "find": "if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "replace": "this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "run": "verify"
+    },
+    {
+      "name": "the banner never comes at five",
+      "file": "index.html",
+      "find": "if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "replace": "if(this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "run": "verify"
+    },
+    {
+      "name": "the toast miscounts tries",
+      "file": "index.html",
+      "find": "const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "replace": "const tries=this.misses;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('TRAP",
+      "run": "verify"
+    },
+    {
+      "name": "a right pick keeps the old curve",
+      "file": "index.html",
+      "find": "      this.last={S:r.S};\n      this.newRound();\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tra",
+      "replace": "      this.last={S:r.S};\n    } else {\n      r.out.add(i); this.misses++; this.last=null;\n    }\n    Tra",
+      "run": "verify"
+    },
+    {
+      "name": "a pick does not redraw",
+      "file": "index.html",
+      "find": "    Trap.render();\n  },\n  missed()",
+      "replace": "  },\n  missed()",
+      "run": "verify"
+    },
+    {
+      "name": "the slips are told the wrong way round",
+      "file": "index.html",
+      "find": "if(k==='left') return `${L} is the left-hand sum",
+      "replace": "if(k==='rightHand') return `${L} is the left-hand sum",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not explained",
+      "file": "index.html",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, y",
+      "replace": "if(m!==null) lines.push(this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, y",
+      "run": "verify"
+    },
+    {
+      "name": "a miss is not checked",
+      "file": "index.html",
+      "find": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, y",
+      "replace": "if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]));\n    else if(this.last){ const B=this.last.S, y",
+      "run": "verify"
+    },
+    {
+      "name": "the no-half check halves",
+      "file": "index.html",
+      "find": "k==='noHalf' ? this.mul(h,[2*n,1])",
+      "replace": "k==='noHalf' ? this.mul(h,[n,1])",
+      "run": "verify"
+    },
+    {
+      "name": "the undoubled check counts one height too few",
+      "file": "index.html",
+      "find": "this.mul(this.mul(h,[1,2]),[n+1,1])",
+      "replace": "this.mul(this.mul(h,[1,2]),[n,1])",
+      "run": "verify"
+    },
+    {
+      "name": "the f(x) = x check uses the wrong area",
+      "file": "index.html",
+      "find": "A=this.mul(this.add(this.mul(b,b),[-S.a*S.a,1]),[1,2])",
+      "replace": "A=this.mul(this.add(this.mul(b,b),[-S.a,1]),[1,2])",
+      "run": "verify"
+    },
+    {
+      "name": "the left check takes the right x's",
+      "file": "index.html",
+      "find": "const use=k==='left' ? xs.slice(0,n) : xs.slice(1)",
+      "replace": "const use=k==='left' ? xs.slice(1) : xs.slice(0,n)",
+      "run": "verify"
+    },
+    {
+      "name": "the antiderivative loses its third",
+      "file": "index.html",
+      "find": "anti(S){ return `${S.c===3?'x³':S.c===1?'x³/3':`${S.c}x³/3`}",
+      "replace": "anti(S){ return `${S.c===1?'x³':`${S.c}x³`}",
+      "run": "verify"
+    },
+    {
+      "name": "the exact check runs on the curve itself",
+      "file": "index.html",
+      "find": "return `Check what ${L} is: [${this.anti(S)}]",
+      "replace": "return `Check what ${L} is: [${this.fw(S)}]",
+      "run": "verify"
+    },
+    {
+      "name": "the right line forgets to double",
+      "file": "index.html",
+      "find": "`2 × ${this.pb(v)}`).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
+      "replace": "this.pb(v)).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
+      "run": "verify"
+    },
+    {
+      "name": "the count line is lost",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tz",
+      "replace": "    out+=`<div id=\"tz",
+      "run": "verify"
+    },
+    {
+      "name": "the rule is not shown",
+      "file": "index.html",
+      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tz",
+      "replace": "let out='';\n    out+=`<div id=\"tz",
+      "run": "verify"
+    },
+    {
+      "name": "the heights are not shown",
+      "file": "index.html",
+      "find": "out+=`<div id=\"tzqH\"",
+      "replace": "out+=`<div id=\"tzqH\" hidden",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number keeps its name",
+      "file": "index.html",
+      "find": "${gone?'. Not T':''}",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the hand workshop does not step aside",
+      "file": "index.html",
+      "find": "for(const id of ['tzwSets','tzwFig','tzwMoveRow','tzwRead','tzwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "",
+      "run": "play:trappick"
     }
   ]
 }

@@ -1953,7 +1953,9 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRAPEZOID WORKSHOP ============ -->
   <div class="screen" id="s-trapezoid">
     <div class="panel"><h2>🪟 Trapezoid Workshop</h2><div class="sub">Cut the area under a curve into strips and join the heights at their edges with straight lines: T = h/2 × (ends + 2 × inside). Double the strips and watch the gap to the true area fall to a quarter, over a curve that bends up and under one that bends down.</div></div>
+    <div id="tzwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cut by hand or pick the estimate"></div>
     <div class="panel">
+      <div id="tzqBox"></div>
       <div id="tzwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="tzwFig"></div>
       <div id="tzwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How many strips">
@@ -14953,7 +14955,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪟 Trapezoid Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Cut the area under x², 4x − x² or a straight line into 1, 2, 4, 8 or 16 strips and add up the trapezoids. See the estimate overshoot a curve that bends up and undershoot one that bends down, meet a line exactly, and the gap fall to a quarter each time the strips double.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the area under x², 4x − x² or a line into 1 to 16 strips and add the trapezoids: over a curve that bends up, under one that bends down, exact on a line, and a quarter the gap each time the strips double. Then turn it round: see a curve, its strips and their heights, and pick which of four numbers is T.</div>
          <button class="btn sm" id="tomeTrap" style="width:auto;margin-top:8px" onclick="Trap.open()">Open the trapezoid workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -28726,6 +28728,172 @@ const LogiPick = {
   }
 };
 
+/* ---------- Which estimate? The trapezoid workshop turned round ----------
+   A curve c·x² + k, an interval [a, b] cut into n strips, and the heights at
+   the strip edges laid out, so nothing has to be held in the head; then four
+   numbers, one of them T. The rule is stated first. The wrong answers are the
+   slips people make: the inside heights not doubled, the h/2 left as h, every
+   height doubled, the left-hand or the right-hand sum (never both, since T is
+   their average), the whole interval as one trapezoid, and the exact integral.
+   Two wrong numbers share T's form, T is whole about half the time, none is
+   two others added, and T's place among them is balanced. A wrong pick is
+   named as its slip and checked without giving T away: the rule it used, run
+   on f(x) = 1 or f(x) = x, where the area is easy and the trapezoid rule is
+   exact. Nothing is saved. */
+const TrapPick = {
+  KINDS:['noDouble','noHalf','allDouble','left','right','one','exact'],
+  RULE:'Cut [a, b] into n strips of width h = (b − a)/n. T = h/2 × (f(x₀) + 2f(x₁) + … + 2f(xₙ₋₁) + f(xₙ)): the end heights once, the inside ones twice. Which is T?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  add(a,b){ return this.frac(a[0]*b[1]+b[0]*a[1],a[1]*b[1]); },
+  mul(a,b){ return this.frac(a[0]*b[0],a[1]*b[1]); },
+  sum(L){ return L.reduce((s,v)=>this.add(s,v),[0,1]); },
+  // the curve as it is written
+  fw(S){ return \`\${S.c===1?'':S.c}x²\${S.k?\` + \${S.k}\`:''}\`; },
+  f(S,x){ return this.add(this.mul([S.c,1],this.mul(x,x)),[S.k,1]); },
+  h(S){ return S.h; },
+  xs(S){ return [...Array(S.n+1)].map((_,i)=>this.add([S.a,1],this.mul([i,1],S.h))); },
+  ys(S){ return this.xs(S).map(x=>this.f(S,x)); },
+  b(S){ return this.add([S.a,1],this.mul([S.n,1],S.h)); },
+  // the number each answer stands for, as a fraction
+  val(S,k){
+    const y=this.ys(S), n=S.n, h=S.h, ends=this.add(y[0],y[n]), ins=this.sum(y.slice(1,n)), all=this.sum(y), half=this.mul(h,[1,2]);
+    const b=this.b(S), F=x=>{ const x3=this.mul(x,this.mul(x,x)); return this.add(this.mul([S.c,3],x3),this.mul([S.k,1],x)); };
+    return k==='right' ? this.mul(half,this.add(ends,this.mul([2,1],ins)))
+      : k==='noDouble' ? this.mul(half,all)
+      : k==='noHalf' ? this.mul(h,this.add(ends,this.mul([2,1],ins)))
+      : k==='allDouble' ? this.mul(h,all)
+      : k==='left' ? this.mul(h,this.sum(y.slice(0,n)))
+      : k==='rightHand' ? this.mul(h,this.sum(y.slice(1)))
+      : k==='one' ? this.mul(this.mul(this.add(b,[-S.a,1]),[1,2]),ends)
+      : this.add(F(b),[-F([S.a,1])[0],F([S.a,1])[1]]);
+  },
+  // 'right' is T itself, so the right-hand sum is called rightHand
+  v(S,k){ return this.val(S,k); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  big(v){ return v[0]>999 || v[1]>99; },
+  NAMES:['noDouble','noHalf','allDouble','left','rightHand','one','exact'],
+  // the slips this curve can offer: each a number above 0, different from T and every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.v(S,'right'))]), keep=[];
+    for(const k of this.NAMES){ const v=this.v(S,k);
+      if(v[0]<=0 || this.big(v) || seen.has(this.key(v))) continue;
+      // a slip whose check would show T is left out, so a miss never hands the answer over
+      const line=this.check(S,k,'A'), T=this.fs(this.v(S,'right'));
+      if(line.includes(\` \${T},\`) || line.includes(\` \${T}.\`)) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // the sets of three slips that may stand beside T: two of its form, never the left and right sums together, no number two others added
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.v(S,'right'), form=this.whole(W), eq=(a,b)=>a[0]*b[1]===b[0]*a[1];
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]], V=t.map(x=>this.v(S,x)), all=[W,...V];
+      if(t.includes('left') && t.includes('rightHand')) continue;
+      if(V.filter(v=>this.whole(v)===form).length<2) continue;
+      if(V.some((v,a)=>all.some((x,b)=>all.some((y,c)=>b<c && b!==a+1 && c!==a+1 && eq(v,this.add(x,y)))))) continue;
+      out.push(t);
+    }
+    return out;
+  },
+  HS:[[1,2],[1,1],[1,1],[2,1]],
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<500;g++){
+      const n=R.i(2,4), h=this.HS[R.i(0,3)], S={c:[1,1,2,3][R.i(0,3)], k:R.i(0,3), a:R.i(0,1), n, h};
+      if(n*h[0]/h[1]>4) continue;
+      const W=this.v(S,'right');
+      if(this.big(W) || this.whole(W)!==wantWhole) continue;
+      if(!this.trios(S).length) continue;
+      return S;
+    }
+    return {c:1,k:0,a:0,n:2,h:[1,1]};
+  },
+  // how often T's place among the four numbers is chosen when it may go there, the rarer ones favoured
+  PLACE:[3,2,2,3],
+  pickW(w){ let x=R.i(1,w.reduce((a,b)=>a+b,0)); for(let i=0;i<w.length;i++){ x-=w[i]; if(x<=0) return i; } return w.length-1; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const T=this.trios(S), W=this.v(S,'right'), rk=t=>t.filter(x=>{ const v=this.v(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[this.pickW(ranks.map(x=>this.PLACE[x]))], fit=T.filter(t=>rk(t)===want);
+    const opts=R.shuffle(['right',...fit[R.i(0,fit.length-1)]]).map(k=>({k}));
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('TRAPEZOID TALLIER', this.matched+' estimates made','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is T, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Trap.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  // a number in brackets where it is a fraction, so a product reads plainly
+  pb(v){ return v[1]===1 ? this.fs(v) : \`(\${this.fs(v)})\`; },
+  slip(S,k,L){
+    const n=S.n, hs=this.fs(S.h), W=this.fs(this.add(this.b(S),[-S.a,1]));
+    if(k==='noDouble') return \`\${L} adds every height once. Each inside height is the edge of two strips, so it counts in two trapezoids: twice.\`;
+    if(k==='noHalf') return \`\${L} multiplies by h where the rule has h/2. A trapezoid's area is its width times the average of its two sides, half their sum.\`;
+    if(k==='allDouble') return \`\${L} doubles every height, the ends too. The end heights are each the edge of only one strip, so they count once.\`;
+    if(k==='left') return \`\${L} is the left-hand sum: a rectangle on each strip at its left height. A trapezoid joins the left and right heights with a straight top.\`;
+    if(k==='rightHand') return \`\${L} is the right-hand sum: a rectangle on each strip at its right height. A trapezoid joins the left and right heights with a straight top.\`;
+    if(k==='one') return \`\${L} takes the whole of [\${neg(S.a)}, \${this.fs(this.b(S))}] as one trapezoid, \${W} wide. With n = \${n} the interval is cut into \${n} strips, each h = \${hs} wide.\`;
+    return \`\${L} is the exact integral, worked from the antiderivative. The trapezoid rule is an estimate of it, from straight tops across the strips.\`;
+  },
+  // a wrong pick checked without giving T away: its rule run on f(x) = 1 or f(x) = x, where the area is easy and the trapezoid rule exact
+  check(S,k,L){
+    const n=S.n, h=S.h, a=[S.a,1], b=this.b(S), Wd=this.add(b,[-S.a,1]), xs=this.xs(S), hs=this.pb(h);
+    if(k==='noDouble'||k==='noHalf'||k==='allDouble'){
+      const g=k==='noDouble' ? this.mul(this.mul(h,[1,2]),[n+1,1]) : k==='noHalf' ? this.mul(h,[2*n,1]) : this.mul(h,[n+1,1]);
+      const how=k==='noDouble' ? \`h/2 × (\${n+1} heights of 1) = \${this.pb(this.mul(h,[1,2]))} × \${n+1}\` : k==='noHalf' ? \`h × (1 + 1 + 2 × \${n-1}) = \${hs} × \${2*n}\` : \`h × (\${n+1} heights of 1) = \${hs} × \${n+1}\`;
+      return \`Check \${L}'s rule on f(x) = 1, whose area from \${neg(S.a)} to \${this.fs(b)} is \${this.fs(Wd)}: it gives \${how} = \${this.fs(g)}, not \${this.fs(Wd)}.\`;
+    }
+    if(k==='left'||k==='rightHand'){
+      const use=k==='left' ? xs.slice(0,n) : xs.slice(1), A=this.mul(this.add(this.mul(b,b),[-S.a*S.a,1]),[1,2]), g=this.mul(h,this.sum(use));
+      return \`Check \${L}'s rule on f(x) = x, whose area from \${neg(S.a)} to \${this.fs(b)} is (\${this.pb(b)}² − \${neg(S.a)}²)/2 = \${this.fs(A)}: it gives h × (\${use.map(x=>this.fs(x)).join(' + ')}) = \${hs} × \${this.fs(this.sum(use))} = \${this.fs(g)}, not \${this.fs(A)}.\`;
+    }
+    if(k==='one') return \`Check h: n = \${n} strips of a width \${this.fs(Wd)} interval are \${this.pb(Wd)}/\${n} = \${this.fs(h)} wide each, and T adds \${n} trapezoids, one on each, where \${L} has one \${this.fs(Wd)} wide.\`;
+    return \`Check what \${L} is: [\${this.anti(S)}] from \${neg(S.a)} to \${this.fs(b)}, the area itself. The rule's straight tops miss the curve's bend, so T is a different number.\`;
+  },
+  // the antiderivative of c·x² + k as it is written
+  anti(S){ return \`\${S.c===3?'x³':S.c===1?'x³/3':\`\${S.c}x³/3\`}\${S.k?\` + \${S.k===1?'':S.k}x\`:''}\`; },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), xs=this.xs(S), ys=this.ys(S);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="tzqQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.fw(S)} on [\${neg(S.a)}, \${this.fs(this.b(S))}], n = \${S.n}, h = \${this.fs(S.h)}</div>\`;
+    out+=\`<div id="tzqH" class="small" style="text-align:center">x: \${xs.map(x=>this.fs(x)).join(', ')}<br>f(x): \${ys.map(y=>this.fs(y)).join(', ')}</div>\`;
+    out+=\`<div id="tzqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.v(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="TrapPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not T':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, y=this.ys(B), n=B.n;
+      lines.push(\`That was it: T = \${this.pb(this.mul(B.h,[1,2]))} × (\${y.map((v,i)=>i===0||i===n?this.fs(v):\`2 × \${this.pb(v)}\`).join(' + ')}) = \${this.fs(this.v(B,'right'))}. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="tzqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
 /* ---------- The trapezoid workshop: cutting an area into strips ----------
    Three curves on [0, 4]: x², which bends up; 4x − x², which bends down; and
    the straight line x/2 + 1. Cut the interval into 1, 2, 4, 8 or 16 strips
@@ -28842,7 +29010,15 @@ const Trap = {
   more(){ if(!this.can(1)) return; this.ni++; this.moved=1; this.touched=true; this.render(); },
   fewer(){ if(!this.can(-1)) return; this.ni--; this.moved=-1; this.touched=true; this.render(); },
   again(){ this.ni=0; this.moved=0; this.touched=true; this.render(); },
+  tab:'hand', // cut by hand, or which estimate
+  setTab(t){ this.tab=t; this.render(); },
   render(){
+    document.getElementById('tzwTab').innerHTML=[['hand','🪟 Cut by hand','Cut the area into strips by hand'],['pick','🎯 Which estimate?','See a curve, its strips and their heights, and pick which number is the trapezoid estimate']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Trap.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['tzwSets','tzwFig','tzwMoveRow','tzwRead','tzwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('tzqBox').innerHTML=pick ? TrapPick.html() : '';
+    if(pick) return;
     document.getElementById('tzwSets').innerHTML=this.CURVES.map((c,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.ci}" onclick="Trap.pick(\${i})" aria-label="Cut the area under \${c.name}">\${c.btn}</button>\`).join('');
     document.getElementById('tzwFewer').disabled=!this.can(-1);
@@ -30893,9 +31069,10 @@ const MixPick = {
     ['ArcPick','ArcLen','🧵 Arc Length Workshop'],
     ['LogiPick','LogiGrow','🐇 Logistic Workshop'],
     ['EstPick','TanLine','🪡 Tangent Line Workshop'],
-    ['LimPick','Limit','🌫️ Limit Workshop']
+    ['LimPick','Limit','🌫️ Limit Workshop'],
+    ['TrapPick','Trap','🪟 Trapezoid Workshop']
   ],
-  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, LogiGrow, LogiPick, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EstPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, LimPick, Limit, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanLine, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, LogiGrow, LogiPick, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EstPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, LimPick, Limit, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanLine, TanPick, TanPlane, Taylor, Trap, TrapPick, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },
