@@ -5523,6 +5523,124 @@ const geoPickNotes = (() => {
   return { rounds, misses, worked, fracR };
 })();
 
+/* How far? The geometric series workshop's third mode, stepped through every
+   x it allows on all four power series. Each sentence of the readout is
+   worked again here from the series alone: t as an exact fraction, which
+   side of 1 its size falls, the first twenty terms and the endless sum
+   inside (the sum also against two thousand terms), what the terms do on an
+   end and how big term 20 is outside, and the radius, which takes a square
+   root for x²ⁿ and ignores the n in front. The drawing must put the green
+   stretch and its open ends at a − R and a + R, the marker at x in the
+   colour of its side, and twelve bars the sizes of the terms. Every goal is
+   found where it should be and nowhere before, with one toast each and a
+   banner for the last, and the stepper stops at twice the radius. */
+const geoReachNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', a: 'blue', b: 'gold', c: 'green', d: 'red', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Geo = {render(){ env.renders++; }};" +
+    cut('const GeoReach = {', '/* ---------- The bend workshop') + 'return GeoReach;')(env, COL);
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const rd = s => { const m = s.replace(/−/g, '-').match(/^(-?\d+)(?:\/(\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const SETS = [{ a: 0, c: 5, p: 0, m: 1, sd: 1, R: 5, name: 'xⁿ/5ⁿ' }, { a: 2, c: 3, p: 0, m: 1, sd: 1, R: 3, name: '(x − 2)ⁿ/3ⁿ' },
+    { a: 0, c: 2, p: 1, m: 1, sd: 2, R: 2, name: 'n·xⁿ/2ⁿ' }, { a: 0, c: 4, p: 0, m: 2, sd: 2, R: 2, name: 'x²ⁿ/4ⁿ' }];
+  if (S.SETS.length !== 4 || S.SETS.some((s, i) => s.a !== SETS[i].a || s.c !== SETS[i].c || s.p !== SETS[i].p || s.m !== SETS[i].m || s.sd !== SETS[i].sd))
+    fail('georeach', 'sets', 'the four power series are not Σ xⁿ/5ⁿ, Σ (x − 2)ⁿ/3ⁿ, Σ n·xⁿ/2ⁿ in halves and Σ x²ⁿ/4ⁿ in halves');
+  if (S.si !== 0 || S.k !== 0 || S.done.size || S.touched) fail('georeach', 'open', 'the mode does not open on Σ xⁿ/5ⁿ at its centre with nothing found');
+  let steps = 0, sums = 0, edges = 0, runs = 0;
+  SETS.forEach((Q, si) => {
+    S.pick(si);
+    if (S.k !== 0) fail('georeach', 'pick', `picking series ${si + 1} does not start at its centre`);
+    const K = 2 * Q.R * Q.sd;
+    for (let k = -K; k <= K; k++) {
+      S.k = k; steps++;
+      const key = `${Q.name} at k = ${k}`;
+      const dx = fr(k, Q.sd), x = fr(Q.a * dx[1] + dx[0], dx[1]);
+      const t = fr(dx[0] ** Q.m, dx[1] ** Q.m * Q.c), tv = t[0] / t[1], rho = Math.abs(tv);
+      const term = n => n ** Q.p * tv ** n;
+      const w = S.working();
+      if (w.length !== 4) { fail('georeach', key, `the readout has ${w.length} sentences, not 4`); continue; }
+      const m2 = w[1].match(/^At x = (\S+), t = (.+?), so the ratio test's limit is \|t\| = (\S+)\.$/);
+      if (!m2 || fst(x) !== m2[1]) { fail('georeach', key, `x is not read as ${fst(x)}: ${w[1]}`); continue; }
+      const parts = m2[2].split(' = '), tt = rd(parts[parts.length - 1]);
+      if (!tt || fst(tt) !== fst(t)) fail('georeach', key, `t is given as ${m2[2]}, not ${fst(t)}`);
+      if (fst(rd(m2[3]) || [NaN, 1]) !== fst([Math.abs(t[0]), t[1]])) fail('georeach', key, `|t| is given as ${m2[3]}`);
+      const v = w[2];
+      if (rho === 0) { if (!/^x is the centre, \d: every term is 0, so the series adds up to 0 there\.$/.test(v)) fail('georeach', key, `the centre is not told as one: ${v}`); }
+      else if (rho < 1) {
+        sums++;
+        const mm = v.match(/^That is under 1, .*the first 20 terms come to S₂₀ ≈ (\S+), closing in on the endless sum t\/\(1 − t\)(²?) = (\S+?)(?: [=≈] \S+)?\.$/);
+        if (!mm) { fail('georeach', key, `inside, the sum is not worked: ${v}`); continue; }
+        let s20 = 0; for (let n = 1; n <= 20; n++) s20 += term(n);
+        let s2k = 0; for (let n = 1; n <= 2000; n++) s2k += term(n);
+        if (Math.abs(+mm[1].replace('−', '-') - s20) > 6e-5) fail('georeach', key, `S₂₀ is read as ${mm[1]}, not ${s20}`);
+        if ((mm[2] === '²') !== (Q.p === 1)) fail('georeach', key, 'the sum formula does not match the n in front');
+        const L = rd(mm[3]), want = Q.p === 0 ? fr(t[0], t[1] - t[0]) : fr(t[0] * t[1], (t[1] - t[0]) ** 2);
+        if (!L || fst(L) !== fst(want) || Math.abs(L[0] / L[1] - s2k) > 1e-9) fail('georeach', key, `the endless sum is given as ${mm[3]}, not ${fst(want)} (two thousand terms: ${s2k})`);
+        if (Q.p === 0 && !/each term is \|t\| times the one before in size/.test(v)) fail('georeach', key, 'a geometric series is not said to shrink by |t| each step');
+        if (Q.p === 1 && !/in the end each term is about \|t\| times the one before/.test(v)) fail('georeach', key, 'n·tⁿ is said to shrink from the start, which it does not');
+      } else if (rho === 1) {
+        edges++;
+        const each = (tv < 0 ? '±' : '') + (Q.p === 1 ? 'n' : '1') + (tv < 0 ? ', in turn' : '');
+        if (v !== `That is exactly 1: an end of the interval, where the ratio test says nothing. Here every term is ${each}, so the terms never shrink to 0 and the series cannot add up.`) fail('georeach', key, `an end is not told right: ${v}`);
+        if (Math.abs(Math.abs(term(7)) - 7 ** Q.p) > 1e-9) fail('georeach', key, 'on an end the terms are not the size the readout says');
+      } else {
+        runs++;
+        const mm = v.match(/^That is over 1, so each term is bigger in size than the last and the total runs away: term 20 is already (more than|about) ([\d,.]+) in size\.$/);
+        const T = Math.abs(term(20));
+        if (!mm) { fail('georeach', key, `outside, it is not said to run away: ${v}`); continue; }
+        const n = +mm[2].replace(/,/g, '');
+        if (mm[1] === 'more than' ? !(n <= T && T < 10 * n && T >= 1e5) : Math.abs(n - T) > (T >= 100 ? 0.5 : 0.005)) fail('georeach', key, `term 20 is ${T}, not ${mm[1]} ${mm[2]}`);
+        if (!(Math.abs(term(21)) > T)) fail('georeach', key, 'outside, the terms do not grow');
+      }
+      const lo = Q.a - Q.R, hi = Q.a + Q.R;
+      if (!w[3].includes(`the radius is R = ${Q.R}, from ${ng(lo)} to ${hi}`)) fail('georeach', key, `the interval is not from ${lo} to ${hi}: ${w[3]}`);
+      if (Q.m === 2 && !w[3].includes(`|x| < √${Q.c} = ${Q.R}, not ${Q.c}`)) fail('georeach', key, 'x²ⁿ does not take the square root');
+      if (Q.p === 1 && !w[3].endsWith('the same as without the n in front.')) fail('georeach', key, 'the n in front is not said to leave R alone');
+      // the drawing
+      const svg = S.svg(), X = u => 20 + (u - (Q.a - 2 * Q.R)) / (4 * Q.R) * 320;
+      const band = svg.match(/data-k="band" x="([\d.]+)" y="28" width="([\d.]+)"/);
+      if (!band || Math.abs(+band[1] - X(lo)) > 0.01 || Math.abs(+band[2] - 160) > 0.01) fail('georeach', key, 'the green stretch is not from a − R to a + R');
+      const E = [...svg.matchAll(/data-k="end" cx="([\d.]+)"/g)].map(e => +e[1]);
+      if (E.length !== 2 || Math.abs(E[0] - X(lo)) > 0.01 || Math.abs(E[1] - X(hi)) > 0.01) fail('georeach', key, 'the open ends are not at a − R and a + R');
+      const mk = svg.match(/data-k="x" d="M([\d.]+) 26 l-6 -10 h12 z" fill="(\w+)"/);
+      if (!mk || Math.abs(+mk[1] - X(x[0] / x[1])) > 0.01 || mk[2] !== (rho < 1 ? 'green' : rho === 1 ? 'gold' : 'red')) fail('georeach', key, 'the marker is not at x in the colour of its side');
+      const bars = [...svg.matchAll(/data-k="term" data-n="(\d+)" x="[\d.]+" y="([\d.]+)" width="18" height="([\d.]+)" rx="2" fill="(\w+)"/g)];
+      if (bars.length !== 12 || bars.some(b => { const tn = term(+b[1]), h = Math.min(Math.abs(tn), 2) * 24;
+        return Math.abs(+b[3] - Math.max(h, 0.5)) > 0.01 || b[4] !== (tn >= 0 ? 'blue' : 'red'); })) fail('georeach', key, 'the bars are not the sizes of the first twelve terms');
+      const h = S.html();
+      if (/id="grHi"[^>]*disabled/.test(h) !== (k === K) || /id="grLo"[^>]*disabled/.test(h) !== (k === -K)) fail('georeach', key, 'the stepper is off where it should not be, or on past twice the radius');
+    }
+  });
+  // the hunt, played through the steps a player would take
+  S.si = 0; S.k = 0; S.done = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  const go = (si, by, n) => { if (si !== null) { S.pick(si); S.html(); } for (let i = 0; i < n; i++) { S.move(by); S.html(); } return [...S.done].sort().join(); };
+  { // nothing counts before a button is pressed
+    S.done = new Set(); S.touched = false; S.si = 0; S.k = 10; S.html();
+    if (S.done.size) fail('georeach', 'hunt', 'a goal is found before anything is pressed');
+  }
+  S.si = 0; S.k = 0; S.done = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  const plan = [[0, 1, 5, ''], [null, 1, 1, 'out'], [1, 1, 2, 'out'], [null, 1, 1, 'edge,out'],
+    [2, 1, 2, 'edge,out'], [null, 1, 1, 'edge,far,out'], [3, -1, 3, 'edge,far,out'], [null, -1, 1, 'edge,far,out,root']];
+  plan.forEach(([si, by, n, want], i) => { const got = go(si, by, n); if (got !== want) fail('georeach', 'hunt', `step ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want || 'nothing'}`); });
+  if (env.toasts.join(' | ') !== '✓ Out past the radius | ✓ On the edge | ✓ As far as it goes') fail('georeach', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MASTER OF THE RADIUS / every interval found') fail('georeach', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  { const k0 = S.k; S.move(-1); S.move(-1); S.move(-1); S.move(-1); S.move(-1); S.move(-1); S.move(-1);
+    if (S.k !== -8 || k0 !== -4) fail('georeach', 'stepper', `the stepper ends at ${S.k}, not at twice the radius`); }
+  S.si = 0; S.k = 0; S.done = new Set(); S.touched = false;
+  return { steps, sums, edges, runs };
+})();
+
 /* Which speed? The pick-the-speed round in the ladder workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from x, y, L and x′ alone.
@@ -17270,6 +17388,7 @@ console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 1
 console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
+console.log(`  power series stepped ${pad(geoReachNotes.steps.toLocaleString(), 12)}  (every x the how-far mode allows on its four power series, each sentence worked again: ${geoReachNotes.sums} sums inside against twenty and two thousand terms, ${geoReachNotes.edges} ends where the ratio is 1, ${geoReachNotes.runs} steps outside where the terms run away)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);

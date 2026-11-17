@@ -1376,7 +1376,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ GEOMETRIC SERIES WORKSHOP ============ -->
   <div class="screen" id="s-geo">
     <div class="panel"><h2>🧮 Geometric Series Workshop</h2><div class="sub">Each term is the last one times r. Add them one at a time and watch the running total: when r is small enough an endless sum lands on a finite number, and when it is not the total runs away for ever.</div></div>
-    <div id="gnTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Add the terms by hand or pick the sum"></div>
+    <div id="gnTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Add the terms by hand, pick the sum, or find how far it reaches"></div>
     <div class="panel">
       <div id="gqBox"></div>
       <div id="gnSets" class="wsModes" role="group" aria-label="Which series"></div>
@@ -15244,7 +15244,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🧮 Geometric Series Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Add an endless sum one term at a time and watch the total close in on a/(1 − r), swing around it, or run away for ever. Then turn it round: see a series, and pick which of four numbers is its endless sum.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Add an endless sum one term at a time and watch the total close in on a/(1 − r), swing around it, or run away for ever. Then turn it round: see a series, and pick which of four numbers is its endless sum. Or put x in the ratio: step it along a power series and find how far from the centre it still adds up.</div>
          <button class="btn sm" id="tomeGeo" style="width:auto;margin-top:8px" onclick="Geo.open()">Open the geometric series workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21776,11 +21776,11 @@ const Geo = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('gnTab').innerHTML=[['hand','🧮 Add it by hand','Add the terms one at a time and watch the running total'],['pick','🎯 Which sum?','See a series, and pick which of four numbers is its endless sum']]
+    document.getElementById('gnTab').innerHTML=[['hand','🧮 Add it by hand','Add the terms one at a time and watch the running total'],['pick','🎯 Which sum?','See a series, and pick which of four numbers is its endless sum'],['reach','📏 How far?','Step x along a power series and find how far from its centre it still adds up']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Geo.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['gnSets','gnFig','gnStep','gnRead','gnGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('gqBox').innerHTML=pick ? GeoPick.html() : '';
+    document.getElementById('gqBox').innerHTML=this.tab==='pick' ? GeoPick.html() : this.tab==='reach' ? GeoReach.html() : '';
     if(pick) return;
     document.getElementById('gnSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Geo.pick(\${i})" aria-label="\${s.btn}: start at \${s.a}, r = \${this.fr(s.p,s.q)}">\${s.btn}</button>\`).join('');
@@ -21801,6 +21801,133 @@ const Geo = {
         Celebrate.banner('MASTER OF THE ENDLESS SUM','every tail tamed','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- How far does it reach? The geometric series workshop's third mode ----------
+ * A power series is a geometric series whose ratio has x in it. Step x along a
+ * number line and watch the ratio test: term n + 1 over term n tends to
+ * |t|, where t = (x − a)/c, or x²/4 for the even powers, and the series adds
+ * up while |t| is under 1. That marks out an interval a − R < x < a + R, R
+ * the radius of convergence. At its ends |t| is exactly 1 and the test says
+ * nothing; on these series the terms there never shrink to 0, so they do not
+ * add up. A factor of n in front changes the sum but not the radius, and x²ⁿ
+ * takes a square root: |x|² < 4 is |x| < 2. Inside, the readout adds the
+ * first twenty terms and the endless sum, both as exact fractions where they
+ * can be. Nothing is saved, and there is no clock.
+ */
+const GeoReach = {
+  SETS:[
+    {id:'five',  btn:'Σ xⁿ/5ⁿ',       a:0, c:5, p:0, m:1, sd:1},
+    {id:'shift', btn:'Σ (x − 2)ⁿ/3ⁿ', a:2, c:3, p:0, m:1, sd:1},
+    {id:'npow',  btn:'Σ n·xⁿ/2ⁿ',     a:0, c:2, p:1, m:1, sd:2},
+    {id:'sq',    btn:'Σ x²ⁿ/4ⁿ',      a:0, c:4, p:0, m:2, sd:2}
+  ],
+  si:0, k:0, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'out', t:'On Σ xⁿ/5ⁿ, step x out past the radius until the terms run away.', toast:'Out past the radius',
+     ok:K=>K.si===0 && K.rho()>1},
+    {id:'edge', t:'On Σ (x − 2)ⁿ/3ⁿ, stand on an end of the interval, where the ratio is exactly 1.', toast:'On the edge',
+     ok:K=>K.si===1 && K.rho()===1},
+    {id:'far', t:'On Σ n·xⁿ/2ⁿ, find the step furthest from 0 that still adds up.', toast:'As far as it goes',
+     ok:K=>K.si===2 && K.rho()<1 && Math.abs(K.k)+1>=K.R()*K.set().sd},
+    {id:'root', t:'On Σ x²ⁿ/4ⁿ, find where the ratio is exactly 1.', toast:'The root found',
+     ok:K=>K.si===3 && K.rho()===1}
+  ],
+  set(){ return this.SETS[this.si]; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  /* the radius: c for xⁿ, the square root of c for x²ⁿ */
+  R(){ const S=this.set(); return S.m===2 ? Math.sqrt(S.c) : S.c; },
+  /* the furthest step either side: twice the radius */
+  K(){ return 2*this.R()*this.set().sd; },
+  /* x − a as a fraction, and x itself */
+  dx(){ return this.frac(this.k, this.set().sd); },
+  x(){ const S=this.set(), d=this.dx(); return this.frac(S.a*d[1]+d[0], d[1]); },
+  /* the ratio each term grows by: t = (x − a)/c, or (x − a)²/c */
+  t(){ const S=this.set(), d=this.dx(); return this.frac(d[0]**S.m, d[1]**S.m*S.c); },
+  rho(){ const t=this.t(); return Math.abs(t[0])/t[1]; },
+  term(n){ const S=this.set(), t=this.t(); return n**S.p*(t[0]/t[1])**n; },
+  /* the endless sum from n = 1: t/(1 − t), or t/(1 − t)² with n in front */
+  sum(){ const S=this.set(), [u,v]=this.t();
+    return S.p===0 ? this.frac(u, v-u) : this.frac(u*v, (v-u)**2); },
+  S20(){ let s=0; for(let n=1;n<=20;n++) s+=this.term(n); return s; },
+  dec(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  approx(v){ return (Math.abs(Math.round(v*1e4)/1e4-v)<1e-10 ? '= ' : '≈ ')+this.dec(v); },
+  xa(){ const S=this.set(); return S.a===0 ? 'x' : \`(x \${S.a>0?'−':'+'} \${Math.abs(S.a)})\`; },
+  working(){
+    const S=this.set(), R=this.R(), t=this.t(), r=this.rho(), xs=this.fs(this.x());
+    const out=[];
+    if(S.m===2) out.push(\`Σ (n = 1 to ∞) x²ⁿ/\${S.c}ⁿ is a geometric series in t = x²/\${S.c}: each term is t times the one before, so the ratio has x squared in it.\`);
+    else if(S.p===1) out.push(\`Σ (n = 1 to ∞) n·xⁿ/\${S.c}ⁿ is nearly geometric in t = x/\${S.c}: term n + 1 over term n is (n + 1)/n × t, and (n + 1)/n tends to 1, so the ratio tends to |t| all the same.\`);
+    else out.push(\`Σ (n = 1 to ∞) \${this.xa()}ⁿ/\${S.c}ⁿ is a geometric series in t = \${this.xa()}/\${S.c}: each term is t times the one before.\`);
+    const whole=this.x()[1]===1 && this.x()[0]>=0;
+    const tw=S.m===2 ? (whole ? \`\${xs}²/\${S.c}\` : \`(\${xs})²/\${S.c}\`) : S.a!==0 ? \`(\${xs} \${S.a>0?'−':'+'} \${Math.abs(S.a)})/\${S.c}\` : this.x()[1]===1 ? \`\${xs}/\${S.c}\` : \`(\${xs})/\${S.c}\`;
+    out.push(\`At x = \${xs}, t = \${tw}\${tw===this.fs(t)?'':' = '+this.fs(t)}, so the ratio test's limit is |t| = \${this.fs([Math.abs(t[0]),t[1]])}.\`);
+    if(t[0]===0) out.push(\`x is the centre, \${S.a}: every term is 0, so the series adds up to 0 there.\`);
+    else if(r<1){
+      const L=this.sum(), f=S.p===0 ? 't/(1 − t)' : 't/(1 − t)²';
+      out.push(\`That is under 1, so \${S.p===1?'in the end each term is about |t| times the one before':'each term is |t| times the one before in size'}, the terms shrink toward 0, and the series adds up: the first 20 terms come to S₂₀ ≈ \${this.dec(this.S20())}, closing in on the endless sum \${f} = \${this.fs(L)}\${L[1]===1?'':' '+this.approx(L[0]/L[1])}.\`);
+    } else if(r===1){
+      const each=S.p===1 ? 'n' : '1';
+      out.push(\`That is exactly 1: an end of the interval, where the ratio test says nothing. Here every term is \${t[0]<0?'±':''}\${each}\${t[0]<0?', in turn':''}, so the terms never shrink to 0 and the series cannot add up.\`);
+    } else {
+      const big=Math.abs(this.term(20));
+      out.push(\`That is over 1, so each term is bigger in size than the last and the total runs away: term 20 is already \${big>=1e5 ? 'more than '+(10**Math.floor(Math.log10(big))).toLocaleString('en-US') : big>=100 ? 'about '+Math.round(big).toLocaleString('en-US') : 'about '+neg(Math.round(big*100)/100)} in size.\`);
+    }
+    const lo=S.a-R, hi=S.a+R;
+    out.push(S.m===2
+      ? \`It adds up while x²/\${S.c} < 1, so x² < \${S.c} and |x| < √\${S.c} = \${R}, not \${S.c}: the radius is R = \${R}, from \${neg(lo)} to \${hi}.\`
+      : \`It adds up while |\${S.a===0?'x':'x '+(S.a>0?'−':'+')+' '+Math.abs(S.a)}| < \${S.c}: the radius is R = \${R}, from \${neg(lo)} to \${hi}\${S.p===1?', the same as without the n in front':''}.\`);
+    return out;
+  },
+  /* the number line from a − 2R to a + 2R, the stretch that adds up in
+     green with its ends left open, x as a marker, and under it the sizes of
+     the first twelve terms as bars, cut off at 2 */
+  svg(){
+    const S=this.set(), R=this.R(), lo=S.a-2*R, hi=S.a+2*R, X=v=>20+(v-lo)/(hi-lo)*320;
+    const xv=this.x(), x=xv[0]/xv[1], r=this.rho();
+    const col=r<1 ? FIG_COL.c : r===1 ? FIG_COL.b : FIG_COL.d;
+    let out=\`<svg viewBox="0 0 360 170" style="width:100%;height:auto;display:block" role="img" aria-label="x = \${this.fs(xv)} on a line from \${neg(lo)} to \${hi}, \${r<1?'inside':r===1?'on an end of':'outside'} the stretch from \${neg(S.a-R)} to \${S.a+R} where the series adds up">\`;
+    out+=\`<line x1="20" y1="34" x2="340" y2="34" stroke="\${FIG_COL.axis}" stroke-width="1.5"/>\`;
+    out+=\`<rect data-k="band" x="\${X(S.a-R).toFixed(2)}" y="28" width="\${(X(S.a+R)-X(S.a-R)).toFixed(2)}" height="12" rx="3" fill="\${FIG_COL.c}" opacity=".35"/>\`;
+    for(const e of [S.a-R,S.a+R]) out+=\`<circle data-k="end" cx="\${X(e).toFixed(2)}" cy="34" r="5" fill="none" stroke="\${FIG_COL.c}" stroke-width="2"/>\`;
+    for(const v of [lo,S.a-R,S.a,S.a+R,hi])
+      out+=\`<text x="\${X(v).toFixed(2)}" y="58" text-anchor="middle" font-size="11" fill="\${FIG_COL.dim}">\${neg(v)}</text>\`;
+    out+=\`<path data-k="x" d="M\${X(x).toFixed(2)} 26 l-6 -10 h12 z" fill="\${col}"/>\`;
+    for(let n=1;n<=12;n++){
+      const v=this.term(n), h=Math.min(Math.abs(v),2)*24;
+      out+=\`<rect data-k="term" data-n="\${n}" x="\${(24+(n-1)*26.5).toFixed(2)}" y="\${(164-h).toFixed(2)}" width="18" height="\${Math.max(h,0.5).toFixed(2)}" rx="2" fill="\${v>=0?FIG_COL.a:FIG_COL.d}"/>\`;
+    }
+    out+=\`<line x1="20" y1="164" x2="340" y2="164" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    return out+\`</svg>\`;
+  },
+  pick(i){ this.si=i; this.k=0; this.touched=true; Geo.render(); },
+  move(by){ const v=this.k+by; if(Math.abs(v)>this.K()) return; this.k=v; this.touched=true; Geo.render(); },
+  html(){
+    const S=this.set();
+    let out=\`<div id="grSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which power series">\`+this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="GeoReach.pick(\${i})" aria-label="\${s.btn.replace('Σ','The sum of')}" style="margin:0">\${s.btn}</button>\`).join('')+\`</div>\`;
+    out+=\`<div id="grFig">\${this.svg()}<div class="figcap">The line is x. The green stretch is where the series adds up, its open ends where the ratio is exactly 1. The bars are the sizes of the first twelve terms, cut off at 2: blue for a term above 0, red for one below.</div></div>\`;
+    out+=\`<div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0"><div class="wsCell">\`+
+      \`<button id="grLo" onclick="GeoReach.move(-1)" aria-label="Step x left"\${this.k<=-this.K()?' disabled':''}>−</button>\`+
+      \`<b id="grX" style="font-size:17px;min-width:0">x = \${this.fs(this.x())}</b>\`+
+      \`<button id="grHi" onclick="GeoReach.move(1)" aria-label="Step x right"\${this.k>=this.K()?' disabled':''}>+</button></div></div>\`;
+    out+=\`<div id="grRead" aria-live="polite" style="font-size:14px;line-height:1.6">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="grGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="grGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE RADIUS','every interval found','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

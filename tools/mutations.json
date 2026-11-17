@@ -1,74 +1,81 @@
 {
-  "change": "Add radius of convergence as a fight topic, linked to the Geometric Series Workshop.",
+  "change": "Add a How far? mode to the geometric series workshop: step x along a power series and find its radius.",
   "mutations": [
     {
-      "name": "the radius taken as c/b without the root",
+      "name": "the radius of x²ⁿ taken without the root",
       "file": "index.html",
-      "find": "const Rr=F(r,s);                              // the radius",
-      "replace": "const Rr=m===2?F(r*r,s*s):F(r,s);              // the radius",
+      "find": "R(){ const S=this.set(); return S.m===2 ? Math.sqrt(S.c) : S.c; },",
+      "replace": "R(){ const S=this.set(); return S.c; },",
       "run": "verify"
     },
     {
-      "name": "the limit slip names the radius instead",
+      "name": "the sum with n in front left unsquared",
       "file": "index.html",
-      "find": "      [L,'that is the ratio\\'s limit, not the radius:",
-      "replace": "      [F(s,r),'that is the ratio\\'s limit, not the radius:",
+      "find": "return S.p===0 ? this.frac(u, v-u) : this.frac(u*v, (v-u)**2); },",
+      "replace": "return S.p===0 ? this.frac(u, v-u) : this.frac(u, v-u); },",
       "run": "verify"
     },
     {
-      "name": "the width slip taken as R",
+      "name": "an end counted as inside",
       "file": "index.html",
-      "find": "[F(2*r,s),'that is the width",
-      "replace": "[F(r,s),'that is the width",
+      "find": "    else if(r<1){\n      const L=this.sum(), f=",
+      "replace": "    else if(r<=1){\n      const L=this.sum(), f=",
       "run": "verify"
     },
     {
-      "name": "the ends swapped",
+      "name": "the bars not cut off at 2",
       "file": "index.html",
-      "find": "[F(a*s+r,s),'that is the right-hand end",
-      "replace": "[F(a*s-r,s),'that is the right-hand end",
+      "find": "const v=this.term(n), h=Math.min(Math.abs(v),2)*24;",
+      "replace": "const v=this.term(n), h=Math.abs(v)*24;",
       "run": "verify"
     },
     {
-      "name": "depth 1 gets a power of n",
+      "name": "the marker in one colour",
       "file": "index.html",
-      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
-      "replace": "const m=d===3?2:1, p=R.pick([0,1,2,3]);",
+      "find": "const col=r<1 ? FIG_COL.c : r===1 ? FIG_COL.b : FIG_COL.d;",
+      "replace": "const col=FIG_COL.c;",
       "run": "verify"
     },
     {
-      "name": "depth 2 never puts n³",
+      "name": "the stepper runs past twice the radius",
       "file": "index.html",
-      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
-      "replace": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2]);",
+      "find": "K(){ return 2*this.R()*this.set().sd; },",
+      "replace": "K(){ return 3*this.R()*this.set().sd; },",
       "run": "verify"
     },
     {
-      "name": "depth 3 stays at the nth power",
+      "name": "a goal found before anything is pressed",
       "file": "index.html",
-      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
-      "replace": "const m=1, p=d===1?0:R.pick([0,1,2,3]);",
+      "find": "    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    out+=`<div class=\"panel\" id=\"grGoalPanel\"",
+      "replace": "    if(true) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    out+=`<div class=\"panel\" id=\"grGoalPanel\"",
       "run": "verify"
     },
     {
-      "name": "the centre at 0",
+      "name": "the furthest step taken one too close",
       "file": "index.html",
-      "find": "const a=R.pick([1,2,3,4,5,-1,-2,-3,-4]);\n    const s=whole",
-      "replace": "const a=R.pick([1,2,3,4,5,-1,-2,-3,-4])*0+1;\n    const s=whole",
+      "find": "ok:K=>K.si===2 && K.rho()<1 && Math.abs(K.k)+1>=K.R()*K.set().sd},",
+      "replace": "ok:K=>K.si===2 && K.rho()<1 && Math.abs(K.k)+2>=K.R()*K.set().sd},",
       "run": "verify"
     },
     {
-      "name": "the working leaves out why nᵖ does not count",
+      "name": "the swing on an end not told",
       "file": "index.html",
-      "find": "${p?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`",
-      "replace": "${p>1?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`",
+      "find": "Here every term is ${t[0]<0?'±':''}${each}",
+      "replace": "Here every term is ${each}",
       "run": "verify"
     },
     {
-      "name": "the working's inequality loses the square",
+      "name": "S₂₀ added with nineteen terms",
       "file": "index.html",
-      "find": "That is under 1 when |x ${a>0?'−':'+'} ${Math.abs(a)}|${m===2?'²':''} <",
-      "replace": "That is under 1 when |x ${a>0?'−':'+'} ${Math.abs(a)}| <",
+      "find": "S20(){ let s=0; for(let n=1;n<=20;n++) s+=this.term(n); return s; },",
+      "replace": "S20(){ let s=0; for(let n=1;n<20;n++) s+=this.term(n); return s; },",
+      "run": "verify"
+    },
+    {
+      "name": "term 20 read off term 19",
+      "file": "index.html",
+      "find": "const big=Math.abs(this.term(20));",
+      "replace": "const big=Math.abs(this.term(19));",
       "run": "verify"
     }
   ]
