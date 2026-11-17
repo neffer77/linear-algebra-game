@@ -748,6 +748,7 @@ let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // rad
 let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
 let lmWhole = 0, lmSeen = new Set(), lmShape = { neg: 0, ab: 0, amax: 0, pmax: 0, ask: {} };   // Lagrange multipliers: whole answers, slips seen, signs, numbers in front of x² and y², the line's largest number, which question is asked
 let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
+let sepWhole = 0, sepSeen = new Set(), sepShape = { neg: 0, frac: 0, m: {}, kmax: 0 };   // separable equations: whole answers, slips seen, signs, fractional y(0), the powers of x and the largest k
 let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, lo: 0, hi: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the smallest and largest entries
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
@@ -1624,6 +1625,47 @@ Object.assign(ANALYSIS, {
     lmShape.amax = Math.max(lmShape.amax, a, b); lmShape.pmax = Math.max(lmShape.pmax, Math.abs(pp), Math.abs(qq)); lmShape.ask[k] = 1;
     covered.add('lagrange');
   },
+  // Separable equations, checked by stepping y′ = kxᵐy² itself with
+  // Runge–Kutta from x = 0 to the asked x rather than trusting 1/y = 1/y(0)
+  // − kxᵐ⁺¹/(m + 1). Each wrong answer is worked again as the slip it names.
+  separable: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const q = fl(p.q).match(/^y′ = (-?\d*)(x([²³])?)?y², with y\(0\) = (-?\d+(?:\/\d+)?)\. What is y when x = (-?\d+)\?$/);
+    if (!q) { fail('analysis', 'separable', `the question does not read as a separable equation: ${fl(p.q)}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const k = q[1] === '' ? 1 : q[1] === '-' ? -1 : +q[1], m = !q[2] ? 0 : !q[3] ? 1 : q[3] === '²' ? 2 : 3, y0 = val(q[4]), a = +q[5];
+    const f = (x, y) => k * x ** m * y * y, n = 4000, h = a / n;
+    let y = y0;
+    for (let i = 0; i < n; i++) {
+      const x = i * h, k1 = f(x, y), k2 = f(x + h / 2, y + h / 2 * k1), k3 = f(x + h / 2, y + h / 2 * k2), k4 = f(x + h, y + h * k3);
+      y += h / 6 * (k1 + 2 * k2 + 2 * k3 + k4);
+    }
+    const ansV = val(fl(p.a));
+    if (!(Math.abs(y - ansV) <= 1e-6 * Math.max(1, Math.abs(ansV)))) fail('analysis', 'separable', `stepping the equation to x = ${a} gives ${y}, not ${fl(p.a)}: ${fl(p.q)}`);
+    if (ansV === 0) fail('analysis', 'separable', `the answer is 0: ${fl(p.q)}`);
+    const W = k * a ** (m + 1) / (m + 1), POW = ['', '', '²', '³', '⁴'], xp = e => 'x' + POW[e];
+    const slip = [[/^that loses the minus/, 1 / (1 / y0 + W), 'minus'], [/^that is y\(0\), where y starts/, y0, 'y0'],
+      [/^that is 1\/y;/, 1 / y0 - W, 'inv'], [/^that puts y\(0\) in for the constant/, 1 / (y0 - W), 'C'],
+      [/^that holds y at y\(0\) on the right/, y0 + y0 * y0 * W, 'euler']];
+    if (m >= 1) slip.push([new RegExp(`^that integrates ${xp(m)} to ${xp(m + 1)} without dividing by ${m + 1}$`), 1 / (1 / y0 - k * a ** (m + 1)), 'int'],
+      [new RegExp(`^that differentiates ${xp(m)} instead of integrating it$`), 1 / (1 / y0 - k * m * a ** (m - 1)), 'diff']);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'separable', `a wrong answer's reason is not one of the slips for m = ${m}: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-9) fail('analysis', 'separable', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      sepSeen.add(sl[2]);
+    });
+    const w = fl(p.ex), N = '(-?\\d+(?:\\/\\d+)?)';
+    const end = w.match(new RegExp(`At x = (-?\\d+), [^=]+ = ${N}, so 1/y = ${N} - \\(?${N}\\)? = ${N}, and y = ${N}\\.$`));
+    if (!w.startsWith('Separate the variables: dy/y² = ') || !/ -1\/y = /.test(w) || !end || +end[1] !== a || Math.abs(val(end[2]) - W) > 1e-12
+      || Math.abs(val(end[3]) - 1 / y0) > 1e-12 || Math.abs(val(end[4]) - W) > 1e-12 || Math.abs(val(end[5]) - (1 / y0 - W)) > 1e-12 || Math.abs(val(end[6]) - ansV) > 1e-12)
+      fail('analysis', 'separable', `the working does not separate, integrate and carry 1/y to the answer: ${w}`);
+    if (y0 < 0 || a < 0) sepShape.neg = 1;
+    if (!Number.isInteger(y0)) sepShape.frac = 1;
+    sepShape.m[m] = 1; sepShape.kmax = Math.max(sepShape.kmax, Math.abs(k));
+    covered.add('separable');
+  },
   // Determinant rules, worked again here on actual matrices: an A and a B are
   // built with the stated determinants (a diagonal scaled, then mixed by
   // matrices of determinant 1), the expression is multiplied out, transposed
@@ -1995,7 +2037,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 88, sig: 0x5744 };
+  const PINNED = { count: 89, sig: 0x7773 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -2116,6 +2158,20 @@ let codeNotes = null;
     if (got.join() !== '280,20,295,8,2,290') fail('codes', 'append', `a v7 code's later topics came back shifted: ${got.join(', ')}`);
   }
 
+  /* A code from the last v8 build, before mastery was cut to eight bits:
+     it has to come back with its ten-bit mastery read as ten bits, so the
+     three topics keep their counts exactly and their mastery to 1/1023. */
+  {
+    const OLD8 = 'KE8-BBLUJDNUDUAEU63DEEBCWSZ3IOQABFSABYJBACWAEAAAAAAAAAALBIAAAAAAAAUAAAAAAAAEAIACAAQAEABAAIACAAQANAAAAAAAAAAAFRBAAAAAAAAAAAAAAAAJQGIABICR4IH4ZAS6BB2VAQCAAAAMAQAAAAAAAAAAAAAAAAAKREQ';
+    const d8 = Codec.decode(OLD8), r8 = d8.ok ? d8.g.topicStats : {};
+    const want = { vecAdd: [12, 3, 0.5], orth: [7.5, 1, 0.123], lagrange: [30, 4, 0.917] };
+    if (!d8.ok) fail('codes', 'v8', `a v8 code no longer decodes (${d8.why})`);
+    else if (d8.lostTopics || Object.keys(r8).sort().join() !== 'lagrange,orth,vecAdd') fail('codes', 'v8', `a v8 code lost its topic history: ${Object.keys(r8).join(', ') || 'none'}`);
+    else for (const [k, [seen, w, m]] of Object.entries(want))
+      if (r8[k].seen !== seen || r8[k].w !== w || Math.abs(r8[k].m - m) > 0.5 / 1023) fail('codes', 'v8', `${k} came back as ${JSON.stringify(r8[k])} from a v8 code`);
+    if (d8.ok && (!r8.lagrange || !r8.lagrange.mastered || d8.g.gold !== 4321)) fail('codes', 'v8', 'a v8 code came back changed');
+  }
+
   /* v8 packs each topic tighter: the wrong answers in exactly as many bits as
      the seen count takes, and how many questions ago in six bits, since the
      scheduler reads nothing past 63 alike. Both have to come back exactly
@@ -2185,9 +2241,11 @@ let codeNotes = null;
          the code: each one adds about seven bytes whatever its counts. So v8
          writes the wrong answers in only as many bits as the seen count takes
          and the questions-ago field in six bits, and the same knight lands on
-         version 20 with about six topics' room to spare. When the topics
-         reach that, this test fails again, and the next trim has to come from
-         somewhere: the 10-bit mastery, or the alphabet the code is written in.
+         version 20 with about six topics' room to spare. At eighty-nine
+         topics it tipped again, and v9 writes mastery in eight bits rather
+         than ten, which buys about three more. After that the next trim has
+         to come from somewhere else: the hours byte, or the alphabet the code
+         is written in.
          If a future field
          pushes the common case up a version, this is the test that says so. */
   const HEAVY = 2000;
@@ -18012,6 +18070,35 @@ for (let d = 1; d <= 3; d++) {
   if (!!lmShape.ab !== (d > 1) || lmShape.amax !== [1, 4, 6][d - 1]) fail('analysis', 'lagrange', `depth ${d} puts up to ${lmShape.amax} in front of x² and y²`);
   if (lmShape.pmax !== [3, 3, 5][d - 1]) fail('analysis', 'lagrange', `depth ${d} reaches ${lmShape.pmax} in the line`);
   if (lmWhole < LG * 0.42 || lmWhole > LG * 0.58) fail('analysis', 'lagrange', `depth ${d} gives a whole answer ${lmWhole} times in ${LG}, not about half`);
+}
+
+// Separable equations at every depth: five different exact numbers, none 0,
+// two of the four wrong ones sharing the answer's sign and two its form;
+// all seven slips turn up; y(0) is sometimes a fraction; the first depth
+// keeps y(0) and x above 0 with m = 0 or 1, the second lets signs in and m
+// reach 2, the third has m from 1 to 3 and k up to 6; and whole and
+// fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const SE = 3000;
+  sepWhole = 0; sepSeen = new Set(); sepShape = { neg: 0, frac: 0, m: {}, kmax: 0 };
+  for (let i = 0; i < SE; i++) {
+    const p = GEN.separable(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'separable', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'separable', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const pos = v => !v.startsWith('-'), whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => pos(v) === pos(vals[0])).length < 2) fail('analysis', 'separable', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'separable', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'separable', `a number runs too long: ${vals.join(', ')}`);
+    if (whole(vals[0])) sepWhole++;
+    ANALYSIS.separable(p);
+  }
+  if (sepSeen.size !== 7) fail('analysis', 'separable', `depth ${d} offers only ${sepSeen.size} of its 7 slips`);
+  if (!!sepShape.neg !== (d > 1)) fail('analysis', 'separable', `depth ${d} ${d > 1 ? 'never has' : 'has'} a negative y(0) or x`);
+  if (!sepShape.frac) fail('analysis', 'separable', `depth ${d} never starts y(0) at a fraction`);
+  if (Object.keys(sepShape.m).join() !== ['0,1', '0,1,2', '1,2,3'][d - 1]) fail('analysis', 'separable', `depth ${d} uses m = ${Object.keys(sepShape.m).join(', ')}`);
+  if (sepShape.kmax !== [4, 4, 6][d - 1]) fail('analysis', 'separable', `depth ${d} reaches k = ${sepShape.kmax}`);
+  if (sepWhole < SE * 0.42 || sepWhole > SE * 0.58) fail('analysis', 'separable', `depth ${d} gives a whole answer ${sepWhole} times in ${SE}, not about half`);
 }
 
 // Determinant rules at every depth: five different exact numbers, none 0,

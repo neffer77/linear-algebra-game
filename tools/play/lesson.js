@@ -109,7 +109,7 @@ module.exports = {
       const shadowed = Object.keys(RULES).filter(k => !GEN[k] || GEN[k](1).codex);
       return { n: Object.keys(GEN).length, bad, shadowed };
     });
-    t.eq('all eighty-eight topics carry a rule and a small example', rules.bad, []);
+    t.eq('all eighty-nine topics carry a rule and a small example', rules.bad, []);
     t.eq('and no fallback rule hides one written beside its generator', rules.shadowed, []);
 
     // ------------------------------------------------------------------
@@ -741,6 +741,6 @@ module.exports = {
     t.ok('a topic\'s record holds only what it always held',
       save.fields.every(f => ['c', 'w', 'm', 'seen', 'last', 't', 'mastered'].includes(f)), save.fields.join());
     t.eq('the knight has no ladder written on it', save.keys, []);
-    t.eq('and the knight code is the version it was', save.ver, 8);
+    t.eq('and the knight code is the version it was', save.ver, 9);
   }
 };

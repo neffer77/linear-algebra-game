@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-eight topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-nine topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with eighty-eight in the game, drawing from all of them would build a run
+have actually met — with eighty-nine in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,10 +277,10 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives, Cramer's rule, determinant rules |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices, least squares, quadratic forms, change of basis |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method, Simpson's rule, parametric derivatives, linear differential equations |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method, Simpson's rule, parametric derivatives, linear differential equations, separable equations |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials, radius of convergence, Lagrange multipliers — the capstone, where the two subjects finally meet |
 
-**88 problem generators** in total, each producing randomised problems at three difficulty
+**89 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -466,7 +466,7 @@ mixed up, C taken the wrong way round, and C read off as y(0). Its check steps t
 with Runge–Kutta, far on for the steady value and to t = 1 for C. It joins the Applications strand
 and the Infinite Expanse, and a fight that shows it up points to the 👣 Euler Step Workshop.
 
-**Lagrange multipliers**, the newest, ask for the lowest point of f = ax² + by² on a line
+**Lagrange multipliers** ask for the lowest point of f = ax² + by² on a line
 px + qy = s: x at that point, the multiplier λ, or the smallest value f takes there. Setting
 ∇f = λ∇g gives 2ax = λp and 2by = λq, so x and y are each a multiple of λ, and putting them into
 the line fixes λ. The first depth is plain x² + y² with every number above 0; the second puts
@@ -478,6 +478,21 @@ instead of λs/2, and the point where the line crosses an axis. Its check never 
 it walks the line, reads f along it as a parabola, takes its vertex, and only then reads λ back from
 2ax = λp. It joins the Multivariable & Series strand and the Gradient Summit, and a fight that shows
 it up points to the 🗺️ Hillwalker Workshop, where 🚧 Walk the fence finds the same point by walking.
+
+**Separable equations**, the newest, give y′ = kxᵐy² with a starting value y(0) and ask for y
+at a given x. Dividing by y² splits the variables, dy/y² = kxᵐ dx, and integrating gives
+−1/y = kxᵐ⁺¹/(m + 1) + c; x = 0 fixes c = −1/y(0), so 1/y = 1/y(0) − kxᵐ⁺¹/(m + 1), and y is
+that turned over. The asked x always comes before the solution runs off to infinity. y(0) is
+sometimes a fraction, since with a whole y(0) a whole y is rare. The first depth keeps y(0) and x
+above 0 with m = 0 or 1; the second lets signs in and m reach 2; the third has m from 1 to 3 and k
+up to 6. Whole and fractional answers come up about equally. The wrong answers are the slips
+people make: the minus from ∫y⁻² dy lost, xᵐ integrated without dividing by m + 1 or
+differentiated instead, y(0) put in for the constant where 1/y(0) belongs, 1/y given for y, y held
+at y(0) for one Euler-like step, and y(0) itself. Its check steps the equation itself with
+Runge–Kutta from 0 to the asked x. It joins the Applications strand and the Infinite Expanse, and a
+fight that shows it up points to the 👣 Euler Step Workshop. Adding it pushed the heaviest knight's
+code one QR version past what a phone can scan, so knight codes moved to KE9-, which keeps mastery
+in eight bits rather than ten; KE8- codes still import with their history.
 
 ---
 
@@ -1351,7 +1366,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Eighty-eight topics link to fifty-seven workshops,
+  back button returns to the summary. Eighty-nine topics link to fifty-seven workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -2304,10 +2319,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading eighty-eight bars.
+  reading eighty-nine bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Eighty-eight topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Eighty-nine topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
