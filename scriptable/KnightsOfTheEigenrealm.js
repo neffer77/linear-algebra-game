@@ -4781,6 +4781,78 @@ linODE(d){
             : \`\${steady} Every solution is that value plus Ce^(−kt), which dies away, so y settles at \${show(ans)}.\`};
   }
 },
+/* Lagrange multipliers. Find the lowest point of f = ax² + by² on the line
+   px + qy = s, with ∇f = λ∇g: 2ax = λp and 2by = λq put x and y in terms of
+   λ, and the line then fixes λ. The question asks for x at the lowest point,
+   for λ, or for the smallest value f takes there. The first depth is the
+   plain x² + y² with every number above 0; the second puts numbers up to 4
+   in front of x² and y² and lets signs in; the third widens them to 6 and
+   the line's numbers to 5. The wrong answers are the slips: the 2 in ∇f left
+   out, the sign of λ turned, the numbers in front of x² and y² left out or
+   multiplied instead of divided, y for x, λ for x or for f, f read as λ/2 or
+   λs instead of λs/2, and the point where the line crosses an axis. */
+lagrange(d){
+  const F=(a,b=1)=>{ if(b<0){ a=-a; b=-b; } const g=gcd(a,b)||1; return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const add=(x,y)=>F(x[0]*y[1]+y[0]*x[1],x[1]*y[1]), mul=(x,y)=>F(x[0]*y[0],x[1]*y[1]);
+  const co=n=>n===1?'':String(n);
+  const lam=u=>u[0]===u[1]?'λ':u[0]===-u[1]?'−λ':\`\${show(u)}λ\`;
+  const term=(c,v,first)=>first ? \`\${c<0?'−':''}\${Math.abs(c)===1?'':Math.abs(c)}\${v}\` : sgn(c,v);
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const a=d===1?1:R.i(1,d===2?4:6), b=d===1?1:R.i(1,d===2?4:6);
+    const p=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5), q=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5);
+    const s=d===1?R.i(1,12):d===2?R.nz(-12,12):R.nz(-15,15);
+    const k=R.i(0,2);
+    const D=p*p*b+q*q*a;
+    const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);
+    const ans=[X,L,M][k];
+    const slips = k===0 ? [
+      [Y,'that is y at the lowest point; x comes from 2ax = λp'],
+      [F(s*p,p*p+q*q),'that leaves out the numbers in front of x² and y²; ∇f = (2ax, 2by)'],
+      [F(s,p),'that is where the line crosses the x-axis; the lowest point need not have y = 0'],
+      [L,'that is λ; x comes from 2ax = λp, so x = λp/(2a)'],
+      [F(2*s*p*b,D),'that leaves out the 2 in ∇f; 2ax = λp, so x = λp/(2a)']
+    ] : k===1 ? [
+      [F(s*a*b,D),'that leaves out the 2 in ∇f = (2ax, 2by)'],
+      [F(-2*s*a*b,D),'that has the sign turned; ∇f = λ∇g, so 2ax = λp'],
+      [F(2*s,p*p+q*q),'that leaves out the numbers in front of x² and y²; ∇f = (2ax, 2by)'],
+      [F(2*s,a*p*p+b*q*q),'that multiplies by the numbers in front of x² and y² instead of dividing; x = λp/(2a)'],
+      [M,'that is the smallest value of f, not λ'],
+      [X,'that is x at the lowest point, not λ']
+    ] : [
+      [F(s*a*b,D),'that is λ/2; at the lowest point f = λs/2'],
+      [F(2*s*s*a*b,D),'that is λs; at the lowest point f = λs/2, half of that'],
+      [F(s*s,p*p+q*q),'that leaves out the numbers in front of x² and y²; ∇f = (2ax, 2by)'],
+      [L,'that is λ, not the value of f'],
+      [F(a*s*s,p*p),'that is f where the line crosses the x-axis, not at the lowest point'],
+      [F(b*s*s,q*q),'that is f where the line crosses the y-axis, not at the lowest point']
+    ];
+    const big=u=>Math.abs(u[0])>999 || u[1]>99;
+    const ok=u=>u[0]!==0 && !big(u) && key(u)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(sl=>(sl[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const fx=\`\${co(a)}x² + \${co(b)}y²\`, line=\`\${term(p,'x',true)}\${term(q,'y',false)} = \${neg(s)}\`;
+    const cx=F(p,2*a), cy=F(q,2*b), T=add(mul(F(p),cx),mul(F(q),cy));
+    const ask=['What is x at the lowest point?','What is λ?','What is the smallest value f takes on the line?'][k];
+    const work=\`∇f = (\${2*a}x, \${2*b}y) and ∇g = (\${neg(p)}, \${neg(q)}), so \${2*a}x = \${p===1?'':p===-1?'−':neg(p)}λ and \${2*b}y = \${q===1?'':q===-1?'−':neg(q)}λ, giving x = \${lam(cx)} and y = \${lam(cy)}. On the line that is \${lam(T)} = \${neg(s)}, so λ = \${show(L)}.\`;
+    const tail=k===0 ? \` Then x = \${lam(cx)} = \${show(X)}.\`
+      : k===1 ? ''
+      : \` Then x = \${show(X)} and y = \${show(Y)}, and f = \${co(a)}x² + \${co(b)}y² there is \${show(M)}.\`;
+    return {topic:'Lagrange Multipliers',
+      codex:{rule:'At the lowest point of f on the curve g = c, ∇f = λ∇g. Solve those equations for the point in terms of λ, then put it into g = c to find λ.',
+             eg:'x² + y² on x + y = 2: (2x, 2y) = λ(1, 1) gives x = y = λ/2, and λ/2 + λ/2 = 2 makes λ = 2, so the point is (1, 1) and f = 2.'},
+      q:\`Find the lowest point of f = \${fx} on the line g = \${line}, using a Lagrange multiplier with ∇f = λ∇g. \${ask}\`,
+      a:show(ans),
+      d:dist.map(([u,w])=>[show(u),w]),
+      ex:work+tail};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -5145,7 +5217,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis', linODE:'Linear Differential Equations'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis', linODE:'Linear Differential Equations', lagrange:'Lagrange Multipliers'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -5159,7 +5231,7 @@ const STRANDS = [
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff','paramDeriv']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton','linODE']],
-  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv']]
+  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv','lagrange']]
 ];
 
 /* The hands-on workshop that shows a topic working, for the topics one
@@ -5224,7 +5296,7 @@ const WORKSHOP_FOR = (() => {
     Bend:    ["〰️ Bend Workshop", ['secondDeriv','inflection']],
     Optim:   ["🏗️ Biggest Build Workshop", ['optimisation','critical']],
     Descent: ["⛰️ Downhill Workshop", ['gradient']],
-    Hill:    ["🗺️ Hillwalker Workshop", ['dirDeriv','partial']]
+    Hill:    ["🗺️ Hillwalker Workshop", ['dirDeriv','partial','lagrange']]
   };
   const out = {};
   for (const mod in W) for (const k of W[mod][1]) out[k] = {mod, name:W[mod][0]};
@@ -5763,7 +5835,7 @@ const REALMS = [
        ground:['#3a2a11','#120b04'], rim:'rgba(255,210,130,.2)', haze:'rgba(40,28,10,.8)',
        glow:'#fff0cd', weather:'shards', accent:'#ffcf7a'},
    pool:['gradient','dirDeriv','chainMulti','tangentPlane','doubleInt','geoSeries','taylor',
-         'partial','vecProj','optimisation','byParts','eigenvec','radiusConv'],
+         'partial','vecProj','optimisation','byParts','eigenvec','radiusConv','lagrange'],
    foes:[
      {nm:'Saddle Point Sentinel', art:'golem',    hp:1300,atk:182,gold:640,xp:600,  col:'#ffcf7a'},
      {nm:'Steepest Descent',      art:'wraith',   hp:1450,atk:197,gold:720,xp:680,  col:'#ffb648'},

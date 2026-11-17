@@ -1,102 +1,102 @@
 {
-  "change": "Add linear differential equations as a fight topic: y′ + py = q settles at q/p, and C = y(0) − q/p.",
+  "change": "Add Lagrange multipliers as a fight topic: ∇f = λ∇g on a line, for x, λ or the smallest value of ax² + by².",
   "mutations": [
     {
-      "name": "the steady value upside down",
+      "name": "λ without the 2",
       "file": "index.html",
-      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
-      "replace": "    const L=F(b,c), y=F(y0), C=sub(y,L);",
+      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
+      "replace": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(s*a*b,D), M=F(s*s*a*b,D);",
       "run": "verify"
     },
     {
-      "name": "C taken the wrong way round",
+      "name": "x with a and b swapped",
       "file": "index.html",
-      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
-      "replace": "    const L=F(c,b), y=F(y0), C=sub(L,y);",
+      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
+      "replace": "const X=F(s*p*a,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
       "run": "verify"
     },
     {
-      "name": "the steady value divided by a",
+      "name": "the smallest value doubled",
       "file": "index.html",
-      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
-      "replace": "    const L=F(c,b*a), y=F(y0), C=sub(y,L);",
+      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
+      "replace": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(2*s*s*a*b,D);",
       "run": "verify"
     },
     {
-      "name": "the sign slip named as the flip",
+      "name": "the denominator with a and b swapped",
       "file": "index.html",
-      "find": "[F(-c,b),'that has the sign turned;",
-      "replace": "[F(b,c),'that has the sign turned;",
+      "find": "const D=p*p*b+q*q*a;",
+      "replace": "const D=p*p*a+q*q*b;",
       "run": "verify"
     },
     {
-      "name": "the y(0) slip for C named as y(0) − q/p",
+      "name": "the sign slip named as the missing 2",
       "file": "index.html",
-      "find": "[y,'that is y(0) itself;",
-      "replace": "[C,'that is y(0) itself;",
+      "find": "[F(-2*s*a*b,D),'that has the sign turned;",
+      "replace": "[F(s*a*b,D),'that has the sign turned;",
       "run": "verify"
     },
     {
-      "name": "the a slip named for a = 1 at the third depth",
+      "name": "the x-axis crossing named for y",
       "file": "index.html",
-      "find": "[F(c,a),a===1?'that leaves out dividing by p; with y′ = 0 the equation is p·y = q':",
-      "replace": "[F(c,a),a>0?'that leaves out dividing by p; with y′ = 0 the equation is p·y = q':",
+      "find": "[F(a*s*s,p*p),'that is f where the line crosses the x-axis",
+      "replace": "[F(a*s*s,q*q),'that is f where the line crosses the x-axis",
       "run": "verify"
     },
     {
-      "name": "negatives let in at the first depth",
+      "name": "the 2x slip never offered",
       "file": "index.html",
-      "find": "const c=d===1?R.i(1,12):",
-      "replace": "const c=d===1?R.i(-12,12)||1:",
+      "find": "      [F(2*s*p*b,D),'that leaves out the 2 in ∇f; 2ax = λp, so x = λp/(2a)']\n",
+      "replace": "      [F(2*s*p*b,D),'that leaves out the 2 in ∇f; 2ax = λp, so x = λp/(2a)'].slice(0,0)\n",
       "run": "verify"
     },
     {
-      "name": "no number in front of y′ at the third depth",
+      "name": "signs let in at the first depth",
       "file": "index.html",
-      "find": "const a=d===3?R.i(2,4):1;",
-      "replace": "const a=1;",
+      "find": "const s=d===1?R.i(1,12):",
+      "replace": "const s=d===1?R.nz(-12,12):",
       "run": "verify"
     },
     {
-      "name": "p no bigger at the second depth",
+      "name": "the second depth as wide as the third",
       "file": "index.html",
-      "find": "const b=d===1?R.i(1,4):d===2?R.i(1,6):R.i(2,9);",
-      "replace": "const b=d===1?R.i(1,4):d===2?R.i(1,4):R.i(2,9);",
+      "find": "const a=d===1?1:R.i(1,d===2?4:6), b=d===1?1:R.i(1,d===2?4:6);",
+      "replace": "const a=d===1?1:R.i(1,6), b=d===1?1:R.i(1,6);",
+      "run": "verify"
+    },
+    {
+      "name": "only two questions asked",
+      "file": "index.html",
+      "find": "const k=R.i(0,2);\n    const D=",
+      "replace": "const k=R.i(0,1);\n    const D=",
       "run": "verify"
     },
     {
       "name": "the answer's form never chosen",
       "file": "index.html",
-      "find": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const eq=",
-      "replace": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const eq=",
+      "find": "(ans[1]===1)!==whole) && g<3000) continue;\n    const fx=",
+      "replace": "false) && g<3000) continue;\n    const fx=",
       "run": "verify"
     },
     {
-      "name": "the question always the steady value",
+      "name": "the working's λ off by its sign",
       "file": "index.html",
-      "find": "    const k=R.i(0,1);\n    const L=F(c,b)",
-      "replace": "    const k=0;\n    const L=F(c,b)",
+      "find": "On the line that is ${lam(T)} = ${neg(s)}, so λ = ${show(L)}.",
+      "replace": "On the line that is ${lam(T)} = ${neg(s)}, so λ = ${show(F(-L[0],L[1]))}.",
       "run": "verify"
     },
     {
-      "name": "the working's steady value left undivided",
+      "name": "the working's ∇g with its parts swapped",
       "file": "index.html",
-      "find": "`${neg(c)}/${b} = ${show(L)}`;",
-      "replace": "`${neg(c)}/${b} = ${neg(c)}`;",
+      "find": "∇g = (${neg(p)}, ${neg(q)})",
+      "replace": "∇g = (${neg(q)}, ${neg(p)})",
       "run": "verify"
     },
     {
-      "name": "the working's C on the wrong side",
+      "name": "the third depth's line no wider",
       "file": "index.html",
-      "find": "So C = ${neg(y0)} − ${L[0]<0?'('+show(L)+')':show(L)} = ${show(ans)}.",
-      "replace": "So C = ${show(L)} − ${neg(y0)} = ${show(ans)}.",
-      "run": "verify"
-    },
-    {
-      "name": "y(0) never negative later",
-      "file": "index.html",
-      "find": "const y0=d===1?R.i(1,9):R.i(-9,9);",
-      "replace": "const y0=d===1?R.i(1,9):R.i(1,9);",
+      "find": "const p=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5), q=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5);",
+      "replace": "const p=d===1?R.i(1,3):R.nz(-3,3), q=d===1?R.i(1,3):R.nz(-3,3);",
       "run": "verify"
     }
   ]

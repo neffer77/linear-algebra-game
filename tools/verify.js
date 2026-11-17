@@ -746,7 +746,8 @@ let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: 
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
 let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
-let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, ny: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
+let lmWhole = 0, lmSeen = new Set(), lmShape = { neg: 0, ab: 0, amax: 0, pmax: 0, ask: {} };   // Lagrange multipliers: whole answers, slips seen, signs, numbers in front of x² and y², the line's largest number, which question is asked
+let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
 let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, lo: 0, hi: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the smallest and largest entries
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
@@ -1580,6 +1581,49 @@ Object.assign(ANALYSIS, {
     loShape.a[a] = 1; loShape.ask[k] = 1; loShape.bmax = Math.max(loShape.bmax, b);
     covered.add('linODE');
   },
+  // Lagrange multipliers, checked without the multiplier's algebra: the
+  // line is walked as a point plus t times its direction, f along it is a
+  // quadratic in t read off from three of its values, its lowest point is
+  // the vertex of that parabola, and λ is read back from 2ax = λp there. Each wrong answer is
+  // worked again as the slip it names.
+  lagrange: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const q = fl(p.q).match(/^Find the lowest point of f = (\d*)x² \+ (\d*)y² on the line g = (-?)(\d*)x ([+-]) (\d*)y = (-?\d+), using a Lagrange multiplier with ∇f = λ∇g\. (What is x at the lowest point\?|What is λ\?|What is the smallest value f takes on the line\?)$/);
+    if (!q) { fail('analysis', 'lagrange', `the question does not read as a Lagrange multiplier problem: ${fl(p.q)}`); return; }
+    const a = q[1] ? +q[1] : 1, b = q[2] ? +q[2] : 1, pp = (q[3] ? -1 : 1) * (q[4] ? +q[4] : 1), qq = (q[5] === '-' ? -1 : 1) * (q[6] ? +q[6] : 1), s = +q[7];
+    const k = q[8].startsWith('What is x') ? 0 : q[8].startsWith('What is λ') ? 1 : 2;
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const n2 = pp * pp + qq * qq, x0 = s * pp / n2, y0 = s * qq / n2, f = t => a * (x0 + t * qq) ** 2 + b * (y0 - t * pp) ** 2;
+    const qa = (f(1) + f(-1)) / 2 - f(0), qb = (f(1) - f(-1)) / 2;
+    if (!(qa > 0)) { fail('analysis', 'lagrange', `f has no lowest point on the line: ${fl(p.q)}`); return; }
+    const t = -qb / (2 * qa), X = x0 + t * qq, Y = y0 - t * pp, M = f(t), L = 2 * a * X / pp;
+    if (Math.abs(2 * b * Y - L * qq) > 1e-6) fail('analysis', 'lagrange', `∇f is not a multiple of ∇g at the lowest point: ${fl(p.q)}`);
+    const ansV = val(fl(p.a));
+    if (Math.abs(ansV - [X, L, M][k]) > 1e-6) fail('analysis', 'lagrange', `${fl(p.a)} is not ${['x at the lowest point', 'λ', 'the smallest value'][k]} (${[X, L, M][k]}): ${fl(p.q)}`);
+    if (ansV === 0) fail('analysis', 'lagrange', `the answer is 0: ${fl(p.q)}`);
+    const n0 = n2, nm = a * pp * pp + b * qq * qq;
+    const slip = k === 0 ? [[/^that is y at the lowest point/, Y, 'xy'], [/^that leaves out the numbers in front of x² and y²/, s * pp / n0, 'xab'],
+      [/^that is where the line crosses the x-axis/, s / pp, 'xcross'], [/^that is λ; x comes from/, L, 'xlam'], [/^that leaves out the 2 in ∇f; 2ax/, 2 * X, 'x2']]
+      : k === 1 ? [[/^that leaves out the 2 in ∇f = /, L / 2, 'l2'], [/^that has the sign turned/, -L, 'lsign'], [/^that leaves out the numbers in front of x² and y²/, 2 * s / n0, 'lab'],
+      [/^that multiplies by the numbers in front/, 2 * s / nm, 'lmul'], [/^that is the smallest value of f, not λ/, M, 'lM'], [/^that is x at the lowest point, not λ/, X, 'lx']]
+      : [[/^that is λ\/2;/, L / 2, 'm2'], [/^that is λs;/, L * s, 'ms'], [/^that leaves out the numbers in front of x² and y²/, s * s / n0, 'mab'],
+      [/^that is λ, not the value of f/, L, 'mlam'], [/^that is f where the line crosses the x-axis/, a * s * s / pp / pp, 'mxc'], [/^that is f where the line crosses the y-axis/, b * s * s / qq / qq, 'myc']];
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'lagrange', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6) fail('analysis', 'lagrange', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      lmSeen.add(sl[2]);
+    });
+    const w = fl(p.ex), num = '(-?\\d+(?:\\/\\d+)?)';
+    const head = w.match(new RegExp(`^∇f = \\((\\d+)x, (\\d+)y\\) and ∇g = \\((-?\\d+), (-?\\d+)\\), so .*On the line that is .* = (-?\\d+), so λ = ${num}\\.`)), end = w.match(new RegExp(`(?:=|is|λ =) ${num}\\.$`));
+    if (!head || +head[1] !== 2 * a || +head[2] !== 2 * b || +head[3] !== pp || +head[4] !== qq || +head[5] !== s || Math.abs(val(head[6]) - L) > 1e-6 || !end || Math.abs(val(end[1]) - ansV) > 1e-9)
+      fail('analysis', 'lagrange', `the working does not set ∇f = λ∇g and carry λ to the answer: ${w}`);
+    if (pp < 0 || qq < 0 || s < 0) lmShape.neg = 1;
+    if (a > 1 || b > 1) lmShape.ab = 1;
+    lmShape.amax = Math.max(lmShape.amax, a, b); lmShape.pmax = Math.max(lmShape.pmax, Math.abs(pp), Math.abs(qq)); lmShape.ask[k] = 1;
+    covered.add('lagrange');
+  },
   // Determinant rules, worked again here on actual matrices: an A and a B are
   // built with the stated determinants (a diagonal scaled, then mixed by
   // matrices of determinant 1), the expression is multiplied out, transposed
@@ -1951,7 +1995,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 87, sig: 0x4267 };
+  const PINNED = { count: 88, sig: 0x5744 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -17814,6 +17858,36 @@ for (let d = 1; d <= 3; d++) {
   if (!!loShape.a[1] !== (d < 3) || Object.keys(loShape.a).length !== (d < 3 ? 1 : 3)) fail('analysis', 'linODE', `depth ${d} puts ${Object.keys(loShape.a).join(', ')} in front of y′`);
   if (loShape.bmax !== [4, 6, 9][d - 1]) fail('analysis', 'linODE', `depth ${d} reaches p = ${loShape.bmax}`);
   if (loWhole < LO * 0.42 || loWhole > LO * 0.58) fail('analysis', 'linODE', `depth ${d} gives a whole answer ${loWhole} times in ${LO}, not about half`);
+}
+
+// Lagrange multipliers at every depth: five different exact numbers, none
+// 0, two of the four wrong ones sharing the answer's sign and two its form;
+// every slip the depth allows turns up; all three questions are asked; the
+// first depth is x² + y² with every number above 0, the second lets signs in
+// and numbers up to 4 in front of x² and y², the third widens those to 6 and
+// the line's numbers to 5; and whole and fractional answers come up about
+// equally.
+for (let d = 1; d <= 3; d++) {
+  const LG = 3000;
+  lmWhole = 0; lmSeen = new Set(); lmShape = { neg: 0, ab: 0, amax: 0, pmax: 0, ask: {} };
+  for (let i = 0; i < LG; i++) {
+    const p = GEN.lagrange(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'lagrange', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'lagrange', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const pos = v => !v.startsWith('-'), whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => pos(v) === pos(vals[0])).length < 2) fail('analysis', 'lagrange', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'lagrange', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'lagrange', `a number runs too long: ${vals.join(', ')}`);
+    if (whole(vals[0])) lmWhole++;
+    ANALYSIS.lagrange(p);
+  }
+  if (lmSeen.size !== (d === 1 ? 13 : 17)) fail('analysis', 'lagrange', `depth ${d} offers only ${lmSeen.size} of its ${d === 1 ? 13 : 17} slips`);
+  if (Object.keys(lmShape.ask).length !== 3) fail('analysis', 'lagrange', `depth ${d} asks only ${Object.keys(lmShape.ask).length} of its three questions`);
+  if (!!lmShape.neg !== (d > 1)) fail('analysis', 'lagrange', `depth ${d} ${d > 1 ? 'never has' : 'has'} a negative number`);
+  if (!!lmShape.ab !== (d > 1) || lmShape.amax !== [1, 4, 6][d - 1]) fail('analysis', 'lagrange', `depth ${d} puts up to ${lmShape.amax} in front of x² and y²`);
+  if (lmShape.pmax !== [3, 3, 5][d - 1]) fail('analysis', 'lagrange', `depth ${d} reaches ${lmShape.pmax} in the line`);
+  if (lmWhole < LG * 0.42 || lmWhole > LG * 0.58) fail('analysis', 'lagrange', `depth ${d} gives a whole answer ${lmWhole} times in ${LG}, not about half`);
 }
 
 // Determinant rules at every depth: five different exact numbers, none 0,
