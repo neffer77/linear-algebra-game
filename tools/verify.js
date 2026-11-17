@@ -9215,6 +9215,148 @@ const hzPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Rank the lines: the best fit workshop's third mode. Every line is worked
+   again from the points: each miss as y minus the line's height, the total
+   of their squares, and the ranks from a sort of the totals. Every line is
+   ranked wrong in all three wrong ways and the slip worked; each round's
+   misleading cases (misses that cancel, a line through points beaten, smaller
+   misses beaten once squared) are found afresh; and the drawing is checked:
+   each line through its own heights, and a red miss from it to every point it
+   does not hit. */
+const fitRankNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Fit = {render(){ env.renders++; }};" +
+    cut('const FitRank = {', '/* ============ ORDER MATTERS ============') + 'return FitRank;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const ORD = ['1st', '2nd', '3rd', '4th'];
+  const and = a => a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1];
+  // the line read aloud: y = mx + c with a 1 and a 0 left out
+  const say = ([m, c]) => { const t = m === 0 ? '' : (m === 1 ? '' : m === -1 ? '−' : ng(m)) + 'x';
+    return 'y = ' + (t ? t + (c ? ` ${c > 0 ? '+' : '−'} ${Math.abs(c)}` : '') : ng(c)); };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('fitrank', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== "Each point misses a line by its y minus the line's height there. Square every miss and add them up: the smaller the total, the better the line fits. Rank the four lines from 1st, the best fit, to 4th, the worst.") fail('fitrank', 'rule', 'the rule is not stated as it should be');
+  let checks = 0, wrongs = 0, segs = 0;
+  S.ROUNDS.forEach((Rd, ri) => {
+    const key = `round ${ri + 1}`, P = Rd.P, Ls = Rd.L;
+    reset(); S.ri = ri;
+    if (P.length !== 5 || Ls.length !== 4) { fail('fitrank', key, 'it does not hold five points and four lines'); return; }
+    if (new Set(P.map(p => p[0])).size !== 5) fail('fitrank', key, 'two points share an x');
+    if (new Set(Ls.map(l => l.join())).size !== 4) fail('fitrank', key, 'two lines are the same');
+    const miss = Ls.map(([m, c]) => P.map(([x, y]) => y - (m * x + c)));
+    const tot = miss.map(r => r.reduce((s, v) => s + v * v, 0));
+    if (new Set(tot).size !== 4) fail('fitrank', key, `two lines tie on ${tot.join(', ')}`);
+    const sorted = [...tot].sort((a, b) => a - b), truth = tot.map(t => sorted.indexOf(t));
+    if (truth.some((t, i) => S.truth(i) !== t || S.sse(i) !== tot[i])) fail('fitrank', key, `its lines are ranked ${[0, 1, 2, 3].map(i => S.truth(i) + 1).join('')}, not ${truth.map(t => t + 1).join('')}`);
+    if (truth.join() === '0,1,2,3' || truth.join() === '3,2,1,0') fail('fitrank', key, 'the lines come in order, so the letters give the ranking away');
+    // the lines stay in the picture where the points are
+    Ls.forEach(([m, c], i) => { if (Math.abs(m * -2 + c) > 4 || Math.abs(m * 2 + c) > 4) fail('fitrank', key, `line ${'ABCD'[i]} leaves the picture over the points`); });
+    if (P.some(([x, y]) => y < -4 || y > 5 || x < -3 || x > 3)) fail('fitrank', key, 'a point is off the picture');
+    // what the round holds, found afresh
+    const sum = miss.map(r => r.reduce((s, v) => s + v, 0)), size = miss.map(r => r.reduce((s, v) => s + Math.abs(v), 0)), hits = miss.map(r => r.filter(v => v === 0).length);
+    const cn = [0, 1, 2, 3].filter(i => sum[i] === 0 && truth[i] > 0), th = [], sq = [];
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+      if (hits[i] >= 2 && hits[j] === 0 && truth[i] > truth[j]) th.push([i, j]);
+      if (size[i] < size[j] && truth[i] > truth[j]) sq.push([i, j]); }
+    const tags = [cn.length ? 'cancel' : null, th.length ? 'through' : null, sq.length ? 'square' : null].filter(Boolean);
+    if (!tags.length) fail('fitrank', key, 'nothing in it misleads');
+    if (S.tags().join() !== tags.join()) fail('fitrank', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // the best line's misses may add up to 0 as well, but that is no surprise, so it is never told as cancelling
+    if (S.cancels().join() !== cn.join()) fail('fitrank', key, `the lines told as cancelling are ${S.cancels().map(i => 'ABCD'[i]).join(', ') || 'none'}, not ${cn.map(i => 'ABCD'[i]).join(', ') || 'none'}`);
+    // every line ranked wrong, one at a time, in all three wrong ways
+    Ls.forEach((l, i) => {
+      for (let k = 0; k < 4; k++) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `${'ABCD'[i]}, ${say(l)}: the misses are ${and(miss[i].map(ng))}, their squares ${and(miss[i].map(v => String(v * v)))}, and they add up to ${tot[i]}. Of the totals ${and(sorted.map(String))}, that is the ${ORD[truth[i]]} smallest, so it ranks ${ORD[truth[i]]}. You had it ${ORD[k]}.`,
+          '0 ranked right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('fitrank', key, `with ${'ABCD'[i]} ranked ${ORD[k]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        const ring = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+        if (ring.length !== 1 || +ring[0][1] !== (i % 2) * 180 + 3 || +ring[0][2] !== Math.floor(i / 2) * 120 + 3) fail('fitrank', key, `with ${'ABCD'[i]} wrong, its pane is not ringed alone`);
+        if (/data-k="rank"/.test(svg)) fail('fitrank', key, `with ${'ABCD'[i]} wrong, the ranks are given away`);
+        if (S.solved || S.streak) fail('fitrank', key, 'a wrong ranking is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('fitrank', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 ranked right on the first check this visit.'].join(' | ')) fail('fitrank', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('fitrank', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, ranked with the buttons
+    reset(); S.ri = ri;
+    if (!/id="frkCheck" disabled /.test(S.html())) fail('fitrank', key, 'the check is open before the lines are ranked');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="frkCheck" disabled /.test(S.html())) fail('fitrank', key, `the check opens with ${'ABCD'[skip]} unranked`);
+      S.check();
+      if (S.tries || S.marks) fail('fitrank', key, `a check runs with ${'ABCD'[skip]} unranked`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="FitRank\\.call\\(${i},(\\d)\\)" aria-label="Line ${'ABCD'[i]}, ${say(Ls[i]).replace(/[+]/g, '\\+')}, ranks ${ORD[t]}${t === 0 ? ', the best fit' : t === 3 ? ', the worst' : ''}"`));
+      if (!m || +m[1] !== t) fail('fitrank', key, `the button ranking ${'ABCD'[i]} ${ORD[t]} does not rank it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`FitRank\\.call\\(${i},`, 'g')) || []).length !== 4) fail('fitrank', key, `${'ABCD'[i]} does not offer all four ranks`);
+    });
+    if (S.calls.join() !== truth.join()) fail('fitrank', key, 'the buttons cannot make the right ranking');
+    if (/id="frkCheck" disabled /.test(S.html())) fail('fitrank', key, 'the check stays shut with every line ranked');
+    S.check(); checks++;
+    const want = ['Yes: all four are ranked right.'];
+    if (cn.length) want.push(`The misses from ${'ABCD'[cn[0]]}, ${say(Ls[cn[0]])}, add up to 0, yet it ranks ${ORD[truth[cn[0]]]}: misses above and below cancel in a plain sum, but a square is never negative.`);
+    if (th.length) { const [i, j] = th[0]; want.push(`${'ABCD'[i]} runs through ${hits[i]} of the points, yet ${'ABCD'[j]} touches none and still ranks above it: hitting points exactly is not the test.`); }
+    if (sq.length) { const [i, j] = sq[0]; want.push(`${'ABCD'[i]}'s misses come to ${size[i]} in all against ${'ABCD'[j]}'s ${size[j]}, yet ${'ABCD'[i]} ranks below: squaring makes one big miss count for more than several small ones.`); }
+    want.push(`The totals: ${tot.map((t, i) => `${'ABCD'[i]} ${t}`).join(', ')}.`);
+    want.push('1 ranked right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('fitrank', key, `once ranked the readout is ${S.working().join(' | ')}`);
+    // the drawing: each line through its own heights, and a red miss to every point off it
+    const svg = S.svg();
+    const lines = [...svg.matchAll(/data-k="line" clip-path="url\(#frkClip(\d)\)" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)];
+    if (lines.length !== 4) fail('fitrank', key, `${lines.length} lines are drawn, not four`);
+    const toX = (i, px) => -3 + (px - (i % 2) * 180 - 14) / 152 * 6, toY = (i, py) => -4 + (Math.floor(i / 2) * 120 + 108 - py) / 96 * 9;
+    lines.forEach((m, i) => { const [a, b] = [[+m[2], +m[3]], [+m[4], +m[5]]], [mm, c] = Ls[i];
+      if (+m[1] !== i || Math.abs(toY(i, a[1]) - (mm * toX(i, a[0]) + c)) > 0.01 || Math.abs(toY(i, b[1]) - (mm * toX(i, b[0]) + c)) > 0.01 || Math.abs(toX(i, a[0]) + 3) > 0.01 || Math.abs(toX(i, b[0]) - 3) > 0.01) fail('fitrank', key, `line ${'ABCD'[i]} is not drawn as ${say(Ls[i])}`); });
+    const ms = [...svg.matchAll(/data-k="miss-seg" clip-path="url\(#frkClip(\d)\)" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)];
+    const wantSegs = []; Ls.forEach(([m, c], i) => P.forEach(([x, y]) => { if (y !== m * x + c) wantSegs.push([i, x, m * x + c, y]); }));
+    if (ms.length !== wantSegs.length) fail('fitrank', key, `${ms.length} misses are drawn, not ${wantSegs.length}`);
+    else ms.forEach((m, k) => { const [i, x, h, y] = wantSegs[k];
+      if (+m[1] !== i || Math.abs(toX(i, +m[2]) - x) > 0.01 || +m[2] !== +m[4] || Math.abs(toY(i, +m[3]) - h) > 0.01 || Math.abs(toY(i, +m[5]) - y) > 0.01) fail('fitrank', key, `the miss from ${'ABCD'[i]} at x = ${x} is not drawn from the line to the point`); else segs++; });
+    if ((svg.match(/data-k="pt"/g) || []).length !== 20) fail('fitrank', key, 'every pane does not show all five points');
+    const rk = [...svg.matchAll(/data-k="rank"[^>]*>([^<]+)</g)].map(m => m[1]);
+    if (rk.join('|') !== truth.map((t, i) => `${ORD[t]} · ${tot[i]}`).join('|')) fail('fitrank', key, `the panes are marked ${rk.join('|')}`);
+    const h = S.html();
+    if (!h.includes('id="frkNext"') || /onclick="FitRank\.call/.test(h.replace(/disabled onclick="FitRank\.call/g, ''))) fail('fitrank', key, 'once ranked, Next is not offered or a rank still opens');
+    const before = S.calls.join(); S.call(0, (truth[0] + 1) % 4);
+    if (S.calls.join() !== before) fail('fitrank', key, 'a rank moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('fitrank', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('fitrank', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const Rd = S.R(), tot = Rd.L.map(([m, c]) => Rd.P.reduce((s, [x, y]) => s + (y - m * x - c) ** 2, 0)), srt = [...tot].sort((a, b) => a - b), right = tot.map(t => srt.indexOf(t));
+    S.calls = right.slice(); if (slip) S.calls[1] = (right[1] + 1) % 4;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,square'], [false, 'cancel,fix,one,square'], [false, 'cancel,fix,one,square,through'], [false, 'cancel,fix,one,square,three,through']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('fitrank', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Squares punish the big miss · A slip caught and fixed | ✓ Right on the first check · Misses that cancel still count | ✓ Hitting points is not the test') fail('fitrank', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'LINE JUDGE / every line ranked') fail('fitrank', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, segs };
+})();
+
 /* Which slope fits best? The best fit workshop turned round. Every number is
    read back off its button and checked against the slip it is named as,
    worked from the points here; the right one alone is the bottom of the
@@ -19745,6 +19887,7 @@ console.log(`  cistern totals     ${pad(cisternPickNotes.rounds.toLocaleString()
 console.log(`  flipped slopes     ${pad(invPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the inverse slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching the inverse solved for a hair either side; ${invPickNotes.misses.toLocaleString()} wrong picks checked against g′(u) × f′(p) = 1, ${invPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  horizons read      ${pad(hzPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-head in the horizon workshop, every number read back off its button and checked against the slip it is named as, the right one alone matching f at ten million; ${hzPickNotes.misses.toLocaleString()} wrong picks checked by the biggest-power part of the gap, ${hzPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  best slopes        ${pad(fitPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-fits-best in the best fit workshop, every number read back off its button and checked against the slip it is named as, the right one alone the bottom of the squared misses; ${fitPickNotes.misses.toLocaleString()} wrong picks checked by the misses times their x gaps, ${fitPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
+console.log(`  lines ranked      ${pad(fitRankNotes.checks.toLocaleString(), 15)}  (checks of four lines ranked by their squared misses in the best fit workshop, ${fitRankNotes.wrongs} of them with one line ranked wrong and caught, and ${fitRankNotes.segs} drawn misses read back from the line to the point)`);
 console.log(`  best pens          ${pad(buildPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-width-holds-most in the biggest build workshop, every width read back off its button and checked against the slip it is named as, the right one alone holding more than a hair either side; ${buildPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, measured, ${buildPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  swept volumes      ${pad(slicePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the slice workshop, every volume read back off its button and checked against the slip it is named as, the right one alone the plane's middle height times the rectangle; ${slicePickNotes.misses.toLocaleString()} wrong picks checked by how the volume grows with its far edge, measured, ${slicePickNotes.worked.toLocaleString()} readouts with every formula worked again)`);
 console.log(`  swapped integrals  ${pad(swapPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the swap workshop, every number read back off its button and checked against the slip it is named as, the right one alone nudged back to the integrand, ${swapPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, measured, ${swapPickNotes.worked.toLocaleString()} readouts with every check worked again)`);

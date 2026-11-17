@@ -1067,7 +1067,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BEST FIT WORKSHOP ============ -->
   <div class="screen" id="s-fit">
     <div class="panel"><h2>📏 Best Fit Workshop</h2><div class="sub">Set a line y = m·x + c through a handful of points. Each point misses the line by its y minus the line's height there. Square every miss and add them up: the line with the smallest total is the best fit, the least-squares line.</div></div>
-    <div id="ftTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the line by hand or pick the best slope"></div>
+    <div id="ftTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set the line by hand, pick the best slope, or rank the lines"></div>
     <div class="panel">
       <div id="fpBox"></div>
       <div id="ftSets" class="wsModes" role="group" aria-label="The points"></div>
@@ -15491,7 +15491,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📏 Best Fit Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats. Then turn it round: see a few points and pick which of four numbers is the slope of the best line.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set a line through scattered points by hand, square and add up how far each one misses, and find the line no other line beats. Then turn it round: see a few points and pick which of four numbers is the slope of the best line. Or rank the lines: four lines through the same points, from the best fit to the worst.</div>
          <button class="btn sm" id="tomeFit" style="width:auto;margin-top:8px" onclick="Fit.open()">Open the best fit workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -18866,11 +18866,11 @@ const Fit = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('ftTab').innerHTML=[['hand','📏 Set it by hand','Set the line through the points by hand'],['pick','🎯 Which slope fits best?','See a few points and pick which of four numbers is the slope of the best line through them']]
+    document.getElementById('ftTab').innerHTML=[['hand','📏 Set it by hand','Set the line through the points by hand'],['pick','🎯 Which slope fits best?','See a few points and pick which of four numbers is the slope of the best line through them'],['rank','🏅 Rank the lines','See four lines through the same points, and rank them from the best fit to the worst']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Fit.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ftSets','ftAmts','ftFig','ftRead','ftGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('fpBox').innerHTML=pick ? FitPick.html() : '';
+    document.getElementById('fpBox').innerHTML=!pick ? '' : this.tab==='pick' ? FitPick.html() : FitRank.html();
     if(pick) return;
     document.getElementById('ftSets').innerHTML=this.SETS.map((o,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Fit.pick(${i})"
@@ -18898,6 +18898,161 @@ const Fit = {
         Celebrate.banner('LINE FITTER','the best line found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Rank the lines: the best fit workshop's third mode ----------
+   Five points and four whole-number lines through the same room, each drawn
+   in its own pane with a red miss from the line to every point. The player
+   ranks the lines from best fit to worst by the total of their squared
+   misses. The rounds are chosen so the easy guesses mislead: a line whose
+   misses add to 0 that is not the best, a line through two points beaten by
+   one that touches none, and a line with smaller misses in all that loses
+   once they are squared. A slip works that line's misses and squares. Every
+   total is a whole number and no two in a round tie. Nothing is saved. */
+const FitRank = {
+  ROUNDS:[
+    {P:[[-2,1],[-1,-1],[0,0],[1,2],[2,1]],    L:[[0,0],[0,2],[1,-1],[1,2]]},
+    {P:[[-2,-1],[-1,1],[0,1],[1,2],[2,2]],    L:[[0,0],[0,1],[1,-1],[1,1]]},
+    {P:[[-2,3],[-1,1],[0,1],[1,-1],[2,-2]],   L:[[-1,2],[-2,0],[0,1],[-1,-1]]},
+    {P:[[-2,0],[-1,0],[0,1],[1,1],[2,4]],     L:[[0,0],[0,1],[0,2],[1,1]]},
+    {P:[[-2,-2],[-1,0],[0,0],[1,1],[2,3]],    L:[[1,-1],[0,-1],[1,0],[0,0]]},
+    {P:[[-2,2],[-1,2],[0,0],[1,0],[2,-1]],    L:[[-2,0],[-1,-1],[-1,0],[-1,2]]}
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',     t:'Rank all four lines right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'cancel',  t:'Rank a line whose misses add up to 0, yet is not the best.', toast:'Misses that cancel still count',
+     ok:K=>K.kinds.has('cancel')},
+    {id:'through', t:'Rank a line through two points below one that touches none.', toast:'Hitting points is not the test',
+     ok:K=>K.kinds.has('through')},
+    {id:'square',  t:'Rank a line with smaller misses in all below one with bigger ones.', toast:'Squares punish the big miss',
+     ok:K=>K.kinds.has('square')},
+    {id:'fix',     t:'Check a ranking with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',   t:'Rank three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Each point misses a line by its y minus the line\'s height there. Square every miss and add them up: the smaller the total, the better the line fits. Rank the four lines from 1st, the best fit, to 4th, the worst.',
+  L:'ABCD',
+  ORD:['1st','2nd','3rd','4th'],
+  R(){ return this.ROUNDS[this.ri]; },
+  line([m,c]){ const mx = m===0 ? '' : m===1 ? 'x' : m===-1 ? '−x' : `${neg(m)}x`;
+    return 'y = '+(mx ? mx+(c===0?'':` ${c>0?'+':'−'} ${Math.abs(c)}`) : neg(c)); },
+  misses(i){ const [m,c]=this.R().L[i]; return this.R().P.map(([x,y])=>y-(m*x+c)); },
+  sse(i){ return this.misses(i).reduce((s,r)=>s+r*r,0); },
+  sum(i){ return this.misses(i).reduce((s,r)=>s+r,0); },
+  size(i){ return this.misses(i).reduce((s,r)=>s+Math.abs(r),0); },
+  hits(i){ return this.misses(i).filter(r=>r===0).length; },
+  /* rank 0 for the best fit, 3 for the worst */
+  truth(i){ const s=this.sse(i); return [0,1,2,3].filter(j=>this.sse(j)<s).length; },
+  /* what a round holds: misses that cancel, a line through points beaten, smaller misses beaten once squared */
+  cancels(){ return [0,1,2,3].filter(i=>this.sum(i)===0 && this.truth(i)>0); },
+  throughs(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.hits(i)>=2 && this.hits(j)===0 && this.truth(i)>this.truth(j)) out.push([i,j]); return out; },
+  squares(){ const out=[]; for(let i=0;i<4;i++) for(let j=0;j<4;j++) if(this.size(i)<this.size(j) && this.truth(i)>this.truth(j)) out.push([i,j]); return out; },
+  tags(){ const t=[]; if(this.cancels().length) t.push('cancel'); if(this.throughs().length) t.push('through'); if(this.squares().length) t.push('square'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  and(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are ranked right.');
+      const cn=this.cancels(), th=this.throughs(), sq=this.squares();
+      if(cn.length){ const i=cn[0];
+        out.push(`The misses from ${this.L[i]}, ${this.line(this.R().L[i])}, add up to 0, yet it ranks ${this.ORD[this.truth(i)]}: misses above and below cancel in a plain sum, but a square is never negative.`); }
+      if(th.length){ const [i,j]=th[0];
+        out.push(`${this.L[i]} runs through ${this.hits(i)} of the points, yet ${this.L[j]} touches none and still ranks above it: hitting points exactly is not the test.`); }
+      if(sq.length){ const [i,j]=sq[0];
+        out.push(`${this.L[i]}'s misses come to ${this.size(i)} in all against ${this.L[j]}'s ${this.size(j)}, yet ${this.L[i]} ranks below: squaring makes one big miss count for more than several small ones.`); }
+      out.push(`The totals: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.sse(i)}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const r=this.misses(i), all=[0,1,2,3].map(j=>this.sse(j)).sort((a,b)=>a-b);
+        out.push(`${this.L[i]}, ${this.line(this.R().L[i])}: the misses are ${this.and(r.map(neg))}, their squares ${this.and(r.map(v=>String(v*v)))}, and they add up to ${this.sse(i)}. Of the totals ${this.and(all.map(String))}, that is the ${this.ORD[this.truth(i)]} smallest, so it ranks ${this.ORD[this.truth(i)]}. You had it ${this.ORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 ranked.`);
+    }
+    out.push(`${this.wins} ranked right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each line in its own pane, x from −3 to 3 and y from −4 to 5: the points
+     in gold, the line in blue, and a red miss from the line to each point it
+     does not hit; a slip rings that pane, and once ranked right each pane
+     gets its rank and its total */
+  XLO:-3, XHI:3, YLO:-4, YHI:5,
+  svg(){
+    const f=n=>n.toFixed(2), R=this.R();
+    let out=`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="The points ${R.P.map(([x,y])=>`(${neg(x)}, ${neg(y)})`).join(', ')}, and four lines: ${[0,1,2,3].map(i=>`${this.L[i]}, ${this.line(R.L[i])}`).join('; ')}${this.solved?', each with its rank and its total':''}">`;
+    out+=`<defs>${[0,1,2,3].map(i=>`<clipPath id="frkClip${i}"><rect x="${(i%2)*180+4}" y="${Math.floor(i/2)*120+4}" width="172" height="112" rx="8"/></clipPath>`).join('')}</defs>`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*120, [m,c]=R.L[i];
+      const PX=x=>X+14+(x-this.XLO)/(this.XHI-this.XLO)*152, PY=y=>Y+108-(y-this.YLO)/(this.YHI-this.YLO)*96;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<line x1="${X+10}" y1="${f(PY(0))}" x2="${X+170}" y2="${f(PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line x1="${f(PX(0))}" y1="${Y+8}" x2="${f(PX(0))}" y2="${Y+112}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line data-k="line" clip-path="url(#frkClip${i})" x1="${f(PX(this.XLO))}" y1="${f(PY(m*this.XLO+c))}" x2="${f(PX(this.XHI))}" y2="${f(PY(m*this.XHI+c))}" stroke="${FIG_COL.a}" stroke-width="2.2"/>`;
+      for(const [x,y] of R.P){ const h=m*x+c;
+        if(y!==h) out+=`<line data-k="miss-seg" clip-path="url(#frkClip${i})" x1="${f(PX(x))}" y1="${f(PY(h))}" x2="${f(PX(x))}" y2="${f(PY(y))}" stroke="${FIG_COL.d}" stroke-width="2"/>`; }
+      for(const [x,y] of R.P) out+=`<circle data-k="pt" cx="${f(PX(x))}" cy="${f(PY(y))}" r="4" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      out+=`<text x="${X+16}" y="${Y+22}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved) out+=`<text data-k="rank" x="${X+168}" y="${Y+22}" fill="${FIG_COL.c}" font-size="13" font-weight="700" text-anchor="end">${this.ORD[this.truth(i)]} · ${this.sse(i)}</text>`;
+    }
+    return out+`</svg>`;
+  },
+  call(i,k){
+    if(this.solved || this.calls[i]===k) return;
+    this.calls=this.calls.slice(); this.calls[i]=k; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Fit.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Fit.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Fit.render(); },
+  btn(i,k){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-k="${k}" aria-pressed="${this.calls[i]===k}" ${this.solved?'disabled ':''}onclick="FitRank.call(${i},${k})" aria-label="Line ${this.L[i]}, ${this.line(this.R().L[i])}, ranks ${this.ORD[k]}${k===0?', the best fit':k===3?', the worst':''}">${this.ORD[k]}</button>`;
+  },
+  html(){
+    const R=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: five points and four lines. Rank the lines from the best fit to the worst.</div>`;
+    out+=`<div id="frkFig">${this.svg()}<div class="figcap">Each pane holds the same five points in gold and one line in blue, with a red miss from the line to every point it does not hit. Once all four are ranked right, each pane gets its rank and its total of squared misses.</div></div>`;
+    out+=`<div id="frkStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+R.L.map((l,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="frkStop" data-i="${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 5;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.line(l)}</span></b>`+
+        [0,1,2,3].map(k=>this.btn(i,k)).join('')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="frkRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="frkNext" onclick="FitRank.next()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="frkCheck" ${this.ready()?'':'disabled '}onclick="FitRank.check()" aria-label="${this.ready()?'Check the four ranks':'Rank all four lines to check them'}">${this.ready()?'Check my ranking':'Rank all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="frkGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="frkGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LINE JUDGE','every line ranked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
