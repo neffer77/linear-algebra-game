@@ -148,6 +148,7 @@ const SUITES = [
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
   require('./play/shaperead'), // read a curve's four points: rises or falls, cup or cap
   require('./play/tailpick'), // see an endless area, pick which of four numbers it closes in on
+  require('./play/tailsort'), // see four endless areas, and call which close in and which run off
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume

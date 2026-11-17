@@ -7615,6 +7615,150 @@ const tailPickNotes = (() => {
   if (fives !== 30) fail('tailpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, wholeR };
 })();
+
+/* Close in or run off? The endless area workshop's third mode. Every area is
+   worked again from the way it is written: its bottom read back as powers of
+   x, p added up as a fraction, the call checked against the area itself
+   pushed out over many doublings, where it closes in checked against the
+   area added up a long way out, every area called wrong and the slip worked,
+   each round's borderline, roots and numbers in front found afresh, and the
+   drawing checked: each curve through its own x^(−p), and once right, each
+   bar of its doublings at its own ratio. */
+const tailSortNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Tail = {render(){ env.renders++; }};" +
+    cut('const TailSort = {', '/* ---------- The lathe workshop') + 'return TailSort;')(env, COL);
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const fr = ([n, d]) => { const k = gcd(n, d); n /= k; d /= k; return d === 1 ? String(n) : `${n}/${d}`; };
+  // the bottom read back as it is written: each factor x, x², √x, ∛x, ∜x or ∛(x²) a power of x
+  const SUP = { '': 1, '²': 2, '³': 3, '⁴': 4 }, ROOT = { '': 1, '√': 2, '∛': 3, '∜': 4 };
+  const read = form => { const m = form.match(/^(\d+)\/(.+)$/); if (!m) return null;
+    const bot = m[2].replace(/^\((.*)\)$/, '$1'); let n = 0, d = 1, used = '';
+    for (const t of bot.matchAll(/([√∛∜]?)(\(?)x([²³⁴]?)\)?/g)) { const a = SUP[t[3]], b = ROOT[t[1]]; n = n * b + a * d; d *= b; used += t[0]; }
+    return used === bot ? { c: +m[1], p: [n, d] } : null; };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('tailsort', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== 'Write each f(x) as c·x^(−p): a root is a power, √x = x^(1/2), ∛x = x^(1/3), ∜x = x^(1/4), and powers multiplied add. The area ∫₁^∞ c·x^(−p) dx closes in exactly when p is more than 1: then each doubling of b adds 2^(1 − p) times what the doubling before it added, less each time. At p = 1 or below it runs off, whatever c is.') fail('tailsort', 'rule', 'the rule is not stated as it should be');
+  const seen = new Set();
+  let checks = 0, wrongs = 0, areas = 0;
+  S.ROUNDS.forEach((Rd, ri) => {
+    const key = `round ${ri + 1}`, L = 'ABCD';
+    reset(); S.ri = ri;
+    if (Rd.length !== 4) { fail('tailsort', key, 'it does not hold four areas'); return; }
+    const A = [0, 1, 2, 3].map(i => read(S.form(i)));
+    if (A.some(a => !a)) { fail('tailsort', key, `an area is written ${[0, 1, 2, 3].map(i => S.form(i)).join(', ')}, which does not read back`); return; }
+    A.forEach((a, i) => { const k = S.form(i); if (seen.has(k)) fail('tailsort', key, `${k} comes round twice`); seen.add(k);
+      if (fr(a.p) !== S.fr(S.p(i)) || a.c !== Rd[i].c) fail('tailsort', key, `${L[i]}, ${k}, is told as p = ${S.fr(S.p(i))}, not ${fr(a.p)}`); });
+    const pv = A.map(a => a.p[0] / a.p[1]);
+    // the area itself, out to b = 2^200 and 2^400 by its antiderivative: closing ones settle, the rest keep growing
+    const area = (i, b) => pv[i] === 1 ? A[i].c * Math.log(b) : A[i].c * (b ** (1 - pv[i]) - 1) / (1 - pv[i]);
+    const truth = [0, 1, 2, 3].map(i => { const a200 = area(i, 2 ** 200), a400 = area(i, 2 ** 400); return a400 - a200 < 1e-6 * A[i].c ? 1 : 0; });
+    truth.forEach((t, i) => { areas++;
+      if (S.truth(i) !== t) fail('tailsort', key, `${L[i]} is called ${S.truth(i) ? 'closing in' : 'running off'}, but its area out to 2⁴⁰⁰ says otherwise`);
+      if (t) { const lim = A[i].c / (pv[i] - 1), [n, d] = S.lim(i);
+        if (Math.abs(area(i, 2 ** 200) - lim) > 1e-6 * lim || Math.abs(n / d - lim) > 1e-9 || gcd(n, d) !== 1) fail('tailsort', key, `${L[i]} is told as closing in on ${n}/${d}, not ${lim}`); } });
+    if (!truth.includes(0) || !truth.includes(1)) fail('tailsort', key, 'every area does the same, so nothing needs reading');
+    // what the round holds, found afresh
+    const bd = [0, 1, 2, 3].filter(i => pv[i] === 1), rt = [0, 1, 2, 3].filter(i => /[√∛∜]/.test(S.form(i)) && truth[i]), fr10 = [0, 1, 2, 3].filter(i => A[i].c >= 10);
+    const tags = [bd.length ? 'border' : null, rt.length ? 'root' : null, fr10.length ? 'front' : null].filter(Boolean);
+    if (!tags.length) fail('tailsort', key, 'nothing in it misleads');
+    if (S.tags().join() !== tags.join()) fail('tailsort', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const ratio = i => { const r = 2 ** (1 - pv[i]), q = Math.round(r * 1e4) / 1e4; return (Math.abs(q - r) < 1e-10 ? '' : 'about ') + q; };
+    const pw = i => `${A[i].c === 1 ? '' : A[i].c}x^(−${fr(A[i].p)})`;
+    const why = i => pv[i] > 1 ? `p is more than 1, so each doubling of b adds ${ratio(i)} times what the doubling before it added, less each time, and the area closes in on c/(p − 1) = ${fr(S.lim(i))}.`
+      : pv[i] === 1 ? `p = 1, the borderline: every doubling of b adds the same ${A[i].c === 1 ? '' : A[i].c + ' × '}ln 2, so the area runs off, though the curve falls toward 0.`
+      : `p is less than 1, so each doubling of b adds ${ratio(i)} times what the doubling before it added, more each time, and the area runs off.`;
+    // every area called wrong, one at a time
+    for (let i = 0; i < 4; i++) {
+      reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = 1 - truth[i]; S.check(); checks++; wrongs++;
+      const want = ['3 of 4 right. Fix the ones in red and check again.',
+        `In ${L[i]}, ${S.form(i)} = ${pw(i)}, so p = ${fr(A[i].p)}. ${why(i)} You had it ${truth[i] ? 'running off' : 'closing in'}.`,
+        '0 called right on the first check this visit.'];
+      const got = S.working();
+      if (got.join(' | ') !== want.join(' | ')) fail('tailsort', key, `with ${L[i]} called wrong the readout is ${got.join(' | ')}`);
+      const svg = S.svg();
+      const ring = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+      if (ring.length !== 1 || +ring[0][1] !== (i % 2) * 180 + 3 || +ring[0][2] !== Math.floor(i / 2) * 120 + 3) fail('tailsort', key, `with ${L[i]} wrong, its pane is not ringed alone`);
+      if (/data-k="bar"|data-k="end"/.test(svg)) fail('tailsort', key, `with ${L[i]} wrong, the answers are given away`);
+      if (S.solved || S.streak) fail('tailsort', key, 'a wrong call is counted');
+      S.call(i, truth[i]);
+      if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('tailsort', key, `changing ${L[i]} leaves its ring`);
+      if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('tailsort', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+      S.check();
+      if (!S.solved || !S.fixed || S.wins) fail('tailsort', key, `fixing ${L[i]} is not counted as a fix`);
+    }
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="tsrCheck" disabled /.test(S.html())) fail('tailsort', key, 'the check is open before the areas are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="tsrCheck" disabled /.test(S.html())) fail('tailsort', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('tailsort', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`data-c="(\\d)" aria-pressed="false" onclick="TailSort\\.call\\(${i},\\1\\)" aria-label="Area ${L[i]}, under ${S.form(i).replace(/[()]/g, '\\$&')}, ${t ? 'closes in' : 'runs off'}"`));
+      if (!m || +m[1] !== t) fail('tailsort', key, `the button calling ${L[i]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`TailSort\\.call\\(${i},`, 'g')) || []).length !== 2) fail('tailsort', key, `${L[i]} does not offer both calls`);
+    });
+    if (S.calls.join() !== truth.join()) fail('tailsort', key, 'the buttons cannot make the right calls');
+    if (/id="tsrCheck" disabled /.test(S.html())) fail('tailsort', key, 'the check stays shut with every area called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (bd.length) { const i = bd[0]; want.push(`${L[i]}, ${S.form(i)}, has p = 1 exactly: every doubling adds the same, so it runs off. Only p more than 1 closes in.`); }
+    if (rt.length) { const i = rt[0]; want.push(`${L[i]}, ${S.form(i)}, has a root in it, yet it is ${pw(i)} with p = ${fr(A[i].p)}, more than 1, so it closes in on ${fr(S.lim(i))}: read the power, not the root sign.`); }
+    if (fr10.length) { const i = fr10[0]; want.push(`${L[i]}'s number in front, ${A[i].c}, only scales its area: ${truth[i] ? `it still closes in, on ${fr(S.lim(i))}` : 'it still runs off'}. No number in front can turn one into the other.`); }
+    want.push(`Where they close in: ${[0, 1, 2, 3].filter(i => truth[i]).map(i => `${L[i]} on ${fr(S.lim(i))}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('tailsort', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each curve through its own x^(−p), and each doubling's bar at its own ratio to the first
+    const svg = S.svg();
+    const cv = [...svg.matchAll(/data-k="curve" clip-path="url\(#tsrClip(\d)\)" points="([^"]+)"/g)];
+    if (cv.length !== 4) fail('tailsort', key, `${cv.length} curves are drawn, not four`);
+    cv.forEach((m, i) => { const X = (i % 2) * 180, Y = Math.floor(i / 2) * 120;
+      const ok = +m[1] === i && m[2].split(' ').every(pt => { const [px, py] = pt.split(',').map(Number), x = 1 + (px - X - 14) / 152 * 15, y = (Y + 70 - py) / 52;
+        return x >= 1 - 1e-6 && x <= 16 + 1e-6 && Math.abs(y - x ** -pv[i]) < 0.01; });
+      if (!ok) fail('tailsort', key, `the curve in ${L[i]} is not x^(−${fr(A[i].p)})`); });
+    const bars = [...svg.matchAll(/data-k="bar" data-h="([^"]+)" x="([^"]+)" y="([^"]+)" width="10" height="([^"]+)" fill="([^"]+)"/g)];
+    if (bars.length !== 20) fail('tailsort', key, `${bars.length} bars are drawn, not twenty`);
+    else bars.forEach((m, k) => { const i = Math.floor(k / 5), j = k % 5, Y = Math.floor(i / 2) * 120;
+      // the area each doubling adds, worked from the area itself, against the first doubling's
+      const add = area(i, 2 ** (j + 1)) - area(i, 2 ** j), first = area(i, 2) - area(i, 1), h = Math.min(10 * add / first, 36);
+      if (Math.abs(+m[4] - h) > 0.01 || Math.abs(+m[3] + +m[4] - (Y + 112)) > 0.01 || m[5] !== (truth[i] ? 'green' : 'gold')) fail('tailsort', key, `doubling ${j + 1} in ${L[i]} is drawn ${m[4]} high, not ${h.toFixed(2)}`); });
+    const ends = [...svg.matchAll(/data-k="end"[^>]*>([^<]+)</g)].map(m => m[1]).join(' | ');
+    if (ends !== [0, 1, 2, 3].map(i => truth[i] ? `closes in on ${fr(S.lim(i))}` : 'runs off').join(' | ')) fail('tailsort', key, `the panes end ${ends}`);
+    const h = S.html();
+    if (!h.includes('id="tsrNext"') || /onclick="TailSort\.call/.test(h.replace(/disabled onclick="TailSort\.call/g, ''))) fail('tailsort', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, 1 - truth[0]);
+    if (S.calls.join() !== before) fail('tailsort', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('tailsort', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('tailsort', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = [0, 1, 2, 3].map(i => S.truth(i));
+    S.calls = right.slice(); if (slip) S.calls[1] = 1 - right[1];
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'border,fix,root'], [false, 'border,fix,front,one,root'], [false, 'border,fix,front,one,root'], [false, 'border,fix,front,one,root,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('tailsort', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ p = 1 still runs off · Read the power, not the root · A slip caught and fixed | ✓ Right on the first check · No number in front decides it') fail('tailsort', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TAIL READER / every endless area called') fail('tailsort', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, areas };
+})();
 /* Which number in front? The pick-a-number round in the growth integral
    workshop. Every number on screen is read back off its button as an exact
    fraction and checked against the slip it is named as, worked out here from
@@ -20029,6 +20173,7 @@ console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 
 console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the trig integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone making the slope of F land on the wave; ${trigPickNotes.misses.toLocaleString()} wrong picks checked by differentiating their F back, ${trigPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${trigPickNotes.wholeR.toLocaleString()} rounds whose c is whole)`);
 console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
+console.log(`  tails called       ${pad(tailSortNotes.checks.toLocaleString(), 12)}  (checks of four endless areas called closing in or running off in the endless area workshop, ${tailSortNotes.wrongs} of them with one area called wrong and caught, and ${tailSortNotes.areas} areas read back from how they are written and pushed out to 2⁴⁰⁰)`);
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
 console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (every equation at every step size, step by step: ${eulerWalkNotes.steps.toLocaleString()} worked steps checked against Euler's points taken again in floats, each landing and each note against Math's own solution, ${eulerWalkNotes.dashes.toLocaleString()} slope dashes read back, ${eulerWalkNotes.goals} goals findable)`);
 console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
