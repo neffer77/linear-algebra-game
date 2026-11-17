@@ -1,103 +1,103 @@
 {
-  "change": "Add a Race to infinity mode to the horizon workshop",
+  "change": "Add an In or out mode to the cross product workshop",
   "mutations": [
     {
-      "name": "an exponential no longer beats a power",
+      "name": "the third part is taken the wrong way round",
       "file": "index.html",
-      "find": "if(A.b || B.b) return (A.b||0)>(B.b||0);",
-      "replace": "if(A.b && B.b) return A.b>B.b;",
+      "find": "z(i){ const [u,v]=this.R()[i]; return u[0]*v[1]-u[1]*v[0]; },",
+      "replace": "z(i){ const [u,v]=this.R()[i]; return u[1]*v[0]-u[0]*v[1]; },",
       "run": "verify"
     },
     {
-      "name": "the power of ln x is ignored",
+      "name": "the swap is missed",
       "file": "index.html",
-      "find": "return A.p!==B.p ? A.p>B.p : A.l>B.l; }",
-      "replace": "return A.p>B.p; }",
+      "find": "if(P[i][0].join()===P[j][1].join() && P[i][1].join()===P[j][0].join()) out.push([i,j]);",
+      "replace": "if(P[i][0].join()===P[j][0].join() && P[i][1].join()===P[j][1].join()) out.push([i,j]);",
       "run": "verify"
     },
     {
-      "name": "values are rounded to whole numbers",
+      "name": "a right angle counts as wide",
       "file": "index.html",
-      "find": "'≈ '+n.toLocaleString('en-US',{maximumFractionDigits:1})",
-      "replace": "'≈ '+n.toLocaleString('en-US',{maximumFractionDigits:0})",
+      "find": "wides(){ return [0,1,2,3].filter(i=>this.z(i)!==0 && this.dot(i)<0); },",
+      "replace": "wides(){ return [0,1,2,3].filter(i=>this.z(i)!==0 && this.dot(i)<=0); },",
       "run": "verify"
     },
     {
-      "name": "places are checked against the order turned round",
+      "name": "the check opens with three called",
       "file": "index.html",
-      "find": "this.marks=this.order.map((k,i)=>k===T[i]);",
-      "replace": "this.marks=this.order.map((k,i)=>k===T[3-i]);",
+      "find": "ready(){ return this.calls.every(c=>c!==null); },",
+      "replace": "ready(){ return this.calls.filter(c=>c!==null).length>=3; },",
       "run": "verify"
     },
     {
       "name": "the check opens with three placed",
       "file": "index.html",
-      "find": "ready(){ return this.order.length===4; },",
-      "replace": "ready(){ return this.order.length>=3; },",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);",
+      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);",
       "run": "verify"
     },
     {
-      "name": "a tap keeps the rings",
+      "name": "a ring is kept after the call changes",
       "file": "index.html",
-      "find": "this.marks=null; this.touched=true;\n    Horizon.render();",
-      "replace": "this.touched=true;\n    Horizon.render();",
+      "find": "if(this.marks) this.marks[i]=null;\n    Cross.render();",
+      "replace": "Cross.render();",
       "run": "verify"
     },
     {
-      "name": "the pair is worked the wrong way round",
+      "name": "the turn runs the long way round",
       "file": "index.html",
-      "find": "but it grows faster. ${this.why(b,a)}",
-      "replace": "but it grows faster. ${this.why(a,b)}",
+      "find": "A ${r} ${r} 0 0 ${z>0?0:1}",
+      "replace": "A ${r} ${r} 0 0 ${z>0?1:0}",
       "run": "verify"
     },
     {
-      "name": "log against log is told as log against power",
+      "name": "in and out arrows are drawn swapped",
       "file": "index.html",
-      "find": "A.p===0 && B.p>0 ? 'Every power of ln x",
-      "replace": "A.p===0 ? 'Every power of ln x",
+      "find": "out+=`<circle data-k=\"${z>0?'out':'in'}\"",
+      "replace": "out+=`<circle data-k=\"${z>0?'in':'out'}\"",
       "run": "verify"
     },
     {
-      "name": "the pair is worked at x = 10",
+      "name": "the slip readout says clockwise for out",
       "file": "index.html",
-      "find": "for(let e=3;e<=12;e++){ let ok=true;",
-      "replace": "for(let e=1;e<=12;e++){ let ok=true;",
+      "find": "so it points out of the page: the short turn from u to v is counterclockwise.`",
+      "replace": "so it points out of the page: the short turn from u to v is clockwise.`",
       "run": "verify"
     },
     {
-      "name": "the leader at x = 10 is told the wrong way",
+      "name": "the areas are the dot products",
       "file": "index.html",
-      "find": "const nums = this.lg(a,10)>this.lg(b,10)",
-      "replace": "const nums = this.lg(a,10)<this.lg(b,10)",
+      "find": "`${this.L[i]} ${Math.abs(this.z(i))}`",
+      "replace": "`${this.L[i]} ${Math.abs(this.dot(i))}`",
       "run": "verify"
     },
     {
-      "name": "an overtake is drawn before the check",
+      "name": "a call moves after the round is right",
       "file": "index.html",
-      "find": "up=this.solved && b<a;",
-      "replace": "up=b<a;",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice();",
       "run": "verify"
     },
     {
-      "name": "Next keeps the order",
+      "name": "the zero button calls into the page",
       "file": "index.html",
-      "find": "this.ri=(this.ri+1)%this.RACES.length; this.order=[];",
-      "replace": "this.ri=(this.ri+1)%this.RACES.length;",
+      "find": "+this.btn(i,0,'0')+",
+      "replace": "+this.btn(i,-1,'0')+",
       "run": "verify"
     },
     {
-      "name": "the race mode is not offered",
+      "name": "the slip pair is not ringed",
       "file": "index.html",
-      "find": ",['race','🏁 Race to infinity','See four functions and rank them from slowest to fastest as x grows without end']]",
+      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
+      "replace": "if(false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
+      "run": "play:crossturn"
+    },
+    {
+      "name": "in or out is not offered as a tab",
+      "file": "index.html",
+      "find": "['turn','🧭 In or out?','See pairs u and v flat on the page, and say whether u × v points out of it, into it, or is zero']]",
       "replace": "]",
-      "run": "play:hzrace"
-    },
-    {
-      "name": "the race tab shows where does it head",
-      "file": "index.html",
-      "find": "this.tab==='pick' ? HzPick.html() : HzRace.html();",
-      "replace": "HzPick.html();",
-      "run": "play:hzrace"
+      "run": "play:crossturn"
     }
   ]
 }

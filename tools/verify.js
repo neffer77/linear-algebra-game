@@ -4566,6 +4566,136 @@ const idNotes = (() => {
   return { ids };
 })();
 
+const shapeReadNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Bend = {render(){ env.renders++; }};" +
+    cut('const ShapeRead = {', '/* ---------- The average height workshop') + 'return ShapeRead;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // the six curves as written, read off their names, with f′ and f″ as written
+  const FN = { 'x³ − 3x': x => x ** 3 - 3 * x, 'x²': x => x * x, '4 − x²': x => 4 - x * x, 'x³/3 − x²': x => x ** 3 / 3 - x * x,
+    'x − x³/3': x => x - x ** 3 / 3, 'x⁴/4 − 2x²': x => x ** 4 / 4 - 2 * x * x };
+  const D1 = { 'x³ − 3x': '3x² − 3', 'x²': '2x', '4 − x²': '−2x', 'x³/3 − x²': 'x² − 2x', 'x − x³/3': '1 − x²', 'x⁴/4 − 2x²': 'x³ − 4x' };
+  const D2 = { 'x³ − 3x': '6x', 'x²': '2', '4 − x²': '−2', 'x³/3 − x²': '2x − 2', 'x − x³/3': '−2x', 'x⁴/4 − 2x²': '3x² − 4' };
+  // the slope and the bend worked from f alone, by differences across a small step
+  const rd = (v, p) => { const q = Math.round(v * p) / p; return Object.is(q, -0) ? 0 : q; };
+  const df = (f, x) => rd((f(x + 1e-5) - f(x - 1e-5)) / 2e-5, 1e6);
+  const d2f = (f, x) => rd((f(x + 1e-3) - 2 * f(x) + f(x - 1e-3)) / 1e-6, 1e4);
+  const go = (f, x) => Math.sign(df(f, x)), bd = (f, x) => Math.sign(d2f(f, x));
+  const W = v => v > 0 ? 'rising' : 'falling', B = v => v > 0 ? 'a cup' : 'a cap';
+  const reset = () => { S.ci = 0; S.go = [null, null, null, null]; S.bd = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.CURVES.length !== 6) fail('shaperead', 'setup', `there are ${S.CURVES.length} curves, not six`);
+  if (new Set(S.CURVES.map(C => C.fs)).size !== S.CURVES.length) fail('shaperead', 'setup', 'a curve comes round twice');
+  let checks = 0, wrongs = 0;
+  S.CURVES.forEach((C, ci) => {
+    const key = `curve ${ci + 1} (${C.fs})`, f = FN[C.fs];
+    if (!f) { fail('shaperead', key, 'is not one of the curves it is meant to be'); return; }
+    reset(); S.ci = ci;
+    if (C.d1s !== D1[C.fs] || C.d2s !== D2[C.fs]) fail('shaperead', key, `its derivatives are written ${C.d1s} and ${C.d2s}`);
+    if ([-2.2, -1, 0, 0.7, 2.1].some(x => Math.abs(C.f(x) - f(x)) > 1e-9)) fail('shaperead', key, `f is not ${C.fs}`);
+    if ([-2.2, -1, 0.3, 1.8].some(x => Math.abs(C.d1(x) - df(f, x)) > 1e-4 || Math.abs(C.d2(x) - d2f(f, x)) > 1e-3)) fail('shaperead', key, `f′ or f″ is not the slope or bend of ${C.fs}`);
+    const xs = C.xs;
+    if (xs.length !== 4 || xs.some((x, i) => i && x <= xs[i - 1]) || xs[0] <= C.D[0] || xs[3] >= C.D[1]) fail('shaperead', key, 'the four points are not in order inside the drawing');
+    if (xs.some(x => Math.abs(df(f, x)) < 0.5 || Math.abs(d2f(f, x)) < 0.5)) fail('shaperead', key, 'a point sits where f′ or f″ is near 0, so its shape cannot be read');
+    const truth = xs.map(x => [go(f, x), bd(f, x)]);
+    if (truth.some((t, i) => S.sgo(i) !== t[0] || S.sbd(i) !== t[1])) fail('shaperead', key, `its points are read ${[0, 1, 2, 3].map(i => S.sgo(i) + '/' + S.sbd(i)).join()}, not ${truth.map(t => t.join('/')).join()}`);
+    const shapes = new Set(truth.map(t => t.join()));
+    const kind = shapes.size === 4 ? 'four' : truth.every(t => t[1] > 0) && new Set(truth.map(t => t[0])).size === 2 ? 'cup'
+      : truth.every(t => t[1] < 0) && new Set(truth.map(t => t[0])).size === 2 ? 'cap' : 'none';
+    if (C.kind !== kind) fail('shaperead', key, `it is told as ${C.kind}, not ${kind}`);
+    const line = `f(x) = ${C.fs}, so f′(x) = ${D1[C.fs]} and f″(x) = ${D2[C.fs]}.`;
+    // every point read wrong, one at a time, in each of the three wrong ways
+    xs.forEach((x, i) => {
+      for (const [g, b] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        if (g === truth[i][0] && b === truth[i][1]) continue;
+        reset(); S.ci = ci; S.go = truth.map(t => t[0]); S.bd = truth.map(t => t[1]); S.go[i] = g; S.bd[i] = b; S.check(); checks++; wrongs++;
+        const s = df(f, x), c = d2f(f, x), X = ng(x);
+        const want = ['3 of 4 right. Fix the ones in red and check again.', line,
+          `At ${'ABCD'[i]}, x = ${X}: f′(${X}) = ${ng(s)} is ${s > 0 ? 'more' : 'less'} than 0, so the curve ${s > 0 ? 'rises' : 'falls'}, and f″(${X}) = ${ng(c)} is ${c > 0 ? 'more' : 'less'} than 0, so it bends ${c > 0 ? 'up like a cup' : 'down like a cap'}. You had it ${W(g)} and ${B(b)}.`,
+          '0 read right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('shaperead', key, `with ${'ABCD'[i]} read ${W(g)} and ${B(b)} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="tan"/.test(svg)) fail('shaperead', key, `with ${'ABCD'[i]} wrong, the wrong point is not ringed alone or the tangents are given away`);
+        if (S.solved || S.streak) fail('shaperead', key, 'a wrong reading is counted');
+        if (g !== truth[i][0]) S.set(i, 'go', truth[i][0]); else S.set(i, 'bd', truth[i][1]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('shaperead', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', line, '0 read right on the first check this visit.'].join(' | ')) fail('shaperead', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.set(i, 'go', truth[i][0]); S.set(i, 'bd', truth[i][1]); S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('shaperead', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, set with the buttons
+    reset(); S.ci = ci;
+    if (!/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, 'the check is open before the points are read');
+    for (let skip = 0; skip < 8; skip++) {
+      S.go = truth.map((t, i) => skip === i ? null : t[0]); S.bd = truth.map((t, i) => skip === i + 4 ? null : t[1]);
+      if (!/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, `the check opens with one answer of ${'ABCD'[skip % 4]} unset`);
+      S.check();
+      if (S.tries || S.marks) fail('shaperead', key, `a check runs with one answer of ${'ABCD'[skip % 4]} unset`);
+    }
+    S.go = [null, null, null, null]; S.bd = [null, null, null, null];
+    const h0 = S.html();
+    xs.forEach((x, i) => {
+      for (const [part, v, lab] of [['go', truth[i][0], truth[i][0] > 0 ? 'rises' : 'falls'], ['bd', truth[i][1], truth[i][1] > 0 ? 'bends up like a cup' : 'bends down like a cap']]) {
+        const m = h0.match(new RegExp(`onclick="ShapeRead\\.set\\(${i},'${part}',(-?1)\\)" aria-label="Point ${'ABCD'[i]} ${lab}"`));
+        if (!m || +m[1] !== v) fail('shaperead', key, `the button for ${'ABCD'[i]} ${lab} does not set it`);
+        else S.set(i, part, +m[1]);
+      }
+    });
+    if (S.go.join() !== truth.map(t => t[0]).join() || S.bd.join() !== truth.map(t => t[1]).join()) fail('shaperead', key, 'the buttons cannot set the right reading');
+    if (/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, 'the check stays shut with every point read');
+    S.check(); checks++;
+    const at = (g, b) => 'ABCD'[truth.findIndex(t => t[0] === g && t[1] === b)];
+    const want = ['Yes: all four points are read right.',
+      kind === 'four' ? `At ${at(1, -1)} the curve climbs while bending down like a cap, and at ${at(-1, 1)} it falls while bending up like a cup: f′ says which way it goes and f″ which way it bends, and the two need not agree.`
+        : kind === 'cup' ? `Every point bends up like a cup, though A and B fall and C and D rise: f″(x) = ${D2[C.fs]} is more than 0 everywhere, while f′(x) = ${D1[C.fs]} changes sign at 0.`
+          : `Every point bends down like a cap, though A and B rise and C and D fall: f″(x) = ${D2[C.fs]} is less than 0 everywhere, while f′(x) = ${D1[C.fs]} changes sign at 0.`,
+      '1 read right on the first check this visit.'];
+    if (kind === 'cup' && truth.map(t => t[0]).join() !== '-1,-1,1,1') fail('shaperead', key, 'its points do not fall at A and B and rise at C and D');
+    if (kind === 'cap' && truth.map(t => t[0]).join() !== '1,1,-1,-1') fail('shaperead', key, 'its points do not rise at A and B and fall at C and D');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('shaperead', key, `once read the readout is ${S.working().join(' | ')}`);
+    // each tangent touches its point, with the slope f′ and the colour of the bend
+    const svg = S.svg(), [lo, hi] = S.span();
+    const PX = v => 20 + (v - C.D[0]) / (C.D[1] - C.D[0]) * 320, PY = v => 188 - (v - lo) / (hi - lo) * 176;
+    const tans = [...svg.matchAll(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)" stroke="([^"]+)"/g)];
+    if (tans.length !== 4) fail('shaperead', key, `${tans.length} tangents are drawn once read, not four`);
+    tans.forEach((m, i) => { const x = xs[i], [x1, y1, x2, y2] = m.slice(1, 5).map(Number);
+      const slope = ((PY(0) - y2) - (PY(0) - y1)) / (x2 - x1) * (320 / (C.D[1] - C.D[0])) / (176 / (hi - lo));
+      if (Math.abs((x1 + x2) / 2 - PX(x)) > 0.02 || Math.abs((y1 + y2) / 2 - PY(f(x))) > 0.02) fail('shaperead', key, `the tangent at ${'ABCD'[i]} does not touch its point`);
+      if (Math.abs(slope - df(f, x)) > 0.05) fail('shaperead', key, `the tangent at ${'ABCD'[i]} has slope ${slope.toFixed(2)}, not ${df(f, x)}`);
+      if (m[5] !== (truth[i][1] > 0 ? 'green' : 'red')) fail('shaperead', key, `the tangent at ${'ABCD'[i]} is ${m[5]}, not the colour of its bend`); });
+    const pts = [...svg.matchAll(/data-k="pt" cx="([^"]+)" cy="([^"]+)"/g)];
+    if (pts.length !== 4 || pts.some((m, i) => Math.abs(+m[1] - PX(xs[i])) > 0.02 || Math.abs(+m[2] - PY(f(xs[i]))) > 0.02)) fail('shaperead', key, 'the four points are not on the curve where they are said to be');
+    if ([...svg.matchAll(/text-anchor="middle">([A-D])</g)].map(m => m[1]).join('') !== 'ABCD') fail('shaperead', key, 'the points are not lettered A to D in order');
+    const h = S.html();
+    if (!h.includes('id="shpNext"') || /onclick="ShapeRead\.set/.test(h.replace(/disabled onclick="ShapeRead\.set/g, ''))) fail('shaperead', key, 'once read, Next is not offered or an answer still opens');
+    const before = S.go.join() + S.bd.join(); S.set(0, 'go', -S.go[0]); S.set(0, 'bd', -S.bd[0]);
+    if (S.go.join() + S.bd.join() !== before) fail('shaperead', key, 'an answer moves after the reading is right');
+    S.next();
+    if (S.ci !== (ci + 1) % 6 || S.solved || S.marks || S.tries || S.go.some(v => v !== null) || S.bd.some(v => v !== null)) fail('shaperead', key, 'Next does not deal the next curve fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the curves
+  reset(); S.html();
+  if (S.done.size) fail('shaperead', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const C = S.C(), f = FN[C.fs]; S.go = C.xs.map(x => go(f, x)); S.bd = C.xs.map(x => bd(f, x)); if (slip) S.bd[2] = -S.bd[2];
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.set(2, 'bd', -S.bd[2]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,four'], [false, 'cup,fix,four,one'], [false, 'cap,cup,fix,four,one'], [false, 'cap,cup,fix,four,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('shaperead', 'hunt', `curve ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ All four shapes on one curve · A slip caught and fixed | ✓ Right on the first check · A cup can fall | ✓ A cap can climb') fail('shaperead', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SHAPE READER / every rise and bend named') fail('shaperead', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs };
+})();
+
 /* Which λ? The pick-a-pair round in the eigenvalue detective. Every matrix
    is solved here from its own entries, by the quadratic formula, and the
    eigenvalues must be two different whole numbers; A must not be
@@ -12342,6 +12472,154 @@ const horizonRaceNotes = (() => {
   reset();
   return { checks, wrongs, pairs };
 })();
+/* In or out? The cross product workshop's third mode. Every pair is worked
+   again from its own numbers: u × v taken in full in 3D with both arrows on the
+   floor, its sign read as out, in or zero, every pair called wrong in both
+   wrong ways, each round's swaps, lines and wide turns found afresh, and the
+   drawing checked: the turn runs the short way from u to v, in the direction
+   the call says. */
+const crossTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cross = {render(){ env.renders++; }};" +
+    cut('const CrossTurn = {', '/* The quotient rule workshop turned round') + 'return CrossTurn;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const V = p => `⟨${p.map(ng).join(', ')}⟩`;
+  // u × v in full, both arrows lying on the floor z = 0
+  const cross3 = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const callOf = ([u, v]) => { const w = cross3([u[0], u[1], 0], [v[0], v[1], 0]); if (w[0] || w[1]) return NaN; return Math.sign(w[2]); };
+  const thirdOf = ([u, v]) => cross3([u[0], u[1], 0], [v[0], v[1], 0])[2];
+  const WD = { 1: 'out of the page', [-1]: 'into the page', 0: 'zero' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('crossturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, turns = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('crossturn', key, `it holds ${P.length} pairs, not four`); return; }
+    P.forEach(([u, v], i) => { const k = u.join() + '|' + v.join(); if (seen.has(k)) fail('crossturn', key, `pair ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (u.every(c => c === 0) || v.every(c => c === 0)) fail('crossturn', key, `pair ${'ABCD'[i]} has a zero arrow`); });
+    const truth = P.map(callOf);
+    if (truth.some((t, i) => S.truth(i) !== t || S.z(i) !== thirdOf(P[i]))) fail('crossturn', key, `its pairs are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('crossturn', key, 'every pair points the same way');
+    // what the round holds, found afresh
+    const sw = [], zs = [], wd = [];
+    for (let i = 0; i < 4; i++) { for (let j = i + 1; j < 4; j++) if (P[i][0].join() === P[j][1].join() && P[i][1].join() === P[j][0].join()) sw.push([i, j]);
+      const dot = P[i][0][0] * P[i][1][0] + P[i][0][1] * P[i][1][1], ang = Math.acos(dot / Math.hypot(...P[i][0]) / Math.hypot(...P[i][1]));
+      if (truth[i] === 0) zs.push(i); else if (ang > Math.PI / 2 + 1e-9) wd.push(i); }
+    sw.forEach(([i, j]) => { if (truth[i] !== -truth[j]) fail('crossturn', key, `${'ABCD'[i]} and ${'ABCD'[j]} are a swap but do not point opposite ways`); });
+    const tags = [sw.length ? 'swap' : null, zs.length ? 'zero' : null, wd.length ? 'wide' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('crossturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every pair called wrong, one at a time, in both wrong ways
+    P.forEach(([u, v], i) => {
+      for (const c of [1, -1, 0]) {
+        if (c === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
+        const z = thirdOf(P[i]);
+        const why = z > 0 ? `${ng(z)} is more than 0, so it points out of the page: the short turn from u to v is counterclockwise.`
+          : z < 0 ? `${ng(z)} is less than 0, so it points into the page: the short turn from u to v is clockwise.`
+            : 'That is the zero vector: u and v lie on one line and span no area.';
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, u = ${V(u)} and v = ${V(v)}: u × v = ⟨0, 0, u₁v₂ − u₂v₁⟩ = ⟨0, 0, (${ng(u[0])})(${ng(v[1])}) − (${ng(u[1])})(${ng(v[0])})⟩ = ⟨0, 0, ${ng(z)}⟩. ${why} You had it ${c === 0 ? 'as zero' : WD[c]}.`,
+          '0 called right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('crossturn', key, `with ${'ABCD'[i]} called ${WD[c]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(turn|out|in|zero)"/.test(svg)) fail('crossturn', key, `with ${'ABCD'[i]} wrong, the wrong pair is not ringed alone or the answers are given away`);
+        if (S.solved || S.streak) fail('crossturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('crossturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('crossturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('crossturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="ctnCheck" disabled /.test(S.html())) fail('crossturn', key, 'the check is open before the pairs are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="ctnCheck" disabled /.test(S.html())) fail('crossturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('crossturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const lab = t === 0 ? 'is zero' : 'points ' + WD[t];
+      const m = h0.match(new RegExp(`onclick="CrossTurn\\.call\\(${i},(-?[01])\\)" aria-label="Pair ${'ABCD'[i]}: u × v ${lab}"`));
+      if (!m || +m[1] !== t) fail('crossturn', key, `the button for ${'ABCD'[i]} ${lab} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`CrossTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('crossturn', key, `${'ABCD'[i]} does not offer out, in and zero`);
+    });
+    if (S.calls.join() !== truth.join()) fail('crossturn', key, 'the buttons cannot make the right calls');
+    if (/id="ctnCheck" disabled /.test(S.html())) fail('crossturn', key, 'the check stays shut with every pair called');
+    S.check(); checks++;
+    const L = ix => ix.map(i => 'ABCD'[i]), list = ix => { const n = L(ix); return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
+    const want = ['Yes: all four are called right.'];
+    if (sw.length) want.push(`${'ABCD'[sw[0][0]]} and ${'ABCD'[sw[0][1]]} are the same two arrows in the other order, and they point opposite ways: v × u = −(u × v).`);
+    if (zs.length) want.push(`${list(zs)} ${zs.length > 1 ? 'each lie' : 'lies'} on one line, so ${zs.length > 1 ? 'each spans' : 'it spans'} no area and u × v = ⟨0, 0, 0⟩.`);
+    if (wd.length) want.push(`In ${'ABCD'[wd[0]]}, u and v are more than a quarter turn apart, but the short turn still settles it: it is ${truth[wd[0]] > 0 ? 'counterclockwise, so u × v points out of' : 'clockwise, so u × v points into'} the page.`);
+    // the area of each parallelogram, by the shoelace formula round 0, u, u + v, v
+    const area = ([u, v]) => { const q = [[0, 0], u, [u[0] + v[0], u[1] + v[1]], v]; let s = 0; for (let k = 0; k < 4; k++) { const a = q[k], b = q[(k + 1) % 4]; s += a[0] * b[1] - a[1] * b[0]; } return Math.abs(s) / 2; };
+    want.push(`The length of each u × v is the area its pair spans: ${P.map((p, i) => `${'ABCD'[i]} ${area(p)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('crossturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each pair in its own square, its turn the short way and in the called direction
+    const svg = S.svg();
+    const us = [...svg.matchAll(/data-k="u" x1="([^"]+)" y1="([^"]+)"/g)], vs = [...svg.matchAll(/data-k="v" x1="([^"]+)" y1="([^"]+)"/g)];
+    if (us.length !== 4 || vs.length !== 4) fail('crossturn', key, 'four u arrows and four v arrows are not drawn');
+    const heads = k => [...svg.matchAll(new RegExp(`data-k="${k}-head" points="([^,]+),([^ ]+) `, 'g'))].map(m => [+m[1], +m[2]]);
+    const hu = heads('u'), hv = heads('v');
+    P.forEach(([u, v], i) => {
+      if (!us[i] || !hu[i] || !hv[i]) return;
+      const cx = +us[i][1], cy = +us[i][2];
+      const dirOK = (h, p) => { const dx = h[0] - cx, dy = cy - h[1]; return Math.abs(dx * p[1] - dy * p[0]) < 0.05 * Math.hypot(dx, dy) * Math.hypot(...p) && dx * p[0] + dy * p[1] > 0; };
+      if (!dirOK(hu[i], u) || !dirOK(hv[i], v)) fail('crossturn', key, `the arrows of ${'ABCD'[i]} do not point along u and v`);
+      if (cx < (i % 2) * 180 || cx > (i % 2) * 180 + 180 || cy < Math.floor(i / 2) * 130 || cy > Math.floor(i / 2) * 130 + 130) fail('crossturn', key, `${'ABCD'[i]} is not in its own square`);
+    });
+    const tns = [...svg.matchAll(/data-k="turn" d="M ([^ ]+) ([^ ]+) A ([^ ]+) [^ ]+ 0 0 ([01]) ([^ ]+) ([^"]+)"/g)];
+    const nz = truth.map((t, i) => t ? i : -1).filter(i => i >= 0);
+    if (tns.length !== nz.length) fail('crossturn', key, `${tns.length} turns are drawn, not one for each of the ${nz.length} pairs that are not zero`);
+    tns.forEach((m, k) => { const i = nz[k]; if (!us[i]) return; turns++;
+      const cx = +us[i][1], cy = +us[i][2], [x0, y0, x1, y1] = [+m[1], +m[2], +m[5], +m[6]];
+      // turning from the start to the end the way the sweep says, measured with y up
+      const a0 = Math.atan2(cy - y0, x0 - cx), a1 = Math.atan2(cy - y1, x1 - cx);
+      let d = a1 - a0; while (d <= -Math.PI) d += 2 * Math.PI; while (d > Math.PI) d -= 2 * Math.PI;
+      const ccw = m[4] === '0';
+      if ((d > 0) !== ccw || (d > 0) !== (truth[i] > 0)) fail('crossturn', key, `the turn in ${'ABCD'[i]} does not run the short way from u to v`);
+      const au = Math.atan2(P[i][0][1], P[i][0][0]), av = Math.atan2(P[i][1][1], P[i][1][0]);
+      if (Math.abs(Math.cos(a0 - au) - 1) > 1e-3 || Math.abs(Math.cos(a1 - av) - 1) > 1e-3) fail('crossturn', key, `the turn in ${'ABCD'[i]} does not start on u and end on v`); });
+    const marks = [...svg.matchAll(/data-k="(out|in|zero)"/g)].map(m => m[1]);
+    if (marks.join() !== truth.map(t => t > 0 ? 'out' : t < 0 ? 'in' : 'zero').join()) fail('crossturn', key, `the arrows are drawn ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="ctnNext"') || /onclick="CrossTurn\.call/.test(h.replace(/disabled onclick="CrossTurn\.call/g, ''))) fail('crossturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? -1 : 1);
+    if (S.calls.join() !== before) fail('crossturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('crossturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('crossturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const P = S.R(); S.calls = P.map(callOf); if (slip) S.calls[1] = S.calls[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, callOf(P[1])); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix'], [false, 'fix,one,swap'], [false, 'fix,one,swap,zero'], [false, 'fix,one,swap,three,wide,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('crossturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A slip caught and fixed | ✓ Right on the first check · Swapping turns it round | ✓ No area, no arrow') fail('crossturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'RIGHT HAND / every turn called') fail('crossturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, turns };
+})();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -19185,7 +19463,8 @@ console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 1
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
 console.log(`  slopes sketched   ${pad(slopeSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn f′ in the slope tracer, ${slopeSketchNotes.wrongs} of them with one slope set wrong and caught, and ${slopeSketchNotes.tans} tangents measured off the square grid)`);
 console.log(`  totals sketched   ${pad(cisternSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn total in the cistern workshop, ${cisternSketchNotes.wrongs} of them with one total set wrong and caught, and ${cisternSketchNotes.shades} hours of area shaded)`);
-console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
+console.log(`  shapes read       ${pad(shapeReadNotes.checks.toLocaleString(), 12)}  (checks of a curve read point by point in the bend workshop, ${shapeReadNotes.wrongs} of them with one point read wrong and caught)`);
+console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
@@ -19196,6 +19475,7 @@ console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 1
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
+console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);

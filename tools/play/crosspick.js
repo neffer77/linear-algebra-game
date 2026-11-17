@@ -29,11 +29,11 @@ module.exports = {
       /Then turn it round: see u and v, and pick which of four arrows is u × v\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCross');
     t.eq('the cross product workshop opens', await t.screen(), 's-cross');
-    t.eq('turning v by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('turning v by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(8181));
     await t.tapText(/Which u × v\?/);
-    t.eq('which u × v is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which u × v is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the pairs, the drawing, the steps, the swap, the readout and the goals step aside',
       await hidden(t, 'crSets') && await hidden(t, 'crFig') && await hidden(t, 'crSteps') && await hidden(t, 'crSwapRow') && await hidden(t, 'crRead') && await hidden(t, 'crGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('ckBox').innerText)).startsWith(
