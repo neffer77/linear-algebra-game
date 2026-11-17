@@ -70,8 +70,8 @@ module.exports = {
       return n ? n.innerText : null;
     });
     t.ok('the map shows the competency map once anything is met', !!node, node);
-    t.ok('with how many topics are fluent out of all eighty-three', node && /3 of 83 fluent/.test(node), node);
-    t.ok('and how many are still being learned', node && /5 learning/.test(node) && /75 not met yet/.test(node), node);
+    t.ok('with how many topics are fluent out of all eighty-four', node && /3 of 84 fluent/.test(node), node);
+    t.ok('and how many are still being learned', node && /5 learning/.test(node) && /76 not met yet/.test(node), node);
 
     // --- one tap opens it, with every topic exactly once ---
     const map = await t.ev(() => {
