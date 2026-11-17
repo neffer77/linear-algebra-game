@@ -15661,7 +15661,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">👣 Euler Step Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, y′ = x turn into a left Riemann sum, and y′ = y² lag its separated curve. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>
          <button class="btn sm" id="tomeEulerWalk" style="width:auto;margin-top:8px" onclick="EulerWalk.open()">Open the Euler step workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -31368,7 +31368,9 @@ const EulerWalk = {
     {id:'decay', btn:'y′ = −2y', eq:'y′ = −2y', name:'y prime equals minus 2 y, from y(0) = 1', y0:1, end:2,
      f:(x,y)=>-2*y, sol:x=>Math.exp(-2*x), solS:'y = e^(−2x)', trueS:'e^(−4) ≈ 0.01832', D:[0,2], R:[-1.3,1.3]},
     {id:'ramp', btn:'y′ = x', eq:'y′ = x', name:'y prime equals x, from y(0) = 0', y0:0, end:2,
-     f:(x,y)=>x, sol:x=>x*x/2, solS:'y = x²/2', trueS:'2', D:[0,2], R:[-0.2,2.2]}
+     f:(x,y)=>x, sol:x=>x*x/2, solS:'y = x²/2', trueS:'2', D:[0,2], R:[-0.2,2.2]},
+    {id:'sq', btn:'y′ = y²', eq:'y′ = y²', name:'y prime equals y squared, from y(0) = 1/2', y0:0.5, end:1,
+     f:(x,y)=>y*y, sol:x=>1/(2-x), solS:'y = 1/(2 − x)', trueS:'1', D:[0,1], R:[0,1.2]}
   ],
   HS:[1, 0.5, 0.25, 0.125],
   si:0, hi:0, k:0, touched:false,
@@ -31387,7 +31389,11 @@ const EulerWalk = {
     {id:'tame', t:'On y′ = −2y, walk all the way to x = 2 without ever reaching 0.', toast:'Small steps follow the decay',
      ok:K=>K.si===1 && K.atEnd() && K.walk().every(p=>p.y>0)},
     {id:'ramp', t:'On y′ = x, reach x = 2 and see how far the walk falls short.', toast:'A left Riemann sum in disguise',
-     ok:K=>K.si===2 && K.atEnd()}
+     ok:K=>K.si===2 && K.atEnd()},
+    {id:'sep', t:'On y′ = y², walk to x = 1 and meet the curve found by separating the variables, y = 1/(2 − x).', toast:'Separated, it lands on exactly 1',
+     ok:K=>K.si===3 && K.atEnd()},
+    {id:'sepnear', t:'On y′ = y², land within 0.1 of the true value 1.', toast:'Steps of 1/8 come within 0.07',
+     ok:K=>K.si===3 && K.atEnd() && Math.abs(K.walk()[K.N()].y-1)<0.1}
   ],
   set(){ return this.SETS[this.si]; },
   h(){ return this.HS[this.hi]; },
@@ -31412,13 +31418,14 @@ const EulerWalk = {
     const id=this.set().id, s=this.sv(p);
     if(id==='grow') return \`the slope is y = \${s}\`;
     if(id==='decay') return \`the slope is −2 × \${this.pf(p.y)} \${this.exact(p.y)!==null ? '=' : '≈'} \${s}\`;
+    if(id==='sq') return \`the slope is \${this.pf(p.y)}² \${this.exact(p.y)!==null && this.exact(p.s)!==null ? '=' : '≈'} \${s}\`;
     return \`the slope is x = \${s}\`;
   },
   stepLine(j, P){ const p=P[j], q=P[j+1], s=this.sv(p);
     return \`Step \${j+1}: at (\${this.fr(p.x)}, \${this.fr(p.y)}) \${this.slopeWork(p)}, so y goes to \${this.fr(p.y)} + \${this.fr(this.h())} × \${/[−/]/.test(s)?\`(\${s})\`:s} \${this.is(q.y)} at x = \${this.fr(q.x)}.\`; },
   working(){
     const S=this.set(), h=this.h(), N=this.N(), P=this.walk(), out=[];
-    out.push(\`\${S.eq}, starting from y(0) = \${neg(S.y0)}. Euler’s method walks it in straight steps of h = \${this.fr(h)}: read the slope where you stand, then move h along x and h × slope up. Reaching x = \${S.end} takes \${N} step\${N===1?'':'s'}.\`);
+    out.push(\`\${S.eq}, starting from y(0) = \${this.fr(S.y0)}. Euler’s method walks it in straight steps of h = \${this.fr(h)}: read the slope where you stand, then move h along x and h × slope up. Reaching x = \${S.end} takes \${N} step\${N===1?'':'s'}.\`);
     if(this.k===0){ out.push('Take the first step.'); return out; }
     const from=Math.max(0,this.k-3);
     if(from>0) out.push(from===1 ? 'Step 1 is the first dot on the figure.' : \`Steps 1 to \${from} are the dots already on the figure.\`);
@@ -31432,6 +31439,7 @@ const EulerWalk = {
       else if(this.hi===1) out.push(\`The true curve never reaches 0, but h × slope is −2 × \${this.fr(h)} × y = −y here: the first step takes away all of y and lands on 0, where the slope is 0, so the walk stays there.\`);
       else out.push(\`Each step keeps 1 − 2h = \${this.fr(1-2*h)} of y, so the walk shrinks toward 0 without reaching it, as the true curve does.\`);
     }
+    if(S.id==='sq') out.push(\`This is y′ = y² separated: dy/y² = dx gives −1/y = x + c, and y(0) = 1/2 makes c = −2, so the true curve is y = 1/(2 − x). Its slope y² grows faster than y does, so each step falls further behind, and the true curve runs off to infinity at x = 2 while Euler’s walk never notices.\`);
     if(S.id==='ramp') out.push(\`The slope here does not depend on y, so each step adds a rectangle h wide and as tall as x at its left edge. Euler’s walk is the left Riemann sum for ∫₀² x dx = 2, and it falls short by exactly h = \${this.fr(h)}.\`);
     const M=this.misses[this.si]||{}, seen=Object.keys(M).map(Number).sort((a,b)=>a-b);
     if(seen.length>1) out.push(\`Misses so far on \${S.eq}: \`+seen.map(i=>\`h = \${this.fr(this.HS[i])} misses by \${this.num(M[i])}\`).join(', ')+'.');

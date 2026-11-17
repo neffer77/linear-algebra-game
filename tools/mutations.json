@@ -1,102 +1,60 @@
 {
-  "change": "Add separable equations as a fight topic, and trim knight codes to KE9",
+  "change": "Add y′ = y² to the Euler step workshop",
   "mutations": [
     {
-      "name": "the minus lost in the answer",
+      "name": "the slope read as y, not y²",
       "file": "index.html",
-      "find": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=sub(inv0,W);",
-      "replace": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=add(inv0,W);",
+      "find": "     f:(x,y)=>y*y, sol:x=>1/(2-x),",
+      "replace": "     f:(x,y)=>y, sol:x=>1/(2-x),",
       "run": "verify"
     },
     {
-      "name": "the division by m + 1 left out",
+      "name": "the true curve drawn as 1/(2 + x)",
       "file": "index.html",
-      "find": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=sub(inv0,W);",
-      "replace": "W=F(k*a**(m+1),1), inv0=rec(Y0), invY=sub(inv0,W);",
+      "find": "     f:(x,y)=>y*y, sol:x=>1/(2-x),",
+      "replace": "     f:(x,y)=>y*y, sol:x=>1/(2+x),",
       "run": "verify"
     },
     {
-      "name": "the constant slip worked with 1/y(0)",
+      "name": "the separated curve met on y′ = x",
       "file": "index.html",
-      "find": "[rec(sub(Y0,W)),'that puts y(0) in for the constant",
-      "replace": "[rec(sub(inv0,F(2*W[0],W[1]))),'that puts y(0) in for the constant",
+      "find": "     ok:K=>K.si===3 && K.atEnd()},\n    {id:'sepnear'",
+      "replace": "     ok:K=>K.si===2 && K.atEnd()},\n    {id:'sepnear'",
       "run": "verify"
     },
     {
-      "name": "the Euler-like step without y²",
+      "name": "steps of 1/4 counted close enough",
       "file": "index.html",
-      "find": "[add(Y0,mul(mul(Y0,Y0),W)),'that holds y",
-      "replace": "[add(Y0,mul(Y0,W)),'that holds y",
+      "find": "Math.abs(K.walk()[K.N()].y-1)<0.1}",
+      "replace": "Math.abs(K.walk()[K.N()].y-1)<0.2}",
       "run": "verify"
     },
     {
-      "name": "the differentiating slip named one power up",
+      "name": "a rounded square said with =",
       "file": "index.html",
-      "find": "`that differentiates ${xp(m)} instead of integrating it`",
-      "replace": "`that differentiates ${xp(m+1)} instead of integrating it`",
+      "find": "${this.exact(p.y)!==null && this.exact(p.s)!==null ? '=' : '≈'}",
+      "replace": "${this.exact(p.y)!==null ? '=' : '≈'}",
       "run": "verify"
     },
     {
-      "name": "whole answers asked too often",
+      "name": "y(0) written as a decimal",
       "file": "index.html",
-      "find": "  const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);",
-      "replace": "  const whole=R.chance(0.7);\n  for(let g=0;;g++){\n    const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);",
+      "find": "starting from y(0) = ${this.fr(S.y0)}. Euler",
+      "replace": "starting from y(0) = ${neg(S.y0)}. Euler",
       "run": "verify"
     },
     {
-      "name": "the first depth starting y below 0",
+      "name": "the constant from y(0) worked wrong",
       "file": "index.html",
-      "find": "const p0=d===1?R.i(1,6):R.nz(",
-      "replace": "const p0=d===1?R.nz(-6,6):R.nz(",
+      "find": "and y(0) = 1/2 makes c = −2, so the true curve",
+      "replace": "and y(0) = 1/2 makes c = −1/2, so the true curve",
       "run": "verify"
     },
     {
-      "name": "the third depth letting m be 0",
+      "name": "the true value at x = 1 named as 2",
       "file": "index.html",
-      "find": "const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);\n    const k=R.nz(",
-      "replace": "const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(0,3);\n    const k=R.nz(",
-      "run": "verify"
-    },
-    {
-      "name": "the third depth keeping k to 4",
-      "file": "index.html",
-      "find": "const k=R.nz(-(d===3?6:4),d===3?6:4);\n    const p0",
-      "replace": "const k=R.nz(-4,4);\n    const p0",
-      "run": "verify"
-    },
-    {
-      "name": "y(0) never a fraction",
-      "file": "index.html",
-      "find": "q0=R.chance(0.4)?R.i(2,d===3?4:3):1;",
-      "replace": "q0=R.chance(0)?R.i(2,d===3?4:3):1;",
-      "run": "verify"
-    },
-    {
-      "name": "the solution let run past infinity",
-      "file": "index.html",
-      "find": "if(invY[0]===0 || (invY[0]>0)!==(inv0[0]>0)) continue;\n    const ans=rec(invY);",
-      "replace": "if(invY[0]===0) continue;\n    const ans=rec(invY);",
-      "run": "verify"
-    },
-    {
-      "name": "the working's 1/y(0) shown as y(0)",
-      "file": "index.html",
-      "find": "so 1/y = ${show(inv0)} − ${paren(W)} = ${show(invY)}",
-      "replace": "so 1/y = ${show(Y0)} − ${paren(W)} = ${show(invY)}",
-      "run": "verify"
-    },
-    {
-      "name": "v8 codes read with eight-bit mastery",
-      "file": "index.html",
-      "find": "const m=ver>=9 ? b.bits(8)/255 : b.bits(10)/1023,",
-      "replace": "const m=ver>=8 ? b.bits(8)/255 : b.bits(10)/1023,",
-      "run": "verify"
-    },
-    {
-      "name": "mastery written in ten bits again",
-      "file": "index.html",
-      "find": "o.bits(Math.round(clamp(r.m||0,0,1)*255), 8);",
-      "replace": "o.bits(Math.round(clamp(r.m||0,0,1)*1023), 10);",
+      "find": "solS:'y = 1/(2 − x)', trueS:'1',",
+      "replace": "solS:'y = 1/(2 − x)', trueS:'2',",
       "run": "verify"
     }
   ]
