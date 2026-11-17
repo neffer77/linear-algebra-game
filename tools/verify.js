@@ -8300,13 +8300,15 @@ const estPickNotes = (() => {
   const SL = ['noBase', 'startA', 'noSlope', 'flip', 'slope', 'noRoot', 'useX'];
   let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0;
   const slots = new Set(), kinds = {}, curves = { root: 0, cube: 0, recip: 0 }, places = [0, 0, 0, 0];
+  const back = { root: 0, cube: 0, recip: 0 }, onCurve = { root: {}, cube: {}, recip: {} };
   for (let seed = 1; seed <= 300; seed++) {
     env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
     P.start();
     let prev = null;
     for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
       const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), C = curve(Q);
-      rounds++; curves[Q.kind]++;
+      rounds++; curves[Q.kind]++; if (Q.d < 0) back[Q.kind]++;
+      for (const o of r.opts) onCurve[Q.kind][o.k] = (onCurve[Q.kind][o.k] || 0) + 1;
       const okQ = Q.kind === 'root' ? Q.n >= 2 && Q.n <= 10 && Math.abs(Q.d) <= 4 * Q.n : Q.kind === 'cube' ? Q.n >= 2 && Q.n <= 5 && Math.abs(Q.d) <= 3 * Q.n * Q.n : Q.kind === 'recip' && Q.n >= 2 && Q.n <= 10 && Math.abs(Q.d) <= 9;
       if (!okQ || Q.d === 0 || C.x[0] / C.x[1] < 1 || !Number.isInteger(Q.d)) fail('estpick', key, `${sig} is not a curve and a step of the kind dealt`);
       if (prev && prev === sig) fail('estpick', key, 'the same curve and step come twice in a row');
@@ -8394,6 +8396,26 @@ const estPickNotes = (() => {
   }
   for (const k of SL) if (!kinds[k] || kinds[k] < rounds * 0.04) fail('estpick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
   for (const c in curves) if (curves[c] < rounds * 0.15) fail('estpick', 'deal', `${c} is dealt in only ${curves[c]} of ${rounds} rounds`);
+  // each curve offers each of its slips, and steps back from a as well as forward; 1/x has no root to lose, and
+  // on 1/x the slope times x lands on the same number as the slope times the step with f(a) dropped, so useX never shows there
+  for (const c in curves) {
+    for (const k of SL) if (!(c === 'recip' && (k === 'noRoot' || k === 'useX')) && (onCurve[c][k] || 0) < curves[c] * 0.1) fail('estpick', 'deal', `${c} offers the slip ${k} in only ${onCurve[c][k] || 0} of its ${curves[c]} rounds`);
+    if (back[c] < curves[c] * 0.2) fail('estpick', 'deal', `${c} steps back from a in only ${back[c]} of its ${curves[c]} rounds`);
+  }
+  { // the deal's guards, each tried with the others out of its way: no step of 0, no curve without three slips to offer,
+    // and no estimate of the form not asked for, even where nothing else would turn it away
+    const realT = P.trios, realW = P.whole;
+    P.trios = () => [['noBase', 'flip', 'useX']];
+    for (let i = 1; i <= 400; i++) { env.seed = i * 104729; if (P.build().d === 0) { fail('estpick', 'deal', 'a step of 0 is dealt'); break; } }
+    P.trios = S => (S.kind === 'cube' ? [] : realT.call(P, S));
+    for (let i = 1; i <= 200; i++) { env.seed = i * 104729; if (P.build().kind === 'cube') { fail('estpick', 'deal', 'a curve with no three slips to offer is dealt'); break; } }
+    P.trios = realT;
+    // with nothing whole, an ask for a whole estimate can never be met, so about half the deals fall back to √25 + 4
+    P.whole = () => false; let back0 = 0;
+    for (let i = 1; i <= 60; i++) { env.seed = i * 104729; if (JSON.stringify(P.build()) === '{"kind":"root","n":5,"d":4}') back0++; }
+    P.whole = realW;
+    if (back0 < 15) fail('estpick', 'deal', `an estimate of the form not asked for is dealt: only ${back0} of 60 asks for a whole one fell back`);
+  }
   if (wholes < rounds * 0.4 || wholes > rounds * 0.6) fail('estpick', 'deal', `the estimate is whole in ${wholes} of ${rounds} rounds, not about half`);
   if (slots.size !== 4) fail('estpick', 'deal', `the estimate only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
   places.forEach((c, i) => { if (c < 0.15 * rounds) fail('estpick', 'deal', `the estimate stands ${i} from the bottom in only ${c} of ${rounds} rounds`); });
@@ -8450,6 +8472,7 @@ const logiPickNotes = (() => {
   const SL = ['noCeil', 'filled', 'noP', 'noR', 'noK', 'flip', 'peak'], RS = ['1/2', '1/4', '1/5', '1/10', '3/10', '2/5', '3/4', '3/5'], KS = [100, 200, 300, 400, 500, 600, 800, 1000];
   let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0, above = 0;
   const slots = new Set(), kinds = {}, rs = new Set(), ks = new Set(), places = [0, 0, 0, 0];
+  let several = 0, firstFit = 0;
   for (let seed = 1; seed <= 300; seed++) {
     env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
     P.start();
@@ -8469,6 +8492,11 @@ const logiPickNotes = (() => {
       if (new Set(btns.map(x => x[6])).size !== 4) fail('logipick', key, 'two numbers are the same');
       if (V.some(v => v[0] === 0)) fail('logipick', key, '0 is offered');
       const ri = r.opts.findIndex(o => o.k === 'right'); slots.add(ri);
+      { // of the trios that put the rate in the same place, the one dealt is drawn at random, not always the first
+        const W0 = P.val(Q, 'right'), lo = t => t.filter(x => { const v = P.val(Q, x); return v[0] * W0[1] < W0[0] * v[1]; }).length;
+        const took = r.opts.filter(o => o.k !== 'right').map(o => o.k), fit = P.trios(Q).filter(t => lo(t) === lo(took));
+        if (fit.length > 1) { several++; if (fit[0].slice().sort().join() === took.slice().sort().join()) firstFit++; }
+      }
       V.forEach((v, i) => {
         const o = r.opts[i], w = want(o.k, Q);
         kinds[o.k] = (kinds[o.k] || 0) + 1;
@@ -8537,6 +8565,7 @@ const logiPickNotes = (() => {
     if (JSON.stringify(P.round.S) === '{"rn":1,"rd":4,"K":400,"P":300}') fail('logipick', 'repeat', 'the same population is dealt twice in a row');
     P.build = real;
   }
+  if (several < rounds * 0.3 || firstFit > several * 0.7) fail('logipick', 'deal', `the first trio that fits is dealt in ${firstFit} of the ${several} rounds where several fit`);
   for (const k of SL) if (!kinds[k] || kinds[k] < rounds * 0.04) fail('logipick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
   if (rs.size !== RS.length || ks.size !== KS.length) fail('logipick', 'deal', `r ${[...rs]}, K ${[...ks]} is not the whole deal`);
   if (wholes < rounds * 0.4 || wholes > rounds * 0.6) fail('logipick', 'deal', `the rate is whole in ${wholes} of ${rounds} rounds, not about half`);
