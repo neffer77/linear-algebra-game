@@ -94,7 +94,7 @@ module.exports = {
       t.ok(`spring ${i + 1} is dealt fresh`, (await t.ev(() => document.getElementById('cwBox').innerText)).startsWith(`Spring ${i + 1} of 8:`) && await shown(t) === '? ? ? ?');
       if (i === 2) {
         await t.ev(() => document.querySelectorAll('.cskStop')[1].querySelector('button').click());
-        t.ok('picking the second hour of a dip says so', /The hour from t = 1 to 2 is picked: its area is shaded\./.test(await read(t)), await read(t));
+        t.ok('picking the second hour of a dip says its area is 0', /The hour from t = 1 to 2 is picked: its area is shaded, and it is 0\./.test(await read(t)), await read(t));
         t.eq('and shades it red then gold where f crosses 0', await t.ev(() => [...document.querySelectorAll('#cskFig polygon')].map(p => p.dataset.k).join()), 'take,add');
       }
       await sketch(t, ANS[i]);
