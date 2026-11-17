@@ -746,7 +746,7 @@ let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: 
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
 let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
-let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, max: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the largest entry
+let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, lo: 0, hi: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the smallest and largest entries
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
@@ -1513,8 +1513,11 @@ Object.assign(ANALYSIS, {
       [/^that is v's own coordinate in the standard basis/, k ? v2 : v1]];
     const w = fl(p.ex);
     const want = `So c${k ? '₂' : '₁'} = `;
-    const wr = w.match(/^v = c₁b₁ \+ c₂b₂ is two equations, (.+) = (-?\d+) and (.+) = (-?\d+)\. With b₁ and b₂ as the columns of P, det P = .+ = (-?\d+)\. So c([₁₂]) = \(.+\)\/\(?(-?\d+)\)? = (-?\d+)\/\(?(-?\d+)\)? = (-?\d+(?:\/\d+)?)\.$/);
-    if (!wr || +wr[2] !== v1 || +wr[4] !== v2 || +wr[5] !== det || wr[6] !== q[7] || +wr[7] !== det || +wr[9] !== det || Math.abs(+wr[8] / det - c[k][0] / c[k][1]) > 1e-12 || Math.abs(val(wr[10]) - c[k][0] / c[k][1]) > 1e-12 || !w.includes(want))
+    const wr = w.match(/^v = c₁b₁ \+ c₂b₂ is two equations, (.+) = (-?\d+) and (.+) = (-?\d+)\. With b₁ and b₂ as the columns of P, det P = .+ = (-?\d+)\. So c([₁₂]) = \((.+)\)\/\(?(-?\d+)\)? = (-?\d+)\/\(?(-?\d+)\)? = (-?\d+(?:\/\d+)?)\.$/);
+    // the top of the fraction, worked out from its own products, must be what Cramer's rule puts over det P
+    const topOf = t => { const m = t.match(/^\(?(-?\d+)\)? × \(?(-?\d+)\)? - \(?(-?\d+)\)? × \(?(-?\d+)\)?$/); return m ? m[1] * m[2] - m[3] * m[4] : NaN; };
+    const topWant = k ? b11 * v2 - b12 * v1 : v1 * b22 - b21 * v2;
+    if (!wr || +wr[2] !== v1 || +wr[4] !== v2 || +wr[5] !== det || wr[6] !== q[7] || topOf(wr[7]) !== topWant || +wr[8] !== det || +wr[10] !== det || +wr[9] !== topWant || Math.abs(+wr[9] / det - c[k][0] / c[k][1]) > 1e-12 || Math.abs(val(wr[11]) - c[k][0] / c[k][1]) > 1e-12 || !w.includes(want))
       fail('analysis', 'changeBasis', `the working does not take det P and the top to c: ${w}`);
     else {
       const lin = (t, a, b) => { const n = t.replace(/ - /g, ' + -').split(' + '); let x = 0, y = 0;
@@ -1531,7 +1534,7 @@ Object.assign(ANALYSIS, {
     const E = [b11, b12, b21, b22];
     if (E.some(x => x < 0) || v1 < 0 || v2 < 0) cbShape.neg = 1;
     if (E.some(x => x === 0)) cbShape.zero = 1;
-    cbShape.ask[k] = 1; cbShape.max = Math.max(cbShape.max, ...E.map(Math.abs));
+    cbShape.ask[k] = 1; cbShape.lo = Math.min(cbShape.lo, ...E); cbShape.hi = Math.max(cbShape.hi, ...E);
     covered.add('changeBasis');
   },
   // Determinant rules, worked again here on actual matrices: an A and a B are
@@ -17717,10 +17720,10 @@ for (let d = 1; d <= 3; d++) {
 // of the four wrong ones sharing the answer's sign and two its form; every
 // slip turns up; both coordinates are asked; the first depth keeps every
 // entry above 0, the second lets signs and zeros in, the third widens the
-// entries past 4; and whole and fractional answers come up about equally.
+// entries past 4 either way; and whole and fractional answers come up about equally.
 for (let d = 1; d <= 3; d++) {
   const CB = 3000;
-  cbWhole = 0; cbSeen = new Set(); cbShape = { neg: 0, zero: 0, ask: {}, max: 0 };
+  cbWhole = 0; cbSeen = new Set(); cbShape = { neg: 0, zero: 0, ask: {}, lo: 99, hi: -99 };
   for (let i = 0; i < CB; i++) {
     const p = GEN.changeBasis(d), vals = [p.a, ...p.d.map(x => x[0])]
       .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
@@ -17736,7 +17739,7 @@ for (let d = 1; d <= 3; d++) {
   if (cbSeen.size !== 6) fail('analysis', 'changeBasis', `depth ${d} offers only ${cbSeen.size} of its slips`);
   if (Object.keys(cbShape.ask).length !== 2) fail('analysis', 'changeBasis', `depth ${d} asks only for one coordinate`);
   if (!!cbShape.neg !== (d > 1) || !!cbShape.zero !== (d > 1)) fail('analysis', 'changeBasis', `depth ${d} ${d > 1 ? 'never has' : 'has'} a sign or a zero`);
-  if (cbShape.max !== (d === 3 ? 6 : 4)) fail('analysis', 'changeBasis', `depth ${d} reaches an entry of ${cbShape.max}`);
+  if (cbShape.hi !== (d === 3 ? 6 : 4) || cbShape.lo !== [1, -4, -6][d - 1]) fail('analysis', 'changeBasis', `depth ${d} has entries from ${cbShape.lo} to ${cbShape.hi}`);
   if (cbWhole < CB * 0.42 || cbWhole > CB * 0.58) fail('analysis', 'changeBasis', `depth ${d} gives a whole answer ${cbWhole} times in ${CB}, not about half`);
 }
 
