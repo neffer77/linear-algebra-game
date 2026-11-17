@@ -36,8 +36,8 @@ module.exports = {
     /* The format version. Bump it here ON PURPOSE when the save gains a field,
        and add a case below proving the previous version still reads — those
        two together are the whole backward-compatibility contract. */
-    t.eq('the codec is at version 7', codec.ver, 7);
-    t.eq('codes are tagged KE7-', codec.head, 'KE7-');
+    t.eq('the codec is at version 8', codec.ver, 8);
+    t.eq('codes are tagged KE8-', codec.head, 'KE8-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);
@@ -143,6 +143,24 @@ module.exports = {
     t.eq('everywhere they had been', v6.bests,
       { deep: 11, summit: 14, wilds: 9, sea: 12, library: 8 });
     t.eq('and the crucible reads as lit, which is the generous default', v6.alch, 0);
+
+    /* And v7, the version just before this one. v8 writes each topic's wrong
+       answers in only as many bits as its seen count takes, and how many
+       questions ago in six bits, so a v8 decoder has to read a v7 code's two
+       varints and its full byte instead. This is the same code tools/verify.js
+       pins, made when the list held seventy topics. */
+    const V7 = 'KE7-A5ICVDNUDUCUE63DEEBBW6ZDFCQJWQAXRCIGQQD2YAQEAIKMQAJIBEFQVAAQAAAAAKAAAAAA'
+             + 'AACAEABAAIACAAQAEABAAIAGQAAAYPN4AAACGCBAAAAAAAAAAABGACL7QUAVIAB76AUASACEAAFASA'
+             + 'AAAMAQAAAAAAAAAAAAAAAAAKLK';
+    const v7 = await t.ev(code => {
+      const d = Codec.decode(code), ts = d.ok ? d.g.topicStats : {};
+      return { ok: d.ok, why: d.why, gold: d.ok ? d.g.gold : null, keys: Object.keys(ts).sort(),
+               dot: ts.dot ? { seen: ts.dot.seen, w: ts.dot.w } : null };
+    }, V7);
+    t.ok('a version 7 code still decodes', v7.ok, v7.why);
+    t.eq('with its topic history', v7.keys, ['dot', 'matMul', 'taylor']);
+    t.ok('read at the widths it was written in', v7.gold === 777 && v7.dot && v7.dot.seen === 12
+      && v7.dot.w >= 0 && v7.dot.w <= 12, JSON.stringify(v7));
 
     /* --- the referee: newest wins, per knight ---
        The vault mirrors localStorage wholesale, so a doctored backup is planted

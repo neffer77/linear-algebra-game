@@ -4538,6 +4538,60 @@ newton(d){
       ex:`${why}.`};
   }
 },
+/* Quadratic forms: Q(x) = ½ xᵀAx for a symmetric A, the form gradient
+   descent and the energy of a spring system are written in. xᵀAx adds each
+   diagonal entry times its square and each off-diagonal entry times its
+   pair, and since A is symmetric every pair comes twice. At depth 1 a 2×2
+   with entries above 0, at depth 2 a 2×2 with signs, and at depth 3 a 3×3.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips people make: the ½ left off, each pair counted once, the pairs
+   left out, a pair's sign turned, the squares not squared, and Ax added up
+   for x·(Ax). */
+quadForm(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===3?3:2, A=[...Array(n)].map(()=>Array(n).fill(0));
+    for(let i=0;i<n;i++) for(let j=i;j<n;j++){
+      const v=d===1 ? R.i(1,4) : i===j ? R.nz(-4,4) : R.i(-3,3);
+      A[i][j]=v; A[j][i]=v;
+    }
+    const x=[...Array(n)].map(()=>d===1 ? R.i(1,3) : R.nz(d===3?-2:-3,d===3?2:3));
+    let dg=0, cr=0, ln=0;
+    for(let i=0;i<n;i++){ dg+=A[i][i]*x[i]*x[i]; ln+=A[i][i]*x[i]; for(let j=i+1;j<n;j++) cr+=A[i][j]*x[i]*x[j]; }
+    const Ax=A.map(r=>r.reduce((s,a,j)=>s+a*x[j],0)), sAx=Ax.reduce((s,v)=>s+v,0);
+    const full=dg+2*cr, ans=F(full,2);
+    const slips=[
+      [F(full),'that leaves off the ½: xᵀAx itself is twice Q'],
+      [F(dg+cr,2),'that counts each off-diagonal pair once; A is symmetric, so a_ij and a_ji both add xᵢxⱼ, twice in all'],
+      [F(dg,2),'that leaves the off-diagonal pairs out; only a diagonal A has none'],
+      [F(dg-2*cr,2),'that turns the pairs\' sign; each adds a_ij xᵢxⱼ with the signs as they are'],
+      [F(ln+2*cr,2),'that does not square the diagonal terms; each a_ii multiplies xᵢ²'],
+      [F(sAx,2),'that adds up the entries of Ax; xᵀ(Ax) dots Ax with x, each entry times its own xᵢ']
+    ];
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>(s[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<2000) continue;
+    const P=v=>v<0?`(${neg(v)})`:neg(v);
+    const terms=[];
+    for(let i=0;i<n;i++) terms.push(`${P(A[i][i])} × ${P(x[i])}²`);
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) terms.push(`2 × ${P(A[i][j])} × ${P(x[i])} × ${P(x[j])}`);
+    return {topic:'Quadratic Forms',
+      codex:{rule:'xᵀAx adds a_ii xᵢ² for each diagonal entry and a_ij xᵢxⱼ for each other entry, so for a symmetric A every pair counts twice. Q(x) = ½ xᵀAx.',
+             eg:'A = [[2, 1], [1, 3]], x = ⟨1, 2⟩: xᵀAx = 2 × 1² + 3 × 2² + 2 × 1 × 1 × 2 = 18, so Q = 9.'},
+      q:`Q(x) = ½ xᵀAx with A = ${mat(A)} and x = ${vecR(x)}. What is Q(x)?`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`xᵀAx = ${terms.join(' + ')} = ${neg(full)}, so Q = ½ × ${P(full)} = ${show(ans)}.`};
+  }
+},
 /* Least squares: the line y = mx + c whose squared misses add up to the
    least, through three or four points. With n points,
    m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and the line passes through the middle
@@ -4720,7 +4774,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule"
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4729,7 +4783,7 @@ const TOPIC_LABEL = {
    what the screens collapse into. */
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
-  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
+  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
@@ -4743,7 +4797,7 @@ const STRANDS = [
    hunting through nineteen workshops for the right one. */
 const WORKSHOP_FOR = (() => {
   const W = {
-    Workshop:["🛠 Matrix Workshop", ['matVec','transMatrix','det2']],
+    Workshop:["🛠 Matrix Workshop", ['matVec','transMatrix','det2','quadForm']],
     Dot:     ["🎯 Dot Product Workshop", ['dot','angleVec','orth','proj','vecProj']],
     Eigen:   ["👑 Eigenvector Hunt", ['eigen2','eigenvec']],
     Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
@@ -5312,7 +5366,7 @@ const REALMS = [
        ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
        glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
    pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
-         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq'],
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq','quadForm'],
    foes:[
      {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
      {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},
@@ -5411,8 +5465,8 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:7,
-  TAG:'KE7-',
+  VER:8,
+  TAG:'KE8-',
 
 
   topics(){ return Object.keys(TOPIC_LABEL); },
@@ -5421,6 +5475,8 @@ const Codec = {
      records. Same contract as ITEMS and the gear tables: written by position
      with an explicit count, so the list is append-only. */
   settings(){ return SETTING_ORDER; },
+  /* How many bits n takes written out in binary: 0 for 0. */
+  bitLen(n){ return n>0 ? Math.floor(n).toString(2).length : 0; },
 
   /** A 16-bit fingerprint of the topic list. Verified collision-free at build
       time, so two different topic sets can never claim the same one. */
@@ -5566,14 +5622,20 @@ const Codec = {
       // stored rather than derived from c and w, because it is the one of the
       // three that thresholds are tested against — so it gets the tighter
       // rounding, and `c` absorbs the slack.
-      o.varint(Math.round((r.seen||0)*4));
-      o.varint(Math.round((r.w||0)*4));
+      // v8: the wrong answers are a part of the ones seen, so they never need
+      // more bits than seen does. Writing them in exactly that many, rather
+      // than as a second varint, saves three bits a topic on a busy knight.
+      const s4=Math.round((r.seen||0)*4), w4=Math.min(s4, Math.round((r.w||0)*4));
+      o.varint(s4);
+      o.bits(w4, this.bitLen(s4));
       o.bits(Math.round(clamp(r.m||0,0,1)*1023), 10);
       o.bits(r.mastered?1:0, 1);
-      // How long ago in questions, and in hours. Both are read through hard
-      // ceilings — the scheduler stops caring past 62 questions and 17 days —
-      // so the byte each is capped at costs nothing and saves a hundred.
-      o.bits(Math.min(255, Math.max(0, (g.qCount||0) - (typeof r.last==='number' ? r.last : 0))), 8);
+      // How long ago in questions, and in hours. Questions are read through a
+      // hard ceiling: dueIn is at most 25 and staleness stops at 2.5 times it,
+      // so nothing past 63 questions ago reads any differently, and v8 keeps
+      // six bits for it. Hours feed the fade, which goes on decaying for
+      // weeks, so they keep their byte.
+      o.bits(Math.min(63, Math.max(0, (g.qCount||0) - (typeof r.last==='number' ? r.last : 0))), 6);
       o.bits(r.t ? Math.min(254, Math.max(0, Math.round((now-r.t)/216e5)))+1 : 0, 8);
     }
 
@@ -5725,9 +5787,9 @@ const Codec = {
       for(let i=0;i<nTop;i++) has.push(b.bits(1));
       for(let i=0;i<nTop;i++){
         if(!has[i]) continue;
-        const seen=b.varint()/4, w=b.varint()/4;
+        const s4=b.varint(), seen=s4/4, w=(ver>=8 ? b.bits(this.bitLen(s4)) : b.varint())/4;
         const m=b.bits(10)/1023, mastered=b.bits(1);
-        const dLast=b.bits(8), dSix=b.bits(8);
+        const dLast=b.bits(ver>=8 ? 6 : 8), dSix=b.bits(8);
         const key=T[i];
         if(!key) continue;
         const r={ c:Math.max(0, seen-w), w, seen, m,

@@ -427,6 +427,6 @@ module.exports = {
     t.ok('the four piles still survive a save', bench.matsSurvive);
     t.ok('and where the bench happens to be pointed is not saved with them',
       bench.noBenchField);
-    t.eq('the codec moved to KE7- for the charge bit', bench.tag, 'KE7-');
+    t.eq('codes are tagged KE8-', bench.tag, 'KE8-');
   }
 };
