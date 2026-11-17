@@ -121,6 +121,7 @@ const SUITES = [
   require('./play/productpick'), // see y = f(x) · g(x), pick which of four formulas is its slope
   require('./play/quotpick'), // see y = f(x) / g(x), pick which of four formulas is its slope
   require('./play/lampick'),  // see a matrix, pick which of four pairs are its eigenvalues
+  require('./play/charmatch'),  // match four matrices to their det(A − λI)
   require('./play/spanpick'), // see two arrows and a ring, pick which of four mixes lands on it
   require('./play/dotpick'),  // see two arrows, pick which of four numbers is u·v
   require('./play/antipick'), // see f, pick which of four F has f as its slope

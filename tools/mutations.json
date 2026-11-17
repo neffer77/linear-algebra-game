@@ -1,103 +1,103 @@
 {
-  "change": "Add a Read the graph mode to the limit workshop",
+  "change": "Add a Match them up mode to the eigenvalue detective",
   "mutations": [
     {
-      "name": "a jump is read as a hole",
+      "name": "the trace is taken with the wrong sign",
       "file": "index.html",
-      "find": "if(L!==R) return 'J';",
-      "replace": "if(false) return 'J';",
+      "find": "tr(A){ return A[0][0]+A[1][1]; },\n  det(A){ return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },\n  /* polynomial n",
+      "replace": "tr(A){ return -(A[0][0]+A[1][1]); },\n  det(A){ return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },\n  /* polynomial n",
       "run": "verify"
     },
     {
-      "name": "f(a) decides the limit",
+      "name": "det A is taken as ad + bc",
       "file": "index.html",
-      "find": "return v===L ? 'C' : 'H';",
-      "replace": "return v===null ? 'H' : 'C';",
+      "find": "det(A){ return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },\n  /* polynomial n",
+      "replace": "det(A){ return A[0][0]*A[1][1]+A[0][1]*A[1][0]; },\n  /* polynomial n",
       "run": "verify"
     },
     {
-      "name": "running off is missed on one side",
+      "name": "a matrix's match is read from the wrong end of the order",
       "file": "index.html",
-      "find": "if(!isFinite(L) || !isFinite(R)) return 'R';",
-      "replace": "if(!isFinite(L) && !isFinite(R)) return 'R';",
+      "find": "truth(i){ return this.R().order.indexOf(i); },",
+      "replace": "truth(i){ return this.R().order[i]; },",
       "run": "verify"
     },
     {
-      "name": "the left side is read from the right piece",
+      "name": "a root counted twice is listed as none",
       "file": "index.html",
-      "find": "y=G.p[s<0?i:i+1](G.xs[i]+s*1e-9)",
-      "replace": "y=G.p[i+1](G.xs[i]+s*1e-9)",
+      "find": "if(D<0) return []; const s=Math.sqrt(D);",
+      "replace": "if(D<=0) return []; const s=Math.sqrt(D);",
       "run": "verify"
     },
     {
-      "name": "a hole's missing f(a) is given as 0",
+      "name": "the slip says the trace matches when the det does",
       "file": "index.html",
-      "find": "${v===null?'is not defined':'= '+neg(v)}: a hole.",
-      "replace": "= ${neg(v||0)}: a hole.",
+      "find": "const off = this.tr(B)===t ? 'the trace matches, but det A does not' : this.det(B)===D ?",
+      "replace": "const off = this.det(B)===D ? 'the trace matches, but det A does not' : this.tr(B)===t ?",
       "run": "verify"
     },
     {
-      "name": "the dot on a jump is not told",
+      "name": "the slip names the polynomial picked as the right one",
       "file": "index.html",
-      "find": "if(jd>=0) out.push(",
-      "replace": "if(false) out.push(",
+      "find": "so det(A − λI) = ${this.poly(A)}: that is ${n+1}.",
+      "replace": "so det(A − λI) = ${this.poly(A)}: that is ${k+1}.",
       "run": "verify"
     },
     {
-      "name": "a hole's limit is listed as none",
+      "name": "a zero det is not told",
       "file": "index.html",
-      "find": "${k==='C'||k==='H' ? neg(this.side(i,-1)) : 'none'}",
-      "replace": "${k==='C' ? neg(this.side(i,-1)) : 'none'}",
+      "find": "zeros(){ return [0,1,2,3].filter(i=>this.det(this.R().M[i])===0); },",
+      "replace": "zeros(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "an open circle is drawn on the dot too",
+      "name": "shared traces are told as shared dets",
       "file": "index.html",
-      "find": "if(isFinite(y) && y!==v) out+=`<circle data-k=\"open\"",
-      "replace": "if(isFinite(y)) out+=`<circle data-k=\"open\"",
+      "find": "for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(this.det(M[i])===this.det(M[j])) out.push([i,j]);",
+      "replace": "for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(this.tr(M[i])===this.tr(M[j])) out.push([i,j]);",
       "run": "verify"
     },
     {
-      "name": "the dashed line is drawn at every point",
+      "name": "the curves are drawn upside down",
       "file": "index.html",
-      "find": "if(!isFinite(L) || !isFinite(R)) out+=`<line data-k=\"asym\"",
-      "replace": "if(true) out+=`<line data-k=\"asym\"",
+      "find": "pts.push(`${f(PX(l))},${f(PY(l*l-t*l+d))}`);",
+      "replace": "pts.push(`${f(PX(l))},${f(PY(-(l*l-t*l+d)))}`);",
+      "run": "verify"
+    },
+    {
+      "name": "the eigenvalue dots are put on the curve's bottom",
+      "file": "index.html",
+      "find": "out+=`<circle data-k=\"root\" cx=\"${f(PX(r))}\" cy=\"${f(PY(0))}\"",
+      "replace": "out+=`<circle data-k=\"root\" cx=\"${f(PX(t/2))}\" cy=\"${f(PY(0))}\"",
+      "run": "verify"
+    },
+    {
+      "name": "the ring goes on the right polynomial",
+      "file": "index.html",
+      "find": "if(this.marks && this.calls.some((c,i)=>c===n && this.marks[i]===false))",
+      "replace": "if(this.marks && [0,1,2,3].some(i=>this.truth(i)===n && this.marks[i]===false))",
       "run": "verify"
     },
     {
       "name": "a fix counts as a first check",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Limit.render();",
-      "replace": "{ this.wins++; this.streak++; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Limit.render();",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Detect.render();",
+      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } if(this.tries>1) this.fixed=true;\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Detect.render();",
       "run": "verify"
     },
     {
-      "name": "the check opens with a point uncalled",
+      "name": "the curves are not numbered",
       "file": "index.html",
-      "find": "ready(){ return this.calls.every(c=>c!==null); },\n  count(){ return this.calls.filter(c=>c!==null).length; },\n  heads(y){ return isFinite(y) ? `heads for ${neg(y)}` : y>0 ? 'climbs without end' : 'drops without end'; },",
-      "replace": "ready(){ return this.calls.some(c=>c!==null); },\n  count(){ return this.calls.filter(c=>c!==null).length; },\n  heads(y){ return isFinite(y) ? `heads for ${neg(y)}` : y>0 ? 'climbs without end' : 'drops without end'; },",
-      "run": "verify"
+      "find": "out+=`<text data-k=\"num\" x=\"${X+16}\"",
+      "replace": "out+=`<text data-k=\"nu\" x=\"${X+16}\"",
+      "run": "play:charmatch"
     },
     {
-      "name": "the hole button calls a jump",
+      "name": "match them up is not offered as a tab",
       "file": "index.html",
-      "find": "+this.btn(i,'H','○ Hole')+",
-      "replace": "+this.btn(i,'J','○ Hole')+",
-      "run": "verify"
-    },
-    {
-      "name": "the slip point is not ringed",
-      "file": "index.html",
-      "find": "if(this.marks && this.marks[i]===false) out+=`<circle data-k=\"miss\" cx=\"${cx}\" cy=\"208\"",
-      "replace": "if(false) out+=`<circle data-k=\"miss\" cx=\"${cx}\" cy=\"208\"",
-      "run": "play:gapread"
-    },
-    {
-      "name": "read the graph is not offered as a tab",
-      "file": "index.html",
-      "find": ",['read','🔍 Read the graph','See a graph with four lettered points, and say at each whether it is joined up, has a hole, jumps, or runs off']]",
+      "find": ",['match','🧩 Match them up','See four matrices and four polynomials, and match each matrix to its det(A − λI)']]",
       "replace": "]",
-      "run": "play:gapread"
+      "run": "play:charmatch"
     }
   ]
 }

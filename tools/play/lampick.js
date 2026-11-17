@@ -31,11 +31,11 @@ module.exports = {
       /Then turn it round: see a matrix, and pick which of four pairs are its eigenvalues\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeDetect');
     t.eq('the eigenvalue detective opens', await t.screen(), 's-detect');
-    t.eq('hunting them down is the pressed mode', await pressed(t), 'true,false');
+    t.eq('hunting them down is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6262));
     await t.tapText(/Which λ\?/);
-    t.eq('which λ is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which λ is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the matrices, the curve, the stepper and the goals step aside', await hidden(t, 'cpSets') && await hidden(t, 'cpMat') && await hidden(t, 'cpFig') && await hidden(t, 'cpStep') && await hidden(t, 'cpRead') && await hidden(t, 'cpGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('dcPick').innerText)).startsWith(
       'An eigenvalue is a λ where det(A − λI) = 0.'));
