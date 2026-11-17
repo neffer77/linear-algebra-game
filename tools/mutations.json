@@ -1,33 +1,103 @@
 {
-  "change": "Write the separable working without taking away a minus",
+  "change": "Add a Sketch f′ mode to the slope tracer workshop",
   "mutations": [
     {
-      "name": "taking away a minus again: 3 − (−2)",
+      "name": "x³/3 − x is given the slope x² + 1",
       "file": "index.html",
-      "find": "${W[0]<0?'+ '+show([-W[0],W[1]]):'− '+show(W)}",
-      "replace": "− ${show(W)}",
+      "find": "d:x=>x*x-1,   kind:'turn'},",
+      "replace": "d:x=>x*x+1,   kind:'turn'},",
       "run": "verify"
     },
     {
-      "name": "the formula line keeps the minus when the term is negative",
+      "name": "x³/3 is told as a curve that turns",
       "file": "index.html",
-      "find": "${c[0]<0?'+ '+Wx.slice(1):'− '+Wx}",
-      "replace": "${c[0]<0?'− '+Wx.slice(1):'− '+Wx}",
+      "find": "d:x=>x*x,     kind:'bend'}",
+      "replace": "d:x=>x*x,     kind:'turn'}",
       "run": "verify"
     },
     {
-      "name": "the plus written with a minus number: + −2",
+      "name": "a falling tangent is said to fall by a minus number",
       "file": "index.html",
-      "find": "${W[0]<0?'+ '+show([-W[0],W[1]]):'− '+show(W)}",
-      "replace": "${W[0]<0?'+ '+show(W):'− '+show(W)}",
+      "find": "`its tangent falls ${-d} for each 1 across`",
+      "replace": "`its tangent falls ${d} for each 1 across`",
       "run": "verify"
     },
     {
-      "name": "the formula line written with + for a positive term",
+      "name": "the tangent is drawn half as steep at its far end",
       "file": "index.html",
-      "find": "${c[0]<0?'+ '+Wx.slice(1):'− '+Wx}",
-      "replace": "${c[0]<0?'+ '+Wx.slice(1):'+ '+Wx}",
+      "find": "y2=\"${f(Y(y+d*(t1-x)))}\"",
+      "replace": "y2=\"${f(Y(y+d*(t1-x)/2))}\"",
       "run": "verify"
+    },
+    {
+      "name": "a fixed sketch counts as right on the first check",
+      "file": "index.html",
+      "find": "if(this.tries===1){ this.wins++;",
+      "replace": "if(this.tries>=1){ this.wins++;",
+      "run": "verify"
+    },
+    {
+      "name": "changing a stop after a check keeps its mark",
+      "file": "index.html",
+      "find": "    if(this.marks) this.marks[i]=null;\n    Tracer.render();",
+      "replace": "    Tracer.render();",
+      "run": "verify"
+    },
+    {
+      "name": "a slope can be pressed past 4",
+      "file": "index.html",
+      "find": "if(v<this.LO || v>this.HI) return;\n    this.vals[i]=v;",
+      "replace": "if(v<this.LO) return;\n    this.vals[i]=v;",
+      "run": "verify"
+    },
+    {
+      "name": "the check opens with a slope still unset",
+      "file": "index.html",
+      "find": "ready(){ return this.vals.every(v=>v!==null); }",
+      "replace": "ready(){ return this.vals.some(v=>v!==null); }",
+      "run": "verify"
+    },
+    {
+      "name": "the true f′ is drawn before the sketch is right",
+      "file": "index.html",
+      "find": "if(this.solved){ const q=[];",
+      "replace": "if(true){ const q=[];",
+      "run": "verify"
+    },
+    {
+      "name": "the drawing cuts off the highest stop",
+      "file": "index.html",
+      "find": "Math.ceil(Math.max(...ys))+0.5]",
+      "replace": "Math.ceil(Math.max(...ys))-1]",
+      "run": "verify"
+    },
+    {
+      "name": "only the first place f′ crosses 0 is named",
+      "file": "index.html",
+      "find": "this.and(this.zeros().map(neg))",
+      "replace": "this.and(this.zeros().slice(0,1).map(neg))",
+      "run": "verify"
+    },
+    {
+      "name": "the next curve keeps the last one's marks",
+      "file": "index.html",
+      "find": "this.sel=2; this.marks=null; this.tries=0;",
+      "replace": "this.sel=2; this.tries=0;",
+      "run": "verify"
+    },
+    {
+      "name": "the sketch mode has no button",
+      "file": "index.html",
+      "find": "],['sketch','✏️ Sketch f′','See f and set its slope at five stops to draw f′ yourself']]",
+      "replace": "]]",
+      "run": "play:slopesketch"
+    },
+    {
+      "name": "the tracer stays showing behind the sketch",
+      "file": "index.html",
+      "find": "const match=this.mode!=='trace';",
+      "replace": "const match=this.mode==='match';",
+      "run": "play:slopesketch"
     }
   ]
 }

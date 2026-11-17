@@ -28,14 +28,14 @@ module.exports = {
 
     await t.ev(() => UI.go('s-tome'));
     t.ok('the Tome says the tracer can be turned round', await t.ev(() =>
-      /Then turn it round: see f, and pick which of three graphs is f′\./.test(document.getElementById('s-tome').innerText)));
+      /Then turn it round: see f, and pick which of three graphs is f′, or sketch f′ yourself, one slope at a time\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTracer');
     t.eq('the slope tracer opens', await t.screen(), 's-tracer');
-    t.eq('tracing is the pressed mode', await pressed(t), 'true,false');
+    t.eq('tracing is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(4242));
     await t.ev(() => document.querySelectorAll('#tcMode button')[1].click());
-    t.eq('which is f′ is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which is f′ is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the tracer itself is put away', await hidden(t, 'tcSets') && await hidden(t, 'tcFig') && await hidden(t, 'tcStep'));
     t.ok('the rule is stated before anything is asked',
       /^f′ sits above the axis wherever f climbs, below wherever f falls, and crosses 0 where f's tangent lies flat\. Which graph is f′\?/
@@ -93,7 +93,7 @@ module.exports = {
     t.ok('the three graphs sit side by side', cols[0] === cols[1] && cols[1] === cols[2], cols.join());
 
     await t.ev(() => document.querySelectorAll('#tcMode button')[0].click());
-    t.eq('tracing comes back', await pressed(t), 'true,false');
+    t.eq('tracing comes back', await pressed(t), 'true,false,false');
     t.ok('with the tracer shown again', !(await hidden(t, 'tcFig')) && !(await hidden(t, 'tcSets')));
     t.ok('and the graphs put away', await t.ev(() => !document.getElementById('smPick') || document.getElementById('tcMatch').offsetParent === null));
     t.ok('which is f′ changes nothing in the save', await t.ev(b => JSON.stringify(Game.s) === b, before));

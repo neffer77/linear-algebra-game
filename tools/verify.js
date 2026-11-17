@@ -11949,6 +11949,128 @@ const fieldMatchNotes = (() => {
   reset();
   return { rounds, misses, dashes };
 })();
+/* Sketch f′, the slope tracer's third mode. Every curve's slope at the five
+   stops worked again here by nudging f itself, never from the f′ it is
+   named with; each curve told as a line, a turn or a flat spot by watching
+   the sign of those slopes; every stop set to every wrong value and checked,
+   with the sentence it gets read back; the drawing's tangent measured in
+   pixels on the square grid; and the hunt played through with its toasts. */
+const slopeSketchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Tracer = {render(){ env.renders++; }};" +
+    cut('const SlopeSketch = {', '/* ---------- The slope tracer workshop') + 'return SlopeSketch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const XS = [-2, -1, 0, 1, 2];
+  const nudge = (f, x) => { const h = 1e-4, v = (f(x + h) - f(x - h)) / (2 * h); return Math.abs(v - Math.round(v)) < 1e-6 ? Math.round(v) || 0 : v; };
+  // the eight curves as written, read off their names
+  const NAMES = { 'x²/2': x => x * x / 2, 'x + 1': x => x + 1, 'x³/3 − x': x => x ** 3 / 3 - x, '−x²/2': x => -x * x / 2,
+    'x³/3': x => x ** 3 / 3, '1 − x': x => 1 - x, 'x − x³/3': x => x - x ** 3 / 3, 'x²/2 + x': x => x * x / 2 + x };
+  const DS = { 'x': x => x, '1': x => 1, 'x² − 1': x => x * x - 1, '−x': x => -x, 'x²': x => x * x, '−1': x => -1, '1 − x²': x => 1 - x * x, 'x + 1': x => x + 1 };
+  const reset = () => { S.ci = 0; S.vals = [null, null, null, null, null]; S.sel = 2; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.CURVES.length !== 8 || S.XS.join() !== XS.join() || S.LO !== -4 || S.HI !== 4) fail('slopesketch', 'setup', 'not eight curves on five stops from −4 to 4');
+  if (new Set(S.CURVES.map(C => C.fs)).size !== 8) fail('slopesketch', 'setup', 'a curve comes round twice');
+  let checks = 0, wrongs = 0, tans = 0;
+  S.CURVES.forEach((C, ci) => {
+    const key = `curve ${ci + 1} (${C.fs})`, F = NAMES[C.fs];
+    if (!F) { fail('slopesketch', key, 'is not one of the curves it is meant to be'); return; }
+    if (XS.some(x => Math.abs(C.f(x) - F(x)) > 1e-12)) fail('slopesketch', key, `f is not ${C.fs}`);
+    const d = XS.map(x => nudge(F, x));
+    if (d.some(v => !Number.isInteger(v) || v < -4 || v > 4)) fail('slopesketch', key, `a slope is not a whole number from −4 to 4: ${d.join()}`);
+    if (XS.some((x, i) => C.d(x) !== d[i])) fail('slopesketch', key, `its f′ at the stops is ${XS.map(C.d).join()}, not ${d.join()}`);
+    if (!DS[C.ds] || [-2.5, -1.5, -0.5, 0.5, 1.5, 2.5].some(x => Math.abs(DS[C.ds](x) - nudge(F, x)) > 1e-6)) fail('slopesketch', key, `f′ is not ${C.ds} between the stops`);
+    // a line has one slope; a turn is where the slope changes sign; a flat spot is a 0 with the same sign either side
+    const kind = new Set(d).size === 1 ? 'line' : d.some((v, i) => v === 0 && i > 0 && i < 4 && Math.sign(d[i - 1]) !== Math.sign(d[i + 1])) ? 'turn' : 'bend';
+    if (C.kind !== kind) fail('slopesketch', key, `it is told as a ${C.kind}, not a ${kind}`);
+    if (kind !== 'line' && !d.includes(0)) fail('slopesketch', key, 'no stop is flat, so the turn cannot be seen');
+    // the window holds every stop, and the tangent at each stop climbs d pixels-for-pixels on the square grid
+    reset(); S.ci = ci;
+    const [y0, y1] = S.win();
+    if (XS.some(x => F(x) < y0 || F(x) > y1)) fail('slopesketch', key, 'a stop falls outside the drawing');
+    XS.forEach((x, i) => {
+      S.sel = i; const svg = S.svg(), m = svg.match(/data-k="tan" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/);
+      if (!m) { fail('slopesketch', key, `no tangent is drawn at x = ${x}`); return; }
+      const [ax, ay, bx, by] = m.slice(1).map(Number); tans++;
+      if (bx <= ax || Math.abs(-(by - ay) / (bx - ax) - d[i]) > 0.02) fail('slopesketch', key, `the tangent at x = ${x} is drawn with slope ${(-(by - ay) / (bx - ax)).toFixed(2)}, not ${d[i]}`);
+      const top = 10, H = (y1 - y0) * S.U;
+      if ([ay, by].some(v => v < top - 0.01 || v > top + H + 0.01) || [ax, bx].some(v => v < 150 - 2.5 * S.U - 0.01 || v > 150 + 2.5 * S.U + 0.01)) fail('slopesketch', key, `the tangent at x = ${x} runs off the grid`);
+      if ((svg.match(/data-k="stop"/g) || []).length !== 5) fail('slopesketch', key, 'the five stops are not all drawn');
+    });
+    // every stop set wrong, one at a time, to every value it could be
+    XS.forEach((x, i) => {
+      for (let v = -4; v <= 4; v++) {
+        if (v === d[i]) continue;
+        reset(); S.ci = ci; S.vals = d.slice(); S.vals[i] = v; S.check(); checks++; wrongs++;
+        const w = S.working();
+        const does = d[i] > 0 ? `its tangent climbs ${d[i]} for each 1 across` : d[i] < 0 ? `its tangent falls ${-d[i]} for each 1 across` : 'its tangent lies flat';
+        const want = ['4 of 5 right. Fix the ones in red and check again.', `At x = ${ng(x)}, ${does}, so f′(${ng(x)}) = ${ng(d[i])}, not ${ng(v)}.`, '0 sketched right on the first check this visit.'];
+        if (w.join(' | ') !== want.join(' | ')) fail('slopesketch', key, `with x = ${x} set to ${v} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="true"/.test(svg)) fail('slopesketch', key, `with x = ${x} set to ${v}, the wrong dot is not ringed alone or f′ is given away`);
+        if (S.solved || S.streak) fail('slopesketch', key, 'a wrong sketch is counted');
+        S.set(i, d[i] - v);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('slopesketch', key, `changing x = ${x} leaves its ring`);
+        if (S.working()[0] !== '4 of 5 right. Check again.' || S.working().length !== 2) fail('slopesketch', key, `after changing x = ${x} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('slopesketch', key, `fixing x = ${x} is not counted as a fix`);
+      }
+    });
+    // all five right on the first check
+    reset(); S.ci = ci;
+    let h = S.html();
+    if (!/id="ssCheck" disabled /.test(h)) fail('slopesketch', key, 'the check is open before the slopes are set');
+    for (let skip = 0; skip < 5; skip++) {
+      S.vals = d.map((v, i) => i === skip ? null : v);
+      if (!/id="ssCheck" disabled /.test(S.html())) fail('slopesketch', key, `the check opens with x = ${XS[skip]} unset`);
+      S.check();
+      if (S.tries || S.marks) fail('slopesketch', key, `a check runs with x = ${XS[skip]} unset`);
+    }
+    S.vals = [null, null, null, null, null];
+    XS.forEach((x, i) => { let n = 0; while (S.vals[i] !== d[i] && n++ < 9) S.set(i, (S.vals[i] === null ? d[i] >= 0 : d[i] > S.vals[i]) ? 1 : -1); });
+    if (S.vals.join() !== d.join()) fail('slopesketch', key, `the buttons cannot set ${d.join()}`);
+    h = S.html();
+    if (/id="ssCheck" disabled /.test(h)) fail('slopesketch', key, 'the check stays shut with every slope set');
+    S.check(); checks++;
+    const zs = XS.filter((x, i) => d[i] === 0).map(ng), and = zs.length < 2 ? zs.join('') : zs.slice(0, -1).join(', ') + ' and ' + zs[zs.length - 1];
+    const second = kind === 'line' ? `A straight line climbs the same at every step, so its slope graph is flat, at ${ng(d[0])}.`
+      : kind === 'bend' ? `At x = 0 the slope is 0, yet ${C.fs} does not turn: it flattens for a moment and climbs on, so f′ touches 0 without crossing it.`
+      : `f′ crosses 0 at x = ${and}, where ${C.fs} turns: there its tangent lies flat.`;
+    const want = [`Yes: the slope of ${C.fs} is f′(x) = ${C.ds}, and the five dots lie on it.`, second, '1 sketched right on the first check this visit.'];
+    if (S.working().join(' | ') !== want.join(' | ')) fail('slopesketch', key, `once sketched the readout is ${S.working().join(' | ')}`);
+    if (kind === 'bend' && (d[1] <= 0 || d[3] <= 0)) fail('slopesketch', key, 'is told as climbing on either side of its flat spot, but does not');
+    h = S.html();
+    if ((h.match(/data-k="true"/g) || []).length !== 1 || !h.includes('id="ssNext"') || /onclick="SlopeSketch\.set\(\d,-?1\)"/.test(h.replace(/disabled onclick="SlopeSketch\.set/g, ''))) fail('slopesketch', key, 'once sketched, f′ is not drawn, Next not offered, or a slope still opens');
+    const before = S.vals.join(); S.set(0, 1);
+    if (S.vals.join() !== before) fail('slopesketch', key, 'a slope moves after the sketch is right');
+    S.next();
+    if (S.ci !== (ci + 1) % 8 || S.solved || S.marks || S.tries || S.vals.some(v => v !== null)) fail('slopesketch', key, 'Next does not deal the next curve fresh');
+  });
+  // the ends of the scale
+  reset(); S.set(0, 1); S.set(0, 1); S.set(0, 1); S.set(0, 1); S.set(0, 1);
+  if (S.vals[0] !== 4) fail('slopesketch', 'scale', `pressing + five times reaches ${S.vals[0]}, not 4`);
+  reset(); for (let k = 0; k < 6; k++) S.set(1, -1);
+  if (S.vals[1] !== -4) fail('slopesketch', 'scale', `pressing − six times reaches ${S.vals[1]}, not −4`);
+  // the hunt, played as a player would: a slip fixed, then first checks round the curves
+  reset(); S.html();
+  if (S.done.size) fail('slopesketch', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const d = XS.map(x => S.C().d(x)); S.vals = d.slice(); if (slip) S.vals[4] = d[4] + 1; S.touched = true; S.check(); S.html();
+    if (slip) { S.set(4, -1); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,turn'], [false, 'fix,line,one,turn'], [false, 'fix,line,one,turn'], [false, 'fix,line,one,three,turn'], [false, 'bend,fix,line,one,three,turn']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('slopesketch', 'hunt', `curve ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ f′ crosses 0 where f turns · A slip caught and fixed | ✓ Right on the first check · A line has one slope | ✓ Three in a row') fail('slopesketch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SLOPE SKETCHER / every f′ drawn by hand') fail('slopesketch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (!S.working().join(' | ').endsWith('4 sketched right on the first check this visit, 4 in a row.')) fail('slopesketch', 'hunt', `the count reads ${S.working().join(' | ')}`);
+  reset();
+  return { checks, wrongs, tans };
+})();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -18790,6 +18912,7 @@ console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString()
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
+console.log(`  slopes sketched   ${pad(slopeSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn f′ in the slope tracer, ${slopeSketchNotes.wrongs} of them with one slope set wrong and caught, and ${slopeSketchNotes.tans} tangents measured off the square grid)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);

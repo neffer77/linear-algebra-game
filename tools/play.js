@@ -111,6 +111,7 @@ const SUITES = [
   require('./play/stretchpick'), // see y(0) and y one stretch on, pick which of four numbers is y later
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′
+  require('./play/slopesketch'), // see f, set its slope at five stops and draw f′ by hand
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
