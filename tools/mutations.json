@@ -1,103 +1,89 @@
 {
-  "change": "Check the trapezoid deal's guards, its spread, the area under x and that nothing on the card is hidden.",
+  "change": "Add Newton's method as a fight topic, linked to its workshop.",
   "mutations": [
     {
-      "name": "a slip may be T itself",
+      "name": "the step is added",
       "file": "index.html",
-      "find": "const seen=new Set([this.key(this.v(S,'right'))]), keep=[];",
-      "replace": "const seen=new Set(), keep=[];",
+      "find": "step=dv(fx,dfx), ans=sub(X,step);",
+      "replace": "step=dv(fx,dfx), ans=add(X,step);",
       "run": "verify"
     },
     {
-      "name": "a slip may be 0",
+      "name": "the slope drops its coefficient",
       "file": "index.html",
-      "find": "if(v[0]<=0 || this.big(v) || seen.has(this.key(v))) continue;",
-      "replace": "if(this.big(v) || seen.has(this.key(v))) continue;",
+      "find": "sv=pw*x0**(pw-1)+p;",
+      "replace": "sv=x0**(pw-1)+p;",
       "run": "verify"
     },
     {
-      "name": "there are always two strips",
+      "name": "the guess always starts below the root",
       "file": "index.html",
-      "find": "const n=R.i(2,4), h=",
-      "replace": "const n=2, h=",
+      "find": "const x0=R.chance(0.5)?lo:lo+1;",
+      "replace": "const x0=lo;",
       "run": "verify"
     },
     {
-      "name": "the curve always starts at 0",
+      "name": "the guess may start far from the root",
       "file": "index.html",
-      "find": "a:R.i(0,1), n, h};",
-      "replace": "a:0, n, h};",
+      "find": "const x0=R.chance(0.5)?lo:lo+1;",
+      "replace": "const x0=R.chance(0.5)?lo:lo+2;",
       "run": "verify"
     },
     {
-      "name": "the f(x) = x check uses the wrong area",
+      "name": "the form asked for is not kept",
       "file": "index.html",
-      "find": "A=this.mul(this.add(this.mul(b,b),[-S.a*S.a,1]),[1,2])",
-      "replace": "A=this.mul(this.add(this.mul(b,b),[-S.a,1]),[1,2])",
+      "find": "same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
+      "replace": "same<2) && g<600) continue;\n    return {topic:\"Newton's Method\",",
       "run": "verify"
     },
     {
-      "name": "the left check takes the right x's",
+      "name": "fewer than two may share the answer's form",
       "file": "index.html",
-      "find": "const use=k==='left' ? xs.slice(0,n) : xs.slice(1)",
-      "replace": "const use=k==='left' ? xs.slice(1) : xs.slice(0,n)",
+      "find": "(dist.length<4 || same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
+      "replace": "(dist.length<4 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
       "run": "verify"
     },
     {
-      "name": "the antiderivative loses its third",
+      "name": "the px slip is never offered",
       "file": "index.html",
-      "find": "anti(S){ return `${S.c===3?'x³':S.c===1?'x³/3':`${S.c}x³/3`}",
-      "replace": "anti(S){ return `${S.c===1?'x³':`${S.c}x³`}",
+      "find": "      ...(p ? [[sub(X,dv(fx,F(3*x0*x0))),",
+      "replace": "      ...(false ? [[sub(X,dv(fx,F(3*x0*x0))),",
       "run": "verify"
     },
     {
-      "name": "the exact check runs on the curve itself",
+      "name": "the unlowered power is worked wrong",
       "file": "index.html",
-      "find": "return `Check what ${L} is: [${this.anti(S)}]",
-      "replace": "return `Check what ${L} is: [${this.fw(S)}]",
+      "find": "[[sub(X,dv(fx,F(3*x0+p))),",
+      "replace": "[[sub(X,dv(fx,F(3*x0))),",
       "run": "verify"
     },
     {
-      "name": "the right line forgets to double",
+      "name": "the upside-down step is the step",
       "file": "index.html",
-      "find": "`2 × ${this.pb(v)}`).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
-      "replace": "this.pb(v)).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
+      "find": "[sub(X,dv(dfx,fx)),'that turns",
+      "replace": "[sub(X,dv(fx,dfx)),'that turns",
       "run": "verify"
     },
     {
-      "name": "the count line is lost",
+      "name": "the working shows f(x₀) with the wrong sign",
       "file": "index.html",
-      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tz",
-      "replace": "    out+=`<div id=\"tz",
+      "find": "− ${k} = ${neg(fv)} and f′(${x0})",
+      "replace": "− ${k} = ${neg(-fv)} and f′(${x0})",
       "run": "verify"
     },
     {
-      "name": "the rule is not shown",
+      "name": "0 may be offered",
       "file": "index.html",
-      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tz",
-      "replace": "let out='';\n    out+=`<div id=\"tz",
+      "find": "const ok=v=>v[0]!==0 && !eq(v,ans);",
+      "replace": "const ok=v=>!eq(v,ans);",
       "run": "verify"
     },
     {
-      "name": "the heights are not shown",
+      "name": "the topic is not linked to its workshop",
       "file": "index.html",
-      "find": "out+=`<div id=\"tzqH\"",
-      "replace": "out+=`<div id=\"tzqH\" hidden",
-      "run": "verify"
-    },
-    {
-      "name": "a shut number keeps its name",
-      "file": "index.html",
-      "find": "${gone?'. Not T':''}",
+      "find": "    Newton: [\"🔎 Newton's Method Workshop\", ['newton']],\n",
       "replace": "",
       "run": "verify"
-    },
-    {
-      "name": "the hand workshop does not step aside",
-      "file": "index.html",
-      "find": "for(const id of ['tzwSets','tzwFig','tzwMoveRow','tzwRead','tzwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
-      "replace": "",
-      "run": "play:trappick"
     }
   ]
 }

@@ -742,6 +742,7 @@ let mvChordOffered = 0;   // the mean value theorem's questions that offer the c
 let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
+let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
@@ -1337,6 +1338,40 @@ Object.assign(ANALYSIS, {
     if (named.includes(slip[1][0]) && named.includes(slip[2][0]) && !gap) fail('analysis', 'trapezoid', `the left and right sums are both offered: ${t}`);
     covered.add('trapezoid');
   },
+  // Newton's method, worked again here in floating point: the curve and x₀
+  // read off the question, x₁ = x₀ − f(x₀)/f′(x₀) worked with the slope found
+  // by a nudge on f, never by the power rule, and each wrong answer worked
+  // again as the slip its reason names.
+  newton: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^Take one step of Newton's method on f\(x\) = x([²³])(?: \+ (\d*)x)? - (\d+) from x₀ = (\d)\. What is x₁\?$/);
+    if (!m) { fail('analysis', 'newton', `the question does not read as Newton's method: ${t}`); return; }
+    const pw = m[1] === '²' ? 2 : 3, p1 = m[2] === undefined ? 0 : m[2] === '' ? 1 : +m[2], k = +m[3], x0 = +m[4];
+    if ((pw === 2 && p1) || x0 < 1 || k < 2) fail('analysis', 'newton', `the curve or x₀ is out of range: ${t}`);
+    const f = x => x ** pw + p1 * x - k, e = 1e-5, df = x => (f(x + e) - f(x - e)) / (2 * e);
+    const fv = f(x0), sv = df(x0), step = fv / sv, truth = x0 - step;
+    // x₀ is a whole number either side of the root, so the step heads toward it
+    if (!(f(x0 - 1) * f(x0) < 0 || f(x0) * f(x0 + 1) < 0)) fail('analysis', 'newton', `x₀ = ${x0} is not next to the root: ${t}`);
+    if (fv < 0) ntBelow++;
+    const slip = [[/^that adds the step/, x0 + step], [/^that is the step f\(x₀\)\/f′\(x₀\) itself/, step], [/^that turns the step upside down/, x0 - sv / fv],
+      [/^that takes away f\(x₀\) with no slope under it/, x0 - fv], [/^that drops the [23] from the slope/, x0 - fv / (sv - (pw - 1) * x0 ** (pw - 1))],
+      [/^that does not lower the power/, x0 - fv / (3 * x0 + p1)], [/^that leaves \d*x out of the slope/, x0 - fv / (sv - p1)]];
+    valueCheck('newton', truth, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'newton', `the working does not end on ${p.a}: ${w}`);
+    const wm = w.match(/f\((\d)\) = .* = (-?\d+) and f′\((\d)\) = (\d+), so x₁ = (\d) - \(?(-?\d+)\)?\/(\d+) = /);
+    if (!wm || +wm[1] !== x0 || +wm[2] !== fv || Math.abs(+wm[4] - sv) > 1e-6 || +wm[6] !== fv || Math.abs(+wm[7] - sv) > 1e-6) fail('analysis', 'newton', `f(x₀) or f′(x₀) is worked wrong: ${w}`);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'newton', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'newton', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      if (/^that (adds the step|is the step)/.test(fl(why))) ntKey++;
+      ntSeen.add(String(sl[0]));
+    });
+    covered.add('newton');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1458,7 +1493,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 77, sig: 0xecef };
+  const PINNED = { count: 78, sig: 0x79be };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16598,6 +16633,37 @@ for (let d = 1; d <= 3; d++) {
   if (tzSeen.size !== (d < 3 ? 6 : 5)) fail('analysis', 'trapezoid', `depth ${d} offers only ${tzSeen.size} of its slips`);
   if (tzKey < TZ * 0.8) fail('analysis', 'trapezoid', `depth ${d} offers its commonest slips in only ${tzKey} of ${TZ} questions`);
   if (tzWhole < TZ * 0.35 || tzWhole > TZ * 0.65) fail('analysis', 'trapezoid', `depth ${d} gives a whole answer ${tzWhole} times in ${TZ}, not about half`);
+}
+
+// Newton's method at every depth: the answer and its four slips are five
+// different exact numbers, none 0, each slip with its reason; the answer is
+// above 0, two of the four share its sign and two its form; the commonest
+// slips (the step added, or the step given for the guess) are offered often;
+// and whole and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const NT = 3000;
+  ntKey = 0; ntWhole = 0; ntBelow = 0; ntSeen = new Set();
+  for (let i = 0; i < NT; i++) {
+    const p = GEN.newton(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'newton', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'newton', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (vals[0].startsWith('-')) fail('analysis', 'newton', `the answer is below 0: ${vals[0]}`);
+    if (vals.slice(1).filter(v => !v.startsWith('-')).length < 2) fail('analysis', 'newton', `fewer than two wrong answers are above 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'newton', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'newton', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'newton', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) ntWhole++;
+    ANALYSIS.newton(p);
+  }
+  // every slip turns up at its depth: five on x² − k, six on x³ − k, seven with px
+  if (ntSeen.size !== d + 4) fail('analysis', 'newton', `depth ${d} offers only ${ntSeen.size} of its slips`);
+  if (ntKey < NT * 0.6) fail('analysis', 'newton', `depth ${d} offers its commonest slips in only ${ntKey} of ${NT} questions`);
+  // from above the root the step lands between it and x₀, never on a whole number, so whole
+  // answers all start below; fractional ones start either side
+  if (ntBelow < NT * 0.6 || ntBelow > NT * 0.9) fail('analysis', 'newton', `depth ${d} starts below the root ${ntBelow} times in ${NT}, not about three in four`);
+  if (ntWhole < NT * 0.35 || ntWhole > NT * 0.65) fail('analysis', 'newton', `depth ${d} gives a whole answer ${ntWhole} times in ${NT}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

@@ -4448,6 +4448,57 @@ trapezoid(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`\${why}.\`};
   }
+},
+/* Newton's method: from a guess x₀, follow the tangent at x₀ down to the
+   axis, x₁ = x₀ − f(x₀)/f′(x₀). At depth 1 one step on x² − k, at depth 2 on
+   x³ − k, and at depth 3 on x³ + px − k, where the slope has two terms.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips people make: the step added instead of taken away, the step
+   f(x₀)/f′(x₀) given for the new guess, the step turned upside down, f(x₀)
+   taken away with no slope under it, and the slope worked wrong (the power's
+   coefficient dropped, the power not lowered, or at depth 3 the p left out). */
+newton(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), dv=(u,v)=>F(u[0]*v[1],u[1]*v[0]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    // x₀ is a whole number either side of the root, so the step heads toward it
+    const pw=d===1?2:3, p=d===3?R.i(1,4):0, k=R.i(2,[0,60,80,60][d]), f=x=>x**pw+p*x-k;
+    let lo=0; while(f(lo+1)<0) lo++;
+    if(f(lo+1)===0) continue;   // a whole root needs no Newton
+    const x0=R.chance(0.5)?lo:lo+1;
+    const fv=f(x0), sv=pw*x0**(pw-1)+p;
+    if(x0<1) continue;
+    const X=F(x0), fx=F(fv), dfx=F(sv), step=dv(fx,dfx), ans=sub(X,step);
+    const fs=\`x\${pw===2?'²':'³'}\${p?\` + \${p===1?'':p}x\`:''} − \${k}\`;
+    const pv=n=>n<0?\`(\${neg(n)})\`:String(n);
+    const why=\`f(x) = \${fs}, so f′(x) = \${pw}x\${pw===3?'²':''}\${p?\` + \${p}\`:''}. At x₀ = \${x0}, f(\${x0}) = \${x0**pw}\${p?\` + \${p*x0}\`:''} − \${k} = \${neg(fv)} and f′(\${x0}) = \${sv}, so x₁ = \${x0} − \${pv(fv)}/\${sv} = \${show(ans)}\`;
+    const slips=[
+      [add(X,step),'that adds the step: the tangent runs down to the axis, so x₁ = x₀ − f(x₀)/f′(x₀), with a minus'],
+      [step,'that is the step f(x₀)/f′(x₀) itself; the new guess is x₀ minus it'],
+      [sub(X,dv(dfx,fx)),'that turns the step upside down: it is f(x₀) over the slope f′(x₀), not the slope over f(x₀)'],
+      [sub(X,fx),'that takes away f(x₀) with no slope under it; the step is f(x₀) divided by f′(x₀)'],
+      [sub(X,dv(fx,F(x0**(pw-1)+p))),\`that drops the \${pw} from the slope: the derivative of x\${pw===2?'²':'³'} is \${pw}x\${pw===3?'²':''}\`],
+      ...(pw===3 ? [[sub(X,dv(fx,F(3*x0+p))),'that does not lower the power: the derivative of x³ is 3x², not 3x']] : []),
+      ...(p ? [[sub(X,dv(fx,F(3*x0*x0))),\`that leaves \${p===1?'':p}x out of the slope: its derivative, \${p}, adds to 3x²\`]] : [])
+    ];
+    // the ranges keep every number short and two of the four above 0, as verify checks
+    const ok=v=>v[0]!==0 && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || same<2 || (ans[1]===1)!==whole) && g<600) continue;
+    return {topic:"Newton's Method",
+      codex:{rule:'x₁ = x₀ − f(x₀)/f′(x₀): from a guess, follow the tangent at x₀ down to the axis. Where it lands is the next guess, nearer a root when the start is near one.',
+             eg:'f(x) = x² − 2 from x₀ = 1: f(1) = −1 and f′(1) = 2, so x₁ = 1 − (−1)/2 = 3/2, already near √2 ≈ 1.414.'},
+      q:\`Take one step of Newton's method on f(x) = \${fs} from x₀ = \${x0}. What is x₁?\`, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
 }
 };
 
@@ -4561,7 +4612,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4574,7 +4625,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4630,6 +4681,7 @@ const WORKSHOP_FOR = (() => {
     ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
     LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
     Trap: ["🪟 Trapezoid Workshop", ['trapezoid']],
+    Newton: ["🔎 Newton's Method Workshop", ['newton']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -5164,7 +5216,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
