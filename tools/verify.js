@@ -11681,7 +11681,7 @@ const eulerPickNotes = (() => {
   if (!host.includes("[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab(\'${t}\')"')) fail('eulerpick', 'host', 'the two tabs are not drawn and pressed as they should be');
   if (!host.includes("for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('eulerpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
   if (!host.includes("document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n    if(pick) return;")) fail('eulerpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
-  if (!html.includes('and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>')) fail('eulerpick', 'tome', 'the Tome does not tell of the pick');
+  if (!html.includes('and y′ = y² lag its separated curve. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>')) fail('eulerpick', 'tome', 'the Tome does not tell of the pick');
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
   const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
@@ -14200,10 +14200,10 @@ const eulerWalkNotes = (() => {
   const val = t => { const s = t.replace(/[()]/g, '').replace(/−/g, '-'), [a, b] = s.split('/'); return b === undefined ? +a : +a / +b; };
   const near = (t, v, tol) => Math.abs(val(t) - v) < tol;
   const tolOf = t => /\//.test(t) || !/\./.test(t) ? 1e-9 : 6e-5;   // an exact number is exact, a decimal is to four places
-  const F = { grow: (x, y) => y, decay: (x, y) => -2 * y, ramp: (x, y) => x };
-  const SOL = { grow: x => Math.exp(x), decay: x => Math.exp(-2 * x), ramp: x => x * x / 2 };
-  const END = { grow: 1, decay: 2, ramp: 2 }, Y0 = { grow: 1, decay: 1, ramp: 0 };
-  if (W.SETS.map(S => S.id).join() !== 'grow,decay,ramp') fail('eulerwalk', 'sets', W.SETS.map(S => S.id).join());
+  const F = { grow: (x, y) => y, decay: (x, y) => -2 * y, ramp: (x, y) => x, sq: (x, y) => y * y };
+  const SOL = { grow: x => Math.exp(x), decay: x => Math.exp(-2 * x), ramp: x => x * x / 2, sq: x => 1 / (2 - x) };
+  const END = { grow: 1, decay: 2, ramp: 2, sq: 1 }, Y0 = { grow: 1, decay: 1, ramp: 0, sq: 0.5 }, Y0S = { grow: '1', decay: '1', ramp: '0', sq: '1/2' };
+  if (W.SETS.map(S => S.id).join() !== 'grow,decay,ramp,sq') fail('eulerwalk', 'sets', W.SETS.map(S => S.id).join());
   if (W.HS.join() !== '1,0.5,0.25,0.125') fail('eulerwalk', 'steps', W.HS.join());
   if (W.si !== 0 || W.hi !== 0 || W.k !== 0) fail('eulerwalk', 'open', 'the workshop does not open on y′ = y with h = 1 and no step taken');
   const reset = () => { W.touched = false; W.si = 0; W.hi = 0; W.k = 0; W.done.clear(); for (const k in W.misses) delete W.misses[k]; };
@@ -14214,7 +14214,7 @@ const eulerWalkNotes = (() => {
     reset();
     // a walk with a bigger step on this equation has been finished before this one, when there is one
     if (hi > 0) { W.si = si; W.hi = hi - 1; W.all(); }
-    W.si = (si + 1) % 3; W.hi = hi; W.all();
+    W.si = (si + 1) % W.SETS.length; W.hi = hi; W.all();
     W.pick(si);
     if (W.k !== 0) fail('eulerwalk', S.id, 'picking an equation does not start the walk again');
     W.all(); W.hi = (hi + 1) % 4; W.setH(hi);
@@ -14231,13 +14231,14 @@ const eulerWalkNotes = (() => {
       const key = `${id} h=${h} after ${k}`, got = W.working(), P = W.walk();
       if (W.k !== k) { fail('eulerwalk', key, 'a step was not taken'); break; }
       if (P.length !== k + 1 || P.some((p, i) => Math.abs(p.x - xs[i]) > 1e-9 || Math.abs(p.y - ys[i]) > 1e-9)) fail('eulerwalk', key, 'the walk leaves Euler’s points');
-      if (got[0] !== `${S.eq}, starting from y(0) = ${Y0[id]}. Euler’s method walks it in straight steps of h = ${({ 1: '1', 0.5: '1/2', 0.25: '1/4', 0.125: '1/8' })[h]}: read the slope where you stand, then move h along x and h × slope up. Reaching x = ${END[id]} takes ${N} step${N === 1 ? '' : 's'}.`) fail('eulerwalk', key, got[0]);
+      if (got[0] !== `${S.eq}, starting from y(0) = ${Y0S[id]}. Euler’s method walks it in straight steps of h = ${({ 1: '1', 0.5: '1/2', 0.25: '1/4', 0.125: '1/8' })[h]}: read the slope where you stand, then move h along x and h × slope up. Reaching x = ${END[id]} takes ${N} step${N === 1 ? '' : 's'}.`) fail('eulerwalk', key, got[0]);
       if (got.some(l => [...l.matchAll(/\d+\/(\d+)/g)].some(q => +q[1] > 16))) fail('eulerwalk', key, `a number is written as a fraction past sixteenths: ${got.join(' ')}`);
       { // every goal, decided here at every step of the walk, not only at its end
         const Pk = W.walk(), atEnd = k === N, truth = {
           walk: id === 'grow' && h === 1 && atEnd, closer: id === 'grow' && h < 1 && atEnd, eighth: id === 'grow' && h === 0.125 && atEnd,
           swing: id === 'decay' && h === 1 && k >= 1, flat: id === 'decay' && h === 0.5 && k >= 1,
-          tame: id === 'decay' && atEnd && Pk.every(p => p.y > 0), ramp: id === 'ramp' && atEnd };
+          tame: id === 'decay' && atEnd && Pk.every(p => p.y > 0), ramp: id === 'ramp' && atEnd,
+          sep: id === 'sq' && atEnd, sepnear: id === 'sq' && atEnd && Math.abs(ys[N] - 1) < 0.1 };
         for (const g of W.GOALS) if (g.id in truth && !!g.ok(W) !== truth[g.id]) fail('eulerwalk', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
       }
       if (k === 0) { if (got.length !== 2 || got[1] !== 'Take the first step.') fail('eulerwalk', key, got.join(' ')); continue; }
@@ -14245,14 +14246,15 @@ const eulerWalkNotes = (() => {
       if (from > 0 && lines.shift() !== (from === 1 ? 'Step 1 is the first dot on the figure.' : `Steps 1 to ${from} are the dots already on the figure.`)) fail('eulerwalk', key, 'the steps off the readout are not pointed to the figure');
       for (let j = from; j < k; j++) {
         const l = lines.shift() || '', s = f(xs[j], ys[j]); steps++;
-        const m = l.match(/^Step (\d+): at \((\S+), (\S+)\) the slope is (?:y = (\S+)|x = (\S+)|−2 × (\S+) ([=≈]) (\S+)), so y goes to (\S+) \+ (\S+) × (\S+) ([=≈]) (\S+) at x = (\S+)\.$/);
+        const m = l.match(/^Step (\d+): at \((\S+), (\S+)\) the slope is (?:y = (\S+)|x = (\S+)|−2 × (\S+) ([=≈]) (\S+)|(\S+)² ([=≈]) (\S+)), so y goes to (\S+) \+ (\S+) × (\S+) ([=≈]) (\S+) at x = (\S+)\.$/);
         if (!m) { fail('eulerwalk', key, `a step is not worked: ${l}`); break; }
-        const [, no, px, py, sy, sx, dy, deq, ds, y2, hh, s2, eq2, y1, x1] = m;
-        const sv = sy || sx || ds;
+        const [, no, px, py, sy, sx, dy, deq, ds, qy, qeq, qs, y2, hh, s2, eq2, y1, x1] = m;
+        const sv = sy || sx || ds || qs;
+        if (qy && (qy !== (/[−/]/.test(py) ? `(${py})` : py) || (qeq === '=') !== (tolOf(py) === 1e-9 && tolOf(qs) === 1e-9))) fail('eulerwalk', key, `step ${j + 1} squares the wrong y: ${l}`);
         if (+no !== j + 1 || !near(px, xs[j], 1e-9) || !near(py, ys[j], tolOf(py)) || !near(sv, s, tolOf(sv))) fail('eulerwalk', key, `step ${j + 1} reads the wrong point or slope: ${l}`);
-        if ((id === 'grow') !== !!sy || (id === 'ramp') !== !!sx || (id === 'decay') !== !!dy) fail('eulerwalk', key, `step ${j + 1} works the wrong equation: ${l}`);
+        if ((id === 'grow') !== !!sy || (id === 'ramp') !== !!sx || (id === 'decay') !== !!dy || (id === 'sq') !== !!qy) fail('eulerwalk', key, `step ${j + 1} works the wrong equation: ${l}`);
         if (dy && (!near(dy, ys[j], tolOf(dy)) || (deq === '=') !== (tolOf(dy) === 1e-9))) fail('eulerwalk', key, `step ${j + 1} doubles the wrong y: ${l}`);
-        if (/\./.test(sv) && !/\./.test(py) && py !== '0') fail('eulerwalk', key, `step ${j + 1} writes the slope less exactly than the point allows: ${l}`);
+        if (/\./.test(sv) && !/\./.test(py) && py !== '0' && !(id === 'sq' && val(py) ** 2 * 16 % 1 !== 0)) fail('eulerwalk', key, `step ${j + 1} writes the slope less exactly than the point allows: ${l}`);
         if (/\./.test(py) && /\//.test(sv)) fail('eulerwalk', key, `step ${j + 1} writes the slope more exactly than its point: ${l}`);
         if (!near(y2, ys[j], tolOf(y2)) || !near(hh, h, 1e-9) || !near(s2, s, tolOf(s2)) || !near(y1, ys[j + 1], tolOf(y1)) || !near(x1, xs[j + 1], 1e-9)) fail('eulerwalk', key, `step ${j + 1} lands in the wrong place: ${l}`);
         if ((eq2 === '=') !== (tolOf(y1) === 1e-9)) fail('eulerwalk', key, `step ${j + 1} says = of a rounded number or ≈ of an exact one: ${l}`);
@@ -14264,13 +14266,14 @@ const eulerWalkNotes = (() => {
       if (!me) fail('eulerwalk', key, `the end is not said: ${end}`);
       else {
         if (+me[1] !== END[id] || +me[5] !== END[id] || !near(me[3], Y, tolOf(me[3]))) fail('eulerwalk', key, `the landing is wrong: ${end}`);
-        if (me[4] !== { grow: 'y = eˣ', decay: 'y = e^(−2x)', ramp: 'y = x²/2' }[id] || me[6] !== { grow: 'e ≈ 2.71828', decay: 'e^(−4) ≈ 0.01832', ramp: '2' }[id]) fail('eulerwalk', key, `the true solution is misnamed: ${end}`);
+        if (me[4] !== { grow: 'y = eˣ', decay: 'y = e^(−2x)', ramp: 'y = x²/2', sq: 'y = 1/(2 − x)' }[id] || me[6] !== { grow: 'e ≈ 2.71828', decay: 'e^(−4) ≈ 0.01832', ramp: '2', sq: '1' }[id]) fail('eulerwalk', key, `the true solution is misnamed: ${end}`);
         if (Math.abs(SOL[id](END[id]) - val(me[6].replace(/^.*≈ /, ''))) > 1e-5) fail('eulerwalk', key, `the true value is wrong: ${me[6]}`);
-        if (me[7] !== (Y < T ? 'short' : 'over') || !near(me[9], Math.abs(Y - T), tolOf(me[9])) || (me[8] === 'exactly') !== (id === 'ramp')) fail('eulerwalk', key, `the miss is wrong: ${end}`);
+        if (me[7] !== (Y < T ? 'short' : 'over') || !near(me[9], Math.abs(Y - T), tolOf(me[9])) || (me[8] === 'exactly') !== (id === 'ramp' || (id === 'sq' && h === 1))) fail('eulerwalk', key, `the miss is wrong: ${end}`);
       }
       const note = lines.shift() || '';
       const want = id === 'grow' ? 'Each step reads the slope where it starts, and on y′ = y the slope only grows as you climb, so every step rises too little and the walk falls short of e.'
         : id === 'ramp' ? `The slope here does not depend on y, so each step adds a rectangle h wide and as tall as x at its left edge. Euler’s walk is the left Riemann sum for ∫₀² x dx = 2, and it falls short by exactly h = ${({ 1: '1', 0.5: '1/2', 0.25: '1/4', 0.125: '1/8' })[h]}.`
+        : id === 'sq' ? 'This is y′ = y² separated: dy/y² = dx gives −1/y = x + c, and y(0) = 1/2 makes c = −2, so the true curve is y = 1/(2 − x). Its slope y² grows faster than y does, so each step falls further behind, and the true curve runs off to infinity at x = 2 while Euler’s walk never notices.'
         : ys.some(y => y < 0) ? 'The true curve never reaches 0, but h × slope is −2 × 1 × y = −2y here: each step takes away twice y, so the walk jumps to the other side of 0 and swings back.'
         : ys.some(y => y === 0) ? 'The true curve never reaches 0, but h × slope is −2 × 1/2 × y = −y here: the first step takes away all of y and lands on 0, where the slope is 0, so the walk stays there.'
         : `Each step keeps 1 − 2h = ${({ 0.25: '1/2', 0.125: '3/4' })[h]} of y, so the walk shrinks toward 0 without reaching it, as the true curve does.`;
@@ -14302,6 +14305,7 @@ const eulerWalkNotes = (() => {
       walk: id === 'grow' && h === 1 && atEnd, closer: id === 'grow' && h < 1 && atEnd, eighth: id === 'grow' && h === 0.125 && atEnd,
       swing: id === 'decay' && h === 1, flat: id === 'decay' && h === 0.5,
       tame: id === 'decay' && atEnd && Pn.every(p => p.y > 0), ramp: id === 'ramp' && atEnd,
+      sep: id === 'sq' && atEnd, sepnear: id === 'sq' && atEnd && Math.abs(ys[N] - 1) < 0.1,
     };
     for (const g of W.GOALS) {
       if (!(g.id in truth)) { fail('eulerwalk', g.id, 'a goal with no check'); continue; }
