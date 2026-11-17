@@ -1,88 +1,88 @@
 {
-  "change": "Add a Match the map mode to the downhill workshop",
+  "change": "Add a Match the flow mode to the diagonal workshop",
   "mutations": [
     {
-      "name": "x² + 4y² drawn as x² + 2y²",
+      "name": "a spiral out drawn from another matrix",
       "file": "index.html",
-      "find": "lv:[1,4,9],           f:(x,y)=>x*x+4*y*y}",
-      "replace": "lv:[1,4,9],           f:(x,y)=>x*x+2*y*y}",
+      "find": "spout:    {M:[[1,-1],[1,1]],",
+      "replace": "spout:    {M:[[1,-1],[2,1]],",
       "run": "verify"
     },
     {
-      "name": "xy told as a map that never closes",
+      "name": "a sink's eigenvalues told wrong",
       "file": "index.html",
-      "find": "twist:  {s:'xy',           k:'cross',",
-      "replace": "twist:  {s:'xy',           k:'open',",
+      "find": "ev:'−1 and −3',",
+      "replace": "ev:'−1 and −2',",
       "run": "verify"
     },
     {
-      "name": "a level dropped from the bowl",
+      "name": "a centre told as turning the wrong way",
       "file": "index.html",
-      "find": "lv:[1,2,4,6,9],",
-      "replace": "lv:[1,2,4,9],",
+      "find": "ccw:      {M:[[0,-1],[1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, anticlockwise'}",
+      "replace": "ccw:      {M:[[0,-1],[1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, clockwise'}",
       "run": "verify"
     },
     {
-      "name": "the answer twice in the first place",
+      "name": "an answer moved out of its place",
       "file": "index.html",
-      "find": "{a:'wide',   o:['tall','bowl','wide','saddle']}",
-      "replace": "{a:'wide',   o:['wide','bowl','tall','saddle']}",
+      "find": "{a:'cw',       o:['ccw','source','spin','cw']}",
+      "replace": "{a:'cw',       o:['ccw','source','cw','spin']}",
       "run": "verify"
     },
     {
-      "name": "a crossing traced the wrong way round",
+      "name": "a source with no other node beside it",
       "file": "index.html",
-      "find": "const t=p/(p-q);",
-      "replace": "const t=q/(q-p);",
+      "find": "{a:'source',   o:['sink','shear','source','cw']}",
+      "replace": "{a:'source',   o:['spin','ccw','source','cw']}",
       "run": "verify"
     },
     {
-      "name": "the y scale flipped",
+      "name": "a backwards arrow counted as the same way",
       "file": "index.html",
-      "find": "N:47, X:x=>150+x*40, Y:y=>130-y*40,",
-      "replace": "N:47, X:x=>150+x*40, Y:y=>130+y*40,",
+      "find": "same(u,v){ return u[0]*v[1]-u[1]*v[0]===0 && u[0]*v[0]+u[1]*v[1]>0; },",
+      "replace": "same(u,v){ return u[0]*v[1]-u[1]*v[0]===0; },",
       "run": "verify"
     },
     {
-      "name": "a wrong pick caught at points it agrees on",
+      "name": "every arrow drawn upside down",
       "file": "index.html",
-      "find": "A.f(...Q)===c && (!W || Math.abs(W(...Q)-W(...P))>=0.4*this.steep(W,Q))",
-      "replace": "A.f(...Q)===c",
+      "find": "dx=v[0]/n*8, dy=-v[1]/n*8,",
+      "replace": "dx=v[0]/n*8, dy=v[1]/n*8,",
       "run": "verify"
     },
     {
-      "name": "a flat point allowed as the first point",
+      "name": "the arrows on the axes left out",
       "file": "index.html",
-      "find": "if(!A.lv.includes(c) || (W && this.steep(W,P)<0.01)) continue;",
-      "replace": "if(!A.lv.includes(c)) continue;",
+      "find": "const q=[i/2,j/2]; out+=this.arrow('arr',q,this.push(R.a,q)",
+      "replace": "const q=[i/2,j/2]; if(!i || !j) continue; out+=this.arrow('arr',q,this.push(R.a,q)",
       "run": "verify"
     },
     {
-      "name": "the wrong contour drawn at the answer's level",
+      "name": "a wrong pick that never counts as a catch",
       "file": "index.html",
-      "find": "out+=`<path data-k=\"wrong\" data-c=\"${W.f(...P)}\" d=\"${this.trace(W.f,W.f(...P))}\"",
-      "replace": "out+=`<path data-k=\"wrong\" data-c=\"${W.f(...P)}\" d=\"${this.trace(W.f,A.f(...P))}\"",
+      "find": "} else { this.gone.add(i); this.last=i; this.caught=true; this.streak=0; }\n    Diag.render();",
+      "replace": "} else { this.gone.add(i); this.last=i; this.streak=0; }\n    Diag.render();",
       "run": "verify"
     },
     {
-      "name": "a shut choice can be picked again",
+      "name": "a sink goal that waits for a source",
       "file": "index.html",
-      "find": "if(this.solved || this.gone.has(i)) return;\n    const R=this.R(); this.touched=true;\n    if(R.o[i]===R.a){\n      this.solved=true; this.last=null;\n      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
-      "replace": "if(this.solved) return;\n    const R=this.R(); this.touched=true;\n    if(R.o[i]===R.a){\n      this.solved=true; this.last=null;\n      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
+      "find": "ok:M=>M.kinds.has('in')},",
+      "replace": "ok:M=>M.kinds.has('out')},",
       "run": "verify"
     },
     {
-      "name": "a match after a miss counted as a first try",
+      "name": "the banner names another workshop",
       "file": "index.html",
-      "find": "if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
-      "replace": "this.wins++; this.streak++;\n      this.kinds.add(this.F(R.a).k);",
+      "find": "Celebrate.banner('FLOW READER','every arrow read'",
+      "replace": "Celebrate.banner('MAP READER','every arrow read'",
       "run": "verify"
     },
     {
-      "name": "three in a row found at two",
+      "name": "the next flow dealt before this one is matched",
       "file": "index.html",
-      "find": "ok:M=>M.streak>=3}\n  ],\n  R(){ return this.ROUNDS[this.ri]; },\n  F(id)",
-      "replace": "ok:M=>M.streak>=2}\n  ],\n  R(){ return this.ROUNDS[this.ri]; },\n  F(id)",
+      "find": "next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Diag.render(); }",
+      "replace": "next(){ this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Diag.render(); }",
       "run": "verify"
     }
   ]

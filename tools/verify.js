@@ -8157,7 +8157,7 @@ const powPickNotes = (() => {
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
     "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
     "const Diag = {render(){ env.renders++; }};" +
-    cut('const PowPick = {', '/* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal') + 'return PowPick;')(R, env);
+    cut('const PowPick = {', '/* ---------- Match the flow') + 'return PowPick;')(R, env);
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
   const pn = n => (n < 0 ? `(${ng(n)})` : String(n));
@@ -12093,6 +12093,140 @@ const contourMatchNotes = (() => {
   if (!S.working().join(' | ').endsWith('3 matched on the first try this visit, 3 in a row.')) fail('contourmatch', 'hunt', `the count reads ${S.working().join(' | ')}`);
   reset();
   return { rounds, misses, segs };
+})();
+const flowMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Diag = {render(){ env.renders++; }};" +
+    cut('const FlowMatch = {', '/* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal') + 'return FlowMatch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pt = p => `(${ng(p[0])}, ${ng(p[1])})`;
+  // the ten matrices, written out again
+  const MS = { sink: [-1, 0, 0, -2], sinkob: [-2, 1, 1, -2], shear: [-1, 1, 0, -1], source: [1, 0, 0, 2], saddle: [1, 0, 0, -1],
+    saddleob: [0, 1, 1, 0], spin: [-1, -1, 1, -1], spout: [1, -1, 1, 1], ccw: [0, -1, 1, 0], cw: [0, 1, -1, 0] };
+  const mul = ([a, b, c, d], [x, y]) => [a * x + b * y, c * x + d * y];
+  const mt = ([a, b, c, d]) => `[${ng(a)}, ${ng(b)}; ${ng(c)}, ${ng(d)}]`;
+  // the eigenvalues from the trace and determinant, and the kind of flow they make
+  const eig = m => { const T = m[0] + m[3], D = m[0] * m[3] - m[1] * m[2], q = T * T - 4 * D;
+    if (q > 0) { const r = Math.sqrt(q); const l = [(T + r) / 2, (T - r) / 2].sort((x, y) => Math.abs(x) - Math.abs(y) || y - x);
+      if (!l.every(Number.isInteger)) return null;
+      return { text: `${ng(l[0])} and ${ng(l[1])}`, kind: l[0] < 0 && l[1] < 0 ? 'in' : l[0] > 0 && l[1] > 0 ? 'out' : 'saddle' }; }
+    if (q === 0) return { text: `${ng(T / 2)}, twice`, kind: T < 0 ? 'in' : 'out' };
+    const re = T / 2, im = Math.sqrt(-q) / 2; if (im !== 1) return null;
+    if (re === 0) return { text: 'i and −i', kind: 'centre', turn: m[2] > 0 ? 'anticlockwise' : 'clockwise' };
+    return { text: `${ng(re)} + i and ${ng(re)} − i`, kind: 'spiral', re }; };
+  const WHY = { in: 'both below 0, so every path flows in to (0, 0): a sink', out: 'both above 0, so every path flows out from (0, 0): a source',
+    saddle: 'one above 0 and one below, so paths come in along one line and leave along the other: a saddle' };
+  const whyOf = (m, e) => e.kind === 'centre' ? `with no real part, the paths circle (0, 0) for ever, ${e.turn}`
+    : e.kind === 'spiral' ? `the i makes the paths turn, and the real part ${ng(e.re)}, ${e.re < 0 ? 'below' : 'above'} 0, makes them spiral ${e.re < 0 ? 'in' : 'out'}`
+    : /twice/.test(e.text) ? 'below 0, so every path flows in to (0, 0), though only one line of paths runs straight in' : WHY[e.kind];
+  const cls = k => (k === 'in' || k === 'out' ? 'node' : k === 'saddle' ? 'saddle' : 'turn');
+  if (Object.keys(S.MS).sort().join() !== Object.keys(MS).sort().join()) fail('flowmatch', 'matrices', Object.keys(S.MS).join());
+  for (const id in MS) {
+    const E = S.MS[id], m = MS[id], e = eig(m);
+    if (E.M.flat().join() !== m.join()) fail('flowmatch', id, `A is ${E.M.flat().join()}`);
+    if (!e) { fail('flowmatch', id, 'its eigenvalues are not the tidy kind this mode names'); continue; }
+    if (m[0] * m[3] - m[1] * m[2] === 0) fail('flowmatch', id, 'A is singular, so some arrows have no way to point');
+    if (E.ev !== e.text) fail('flowmatch', id, `its eigenvalues are told as ${E.ev}, not ${e.text}`);
+    if (E.k !== e.kind) fail('flowmatch', id, `its flow is told as ${E.k}, not ${e.kind}`);
+    if (E.why !== whyOf(m, e)) fail('flowmatch', id, `it is explained as ${E.why}`);
+    if (S.mt(id) !== mt(m)) fail('flowmatch', id, `it is written ${S.mt(id)}`);
+  }
+  // the rounds: eight flows with eight answers, the answer twice in each place
+  const R = S.ROUNDS, place = [0, 0, 0, 0];
+  if (R.length !== 8 || new Set(R.map(r => r.a)).size !== 8) fail('flowmatch', 'rounds', 'there are not eight flows with eight different matrices');
+  R.forEach((r, ri) => {
+    if (r.o.length !== 4 || new Set(r.o).size !== 4 || r.o.filter(o => o === r.a).length !== 1 || r.o.some(o => !MS[o])) fail('flowmatch', `flow ${ri + 1}`, 'the four choices are not four matrices with the answer once');
+    place[r.o.indexOf(r.a)]++;
+    // a fair flow: a wrong choice of the same family (in or out, saddle, turning), so the family alone does not settle it
+    if (!r.o.some(o => o !== r.a && cls(eig(MS[o]).kind) === cls(eig(MS[r.a]).kind))) fail('flowmatch', `flow ${ri + 1}`, 'no wrong choice is of the same family as the answer');
+  });
+  if (place.join() !== '2,2,2,2') fail('flowmatch', 'rounds', `the answer sits in the four places ${place.join()} times`);
+  if (S.ri !== 0 || S.solved || S.gone.size || S.done.size || S.touched || S.wins || S.streak) fail('flowmatch', 'open', 'the mode does not open on the first flow with nothing picked');
+  const PX = x => 150 + x * 55, PY = y => 130 - y * 55;
+  const dir = (m) => [+m[5] - +m[3], -(+m[6] - +m[4])];
+  // the same way, to within the hundredth of a pixel the drawing is written to
+  const sameWay = (u, v) => Math.abs(u[0] * v[1] - u[1] * v[0]) < 0.002 * Math.hypot(...u) * Math.hypot(...v) && u[0] * v[0] + u[1] * v[1] > 0;
+  const arrRe = k => new RegExp(`<line data-k="${k}" data-x="([-\\d.]+)" data-y="([-\\d.]+)" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"`, 'g');
+  let arrows = 0;
+  const readFlow = (svg, m, key) => {
+    const as = [...svg.matchAll(arrRe('arr'))];
+    if (as.length !== 80) fail('flowmatch', key, `${as.length} arrows are drawn, not 80`);
+    for (const a of as) {
+      const x = +a[1], y = +a[2], d = dir(a);
+      if (Math.abs((+a[3] + +a[5]) / 2 - PX(x)) > 0.02 || Math.abs((+a[4] + +a[6]) / 2 - PY(y)) > 0.02) { fail('flowmatch', key, `the arrow at (${x}, ${y}) is not centred there`); break; }
+      if (Math.abs(Math.hypot(...d) - 16) > 0.05) { fail('flowmatch', key, `the arrow at (${x}, ${y}) is not the common length`); break; }
+      if (!sameWay(d, mul(m, [x, y]))) { fail('flowmatch', key, `the arrow at (${x}, ${y}) points along (${d.map(v => v.toFixed(2))}), not A times the point`); break; }
+    }
+    const heads = [...svg.matchAll(/<circle data-k="arrh" cx="([-\d.]+)" cy="([-\d.]+)"/g)];
+    if (heads.length !== as.length || heads.some((h, i) => Math.abs(+h[1] - +as[i][5]) > 0.01 || Math.abs(+h[2] - +as[i][6]) > 0.01)) fail('flowmatch', key, 'an arrow’s head is not at the end it points to');
+    arrows += as.length;
+  };
+  const PTS = [[1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -1], [-1, 1], [-1, -1], [2, 0], [0, 2], [2, 1], [1, 2], [2, 2]];
+  const RULE = 'Each arrow shows which way x′ = Ax pushes at its point. The eigenvalues of A decide the picture: both below 0 and every path flows in to (0, 0); both above 0 and every path flows out; one of each and it is a saddle; a pair with an i makes the paths turn.';
+  let rounds = 0, misses = 0;
+  const reset = () => { S.ri = 0; S.gone = new Set(); S.last = null; S.solved = false; S.streak = 0; S.wins = 0; S.touched = false; S.done = new Set(); S.kinds = new Set(); S.caught = false; env.toasts = []; env.banners = []; };
+  R.forEach((r, ri) => {
+    const key = `flow ${ri + 1}`, A = MS[r.a];
+    for (let miss = 0; miss <= 3; miss++) {
+      reset(); S.ri = ri;
+      let h = S.html();
+      if (!h.startsWith(`<div class="small" style="margin:2px 0 6px">Flow ${ri + 1} of 8. Which A drew these arrows of x′ = Ax?</div>`)) fail('flowmatch', key, 'the question is not asked');
+      if (S.working().join(' | ') !== RULE + ' | 0 matched on the first try this visit.') fail('flowmatch', key, `before a pick the readout is ${S.working().join(' | ')}`);
+      if (miss === 0) readFlow(S.svg(), A, key);
+      const wrongs = r.o.map((o, i) => i).filter(i => r.o[i] !== r.a).slice(0, miss);
+      for (const i of wrongs) {
+        S.choose(i); misses++;
+        const W = MS[r.o[i]], p = PTS.find(q => !sameWay(mul(W, q), mul(A, q)));
+        if (!p) { fail('flowmatch', key, `${mt(W)} points every way ${mt(A)} does`); continue; }
+        const w = S.working();
+        if (w[0] !== `${'ABCD'[i]}, A = ${mt(W)}, is not it: at ${pt(p)} it pushes along ${pt(mul(W, p))}, but the arrow drawn there points along ${pt(mul(A, p))}. Its own arrow is drawn in blue.`) fail('flowmatch', key, `a wrong ${mt(W)} is not caught: ${w[0]}`);
+        const svg = S.svg(), ring = svg.match(/data-k="ring" cx="([-\d.]+)" cy="([-\d.]+)"/), wr = [...svg.matchAll(arrRe('wrong'))];
+        if (!ring || Math.abs(+ring[1] - PX(p[0])) > 0.02 || Math.abs(+ring[2] - PY(p[1])) > 0.02) fail('flowmatch', key, `the ring is not at ${pt(p)}`);
+        if (wr.length !== 1 || +wr[0][1] !== p[0] || +wr[0][2] !== p[1] || !sameWay(dir(wr[0]), mul(W, p))) fail('flowmatch', key, `${mt(W)}’s own arrow is not drawn at ${pt(p)}`);
+        if (sameWay(dir(wr[0] || []), mul(A, p))) fail('flowmatch', key, 'the wrong arrow points the same way as the flow');
+        h = S.html();
+        const b = h.match(new RegExp(`data-opt="${'ABCD'[i]}" ([^>]*)aria-label="([^"]+)"`));
+        if (!b || !/disabled/.test(b[1]) || b[2] !== `${'ABCD'[i]}: A = ${mt(W)}. Not this flow`) fail('flowmatch', key, `the wrong ${mt(W)} is not shut`);
+        const was = env.renders; S.choose(i);
+        if (S.gone.size !== wrongs.indexOf(i) + 1 || env.renders !== was) fail('flowmatch', key, 'a shut choice can be picked again');
+        if (h.includes('id="fwmNext"')) fail('flowmatch', key, 'Next is offered before the flow is matched');
+      }
+      S.next(); if (S.ri !== ri) fail('flowmatch', key, 'Next moves on before the flow is matched');
+      S.choose(r.o.indexOf(r.a)); rounds++;
+      const e = eig(A);
+      const want = [`Yes, this flow is A = ${mt(A)}.`, `Its eigenvalues are ${e.text}: ${whyOf(A, e)}.`, `At (1, 2) it pushes along ${pt(mul(A, [1, 2]))}, the way the arrow there points.`, `${miss ? 0 : 1} matched on the first try this visit.`];
+      const w = S.working();
+      if (w.join(' | ') !== want.join(' | ')) fail('flowmatch', key, `after a match the readout is ${w.join(' | ')}`);
+      const svg = S.svg();
+      if (/data-k="(ring|wrong)"/.test(svg)) fail('flowmatch', key, 'the wrong arrow is still drawn after the match');
+      if (!svg.includes(`, drawn by A = ${mt(A)}">`)) fail('flowmatch', key, 'the drawing is not named once matched');
+      h = S.html();
+      if (!h.includes('id="fwmNext"') || (h.match(/smOpt[^"]*" data-opt="[ABCD]" disabled /g) || []).length !== 4) fail('flowmatch', key, 'once matched, Next is not offered or a choice is still open');
+      if (!h.includes(`aria-label="${'ABCD'[r.o.indexOf(r.a)]}: A = ${mt(A)}. This flow"`)) fail('flowmatch', key, 'the match is not named on its button');
+      S.next();
+      if (S.ri !== (ri + 1) % 8 || S.solved || S.gone.size || S.last !== null) fail('flowmatch', key, 'Next does not deal the next flow fresh');
+    }
+  });
+  // the hunt, played as a player would: a miss, then first tries round the flows
+  reset(); S.html();
+  if (S.done.size) fail('flowmatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = miss => { const r = S.R(); if (miss) { S.choose(r.o.findIndex(o => o !== r.a)); S.html(); } S.choose(r.o.indexOf(r.a)); S.html(); S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'catch,settle'], [false, 'catch,one,saddle,settle'], [false, 'catch,one,saddle,settle,turn'], [false, 'catch,one,saddle,settle,three,turn']];
+  plan.forEach(([miss, want], i) => { const got = play(miss); if (got !== want) fail('flowmatch', 'hunt', `flow ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Caught a wrong matrix at one arrow | ✓ Read a sink | ✓ Matched on the first try · Read a saddle | ✓ Read a flow that turns') fail('flowmatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'FLOW READER / every arrow read') fail('flowmatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (S.streak !== 3 || S.wins !== 3) fail('flowmatch', 'hunt', `the run is counted as ${S.streak} in a row and ${S.wins} first tries`);
+  if (!S.working().join(' | ').endsWith('3 matched on the first try this visit, 3 in a row.')) fail('flowmatch', 'hunt', `the count reads ${S.working().join(' | ')}`);
+  reset();
+  return { rounds, misses, arrows };
 })();
 
 /* Which c? The chord workshop turned round. Every number is read back off
@@ -18654,6 +18788,7 @@ console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
+console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
 console.log(`  chord picks       ${pad(chordPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the chord workshop, every number worked again from the curve and the interval alone and checked against the slip it is named as, the right one alone giving a tangent as steep as the chord strictly inside [a, b] in floats; ${chordPickNotes.misses.toLocaleString()} wrong picks explained and checked by putting them into f′, and no check ever naming c)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);

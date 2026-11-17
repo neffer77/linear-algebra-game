@@ -149,6 +149,7 @@ const SUITES = [
   require('./play/hillfence'), // walk a fence across a hill to its lowest point, where ∇f lines up with ∇g
   require('./play/pathpick'), // see a hill, a path and a moment, pick which of four numbers is dz/dt
   require('./play/powpick'), // see A, its eigenvectors and v, pick which of four vectors is Aⁿv
+  require('./play/flowmatch'), // see the arrows of x′ = Ax, pick which of four matrices drew them
   require('./play/tanpick'), // see a surface and a point, pick which of four planes touches it there
   require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there

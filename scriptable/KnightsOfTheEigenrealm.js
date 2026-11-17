@@ -1798,7 +1798,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DIAGONAL WORKSHOP ============ -->
   <div class="screen" id="s-diag">
     <div class="panel"><h2>🔑 Diagonal Workshop</h2><div class="sub">To diagonalise A, build P from eigenvectors: then P⁻¹AP is a diagonal D. Choose P's two columns by hand and watch P⁻¹AP worked out, column by column.</div></div>
-    <div id="dgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build P by hand or pick a power"></div>
+    <div id="dgTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build P by hand, pick a power, or match a flow"></div>
     <div class="panel">
       <div id="pwBox"></div>
       <div id="dgSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
@@ -15626,7 +15626,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔑 Diagonal Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise. Then turn it round: see A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build P from two arrows and watch P⁻¹AP turn diagonal once both are eigenvectors. Clear one column at a time, swap the order and watch D follow, put two arrows on one line, and meet a shear that no P can diagonalise. Then turn it round: pick which of four vectors is Aⁿv, or which of four matrices drew the arrows of x′ = Ax.</div>
          <button class="btn sm" id="tomeDiag" style="width:auto;margin-top:8px" onclick="Diag.open()">Open the diagonal workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -28013,6 +28013,136 @@ const PowPick = {
     return out;
   }
 };
+/* ---------- Match the flow: the diagonal workshop's third mode ----------
+ * The arrows of x′ = Ax drawn over the plane, and four matrices A; one of
+ * them drew it. The eigenvalues of A decide the picture: both below 0 and
+ * every path flows in, both above and every path flows out, one of each and
+ * it is a saddle, and a pair with an i makes the paths turn. A wrong pick is
+ * caught at the first point where it pushes another way, with its own arrow
+ * drawn there in blue. The flows come round in a fixed order: nothing is
+ * random, nothing is saved and there is no clock.
+ */
+const FlowMatch = {
+  MS:{
+    sink:     {M:[[-1,0],[0,-2]],  k:'in',     ev:'−1 and −2',          why:'both below 0, so every path flows in to (0, 0): a sink'},
+    sinkob:   {M:[[-2,1],[1,-2]],  k:'in',     ev:'−1 and −3',          why:'both below 0, so every path flows in to (0, 0): a sink'},
+    shear:    {M:[[-1,1],[0,-1]],  k:'in',     ev:'−1, twice',          why:'below 0, so every path flows in to (0, 0), though only one line of paths runs straight in'},
+    source:   {M:[[1,0],[0,2]],    k:'out',    ev:'1 and 2',            why:'both above 0, so every path flows out from (0, 0): a source'},
+    saddle:   {M:[[1,0],[0,-1]],   k:'saddle', ev:'1 and −1',           why:'one above 0 and one below, so paths come in along one line and leave along the other: a saddle'},
+    saddleob: {M:[[0,1],[1,0]],    k:'saddle', ev:'1 and −1',           why:'one above 0 and one below, so paths come in along one line and leave along the other: a saddle'},
+    spin:     {M:[[-1,-1],[1,-1]], k:'spiral', ev:'−1 + i and −1 − i',  why:'the i makes the paths turn, and the real part −1, below 0, makes them spiral in'},
+    spout:    {M:[[1,-1],[1,1]],   k:'spiral', ev:'1 + i and 1 − i',    why:'the i makes the paths turn, and the real part 1, above 0, makes them spiral out'},
+    ccw:      {M:[[0,-1],[1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, anticlockwise'},
+    cw:       {M:[[0,1],[-1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, clockwise'}
+  },
+  ROUNDS:[
+    {a:'sink',     o:['sink','sinkob','saddle','ccw']},
+    {a:'saddle',   o:['source','saddleob','saddle','spin']},
+    {a:'spin',     o:['spout','spin','ccw','sink']},
+    {a:'source',   o:['sink','shear','source','cw']},
+    {a:'saddleob', o:['saddle','sinkob','spout','saddleob']},
+    {a:'ccw',      o:['ccw','cw','spin','saddle']},
+    {a:'shear',    o:['sinkob','shear','saddleob','spout']},
+    {a:'cw',       o:['ccw','source','spin','cw']}
+  ],
+  /* a wrong pick is checked at these points in turn */
+  PTS:[[1,0],[0,1],[1,1],[-1,0],[0,-1],[1,-1],[-1,1],[-1,-1],[2,0],[0,2],[2,1],[1,2],[2,2]],
+  ri:0, gone:new Set(), last:null, solved:false, streak:0, wins:0, touched:false,
+  done:new Set(), kinds:new Set(), caught:false,
+  GOALS:[
+    {id:'one',    t:'Match a flow on the first try.', toast:'Matched on the first try',
+     ok:M=>M.wins>=1},
+    {id:'settle', t:'Match a flow where every path heads in to (0, 0).', toast:'Read a sink',
+     ok:M=>M.kinds.has('in')},
+    {id:'saddle', t:'Match a saddle: paths come in one way and leave another.', toast:'Read a saddle',
+     ok:M=>M.kinds.has('saddle')},
+    {id:'turn',   t:'Match a flow that turns, where the eigenvalues have an i.', toast:'Read a flow that turns',
+     ok:M=>M.kinds.has('spiral') || M.kinds.has('centre')},
+    {id:'catch',  t:'Pick a wrong matrix and see the one arrow it gets wrong.', toast:'Caught a wrong matrix at one arrow',
+     ok:M=>M.caught},
+    {id:'three',  t:'Match three flows in a row, each on the first try.', toast:'Three in a row',
+     ok:M=>M.streak>=3}
+  ],
+  R(){ return this.ROUNDS[this.ri]; },
+  F(id){ return this.MS[id]; },
+  mt(id){ const M=this.F(id).M; return \`[\${neg(M[0][0])}, \${neg(M[0][1])}; \${neg(M[1][0])}, \${neg(M[1][1])}]\`; },
+  push(id,p){ const M=this.F(id).M; return [M[0][0]*p[0]+M[0][1]*p[1], M[1][0]*p[0]+M[1][1]*p[1]]; },
+  pt(p){ return \`(\${neg(p[0])}, \${neg(p[1])})\`; },
+  /* the same way: no turn between them, and not backwards */
+  same(u,v){ return u[0]*v[1]-u[1]*v[0]===0 && u[0]*v[0]+u[1]*v[1]>0; },
+  /* where wrong matrix w first pushes another way than the answer */
+  where(w){ const a=this.R().a; return this.PTS.find(p=>!this.same(this.push(w,p),this.push(a,p))); },
+  RULE:'Each arrow shows which way x′ = Ax pushes at its point. The eigenvalues of A decide the picture: both below 0 and every path flows in to (0, 0); both above 0 and every path flows out; one of each and it is a saddle; a pair with an i makes the paths turn.',
+  working(){
+    const R=this.R(), out=[];
+    if(this.solved){
+      const A=this.F(R.a);
+      out.push(\`Yes, this flow is A = \${this.mt(R.a)}.\`);
+      out.push(\`Its eigenvalues are \${A.ev}: \${A.why}.\`);
+      out.push(\`At (1, 2) it pushes along \${this.pt(this.push(R.a,[1,2]))}, the way the arrow there points.\`);
+    } else if(this.last!==null){
+      const w=R.o[this.last], p=this.where(w);
+      out.push(\`\${'ABCD'[this.last]}, A = \${this.mt(w)}, is not it: at \${this.pt(p)} it pushes along \${this.pt(this.push(w,p))}, but the arrow drawn there points along \${this.pt(this.push(R.a,p))}. Its own arrow is drawn in blue.\`);
+    } else out.push(this.RULE);
+    out.push(\`\${this.wins} matched on the first try this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  X:x=>150+x*55, Y:y=>130-y*55,
+  /* one arrow of fixed length at p, pointing along v */
+  arrow(k,p,v,col,w){
+    const n=Math.hypot(v[0],v[1]), dx=v[0]/n*8, dy=-v[1]/n*8, cx=this.X(p[0]), cy=this.Y(p[1]), f=t=>t.toFixed(2);
+    return \`<line data-k="\${k}" data-x="\${p[0]}" data-y="\${p[1]}" x1="\${f(cx-dx)}" y1="\${f(cy-dy)}" x2="\${f(cx+dx)}" y2="\${f(cy+dy)}" stroke="\${col}" stroke-width="\${w}" stroke-linecap="round"/>\`+
+      \`<circle data-k="\${k}h" cx="\${f(cx+dx)}" cy="\${f(cy+dy)}" r="\${w+0.6}" fill="\${col}"/>\`;
+  },
+  svg(){
+    const R=this.R(), odd=!this.solved && this.last!==null ? R.o[this.last] : null, p=odd ? this.where(odd) : null;
+    let out=\`<svg viewBox="0 0 300 260" style="width:100%;height:auto;display:block" role="img" aria-label="The arrows of x′ = Ax for x and y from −2 to 2, flow \${this.ri+1} of \${this.ROUNDS.length}\${this.solved ? \`, drawn by A = \${this.mt(R.a)}\` : ''}\${odd ? \`, with the wrong matrix’s arrow at \${this.pt(p)}\` : ''}">\`;
+    out+=\`<line data-k="xaxis" x1="20" y1="130" x2="280" y2="130" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="yaxis" x1="150" y1="10" x2="150" y2="250" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(let i=-4;i<=4;i++) for(let j=-4;j<=4;j++){ if(!i && !j) continue;
+      const q=[i/2,j/2]; out+=this.arrow('arr',q,this.push(R.a,q),this.solved?FIG_COL.b:FIG_COL.ink,1.6); }
+    if(p){
+      out+=\`<circle data-k="ring" cx="\${this.X(p[0])}" cy="\${this.Y(p[1])}" r="13" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      out+=this.arrow('wrong',p,this.push(odd,p),FIG_COL.a,3);
+    }
+    return out+\`</svg>\`;
+  },
+  choose(i){
+    if(this.solved || this.gone.has(i)) return;
+    const R=this.R(); this.touched=true;
+    if(R.o[i]===R.a){
+      this.solved=true; this.last=null;
+      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;
+      this.kinds.add(this.F(R.a).k);
+    } else { this.gone.add(i); this.last=i; this.caught=true; this.streak=0; }
+    Diag.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Diag.render(); },
+  html(){
+    const R=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Flow \${this.ri+1} of \${this.ROUNDS.length}. Which A drew these arrows of x′ = Ax?</div>\`;
+    out+=\`<div id="fwmFig">\${this.svg()}<div class="figcap">Each arrow shows which way x′ = Ax pushes at its point, for x and y from −2 to 2.</div></div>\`;
+    out+=\`<div id="fwmPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+R.o.map((id,i)=>{
+      const gone=this.gone.has(i), right=this.solved && id===R.a, L='ABCD'[i], s=this.mt(id);
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone||this.solved?'disabled ':''}onclick="FlowMatch.choose(\${i})" aria-label="\${L}: A = \${s}\${gone?'. Not this flow':right?'. This flow':''}" style="margin:0"><b>\${L}</b> A = \${s}</button>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="fwmRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    if(this.solved) out+=\`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="fwmNext" onclick="FlowMatch.next()" aria-label="Show the next flow">Next flow →</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="fwmGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="fwmGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('FLOW READER','every arrow read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- The diagonal workshop: eigenvectors make P⁻¹AP diagonal ----------
    Build P from two arrows by hand and watch P⁻¹AP worked out exactly. Each
    column of P that is an eigenvector clears its own column of P⁻¹AP down to
@@ -28105,11 +28235,11 @@ const Diag = {
   setTab(t){ this.tab=t; this.render(); },
   render(){
     if(!this.c) this.start();
-    document.getElementById('dgTab').innerHTML=[['hand','🔑 Build P by hand','Build P from two arrows by hand and watch P⁻¹AP worked out'],['pick','🎯 Which Aⁿv?','See A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv']]
+    document.getElementById('dgTab').innerHTML=[['hand','🔑 Build P by hand','Build P from two arrows by hand and watch P⁻¹AP worked out'],['pick','🎯 Which Aⁿv?','See A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv'],['flow','🌀 Match the flow','See the arrows of x′ = Ax and pick which of four matrices drew them']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Diag.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['dgSets','dgFig','dgCols','dgRead','dgGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('pwBox').innerHTML=pick ? PowPick.html() : '';
+    document.getElementById('pwBox').innerHTML=this.tab==='pick' ? PowPick.html() : this.tab==='flow' ? FlowMatch.html() : '';
     if(pick) return;
     document.getElementById('dgSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Diag.pick(\${i})" aria-label="\${s.btn}: A has rows \${this.vec(s.A[0])} and \${this.vec(s.A[1])}">\${s.btn}</button>\`).join('');
