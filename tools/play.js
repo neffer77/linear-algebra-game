@@ -52,6 +52,7 @@ const SUITES = [
   require('./play/slope'),       // a secant becomes a tangent as h closes in
   require('./play/compose'),     // two moves of the plane, and why their order matters
   require('./play/limit'),       // closing in on a point from the left and the right
+  require('./play/limpick'),   // see a ratio and where x heads, pick its limit or that it has none
   require('./play/descent'),     // a walk down a valley against its gradient
   require('./play/span'),        // a of one arrow and b of another
   require('./play/elim'),        // two equations solved with row operations
@@ -100,9 +101,11 @@ const SUITES = [
   require('./play/meanvalue'), // match a tangent to the chord by hand
   require('./play/chordpick'), // see a curve and its chord, pick which of four numbers is c
   require('./play/tanline'),   // estimate f(x) from the tangent at a and measure the miss
+  require('./play/estpick'),   // see a curve and an x near a, pick which of four numbers is the tangent's estimate
   require('./play/arclen'),    // lay chords along a curve and watch them close in on its length
   require('./play/arcpick'),  // see a curve, pick which of four integrals is its length
   require('./play/logistic'),  // step a population toward its ceiling and watch the rate rise and fall
+  require('./play/logipick'),  // see r, K and P, pick which of four numbers is dP/dt
   require('./play/stretchpick'), // see y(0) and y one stretch on, pick which of four numbers is y later
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′

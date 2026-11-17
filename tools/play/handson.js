@@ -9,14 +9,19 @@
  */
 'use strict';
 
-const summary = (t, learned) => t.ev(l => {
+// Every topic has a workshop now, so a topic no workshop fits is made by taking
+// one topic's workshop away for the length of the call, and putting it back.
+const summary = (t, learned, without = []) => t.ev(([l, wo]) => {
+  const kept = {}; for (const k of wo) { kept[k] = WORKSHOP_FOR[k]; delete WORKSHOP_FOR[k]; }
   Battle.learned = l; Battle.mode = 'map';
   UI.go('s-result');
   document.getElementById('resultBody').innerHTML = `<div class="panel center">${Battle.learnedHtml()}</div>`;
   const b = [...document.querySelectorAll('#handsOn button')];
-  return { ws: b.map(x => x.dataset.ws), topics: b.map(x => x.dataset.topic), text: b.map(x => x.innerText),
+  const got = { ws: b.map(x => x.dataset.ws), topics: b.map(x => x.dataset.topic), text: b.map(x => x.innerText),
     head: (document.querySelector('#handsOn') || {}).innerText || '' };
-}, learned);
+  Object.assign(WORKSHOP_FOR, kept);
+  return got;
+}, [learned, without]);
 
 module.exports = {
   name: 'handson',
@@ -30,7 +35,7 @@ module.exports = {
     let s = await summary(t, {
       lhopital: { from: 0.6, to: 0.3 }, chainRule: { from: 0.5, to: 0.4 },
       limPoly: { from: 0.7, to: 0.2 }, vecAdd: { from: 0.1, to: 0.4 }
-    });
+    }, ['limPoly']);
     t.ok('the summary offers a workshop for what fell', /See it work by hand/.test(s.head), s.head);
     t.eq('the biggest fall with a workshop comes first', s.topics, ['lhopital', 'chainRule']);
     t.eq('each button opens the workshop that fits', s.ws, ['Hopital', 'Chain']);
@@ -48,9 +53,10 @@ module.exports = {
     // --- nothing fell, or nothing that fell has a workshop ---
     s = await summary(t, { lhopital: { from: 0.2, to: 0.5 } });
     t.eq('a topic that rose is offered nothing', s.ws, []);
-    s = await summary(t, { limPoly: { from: 0.6, to: 0.3 } });
+    s = await summary(t, { limPoly: { from: 0.6, to: 0.3 } }, ['limPoly']);
     t.eq('nor is a fall no workshop fits', s.ws, []);
     t.eq('so the heading is not shown either', s.head, '');
+    t.ok('and the workshop taken away is put back', await t.ev(() => !!WORKSHOP_FOR.limPoly));
 
     // --- a tap opens it, and back returns to the summary ---
     s = await summary(t, { lhopital: { from: 0.6, to: 0.3 } });

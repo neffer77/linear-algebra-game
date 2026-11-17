@@ -1,11 +1,46 @@
 {
-  "change": "The tangent line estimate is never a number the nudge already shows, and the logistic workshop's check reads its readout as written.",
+  "change": "Close the gaps the breaks found in the logistic and tangent line picks.",
   "mutations": [
     {
-      "name": "the estimate may be a number the nudge shows",
+      "name": "the slips are always the first trio",
       "file": "index.html",
-      "find": "    if(seenIn(why)>seenIn(`f(x) = ${fs}. Use its tangent line at x = ${show(a)} to estimate ${fname(x)}.`) && g<400) continue;\n",
-      "replace": "",
+      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
+      "replace": "fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
+      "run": "verify"
+    },
+    {
+      "name": "the root slip uses the right slope",
+      "file": "index.html",
+      "find": "h:[d,1], x:[n*n+d,1], m2:[1,n]}",
+      "replace": "h:[d,1], x:[n*n+d,1], m2:[1,2*n]}",
+      "run": "verify"
+    },
+    {
+      "name": "√x always steps forward",
+      "file": "index.html",
+      "find": "d=wantWhole ? 2*n*[-1,1,2][R.i(0,2)] : R.i(-2*n,2*n); }",
+      "replace": "d=wantWhole ? 2*n*[1,2][R.i(0,1)] : R.i(1,2*n); }",
+      "run": "verify"
+    },
+    {
+      "name": "√x may step 0",
+      "file": "index.html",
+      "find": "if(d===0 || this.A(S)+d<1) continue;",
+      "replace": "if(this.A(S)+d<1) continue;",
+      "run": "verify"
+    },
+    {
+      "name": "the form asked for is not kept",
+      "file": "index.html",
+      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "replace": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "run": "verify"
+    },
+    {
+      "name": "a curve with no trio may be dealt",
+      "file": "index.html",
+      "find": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "replace": "      return S;\n    }\n    return {k",
       "run": "verify"
     }
   ]

@@ -636,7 +636,7 @@ The game is built so that losing teaches you as much as winning.
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: fifty
+  question from a different workshop's turned-round mode each time: fifty-three
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -768,6 +768,26 @@ The game is built so that losing teaches you as much as winning.
   end on the other. `npm test` checks all 40 states against each value worked another way
   (x + 1 for the hole, the series for sin x / x), every step of the working, and each
   side's verdict against where three values closing in actually head.
+
+  **🎯 Which limit?** turns the workshop round: a ratio of two quadratics, the x it
+  closes in on, and five answers, four numbers and No limit, one of them right. The
+  rule is stated first: put x = a in, and if the bottom is 0 but the top is not there
+  is no limit, while 0/0 means x − a is a factor of both, to cancel. About one ratio
+  in five hides no hole, and then No limit is right. Otherwise No limit is the slip
+  of taking 0/0 for an answer, and the wrong numbers are the others people make: a
+  factor written with the wrong sign, a leftover factor dropped after cancelling,
+  the ratio turned upside down, the top alone, L'Hôpital used where the top is not
+  0, a factor crossed out that the top does not have, the x² terms' ratio, or x = 0
+  put in. No number is 0, two share the limit's form, whole or fraction, and two its
+  sign, no wrong one is two others added, the limit is whole about half the time,
+  and it sits lowest, highest or between about as often. A wrong pick is shut and
+  checked without working out the limit: factors multiplied back out, a value away
+  from a, or the top at a. The right pick factors the ratio, cancels and puts x = a
+  in, or says why f runs off without end. A fight on limits by substitution now
+  offers the workshop too. Nothing is saved, and there is no clock. `npm test`
+  rebuilds every ratio from its factors, reads every number back off its button,
+  works it again from the slip it is named as, finds the limit by putting x a hair
+  either side of a, and works every check again.
 - **📈 Slope Workshop** — also opened from the Tome, and the calculus side of the same
   idea. Pick a curve (x², x³ − 3x or 4 − x²), step the point a from −2 to 2, and bring
   h towards 0 through 1, 0.5, 0.1, 0.01 and 0.001. A blue secant runs through (a, f(a))
@@ -1165,7 +1185,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Seventy-five topics link to fifty-four workshops,
+  back button returns to the summary. Seventy-six topics link to fifty-four workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -1972,6 +1992,23 @@ The game is built so that losing teaches you as much as winning.
   sin x, which does not bend at 0, to about an eighth. Six things to find, and a
   fight on linear approximation now offers it.
 
+  **🎯 Which estimate?** turns the workshop round: √x near a square, ∛x near a cube
+  or 1/x near a whole number, an x near a, and four numbers, one of them the
+  tangent's estimate. The rule is stated first, with the three slopes to use. The
+  wrong numbers are the slips people make: the start f(a) left off, or a put where
+  f(a) belongs, the slope left off, the rise taken the wrong way, the slope rule
+  misremembered or its root lost, and x put where x − a belongs. Two wrong numbers
+  share the estimate's form, whole or fraction, and two its sign, none is 0, no
+  wrong one is two others added, the estimate is whole about half the time, and it
+  sits lowest, highest or between about as often. A wrong pick is shut and checked
+  where its formula must fail: at x = a, where the tangent touches the curve, or
+  one step across, where it must move by f′(a). The right pick works
+  f(a) + f′(a)(x − a) through and sets it beside the true value, with which way the
+  tangent misses. Nothing is saved, and there is no clock. `npm test` reads every
+  number back off its button, works it again from the slip it is named as, finds
+  the right one alone by nudging the curve for its slope, and works every check
+  again.
+
 - **🧵 Arc Length Workshop** — measuring a curve with chords. Pick a line, the cubic
   x³/6 + 1/(2x) or a quarter circle, and lay 1, 2, 4 and up to 32 straight chords along
   it. With four or fewer every chord is measured in the readout by Pythagoras,
@@ -2006,6 +2043,22 @@ The game is built so that losing teaches you as much as winning.
   tangent at the point as steep as the rate. Small, P's first step is almost e^0.5; past
   500 the room left shrinks faster than P grows and the rate falls; from either side P
   settles on 1000. Six things to find, and a fight on logistic growth now offers it.
+
+  **🎯 Which rate?** turns the workshop round: r, K and P, with P below the ceiling
+  or above it, and four numbers, one of them dP/dt. The rule is stated first: r per
+  head, times the P heads there are, times the room left, 1 − P/K. The wrong numbers
+  are the slips people make: rP with no ceiling, the share already filled P/K where
+  the room left belongs, the P dropped, the r dropped, the ÷ K dropped, the share
+  turned upside down, and the peak rate rK/4 given whatever P is. Two wrong numbers
+  share the rate's form, whole or fraction, and two its sign, none is 0, no wrong
+  one is two others added, and the rate is whole about half the time. A wrong pick
+  is shut and checked where its formula must fail: at P = 0, where nobody breeds,
+  at the ceiling, where there is no room, or at P = 1, where one head grows at about
+  r. The right pick works rP(1 − P/K) through, and above the ceiling says why the
+  rate is below 0. Nothing is saved, and there is no clock. `npm test` reads every
+  number back off its button, works it again from the slip it is named as, finds
+  the right one alone by nudging the solution through P, and works every check
+  again.
 
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
@@ -2171,7 +2224,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-six suites, about 5,820 checks, about a minute:
+loop only exists once the page is running. A hundred and forty-nine suites, about 5,913 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2208,6 +2261,7 @@ loop only exists once the page is running. A hundred and forty-six suites, about
 | `eig` | the Tome opens the eigenvector hunt on the first matrix with v = ⟨1, 0⟩; the readout works Av = ⟨2, 1⟩ and says it is knocked about 27° off v's line; nothing is found before anything is turned; ⟨1, 1⟩ is stretched by 3 and ⟨1, −1⟩ left where it was, each ticked then, and the toast starts with a capital; sums are written with −, never + −; the third matrix flips ⟨1, −1⟩ with λ = −1 and ⟨2, −2⟩ counts as a longer eigenvector; the second matrix's two directions finish all six; the quarter-turn is 90° off and has no real eigenvectors; ⟨0, 0⟩ is never counted; the steppers stop at 2, even when pressed past it; every button is named and each matrix reads its rows; it fits a phone; nothing is saved |
 | `compose` | the Tome opens Order Matters on a shear then a quarter-turn; the readout follows î and ĵ through both moves, gives the pair's columns ⟨0, 1⟩ and ⟨−1, 1⟩ and its determinant 1 × 1 = 1, and says the other order lands î on ⟨1, 1⟩, drawn dashed; nothing is found before anything is pressed and the picked moves are shown pressed; a flip twice brings every arrow back, with (−1) × (−1) = 1, and has no other order to try; flip then stretch gives det = −2 and lands the same either way round, which the caption says too; flip then swap is a single quarter-turn; two quarter-turns make a half-turn and finish all six; all ten buttons are named with the move and when; it fits a phone; nothing is saved |
 | `limit` | the Tome opens the limit workshop on (x² − 1)/(x − 1) from the right at h = 1; the readout works f(2) = (4 − 1)/1 = 3/1 = 3, says 0/0 at x = 1 is no number, and asks for a smaller h; the figure draws the hole at (1, 2) and the dot on the curve; nothing is found before anything is pressed; h stops at 1 and at 0.001 even pressed past them; at h = 0.01 the working is 0.0201/0.01 = 2.01 and getting within 0.01 is found, with its toast; from the right at 0.001 it heads for 2, and from the left the negatives are bracketed, the sides agree and the limit 2 is named; sin x / x is worked to eight figures and heads for 1; \|x\| / x stays at −1 and at 1, so the limit does not exist; 1/x reaches 1000, is kept inside the picture, and falls without end from the left, finishing all six; a side watched up close is still remembered at h = 1; every button is named; it fits a phone; nothing is saved |
+| `limpick` | the Tome says the limit workshop can be turned round; the workshop opens on closing in by hand, and switching to which limit puts away the formulas, the sides, the figure, the h buttons, the readout and the goals and states the rule first; the ratio and where x heads are shown, with four numbers and No limit across the row, each named by what it says; two wrong picks are each named as their slip and checked, shut and told as not the limit, and not counted; the right pick works the ratio through, counts (not as a first try after a miss), toasts and deals a new ratio; a first try counts as one, and the fifth brings HOLE FINDER; where nothing cancels No limit is right and the readout says f runs off without end; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `descent` | the Tome opens the downhill workshop at (−2, 1) with η = 0.1; the readout works f = (−3)² + 2·2² = 17, ∇f = ⟨−6, 8⟩ and the step to (−1.4, 0.2), and the figure draws the valley, the walk and a dashed next step; nothing is found before anything is pressed; five steps of 0.1 still leave f above 0.5, with its toast; picking a step size starts again; one step of 0.25 lands on y = −1 and seven reach f ≈ 0.0005, and at (1, −1) it says nothing is uphill and the Step button stops; 0.4 zigzags across the floor while f falls from 17 to 3.24; 0.55 climbs on its second step and passes 100 on its seventh, finishing all six; a walk past f = 1000 is stopped and Start again begins it afresh; every step size is named; it fits a phone; nothing is saved |
 | `span` | the Tome opens the span workshop on ⟨2, 1⟩ and ⟨1, 2⟩ with a = b = 1; the readout works a·u + b·v = ⟨3, 3⟩, says ⟨1, 2⟩ is still to go and that the pair spans the plane, and the figure walks a·u, then b·v from its tip, with a ring on the target; nothing is found before anything is pressed; one more of v lands on ⟨4, 5⟩, with its toast; the second pair's target takes −2 of v, bracketed, and b stops at −2; with î and ĵ the amounts −2 and 1 are named as the coordinates; the fourth pair works out to (a + 2b)·u, says its target is off the line, makes ⟨0, 0⟩ from −2 and 1, draws the dashed line and no zero-length arrows, and at a = b = 0 remembers the other way to ⟨0, 0⟩, finishing all six; every button is named; it fits a phone; nothing is saved |
 | `elim` | the Tome opens the elimination workshop on x + 2y = 5 and 3x + 4y = 11, working on row 2; the readout lists both equations and says the lines cross at (1, 2), and the figure draws both lines with the crossing ringed; nothing is found before anything is pressed; multiplying by 1 and a divide that would leave fractions are not offered; k skips 0 and stops at −3; R2 − 3·R1 is worked entry by entry, says x is gone and to divide by (−2), and is drawn, with its toast; dividing by −2 leaves y = 2 and says the line has not moved; R1 − 2·R2 leaves x = 1 and the system solved; Undo and Start again put rows back; the second system is solved with a swap, an add with a bracketed negative, a divide and an add; the third reads 0 = 2, draws only row 1 and says why; the fourth reads 0 = 0, finishing all six; every button is named; it fits a phone; nothing is saved |
@@ -2256,9 +2310,11 @@ loop only exists once the page is running. A hundred and forty-six suites, about
 | `meanvalue` | the Tome opens the chord workshop on x² at x = 1, with the chord's slope (16 − 0)/(4 − 0) = 4 worked and the tangent's 2 too shallow, so c lies to the right; at 2 the tangent matches, half way as on every parabola, and at 2.05 it is steeper; a quarter step stops short of the end; on x³ the middle 1.5 gives 6.75, short of 9, and a step from 1.7 to 1.75 crosses c = √3 ≈ 1.7321; on 4/x the chord runs downhill at −1 and c is 2, short of the middle; all six goals, starting over, the ends, every button and the drawing named, a phone's width, and nothing saved |
 | `chordpick` | the Tome says the chord workshop can be turned round; the mode is pressed and the curves, the figure, the move buttons, the readout and the goals step aside; the rule comes first; a curve on an interval is shown with its chord drawn and no tangent, and four numbers offered, each named; a wrong pick is named as its slip, checked by putting it into f′, shut and told as not c, and not counted; the right pick is worked from the chord's slope, counted but not as a first try, toasted, and deals a new question; a missed pick between a and b has its tangent drawn, and it goes with the question; a first try is counted as one; the fifth brings CHORD FINDER; every button and the figure are named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `tanline` | the Tome opens the tangent line workshop on √x at a = 4, with L(x) = 2 + (1/4)(x − 4) worked and the two touching; at 4.1 the estimate 2.025 is too high by about 0.0002, within 0.001; from 6 halving to 5 cuts the miss from 0.0505 to 0.0139, about a quarter; at 8 it drifts past 0.1; left of 4 it still overshoots, and x stops at 1 and 9; on 1/x near 1 the tangent falls short; on sin x near 0 halving from 0.8 to 0.4 cuts the miss to about an eighth; all six goals and the banner, starting over, every button and the drawing named, a phone's width, and nothing saved |
+| `estpick` | the Tome says the tangent line workshop can be turned round; the workshop opens on stepping x by hand, and switching to which estimate puts away the curves, the figure, the step buttons, the readout and the goals and states the rule first; the curve, a and x are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked at x = a or one step across, shut and told as not the estimate, and not counted; the right pick works f(a) + f′(a)(x − a) through beside the true value, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings TANGENT TRACKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `arclen` | the Tome opens the arc length workshop on the line, one chord measured √(4² + 3²) = 5 beside the runs alone, 4; two chords still exactly 5; on the cubic one chord short of 17/12 by about 0.0601, four chords each worked, doubling from 2 to 4 cutting the gap from 0.01656 to 0.00421, about a quarter, and 16 chords within 0.001; the chords stop at 32, halving drops the note and starting over goes back to one; on the quarter circle 16 chords give 1.5685 and doubling cuts the gap only to about a third; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
 | `arcpick` | the Tome says the arc length workshop can be turned round; the workshop opens on laying chords by hand, and switching to which integral puts away the curves, the figure, the chord buttons, the readout and the goals and states the rule first; a curve and where it runs are shown and four integrals offered, each named by its integral; two wrong picks are each named as their slip and checked at one x, where the slope gives a tiny step's length, shut and told as not the length, and not counted; the right pick works 1 + f′² through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings CURVE MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `logistic` | the Tome opens the logistic workshop starting small at 20, A = 49 worked and the rate 0.5 × 20 × 0.98 = 9.8; one step grows P to 32.6, 1.6276 times as much, almost e^0.5, with the rate rising; P passes 500 at t = 8 with rK/4 = 125 told, and at t = 9 the rate falls from 124.6 to 114.1; by t = 17 P is within 1% of 1000; the steps stop at 20, stepping back drops the step note and starting over goes back to t = 0; half way the rate falls from 125; above the ceiling the rate is −480 and P falls to 1294.4; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
+| `logipick` | the Tome says the logistic workshop can be turned round; the workshop opens on stepping by hand, and switching to which rate puts away the starts, the figure, the step buttons, the readout and the goals and states the rule first; r, K and P are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked where their formula must fail, shut and told as not dP/dt, and not counted; the right pick works rP(1 − P/K) through, counts (not as a first try after a miss), toasts and deals a new population; a first try counts as one, and the fifth brings RATE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 54 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
