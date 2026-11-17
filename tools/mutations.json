@@ -1,180 +1,187 @@
 {
-  "change": "Euler's method as a fight topic: estimate y two or three steps on from y′ = px + qy.",
+  "change": "The Chord Workshop: walk a point along x², x³ or 4/x until its tangent runs parallel to the chord.",
   "mutations": [
     {
-      "name": "a step adds the whole slope",
+      "name": "the chord's slope forgets to divide",
       "file": "index.html",
-      "find": "const y1=add(y, how==='noH'?s:mul(h,s));",
-      "replace": "const y1=add(y, s);",
+      "find": "return (S.f(S.b)-S.f(S.a))/(S.b-S.a); },",
+      "replace": "return (S.f(S.b)-S.f(S.a)); },",
       "run": "verify"
     },
     {
-      "name": "every step reads its slope at the far end",
+      "name": "x³'s slope forgets the 3",
       "file": "index.html",
-      "find": "at=how==='far'?F(k+1,hd):x;",
-      "replace": "at=F(k+1,hd);",
+      "find": "df:x=>3*x*x,",
+      "replace": "df:x=>x*x,",
       "run": "verify"
     },
     {
-      "name": "the slope swaps its two coefficients",
+      "name": "4/x's slope loses its sign",
       "file": "index.html",
-      "find": "add(mul(F(p),x),mul(F(q),y))",
-      "replace": "add(mul(F(q),x),mul(F(p),y))",
+      "find": "df:x=>-4/(x*x),",
+      "replace": "df:x=>4/(x*x),",
       "run": "verify"
     },
     {
-      "name": "the slope forgets x",
+      "name": "the point is a step off",
       "file": "index.html",
-      "find": "add(mul(F(p),x),mul(F(q),y))",
-      "replace": "mul(F(q),y)",
+      "find": "x(k=this.k){ return k/20; },",
+      "replace": "x(k=this.k){ return (k+1)/20; },",
       "run": "verify"
     },
     {
-      "name": "the answer is one step short",
+      "name": "the point may reach the end",
       "file": "index.html",
-      "find": "A=W[n-1].y1;",
-      "replace": "A=W[n-2].y1;",
+      "find": "hi(){ return this.set().b*20-1; },",
+      "replace": "hi(){ return this.set().b*20; },",
       "run": "verify"
     },
     {
-      "name": "the four wrong answers may coincide",
+      "name": "parallel is judged loosely",
       "file": "index.html",
-      "find": "new Set(keys).size!==5 || ",
+      "find": "return Math.abs(d)<1e-9 ? 0 : d<0 ? -1 : 1; },",
+      "replace": "return Math.abs(d)<0.2 ? 0 : d<0 ? -1 : 1; },",
+      "run": "verify"
+    },
+    {
+      "name": "c is said to lie the wrong way",
+      "file": "index.html",
+      "find": "so c lies to the ${sd<0?'right':'left'} of",
+      "replace": "so c lies to the ${sd<0?'left':'right'} of",
+      "run": "verify"
+    },
+    {
+      "name": "an approximate slope is written as exact",
+      "file": "index.html",
+      "find": "is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')",
+      "replace": "is(v){ return '= '",
+      "run": "verify"
+    },
+    {
+      "name": "the middle note is never said",
+      "file": "index.html",
+      "find": "    if(this.k===mid) out.push(",
+      "replace": "    if(false) out.push(",
+      "run": "verify"
+    },
+    {
+      "name": "a crossing is told without one",
+      "file": "index.html",
+      "find": "if(this.prev!==null && this.side(this.prev)*sd<0)",
+      "replace": "if(this.prev!==null && this.side(this.prev)*sd<=0)",
+      "run": "verify"
+    },
+    {
+      "name": "√3 is solved wrong",
+      "file": "index.html",
+      "find": "solve:'3c² = 9 gives c = √3 ≈ 1.7321'",
+      "replace": "solve:'3c² = 9 gives c = √3 ≈ 1.5'",
+      "run": "verify"
+    },
+    {
+      "name": "4/x's c is said to be the middle",
+      "file": "index.html",
+      "find": "On 4/x, c = √(${S.a} × ${S.b}) = 2, short of the middle, 2.5.",
+      "replace": "On 4/x, c = (${S.a} + ${S.b})/2 = 2.5.",
+      "run": "verify"
+    },
+    {
+      "name": "the chord joins the wrong ends",
+      "file": "index.html",
+      "find": "x2=\"${f(this.PX(S.b))}\" y2=\"${f(this.PY(S.f(S.b)))}\" stroke=\"${FIG_COL.dim}\"",
+      "replace": "x2=\"${f(this.PX(S.b))}\" y2=\"${f(this.PY(S.f(S.a)))}\" stroke=\"${FIG_COL.dim}\"",
+      "run": "verify"
+    },
+    {
+      "name": "the tangent is drawn with the chord's slope",
+      "file": "index.html",
+      "find": "const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=S.df(x),",
+      "replace": "const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=this.slope(),",
+      "run": "verify"
+    },
+    {
+      "name": "the point is drawn off the curve",
+      "file": "index.html",
+      "find": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y))}\" r=\"5\" fill=\"${FIG_COL.a",
+      "replace": "<circle data-k=\"pt\" cx=\"${f(this.PX(x))}\" cy=\"${f(this.PY(y+1))}\" r=\"5\" fill=\"${FIG_COL.a",
+      "run": "verify"
+    },
+    {
+      "name": "the crossing goal needs no crossing",
+      "file": "index.html",
+      "find": "ok:K=>K.si===1 && K.prev!==null && (K.prev<=34) !== (K.k<=34)},",
+      "replace": "ok:K=>K.si===1 && K.prev!==null},",
+      "run": "verify"
+    },
+    {
+      "name": "the close goal is met at the middle",
+      "file": "index.html",
+      "find": "ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<0.2},",
+      "replace": "ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<2.3},",
+      "run": "verify"
+    },
+    {
+      "name": "the steep goal is met at c",
+      "file": "index.html",
+      "find": "ok:K=>K.si===0 && K.k>40},",
+      "replace": "ok:K=>K.si===0 && K.k>=40},",
+      "run": "verify"
+    },
+    {
+      "name": "picking a curve keeps the old point",
+      "file": "index.html",
+      "find": "pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null;",
+      "replace": "pick(i){ this.si=i; this.prev=null;",
+      "run": "verify"
+    },
+    {
+      "name": "starting over keeps the last step",
+      "file": "index.html",
+      "find": "again(){ this.k=this.set().k0; this.prev=null;",
+      "replace": "again(){ this.k=this.set().k0;",
+      "run": "verify"
+    },
+    {
+      "name": "the small step right goes left",
+      "file": "index.html",
+      "find": "onclick=\"MeanValue.move(1)\"",
+      "replace": "onclick=\"MeanValue.move(-1)\"",
+      "run": "play:meanvalue"
+    },
+    {
+      "name": "the Tome does not offer it",
+      "file": "index.html",
+      "find": "onclick=\"MeanValue.open()\"",
+      "replace": "onclick=\"MeanValue.render()\"",
+      "run": "play:meanvalue"
+    },
+    {
+      "name": "a fight on the mean value theorem does not offer it",
+      "file": "index.html",
+      "find": "    MeanValue: [\"📐 Chord Workshop\", ['meanValue']],\n",
       "replace": "",
       "run": "verify"
     },
     {
-      "name": "a wrong answer may be 0",
+      "name": "the screen is not drawn when opened",
       "file": "index.html",
-      "find": "dist.some(x=>x[0][0]===0) || ",
+      "find": "    if(id==='s-mvt') MeanValue.render();\n",
       "replace": "",
-      "run": "verify"
+      "run": "play:meanvalue"
     },
     {
-      "name": "the question says the wrong step",
+      "name": "the buttons never stop at the ends",
       "file": "index.html",
-      "find": "step h = ${show(h)} on",
-      "replace": "step h = ${show(F(1))} on",
-      "run": "verify"
-    },
-    {
-      "name": "the question says the wrong start",
-      "file": "index.html",
-      "find": "starting from y(0) = ${show(y0)}.",
-      "replace": "starting from y(0) = ${show(F(1))}.",
-      "run": "verify"
-    },
-    {
-      "name": "the question asks for the wrong point",
-      "file": "index.html",
-      "find": "What is its estimate of y(${show(F(n,hd))})?",
-      "replace": "What is its estimate of y(${show(F(n,1))})?",
-      "run": "verify"
-    },
-    {
-      "name": "the equation flips the sign of y",
-      "file": "index.html",
-      "find": "${q<0?'−':'+'} ${Math.abs(q)=",
-      "replace": "${q<0?'+':'−'} ${Math.abs(q)=",
-      "run": "verify"
-    },
-    {
-      "name": "the equation writes 1y",
-      "file": "index.html",
-      "find": "${Math.abs(q)===1?'':Math.abs(q)}y",
-      "replace": "${Math.abs(q)}y",
-      "run": "verify"
-    },
-    {
-      "name": "the equation writes 1x",
-      "file": "index.html",
-      "find": "${p===1?'':p===-1?'−':neg(p)}x ",
-      "replace": "${neg(p)}x ",
-      "run": "verify"
-    },
-    {
-      "name": "the working skips a step",
-      "file": "index.html",
-      "find": "work.join(' ')",
-      "replace": "work.slice(1).join(' ')",
-      "run": "verify"
-    },
-    {
-      "name": "the working lands a step in the wrong place",
-      "file": "index.html",
-      "find": "= ${show(st.y1)}.`",
-      "replace": "= ${show(st.y)}.`",
-      "run": "verify"
-    },
-    {
-      "name": "the step-size slip is offered when h is 1",
-      "file": "index.html",
-      "find": "if(hd>1) dist.push",
-      "replace": "if(hd>0) dist.push",
-      "run": "verify"
-    },
-    {
-      "name": "the answer is shown as a decimal",
-      "file": "index.html",
-      "find": "a:show(A),",
-      "replace": "a:String(A[0]/A[1]),",
-      "run": "verify"
-    },
-    {
-      "name": "the codex has no example",
-      "file": "index.html",
-      "find": "eg:'y′ = y from y(0) = 1 with h = 1/2: 1 → 1 + 1/2 × 1 = 3/2 → 3/2 + 1/2 × 3/2 = 9/4.'",
-      "replace": "eg:''",
-      "run": "verify"
-    },
-    {
-      "name": "a wrong answer has no reason",
-      "file": "index.html",
-      "find": "d:dist.map(([v,why])=>[show(v),why]),",
-      "replace": "d:dist.map(([v,why])=>[show(v),'']),",
-      "run": "verify"
-    },
-    {
-      "name": "Euler's method has no name",
-      "file": "index.html",
-      "find": ", euler:\"Euler's Method\"",
+      "find": "for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);",
       "replace": "",
-      "run": "verify"
+      "run": "play:meanvalue"
     },
     {
-      "name": "no realm asks Euler's method",
+      "name": "the goals never show as found",
       "file": "index.html",
-      "find": "'secondDeriv','euler'],",
-      "replace": "'secondDeriv'],",
-      "run": "verify"
-    },
-    {
-      "name": "Euler's method is in no strand",
-      "file": "index.html",
-      "find": ",'optimisation','euler']]",
-      "replace": ",'optimisation']]",
-      "run": "verify"
-    },
-    {
-      "name": "an old code loses its history",
-      "file": "index.html",
-      "find": "if(sig!==this.sig() && !(nTop<T.length && sig===this.sigOf(nTop))){",
-      "replace": "if(sig!==this.sig()){",
-      "run": "verify"
-    },
-    {
-      "name": "an old code is read against the whole list",
-      "file": "index.html",
-      "find": "sig===this.sigOf(nTop))",
-      "replace": "sig===this.sigOf(T.length))",
-      "run": "verify"
-    },
-    {
-      "name": "the signature hashes one topic too many",
-      "file": "index.html",
-      "find": "this.topics().slice(0,n).join(',')",
-      "replace": "this.topics().slice(0,n+1).join(',')",
-      "run": "verify"
+      "find": "this.GOALS.map(g=>`<div class=\"wsGoal${this.done.has(g.id)?' done':''}\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE CHORD'",
+      "replace": "this.GOALS.map(g=>`<div class=\"wsGoal\" data-goal=\"${g.id}\">\n        <i aria-hidden=\"true\">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class=\"sr-only\">(found)</span>':''}</span></div>`).join('');\n    if(fresh.length){\n      if(this.done.size===this.GOALS.length)\n        Celebrate.banner('MASTER OF THE CHORD'",
+      "run": "play:meanvalue"
     }
   ]
 }

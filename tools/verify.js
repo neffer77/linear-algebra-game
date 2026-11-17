@@ -90,6 +90,9 @@ function loadGame() {
     ';const InvSlope={' + script.slice(script.indexOf("  SETS:[\n    {id:'asin', btn:'arcsin', g:'arcsin'"), script.indexOf("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },\n  render(){\n    document.getElementById('ivTab')")) + 'render(){}};exports.InvSlope=InvSlope;' +
     ';const LogDiff={' + script.slice(script.indexOf("  E:Math.E,\n  SETS:[\n    {id:'xx'"), script.indexOf("  render(){\n    document.getElementById('lgTab')")) + 'render(){}};exports.LogDiff=LogDiff;' +
     ';const PathChain={' + script.slice(script.indexOf("  SETS:[\n    {id:'xy', btn:'z = xy'"), script.indexOf("  render(){\n    document.getElementById('pcTab')")) + 'render(){}};exports.PathChain=PathChain;' +
+    ';const Doubling={' + script.slice(script.indexOf("  SETS:[\n    {id:'dbl', btn:'×2 every 2 days'"), script.indexOf("  render(){\n    document.getElementById('dbTab')")) + 'render(){}};exports.Doubling=Doubling;' +
+    ';const MeanValue={' + script.slice(script.indexOf("  SETS:[\n    {id:'sq', btn:'x² on [0, 4]'"), script.indexOf("  render(){\n    document.getElementById('mvtSets')")) + 'render(){}};exports.MeanValue=MeanValue;' +
+    ';const EulerWalk={' + script.slice(script.indexOf("  SETS:[\n    {id:'grow', btn:'y′ = y'"), script.indexOf("  render(){\n    document.getElementById('ewTab')")) + 'render(){}};exports.EulerWalk=EulerWalk;' +
     ';const ExpInt={' + script.slice(script.indexOf("  SETS:[\n    {id:'two', btn:'e^(2x)'"), script.indexOf("  render(){\n    document.getElementById('xiTab')")) + 'render(){}};exports.ExpInt=ExpInt;' +
     ';const Optim={' + script.slice(script.indexOf("  SETS:[\n    {id:'wall', btn:'Wall paddock'"), script.indexOf("  open(){ UI.go('s-optim'); },")) + '};exports.Optim=Optim;' +
     ';const Descent={' + script.slice(script.indexOf('  START:[-2, 1],\n  ETAS:'), script.indexOf('  open(){ UI.go(\'s-descent\'); },')) + '};exports.Descent=Descent;' +
@@ -109,7 +112,7 @@ function loadGame() {
   try { new Function(html.match(/<script>([\s\S]*)<\/script>/)[1]); }
   catch (e) { console.log(`FAIL [page] script: the page script does not parse: ${e.message}`); process.exit(1); }
 }
-const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt } = loadGame();
+const { GEN, trailQ, buildQuestion, buildMote, mat, Figure, figEval, Build, Slip, Workshop, Slope, Area, Dot, Eigen, Taylor, Compose, Limit, Descent, Span, Elim, Undo, Fit, Newton, Chain, Castles, Optim, Cistern, Hopital, Product, Ladder, Kernel, Gram, Geo, Bend, Avg, Tail, Lathe, Swap, Implicit, Parts, Detect, Hill, Cofactor, Cover, Slice, Tracer, Arrow, Horizon, Cross, Quot, Anti, Transpose, Diag, TrigInt, TanPlane, InvSlope, LogDiff, PathChain, ExpInt, EulerWalk, Doubling, MeanValue } = loadGame();
 
 /* Figures are data, so their contract can be checked without a browser. Each
    kind names the fields it cannot draw without; the reveal flags are the ones
@@ -731,6 +734,7 @@ function workedSum(key, ex, a) {
       fail('analysis', key, `the worked values ${vals} do not add up to ${a}`);
   }
 }
+let mvChordOffered = 0;   // the mean value theorem's questions that offer the chord's slope as a slip
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
   trigDeriv:   p => derivCheck('trigDeriv', stripD(p.q), p.a),
@@ -1129,6 +1133,64 @@ Object.assign(ANALYSIS, {
     if (got.length !== ys.length || got.some((v, k) => Math.abs(v - ys[k]) > 1e-9))
       fail('analysis', 'euler', `the working does not take each of the ${ys.length} steps: ${w}`);
   },
+  // Exponential growth, worked again here in floating point: y(t) is
+  // y(0) × (y(T)/y(0))^(t/T), and the working names that factor.
+  growth: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ');
+    const t = fl(p.q);
+    const m = t.match(/^y′ = ky for some constant k, with y\(0\) = (\d+) and y\((\d+)\) = (\d+(?:\/\d+)?)\. What is y\((\d+)\)\?$/);
+    if (!m) { fail('analysis', 'growth', `the question does not read as exponential growth: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const a = +m[1], T = +m[2], b = val(m[3]), tt = +m[4];
+    valueCheck('growth', a * Math.pow(b / a, tt / T), p.a, 1e-9);
+    const w = fl(p.ex), f = w.match(/y\(\d+\) ÷ y\(0\) = [^=]* = (\d+(?:\/\d+)?)\./);
+    if (!f || Math.abs(val(f[1]) - b / a) > 1e-12) fail('analysis', 'growth', `the working does not name the factor every ${T}: ${w}`);
+    covered.add('growth');
+  },
+  // The mean value theorem, worked again here in floating point: the chord's
+  // slope from f(a) and f(b), then every c strictly between a and b where a
+  // numeric f′ meets it, found by bisection. There must be exactly one, and it
+  // is the answer; the working names the chord's slope.
+  meanValue: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), N = '(-?\\d+(?:/\\d+)?)';
+    const m = t.match(new RegExp(`^f\\(x\\) = (.+?) on \\[${N}, ${N}\\]\\. Where between ${N} and ${N} is the tangent parallel to the chord\\? What is c\\?$`));
+    if (!m) { fail('analysis', 'meanValue', `the question does not read as the mean value theorem: ${t}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const a = val(m[2]), b = val(m[3]);
+    if (m[4] !== m[2] || m[5] !== m[3] || !(a < b)) { fail('analysis', 'meanValue', `the interval is not named the same twice: ${t}`); return; }
+    let f;
+    const rec = m[1].match(/^(\d+)\/x$/);
+    if (rec) f = x => +rec[1] / x;
+    else {
+      // a polynomial as written: terms like 3x², −x³, 4x, −5
+      const terms = m[1].replace(/ - /g, ' + -').split(' + ').map(z => { const q = z.match(/^(-?\d*)(x([²³])?)?$/);
+        if (!q) return null; const c = q[1] === '' ? 1 : q[1] === '-' ? -1 : +q[1]; return [c, q[2] ? (q[3] === '³' ? 3 : q[3] === '²' ? 2 : 1) : 0]; });
+      if (terms.some(z => !z)) { fail('analysis', 'meanValue', `f is not read: ${m[1]}`); return; }
+      f = x => terms.reduce((s, [c, k]) => s + c * x ** k, 0);
+    }
+    const slope = (f(b) - f(a)) / (b - a), g = x => (f(x + 1e-6) - f(x - 1e-6)) / 2e-6 - slope;
+    const roots = [], n = 4000, lo = a + (b - a) * 1e-4, hi = b - (b - a) * 1e-4;
+    for (let i = 0; i < n; i++) {
+      let x0 = lo + (hi - lo) * i / n, x1 = lo + (hi - lo) * (i + 1) / n, g0 = g(x0), g1 = g(x1);
+      if (g0 === 0) { roots.push(x0); continue; }
+      if (g0 * g1 < 0) { for (let k = 0; k < 60; k++) { const xm = (x0 + x1) / 2, gm = g(xm); if (g0 * gm <= 0) x1 = xm; else { x0 = xm; g0 = gm; } } roots.push((x0 + x1) / 2); }
+    }
+    if (roots.length !== 1) { fail('analysis', 'meanValue', `${roots.length} places between ${a} and ${b} have the chord's slope: ${t}`); return; }
+    valueCheck('meanValue', roots[0], p.a, 1e-5);
+    const w = fl(p.ex), s = w.match(/^The chord from \(\S+, \S+\) to \(\S+, \S+\) has slope \(.+?\)\/\(.+?\) = (-?\d+(?:\/\d+)?)\. /);
+    if (!s || Math.abs(val(s[1]) - slope) > 1e-9 * Math.max(1, Math.abs(slope))) fail('analysis', 'meanValue', `the working does not name the chord's slope, ${slope}: ${w}`);
+    const fc = w.match(/so f′\(c\) = (-?\d+(?:\/\d+)?) means/);
+    if (!fc || Math.abs(val(fc[1]) - slope) > 1e-9 * Math.max(1, Math.abs(slope))) fail('analysis', 'meanValue', `the working does not set f′(c) to the chord's slope, ${slope}: ${w}`);
+    // the working ends on the answer: the last c = … (or √… = …) it reaches is c
+    const fin = [...w.matchAll(/(?:\bc|√\S+) = (-?\d+(?:\/\d+)?)(?=[.,])/g)].pop();
+    if (!fin || fin[1] !== fl(p.a).replace(/−/g, '-')) fail('analysis', 'meanValue', `the working does not end on c = ${p.a}: ${w}`);
+    // the chord's slope is the first slip people make, so it is on offer
+    if (p.d.some(x => Math.abs(val(fl(x[0])) - slope) < 1e-9)) mvChordOffered++;
+    covered.add('meanValue');
+  },
   taylor: p => {
     const t = flat(p.q);
     const m = t.match(/of (e|cos\(|ln\(1 \+ )(\d?)(x)?/);
@@ -1211,7 +1273,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 71, sig: 0x6193 };
+  const PINNED = { count: 73, sig: 0xa208 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -2780,6 +2842,13 @@ const wsIndexNotes = (() => {
   const mods = {};
   for (const k of Object.keys(FOR)) (mods[FOR[k].mod] || (mods[FOR[k].mod] = { name: FOR[k].name, topics: [] })).topics.push(k);
   const cards = [...html.matchAll(/onclick="(\w+)\.open\(\)">Open [^<]*<\/button>/g)].map(m => m[1]);
+  { // the README's count of topics that open a workshop, and of the workshops, is the game's own
+    const NW = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+    const num = w => w.toLowerCase().split('-').reduce((a, x) => a + (NW[x] || NaN), 0);
+    const rd = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8').replace(/\s+/g, ' ');
+    const m = rd.match(/(\S+) topics link to (\S+) workshops/);
+    if (!m || num(m[1]) !== Object.keys(FOR).length || num(m[2]) !== Object.keys(mods).length) fail('wsindex', 'readme', `the README says ${m ? m[0] : 'nothing'}, but ${Object.keys(FOR).length} topics link to ${Object.keys(mods).length} workshops`);
+  }
   const gs = I.groups(), items = gs.flatMap(g => g.items);
   if (items.length !== Object.keys(mods).length) fail('wsindex', 'count', `${items.length} chips for ${Object.keys(mods).length} workshops`);
   const seen = new Set();
@@ -9241,6 +9310,364 @@ const lnPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Which estimate? The Euler step workshop turned round. Every number is read
+   back off its button and checked against the slip it is named as, walked
+   again here from the equation's numbers; the right one alone is Euler's
+   estimate, walked once more in floating point. Each miss is checked at the
+   first step it gets wrong, worked again here, and no check names the
+   estimate itself. */
+const eulerPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const EulerWalk = {render(){ env.renders++; }};" +
+    cut('const EulerPick = {', '/* ---------- The Euler step workshop: walk a differential equation by hand') + 'return EulerPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const EulerWalk = {', '\n};\n');
+  if (!html.includes('<div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand or pick Euler’s estimate"></div>\n    <div class="panel">\n      <div id="euBox"></div>')) fail('eulerpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['ewWalkRow', 'ewGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('eulerpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('eulerpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab(\'${t}\')"')) fail('eulerpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('eulerpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n    if(pick) return;")) fail('eulerpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>')) fail('eulerpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const times = (f, g) => red(f[0] * g[0], f[1] * g[1]);
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const br = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // the walk as each option takes it, two steps from (0, y0) (one for a step short)
+  const walkOf = (k, Q) => { const h = [1, Q.hd], sl = (x, y) => plus(times([Q.p, 1], x), times([Q.q, 1], y));
+    let x = [0, 1], y = [Q.y0, 1]; const pts = [[x, y]], used = [], rise = [];
+    for (let j = 0; j < (k === 'short' ? 1 : 2); j++) {
+      const nx = red(j + 1, Q.hd), s = k === 'same' ? sl([0, 1], [Q.y0, 1]) : k === 'far' ? sl(nx, y) : sl(x, y);
+      const up = k === 'noH' ? s : times(h, s); y = k === 'noAdd' ? up : plus(y, up); x = nx;
+      used.push(s); rise.push(up); pts.push([x, y]); }
+    return { pts, used, rise }; };
+  const want = (k, Q) => { const w = walkOf(k, Q); return w.pts[w.pts.length - 1][1]; };
+  // Euler's estimate walked in floats, with no fractions at all
+  const float = Q => { const h = 1 / Q.hd; let x = 0, y = Q.y0; for (let j = 0; j < 2; j++) { y += h * (Q.p * x + Q.q * y); x += h; } return y; };
+  const eqOf = Q => `y′ = ${Q.p === 1 ? '' : Q.p === -1 ? '−' : ng(Q.p)}x ${Q.q < 0 ? '−' : '+'} ${Math.abs(Q.q) === 1 ? '' : Math.abs(Q.q)}y`;
+  const sw = (Q, x, y) => `${ng(Q.p)} × ${br(x)} + ${br([Q.q, 1])} × ${br(y)} = ${fr(plus(times([Q.p, 1], x), times([Q.q, 1], y)))}`;
+  const slipOf = (k, L, Q) => {
+    if (k === 'short') return `${L} stops after one step. Euler’s method keeps stepping until it reaches the x it was asked for, and x = ${fr(red(2, Q.hd))} is two steps of ${fr([1, Q.hd])} from 0.`;
+    if (k === 'same') return `${L} uses the starting slope for both steps. The slope changes as x and y change, so it is worked out again at each new point.`;
+    if (k === 'far') return `${L} reads each slope at the far end of its step. Euler’s method uses the slope where the step starts, the one point it already knows.`;
+    if (k === 'noH') return `${L} adds the whole slope at each step. A step of h rises by h × slope, and here h is ${fr([1, Q.hd])}.`;
+    return `${L} takes h × slope as the new y instead of adding it on. A step starts from the y where you stand: the new y is y + h × slope.`; };
+  const checkOf = (k, L, Q) => {
+    const h = fr([1, Q.hd]), W = walkOf('right', Q), K = walkOf(k, Q);
+    if (k === 'short') return `Check ${L}: that is y at x = ${h}, after one step. Reaching x = ${fr(red(2, Q.hd))} takes two steps of ${h}.`;
+    const t = String(K.used[0]) !== String(W.used[0]) || String(K.rise[0]) !== String(W.rise[0]) || String(K.pts[1][1]) !== String(W.pts[1][1]) ? 0 : 1;
+    const [x, y] = W.pts[t];
+    const did = { same: `it keeps the first slope, ${fr(K.used[t])}`, far: `it reads the slope at x = ${fr(W.pts[t + 1][0])}, the far end of the step`,
+      noH: `it adds the whole slope, ${fr(K.used[t])}`, noAdd: `it takes h × slope, ${fr(K.rise[t])}, as the new y` }[k];
+    return `Check ${L}: at step ${t + 1}, from (${fr(x)}, ${fr(y)}), ${did}. The slope at that point is ${sw(Q, x, y)}, so y rises by ${h} × ${br(W.used[t])}.`; };
+  const stepOf = (Q, j) => { const W = walkOf('right', Q), [x, y] = W.pts[j], [x1, y1] = W.pts[j + 1];
+    return `from (${fr(x)}, ${fr(y)}) the slope is ${sw(Q, x, y)}, so y goes to ${fr(y)} + ${fr([1, Q.hd])} × ${br(W.used[j])} = ${fr(y1)} at x = ${fr(x1)}`; };
+  const RULE = 'Euler’s method walks y′ = f(x, y) forward in straight steps: where you stand, work out the slope f(x, y), then move h along x and h × slope up. From the new point, do it again. Which is the estimate here?';
+  if (S.RULE !== RULE) fail('eulerpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('eulerpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['short', 'same', 'far', 'noH', 'noAdd'];
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, seen = { p: new Set(), q: new Set(), y0: new Set(), hd: new Set() };
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; for (const n in seen) seen[n].add(Q[n]);
+      if (![-2, -1, 1, 2, 3].includes(Q.p) || ![-3, -1, 1, 2, 3].includes(Q.q) || ![-2, -1, 1, 2, 3].includes(Q.y0) || ![1, 2].includes(Q.hd) || Object.keys(Q).length !== 4) fail('eulerpick', key, `${sig} is not an equation of the kind dealt`);
+      if (prev && prev === sig) fail('eulerpick', key, 'the same equation comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('eulerpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} ${eqOf(Q)}, y(0) = ${ng(Q.y0)}, step h = ${fr([1, Q.hd])} Which is Euler’s estimate of y(${fr(red(2, Q.hd))})? A `)) fail('eulerpick', key, `the rule and the equation are not shown first: ${head.slice(RULE.length, RULE.length + 90)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="EulerPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('eulerpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('eulerpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('eulerpick', key, 'a number is 0');
+      if (new Set(vals.map(String)).size !== 4) fail('eulerpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('eulerpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      const W = walkOf('right', Q);
+      // the page and the checks name p, q, y(0), h, 2h, the first landing and rise and the two slopes read, so none of those is the estimate
+      if ([[Q.p, 1], [Q.q, 1], [Q.y0, 1], [1, Q.hd], red(2, Q.hd), W.pts[1][1], W.rise[0], ...W.used].some(n => String(n) === String(vals[ri]))) fail('eulerpick', key, `the estimate ${fr(vals[ri])} is named elsewhere on the page or in a check`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('eulerpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('eulerpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const Wv = want('right', Q), have = new Set([String(Wv)]), can = [];
+        for (const kk of SL) { const x = want(kk, Q); if (x[0] === 0 || have.has(String(x))) continue; have.add(String(x)); can.push(kk); }
+        const T = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (Wv[1] === 1)) && tr.some(x => want(x, Q)[0] * Wv[0] > 0) && !sums([Wv, ...tr.map(x => want(x, Q))])) T.push(tr); }
+        const rk = tr => tr.filter(x => { const y = want(x, Q); return y[0] * Wv[1] < Wv[0] * y[1]; }).length, F = T.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!SL.includes(o.k) && o.k !== 'right') { fail('eulerpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(want(o.k, Q))) fail('eulerpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(float(Q) - vals[i][0] / vals[i][1]) < 1e-9)) fail('eulerpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} Euler’s estimate walked in floats`);
+      });
+      if (k === 0 && txt(S.html().split('id="euRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('eulerpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('eulerpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="euRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ck = checkOf(o.k, Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('eulerpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        // a check works one step, but never lands on the estimate
+        if (lines.slice(0, 2).join(' ').split(/[\s,.;:()]+/).includes(fr(want('right', Q)))) fail('eulerpick', key, `the check of ${o.k} names the estimate ${fr(want('right', Q))}`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="EulerPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not Euler’s estimate"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('eulerpick', key, 'the missed numbers are not shut and told as not Euler’s estimate');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('eulerpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('eulerpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('eulerpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('eulerpick', key, 'no fresh equation after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'SURE-FOOTED / 5 walks read') fail('eulerpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is Euler’s estimate, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('eulerpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="euRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ${stepOf(Q, 0)}; then ${stepOf(Q, 1)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('eulerpick', key, `after a pick: ${got}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same equation dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { p: 2, q: -1, y0: 3, hd: 2 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"p":2,"q":-1,"y0":3,"hd":2}') fail('eulerpick', 'repeat', 'the same equation is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of equations: the answer's form even
+    let sw2 = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (want('right', Q)[1] === 1) sw2++; }
+    if (sw2 < 9000 || sw2 > 11000) fail('eulerpick', 'sweep', `${sw2} of 20000 estimates are whole, not about half`); }
+  for (const k of SL) if (!(kinds[k] > rounds * 0.2)) fail('eulerpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  const sizes = { p: 5, q: 5, y0: 5, hd: 2 };
+  for (const n in sizes) if (seen[n].size !== sizes[n]) fail('eulerpick', 'deal', `${n} is only ever ${[...seen[n]].sort((a, b) => a - b)}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('eulerpick', 'deal', `the estimate sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.05 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.05)) fail('eulerpick', 'deal', `the estimate sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('eulerpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives the estimate its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('eulerpick', 'deal', `${whole} of ${rounds} estimates are whole, not about half`);
+  if (fives !== 30) fail('eulerpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
+/* Which y? The doubling workshop turned round. Every number is read back off
+   its button and checked against the slip it is named as, worked again here
+   from y(0), y(T) and t alone; the right one alone is y(0) × (y(T)/y(0))^(t/T)
+   taken again in floating point. Each miss is explained and checked, worked
+   again here, and no check names y(t) itself. */
+const stretchPickNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0, seed: 1 };
+  const R = { _r: () => { env.seed = (env.seed * 1664525 + 1013904223) >>> 0; return env.seed / 4294967296; } };
+  R.i = (a, b) => Math.floor(R._r() * (b - a + 1)) + a;
+  const S = new Function('R', 'env',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n));" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Doubling = {render(){ env.renders++; }};" +
+    cut('const StretchPick = {', '/* ---------- The doubling workshop: y′ = ky one stretch at a time') + 'return StretchPick;')(R, env);
+  // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
+  const host = cut('const Doubling = {', '\n};\n');
+  if (!html.includes('<div id="dbTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a story by hand or pick which number is y"></div>\n    <div class="panel">\n      <div id="ypBox"></div>')) fail('stretchpick', 'host', 'the tabs and the pick box are not on the page');
+  for (const id of ['dbWalkRow', 'dbGoalPanel', 'ypBox', 'dbTab']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('stretchpick', 'host', `${id} is not on the page once`);
+  if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('stretchpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
+  if (!host.includes("[['hand','⏩ Walk it by hand','Pick a story and walk it a whole or half stretch at a time'],['pick','🎯 Which y?','See y(0) and y one stretch on, and pick which of four numbers is y at a later time']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="Doubling.setTab(\'${t}\')"')) fail('stretchpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("for(const id of ['dbSets','dbFig','dbWalkRow','dbRead','dbGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('stretchpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
+  if (!host.includes("document.getElementById('ypBox').innerHTML=pick ? StretchPick.html() : '';\n    if(pick) return;")) fail('stretchpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('and a straight line run below zero where the decay never does. Then turn it round: see y(0) and y one stretch on, and pick which of four numbers is y later.</div>')) fail('stretchpick', 'tome', 'the Tome does not tell of the pick');
+  const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const red = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const plus = (f, g) => red(f[0] * g[1] + g[0] * f[1], f[1] * g[1]);
+  const times = (f, g) => red(f[0] * g[0], f[1] * g[1]);
+  const fr = v => (v[1] === 1 ? ng(v[0]) : `${ng(v[0])}/${v[1]}`);
+  const br = v => (v[0] < 0 || v[1] !== 1 ? `(${fr(v)})` : fr(v));
+  const rdv = t => { let m = t.match(/^(−?)(\d+)$/); if (m) return [(m[1] ? -1 : 1) * +m[2], 1];
+    m = t.match(/^(−?)(\d+)\/(\d+)$/); if (!m || +m[3] < 2 || gcd(+m[2], +m[3]) !== 1) return null; return [(m[1] ? -1 : 1) * +m[2], +m[3]]; };
+  // √ of a fraction, found by trying every whole number, and r to a whole power by repeated multiplying
+  const sq = v => { const a = [...Array(400).keys()].find(n => n * n === v[0]), b = [...Array(400).keys()].find(n => n * n === v[1]); return a === undefined || b === undefined ? null : [a, b]; };
+  const up = (v, e) => { let o = [1, 1]; for (let j = 0; j < Math.abs(e); j++) o = times(o, v); return e < 0 ? red(o[1], o[0]) : o; };
+  // r to the power h/2: h halves of a stretch
+  const halves = (r, h) => (h % 2 ? (sq(r) && up(sq(r), h)) : up(r, h / 2));
+  const want = (k, Q) => {
+    const y0 = [Q.y0, 1], r = Q.r, h = Q.n2, y1 = times(y0, r);
+    if (k === 'right') return times(y0, halves(r, h));
+    if (k === 'line') return plus(y0, times(plus(y1, [-Q.y0, 1]), red(h, 2)));          // the same amount added every stretch
+    if (k === 'scale') return times(y0, times(r, red(h, 2)));                               // r times the number of stretches
+    if (k === 'powT') { const p = halves(r, h * Q.T); return p && times(y0, p); }          // t itself as the exponent
+    if (k === 'from1') return times(y1, halves(r, h));                                     // the stretches counted from y(T)
+    if (k === 'mean') return h % 2 ? times(plus(times(y0, halves(r, h - 1)), times(y0, halves(r, h + 1))), [1, 2]) : null;   // half way between whole stretches
+    if (k === 'flip') return times(y0, halves(red(r[1], r[0]), h));                       // the factor upside down
+    return null; };
+  const float = Q => Q.y0 * Math.pow(Q.y0 * Q.r[0] / Q.r[1] / Q.y0, (Q.n2 * Q.T / 2) / Q.T);
+  const W4 = ['', 'one', 'two', 'three', 'four'];
+  const far = h => { const w = Math.floor(h / 2), hf = h % 2; return !w ? 'half a stretch' : w === 1 ? (hf ? 'a stretch and a half' : 'one stretch') : `${W4[w]}${hf ? ' and a half' : ''} stretches`; };
+  const facs = (Q, h) => { const out = Array(Math.floor(h / 2)).fill(fr(Q.r)); if (h % 2) out.push(`√${br(Q.r)}`); return out.join(' × '); };
+  const slipOf = (k, L, Q) => ({
+    line: `${L} adds the same amount every stretch, as a straight line does. y′ = ky multiplies by the same factor every stretch instead.`,
+    scale: `${L} multiplies the factor by the number of stretches. Each stretch multiplies by r again, so the factors multiply together; they are not scaled.`,
+    powT: `${L} puts t itself in the exponent, as if every single unit were a stretch. The exponent counts stretches: t ÷ ${Q.T}.`,
+    from1: `${L} starts from y(${Q.T}) instead of y(0), so it lands one stretch too far on.`,
+    mean: `${L} takes half way between the two whole stretches either side. Between them the curve does not run in a straight line: half a stretch multiplies by √r.`,
+    flip: `${L} turns the factor upside down. The factor is y(${Q.T}) ÷ y(0), the later value over the earlier one.` }[k]);
+  const checkOf = (k, L, Q) => {
+    const r = fr(Q.r), y1 = times([Q.y0, 1], Q.r), t = red(Q.n2 * Q.T, 2), h = Q.n2;
+    if (k === 'line') return `Check ${L}: it adds y(${Q.T}) − y(0) = ${fr(plus(y1, [-Q.y0, 1]))} every stretch. From y(0) = ${Q.y0} to y(${Q.T}) = ${fr(y1)}, y is multiplied by ${fr(y1)} ÷ ${Q.y0} = ${r}, and every stretch of ${Q.T} does the same.`;
+    if (k === 'scale') return h === 1 ? `Check ${L}: it multiplies y(0) by ${r} × 1/2. Two halves must make ×${r}, and the number that makes ${r} when multiplied by itself is √${br(Q.r)}, not ${r} ÷ 2.`
+      : `Check ${L}: it multiplies y(0) by ${r} × ${fr(red(h, 2))}. ${far(h)[0].toUpperCase() + far(h).slice(1)} ${h < 4 ? 'multiplies' : 'multiply'} y(0) by ${facs(Q, h)}.`;
+    if (k === 'powT') return `Check ${L}: it takes ${br(Q.r)} to the power t = ${fr(t)}. A stretch here is ${Q.T}, so t = ${fr(t)} is t ÷ ${Q.T} = ${fr(red(h, 2))} stretches, and that is the exponent.`;
+    if (k === 'from1') return `Check ${L}: it multiplies y(${Q.T}) = ${fr(y1)} by ${facs(Q, h)}, which reaches t = ${fr(plus(t, [Q.T, 1]))}. Count ${far(h)} from t = 0, where y = ${Q.y0}.`;
+    if (k === 'mean') { const a = times([Q.y0, 1], halves(Q.r, h - 1)), b = times([Q.y0, 1], halves(Q.r, h + 1)), s = sq(Q.r), ta = fr(red((h - 1) * Q.T, 2));
+      return `Check ${L}: it is half way between y(${ta}) = ${fr(a)} and y(${fr(red((h + 1) * Q.T, 2))}) = ${fr(b)}. Half a stretch from y(${ta}) multiplies it by √${br(Q.r)} = ${fr(s)}, since ${fr(s)} × ${fr(s)} = ${r}.`; }
+    return `Check ${L}: it divides by ${r} where it should multiply. From y(0) = ${Q.y0} to y(${Q.T}) = ${fr(y1)}, y is multiplied by ${fr(y1)} ÷ ${Q.y0} = ${r}, so every stretch multiplies by ${r}.`; };
+  const workOf = Q => { const t = fr(red(Q.n2 * Q.T, 2)), y1 = times([Q.y0, 1], Q.r), h = Q.n2;
+    return `t = ${t} is ${far(h)} of ${Q.T}, and r = ${fr(y1)} ÷ ${Q.y0} = ${fr(Q.r)}, so y(${t}) = ${Q.y0} × ${br(Q.r)}${h % 2 ? `^(${h}/2)` : '⁰¹²³⁴'[h / 2]} = ${fr(want('right', Q))}`; };
+  const RULE = 'y′ = ky multiplies y by the same factor r over every stretch of time of the same length. Read r off the two values given; then each whole stretch multiplies by r again, and half a stretch multiplies by √r. Which is y at the time asked?';
+  if (S.RULE !== RULE) fail('stretchpick', 'rule', 'the rule is not stated as it should be');
+  if (S.round !== null || S.matched !== 0) fail('stretchpick', 'open', 'a round is dealt before the mode is opened');
+  const SL = ['line', 'scale', 'powT', 'from1', 'mean', 'flip'];
+  const RS = ['2', '3', '4', '9', '3/2', '9/4', '1/2', '1/3', '1/4', '1/9', '2/3', '4/9'];
+  const sums = vs => { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) for (let k = j + 1; k < 4; k++) {
+    if (i === j || i === k) continue; const s = plus(vs[j], vs[k]); if (s[0] === vs[i][0] && s[1] === vs[i][1]) return true; } return false; };
+  let rounds = 0, misses = 0, worked = 0, fives = 0, whole = 0, choice = 0, later = 0, halfQs = 0, halfMean = 0;
+  const slots = [0, 0, 0, 0], kinds = {}, ranks = {}, seen = { r: new Set(), T: new Set(), n2: new Set(), y0: new Set() };
+  for (let seed = 1; seed <= 300; seed++) {
+    env.seed = seed * 7919; S.round = null; S.last = null; S.matched = 0; S.firstTry = 0;
+    S.start();
+    let prev = null;
+    for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
+      const r = S.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q);
+      rounds++; seen.r.add(fr(Q.r)); seen.T.add(Q.T); seen.n2.add(Q.n2); seen.y0.add(Q.y0);
+      const y1 = times([Q.y0, 1], Q.r), t = red(Q.n2 * Q.T, 2);
+      if (!RS.includes(fr(Q.r)) || ![2, 3].includes(Q.T) || ![1, 3, 4, 5, 6, 7, 8].includes(Q.n2) || !(Q.y0 >= 1 && Q.y0 <= 81) || y1[1] !== 1 || Object.keys(Q).length !== 4) fail('stretchpick', key, `${sig} is not a question of the kind dealt`);
+      if (prev && prev === sig) fail('stretchpick', key, 'the same question comes twice in a row');
+      if (r.opts.length !== 4 || r.opts.filter(o => o.k === 'right').length !== 1) fail('stretchpick', key, 'there are not four numbers, one of them right');
+      const h0 = S.html(), head = txt(h0);
+      if (!head.startsWith(`${RULE} y′ = ky, y(0) = ${Q.y0}, y(${Q.T}) = ${fr(y1)} Which is y(${fr(t)})? A `)) fail('stretchpick', key, `the rule and the question are not shown first: ${head.slice(RULE.length, RULE.length + 90)}`);
+      const btns = [...h0.matchAll(/<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="StretchPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g)];
+      if (btns.length !== 4 || btns.some((x, i) => x[1] !== 'ABCD'[i] || +x[2] !== i || x[3] !== 'ABCD'[i] || x[5] !== 'ABCD'[i] || x[4] !== x[6])) { fail('stretchpick', key, 'the four numbers are not offered as they are, A to D'); continue; }
+      const vals = btns.map(x => rdv(x[6]));
+      if (vals.some(v => !v)) { fail('stretchpick', key, `a number is not in lowest terms: ${btns.map(x => x[6]).join(' | ')}`); continue; }
+      if (vals.some(v => v[0] === 0)) fail('stretchpick', key, 'a number is 0');
+      if (vals.some(v => Math.abs(v[0]) > 99999 || v[1] > 99999)) fail('stretchpick', key, `a number runs past five digits: ${btns.map(x => x[6]).join(' | ')}`);
+      if (new Set(vals.map(String)).size !== 4) fail('stretchpick', key, 'two numbers are the same');
+      if (sums(vals)) fail('stretchpick', key, `one number is the sum of two others: ${btns.map(x => x[6]).join(' | ')}`);
+      const ri = r.opts.findIndex(o => o.k === 'right'); slots[ri]++;
+      if (vals[ri][1] === 1) whole++;
+      if (Q.n2 % 2) { halfQs++; if (r.opts.some(o => o.k === 'mean')) halfMean++; }
+      // the page and the checks name y(0), y(T), T, t, r, √r, the stretches, t + T, y(T) − y(0) and y at the whole stretches either side, so none of those is y(t)
+      const named = [[Q.y0, 1], y1, [Q.T, 1], t, Q.r, red(Q.n2, 2), plus(t, [Q.T, 1]), plus(y1, [-Q.y0, 1])];
+      if (sq(Q.r)) named.push(sq(Q.r));
+      if (Q.n2 % 2) named.push(times([Q.y0, 1], halves(Q.r, Q.n2 - 1)), times([Q.y0, 1], halves(Q.r, Q.n2 + 1)));
+      if (named.some(n => String(n) === String(vals[ri]))) fail('stretchpick', key, `y(t) = ${fr(vals[ri])} is named elsewhere on the page or in a check`);
+      if (!vals.some((x, i) => i !== ri && (x[1] === 1) === (vals[ri][1] === 1))) fail('stretchpick', key, 'no wrong number is of the right one’s form, whole or fraction');
+      if (!vals.some((x, i) => i !== ri && x[0] * vals[ri][0] > 0)) fail('stretchpick', key, 'no wrong number has the right one’s sign');
+      const below = vals.filter(x => x[0] * vals[ri][1] < vals[ri][0] * x[1]).length; ranks[below] = (ranks[below] || 0) + 1;
+      { // where more than one set of three would do, any may be dealt, not always the first
+        const Wv = want('right', Q), have = new Set([String(Wv)]), can = [];
+        for (const kk of SL) { const x = want(kk, Q); if (!x || x[0] === 0 || Math.abs(x[0]) > 99999 || x[1] > 99999 || have.has(String(x))) continue; have.add(String(x)); can.push(kk); }
+        const T3 = []; for (let a = 0; a < can.length; a++) for (let b = a + 1; b < can.length; b++) for (let c = b + 1; c < can.length; c++) {
+          const tr = [can[a], can[b], can[c]]; if (tr.some(x => (want(x, Q)[1] === 1) === (Wv[1] === 1)) && tr.some(x => want(x, Q)[0] * Wv[0] > 0) && !sums([Wv, ...tr.map(x => want(x, Q))])) T3.push(tr); }
+        const rk = tr => tr.filter(x => { const y = want(x, Q); return y[0] * Wv[1] < Wv[0] * y[1]; }).length, F = T3.filter(tr => rk(tr) === below);
+        if (F.length > 1) { choice++; if (r.opts.map(o => o.k).filter(x => x !== 'right').sort().join() !== F[0].slice().sort().join()) later++; } }
+      r.opts.forEach((o, i) => {
+        kinds[o.k] = (kinds[o.k] || 0) + 1;
+        if (!SL.includes(o.k) && o.k !== 'right') { fail('stretchpick', key, `a number is the unknown ${o.k}`); return; }
+        if (String(vals[i]) !== String(want(o.k, Q))) fail('stretchpick', key, `${o.k} is shown as ${btns[i][6]}, which is not that slip`);
+        if ((o.k === 'right') !== (Math.abs(float(Q) - vals[i][0] / vals[i][1]) < 1e-9 * Math.max(1, Math.abs(float(Q))))) fail('stretchpick', key, `${btns[i][6]} ${o.k === 'right' ? 'is not' : 'is'} y(0) × r^(t/T) taken in floats`);
+      });
+      if (k === 0 && txt(S.html().split('id="ypRead"')[1].replace(/^[^>]*>/, '')) !== '0 picked this visit, 0 on the first try.') fail('stretchpick', key, 'before a pick the readout is not just the count');
+      const wrong = [0, 1, 2, 3].filter(i => i !== ri); if (seed % 2) wrong.reverse();
+      const missN = (seed + k) % 4;
+      for (let q = 0; q < missN; q++) {
+        const i = wrong[q], o = r.opts[i], Lt = 'ABCD'[i], m0 = S.matched, nt = env.toasts.length;
+        S.choose(i); misses++;
+        if (S.matched !== m0 || !S.round.out.has(i) || S.round !== r || env.toasts.length !== nt) fail('stretchpick', key, 'a miss is counted, or not crossed off');
+        const lines = S.html().split('id="ypRead"')[1].replace(/^[^>]*>/, '').split('</div>').map(txt).filter(Boolean);
+        const ck = checkOf(o.k, Lt, Q);
+        if (lines.length !== 3 || lines[0] !== slipOf(o.k, Lt, Q) || lines[1] !== ck || lines[2] !== `${S.matched} picked this visit, ${S.firstTry} on the first try.`) fail('stretchpick', key, `${o.k} is explained as: ${lines.join(' ')} | want ${slipOf(o.k, Lt, Q)} ${ck}`);
+        // a check works the factor, but never lands on y(t)
+        if (lines.slice(0, 2).join(' ').split(/[\s,.;:()×÷=]+/).includes(fr(want('right', Q)))) fail('stretchpick', key, `the check of ${o.k} names y(t) = ${fr(want('right', Q))}`);
+        worked++;
+        const hh = S.html();
+        if (!new RegExp(`smOpt miss" data-opt="${Lt}" disabled onclick="StretchPick\\.choose\\(${i}\\)" aria-label="${Lt}: [^"]+\\. Not y\\(${fr(t).replace('/', '\\/')}\\)"`).test(hh) || (hh.match(/ disabled /g) || []).length !== q + 1) fail('stretchpick', key, 'the missed numbers are not shut and told as not y(t)');
+        const r0 = env.renders; S.choose(i);
+        if (S.misses !== q + 1 || env.renders !== r0) fail('stretchpick', key, 'tapping a missed number again does something');
+      }
+      const m0 = S.matched, ft = S.firstTry, nt = env.toasts.length, nb = env.banners.length, r0 = env.renders;
+      S.choose(ri);
+      if (env.renders !== r0 + 1) fail('stretchpick', key, 'a pick does not redraw the workshop');
+      if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('stretchpick', key, 'the right pick is not counted');
+      if (S.round === r || S.misses !== 0 || S.picked !== null) fail('stretchpick', key, 'no fresh question after the right pick');
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'STRETCH READER / 5 growths read') fail('stretchpick', key, 'no banner at five'); }
+      else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is y, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
+        if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('stretchpick', key, `the toast is ${env.toasts[nt]}`); }
+      const got = txt(S.html().split('id="ypRead"')[1].replace(/^[^>]*>/, ''));
+      const wantLine = `That was it: ${workOf(Q)}. Here is a new one. ${S.matched} picked this visit, ${S.firstTry} on the first try.`;
+      if (got !== wantLine) fail('stretchpick', key, `after a pick: ${got} | want ${wantLine}`);
+      worked++;
+      prev = sig;
+    }
+  }
+  { // the same question dealt again is turned away for a fresh one
+    const real = S.build; let c = 0;
+    S.build = () => (c++ < 3 ? { y0: 4, r: [9, 4], T: 2, n2: 3 } : real.call(S));
+    S.round = null; S.newRound(); S.newRound();
+    if (JSON.stringify(S.round.S) === '{"y0":4,"r":[9,4],"T":2,"n2":3}') fail('stretchpick', 'repeat', 'the same question is dealt twice in a row');
+    S.build = real;
+  }
+  { // a wide sweep of questions: the answer's form even, and the stand-by question seldom needed
+    let sw2 = 0, stand = 0;
+    for (let seed = 1; seed <= 20000; seed++) { env.seed = seed * 104729; const Q = S.build(); if (want('right', Q)[1] === 1) sw2++; if (JSON.stringify(Q) === '{"y0":4,"r":[9,4],"T":2,"n2":3}') stand++; }
+    if (sw2 < 9000 || sw2 > 11000) fail('stretchpick', 'sweep', `${sw2} of 20000 answers are whole, not about half`);
+    if (stand > 200) fail('stretchpick', 'sweep', `the stand-by question is dealt ${stand} times in 20000`); }
+  for (const k of SL) if (!(kinds[k] > rounds * (k === 'mean' ? 0.05 : 0.2))) fail('stretchpick', 'slips', `the slip ${k} is offered too seldom: ${kinds[k] || 0} of ${rounds}`);
+  if (halfMean < halfQs * 0.3) fail('stretchpick', 'slips', `half way between is offered on only ${halfMean} of ${halfQs} half-stretch questions`);
+  if (halfQs < rounds * 0.2) fail('stretchpick', 'deal', `only ${halfQs} of ${rounds} questions ask half a stretch on`);
+  const sizes = { r: 12, T: 2, n2: 7 };
+  for (const n in sizes) if (seen[n].size !== sizes[n]) fail('stretchpick', 'deal', `${n} is only ever ${[...seen[n]].join(', ')}`);
+  if (seen.y0.size < 12) fail('stretchpick', 'deal', `y(0) is only ever ${[...seen.y0].join(', ')}`);
+  if (slots.some(n => !(n > rounds * 0.2))) fail('stretchpick', 'deal', `y(t) sits at A to D ${slots.join(', ')} times, not evenly`);
+  if (!(ranks[0] > rounds * 0.05 && ranks[1] > rounds * 0.2 && ranks[2] > rounds * 0.2 && ranks[3] > rounds * 0.05)) fail('stretchpick', 'deal', `y(t) sits lowest ${ranks[0]}, second ${ranks[1]}, third ${ranks[2]} and highest ${ranks[3]} times of ${rounds}`);
+  if (later < choice * 0.5) fail('stretchpick', 'deal', `of ${choice} rounds with more than one set of three to choose from, only ${later} deal any but the first that gives y(t) its place`);
+  if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('stretchpick', 'deal', `${whole} of ${rounds} answers are whole, not about half`);
+  if (fives !== 30) fail('stretchpick', 'banner', `five were picked ${fives} times, not 30`);
+  return { rounds, misses, worked };
+})();
+
 /* Which limit? The pick-a-limit round in the L'Hôpital workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from the ratio alone, and
@@ -10467,6 +10894,331 @@ const slopeMatchNotes = (() => {
   if (dealt.has('quad shift')) fail('slopematch', 'quad', 'a faint slid parabola is dealt');
   if (fives !== 40) fail('slopematch', 'banner', `five slopes were read ${fives} times, not 40`);
   return { n, rounds, misses };
+})();
+
+/* The doubling workshop: every story, every walk of whole and half stretches
+   that fits on its figure. Each walk is taken again here from y(0) and y(T)
+   alone, as y(0) × (y(T)/y(0))^(t/T) in plain floats, never from the
+   workshop's own numbers; every move the readout names, the landing, the
+   straight line through the first two points and each note are checked
+   against it, the curve, the line and the dots are read back from the
+   drawing, and every goal is decided independently. */
+const doublingNotes = (() => {
+  const D = Doubling;
+  const val = t => { const s = t.replace(/[()]/g, '').replace(/−/g, '-'), [a, b] = s.split('/'); return b === undefined ? +a : +a / +b; };
+  const tolOf = t => /\//.test(t) || !/\./.test(t) ? 1e-9 : 6e-5;   // an exact number is exact, a decimal is to four places
+  const near = (t, v) => Math.abs(val(t) - v) < tolOf(t);
+  const exactish = v => [1, 2, 4, 8, 16].some(d => Math.abs(Math.round(v * d) - v * d) < 1e-9);
+  const STORY = { dbl: [3, 6, 2, 'days', 4], half: [16, 8, 3, 'hours', 4], quad: [1, 4, 2, 'minutes', 3] };
+  if (D.SETS.map(S => S.id).join() !== 'dbl,half,quad') fail('doubling', 'sets', D.SETS.map(S => S.id).join());
+  if (D.si !== 0 || D.moves.length) fail('doubling', 'open', 'the workshop does not open on the doubling with no move taken');
+  const reset = () => { D.touched = false; D.si = 0; D.moves = []; D.done.clear(); };
+  reset();
+  for (const g of D.GOALS) if (g.ok(D)) fail('doubling', g.id, 'met where the workshop opens');
+  // every walk of whole and half stretches that ends by maxN
+  const walks = N => { const out = [[]]; for (let i = 0; i < out.length; i++) { const w = out[i], s = w.reduce((a, b) => a + b, 0); for (const m of [1, 0.5]) if (s + m <= N) out.push([...w, m]); } return out; };
+  const W = ['', 'one', 'two', 'three', 'four'];
+  const found = {}; let n = 0, moves = 0, points = 0;
+  D.SETS.forEach((S, si) => {
+    const [y0, y1, T, unit, N] = STORY[S.id], r = y1 / y0, Y = k => y0 * Math.pow(r, k), Line = k => y0 + (y1 - y0) * k;
+    if (S.y0 !== y0 || S.T !== T || S.unit !== unit || S.maxN !== N || Math.abs(S.y0 * S.r - y1) > 1e-12) fail('doubling', S.id, 'the story is not the one told');
+    for (const w of walks(N)) {
+      reset(); D.full(); D.pick(si);   // a walk already under way, so picking a story has something to clear
+      if (D.moves.length) fail('doubling', S.id, 'picking a story does not start the walk again');
+      for (const m of w) (m === 1 ? D.full() : D.halfStep());
+      n++;
+      const key = `${S.id} ${w.join(',') || 'start'}`, k = w.reduce((a, b) => a + b, 0), got = D.working();
+      if (D.moves.join() !== w.join()) { fail('doubling', key, 'a move was not taken'); continue; }
+      if (got[0] !== `y′ = ky multiplies y by the same factor over every stretch of time of the same length. Here y(0) = ${y0} and y(${T}) = ${y1}, so each stretch of ${T} ${unit} multiplies y by r = ${y1} ÷ ${y0} = ${r === 0.5 ? '1/2' : r}.`) fail('doubling', key, got[0]);
+      if (!w.length) { if (got.length !== 2 || got[1] !== `Take a whole stretch of ${T} ${unit}, or half of one.`) fail('doubling', key, got.join(' ')); continue; }
+      const lines = got.slice(1), from = Math.max(0, w.length - 3);
+      if (from > 0 && lines.shift() !== (from === 1 ? 'Move 1 is the first dot on the figure.' : from === 2 ? 'Moves 1 and 2 are the dots already on the figure.' : `Moves 1 to ${from} are the dots already on the figure.`)) fail('doubling', key, 'the moves off the readout are not pointed to the figure');
+      let at = 0;
+      w.forEach((m, j) => {
+        const a = at; at += m; if (j < from) return;
+        const l = lines.shift() || ''; moves++;
+        const mm = l.match(/^Move (\d+): (a whole stretch|half a stretch), from t = (\S+) to t = (\S+), multiplies y by (\S+): y\((\S+)\) ([=≈]) (\S+)\.$/);
+        if (!mm) { fail('doubling', key, `a move is not worked: ${l}`); return; }
+        const [, no, kind, ta, tb, fac, tc, eq, yv] = mm;
+        if (+no !== j + 1 || (kind === 'a whole stretch') !== (m === 1)) fail('doubling', key, `move ${j + 1} is misnamed: ${l}`);
+        if (!near(ta, a * T) || !near(tb, at * T) || tc !== tb) fail('doubling', key, `move ${j + 1} names the wrong times: ${l}`);
+        const f = m === 1 ? fac : (fac.match(/^√(.+)$/) || [])[1];
+        if (f === undefined || !near(f, r) || (m === 1 && /[()]/.test(fac))) fail('doubling', key, `move ${j + 1} multiplies by the wrong factor: ${l}`);
+        if (!near(yv, Y(at)) || (eq === '=') !== exactish(Y(at))) fail('doubling', key, `move ${j + 1} lands in the wrong place: ${l}`);
+      });
+      const st = Number.isInteger(k) ? `${W[k]} stretch${k === 1 ? '' : 'es'}` : Math.floor(k) ? `${W[Math.floor(k)]} and a half stretches` : 'half a stretch';
+      const sum = lines.shift() || '', ms = sum.match(/^At t = (\S+), (.+?) from the start: y\((\S+)\) = (\d+) × (\S+?)(⁰|¹|²|³|⁴|\^\((\d+)\/2\))? ([=≈]) (\S+)\.$/);
+      if (!ms) fail('doubling', key, `the landing is not said: ${sum}`);
+      else {
+        const pw = ms[6] === undefined ? 1 : ms[7] ? ms[7] / 2 : '⁰¹²³⁴'.indexOf(ms[6]);
+        if (!near(ms[1], k * T) || ms[3] !== ms[1] || ms[2] !== st || +ms[4] !== y0 || !near(ms[5], r) || pw !== k || (k > 1 && Number.isInteger(k) && ms[6] === undefined)) fail('doubling', key, `the landing is worked wrong: ${sum}`);
+        if (!near(ms[9], Y(k)) || (ms[8] === '=') !== exactish(Y(k))) fail('doubling', key, `the landing is wrong: ${sum}`);
+      }
+      const ln = lines.shift() || '', L = Line(k);
+      const wantL = k === 1 ? `The straight line through the first two points meets the curve here, at y = ${y1}.`
+        : `The straight line through the first two points gives ${D.fr(L)} at t = ${D.fr(k * T)}` + (k < 1 ? ', above the curve: between the two points the curve sags below the line.'
+        : L > 0 ? ', below the curve, which pulls further away every stretch.'
+        : L === 0 ? `: the line reaches 0 here, but y is still ${D.fr(Y(k))}.`
+        : ', below zero. A line takes away the same amount every stretch; y′ = ky takes away the same share, so y never reaches 0.');
+      if (ln !== wantL || !near(D.fr(L), L) || (k < 1) !== (L > Y(k) + 1e-9) || (k > 1) !== (L < Y(k) - 1e-9)) fail('doubling', key, `the straight line is told wrong: ${ln}`);
+      const note = lines.join(' ');
+      const wantN = !w.includes(0.5) ? ''
+        : S.id === 'dbl' ? 'Half a stretch multiplies by √2 ≈ 1.4142, not by 1.5: two half stretches must make ×2, and 1.5 × 1.5 = 2.25 is too much.'
+        : S.id === 'quad' ? 'Half a stretch multiplies by √4 = 2, since 2 × 2 = 4.'
+        : 'Half a stretch keeps √(1/2) ≈ 0.7071 of y, since 0.7071 × 0.7071 ≈ 1/2.';
+      if (note !== wantN) fail('doubling', key, `the half-stretch note is wrong: ${note}`);
+      if (w.includes(0.5) && Math.abs(Math.sqrt(r) - val((note.match(/√\S+ [=≈] (\S+?),? /) || [, 'x'])[1])) > 6e-5) fail('doubling', key, `the root is wrong: ${note}`);
+      // the drawing: the dots on the walk, the curve on y(0) × r^(t/T), the line through the first two points
+      const [c0, d0] = S.R, end = N * T, svg = D.svg();
+      const PX = t => D.L + t / end * D.W, PY = v => D.TOP + D.Hh - (v - c0) / (d0 - c0) * D.Hh;
+      const dots = [...svg.matchAll(/data-k="pt" data-i="(\d+)" cx="([\d.-]+)" cy="([\d.-]+)"/g)];
+      let p = 0; const P = [0, ...w.map(m => p += m)];
+      if (dots.length !== P.length || dots.some((d, i) => Math.abs(+d[2] - PX(P[i] * T)) > 0.01 || Math.abs(+d[3] - PY(Y(P[i]))) > 0.01)) fail('doubling', key, 'the dots are not on the walk');
+      points += dots.length;
+      const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!cv || cv[1].split(' ').some(q => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qy - PY(Y((qx - D.L) / D.W * end / T))) > 0.05; })) fail('doubling', key, 'the curve leaves y(0) × r^(t/T)');
+      const li = svg.match(/data-k="line" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+      if (!li || [[li[1], li[2]], [li[3], li[4]]].some(([X, Yp]) => Math.abs(+Yp - PY(Line((+X - D.L) / D.W * end / T))) > 0.02 || +Yp < D.TOP - 0.01 || +Yp > D.TOP + D.Hh + 0.01) || Math.abs(+li[1] - D.L) > 0.01) fail('doubling', key, 'the straight line is not drawn through the first two points');
+      // every goal, decided here from the walk taken
+      const truth = {
+        stretch: w.includes(1), root: S.id === 'dbl' && w.includes(0.5),
+        halves: w.length >= 2 && w[w.length - 1] === 0.5 && w[w.length - 2] === 0.5 && Number.isInteger(k),
+        exact: S.id === 'quad' && w.includes(0.5), never: S.id === 'half' && k * T > 6, leave: S.id === 'dbl' && k * T === 8,
+      };
+      for (const g of D.GOALS) {
+        if (!(g.id in truth)) { fail('doubling', g.id, 'a goal with no check'); continue; }
+        if (!!g.ok(D) !== truth[g.id]) fail('doubling', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+        if (truth[g.id]) found[g.id] = 1;
+      }
+      // the buttons stop at the edge of the figure, and starting over goes back to the start
+      if (D.canFull() !== (k + 1 <= N) || D.canHalf() !== (k + 0.5 <= N)) fail('doubling', key, 'a move is offered that runs off the figure, or one that fits is not');
+      const before = w.length; D.full(); D.halfStep();
+      if (k + 0.5 > N && D.moves.length !== before) fail('doubling', key, 'a move is taken past the edge');
+      D.again(); if (D.moves.length) fail('doubling', key, 'starting over does not go back to the start');
+    }
+  });
+  for (const g of D.GOALS) if (!found[g.id]) fail('doubling', g.id, 'can never be found');
+  reset();
+  return { n, moves, points, goals: Object.keys(found).length };
+})();
+
+/* The chord workshop: every curve, every stop the point can take, and every
+   move from each stop. Each curve is worked again here from its own formula,
+   in plain floats, never from the workshop's numbers: the chord's slope, the
+   slope of the tangent at the stop, which side of c the stop lies on, the
+   middle and crossing notes, and each goal; the curve, the chord, the
+   tangent and the point are read back off the drawing. */
+const meanValueNotes = (() => {
+  const M = MeanValue;
+  const val = t => +t.replace(/[()]/g, '').replace(/−/g, '-');
+  const near = (t, v) => Math.abs(val(t) - v) < 6e-5;
+  const exact4 = v => Math.abs(Math.round(v * 1e4) - v * 1e4) < 1e-6;
+  const CURVE = {
+    sq: [0, 4, x => x * x, x => 2 * x, Math.sqrt(4), 'x²', '2x'],
+    cube: [0, 3, x => x ** 3, x => 3 * x ** 2, Math.sqrt(3), 'x³', '3x²'],
+    recip: [1, 4, x => 4 / x, x => -4 / x ** 2, Math.sqrt(4), '4/x', '−4/x²'],
+  };
+  if (M.SETS.map(S => S.id).join() !== 'sq,cube,recip') fail('chord', 'sets', M.SETS.map(S => S.id).join());
+  if (M.si !== 0 || M.k !== 20 || M.prev !== null) fail('chord', 'open', 'the workshop does not open on x² at x = 1');
+  const reset = () => { M.touched = false; M.si = 0; M.k = 20; M.prev = null; M.done.clear(); };
+  reset();
+  for (const g of M.GOALS) if (g.ok(M)) fail('chord', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, stops = 0, points = 0;
+  M.SETS.forEach((S, si) => {
+    const [a, b, f, df, c, fs, dfs] = CURVE[S.id], m = (f(b) - f(a)) / (b - a), lo = a * 20 + 1, hi = b * 20 - 1;
+    // c really is where the tangent matches the chord, strictly inside
+    if (!(c > a && c < b) || Math.abs(df(c) - m) > 1e-9) fail('chord', S.id, 'c does not match the chord');
+    reset(); M.move(1); M.pick(si);
+    if (M.prev !== null || M.k !== S.k0) fail('chord', S.id, 'picking a curve does not start it again');
+    for (let k0 = lo; k0 <= hi; k0++) {
+      stops++;
+      for (const dk of [-5, -1, 1, 5]) {
+        reset(); M.pick(si); M.k = k0; M.prev = null; M.touched = false;
+        const ok = k0 + dk >= lo && k0 + dk <= hi;
+        if (M.can(dk) !== ok) fail('chord', `${S.id} ${k0}`, `a move of ${dk} is ${ok ? 'not ' : ''}offered`);
+        M.move(dk);
+        if (!ok) { if (M.k !== k0) fail('chord', `${S.id} ${k0}`, 'a move is taken past the edge'); continue; }
+        n++;
+        const k = k0 + dk, x = k / 20, d = df(x), key = `${S.id} ${k0}→${k}`, got = M.working();
+        const side = q => { const e = df(q / 20) - m; return Math.abs(e) < 1e-9 ? 0 : e < 0 ? -1 : 1; }, sd = side(k);
+        const ch = got[0].match(/^f\(x\) = (\S+) on \[(\S+), (\S+)\]\. The chord from \((\S+), (\S+)\) to \((\S+), (\S+)\) has slope \((\S+) − (\S+)\)\/\((\S+) − (\S+)\) = (\S+)\.$/);
+        if (!ch || ch[1] !== fs || +ch[2] !== a || +ch[3] !== b || +ch[4] !== a || !near(ch[5], f(a)) || +ch[6] !== b || !near(ch[7], f(b)) || ch[8] !== ch[7] || !near(ch[9], f(a)) || +ch[10] !== b || +ch[11] !== a || !near(ch[12], m)) fail('chord', key, `the chord is worked wrong: ${got[0]}`);
+        const tg = (got[1] || '').match(/^At x = (\S+): f′\(x\) = (\S+), so f′\((\S+)\) ([=≈]) (\S+)\.$/);
+        if (!tg || !near(tg[1], x) || tg[3] !== tg[1] || tg[2] !== dfs || !near(tg[5], d) || (tg[4] === '=') !== exact4(d)) fail('chord', key, `the tangent's slope is wrong: ${got[1]}`);
+        const wantS = sd === 0 ? `That is the chord's slope, ${M.num(m)}: the tangent here is parallel to the chord. This x is the c the mean value theorem promises.`
+          : `That is ${sd < 0 ? 'less' : 'more'} than the chord's slope, ${M.num(m)}, and f′ grows as x moves right, so c lies to the ${sd < 0 ? 'right' : 'left'} of ${M.num(x)}.`;
+        if (got[2] !== wantS || (sd < 0) !== (x < c - 1e-9) || (sd > 0) !== (x > c + 1e-9)) fail('chord', key, `the side of c is told wrong: ${got[2]}`);
+        // f′ really does grow left to right here, as the readout says
+        if (!(df(x + 0.01) > df(x))) fail('chord', key, 'f′ does not grow as x moves right');
+        const notes = got.slice(3), want = [];
+        if (k * 2 === (a + b) * 20) want.push(S.id === 'sq' ? `For a parabola c always falls half way: (${a} + ${b})/2 = ${M.num(x)}.` : `${M.num(x)} is the middle of [${a}, ${b}], but c is not: c falls half way only on a parabola.`);
+        if (side(k0) * sd < 0) {
+          want.push(`Between x = ${M.num(k0 / 20)} and x = ${M.num(x)} the tangent's slope passes ${M.num(m)}, so c lies between them: solving ${S.solve}.`);
+          if (!((k0 / 20 - c) * (x - c) < 0)) fail('chord', key, 'a crossing is told where c does not lie between');
+          const cv = S.solve.match(/c = (?:√\d+ ≈ )?(\S+)$/);
+          if (!cv || Math.abs(+cv[1] - c) > 6e-5) fail('chord', key, `the solved c is wrong: ${S.solve}`);
+        }
+        if (S.id === 'recip' && sd === 0) want.push(`On 4/x, c = √(${a} × ${b}) = 2, short of the middle, 2.5.`);
+        if (notes.join('|') !== want.join('|')) fail('chord', key, `the notes are wrong: ${notes.join(' ')}`);
+        // the drawing
+        const [r0, r1] = S.R, svg = M.svg(), PX = t => M.L + (t - a) / (b - a) * M.W, PY = v => M.TOP + M.Hh - (v - r0) / (r1 - r0) * M.Hh;
+        const pt = svg.match(/data-k="pt" cx="([\d.-]+)" cy="([\d.-]+)"/);
+        if (!pt || Math.abs(+pt[1] - PX(x)) > 0.01 || Math.abs(+pt[2] - PY(f(x))) > 0.01) fail('chord', key, 'the point is not on the curve at x');
+        const cv = svg.match(/data-k="curve" points="([^"]+)"/);
+        if (!cv || cv[1].split(' ').some(q => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qy - PY(f(a + (qx - M.L) / M.W * (b - a)))) > 0.05; })) fail('chord', key, 'the curve leaves f');
+        const cd = svg.match(/data-k="chord" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!cd || Math.abs(+cd[1] - PX(a)) > 0.01 || Math.abs(+cd[2] - PY(f(a))) > 0.01 || Math.abs(+cd[3] - PX(b)) > 0.01 || Math.abs(+cd[4] - PY(f(b))) > 0.01) fail('chord', key, 'the chord does not join the ends');
+        const tl = svg.match(/data-k="tangent" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/);
+        if (!tl || [[tl[1], tl[2]], [tl[3], tl[4]]].some(([X, Y]) => { const t = a + (+X - M.L) / M.W * (b - a); return Math.abs(+Y - PY(f(x) + d * (t - x))) > 0.03 || +Y < M.TOP - 0.01 || +Y > M.TOP + M.Hh + 0.01 || t < a - 1e-6 || t > b + 1e-6; }) || !(+tl[1] <= PX(x) + 0.01 && +tl[3] >= PX(x) - 0.01)) fail('chord', key, 'the tangent is not drawn through the point with its slope');
+        points += 2;
+        // every goal, decided here
+        const truth = {
+          parallel: S.id === 'sq' && x === 2, steep: S.id === 'sq' && x > 2, middle: S.id === 'cube' && x === 1.5,
+          cross: S.id === 'cube' && (k0 / 20 - c) * (x - c) < 0, close: S.id === 'cube' && Math.abs(df(x) - m) < 0.2, recip: S.id === 'recip' && x === 2,
+        };
+        for (const g of M.GOALS) {
+          if (!(g.id in truth)) { fail('chord', g.id, 'a goal with no check'); continue; }
+          if (!!g.ok(M) !== truth[g.id]) fail('chord', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+          if (truth[g.id]) found[g.id] = 1;
+        }
+        M.again(); if (M.k !== S.k0 || M.prev !== null) fail('chord', key, 'starting over does not go back to the start');
+      }
+    }
+  });
+  for (const g of M.GOALS) if (!found[g.id]) fail('chord', g.id, 'can never be found');
+  reset();
+  return { n, stops, points, goals: Object.keys(found).length };
+})();
+
+/* The Euler step workshop: every equation, every step size, every step. Each
+   walk is taken again here in plain floats from the equation itself, never
+   from the workshop's own walk; every point the readout names is checked
+   against it, every step's slope and landing, the end against Math's own
+   solution, each note shown exactly when its case holds, the slope field and
+   the walk read back from the drawing, and every goal decided independently. */
+const eulerWalkNotes = (() => {
+  const W = EulerWalk;
+  const val = t => { const s = t.replace(/[()]/g, '').replace(/−/g, '-'), [a, b] = s.split('/'); return b === undefined ? +a : +a / +b; };
+  const near = (t, v, tol) => Math.abs(val(t) - v) < tol;
+  const tolOf = t => /\//.test(t) || !/\./.test(t) ? 1e-9 : 6e-5;   // an exact number is exact, a decimal is to four places
+  const F = { grow: (x, y) => y, decay: (x, y) => -2 * y, ramp: (x, y) => x };
+  const SOL = { grow: x => Math.exp(x), decay: x => Math.exp(-2 * x), ramp: x => x * x / 2 };
+  const END = { grow: 1, decay: 2, ramp: 2 }, Y0 = { grow: 1, decay: 1, ramp: 0 };
+  if (W.SETS.map(S => S.id).join() !== 'grow,decay,ramp') fail('eulerwalk', 'sets', W.SETS.map(S => S.id).join());
+  if (W.HS.join() !== '1,0.5,0.25,0.125') fail('eulerwalk', 'steps', W.HS.join());
+  if (W.si !== 0 || W.hi !== 0 || W.k !== 0) fail('eulerwalk', 'open', 'the workshop does not open on y′ = y with h = 1 and no step taken');
+  const reset = () => { W.touched = false; W.si = 0; W.hi = 0; W.k = 0; W.done.clear(); for (const k in W.misses) delete W.misses[k]; };
+  reset();
+  for (const g of W.GOALS) if (g.ok(W)) fail('eulerwalk', g.id, 'met where the workshop opens');
+  const found = {}; let n = 0, steps = 0, dashes = 0;
+  W.SETS.forEach((S, si) => W.HS.forEach((h, hi) => {
+    reset();
+    // a walk with a bigger step on this equation has been finished before this one, when there is one
+    if (hi > 0) { W.si = si; W.hi = hi - 1; W.all(); }
+    W.si = (si + 1) % 3; W.hi = hi; W.all();
+    W.pick(si);
+    if (W.k !== 0) fail('eulerwalk', S.id, 'picking an equation does not start the walk again');
+    W.all(); W.hi = (hi + 1) % 4; W.setH(hi);
+    if (W.k !== 0) fail('eulerwalk', S.id, 'picking a step does not start the walk again');
+    if (hi > 0) { const keep = W.misses[si] && W.misses[si][hi - 1]; for (const k in W.misses) delete W.misses[k]; if (keep !== undefined) W.misses[si] = { [hi - 1]: keep }; }
+    W.done.clear(); W.touched = false;
+    const id = S.id, f = F[id], N = Math.round(END[id] / h);
+    if (W.N() !== N) fail('eulerwalk', `${id} h=${h}`, `${W.N()} steps, not ${N}`);
+    const xs = [0], ys = [Y0[id]];
+    for (let j = 0; j < N; j++) { ys.push(ys[j] + h * f(xs[j], ys[j])); xs.push(xs[j] + h); }
+    for (let k = 0; k <= N; k++) {
+      if (k > 0) W.step();
+      n++;
+      const key = `${id} h=${h} after ${k}`, got = W.working(), P = W.walk();
+      if (W.k !== k) { fail('eulerwalk', key, 'a step was not taken'); break; }
+      if (P.length !== k + 1 || P.some((p, i) => Math.abs(p.x - xs[i]) > 1e-9 || Math.abs(p.y - ys[i]) > 1e-9)) fail('eulerwalk', key, 'the walk leaves Euler’s points');
+      if (got[0] !== `${S.eq}, starting from y(0) = ${Y0[id]}. Euler’s method walks it in straight steps of h = ${({ 1: '1', 0.5: '1/2', 0.25: '1/4', 0.125: '1/8' })[h]}: read the slope where you stand, then move h along x and h × slope up. Reaching x = ${END[id]} takes ${N} step${N === 1 ? '' : 's'}.`) fail('eulerwalk', key, got[0]);
+      if (got.some(l => [...l.matchAll(/\d+\/(\d+)/g)].some(q => +q[1] > 16))) fail('eulerwalk', key, `a number is written as a fraction past sixteenths: ${got.join(' ')}`);
+      { // every goal, decided here at every step of the walk, not only at its end
+        const Pk = W.walk(), atEnd = k === N, truth = {
+          walk: id === 'grow' && h === 1 && atEnd, closer: id === 'grow' && h < 1 && atEnd, eighth: id === 'grow' && h === 0.125 && atEnd,
+          swing: id === 'decay' && h === 1 && k >= 1, flat: id === 'decay' && h === 0.5 && k >= 1,
+          tame: id === 'decay' && atEnd && Pk.every(p => p.y > 0), ramp: id === 'ramp' && atEnd };
+        for (const g of W.GOALS) if (g.id in truth && !!g.ok(W) !== truth[g.id]) fail('eulerwalk', g.id, `${key}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+      }
+      if (k === 0) { if (got.length !== 2 || got[1] !== 'Take the first step.') fail('eulerwalk', key, got.join(' ')); continue; }
+      const from = Math.max(0, k - 3), lines = got.slice(1);
+      if (from > 0 && lines.shift() !== (from === 1 ? 'Step 1 is the first dot on the figure.' : `Steps 1 to ${from} are the dots already on the figure.`)) fail('eulerwalk', key, 'the steps off the readout are not pointed to the figure');
+      for (let j = from; j < k; j++) {
+        const l = lines.shift() || '', s = f(xs[j], ys[j]); steps++;
+        const m = l.match(/^Step (\d+): at \((\S+), (\S+)\) the slope is (?:y = (\S+)|x = (\S+)|−2 × (\S+) ([=≈]) (\S+)), so y goes to (\S+) \+ (\S+) × (\S+) ([=≈]) (\S+) at x = (\S+)\.$/);
+        if (!m) { fail('eulerwalk', key, `a step is not worked: ${l}`); break; }
+        const [, no, px, py, sy, sx, dy, deq, ds, y2, hh, s2, eq2, y1, x1] = m;
+        const sv = sy || sx || ds;
+        if (+no !== j + 1 || !near(px, xs[j], 1e-9) || !near(py, ys[j], tolOf(py)) || !near(sv, s, tolOf(sv))) fail('eulerwalk', key, `step ${j + 1} reads the wrong point or slope: ${l}`);
+        if ((id === 'grow') !== !!sy || (id === 'ramp') !== !!sx || (id === 'decay') !== !!dy) fail('eulerwalk', key, `step ${j + 1} works the wrong equation: ${l}`);
+        if (dy && (!near(dy, ys[j], tolOf(dy)) || (deq === '=') !== (tolOf(dy) === 1e-9))) fail('eulerwalk', key, `step ${j + 1} doubles the wrong y: ${l}`);
+        if (/\./.test(sv) && !/\./.test(py) && py !== '0') fail('eulerwalk', key, `step ${j + 1} writes the slope less exactly than the point allows: ${l}`);
+        if (/\./.test(py) && /\//.test(sv)) fail('eulerwalk', key, `step ${j + 1} writes the slope more exactly than its point: ${l}`);
+        if (!near(y2, ys[j], tolOf(y2)) || !near(hh, h, 1e-9) || !near(s2, s, tolOf(s2)) || !near(y1, ys[j + 1], tolOf(y1)) || !near(x1, xs[j + 1], 1e-9)) fail('eulerwalk', key, `step ${j + 1} lands in the wrong place: ${l}`);
+        if ((eq2 === '=') !== (tolOf(y1) === 1e-9)) fail('eulerwalk', key, `step ${j + 1} says = of a rounded number or ≈ of an exact one: ${l}`);
+        if (/× −/.test(l) || /× \d+\/\d+ /.test(l.replace(/^.*so y goes to \S+ \+ \S+ × /, '× '))) fail('eulerwalk', key, `a negative or a fraction is multiplied bare: ${l}`);
+      }
+      if (k < N) { if (lines.join(' ') !== `${N - k} step${N - k === 1 ? '' : 's'} to go.`) fail('eulerwalk', key, `the steps left are miscounted: ${lines.join(' ')}`); continue; }
+      const Y = ys[N], T = SOL[id](END[id]), end = lines.shift() || '';
+      const me = end.match(/^At x = (\d+) Euler’s method gives y ([=≈]) (\S+)\. The true solution is (.+?), so y\((\d+)\) = (.+?): the walk is (short|over) by (exactly|about) (\S+)\.$/);
+      if (!me) fail('eulerwalk', key, `the end is not said: ${end}`);
+      else {
+        if (+me[1] !== END[id] || +me[5] !== END[id] || !near(me[3], Y, tolOf(me[3]))) fail('eulerwalk', key, `the landing is wrong: ${end}`);
+        if (me[4] !== { grow: 'y = eˣ', decay: 'y = e^(−2x)', ramp: 'y = x²/2' }[id] || me[6] !== { grow: 'e ≈ 2.71828', decay: 'e^(−4) ≈ 0.01832', ramp: '2' }[id]) fail('eulerwalk', key, `the true solution is misnamed: ${end}`);
+        if (Math.abs(SOL[id](END[id]) - val(me[6].replace(/^.*≈ /, ''))) > 1e-5) fail('eulerwalk', key, `the true value is wrong: ${me[6]}`);
+        if (me[7] !== (Y < T ? 'short' : 'over') || !near(me[9], Math.abs(Y - T), tolOf(me[9])) || (me[8] === 'exactly') !== (id === 'ramp')) fail('eulerwalk', key, `the miss is wrong: ${end}`);
+      }
+      const note = lines.shift() || '';
+      const want = id === 'grow' ? 'Each step reads the slope where it starts, and on y′ = y the slope only grows as you climb, so every step rises too little and the walk falls short of e.'
+        : id === 'ramp' ? `The slope here does not depend on y, so each step adds a rectangle h wide and as tall as x at its left edge. Euler’s walk is the left Riemann sum for ∫₀² x dx = 2, and it falls short by exactly h = ${({ 1: '1', 0.5: '1/2', 0.25: '1/4', 0.125: '1/8' })[h]}.`
+        : ys.some(y => y < 0) ? 'The true curve never reaches 0, but h × slope is −2 × 1 × y = −2y here: each step takes away twice y, so the walk jumps to the other side of 0 and swings back.'
+        : ys.some(y => y === 0) ? 'The true curve never reaches 0, but h × slope is −2 × 1/2 × y = −y here: the first step takes away all of y and lands on 0, where the slope is 0, so the walk stays there.'
+        : `Each step keeps 1 − 2h = ${({ 0.25: '1/2', 0.125: '3/4' })[h]} of y, so the walk shrinks toward 0 without reaching it, as the true curve does.`;
+      if (note !== want) fail('eulerwalk', key, `the note is wrong: ${note}`);
+      if (id === 'ramp' && Math.abs(Math.abs(Y - T) - h) > 1e-9) fail('eulerwalk', key, 'the ramp does not fall short by exactly h');
+      const mis = lines.join(' ');
+      if (hi > 0) {
+        const mm = mis.match(/^Misses so far on (\S+ = \S+): h = (\S+) misses by (\S+), h = (\S+) misses by (\S+)\.$/);
+        const Yp = (() => { const hp = W.HS[hi - 1]; let x = 0, y = Y0[id]; for (let j = 0; j < Math.round(END[id] / hp); j++) { y += hp * f(x, y); x += hp; } return y; })();
+        if (!mm || mm[1] !== S.eq || !near(mm[2], W.HS[hi - 1], 1e-9) || !near(mm[3], Math.abs(Yp - T), 6e-5) || !near(mm[4], h, 1e-9) || !near(mm[5], Math.abs(Y - T), 6e-5)) fail('eulerwalk', key, `the misses are not laid side by side: ${mis}`);
+      } else if (mis) fail('eulerwalk', key, `a comparison with nothing to compare: ${mis}`);
+      // the drawing: every dash along the slope at its own point, the walk on Euler's points, the solution on Math's
+      const [a, b] = S.D, [c0, d0] = S.R, svg = W.svg(), sx2 = W.W / (b - a), sy2 = W.Hh / (d0 - c0);
+      const PX = v => W.L + (v - a) * sx2, PY = v => W.T + W.Hh - (v - c0) * sy2;
+      const ds2 = [...svg.matchAll(/data-k="dash" data-x="([\d.-]+)" data-y="([\d.-]+)" x1="([\d.-]+)" y1="([\d.-]+)" x2="([\d.-]+)" y2="([\d.-]+)"/g)];
+      if (ds2.length !== 88) fail('eulerwalk', key, `the field has ${ds2.length} dashes, not 88`);
+      for (const d of ds2) { dashes++;
+        const [x, y, X1, Y1, X2, Y2] = d.slice(1).map(Number), sl = -((Y2 - Y1) / sy2) / ((X2 - X1) / sx2);
+        if (Math.abs(sl - f(x, y)) > 0.03 * Math.max(1, Math.abs(f(x, y))) || Math.abs((X1 + X2) / 2 - PX(x)) > 0.02 || Math.abs((Y1 + Y2) / 2 - PY(y)) > 0.02) { fail('eulerwalk', key, `a dash does not point along the slope at (${x}, ${y})`); break; } }
+      const wk = svg.match(/data-k="walk" points="([^"]+)"/);
+      if (!wk || wk[1].split(' ').length !== k + 1 || wk[1].split(' ').some((q, i) => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qx - PX(xs[i])) > 0.01 || Math.abs(qy - PY(ys[i])) > 0.01; })) fail('eulerwalk', key, 'the walk is not drawn through Euler’s points');
+      if ([...svg.matchAll(/data-k="pt"/g)].length !== k + 1) fail('eulerwalk', key, 'there is not one dot per point');
+      const sol = svg.match(/data-k="sol" points="([^"]+)"/);
+      if (!sol || sol[1].split(' ').some(q => { const [qx, qy] = q.split(',').map(Number); return Math.abs(qy - PY(SOL[id](a + (qx - W.L) / sx2))) > 0.05; })) fail('eulerwalk', key, 'the true solution leaves its values');
+    }
+    // every goal, decided here from the walk taken
+    const Pn = W.walk(), atEnd = W.k === N;
+    const truth = {
+      walk: id === 'grow' && h === 1 && atEnd, closer: id === 'grow' && h < 1 && atEnd, eighth: id === 'grow' && h === 0.125 && atEnd,
+      swing: id === 'decay' && h === 1, flat: id === 'decay' && h === 0.5,
+      tame: id === 'decay' && atEnd && Pn.every(p => p.y > 0), ramp: id === 'ramp' && atEnd,
+    };
+    for (const g of W.GOALS) {
+      if (!(g.id in truth)) { fail('eulerwalk', g.id, 'a goal with no check'); continue; }
+      if (!!g.ok(W) !== truth[g.id]) fail('eulerwalk', g.id, `${id} h=${h}: goal ${g.id} is ${truth[g.id] ? 'not ' : ''}met`);
+      if (truth[g.id]) found[g.id] = 1;
+    }
+    // the steps stop at the end, and starting over goes back to the start
+    W.step(); W.all(); if (W.k !== N) fail('eulerwalk', `${id} h=${h}`, 'a step is taken past the end');
+    W.again(); if (W.k !== 0) fail('eulerwalk', `${id} h=${h}`, 'starting over does not go back to the start');
+  }));
+  // halving the step closes in on e only once a bigger step has been walked
+  reset(); W.setH(1); W.all();
+  if (W.GOALS.find(g => g.id === 'closer').ok(W)) fail('eulerwalk', 'closer', 'met with no bigger step walked first');
+  for (const g of W.GOALS) if (!found[g.id]) fail('eulerwalk', g.id, 'can never be found');
+  reset();
+  return { n, steps, dashes, goals: Object.keys(found).length };
 })();
 
 /* The growth integral workshop: every curve, every number in front, every
@@ -13899,6 +14651,49 @@ const pad = (s, n) => String(s).padStart(n);
 
 console.log('Knights of the Eigenrealm — verification');
 console.log('─'.repeat(58));
+// Exponential growth at every depth: the answer and its four slips are five
+// different exact numbers, all of them above 0. y′ = ky starting above 0 never
+// reaches 0 or goes below it, so a 0 or a negative would be an answer anyone
+// could cross out unworked.
+const decays = [0, 0, 0];
+for (let d = 1; d <= 3; d++) {
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.growth(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'growth', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^\d+(\/\d+)?$/.test(v) || /^0/.test(v))) fail('analysis', 'growth', `a number is not exact and above 0: ${vals.join(', ')}`);
+    // half a stretch is worked as the number that twice over makes the factor
+    const q = plainT(String(p.q).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/\s+/g, ' ');
+    const w = plainT(String(p.ex).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/\s+/g, ' ');
+    const m = q.match(/y\(0\) = (\d+) and y\((\d+)\) = (\d+(?:\/\d+)?)\..*y\((\d+)\)\?/);
+    if (!m) continue;
+    const num = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v, r = num(m[3]) / +m[1];
+    if (r < 1) decays[d - 1]++;
+    if (+m[4] % +m[2]) {
+      const h = w.match(/Half a stretch multiplies y by (\S+), since \(?(\S+?)\)? × \(?(\S+?)\)? = (\S+?)\. /);
+      if (!h || h[1] !== h[2] || h[2] !== h[3] || Math.abs(num(h[1]) ** 2 - r) > 1e-12 || Math.abs(num(h[4]) - r) > 1e-12) fail('analysis', 'growth', `half a stretch is not worked as the number that twice over makes the factor: ${w}`);
+    }
+  }
+  // growth and decay come up about equally, so neither is the only kind a knight meets
+  if (decays[d - 1] < REPS * 0.25 || decays[d - 1] > REPS * 0.75) fail('analysis', 'growth', `at depth ${d}, ${decays[d - 1]} of ${REPS} questions decay, not about half`);
+}
+
+// The mean value theorem at every depth: the answer and its four slips are
+// five different exact numbers, none of them 0, and only the answer lies
+// strictly between a and b with f′ there equal to the chord's slope.
+for (let d = 1; d <= 3; d++) {
+  mvChordOffered = 0;
+  for (let i = 0; i < REPS; i++) {
+    const p = GEN.meanValue(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'meanValue', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^−?\d+(\/\d+)?$/.test(v) || /^−?0/.test(v))) fail('analysis', 'meanValue', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'meanValue', 'a wrong answer has no reason');
+    ANALYSIS.meanValue(p);
+  }
+  if (mvChordOffered < REPS / 4) fail('analysis', 'meanValue', `depth ${d} offers the chord's slope as a slip in only ${mvChordOffered} of ${REPS} questions`);
+}
+
 console.log(`  generators                 ${pad(total, 10)}`);
 console.log(`  problems generated         ${pad(generated.toLocaleString(), 10)}`);
 console.log(`  algebraic identities       ${pad(algebraChecks.toLocaleString(), 10)}`);
@@ -13990,6 +14785,9 @@ console.log(`  waves undone       ${pad(trigPickNotes.rounds.toLocaleString(), 1
 console.log(`  bends found        ${pad(flipPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-flip in the bend workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone flipping the bend of f; ${flipPickNotes.misses.toLocaleString()} wrong picks checked by putting them into f″, ${flipPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${flipPickNotes.wholeR.toLocaleString()} rounds whose x is whole)`);
 console.log(`  endless areas      ${pad(tailPickNotes.rounds.toLocaleString(), 12)}  (rounds of where-does-it-close-in in the endless area workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the area added up out to a very long way; ${tailPickNotes.misses.toLocaleString()} wrong picks checked by the slope of the area, ${tailPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${tailPickNotes.wholeR.toLocaleString()} rounds whose area is whole)`);
 console.log(`  growth integrals   ${pad(growPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-number-in-front in the growth integral workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone giving back the exponential when nudged; ${growPickNotes.misses.toLocaleString()} wrong picks checked by the chain rule, ${growPickNotes.worked.toLocaleString()} readouts with every c × k worked again)`);
+console.log(`  euler walks      ${pad(eulerWalkNotes.n.toLocaleString(), 15)}  (every equation at every step size, step by step: ${eulerWalkNotes.steps.toLocaleString()} worked steps checked against Euler's points taken again in floats, each landing and each note against Math's own solution, ${eulerWalkNotes.dashes.toLocaleString()} slope dashes read back, ${eulerWalkNotes.goals} goals findable)`);
+console.log(`  doubling walks   ${pad(doublingNotes.n.toLocaleString(), 15)}  (every walk of whole and half stretches on every story: ${doublingNotes.moves.toLocaleString()} moves checked against y(0) × r^(t/T) taken again in floats, every landing, straight line and note, ${doublingNotes.points.toLocaleString()} dots read back off the drawing, ${doublingNotes.goals} goals findable)`);
+console.log(`  chord stops      ${pad(meanValueNotes.n.toLocaleString(), 15)}  (every move from every stop the point can take on x², x³ and 4/x, ${meanValueNotes.stops.toLocaleString()} stops: the chord's slope and the tangent's worked again in floats, which side of c, every note, the point, chord and tangent read back off the drawing, ${meanValueNotes.goals} goals findable)`);
 console.log(`  series terms       ${pad(seriesPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-coefficient in the Taylor workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the series summed out to forty terms; ${seriesPickNotes.misses.toLocaleString()} wrong picks checked by Taylor's rule, ${seriesPickNotes.worked.toLocaleString()} readouts with every c × n! worked again)`);
 console.log(`  turned solids      ${pad(lathePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-volume in the lathe workshop, every volume read back off its button as an exact fraction of π and checked against the slip it is named as, the right one alone matching the disks added up over thousands of slices; ${lathePickNotes.misses.toLocaleString()} wrong picks checked by their slope in b, ${lathePickNotes.worked.toLocaleString()} readouts with every check worked again)`);
 console.log(`  read slopes        ${pad(hillPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope in the hillwalker workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching f nudged a hair along the heading; ${hillPickNotes.misses.toLocaleString()} wrong picks checked by a step of 5, ${hillPickNotes.worked.toLocaleString()} readouts with every check worked again)`);
@@ -14011,6 +14809,8 @@ console.log(`  arrows measured    ${pad(arrowPickNotes.rounds.toLocaleString(), 
 console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12)}  (workshops in the turn-it-round mix, each read against the page and its Tome title; ${mixPickNotes.dealt} deals with stand-in picks, none twice running and every one once a pass; ${mixPickNotes.real} rounds of real picks played through it with every id prefixed and no workshop redrawn)`);
 console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
+console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
+console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);

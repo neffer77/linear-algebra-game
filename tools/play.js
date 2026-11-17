@@ -95,6 +95,10 @@ const SUITES = [
   require('./play/logdiff'),    // x in the base and the power: take ln first
   require('./play/pathchain'),  // dz/dt along a path: an x part and a y part
   require('./play/expint'),  // ∫ e^(kx) dx: fit F to a slope field, divide by k
+  require('./play/eulerwalk'), // walk y′ = f(x, y) in Euler's steps by hand
+  require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
+  require('./play/meanvalue'), // match a tangent to the chord by hand
+  require('./play/stretchpick'), // see y(0) and y one stretch on, pick which of four numbers is y later
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
@@ -146,6 +150,7 @@ const SUITES = [
   require('./play/mixpick'), // the Tome's mix: one question from a different workshop's pick mode each time
   require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
   require('./play/lnpick'), // see a product of powers, pick which of four numbers is the slope of ln y
+  require('./play/eulerpick'), // see y′ = px + qy, a start and a step, pick which of four numbers is Euler's estimate
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

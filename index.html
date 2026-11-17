@@ -1908,6 +1908,70 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ DOUBLING WORKSHOP ============ -->
+  <div class="screen" id="s-double">
+    <div class="panel"><h2>⏳ Doubling Workshop</h2><div class="sub">y′ = ky says y grows at a rate in step with itself, and that makes the same length of time always multiply y by the same factor. Pick a story, walk it a whole stretch or half a stretch at a time, and watch the curve against the straight line through its first two points.</div></div>
+    <div id="dbTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a story by hand or pick which number is y"></div>
+    <div class="panel">
+      <div id="ypBox"></div>
+      <div id="dbSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which story"></div>
+      <div id="dbFig"></div>
+      <div class="wsModes" id="dbWalkRow" style="flex-wrap:wrap" role="group" aria-label="Walk">
+        <button class="btn sm" id="dbFull" onclick="Doubling.full()" aria-label="Walk one whole stretch">⏩ A whole stretch</button>
+        <button class="btn sm ghost" id="dbHalf" onclick="Doubling.halfStep()" aria-label="Walk half a stretch">Half a stretch</button>
+        <button class="btn sm ghost" id="dbAgain" onclick="Doubling.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="dbRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="dbGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="dbGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ CHORD WORKSHOP ============ -->
+  <div class="screen" id="s-mvt">
+    <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
+    <div class="panel">
+      <div id="mvtSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="mvtFig"></div>
+      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move the point">
+        <button class="btn sm ghost" id="mvtL" onclick="MeanValue.move(-5)" aria-label="Move the point a quarter left">◀ ¼</button>
+        <button class="btn sm ghost" id="mvtl" onclick="MeanValue.move(-1)" aria-label="Move the point a twentieth left">◀ 0.05</button>
+        <button class="btn sm ghost" id="mvtr" onclick="MeanValue.move(1)" aria-label="Move the point a twentieth right">0.05 ▶</button>
+        <button class="btn sm" id="mvtR" onclick="MeanValue.move(5)" aria-label="Move the point a quarter right">¼ ▶</button>
+        <button class="btn sm ghost" id="mvtAgain" onclick="MeanValue.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="mvtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="mvtGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ EULER STEP WORKSHOP ============ -->
+  <div class="screen" id="s-eulerwalk">
+    <div class="panel"><h2>👣 Euler Step Workshop</h2><div class="sub">A differential equation gives the slope at every point but not the curve. Euler’s method walks it in straight steps: read the slope where you stand, move h along and h × slope up, and repeat. Pick an equation and a step size, take the steps by hand, and see where the walk lands against the true curve.</div></div>
+    <div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand or pick Euler’s estimate"></div>
+    <div class="panel">
+      <div id="euBox"></div>
+      <div id="ewSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which equation"></div>
+      <div id="ewHs" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which step size"></div>
+      <div id="ewFig"></div>
+      <div class="wsModes" id="ewWalkRow" style="flex-wrap:wrap" role="group" aria-label="Walk">
+        <button class="btn sm" id="ewStep" onclick="EulerWalk.step()" aria-label="Take one Euler step">👣 Take a step</button>
+        <button class="btn sm ghost" id="ewAll" onclick="EulerWalk.all()" aria-label="Take every step left, to the end">Walk to the end</button>
+        <button class="btn sm ghost" id="ewAgain" onclick="EulerWalk.again()" aria-label="Go back to the start">Start over</button>
+      </div>
+      <div id="ewRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="ewGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="ewGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ GROWTH INTEGRAL WORKSHOP ============ -->
   <div class="screen" id="s-expint">
     <div class="panel"><h2>🪴 Growth Integral Workshop</h2><div class="sub">The short dashes show the slope of f(x) = e^(kx) wherever you stand. An antiderivative F has to run along every one. Pick the number in front of F and a lift + C, and see whether F fits the field. Then multiply by k or raise the exponent, as the power rule would, and catch each slip.</div></div>
@@ -3831,6 +3895,137 @@ euler(d){
       ex:`Each step reads the slope where it starts and moves ${show(h)} along x and ${show(h)} × slope up. `+work.join(' ')+
          ` So after ${n} steps Euler's method estimates y(${show(F(n,hd))}) ≈ ${show(A)}.`};
   }
+},
+/* Exponential growth: y′ = ky. Every solution is y = y(0)·eᵏᵗ, so equal
+   stretches of time multiply y by equal factors. Given y(0) and y(T), the
+   factor every T is r = y(T)/y(0), and y(t) = y(0) × r^(t/T). Two or three
+   stretches at depth 1, half of one at depth 2 and one and a half at depth 3,
+   where r is a perfect square so the root is exact. Decay as often as
+   growth. The wrong answers are the slips people make: adding the same
+   amount every T as a straight line would, multiplying r by the number of
+   stretches instead of raising it to that power, counting the stretches on
+   from y(T), dividing by the factor instead of multiplying, and raising y(T)
+   itself to the power instead of the factor. */
+growth(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]);
+  const pw=(u,n)=>n<0?F(u[1]**-n,u[0]**-n):F(u[0]**n,u[1]**n);
+  const show=u=>rat(u[0],u[1]), inB=u=>u[1]===1?show(u):`(${show(u)})`, key=u=>u[0]+'/'+u[1];
+  // m = mn/2 stretches of T; root q, so that r = q^j and r^m = q^(j·m)
+  const [mn,j]=d===1?[R.pick([4,6]),1]:d===2?[1,2]:[3,2];
+  const mShow=mn%2?(mn===1?'1/2':'3/2'):String(mn/2);
+  const mWords={1:'half of one',2:'one',3:'one and a half',4:'two',6:'three'}[mn];
+  for(let g=0;;g++){
+    const decay=R.chance(0.5);
+    const q0=d===1?R.pick([[2,1],[3,1],[4,1],[3,2]]):R.pick([[2,1],[3,1],[3,2]]), q=decay?F(q0[1],q0[0]):F(q0[0],q0[1]);
+    const r=pw(q,j), a=F(R.i(2,9)), b=mul(a,r);
+    const T=d===1?R.pick([1,2,3,5,10]):R.pick([2,4,6,10]), t=T*mn/2;
+    const rm=pw(q,j*mn/2), A=mul(a,rm);
+    const m=F(mn,2);
+    const slips=[
+      [add(a,mul(add(b,mul(a,F(-1))),m)),`that adds the same amount, ${show(add(b,mul(a,F(-1))))}, every ${T}, as a straight line would; y′ = ky multiplies by the same factor instead`],
+      [mul(mul(a,r),m),`that multiplies the factor ${show(r)} by the number of stretches, ${mShow}; it has to be raised to that power`],
+      [mul(b,rm),`that counts the stretches on from y(${T}) = ${show(b)}, but y(${T}) is already one stretch on from y(0)`],
+      [mul(a,pw(q,-j*mn/2)),`that divides by the factor ${show(r)} at every stretch instead of multiplying by it`],
+      ...(mn%2===0?[[pw(b,mn/2),`that raises y(${T}) itself to the power; it is the factor y(${T}) ÷ y(0) that is raised`]]:[])
+    ];
+    // four different positive numbers beside the answer, none of them wild
+    const ok=v=>v[0]>0 && v[0]/v[1]<=1500 && v[1]<=1000;
+    const dist=[], seen=new Set([key(A)]);
+    for(const s of slips) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    if((dist.length<4 || A[0]/A[1]>1500 || A[1]>1000) && g<300) continue;
+    // half a stretch multiplies by q, the number that twice over makes r
+    const half=mn%2?`Half a stretch multiplies y by ${show(q)}, since ${inB(q)} × ${inB(q)} = ${show(r)}. `:'';
+    const pow=mn===1?inB(q):mn===3?`${inB(r)} × ${inB(q)}`:`${inB(r)}${sup(mn/2)}`;
+    return {topic:'Exponential Growth',
+      codex:{rule:'y′ = ky multiplies y by the same factor over every stretch of time of the same length. So y(t) = y(0) × r^(t/T), where r = y(T) ÷ y(0) is the factor every T.',
+             eg:'y(0) = 3 and y(2) = 6: the factor every 2 is 6 ÷ 3 = 2, so y(6) = 3 × 2³ = 24.'},
+      q:`y′ = ky for some constant k, with y(0) = ${show(a)} and y(${T}) = ${show(b)}.<br>What is y(${t})?`,
+      a:show(A),
+      d:dist.map(([v,why])=>[show(v),why]),
+      ex:`Every solution of y′ = ky is y = y(0)·eᵏᵗ, so each stretch of ${T} multiplies y by the same factor, y(${T}) ÷ y(0) = ${show(b)} ÷ ${show(a)} = ${show(r)}. `+
+         `t = ${t} is ${mWords} of those stretches${mn%2===0?'':` (${mShow} of them)`}. ${half}So y(${t}) = ${show(a)} × ${pow}${pow===inB(rm)?'':` = ${show(a)} × ${inB(rm)}`} = ${show(A)}.`};
+  }
+},
+/* The mean value theorem: a smooth f on [a, b] has, somewhere strictly
+   between a and b, a tangent parallel to the chord from (a, f(a)) to
+   (b, f(b)): a c with f′(c) = (f(b) − f(a))/(b − a). A parabola at depth 1,
+   where c always falls half way; x³ + px + q at depth 2, where c² is a third
+   of a² + ab + b² and the other root lands on an end of the interval, which
+   does not count; n/x at depth 3, where c is √(ab). The wrong answers are the
+   slips people make: giving the chord's slope instead of the point, taking
+   the middle of the interval where f is not a parabola, forgetting the 2 that
+   x² brings down, stopping at c² or at the end, giving where the tangent is
+   flat, and giving a height, f(c) or the average of f(a) and f(b), instead
+   of c. */
+meanValue(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), div=(u,v)=>F(u[0]*v[1],u[1]*v[0]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):`(${show(u)})`;
+  for(let g=0;;g++){
+    let fs, dfs, f, a, b, c, why, slips;
+    if(d===1){
+      const p=R.pick([1,-1,2,-2,3]), q=R.i(-6,6), r=R.i(-5,5);
+      const A=R.i(-3,3), B=A+R.pick([1,2,3,4,5]); a=F(A); b=F(B);
+      f=x=>add(add(mul(F(p),mul(x,x)),mul(F(q),x)),F(r));
+      fs=poly([[p,2],[q,1],[r,0]]); dfs=poly([[2*p,1],[q,0]]);
+      const m=F(p*(A+B)+q,1); c=F(A+B,2);
+      why=`f′(x) = ${dfs}, so f′(c) = ${show(m)} means ${2*p===1?'':2*p===-1?'−':neg(2*p)}c${q?` ${q<0?'−':'+'} ${Math.abs(q)}`:''} = ${show(m)}, which gives c = ${show(c)}. For a parabola c is always half way between a and b.`;
+      slips=[
+        [m,`that is the chord's slope; c is the point where the tangent has that slope`],
+        [F(A+B),`that takes f′(x) as ${poly([[p,1],[q,0]])}, forgetting the 2 that x² brings down`],
+        [F(-q,2*p),`that is where the tangent is flat, f′(c) = 0; the tangent has to match the chord, whose slope is ${show(m)}`],
+        [f(c),`that is f(c), the height of the curve at c; the question asks for c itself`],
+        [mul(add(f(a),f(b)),F(1,2)),`that is the average of f(${show(a)}) and f(${show(b)}), a height on the curve, not a place between ${show(a)} and ${show(b)}`]
+      ];
+    } else if(d===2){
+      const [A,B,C]=R.pick([[-8,4,-4],[-6,3,-3],[-4,2,-2],[-4,8,4],[-3,6,3],[-2,1,-1],[-2,4,2],[-1,2,1]]);
+      const h=R.pick([1,2]), p=R.i(-3,3), q=R.i(-5,5);
+      a=F(A,h); b=F(B,h); c=F(C,h);
+      f=x=>add(add(mul(x,mul(x,x)),mul(F(p),x)),F(q));
+      fs=poly([[1,3],[p,1],[q,0]]); dfs=poly([[3,2],[p,0]]);
+      const m=F(A*A+A*B+B*B+p*h*h,h*h), k2=F(C*C,h*h);
+      why=`f′(x) = ${dfs}, so f′(c) = ${show(m)} means 3c²${p?` ${p<0?'−':'+'} ${Math.abs(p)}`:''} = ${show(m)}, so c² = ${show(k2)} and c = ${show(F(Math.abs(C),h))} or ${show(F(-Math.abs(C),h))}. ${show(F(-C,h))} is an end of the interval, and the theorem promises a c strictly between ${show(a)} and ${show(b)}, so c = ${show(c)}.`;
+      slips=[
+        [m,`that is the chord's slope; c is the point where the tangent has that slope`],
+        [F(A+B,2*h),`that is the middle of the interval; c falls half way only when f is a parabola, and this f is a cubic`],
+        [k2,`that is c², not c: c is its square root`],
+        [F(-C,h),`that root is an end of the interval, and the theorem's c lies strictly between ${show(a)} and ${show(b)}`],
+        [f(c),`that is f(c), the height of the curve at c; the question asks for c itself`],
+        [mul(add(f(a),f(b)),F(1,2)),`that is the average of f(${show(a)}) and f(${show(b)}), a height on the curve, not a place between ${show(a)} and ${show(b)}`]
+      ];
+    } else {
+      const [A,B,C]=R.chance(0.5)?R.pick([[[1,1],[4,1],[2,1]],[[1,1],[9,1],[3,1]],[[4,1],[9,1],[6,1]],[[2,1],[8,1],[4,1]],[[1,1],[16,1],[4,1]],[[3,1],[12,1],[6,1]],[[2,1],[18,1],[6,1]],[[9,1],[16,1],[12,1]],[[1,1],[25,1],[5,1]],[[4,1],[25,1],[10,1]]])
+        :R.pick([[[1,4],[1,1],[1,2]],[[1,9],[1,1],[1,3]],[[1,4],[9,1],[3,2]],[[1,9],[4,1],[2,3]],[[4,9],[1,1],[2,3]],[[1,4],[4,9],[1,3]],[[1,9],[1,4],[1,6]],[[1,4],[25,1],[5,2]],[[1,16],[1,1],[1,4]],[[9,4],[4,1],[3,1]]]), n=R.pick([1,2,3,4,6,12]);
+      a=A; b=B; c=C;
+      f=x=>div(F(n),x);
+      fs=`${n}/x`; dfs=`−${n}/x²`;
+      const ab=mul(a,b), m=div(F(-n),ab);
+      why=`f′(x) = ${dfs}, so f′(c) = ${show(m)} means ${n}/c² = ${show(div(F(n),ab))}, so c² = ${inB(a)} × ${inB(b)} = ${show(ab)} and c = √${inB(ab)} = ${show(c)}, the positive root, since c lies between ${show(a)} and ${show(b)}.`;
+      slips=[
+        [m,`that is the chord's slope; c is the point where the tangent has that slope`],
+        [mul(add(a,b),F(1,2)),`that is the middle of the interval; c falls half way only when f is a parabola, and ${n}/x is not one`],
+        [ab,`that is c², not c: c is its square root`],
+        [f(c),`that is f(c), the height of the curve at c; the question asks for c itself`],
+        [mul(add(f(a),f(b)),F(1,2)),`that is the average of f(${show(a)}) and f(${show(b)}), a height on the curve, not a place between ${show(a)} and ${show(b)}`]
+      ];
+    }
+    // four different numbers beside the answer, none of them 0 and none wild
+    const ok=v=>v[0]!==0 && Math.abs(v[0]/v[1])<=600 && v[1]<=100 && key(v)!==key(c);
+    const dist=[], seen=new Set([key(c)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    if((dist.length<4 || c[0]===0) && g<300) continue;
+    const fa=f(a), fb=f(b), rise=add(fb,mul(fa,F(-1)));
+    return {topic:'Mean Value Theorem',
+      codex:{rule:'If f is smooth on [a, b], then somewhere strictly between a and b its tangent is parallel to the chord: f′(c) = (f(b) − f(a))/(b − a). Find the chord\'s slope, then solve f′(c) = it.',
+             eg:'f(x) = x² on [1, 3]: the chord\'s slope is (9 − 1)/(3 − 1) = 4, and f′(c) = 2c = 4 gives c = 2.'},
+      q:`f(x) = ${fs} on [${show(a)}, ${show(b)}].<br>Where between ${show(a)} and ${show(b)} is the tangent parallel to the chord? What is c?`,
+      a:show(c),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`The chord from (${show(a)}, ${show(fa)}) to (${show(b)}, ${show(fb)}) has slope (${show(fb)} − ${inB(fa)})/(${show(b)} − ${inB(a)}) = ${show(div(rise,add(b,mul(a,F(-1)))))}. `+why};
+  }
 }
 };
 
@@ -3944,7 +4139,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method"
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -3957,7 +4152,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4006,6 +4201,9 @@ const WORKSHOP_FOR = (() => {
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
+    EulerWalk: ["👣 Euler Step Workshop", ['euler']],
+    Doubling: ["⏳ Doubling Workshop", ['growth']],
+    MeanValue: ["📐 Chord Workshop", ['meanValue']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -4540,7 +4738,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
@@ -13472,6 +13670,9 @@ const UI = {
     if(id==='s-logdiff') LogDiff.render();
     if(id==='s-pathchain') PathChain.render();
     if(id==='s-expint') ExpInt.render();
+    if(id==='s-eulerwalk') EulerWalk.render();
+    if(id==='s-double') Doubling.render();
+    if(id==='s-mvt') MeanValue.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14296,6 +14497,21 @@ const UI = {
          <h2 style="font-size:16px;color:var(--gold)">🪴 Growth Integral Workshop</h2>
          <div class="sub" style="margin-top:6px;font-size:14px">Fit an antiderivative of e^(kx) to its slope field: pick the number in front and a lift + C, and watch F run along every dash. Then multiply by k or raise the exponent and catch each slip. Then turn it round: see an exponential, and pick which of four numbers goes in front of its antiderivative.</div>
          <button class="btn sm" id="tomeExpInt" style="width:auto;margin-top:8px" onclick="ExpInt.open()">Open the growth integral workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">👣 Euler Step Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Walk a differential equation by hand: read the slope where you stand, move h along and h × slope up. Watch y′ = y fall short of e, a big step overshoot zero on y′ = −2y, and y′ = x turn into a left Riemann sum. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>
+         <button class="btn sm" id="tomeEulerWalk" style="width:auto;margin-top:8px" onclick="EulerWalk.open()">Open the Euler step workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not.</div>
+         <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
+       </div>` +
+      `<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">y′ = ky multiplies y by the same factor over every stretch of the same length. Walk a doubling, a halving and a quadrupling a whole or half stretch at a time: see half of ×2 come out as ×√2, and a straight line run below zero where the decay never does. Then turn it round: see y(0) and y one stretch on, and pick which of four numbers is y later.</div>
+         <button class="btn sm" id="tomeDoubling" style="width:auto;margin-top:8px" onclick="Doubling.open()">Open the doubling workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⭕ Implicit Slope Workshop</h2>
@@ -27139,6 +27355,709 @@ const PathChain = {
   }
 };
 
+/* ---------- Which y? The doubling workshop turned round ----------
+   y′ = ky with y(0) and y(T) given, a time t some whole or half stretches
+   on, and four numbers, one of them y(t). The rule is stated first; the wrong
+   numbers are the slips people make with it: going in a straight line,
+   multiplying the factor by the number of stretches, putting t itself in the
+   exponent, starting from y(T) instead of y(0), taking half way between two
+   whole stretches, or turning the factor upside down. A wrong pick is
+   checked against the factor, and a check never names y(t) itself. Nothing
+   is saved. */
+const StretchPick = {
+  SLIPS:['line','scale','powT','from1','mean','flip'],
+  RULE:'y′ = ky multiplies y by the same factor r over every stretch of time of the same length. Read r off the two values given; then each whole stretch multiplies by r again, and half a stretch multiplies by √r. Which is y at the time asked?',
+  RS:[[2,1],[3,1],[4,1],[9,1],[3,2],[9,4],[1,2],[1,3],[1,4],[1,9],[2,3],[4,9]],
+  Y0:[1,2,3,4,5,6,8,9,12,16,18,24,27,32,36,48,54,64,81],
+  WORD:['','one','two','three','four'],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  mul(f,g){ return this.frac(f[0]*g[0],f[1]*g[1]); },
+  isq(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? s : null; },
+  // √ of a fraction, when both halves are squares
+  root(f){ const a=this.isq(f[0]), b=this.isq(f[1]); return a!==null && b!==null ? [a,b] : null; },
+  // f to the power n/2, or null where that is not a fraction
+  pw(f,n){
+    let base=f, e=n;
+    if(e<0){ base=[f[1],f[0]]; e=-e; }
+    if(e%2){ base=this.root(base); if(!base) return null; } else e/=2;
+    let out=[1,1]; for(let j=0;j<e;j++) out=this.mul(out,base);
+    return out;
+  },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  y1(S){ return this.mul([S.y0,1],S.r); },
+  t(S){ return this.frac(S.n2*S.T,2); },
+  // y as each option works it: n2 is the number of half stretches from the start
+  val(S,k){
+    const y0=[S.y0,1], r=S.r, n=S.n2, d=this.add(this.y1(S),[-S.y0,1]);
+    if(k==='right') return this.mul(y0,this.pw(r,n));
+    if(k==='line') return this.add(y0,this.mul(d,[n,2]));
+    if(k==='scale') return this.mul(y0,this.mul(r,[n,2]));
+    if(k==='powT'){ const p=this.pw(r,n*S.T); return p && this.mul(y0,p); }
+    if(k==='from1') return this.mul(y0,this.pw(r,n+2));
+    if(k==='mean'){ if(n%2===0) return null; const m=n-1;
+      return this.mul(this.add(this.mul(y0,this.pw(r,m)),this.mul(y0,this.pw(r,m+2))),[1,2]); }
+    return this.mul(y0,this.pw(r,-n));
+  },
+  ok(v){ return !!v && v[0]!==0 && Math.abs(v[0])<=99999 && v[1]<=99999; },
+  // the slips this question can offer: each a number other than 0, not absurdly long, and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!this.ok(v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page names, a check included: y(0), y(T), T, t, r, √r, the stretches, t + T, y(T) − y(0), and y at the whole stretches either side
+  named(S){
+    const out=[[S.y0,1],this.y1(S),[S.T,1],this.t(S),S.r,this.frac(S.n2,2),this.add(this.t(S),[S.T,1]),this.add(this.y1(S),[-S.y0,1])];
+    const s=this.root(S.r); if(s) out.push(s);
+    if(S.n2%2){ const m=S.n2-1; out.push(this.mul([S.y0,1],this.pw(S.r,m)),this.mul([S.y0,1],this.pw(S.r,m+2))); }
+    return out;
+  },
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<3000;g++){
+      const r=this.RS[R.i(0,this.RS.length-1)], y0=this.Y0[R.i(0,this.Y0.length-1)], T=R.i(2,3), n2=[1,3,4,5,6,7,8][R.i(0,6)];
+      const S={y0,r,T,n2};
+      if(!this.whole(this.y1(S)) || (n2%2 && !this.root(r))) continue;
+      const W=this.val(S,'right');
+      if(!W || this.whole(W)!==wantWhole || Math.abs(W[0]/W[1])>3000 || W[1]>729) continue;
+      // a check names y(0), y(T), r, √r and y at the whole stretches either side, so none of them may be y(t)
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {y0:4,r:[9,4],T:2,n2:3};
+  },
+  // how far t is from the start, in stretches
+  far(n){ const w=Math.floor(n/2), h=n%2;
+    return !w ? 'half a stretch' : w===1 ? (h?'a stretch and a half':'one stretch') : `${this.WORD[w]}${h?' and a half':''} stretches`; },
+  // r to the power n/2, written out as a power
+  powStr(S,n){ const sup='⁰¹²³⁴⁵⁶⁷⁸'; return `${this.pf(S.r)}${n%2 ? `^(${n}/2)` : sup[n/2]}`; },
+  // r to the power n/2, written out as factors: r × r × √r
+  factors(S,n){ const w=Math.floor(n/2), out=Array(w).fill(this.fs(S.r)); if(n%2) out.push(`√${this.pf(S.r)}`); return out.join(' × '); },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('STRETCH READER', this.matched+' growths read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is y, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    Doubling.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    if(k==='line') return `${L} adds the same amount every stretch, as a straight line does. y′ = ky multiplies by the same factor every stretch instead.`;
+    if(k==='scale') return `${L} multiplies the factor by the number of stretches. Each stretch multiplies by r again, so the factors multiply together; they are not scaled.`;
+    if(k==='powT') return `${L} puts t itself in the exponent, as if every single unit were a stretch. The exponent counts stretches: t ÷ ${S.T}.`;
+    if(k==='from1') return `${L} starts from y(${S.T}) instead of y(0), so it lands one stretch too far on.`;
+    if(k==='mean') return `${L} takes half way between the two whole stretches either side. Between them the curve does not run in a straight line: half a stretch multiplies by √r.`;
+    return `${L} turns the factor upside down. The factor is y(${S.T}) ÷ y(0), the later value over the earlier one.`;
+  },
+  check(S,k,L){
+    const r=this.fs(S.r), t=this.fs(this.t(S)), y1=this.fs(this.y1(S)), n=S.n2;
+    if(k==='line') return `Check ${L}: it adds y(${S.T}) − y(0) = ${this.fs(this.add(this.y1(S),[-S.y0,1]))} every stretch. From y(0) = ${S.y0} to y(${S.T}) = ${y1}, y is multiplied by ${y1} ÷ ${S.y0} = ${r}, and every stretch of ${S.T} does the same.`;
+    if(k==='scale') return n===1
+      ? `Check ${L}: it multiplies y(0) by ${r} × 1/2. Two halves must make ×${r}, and the number that makes ${r} when multiplied by itself is √${this.pf(S.r)}, not ${r} ÷ 2.`
+      : `Check ${L}: it multiplies y(0) by ${r} × ${this.fs(this.frac(n,2))}. ${this.far(n)[0].toUpperCase()+this.far(n).slice(1)} multipl${n<4?'ies':'y'} y(0) by ${this.factors(S,n)}.`;
+    if(k==='powT') return `Check ${L}: it takes ${this.pf(S.r)} to the power t = ${t}. A stretch here is ${S.T}, so t = ${t} is t ÷ ${S.T} = ${this.fs(this.frac(n,2))} stretches, and that is the exponent.`;
+    if(k==='from1') return `Check ${L}: it multiplies y(${S.T}) = ${y1} by ${this.factors(S,n)}, which reaches t = ${this.fs(this.add(this.t(S),[S.T,1]))}. Count ${this.far(n)} from t = 0, where y = ${S.y0}.`;
+    if(k==='mean'){ const m=n-1, a=this.mul([S.y0,1],this.pw(S.r,m)), b=this.mul([S.y0,1],this.pw(S.r,m+2)), s=this.root(S.r);
+      return `Check ${L}: it is half way between y(${this.fs(this.frac(m*S.T,2))}) = ${this.fs(a)} and y(${this.fs(this.frac((m+2)*S.T,2))}) = ${this.fs(b)}. Half a stretch from y(${this.fs(this.frac(m*S.T,2))}) multiplies it by √${this.pf(S.r)} = ${this.fs(s)}, since ${this.fs(s)} × ${this.fs(s)} = ${r}.`; }
+    return `Check ${L}: it divides by ${r} where it should multiply. From y(0) = ${S.y0} to y(${S.T}) = ${y1}, y is multiplied by ${y1} ÷ ${S.y0} = ${r}, so every stretch multiplies by ${r}.`;
+  },
+  // the right answer, worked
+  work(S){ return `t = ${this.fs(this.t(S))} is ${this.far(S.n2)} of ${S.T}, and r = ${this.fs(this.y1(S))} ÷ ${S.y0} = ${this.fs(S.r)}, so y(${this.fs(this.t(S))}) = ${S.y0} × ${this.powStr(S,S.n2)} = ${this.fs(this.val(S,'right'))}`; },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), t=this.fs(this.t(S));
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="ypQ" style="text-align:center;font-size:16px;margin-bottom:2px">y′ = ky, y(0) = ${S.y0}, y(${S.T}) = ${this.fs(this.y1(S))}</div>`;
+    out+=`<div class="small" style="text-align:center">Which is y(${t})?</div>`;
+    out+=`<div id="ypPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="StretchPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not y('+t+')':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(`That was it: ${this.work(this.last.S)}. Here is a new one.`);
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="ypRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+/* ---------- The doubling workshop: y′ = ky one stretch at a time ----------
+   y′ = ky multiplies y by the same factor over every stretch of time of the
+   same length. Pick a story (doubles every 2 days, halves every 3 hours,
+   quadruples every 2 minutes) and walk it a whole stretch or half a stretch
+   at a time. The figure keeps every point against the curve and against the
+   straight line through the first two points, so nothing is held in the
+   head: half a stretch of ×2 is ×√2, not ×1.5, and the line runs below zero
+   where the decay never does. Nothing is saved. */
+const Doubling = {
+  SETS:[
+    {id:'dbl', btn:'×2 every 2 days', name:'doubles every 2 days, from 3', y0:3, r:2, T:2, unit:'days', maxN:4, R:[0,50]},
+    {id:'half', btn:'½ every 3 hours', name:'halves every 3 hours, from 16', y0:16, r:0.5, T:3, unit:'hours', maxN:4, R:[-18,18]},
+    {id:'quad', btn:'×4 every 2 minutes', name:'quadruples every 2 minutes, from 1', y0:1, r:4, T:2, unit:'minutes', maxN:3, R:[0,66]}
+  ],
+  si:0, moves:[], touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'stretch', t:'Take one whole stretch and see y multiply by the factor.', toast:'Same time, same factor',
+     ok:K=>K.moves.includes(1)},
+    {id:'root', t:'On ×2 every 2 days, take half a stretch: y grows by √2, not by 1.5.', toast:'Half of ×2 is ×√2',
+     ok:K=>K.si===0 && K.moves.includes(0.5)},
+    {id:'halves', t:'Land on a whole stretch with two half stretches in a row.', toast:'Half and half make one',
+     ok:K=>{ const m=K.moves, L=m.length; return L>=2 && m[L-1]===0.5 && m[L-2]===0.5 && Number.isInteger(K.n()); }},
+    {id:'exact', t:'On ×4 every 2 minutes, take half a stretch and land on a whole number.', toast:'√4 = 2',
+     ok:K=>K.si===2 && K.moves.includes(0.5)},
+    {id:'never', t:'On ½ every 3 hours, walk past the hour where the straight line hits 0.', toast:'A share, never the whole',
+     ok:K=>K.si===1 && K.n()>2},
+    {id:'leave', t:'On ×2 every 2 days, walk to day 8 and see the curve leave the straight line behind.', toast:'48 against 15',
+     ok:K=>K.si===0 && K.n()===4}
+  ],
+  set(){ return this.SETS[this.si]; },
+  /* how many stretches walked, and the time that makes */
+  n(){ return this.moves.reduce((a,b)=>a+b,0); },
+  y(n){ const S=this.set(); return S.y0*Math.pow(S.r,n); },
+  line(n){ const S=this.set(); return S.y0+(S.y0*S.r-S.y0)*n; },
+  canFull(){ return this.n()+1<=this.set().maxN; },
+  canHalf(){ return this.n()+0.5<=this.set().maxN; },
+  r9(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  /* a number is written exactly when it is a short fraction, otherwise to four places */
+  exact(v){ const q=this.r9(v); for(const d of [1,2,4,8,16]){ const n=Math.round(q*d); if(Math.abs(n/d-q)<1e-9) return d===1 ? neg(n) : (n<0?'−':'')+Math.abs(n)+'/'+d; } return null; },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  fr(v){ const e=this.exact(v); return e!==null ? e : this.num(v); },
+  is(v){ return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v); },
+  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },
+  /* the factor for half a stretch, written as the root it is */
+  root(){ return `√${this.pf(this.set().r)}`; },
+  /* how many stretches, as a power: ² for whole ones, ^(3/2) for halves */
+  pow(n){ return Number.isInteger(n) ? (n===1 ? '' : '⁰¹²³⁴'[n]) : `^(${2*n}/2)`; },
+  working(){
+    const S=this.set(), y1=S.y0*S.r, out=[];
+    out.push(`y′ = ky multiplies y by the same factor over every stretch of time of the same length. Here y(0) = ${S.y0} and y(${S.T}) = ${this.fr(y1)}, so each stretch of ${S.T} ${S.unit} multiplies y by r = ${this.fr(y1)} ÷ ${S.y0} = ${this.fr(S.r)}.`);
+    if(!this.moves.length){ out.push(`Take a whole stretch of ${S.T} ${S.unit}, or half of one.`); return out; }
+    const from=Math.max(0,this.moves.length-3);
+    if(from>0) out.push(from===1 ? 'Move 1 is the first dot on the figure.' : from===2 ? 'Moves 1 and 2 are the dots already on the figure.' : `Moves 1 to ${from} are the dots already on the figure.`);
+    let n=0;
+    this.moves.forEach((m,j)=>{ const a=n; n+=m; if(j<from) return;
+      out.push(`Move ${j+1}: ${m===1?'a whole stretch':'half a stretch'}, from t = ${this.fr(a*S.T)} to t = ${this.fr(n*S.T)}, multiplies y by ${m===1?this.fr(S.r):this.root()}: y(${this.fr(n*S.T)}) ${this.is(this.y(n))}.`); });
+    const t=n*S.T, Y=this.y(n), L=this.line(n), w=['','one','two','three','four'], st=Number.isInteger(n) ? `${w[n]} stretch${n===1?'':'es'}` : Math.floor(n) ? `${w[Math.floor(n)]} and a half stretches` : 'half a stretch';
+    out.push(`At t = ${this.fr(t)}, ${st} from the start: y(${this.fr(t)}) = ${S.y0} × ${this.pf(S.r)}${this.pow(n)} ${this.is(Y)}.`);
+    const lead=`The straight line through the first two points gives ${this.fr(L)} at t = ${this.fr(t)}`;
+    if(n===1) out.push(`The straight line through the first two points meets the curve here, at y = ${this.fr(Y)}.`);
+    else if(n<1) out.push(`${lead}, above the curve: between the two points the curve sags below the line.`);
+    else if(L>0) out.push(`${lead}, below the curve, which pulls further away every stretch.`);
+    else if(L===0) out.push(`${lead}: the line reaches 0 here, but y is still ${this.fr(Y)}.`);
+    else out.push(`${lead}, below zero. A line takes away the same amount every stretch; y′ = ky takes away the same share, so y never reaches 0.`);
+    if(this.moves.includes(0.5)) out.push(
+      S.id==='dbl' ? 'Half a stretch multiplies by √2 ≈ 1.4142, not by 1.5: two half stretches must make ×2, and 1.5 × 1.5 = 2.25 is too much.'
+      : S.id==='quad' ? 'Half a stretch multiplies by √4 = 2, since 2 × 2 = 4.'
+      : 'Half a stretch keeps √(1/2) ≈ 0.7071 of y, since 0.7071 × 0.7071 ≈ 1/2.');
+    return out;
+  },
+  /* the curve, the straight line through the first two points, and the walk */
+  L:30, TOP:12, W:310, Hh:230,
+  PX(t){ const S=this.set(); return this.L+t/(S.maxN*S.T)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), end=S.maxN*S.T, n=this.n();
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="y ${S.name.replace(/, from \d+$/,'')}: the curve y = ${S.y0} × ${this.pf(S.r)}^(t/${S.T}) in gold, the straight line through its first two points dashed, and the walk in blue, now at t = ${this.fr(n*S.T)}, y ${this.is(this.y(n))}">`;
+    out+=`<line data-k="taxis" x1="${this.L}" y1="${f(this.PY(Math.max(c,0)))}" x2="${this.L+this.W}" y2="${f(this.PY(Math.max(c,0)))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${this.L}" y1="${this.TOP}" x2="${this.L}" y2="${this.TOP+this.Hh}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let k=1;k<=S.maxN;k++) out+=`<text data-k="tick" x="${f(this.PX(k*S.T))}" y="${f(Math.min(this.TOP+this.Hh,this.PY(Math.max(c,0))+12))}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${k*S.T}</text>`;
+    /* the straight line, cut where it leaves the figure */
+    const lt=v=>(v-S.y0)/(S.y0*S.r-S.y0)*S.T, ts=[0,end,lt(c),lt(d)].filter(t=>t>=0&&t<=end).sort((a,b)=>a-b);
+    const t1=ts[0], t2=ts.filter(t=>{ const v=this.line(t/S.T); return v>=c-1e-9 && v<=d+1e-9; }).pop();
+    out+=`<line data-k="line" x1="${f(this.PX(t1))}" y1="${f(this.PY(this.line(t1/S.T)))}" x2="${f(this.PX(t2))}" y2="${f(this.PY(this.line(t2/S.T)))}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=end*i/120; pts.push(`${f(this.PX(t))},${f(this.PY(this.y(t/S.T)))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+    let m=0; const P=[0,...this.moves.map(v=>m+=v)];
+    P.forEach((q,i)=>{ out+=`<circle data-k="pt" data-i="${i}" cx="${f(this.PX(q*S.T))}" cy="${f(this.PY(this.y(q)))}" r="${i===P.length-1?5:3.5}" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`; });
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-double'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
+  pick(i){ this.si=i; this.moves=[]; this.touched=true; this.render(); },
+  full(){ if(!this.canFull()) return; this.moves.push(1); this.touched=true; this.render(); },
+  halfStep(){ if(!this.canHalf()) return; this.moves.push(0.5); this.touched=true; this.render(); },
+  again(){ this.moves=[]; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('dbTab').innerHTML=[['hand','⏩ Walk it by hand','Pick a story and walk it a whole or half stretch at a time'],['pick','🎯 Which y?','See y(0) and y one stretch on, and pick which of four numbers is y at a later time']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Doubling.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['dbSets','dbFig','dbWalkRow','dbRead','dbGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('ypBox').innerHTML=pick ? StretchPick.html() : '';
+    if(pick) return;
+    document.getElementById('dbSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Doubling.pick(${i})" aria-label="y ${s.name}">${s.btn}</button>`).join('');
+    document.getElementById('dbFull').disabled=!this.canFull();
+    document.getElementById('dbHalf').disabled=!this.canHalf();
+    document.getElementById('dbAgain').disabled=this.moves.length===0;
+    document.getElementById('dbFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold curve is y′ = ky; the dashed line runs straight through its first two points. The blue dots are your walk, one per move, and the numbers along the bottom mark each whole stretch.</div>`;
+    document.getElementById('dbRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('dbGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF GROWTH','every stretch walked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The chord workshop: the mean value theorem by hand ----------
+   Somewhere strictly between a and b the tangent runs parallel to the chord.
+   Pick a curve (x² on [0, 4], x³ on [0, 3], 4/x on [1, 4]) and walk a point
+   along it a quarter or a twentieth at a time. The figure draws the chord
+   and the tangent at the point, and the readout sets the tangent's slope
+   beside the chord's and says which way c lies, so nothing is held in the
+   head: on x² c falls half way, on x³ it is √3 ≈ 1.7321, past the middle,
+   and on 4/x it is √(ab) = 2, short of it. Nothing is saved. */
+const MeanValue = {
+  SETS:[
+    {id:'sq', btn:'x² on [0, 4]', name:'x squared on 0 to 4', fs:'x²', dfs:'2x', a:0, b:4, f:x=>x*x, df:x=>2*x, solve:'2c = 4 gives c = 2', k0:20, R:[-2,17]},
+    {id:'cube', btn:'x³ on [0, 3]', name:'x cubed on 0 to 3', fs:'x³', dfs:'3x²', a:0, b:3, f:x=>x*x*x, df:x=>3*x*x, solve:'3c² = 9 gives c = √3 ≈ 1.7321', k0:20, R:[-3,28]},
+    {id:'recip', btn:'4/x on [1, 4]', name:'4 over x on 1 to 4', fs:'4/x', dfs:'−4/x²', a:1, b:4, f:x=>4/x, df:x=>-4/(x*x), solve:'−4/c² = −1 gives c² = 4 and c = 2', k0:30, R:[0,4.6]}
+  ],
+  si:0, k:20, prev:null, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'parallel', t:'On x², find the point where the tangent runs parallel to the chord.', toast:'Parallel to the chord',
+     ok:K=>K.si===0 && K.k===40},
+    {id:'steep', t:'On x², walk past c and see the tangent turn steeper than the chord.', toast:'Past c, steeper',
+     ok:K=>K.si===0 && K.k>40},
+    {id:'middle', t:'On x³, stop at the middle, 1.5, and see that c is not there.', toast:'Half way is for parabolas',
+     ok:K=>K.si===1 && K.k===30},
+    {id:'cross', t:'On x³, step across c: too shallow at one stop, too steep at the next.', toast:'c is between them',
+     ok:K=>K.si===1 && K.prev!==null && (K.prev<=34) !== (K.k<=34)},
+    {id:'close', t:'On x³, bring the tangent\'s slope within 0.2 of the chord\'s.', toast:'1.75 is close to √3',
+     ok:K=>K.si===1 && Math.abs(3*(K.k/20)**2-9)<0.2},
+    {id:'recip', t:'On 4/x, find c, short of the middle, 2.5.', toast:'√(1 × 4) = 2',
+     ok:K=>K.si===2 && K.k===40}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(k=this.k){ return k/20; },
+  lo(){ return this.set().a*20+1; }, hi(){ return this.set().b*20-1; },
+  can(dk){ const k=this.k+dk; return k>=this.lo() && k<=this.hi(); },
+  slope(){ const S=this.set(); return (S.f(S.b)-S.f(S.a))/(S.b-S.a); },
+  /* which side of c a point is on: −1 shallower than the chord, 0 parallel, 1 steeper */
+  side(k){ const S=this.set(), d=S.df(this.x(k))-this.slope(); return Math.abs(d)<1e-9 ? 0 : d<0 ? -1 : 1; },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? `(${s})` : s; },
+  working(){
+    const S=this.set(), m=this.slope(), x=this.x(), d=S.df(x), xs=this.num(x), out=[];
+    out.push(`f(x) = ${S.fs} on [${S.a}, ${S.b}]. The chord from (${S.a}, ${this.num(S.f(S.a))}) to (${S.b}, ${this.num(S.f(S.b))}) has slope (${this.num(S.f(S.b))} − ${this.pf(S.f(S.a))})/(${S.b} − ${S.a}) = ${this.num(m)}.`);
+    out.push(`At x = ${xs}: f′(x) = ${S.dfs}, so f′(${xs}) ${this.is(d)}.`);
+    const sd=this.side(this.k);
+    out.push(sd===0 ? `That is the chord's slope, ${this.num(m)}: the tangent here is parallel to the chord. This x is the c the mean value theorem promises.`
+      : `That is ${sd<0?'less':'more'} than the chord's slope, ${this.num(m)}, and f′ grows as x moves right, so c lies to the ${sd<0?'right':'left'} of ${xs}.`);
+    const mid=(S.a+S.b)*10;
+    if(this.k===mid) out.push(S.id==='sq' ? `For a parabola c always falls half way: (${S.a} + ${S.b})/2 = ${this.num(x)}.`
+      : `${xs} is the middle of [${S.a}, ${S.b}], but c is not: c falls half way only on a parabola.`);
+    if(this.prev!==null && this.side(this.prev)*sd<0)
+      out.push(`Between x = ${this.num(this.x(this.prev))} and x = ${xs} the tangent's slope passes ${this.num(m)}, so c lies between them: solving ${S.solve}.`);
+    if(S.id==='recip' && sd===0) out.push(`On 4/x, c = √(${S.a} × ${S.b}) = 2, short of the middle, 2.5.`);
+    return out;
+  },
+  /* the curve, the chord, and the tangent at the point */
+  L:30, TOP:12, W:310, Hh:230,
+  PX(t){ const S=this.set(); return this.L+(t-S.a)/(S.b-S.a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, f=v=>v.toFixed(2), x=this.x(), y=S.f(x), s=S.df(x), par=this.side(this.k)===0;
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${S.fs} on ${S.a} to ${S.b} in gold, the chord between its ends dashed, and in blue the tangent at x = ${this.num(x)}, slope ${this.is(s)} against the chord's ${this.num(this.slope())}${par?', parallel to the chord':''}">`;
+    const y0=Math.min(Math.max(0,c),d);
+    out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(this.PY(y0))}" x2="${this.L+this.W}" y2="${f(this.PY(y0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let t=S.a;t<=S.b;t++) out+=`<text data-k="tick" x="${f(this.PX(t))}" y="${f(Math.min(this.TOP+this.Hh+10,this.PY(y0)+12))}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${t}</text>`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=S.a+(S.b-S.a)*i/120; pts.push(`${f(this.PX(t))},${f(this.PY(S.f(t)))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+    out+=`<line data-k="chord" x1="${f(this.PX(S.a))}" y1="${f(this.PY(S.f(S.a)))}" x2="${f(this.PX(S.b))}" y2="${f(this.PY(S.f(S.b)))}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+    /* the tangent, a quarter of the interval each way: on these three curves it never leaves the figure */
+    const h=(S.b-S.a)/4, Tl=t=>y+s*(t-x);
+    const t1=Math.max(x-h,S.a), t2=Math.min(x+h,S.b);
+    out+=`<line data-k="tangent" x1="${f(this.PX(t1))}" y1="${f(this.PY(Tl(t1)))}" x2="${f(this.PX(t2))}" y2="${f(this.PY(Tl(t2)))}" stroke="${FIG_COL.a}" stroke-width="2"/>`;
+    for(const t of [S.a,S.b]) out+=`<circle data-k="end" cx="${f(this.PX(t))}" cy="${f(this.PY(S.f(t)))}" r="3.5" fill="${FIG_COL.dim}"/>`;
+    out+=`<circle data-k="pt" cx="${f(this.PX(x))}" cy="${f(this.PY(y))}" r="5" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`;
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-mvt'); },
+  pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null; this.touched=true; this.render(); },
+  move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.touched=true; this.render(); },
+  again(){ this.k=this.set().k0; this.prev=null; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('mvtSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="MeanValue.pick(${i})" aria-label="f(x) = ${s.name}">${s.btn}</button>`).join('');
+    for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);
+    document.getElementById('mvtAgain').disabled=this.k===this.set().k0 && this.prev===null;
+    document.getElementById('mvtFig').innerHTML=this.svg()+
+      `<div class="figcap">The gold curve is f; the dashed line is the chord between its ends. The blue line is the tangent at your point, and the numbers along the bottom mark x.</div>`;
+    document.getElementById('mvtRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('mvtGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE CHORD','every tangent matched','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- Which estimate? The Euler step workshop turned round ----------
+   y′ = px + qy from a whole y(0), two steps of h = 1 or 1/2, and four
+   numbers, one of them Euler's estimate of y at x = 2h. The rule is stated
+   first; the wrong numbers are the slips people make with it: stopping a step
+   short, keeping the first slope for both steps, reading each slope at the
+   far end of its step, adding the whole slope with no × h, or taking
+   h × slope as the new y instead of adding it on. A wrong pick is checked at the first step it gets wrong,
+   and a check never names the estimate itself. Nothing is saved. */
+const EulerPick = {
+  SLIPS:['short','same','far','noH','noAdd'],
+  RULE:'Euler’s method walks y′ = f(x, y) forward in straight steps: where you stand, work out the slope f(x, y), then move h along x and h × slope up. From the new point, do it again. Which is the estimate here?',
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  mul(f,g){ return this.frac(f[0]*g[0],f[1]*g[1]); },
+  fs:f=>f[1]===1 ? neg(f[0]) : `${neg(f[0])}/${f[1]}`,
+  pf(f){ return f[0]<0||f[1]!==1 ? `(${this.fs(f)})` : this.fs(f); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  h(S){ return [1,S.hd]; },
+  // the slope px + qy at a point
+  slope(S,x,y){ return this.add(this.mul([S.p,1],x),this.mul([S.q,1],y)); },
+  // the walk as each option takes it: the points it stands on, the slope each step uses and how far y rises
+  walk(S,k){
+    const h=this.h(S), n=k==='short'?1:2, pts=[{x:[0,1],y:[S.y0,1]}], used=[], rise=[];
+    for(let j=0;j<n;j++){
+      const x=this.frac(j,S.hd), y=pts[j].y, at=k==='far'?this.frac(j+1,S.hd):x;
+      const s=k==='same' ? this.slope(S,[0,1],[S.y0,1]) : this.slope(S,at,y);
+      const up=k==='noH' ? s : this.mul(h,s);
+      used.push(s); rise.push(up); pts.push({x:this.frac(j+1,S.hd),y:k==='noAdd'?up:this.add(y,up)});
+    }
+    return {pts,used,rise};
+  },
+  val(S,k){ const w=this.walk(S,k); return w.pts[w.pts.length-1].y; },
+  // the slips this equation can offer: each a number other than 0 and different from every one kept before it
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(v[0]===0 || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  // whether one of the four numbers is the sum of two others, which would point at it
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  // the sets of three slips that may stand beside the right one: one of its form, whole or fraction, one of its sign, and no sums
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page names, a check included: p, q, y(0), h, 2h, where the first step lands, how far it rises, and the two slopes the walk reads
+  named(S){ const w=this.walk(S,'right'); return [[S.p,1],[S.q,1],[S.y0,1],this.h(S),this.frac(2,S.hd),w.pts[1].y,w.rise[0],...w.used]; },
+  build(){
+    const wantWhole=R.i(0,1)===1, P=[-2,-1,1,2,3], Q=[-3,-1,1,2,3];
+    for(let g=0;g<2000;g++){
+      const S={p:P[R.i(0,4)], q:Q[R.i(0,4)], y0:P[R.i(0,4)], hd:R.i(1,2)};
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole || Math.abs(W[0]/W[1])>30) continue;
+      // a check names where the first step lands and the slopes the walk reads, so none of them may be the estimate
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {p:2, q:-1, y0:3, hd:2};
+  },
+  eq(S){ const {p,q}=S; return `y′ = ${p===1?'':p===-1?'−':neg(p)}x ${q<0?'−':'+'} ${Math.abs(q)===1?'':Math.abs(q)}y`; },
+  // a slope worked from the equation at a point
+  slopeWork(S,x,y){ return `${neg(S.p)} × ${this.pf(x)} + ${this.pf([S.q,1])} × ${this.pf(y)} = ${this.fs(this.slope(S,x,y))}`; },
+  // one right step, worked
+  stepWork(S,j){
+    const w=this.walk(S,'right'), a=w.pts[j], b=w.pts[j+1], s=w.used[j];
+    return `from (${this.fs(a.x)}, ${this.fs(a.y)}) the slope is ${this.slopeWork(S,a.x,a.y)}, so y goes to ${this.fs(a.y)} + ${this.fs(this.h(S))} × ${this.pf(s)} = ${this.fs(b.y)} at x = ${this.fs(b.x)}`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, so neither gives anything away,
+    // and the right one sits low, high or between as often as these slips allow, so its place gives nothing away
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('SURE-FOOTED', this.matched+' walks read','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(`✓ ${'ABCD'[i]} is Euler’s estimate, picked ${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    EulerWalk.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const h=this.fs(this.h(S));
+    if(k==='short') return `${L} stops after one step. Euler’s method keeps stepping until it reaches the x it was asked for, and x = ${this.fs(this.frac(2,S.hd))} is two steps of ${h} from 0.`;
+    if(k==='same') return `${L} uses the starting slope for both steps. The slope changes as x and y change, so it is worked out again at each new point.`;
+    if(k==='far') return `${L} reads each slope at the far end of its step. Euler’s method uses the slope where the step starts, the one point it already knows.`;
+    if(k==='noH') return `${L} adds the whole slope at each step. A step of h rises by h × slope, and here h is ${h}.`;
+    return `${L} takes h × slope as the new y instead of adding it on. A step starts from the y where you stand: the new y is y + h × slope.`;
+  },
+  check(S,k,L){
+    const R0=this.walk(S,'right'), h=this.h(S);
+    if(k==='short') return `Check ${L}: that is y at x = ${this.fs(h)}, after one step. Reaching x = ${this.fs(this.frac(2,S.hd))} takes two steps of ${this.fs(h)}.`;
+    const K=this.walk(S,k), t=[0,1].find(j=>this.key(K.used[j])!==this.key(R0.used[j]) || this.key(K.rise[j])!==this.key(R0.rise[j]) || this.key(K.pts[j+1].y)!==this.key(R0.pts[j+1].y));
+    const a=R0.pts[t], s=R0.used[t];
+    const did={same:`it keeps the first slope, ${this.fs(K.used[t])}`, far:`it reads the slope at x = ${this.fs(R0.pts[t+1].x)}, the far end of the step`,
+      noH:`it adds the whole slope, ${this.fs(K.used[t])}`, noAdd:`it takes h × slope, ${this.fs(K.rise[t])}, as the new y`}[k];
+    return `Check ${L}: at step ${t+1}, from (${this.fs(a.x)}, ${this.fs(a.y)}), ${did}. The slope at that point is ${this.slopeWork(S,a.x,a.y)}, so y rises by ${this.fs(h)} × ${this.pf(s)}.`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=`<div class="small" style="margin:2px 0 6px">${this.RULE}</div>`;
+    out+=`<div id="euQ" style="text-align:center;font-size:16px;margin-bottom:2px">${this.eq(S)}, y(0) = ${neg(S.y0)}, step h = ${this.fs(this.h(S))}</div>`;
+    out+=`<div class="small" style="text-align:center">Which is Euler’s estimate of y(${this.fs(this.frac(2,S.hd))})?</div>`;
+    out+=`<div id="euPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone?'disabled ':''}onclick="EulerPick.choose(${i})" aria-label="${L}: ${v}${gone?'. Not Euler’s estimate':''}" style="margin:0"><b>${L}</b> ${v}</button>`;
+    }).join('')+`</div>`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S;
+      lines.push(`That was it: ${this.stepWork(B,0)}; then ${this.stepWork(B,1)}. Here is a new one.`); }
+    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);
+    out+=`<div id="euRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+    return out;
+  }
+};
+/* ---------- The Euler step workshop: walk a differential equation by hand ----------
+   Pick an equation and a step h, then take Euler's steps one at a time: read
+   the slope where you stand, move h along and h × slope up. The figure keeps
+   every point, so nothing has to be held in the head. y′ = y walks toward e
+   and falls short; y′ = −2y overshoots zero when h is too big; y′ = x turns
+   out to be a left Riemann sum. Nothing is saved. */
+const EulerWalk = {
+  SETS:[
+    {id:'grow', btn:'y′ = y', eq:'y′ = y', name:'y prime equals y, from y(0) = 1', y0:1, end:1,
+     f:(x,y)=>y, sol:x=>Math.exp(x), solS:'y = eˣ', trueS:'e ≈ 2.71828', D:[0,1], R:[0,3]},
+    {id:'decay', btn:'y′ = −2y', eq:'y′ = −2y', name:'y prime equals minus 2 y, from y(0) = 1', y0:1, end:2,
+     f:(x,y)=>-2*y, sol:x=>Math.exp(-2*x), solS:'y = e^(−2x)', trueS:'e^(−4) ≈ 0.01832', D:[0,2], R:[-1.3,1.3]},
+    {id:'ramp', btn:'y′ = x', eq:'y′ = x', name:'y prime equals x, from y(0) = 0', y0:0, end:2,
+     f:(x,y)=>x, sol:x=>x*x/2, solS:'y = x²/2', trueS:'2', D:[0,2], R:[-0.2,2.2]}
+  ],
+  HS:[1, 0.5, 0.25, 0.125],
+  si:0, hi:0, k:0, touched:false,
+  done:new Set(), misses:{},
+  GOALS:[
+    {id:'walk', t:'Walk y′ = y from 0 to 1 in a single step of 1.', toast:'Two, where e is 2.718',
+     ok:K=>K.si===0 && K.hi===0 && K.atEnd()},
+    {id:'closer', t:'Halve the step and land closer to e.', toast:'A smaller step, a smaller miss',
+     ok:K=>K.si===0 && K.hi>0 && K.atEnd() && (K.hi-1) in (K.misses[0]||{})},
+    {id:'eighth', t:'Reach e’s neighbourhood: walk y′ = y to x = 1 in steps of 1/8.', toast:'Eight small steps',
+     ok:K=>K.si===0 && K.hi===3 && K.atEnd()},
+    {id:'swing', t:'On y′ = −2y, take a step of 1 and watch the walk jump below zero.', toast:'Too big a step overshoots',
+     ok:K=>K.si===1 && K.hi===0 && K.k>=1},
+    {id:'flat', t:'On y′ = −2y, find the step that lands on 0 and stays there.', toast:'h × slope took all of y',
+     ok:K=>K.si===1 && K.hi===1 && K.k>=1},
+    {id:'tame', t:'On y′ = −2y, walk all the way to x = 2 without ever reaching 0.', toast:'Small steps follow the decay',
+     ok:K=>K.si===1 && K.atEnd() && K.walk().every(p=>p.y>0)},
+    {id:'ramp', t:'On y′ = x, reach x = 2 and see how far the walk falls short.', toast:'A left Riemann sum in disguise',
+     ok:K=>K.si===2 && K.atEnd()}
+  ],
+  set(){ return this.SETS[this.si]; },
+  h(){ return this.HS[this.hi]; },
+  N(){ return Math.round(this.set().end/this.h()); },
+  atEnd(){ return this.k>=this.N(); },
+  r(v){ const q=Math.round(v*1e9)/1e9; return Object.is(q,-0)?0:q; },
+  /* every point of the walk so far, (x, y) with the slope read there */
+  walk(){
+    const S=this.set(), h=this.h(), out=[{x:0,y:S.y0}];
+    for(let j=0;j<this.k;j++){ const p=out[j], s=S.f(p.x,p.y); p.s=s; out.push({x:this.r(p.x+h), y:this.r(p.y+h*s)}); }
+    return out;
+  },
+  /* a number is written exactly when it is a short fraction, otherwise to four places */
+  exact(v){ const q=this.r(v); for(const d of [1,2,4,8,16]){ const n=Math.round(q*d); if(Math.abs(n/d-q)<1e-9) return d===1 ? neg(n) : (n<0?'−':'')+Math.abs(n)+'/'+d; } return null; },
+  fr(v){ const e=this.exact(v); return e!==null ? e : this.num(v); },
+  num(v,d=4){ const p=10**d, q=Math.round(v*p)/p; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (this.exact(v)!==null ? '= ' : '≈ ')+this.fr(v); },
+  pf(v){ const s=this.fr(v); return /[−/]/.test(s) ? `(${s})` : s; },
+  /* the slope is written as exactly as the point it is read at */
+  sv(p){ return this.exact(p.y)!==null ? this.fr(p.s) : this.num(p.s); },
+  slopeWork(p){
+    const id=this.set().id, s=this.sv(p);
+    if(id==='grow') return `the slope is y = ${s}`;
+    if(id==='decay') return `the slope is −2 × ${this.pf(p.y)} ${this.exact(p.y)!==null ? '=' : '≈'} ${s}`;
+    return `the slope is x = ${s}`;
+  },
+  stepLine(j, P){ const p=P[j], q=P[j+1], s=this.sv(p);
+    return `Step ${j+1}: at (${this.fr(p.x)}, ${this.fr(p.y)}) ${this.slopeWork(p)}, so y goes to ${this.fr(p.y)} + ${this.fr(this.h())} × ${/[−/]/.test(s)?`(${s})`:s} ${this.is(q.y)} at x = ${this.fr(q.x)}.`; },
+  working(){
+    const S=this.set(), h=this.h(), N=this.N(), P=this.walk(), out=[];
+    out.push(`${S.eq}, starting from y(0) = ${neg(S.y0)}. Euler’s method walks it in straight steps of h = ${this.fr(h)}: read the slope where you stand, then move h along x and h × slope up. Reaching x = ${S.end} takes ${N} step${N===1?'':'s'}.`);
+    if(this.k===0){ out.push('Take the first step.'); return out; }
+    const from=Math.max(0,this.k-3);
+    if(from>0) out.push(from===1 ? 'Step 1 is the first dot on the figure.' : `Steps 1 to ${from} are the dots already on the figure.`);
+    for(let j=from;j<this.k;j++) out.push(this.stepLine(j,P));
+    if(!this.atEnd()){ out.push(`${N-this.k} step${N-this.k===1?'':'s'} to go.`); return out; }
+    const Y=P[N].y, T=S.sol(S.end), miss=Math.abs(Y-T);
+    out.push(`At x = ${S.end} Euler’s method gives y ${this.is(Y)}. The true solution is ${S.solS}, so y(${S.end}) = ${S.trueS}: the walk is ${Y<T?'short':'over'} by ${this.exact(miss)!==null ? 'exactly '+this.fr(miss) : 'about '+this.num(miss)}.`);
+    if(S.id==='grow') out.push(`Each step reads the slope where it starts, and on y′ = y the slope only grows as you climb, so every step rises too little and the walk falls short of e.`);
+    if(S.id==='decay'){
+      if(this.hi===0) out.push(`The true curve never reaches 0, but h × slope is −2 × ${this.fr(h)} × y = −2y here: each step takes away twice y, so the walk jumps to the other side of 0 and swings back.`);
+      else if(this.hi===1) out.push(`The true curve never reaches 0, but h × slope is −2 × ${this.fr(h)} × y = −y here: the first step takes away all of y and lands on 0, where the slope is 0, so the walk stays there.`);
+      else out.push(`Each step keeps 1 − 2h = ${this.fr(1-2*h)} of y, so the walk shrinks toward 0 without reaching it, as the true curve does.`);
+    }
+    if(S.id==='ramp') out.push(`The slope here does not depend on y, so each step adds a rectangle h wide and as tall as x at its left edge. Euler’s walk is the left Riemann sum for ∫₀² x dx = 2, and it falls short by exactly h = ${this.fr(h)}.`);
+    const M=this.misses[this.si]||{}, seen=Object.keys(M).map(Number).sort((a,b)=>a-b);
+    if(seen.length>1) out.push(`Misses so far on ${S.eq}: `+seen.map(i=>`h = ${this.fr(this.HS[i])} misses by ${this.num(M[i])}`).join(', ')+'.');
+    return out;
+  },
+  /* the slope field, the true solution and the walk */
+  L:30, T:12, W:310, Hh:230,
+  PX(v){ const [a,b]=this.set().D; return this.L+(v-a)/(b-a)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.T+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [a,b]=S.D, [c,d]=S.R, f=v=>v.toFixed(2), sx=this.W/(b-a), sy=this.Hh/(d-c), P=this.walk(), at=P[this.k];
+    let out=`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="The slope field of ${S.eq}, the true solution ${S.solS} in gold, and Euler’s walk in blue through ${P.length} point${P.length===1?'':'s'}, now at x = ${this.fr(at.x)}, y ${this.is(at.y)}">`;
+    if(c<=0 && d>=0) out+=`<line data-k="xaxis" x1="${this.L}" y1="${f(this.PY(0))}" x2="${this.L+this.W}" y2="${f(this.PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${f(this.PX(0))}" y1="${this.T}" x2="${f(this.PX(0))}" y2="${this.T+this.Hh}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    /* each dash points along the slope at its own (x, y), 12 pixels long */
+    for(let i=0;i<=10;i++) for(let j=0;j<=7;j++){
+      const x=a+(b-a)*(i+0.5)/11, y=c+(d-c)*(j+0.5)/8, dx=sx, dy=-S.f(x,y)*sy, n=Math.hypot(dx,dy), ux=6*dx/n, uy=6*dy/n, X=this.PX(x), Y=this.PY(y);
+      out+=`<line data-k="dash" data-x="${x.toFixed(4)}" data-y="${y.toFixed(4)}" x1="${f(X-ux)}" y1="${f(Y-uy)}" x2="${f(X+ux)}" y2="${f(Y+uy)}" stroke="${FIG_COL.dim}" stroke-width="1.5" stroke-linecap="round"/>`;
+    }
+    const pts=[]; for(let i=0;i<=120;i++){ const x=a+(b-a)*i/120; pts.push(`${f(this.PX(x))},${f(this.PY(S.sol(x)))}`); }
+    out+=`<polyline data-k="sol" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>`;
+    if(P.length>1) out+=`<polyline data-k="walk" points="${P.map(p=>`${f(this.PX(p.x))},${f(this.PY(p.y))}`).join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="3" stroke-linejoin="round"/>`;
+    P.forEach((p,i)=>{ out+=`<circle data-k="pt" data-i="${i}" cx="${f(this.PX(p.x))}" cy="${f(this.PY(p.y))}" r="${i===this.k?5:3.5}" fill="${FIG_COL.a}" stroke="${FIG_COL.ink}" stroke-width="1"/>`; });
+    return out+`</svg>`;
+  },
+  open(){ UI.go('s-eulerwalk'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
+  pick(i){ this.si=i; this.k=0; this.touched=true; this.render(); },
+  setH(i){ this.hi=i; this.k=0; this.touched=true; this.render(); },
+  step(){ if(this.atEnd()) return; this.k++; this.touched=true; this.note(); this.render(); },
+  all(){ if(this.atEnd()) return; this.k=this.N(); this.touched=true; this.note(); this.render(); },
+  again(){ this.k=0; this.touched=true; this.render(); },
+  /* the miss at the end of each walk, kept for the comparison while the page is open */
+  note(){ if(!this.atEnd()) return; const S=this.set(), P=this.walk();
+    (this.misses[this.si]=this.misses[this.si]||{})[this.hi]=Math.abs(P[this.N()].y-S.sol(S.end)); },
+  render(){
+    document.getElementById('ewTab').innerHTML=[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]
+      .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';
+    if(pick) return;
+    document.getElementById('ewSets').innerHTML=this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="EulerWalk.pick(${i})" aria-label="${s.name}">${s.btn}</button>`).join('');
+    document.getElementById('ewHs').innerHTML=this.HS.map((h,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.hi}" onclick="EulerWalk.setH(${i})" aria-label="Steps of h = ${this.fr(h)}">h = ${this.fr(h)}</button>`).join('');
+    document.getElementById('ewStep').disabled=this.atEnd();
+    document.getElementById('ewAll').disabled=this.atEnd();
+    document.getElementById('ewAgain').disabled=this.k===0;
+    document.getElementById('ewFig').innerHTML=this.svg()+
+      `<div class="figcap">The short dashes show the slope y′ wherever you stand. The gold dashed curve is the true solution; the blue dots are Euler’s walk, one per step.</div>`;
+    document.getElementById('ewRead').innerHTML=this.working().map(l=>`<div>${l}</div>`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('ewGoals').innerHTML=
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF STEPS','every walk taken','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The growth integral workshop: undo e^(kx) on a slope field ----------
    The short dashes show the slope f(x) = e^(kx) wherever you stand. An
    antiderivative F has to run along every one of them. Pick the number in
@@ -28078,11 +28997,13 @@ const MixPick = {
     ['InvPick','InvSlope','🪩 Inverse Slope Workshop'],
     ['LnPick','LogDiff','🪵 Log Slope Workshop'],
     ['PathPick','PathChain','🛤️ Path Chain Workshop'],
+    ['StretchPick','Doubling','⏳ Doubling Workshop'],
+    ['EulerPick','EulerWalk','👣 Euler Step Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
     ['BuildPick','Optim','🏗️ Biggest Build Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Elim, ElimPick, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },
