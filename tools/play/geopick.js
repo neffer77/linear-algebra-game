@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see a series, and pick which of four numbers is its endless sum\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeGeo');
     t.eq('the geometric series workshop opens', await t.screen(), 's-geo');
-    t.eq('adding by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('adding by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5252));
     await t.tapText(/Which sum\?/);
-    t.eq('which sum is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which sum is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the series, drawing, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('gqBox').innerText)).startsWith(
