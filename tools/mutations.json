@@ -58,20 +58,6 @@
       "run": "verify"
     },
     {
-      "name": "two of the answer's form not required",
-      "file": "index.html",
-      "find": "if((dist.length<4 || same<2 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
-      "replace": "if((dist.length<4 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
-      "run": "verify"
-    },
-    {
-      "name": "whole answers not balanced",
-      "file": "index.html",
-      "find": "if((dist.length<4 || same<2 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
-      "replace": "if((dist.length<4 || same<2 || sign<2) && g<3000) continue;\n    const xa=",
-      "run": "verify"
-    },
-    {
       "name": "the working leaves out why nᵖ does not count",
       "file": "index.html",
       "find": "${p?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`",

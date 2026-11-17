@@ -744,7 +744,7 @@ let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgott
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
-let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {} };   // radius of convergence: whole answers, slips seen, the shapes each depth uses
+let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
@@ -1433,7 +1433,7 @@ Object.assign(ANALYSIS, {
       if (Math.abs(val(fl(v)) - sl[1]) > 1e-6) fail('analysis', 'radiusConv', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
       rcSeen.add(String(sl[0]));
     });
-    rcShape.p[pw] = 1; rcShape.m[m] = 1;
+    rcShape.p[pw] = 1; rcShape.m[m] = 1; rcShape.a[a] = 1;
     covered.add('radiusConv');
   },
   // Determinant rules, worked again here on actual matrices: an A and a B are
@@ -17013,11 +17013,11 @@ for (let d = 1; d <= 3; d++) {
 // Radius of convergence at every depth: five different exact numbers, none 0,
 // two of the four wrong ones positive like the answer and two of its form;
 // every slip the depth allows turns up; the power of n and the 2n exponent
-// come in at their depths; and whole and fractional answers come up about
+// come in at their depths; the centre moves both ways from 0; and whole and fractional answers come up about
 // equally.
 for (let d = 1; d <= 3; d++) {
   const RC = 3000;
-  rcWhole = 0; rcSeen = new Set(); rcShape = { p: {}, m: {} };
+  rcWhole = 0; rcSeen = new Set(); rcShape = { p: {}, m: {}, a: {} };
   for (let i = 0; i < RC; i++) {
     const p = GEN.radiusConv(d), vals = [p.a, ...p.d.map(x => x[0])]
       .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
@@ -17034,6 +17034,8 @@ for (let d = 1; d <= 3; d++) {
   const ps = Object.keys(rcShape.p).sort().join(), ms = Object.keys(rcShape.m).sort().join();
   if (ps !== (d === 1 ? '0' : '0,1,2,3')) fail('analysis', 'radiusConv', `depth ${d} puts n to the powers ${ps}`);
   if (ms !== (d === 3 ? '2' : '1')) fail('analysis', 'radiusConv', `depth ${d} uses the exponent ${ms}n`);
+  const as = Object.keys(rcShape.a).map(Number).sort((x, y) => x - y).join();
+  if (as !== '-4,-3,-2,-1,1,2,3,4,5') fail('analysis', 'radiusConv', `depth ${d} centres its series only at ${as}`);
   if (rcSeen.size !== (d === 3 ? 5 : 4)) fail('analysis', 'radiusConv', `depth ${d} offers only ${rcSeen.size} of its slips`);
   if (rcWhole < RC * 0.42 || rcWhole > RC * 0.58) fail('analysis', 'radiusConv', `depth ${d} gives a whole answer ${rcWhole} times in ${RC}, not about half`);
 }
