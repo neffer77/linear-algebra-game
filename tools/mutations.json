@@ -1,102 +1,88 @@
 {
-  "change": "Add Lagrange multipliers as a fight topic: ∇f = λ∇g on a line, for x, λ or the smallest value of ax² + by².",
+  "change": "Walk the fence, the hillwalker workshop's third mode",
   "mutations": [
     {
-      "name": "λ without the 2",
+      "name": "λ worked from the wrong part of ∇f",
       "file": "index.html",
-      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
-      "replace": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(s*a*b,D), M=F(s*s*a*b,D);",
+      "find": "const lam=Hill.fr(A,S.p);",
+      "replace": "const lam=Hill.fr(B,S.p);",
       "run": "verify"
     },
     {
-      "name": "x with a and b swapped",
+      "name": "the slope along the fence with a sign turned",
       "file": "index.html",
-      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
-      "replace": "const X=F(s*p*a,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
+      "find": "return A*v[0]+B*v[1]; },",
+      "replace": "return A*v[0]-B*v[1]; },",
       "run": "verify"
     },
     {
-      "name": "the smallest value doubled",
+      "name": "the nearest post measured by x alone",
       "file": "index.html",
-      "find": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(s*s*a*b,D);",
-      "replace": "const X=F(s*p*b,D), Y=F(s*q*a,D), L=F(2*s*a*b,D), M=F(2*s*s*a*b,D);",
+      "find": "d=t=>this.at(t)[0]**2+this.at(t)[1]**2;",
+      "replace": "d=t=>Math.abs(this.at(t)[0]);",
       "run": "verify"
     },
     {
-      "name": "the denominator with a and b swapped",
+      "name": "∇f drawn along ∇g",
       "file": "index.html",
-      "find": "const D=p*p*b+q*q*a;",
-      "replace": "const D=p*p*a+q*q*b;",
+      "find": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', true);",
+      "replace": "out+=arrow(len*S.p/m, len*S.q/m, FIG_COL.b, 'grad', true);",
       "run": "verify"
     },
     {
-      "name": "the sign slip named as the missing 2",
+      "name": "∇f no longer dashed",
       "file": "index.html",
-      "find": "[F(-2*s*a*b,D),'that has the sign turned;",
-      "replace": "[F(s*a*b,D),'that has the sign turned;",
+      "find": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', true);",
+      "replace": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', false);",
       "run": "verify"
     },
     {
-      "name": "the x-axis crossing named for y",
+      "name": "the lowest contour drawn bold",
       "file": "index.html",
-      "find": "[F(a*s*s,p*p),'that is f where the line crosses the x-axis",
-      "replace": "[F(a*s*s,q*q),'that is f where the line crosses the x-axis",
+      "find": "stroke-width=\"${c===F?2.5:1}\" opacity=\"${c===F?1:0.5}\"",
+      "replace": "stroke-width=\"${c===L[0]?2.5:1}\" opacity=\"${c===F?1:0.5}\"",
       "run": "verify"
     },
     {
-      "name": "the 2x slip never offered",
+      "name": "the post on read one short of the end",
       "file": "index.html",
-      "find": "      [F(2*s*p*b,D),'that leaves out the 2 in ∇f; 2ax = λp, so x = λp/(2a)']\n",
-      "replace": "      [F(2*s*p*b,D),'that leaves out the 2 in ∇f; 2ax = λp, so x = λp/(2a)'].slice(0,0)\n",
+      "find": "if(t<S.T[1]) nb.push",
+      "replace": "if(t<S.T[1]-1) nb.push",
       "run": "verify"
     },
     {
-      "name": "signs let in at the first depth",
+      "name": "the walk-on button shut a post early",
       "file": "index.html",
-      "find": "const s=d===1?R.i(1,12):",
-      "replace": "const s=d===1?R.nz(-12,12):",
+      "find": "${t>=S.T[1]?' disabled':''}",
+      "replace": "${t>=S.T[1]-1?' disabled':''}",
       "run": "verify"
     },
     {
-      "name": "the second depth as wide as the third",
+      "name": "walking back past the first post",
       "file": "index.html",
-      "find": "const a=d===1?1:R.i(1,d===2?4:6), b=d===1?1:R.i(1,d===2?4:6);",
-      "replace": "const a=d===1?1:R.i(1,6), b=d===1?1:R.i(1,6);",
+      "find": "if(t<S.T[0]||t>S.T[1]) return;",
+      "replace": "if(t<S.T[0]-1||t>S.T[1]) return;",
       "run": "verify"
     },
     {
-      "name": "only two questions asked",
+      "name": "the x-axis crossing not told",
       "file": "index.html",
-      "find": "const k=R.i(0,2);\n    const D=",
-      "replace": "const k=R.i(0,1);\n    const D=",
+      "find": "if(D && (x===0 || y===0))",
+      "replace": "if(D && x===0)",
       "run": "verify"
     },
     {
-      "name": "the answer's form never chosen",
+      "name": "the oval bowl made rounder",
       "file": "index.html",
-      "find": "(ans[1]===1)!==whole) && g<3000) continue;\n    const fx=",
-      "replace": "false) && g<3000) continue;\n    const fx=",
+      "find": "{btn:'Oval bowl', a:1, b:3,",
+      "replace": "{btn:'Oval bowl', a:1, b:2,",
       "run": "verify"
     },
     {
-      "name": "the working's λ off by its sign",
+      "name": "a contour left out",
       "file": "index.html",
-      "find": "On the line that is ${lam(T)} = ${neg(s)}, so λ = ${show(L)}.",
-      "replace": "On the line that is ${lam(T)} = ${neg(s)}, so λ = ${show(F(-L[0],L[1]))}.",
-      "run": "verify"
-    },
-    {
-      "name": "the working's ∇g with its parts swapped",
-      "file": "index.html",
-      "find": "∇g = (${neg(p)}, ${neg(q)})",
-      "replace": "∇g = (${neg(q)}, ${neg(p)})",
-      "run": "verify"
-    },
-    {
-      "name": "the third depth's line no wider",
-      "file": "index.html",
-      "find": "const p=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5), q=d===1?R.i(1,3):R.nz(-(d===2?3:5),d===2?3:5);",
-      "replace": "const p=d===1?R.i(1,3):R.nz(-3,3), q=d===1?R.i(1,3):R.nz(-3,3);",
+      "find": "const L=[...new Set(posts.map(p=>this.f(...p)))]",
+      "replace": "const L=[...new Set(posts.slice(1).map(p=>this.f(...p)))]",
       "run": "verify"
     }
   ]

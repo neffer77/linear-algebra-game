@@ -477,7 +477,7 @@ out or multiplied instead of divided, y given for x, λ given for x or for f, f 
 instead of λs/2, and the point where the line crosses an axis. Its check never uses the multiplier:
 it walks the line, reads f along it as a parabola, takes its vertex, and only then reads λ back from
 2ax = λp. It joins the Multivariable & Series strand and the Gradient Summit, and a fight that shows
-it up points to the 🗺️ Hillwalker Workshop.
+it up points to the 🗺️ Hillwalker Workshop, where 🚧 Walk the fence finds the same point by walking.
 
 ---
 
@@ -1710,6 +1710,25 @@ The game is built so that losing teaches you as much as winning.
   exact fraction, checks it against the slip it is named as, checks the right
   one alone against f nudged a hair along û, and works every step, height and
   bend in the readout again.
+
+  **🚧 Walk the fence** is Lagrange multipliers by walking. A fence runs
+  across the hill, g(x, y) = px + qy = s, and you may only step from post to
+  post along it. The readout works ∇f and ∇g where you stand and the slope
+  along the fence, ∇f · v for the step v. Below 0, f still falls going on;
+  above 0, the lowest point is back. At 0, ∇f has no part along the fence, so
+  it lines up with ∇g, which always points straight off it: ∇f = λ∇g, and the
+  readout works λ from the first parts and checks it on the second. The round
+  bowl x² + y² on x + y = 4 bottoms out at (2, 2) with λ = 4. The oval bowl
+  x² + 3y² on the same fence does not bottom out at the post nearest the
+  middle, (2, 2), where f still falls, but at (3, 1), where the fence just
+  touches a contour, with λ = 6. The slanted fence x + 2y = 5 on the round
+  bowl bottoms out at (1, 2) with λ = 2, and where a fence crosses an axis the
+  readout says that point is nothing special. Every post is a whole-number
+  point, so every number is exact. Five things to find, and nothing saved.
+  `npm test` stands at every post of all three fences and works every
+  sentence again, checks that the post the readout calls lowest is lower
+  than every other post, and reads the point, the fence and both arrows back
+  off the drawing.
 - **♟️ Cofactor Workshop** — a 3×3 determinant, expanded along any row or
   column you pick. The readout strikes out each entry's row and column,
   works the 2×2 minor left behind, takes its sign from the checkerboard
@@ -2439,7 +2458,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and fifty-six suites, about 6,150 checks, about a minute:
+loop only exists once the page is running. A hundred and fifty-seven suites, about 6,190 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2572,6 +2591,7 @@ loop only exists once the page is running. A hundred and fifty-six suites, about
 | `seriespick` | the Tome says the Taylor workshop can be turned round; the workshop opens on building the series by hand, and switching to which coefficient puts away the curves, the drawing, the steppers, the readout and the goals and states the rule first; the exponential and the power are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by Taylor's rule, shut and told as not the coefficient, and is not counted; the right pick works c × n! back to the slope taken n times at 0, counts (not as a first try after a miss), toasts and deals a new term; a first try counts as one, and the fifth brings SERIES READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `lathepick` | the Tome says the lathe workshop can be turned round; the workshop opens on measuring by hand, and switching to which volume puts away the solids, the drawing, the stepper, the readout and the goals and states the rule first; the curve and its ends are shown, and four volumes offered two by two, each named by its value; a wrong pick is named as its slip, checked by its slope in b against the end disk, shut and told as not the volume, and is not counted; the right pick works π∫ y² dx out, counts (not as a first try after a miss), toasts and deals a new solid; a first try counts as one, and the fifth brings MASTER TURNER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `hillpick` | the Tome says the hillwalker workshop can be turned round; the workshop opens on walking it by hand, and switching to which slope puts away the hills, the map, the turn buttons, the readout and the goals and states the rule first; the hill, the point and the heading are shown, and four slopes offered two by two, each named by its value; a wrong pick is named as its slip, checked by a step of 5 along û against 5 times the slope plus the bend, shut and told as not the slope, and is not counted; the right pick works ∇f · û out, counts (not as a first try after a miss), toasts and deals a new hill; a first try counts as one, and the fifth brings TRAIL READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `hillfence` | the Tome says the hillwalker workshop can walk a fence; switching to it puts the hands-on workshop away; the round bowl opens at (0, 4) with f = 16, works ∇f = ⟨0, 8⟩ and ∇g = ⟨1, 1⟩, finds the slope along the fence −8 so f still falls, checks the posts either side, and says the y-axis is nothing special; walking back stops at (−1, 5), checked with one post, and walking on finds the axis; (2, 2) is the lowest point with λ = 4, both posts beside it higher and ∇f drawn in line with ∇g; on the oval bowl the post nearest the middle, (2, 2), still falls and says so, and (3, 1) is lowest with λ = 6; on the slanted fence (1, 2) is lowest with λ = 2 and brings the banner; the walk stops at (5, 0); every button is named, the drawing is named, it fits a phone, the hands-on workshop comes back, and nothing is saved |
 | `pathpick` | the Tome says the path chain workshop can be turned round; the workshop opens on walking it by hand, and switching to which rate puts away the hills, the drawing, the t stepper, the slip modes, the readout and the goals and states the rule first; the hill, the path and the moment are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by a nudge in t against the rise it would give, shut and told as not dz/dt, and is not counted; the right pick works both parts of dz/dt out, counts (not as a first try after a miss), toasts and deals a new hill and path; a first try counts as one, and the fifth brings PATHFINDER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `powpick` | the Tome says the diagonal workshop can be turned round; the workshop opens on building P by hand, and switching to which Aⁿv puts away the matrices, the drawing, the columns of P, the readout and the goals and states the rule first; A, its eigenvectors and v are shown, with the power asked for, and four vectors offered two by two, each named by its value; a wrong pick is named as its slip, checked in eigenvector parts, shut and told as not Aⁿv, and is not counted; the right pick works Aⁿv out part by part, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings POWER BROKER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `tanpick` | the Tome says the tangent plane workshop can be turned round; the workshop opens on building a plane by hand, and switching to which plane puts away the surfaces, the slices, the plane, its steppers, the readout and the goals and states the rule first; the surface and the point are shown, and four planes offered one under another, each named by its plane; a wrong slope is named as its slip and checked by a step of 1, a wrong height named and checked at the point, each shut and told as not the tangent plane, and neither counted; the right pick works the height and both slopes out, counts (not as a first try after a miss), toasts and deals a new surface; a first try counts as one, and the fifth brings PLANE TOUCHER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |

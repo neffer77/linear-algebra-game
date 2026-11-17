@@ -35,11 +35,11 @@ module.exports = {
       /Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeHill');
     t.eq('the hillwalker workshop opens', await t.screen(), 's-hill');
-    t.eq('walking it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('walking it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5656));
     await t.tapText(/Which slope\?/);
-    t.eq('which slope is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which slope is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the hills, map, turn buttons, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('dsBox').innerText)).startsWith(

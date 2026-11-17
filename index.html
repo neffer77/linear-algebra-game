@@ -1538,8 +1538,8 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 
   <!-- ============ HILLWALKER WORKSHOP ============ -->
   <div class="screen" id="s-hill">
-    <div class="panel"><h2>🗺️ Hillwalker Workshop</h2><div class="sub">Stand on a hill and turn to face a heading. The slope that way is the directional derivative, ∇f · û. Find the steepest climb, the steepest drop, and the headings that stay level along the contour.</div></div>
-    <div id="hwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a hill by hand or pick its slope"></div>
+    <div class="panel"><h2>🗺️ Hillwalker Workshop</h2><div class="sub">Stand on a hill and turn to face a heading. The slope that way is the directional derivative, ∇f · û. Find the steepest climb, the steepest drop, and the headings that stay level along the contour. Or walk a fence across the hill and find where it runs lowest.</div></div>
+    <div id="hwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a hill by hand, pick its slope or walk a fence"></div>
     <div class="panel">
       <div id="dsBox"></div>
       <div id="hwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill"></div>
@@ -15652,7 +15652,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🗺️ Hillwalker Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom. Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Turn on a hillside and read the slope each way you face: ∇f · û. Find the steepest climb and the level contour, and see why the steepest way up an oval bowl is not straight away from the bottom. Then turn it round: see a hill, a point and a heading, and pick which of four numbers is the slope that way. Or walk a fence to its lowest point, where ∇f = λ∇g.</div>
          <button class="btn sm" id="tomeHill" style="width:auto;margin-top:8px" onclick="Hill.open()">Open the hillwalker workshop</button>
        </div>` +
       TOME.map(p=>`<div class="panel"><h2 style="font-size:16px;color:var(--gold)">${p.t}</h2>
@@ -24606,11 +24606,11 @@ const Hill = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('hwTab').innerHTML=[['hand','🗺️ Walk it by hand','Turn on a hill by hand and read the slope'],['pick','🎯 Which slope?','See a hill, a point and a heading, and pick which of four numbers is the slope that way']]
+    document.getElementById('hwTab').innerHTML=[['hand','🗺️ Walk it by hand','Turn on a hill by hand and read the slope'],['pick','🎯 Which slope?','See a hill, a point and a heading, and pick which of four numbers is the slope that way'],['fence','🚧 Walk the fence','Walk a fence across a hill and find its lowest point, where ∇f lines up with ∇g']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Hill.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['hwSets','hwFig','hwStep','hwRead','hwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('dsBox').innerHTML=pick ? HillPick.html() : '';
+    document.getElementById('dsBox').innerHTML=this.tab==='pick' ? HillPick.html() : this.tab==='fence' ? HillFence.html() : '';
     if(pick) return;
     document.getElementById('hwSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Hill.pick(${i})" aria-label="${s.btn}: f(x, y) = ${s.fs}, standing at (${s.P.map(neg).join(', ')})">${s.btn}</button>`).join('');
@@ -24629,6 +24629,124 @@ const Hill = {
         Celebrate.banner('HILLWALKER','every heading read','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- The hillwalker's fence: Lagrange multipliers by walking ----------
+   A fence runs across the hill, g(x, y) = px + qy = s, and you may only walk
+   along it. Step from post to post and read f. Where f stops falling, ∇f has
+   no part along the fence, so it is at a right angle to the fence, just as
+   ∇g is: the two line up, ∇f = λ∇g. Every post is a whole-number point, so
+   every slope and every λ comes out exact. */
+const HillFence = {
+  SETS:[
+    {btn:'Round bowl', a:1, b:1, p:1, q:1, s:4, P0:[2,2], v:[1,-1], T:[-3,3], start:-2},
+    {btn:'Oval bowl', a:1, b:3, p:1, q:1, s:4, P0:[3,1], v:[1,-1], T:[-4,2], start:-3},
+    {btn:'Slanted fence', a:1, b:1, p:1, q:2, s:5, P0:[1,2], v:[2,-1], T:[-2,2], start:-2}
+  ],
+  si:0, t:null, touched:false, done:new Set(),
+  GOALS:[
+    {id:'low', t:'On the round bowl, walk the fence to its lowest point, where ∇f lines up with ∇g.', toast:'The lowest point on the fence',
+     ok:K=>K.si===0 && K.T()===0},
+    {id:'near', t:'On the oval bowl, stand at the fence post nearest the middle, and see that f still falls.', toast:'Nearest is not lowest',
+     ok:K=>K.si===1 && K.near()},
+    {id:'oval', t:'Find the lowest point on the oval bowl\'s fence.', toast:'Lowest on the oval',
+     ok:K=>K.si===1 && K.T()===0},
+    {id:'lam', t:'On the slanted fence, find the lowest point and read λ.', toast:'λ read on a slant',
+     ok:K=>K.si===2 && K.T()===0},
+    {id:'axis', t:'Stand where a fence crosses an axis, and see that nothing makes that point the lowest.', toast:'An axis is not special',
+     ok:K=>K.T()!==0 && K.P().includes(0)}
+  ],
+  set(){ return this.SETS[this.si]; },
+  T(){ if(this.t===null) this.t=this.set().start; return this.t; },
+  at(t){ const S=this.set(); return [S.P0[0]+t*S.v[0], S.P0[1]+t*S.v[1]]; },
+  P(){ return this.at(this.T()); },
+  f(x,y){ const S=this.set(); return S.a*x*x+S.b*y*y; },
+  grad(x,y){ const S=this.set(); return [2*S.a*x, 2*S.b*y]; },
+  /* ∇f · v: the slope along the fence, times the step's length */
+  D(){ const [x,y]=this.P(), [A,B]=this.grad(x,y), v=this.set().v; return A*v[0]+B*v[1]; },
+  /* the post nearest (0, 0) */
+  near(){ const S=this.set(), d=t=>this.at(t)[0]**2+this.at(t)[1]**2; let best=S.T[0]; for(let t=S.T[0];t<=S.T[1];t++) if(d(t)<d(best)) best=t; return this.T()===best; },
+  fs(){ const S=this.set(), t=(c,v)=>(c===1?'':c)+v+'²'; return `${t(S.a,'x')} + ${t(S.b,'y')}`; },
+  gs(){ const S=this.set(), t=(c,v)=>(c===1?'':c)+v; return `${t(S.p,'x')} + ${t(S.q,'y')}`; },
+  amt:n=>n<0 ? `(${neg(n)})` : neg(n),
+  pt:P=>`(${neg(P[0])}, ${neg(P[1])})`,
+  vec:v=>`⟨${neg(v[0])}, ${neg(v[1])}⟩`,
+  pick(i){ this.si=i; this.t=null; this.touched=true; Hill.render(); },
+  walk(by){ const S=this.set(), t=this.T()+by; if(t<S.T[0]||t>S.T[1]) return; this.t=t; this.touched=true; Hill.render(); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.set(), [x,y]=this.P(), F=this.f(x,y), [A,B]=this.grad(x,y), v=S.v, D=this.D(), t=this.T(), out=[];
+    out.push(`f(x, y) = ${this.fs()}, and the fence is g(x, y) = ${this.gs()} = ${S.s}. You stand at ${this.pt([x,y])}, on the fence since ${S.p} × ${this.amt(x)} + ${S.q} × ${this.amt(y)} = ${S.s}, where f = ${neg(F)}.`);
+    out.push(`∇f = (${2*S.a}x, ${2*S.b}y) = ${this.vec([A,B])}, the way up the hill. ∇g = ${this.vec([S.p,S.q])}, which points straight off the fence.`);
+    out.push(`Stepping along the fence by ${this.vec(v)}, the slope that way is ∇f · ${this.vec(v)} = ${neg(A)} × ${this.amt(v[0])} + ${this.amt(B)} × ${this.amt(v[1])} = ${neg(D)}.`);
+    if(D){
+      out.push(`That is ${D>0?'above':'below'} 0, so f ${D>0?'rises':'falls'} going on and ${D>0?'falls':'rises'} going back: the lowest point is ${D>0?'back':'further on'}. ∇f still has a part along the fence, so it does not line up with ∇g, and no λ makes ∇f = λ∇g.`);
+    } else {
+      const lam=Hill.fr(A,S.p);
+      out.push(`That is 0: ∇f has no part along the fence, so it is at a right angle to it, just as ∇g is. ∇f and ∇g line up: ∇f = λ∇g with λ = ${neg(A)} / ${this.amt(S.p)} = ${lam}, and ${neg(B)} = ${lam} × ${this.amt(S.q)} checks the second part. This is the lowest point on the fence, where f = ${neg(F)}.`);
+    }
+    const nb=[];
+    if(t>S.T[0]) nb.push(`one post back f = ${neg(this.f(...this.at(t-1)))}`);
+    if(t<S.T[1]) nb.push(`one post on f = ${neg(this.f(...this.at(t+1)))}`);
+    out.push(nb.length===2 ? `Check with the posts either side: ${nb.join(' and ')}.` : `Check with the post beside it: ${nb[0]}.`);
+    if(this.si===1 && this.near() && D)
+      out.push(`This is the post nearest the middle (0, 0), but the oval bowl climbs three times as fast in y as in x, so its lowest point on the fence is not the nearest one. The lowest point is where the fence just touches a contour.`);
+    if(D && (x===0 || y===0))
+      out.push(`Here the fence crosses the ${x===0?'y':'x'}-axis, but the axis is nothing special: f = ${neg(F)} here is not the lowest the fence goes.`);
+    return out;
+  },
+  /* seen from above: contours in blue through every post, the fence in red,
+     ∇f as a dashed gold arrow and ∇g as a solid green arrow from where you stand */
+  svg(){
+    const S=this.set(), [x0,y0]=this.P(), [A,B]=this.grad(x0,y0), F=this.f(x0,y0);
+    const posts=[]; for(let t=S.T[0];t<=S.T[1];t++) posts.push(this.at(t));
+    const xs=[0,...posts.map(p=>p[0])], ys=[0,...posts.map(p=>p[1])];
+    const X0=Math.min(...xs)-1.5, X1=Math.max(...xs)+1.5, Y0=Math.min(...ys)-1.5, Y1=Math.max(...ys)+1.5;
+    const sc=Math.min(320/(X1-X0), 240/(Y1-Y0)), ox=20+(320-sc*(X1-X0))/2-sc*X0, oy=20+(240-sc*(Y1-Y0))/2+sc*Y1;
+    const PX=v=>+(ox+sc*v).toFixed(2), PY=v=>+(oy-sc*v).toFixed(2);
+    const arrow=(dx,dy,col,k,dash)=>{
+      const x1=PX(x0+dx), y1=PY(y0+dy), a=Math.atan2(y1-PY(y0),x1-PX(x0)), hd=[a+2.6,a-2.6].map(b=>`${(x1+9*Math.cos(b)).toFixed(2)},${(y1+9*Math.sin(b)).toFixed(2)}`);
+      return `<line data-k="${k}" x1="${PX(x0)}" y1="${PY(y0)}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="3"${dash?' stroke-dasharray="6 4"':''} stroke-linecap="round"/>`+
+        `<polygon data-k="${k}Tip" points="${x1},${y1} ${hd.join(' ')}" fill="${col}"/>`;
+    };
+    let out=`<svg viewBox="0 0 360 280" data-ox="${+ox.toFixed(4)}" data-oy="${+oy.toFixed(4)}" data-s="${+sc.toFixed(4)}" style="width:100%;height:auto;display:block;overflow:hidden" role="img" aria-label="Contours of f(x, y) = ${this.fs()}, the fence ${this.gs()} = ${S.s}, and you at ${this.pt([x0,y0])} with ∇f = ${this.vec([A,B])} dashed in gold and ∇g = ${this.vec([S.p,S.q])} in green">`;
+    out+=`<defs><clipPath id="hfClip"><rect x="0" y="0" width="360" height="280"/></clipPath></defs><g clip-path="url(#hfClip)">`;
+    out+=`<line x1="0" y1="${PY(0)}" x2="360" y2="${PY(0)}" stroke="${FIG_COL.axis}" stroke-width="1"/><line x1="${PX(0)}" y1="0" x2="${PX(0)}" y2="280" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    const L=[...new Set(posts.map(p=>this.f(...p)))].sort((a,b)=>a-b);
+    for(const c of L){
+      const l=[]; for(let i=0;i<=96;i++){ const u=2*Math.PI*i/96; l.push(`${PX(Math.sqrt(c/S.a)*Math.cos(u))},${PY(Math.sqrt(c/S.b)*Math.sin(u))}`); }
+      out+=`<polyline data-k="contour" data-c="${c}" points="${l.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="${c===F?2.5:1}" opacity="${c===F?1:0.5}"/>`;
+    }
+    const e0=this.at(S.T[0]-0.6), e1=this.at(S.T[1]+0.6);
+    out+=`<line data-k="fence" x1="${PX(e0[0])}" y1="${PY(e0[1])}" x2="${PX(e1[0])}" y2="${PY(e1[1])}" stroke="${FIG_COL.d}" stroke-width="2.5" stroke-linecap="round"/>`;
+    for(const p of posts) out+=`<circle data-k="post" cx="${PX(p[0])}" cy="${PY(p[1])}" r="3" fill="${FIG_COL.d}"/>`;
+    out+=`</g>`;
+    const n=Math.hypot(A,B), m=Math.hypot(S.p,S.q), len=48/sc;
+    if(n) out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', true);
+    out+=arrow(len*S.p/m, len*S.q/m, FIG_COL.c, 'gg', false);
+    out+=`<circle data-k="pt" cx="${PX(x0)}" cy="${PY(y0)}" r="6" fill="${FIG_COL.b}" stroke="${FIG_COL.ink}" stroke-width="1.5"/>`;
+    return out+`</svg>`;
+  },
+  html(){
+    const S=this.set(), t=this.T();
+    let out=`<div class="small" style="margin:2px 0 6px">A fence runs across the hill, and you may only walk along it. Where f stops falling, ∇f points straight off the fence, just as ∇g does: the two line up, ∇f = λ∇g. That λ is the Lagrange multiplier.</div>`;
+    out+=`<div id="hfSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which hill and fence">`+this.SETS.map((s,i)=>{ const K={...this,si:i};
+      return `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="HillFence.pick(${i})" aria-label="${s.btn}: f(x, y) = ${this.fs.call(K)}, with the fence ${this.gs.call(K)} = ${s.s}">${s.btn}</button>`; }).join('')+`</div>`;
+    out+=`<div id="hfFig">${this.svg()}<div class="figcap">Seen from above: blue contours, the fence in red with its posts, and you in gold. The dashed gold arrow is ∇f; the green arrow is ∇g, straight off the fence.</div></div>`;
+    out+=`<div class="wsMat" style="grid-template-columns:1fr;border:none;padding:0"><div class="wsCell"><button id="hfLo" onclick="HillFence.walk(-1)" aria-label="Walk back one post"${t<=S.T[0]?' disabled':''}>◀</button>`+
+      `<b style="font-size:17px;min-width:0">${this.pt(this.P())}</b><button id="hfHi" onclick="HillFence.walk(1)" aria-label="Walk on one post"${t>=S.T[1]?' disabled':''}>▶</button></div></div>`;
+    out+=`<div id="hfRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div id="hfGoalPanel" style="margin-top:8px"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="hfGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}"><i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length) Celebrate.banner('FENCE WALKER','every fence walked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

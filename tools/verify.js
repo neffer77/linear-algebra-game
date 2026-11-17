@@ -6125,6 +6125,130 @@ const cofMovesNotes = (() => {
   return { presses, tris, shut, hints };
 })();
 
+/* Walk the fence, the hillwalker workshop's third mode. Every post on each
+   of its three fences. Each sentence is worked again here from the hill and
+   the fence alone: the post must lie on the fence, ∇f and ∇g are worked from
+   their own parts, and the slope along the fence is ∇f dotted with the step.
+   The post the readout calls lowest is checked against every other post and
+   against the lowest point of the whole line, found without a multiplier by
+   reading f along the line as a parabola and taking its vertex; λ must then
+   satisfy both parts of ∇f = λ∇g. The drawing is read back too: the point,
+   the fence through every post, ∇f and ∇g pointing their own ways, and every
+   contour an ellipse a·x² + b·y² = c through a post. */
+const hillFenceNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { a: 'blue', b: 'gold', c: 'green', d: 'red', dim: 'dim', ink: 'ink', grid: 'grid', axis: 'axis' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const gcd = (a,b) => { a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; };" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Hill = {render(){ env.renders++; }, fr(n,d){ if(d<0){ n=-n; d=-d; } const g=gcd(Math.abs(n),d)||1; n/=g; d/=g; return d===1 ? neg(n) : `${neg(n)}/${d}`; }};" +
+    cut('const HillFence = {', '/* ---------- The cofactor workshop') + 'return HillFence;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const am = n => (n < 0 ? `(${ng(n)})` : ng(n));
+  const SET = [{ a: 1, b: 1, p: 1, q: 1, s: 4, lo: [-1, 5], hi: [5, -1] }, { a: 1, b: 3, p: 1, q: 1, s: 4, lo: [-1, 5], hi: [5, -1] }, { a: 1, b: 1, p: 1, q: 2, s: 5, lo: [-3, 4], hi: [5, 0] }];
+  if (S.SETS.length !== 3 || S.SETS.some((s, i) => s.a !== SET[i].a || s.b !== SET[i].b || s.p !== SET[i].p || s.q !== SET[i].q || s.s !== SET[i].s))
+    fail('hillfence', 'sets', 'the hills and fences are not x² + y² on x + y = 4, x² + 3y² on x + y = 4, and x² + y² on x + 2y = 5');
+  if (S.si !== 0 || S.t !== null || S.done.size || S.touched) fail('hillfence', 'open', 'the mode does not open on the round bowl with nothing found');
+  const tm = (c, v) => (c === 1 ? '' : c) + v;
+  let posts = 0, lows = 0, drawn = 0, contours = 0;
+  SET.forEach((Q, si) => {
+    S.pick(si);
+    const K = S.SETS[si];
+    // the posts, in order, from one end of the fence to the other
+    const P = []; for (let t = K.T[0]; t <= K.T[1]; t++) P.push([t, S.at(t)]);
+    if (P[0][1].join() !== Q.lo.join() || P[P.length - 1][1].join() !== Q.hi.join()) fail('hillfence', `fence ${si + 1}`, `the fence runs from (${P[0][1]}) to (${P[P.length - 1][1]})`);
+    const f = (x, y) => Q.a * x * x + Q.b * y * y;
+    // the lowest point of the whole line, with no multiplier: f along x = x₀ + u·q, y = y₀ − u·p is a parabola in u
+    const [x0, y0] = Q.lo, F = u => f(x0 + u * Q.q, y0 - u * Q.p), A2 = (F(1) + F(-1) - 2 * F(0)) / 2, B1 = (F(1) - F(-1)) / 2, uMin = -B1 / (2 * A2);
+    const low = [x0 + uMin * Q.q, y0 - uMin * Q.p], fLow = F(uMin);
+    const fs2 = P.map(([, p]) => f(...p)), nearest = P.reduce((b, c) => (c[1][0] ** 2 + c[1][1] ** 2 < b[1][0] ** 2 + b[1][1] ** 2 ? c : b))[0];
+    P.forEach(([t, [x, y]], i) => {
+      S.t = t; posts++;
+      const key = `fence ${si + 1}, post (${x}, ${y})`;
+      if (Q.p * x + Q.q * y !== Q.s) fail('hillfence', key, 'the post is not on the fence');
+      const v = [S.at(t + 1)[0] - x, S.at(t + 1)[1] - y];
+      if ((!v[0] && !v[1]) || v[0] * Q.p + v[1] * Q.q !== 0) fail('hillfence', key, 'the step to the next post leaves the fence');
+      const A = 2 * Q.a * x, B = 2 * Q.b * y, D = A * v[0] + B * v[1], fv = f(x, y);
+      const w = S.working();
+      if (w[0] !== `f(x, y) = ${tm(Q.a, 'x')}² + ${tm(Q.b, 'y')}², and the fence is g(x, y) = ${tm(Q.p, 'x')} + ${tm(Q.q, 'y')} = ${Q.s}. You stand at (${ng(x)}, ${ng(y)}), on the fence since ${Q.p} × ${am(x)} + ${Q.q} × ${am(y)} = ${Q.s}, where f = ${ng(fv)}.`)
+        fail('hillfence', key, `the hill, the fence and f are not read right: ${w[0]}`);
+      if (w[1] !== `∇f = (${2 * Q.a}x, ${2 * Q.b}y) = ⟨${ng(A)}, ${ng(B)}⟩, the way up the hill. ∇g = ⟨${Q.p}, ${Q.q}⟩, which points straight off the fence.`) fail('hillfence', key, `the gradients are not worked right: ${w[1]}`);
+      if (w[2] !== `Stepping along the fence by ⟨${ng(v[0])}, ${ng(v[1])}⟩, the slope that way is ∇f · ⟨${ng(v[0])}, ${ng(v[1])}⟩ = ${ng(A)} × ${am(v[0])} + ${am(B)} × ${am(v[1])} = ${ng(D)}.`) fail('hillfence', key, `the slope along the fence is not ∇f · v: ${w[2]}`);
+      const isLow = Math.abs(x - low[0]) < 1e-9 && Math.abs(y - low[1]) < 1e-9;
+      if (isLow !== (D === 0)) fail('hillfence', key, `the slope along the fence is ${D} but the post is ${isLow ? '' : 'not '}the lowest point of the line`);
+      if (D) {
+        // which way is lower, read off the posts themselves
+        const on = i + 1 < P.length ? fs2[i + 1] : null, back = i ? fs2[i - 1] : null;
+        if ((on !== null && (on < fv) !== (D < 0)) || (back !== null && (back < fv) !== (D > 0))) fail('hillfence', key, 'the sign of the slope does not say which neighbouring post is lower');
+        if (w[3] !== `That is ${D > 0 ? 'above' : 'below'} 0, so f ${D > 0 ? 'rises' : 'falls'} going on and ${D > 0 ? 'falls' : 'rises'} going back: the lowest point is ${D > 0 ? 'back' : 'further on'}. ∇f still has a part along the fence, so it does not line up with ∇g, and no λ makes ∇f = λ∇g.`)
+          fail('hillfence', key, `a post off the lowest point is not told as one: ${w[3]}`);
+        if (A * Q.q === B * Q.p) fail('hillfence', key, '∇f lines up with ∇g away from the lowest point');
+      } else {
+        lows++;
+        if (fs2.some(g => g < fv) || Math.abs(fv - fLow) > 1e-9) fail('hillfence', key, `the post called lowest has f = ${fv}, but the line goes down to ${fLow}`);
+        const m = w[3].match(/^That is 0: ∇f has no part along the fence, so it is at a right angle to it, just as ∇g is\. ∇f and ∇g line up: ∇f = λ∇g with λ = (\S+) \/ (\S+) = (\S+), and (\S+) = (\S+) × (\S+) checks the second part\. This is the lowest point on the fence, where f = (\S+)\.$/);
+        const lam = A / Q.p;
+        if (!m || m[1] !== ng(A) || m[2] !== am(Q.p) || m[3] !== ng(lam) || m[4] !== ng(B) || m[5] !== ng(lam) || m[6] !== am(Q.q) || m[7] !== ng(fv)) fail('hillfence', key, `λ is not worked from ∇f = λ∇g: ${w[3]}`);
+        if (A !== lam * Q.p || B !== lam * Q.q) fail('hillfence', key, `λ = ${lam} does not satisfy both parts of ∇f = λ∇g`);
+      }
+      const nb = []; if (i) nb.push(`one post back f = ${ng(fs2[i - 1])}`); if (i + 1 < P.length) nb.push(`one post on f = ${ng(fs2[i + 1])}`);
+      if (w[4] !== (nb.length === 2 ? `Check with the posts either side: ${nb.join(' and ')}.` : `Check with the post beside it: ${nb[0]}.`)) fail('hillfence', key, `the posts either side are not read right: ${w[4]}`);
+      const extra = [];
+      if (si === 1 && t === nearest && D) extra.push('This is the post nearest the middle (0, 0), but the oval bowl climbs three times as fast in y as in x, so its lowest point on the fence is not the nearest one. The lowest point is where the fence just touches a contour.');
+      if (D && (x === 0 || y === 0)) extra.push(`Here the fence crosses the ${x === 0 ? 'y' : 'x'}-axis, but the axis is nothing special: f = ${ng(fv)} here is not the lowest the fence goes.`);
+      if (w.slice(5).join('|') !== extra.join('|')) fail('hillfence', key, `the closing sentences are wrong: ${w.slice(5).join(' | ') || 'none'}`);
+      // the drawing
+      const svg = S.svg(), ox = +svg.match(/data-ox="([-\d.]+)"/)[1], oy = +svg.match(/data-oy="([-\d.]+)"/)[1], sc = +svg.match(/data-s="([-\d.]+)"/)[1];
+      const bk = (X, Y) => [(+X - ox) / sc, (oy - +Y) / sc];
+      drawn++;
+      const pt = svg.match(/data-k="pt" cx="([-\d.]+)" cy="([-\d.]+)"/), at = pt && bk(pt[1], pt[2]);
+      if (!at || Math.abs(at[0] - x) > 0.01 || Math.abs(at[1] - y) > 0.01) fail('hillfence', key, 'the gold point is not drawn where you stand');
+      const fe = svg.match(/data-k="fence" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/);
+      if (!fe || [bk(fe[1], fe[2]), bk(fe[3], fe[4])].some(([X, Y]) => Math.abs(Q.p * X + Q.q * Y - Q.s) > 0.02)) fail('hillfence', key, 'the red fence is not drawn along px + qy = s');
+      const ps = [...svg.matchAll(/data-k="post" cx="([-\d.]+)" cy="([-\d.]+)"/g)].map(m => bk(m[1], m[2]));
+      if (ps.length !== P.length || ps.some(([X, Y], j) => Math.abs(X - P[j][1][0]) > 0.01 || Math.abs(Y - P[j][1][1]) > 0.01)) fail('hillfence', key, 'the posts are not drawn where they stand');
+      for (const [k, dir, dash] of [['grad', [A, B], true], ['gg', [Q.p, Q.q], false]]) {
+        const l = svg.match(new RegExp(`<line data-k="${k}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"([^>]*)>`));
+        if (!l) { fail('hillfence', key, `the ${k} arrow is missing`); continue; }
+        const [X1, Y1] = bk(l[1], l[2]), [X2, Y2] = bk(l[3], l[4]), dx = X2 - X1, dy = Y2 - Y1;
+        if (Math.abs(X1 - x) > 0.01 || Math.abs(Y1 - y) > 0.01) fail('hillfence', key, `the ${k} arrow does not start where you stand`);
+        if (Math.abs(dx * dir[1] - dy * dir[0]) > 0.02 * Math.hypot(dx, dy) * Math.hypot(...dir) || dx * dir[0] + dy * dir[1] <= 0) fail('hillfence', key, `the ${k} arrow does not point along ⟨${dir}⟩`);
+        if (/stroke-dasharray="6 4"/.test(l[5]) !== dash) fail('hillfence', key, `the ${k} arrow is ${dash ? 'not ' : ''}dashed`);
+      }
+      const cs = [...svg.matchAll(/data-k="contour" data-c="([-\d.]+)" points="([^"]+)" fill="none" stroke="[^"]+" stroke-width="([\d.]+)"/g)];
+      const want = [...new Set(fs2)].sort((p, q) => p - q);
+      if (cs.map(c => +c[1]).join() !== want.join()) fail('hillfence', key, `the contours are at ${cs.map(c => c[1]).join(', ')}, not through every post`);
+      for (const c of cs) { contours++;
+        if ((c[3] === '2.5') !== (+c[1] === fv)) fail('hillfence', key, `the contour at ${c[1]} is ${c[3] === '2.5' ? '' : 'not '}drawn bold`);
+        for (const p of c[2].split(' ')) { const [X, Y] = bk(...p.split(',')); if (Math.abs(f(X, Y) - +c[1]) > 0.05 * +c[1] + 0.05) { fail('hillfence', key, `a point of the contour at ${c[1]} is off its ellipse`); break; } }
+      }
+      const h = S.html();
+      if (/id="hfLo"[^>]*disabled/.test(h) !== (i === 0) || /id="hfHi"[^>]*disabled/.test(h) !== (i === P.length - 1)) fail('hillfence', key, 'a walk button is shut away from its end, or open at it');
+    });
+  });
+  // the hunt, played through the presses a player would make
+  S.si = 0; S.t = null; S.done = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  S.html();
+  if (S.done.size) fail('hillfence', 'hunt', 'a goal is found before anything is pressed');
+  const go = steps => { for (const [fn, ...a] of steps) { S[fn](...a); S.html(); } return [...S.done].sort().join(); };
+  const plan = [[[['walk', -1]], ''], [[['walk', 1]], 'axis'], [[['walk', 1], ['walk', 1]], 'axis,low'], [[['pick', 1], ['walk', 1], ['walk', 1]], 'axis,low,near'],
+    [[['walk', 1]], 'axis,low,near,oval'], [[['pick', 2], ['walk', 1], ['walk', 1]], 'axis,lam,low,near,oval']];
+  plan.forEach(([steps, want], i) => { const got = go(steps); if (got !== want) fail('hillfence', 'hunt', `step ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want || 'nothing'}`); });
+  if (env.toasts.join(' | ') !== '✓ An axis is not special | ✓ The lowest point on the fence | ✓ Nearest is not lowest | ✓ Lowest on the oval') fail('hillfence', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'FENCE WALKER / every fence walked') fail('hillfence', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  { // the walk stops at both ends
+    S.pick(0); for (let i = 0; i < 20; i++) S.walk(-1); if (S.P().join() !== '-1,5') fail('hillfence', 'hunt', 'walking back does not stop at the first post');
+    for (let i = 0; i < 20; i++) S.walk(1); if (S.P().join() !== '5,-1') fail('hillfence', 'hunt', 'walking on does not stop at the last post');
+  }
+  S.si = 0; S.t = null; S.done = new Set(); S.touched = false;
+  return { posts, lows, drawn, contours };
+})();
+
 /* Cramer's rule, the elimination workshop's third mode. Every b the steppers
    allow on each of its three systems, with b in neither column, column 1 and
    column 2. Each sentence is worked again here: det A and det A with b put in
@@ -18124,6 +18248,7 @@ console.log(`  power series stepped ${pad(geoReachNotes.steps.toLocaleString(), 
 console.log(`  curves walked       ${pad(paramWalkNotes.steps.toLocaleString(), 12)}  (every t the along-a-curve mode allows on its four curves, each sentence worked again from the curve alone: ${paramWalkNotes.slopes} slopes as dy/dt over dx/dt checked against the curve, ${paramWalkNotes.ups} straight-up tangents, ${paramWalkNotes.stops} dead stop, ${paramWalkNotes.drawn} drawings with the point, the tangent and the stub)`);
 console.log(`  row moves pressed ${pad(cofMovesNotes.presses.toLocaleString(), 15)}  (random runs of swaps, scalings and additions on the cofactor workshop's three matrices, det A = tally × det M checked after every one with det M worked by Sarrus' rule; ${cofMovesNotes.tris.toLocaleString()} triangular matrices read off their diagonals, ${cofMovesNotes.hints} zeros on the diagonal pointed to a swap, ${cofMovesNotes.shut} moves shut for running an entry too far)`);
 console.log(`  Cramer ratios read ${pad(elimCramerNotes.ratios.toLocaleString(), 16)}  (every b the steppers allow on the elimination workshop's three systems, b put in each column: every det worked again, each ratio checked to solve its system, ${elimCramerNotes.drawn.toLocaleString()} gold parallelograms read back off the drawing and measured by the shoelace rule against the blue one, ${elimCramerNotes.flats.toLocaleString()} flat states told apart into no solution or a whole line, ${elimCramerNotes.checks.toLocaleString()} checks put back into both equations)`);
+console.log(`  fence posts walked ${pad(hillFenceNotes.posts.toLocaleString(), 16)}  (every post on the hillwalker workshop's three fences, each sentence worked again from the hill and the fence: ${hillFenceNotes.lows} lowest points checked against every post and against the vertex of f along the whole line, with λ satisfying both parts of ∇f = λ∇g; ${hillFenceNotes.drawn} drawings read back, ${hillFenceNotes.contours} contours checked to be ellipses through the posts)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);
