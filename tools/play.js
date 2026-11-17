@@ -98,6 +98,11 @@ const SUITES = [
   require('./play/eulerwalk'), // walk y′ = f(x, y) in Euler's steps by hand
   require('./play/doubling'),  // walk y′ = ky a whole or half stretch at a time
   require('./play/meanvalue'), // match a tangent to the chord by hand
+  require('./play/chordpick'), // see a curve and its chord, pick which of four numbers is c
+  require('./play/tanline'),   // estimate f(x) from the tangent at a and measure the miss
+  require('./play/arclen'),    // lay chords along a curve and watch them close in on its length
+  require('./play/arcpick'),  // see a curve, pick which of four integrals is its length
+  require('./play/logistic'),  // step a population toward its ceiling and watch the rate rise and fall
   require('./play/stretchpick'), // see y(0) and y one stretch on, pick which of four numbers is y later
   require('./play/wsindex'), // every workshop one tap from the top of the Tome
   require('./play/slopematch'), // see f, pick which of three graphs is f′

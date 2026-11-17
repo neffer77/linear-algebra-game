@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-three topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-six topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy-three in the game, drawing from all of them would build a run
+have actually met — with seventy-six in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,10 +277,10 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**73 problem generators** in total, each producing randomised problems at three difficulty
+**76 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -305,7 +305,7 @@ stretches instead of raising it to that power, counting the stretches on from y(
 dividing by the factor instead of multiplying, and raising y(T) itself to the power. It
 joins the Applications strand and the Infinite Expanse.
 
-**The mean value theorem**, the newest, asks where a curve's tangent runs parallel to its
+**The mean value theorem** asks where a curve's tangent runs parallel to its
 chord. f and an interval [a, b] are given, and the question is the c strictly between a
 and b where f′(c) equals the chord's slope, (f(b) − f(a))/(b − a). A parabola at the first
 depth, where c always falls half way; x³ + px + q at the second, where c² comes out and
@@ -316,6 +316,35 @@ taking the middle of the interval where f is not a parabola, forgetting the 2 th
 brings down, stopping at c² or at the end of the interval, giving where the tangent is
 flat, and giving a height, f(c) or the average of f(a) and f(b), instead of c. It joins
 the Applications strand and the Infinite Expanse.
+
+**Linear approximation** estimates a value from the tangent line: near a,
+f(x) ≈ f(a) + f′(a)(x − a). √x near a perfect square at the first depth, x² or x³ a
+small step from a whole number at the second, and ∛x near a perfect cube at the third,
+with whole and fractional answers about equally often. The wrong answers are the slips
+people make: giving the step alone with f(a) left off, multiplying the slope by x
+instead of by x − a, adding x − a with no slope, stepping the wrong way, a slope missing
+its ½, its ⅓ or its power, and, for x² and x³, the exact value of f(x), which is not
+what the tangent line gives. It joins the Applications strand and the Infinite Expanse.
+
+**Arc length** measures a curve: the length of y = f(x) from a to b is
+∫ √(1 + f′(x)²) dx, since each tiny step runs dx and rises f′ dx. A straight line with
+a Pythagorean slope at the first depth, y = (2/3)x√x at the second, where the root is
+√(1 + x), and y = x³/(3c) + c/(4x) at the third, where 1 + f′² is a perfect square.
+Whole and fractional answers come up about equally at the first two depths. The wrong
+answers are the slips people make: the run alone, the rise alone, rise and run added
+instead of put through Pythagoras, the square root forgotten, and at the second depth
+the antiderivative's 2/3 dropped or turned upside down, or its lower end left off. It
+joins the Applications strand and the Infinite Expanse.
+
+**Logistic growth**, the newest, is growth with a ceiling: dP/dt = rP(1 − P/K) grows like
+rP while P is small and slows to nothing as P nears K. The first depth asks how fast it
+grows at a given P, the second how fast at its fastest, rK/4 at P = K/2, and the third
+where P stands once e^(rt) reaches a given number, from P(t) = K/(1 + A·e^(−rt)) with
+A = (K − P(0))/P(0). Whole and fractional answers come up about equally. The wrong answers
+are the slips people make: rP with no ceiling, the share filled P/K where the room left
+1 − P/K belongs, the P or the r or the ÷ K dropped, the population K/2 given for the
+rate, A turned upside down or taken as K/P(0), and e^(rt) where the solution has e^(−rt).
+It joins the Applications strand and the Infinite Expanse.
 
 ---
 
@@ -581,7 +610,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy of the seventy-three topics
+  where every answer would echo is asked the plain way. Seventy-three of the seventy-six topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -600,14 +629,14 @@ The game is built so that losing teaches you as much as winning.
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
-- **🧭 Workshop index** — the top of the Tome lists all fifty-one workshops
+- **🧭 Workshop index** — the top of the Tome lists all fifty-four workshops
   as chips, under the seven strands and in each strand's order, so any one is a
   tap away instead of a long scroll down. A chip turns green with a ✓ once every
   topic it covers is solid, and is ringed in gold while one of them needs work, as
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: forty-eight
+  question from a different workshop's turned-round mode each time: fifty
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1136,7 +1165,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Seventy-two topics link to fifty-one workshops,
+  back button returns to the summary. Seventy-five topics link to fifty-four workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -1916,6 +1945,68 @@ The game is built so that losing teaches you as much as winning.
   c = √3 ≈ 1.7321; on 4/x c is √(1 × 4) = 2, short of the middle. Six things
   to find, and a fight on the mean value theorem now offers it.
 
+  **🎯 Which c?** turns the workshop round: a curve on an interval is drawn
+  with its chord, and four numbers offered, one of them the c strictly between
+  a and b where the tangent runs parallel to the chord. The curves are a
+  parabola, k√x, n/x and x³ + px + q, on intervals with whole or fractional
+  ends. The rule comes first: work the chord's slope from the two ends, then
+  solve f′(c) = it. The wrong numbers are the slips people make: the chord's
+  slope itself, the middle of the interval where f is not a parabola, a
+  forgotten doubling or halving, where the tangent is flat, stopping at c² or
+  at √c, the cubic's other root on an end of the interval, and a height, f(c)
+  or the average of f(a) and f(b), instead of a place. A wrong pick is shut,
+  checked by putting it into f′, and its tangent drawn dashed beside the
+  chord; the right one is worked from the chord's slope. No check ever names c
+  itself, the answer is whole as often as it is a fraction, and nothing is
+  saved. `npm test` works every number again from the curve and the interval
+  alone, and checks the right one alone gives, in floating point, a tangent as
+  steep as the chord strictly inside [a, b].
+
+- **🪡 Tangent Line Workshop** — linear approximation by hand. Pick a curve (√x
+  near 4, 1/x near 1, sin x near 0) and step x away from a a tenth or a whole one at a
+  time, or halve x − a. The readout works L(x) = f(a) + f′(a)(x − a) beside the
+  curve's own value and says by how much, and which way, the tangent misses, while
+  the figure draws the gap in red, so nothing has to be held in the head. √x bends
+  under its tangent, so the estimate overshoots on both sides of 4; 1/x bends over
+  it, so it falls short; halving x − a cuts the miss to about a quarter, and on
+  sin x, which does not bend at 0, to about an eighth. Six things to find, and a
+  fight on linear approximation now offers it.
+
+- **🧵 Arc Length Workshop** — measuring a curve with chords. Pick a line, the cubic
+  x³/6 + 1/(2x) or a quarter circle, and lay 1, 2, 4 and up to 32 straight chords along
+  it. With four or fewer every chord is measured in the readout by Pythagoras,
+  √(run² + rise²), and the total is set beside the true length, ∫ √(1 + f′²) dx, and
+  beside the runs alone, the slip of forgetting the rise. On the line one chord is
+  already exact; on the cubic doubling the chords cuts the gap to about a quarter; on
+  the quarter circle, which stands straight up at x = 1, only to about a third, and 16
+  chords measure π/2 to two places. Six things to find, and a fight on arc length now
+  offers it.
+
+  **🎯 Which integral?** turns the workshop round: a curve y = c·xᵖ, with p 2, 3
+  or 4, from x = a to x = b, and four integrals, one of them its length. The rule
+  is stated first: a tiny step runs dx and rises f′(x) dx, so by Pythagoras it is
+  √(1 + f′(x)²) dx long, and the length adds the steps up. The wrong integrals are
+  the slips people make setting it up: the root left off, f squared in place of
+  f′, f′ put under the root unsquared, only its number or only its power of x
+  squared, the 1 dropped so only the rise is left, and the area ∫ f dx taken for
+  the length. No integral's look gives it away: two wrong ones always sit under a
+  root, each part of the right one turns up in a wrong one, and some wrong one
+  shares as much with the rest as the right one does. A wrong pick is shut and
+  checked at one x, where the slope gives a tiny step's length, √(1 + f′²), and
+  the wrong integrand gives something else. The right pick works 1 + f′² through.
+  Nothing is saved, and there is no clock. `npm test` reads every integral back
+  off its button, takes it apart, checks it against the slip it is named as,
+  measures the right one alone against √(1 + f′²) with f′ nudged and against the
+  chords of a fine split, and works every check again.
+
+- **🐇 Logistic Workshop** — growth with a ceiling, step by step. Start a population of
+  dP/dt = 0.5P(1 − P/1000) small at 20, half way at 500 or above the ceiling at 1600, and
+  step t forward a whole unit at a time up to 20. Each step works e^(−0.5t), P from
+  P(t) = 1000/(1 + A·e^(−0.5t)), the room left 1 − P/1000 and the rate, and draws the
+  tangent at the point as steep as the rate. Small, P's first step is almost e^0.5; past
+  500 the room left shrinks faster than P grows and the rate falls; from either side P
+  settles on 1000. Six things to find, and a fight on logistic growth now offers it.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -1926,10 +2017,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy-three bars.
+  reading seventy-six bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy-three topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Seventy-six topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
@@ -2080,7 +2171,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-one suites, about 5,640 checks, about a minute:
+loop only exists once the page is running. A hundred and forty-six suites, about 5,820 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2163,9 +2254,14 @@ loop only exists once the page is running. A hundred and forty-one suites, about
 | `eulerwalk` | the Tome opens the Euler step workshop on y′ = y with h = 1 and one dot; one step works 1 + 1 × 1 = 2 and sets it short of e by 0.7183; halving the step works 9/4 and lays both misses side by side; steps of 1/8 reach 2.5658 with the early steps left to the figure; on y′ = −2y a step of 1 jumps to −1 and swings back, 1/2 lands on 0 and stays, 1/4 keeps half of y each step; y′ = x falls short of 2 by exactly h; all seven goals, starting over, the ends, every button named, a phone's width, and nothing saved |
 | `doubling` | the Tome opens the doubling workshop on ×2 every 2 days with one dot; a whole stretch works 6 and meets the straight line; half a stretch works 3 × 2^(1/2) ≈ 4.2426 under the line's 9/2 with the note that √2 is not 1.5, and a second half lands on 6; walked to day 8 the curve is at 48 against the line's 15 with the early moves left to the figure; the halving reaches the line's 0 at hour 6 with y still 4 and runs past it below zero; half of ×4 is ×2; all six goals, starting over, the edge of the figure, every button named, a phone's width, and nothing saved |
 | `meanvalue` | the Tome opens the chord workshop on x² at x = 1, with the chord's slope (16 − 0)/(4 − 0) = 4 worked and the tangent's 2 too shallow, so c lies to the right; at 2 the tangent matches, half way as on every parabola, and at 2.05 it is steeper; a quarter step stops short of the end; on x³ the middle 1.5 gives 6.75, short of 9, and a step from 1.7 to 1.75 crosses c = √3 ≈ 1.7321; on 4/x the chord runs downhill at −1 and c is 2, short of the middle; all six goals, starting over, the ends, every button and the drawing named, a phone's width, and nothing saved |
+| `chordpick` | the Tome says the chord workshop can be turned round; the mode is pressed and the curves, the figure, the move buttons, the readout and the goals step aside; the rule comes first; a curve on an interval is shown with its chord drawn and no tangent, and four numbers offered, each named; a wrong pick is named as its slip, checked by putting it into f′, shut and told as not c, and not counted; the right pick is worked from the chord's slope, counted but not as a first try, toasted, and deals a new question; a missed pick between a and b has its tangent drawn, and it goes with the question; a first try is counted as one; the fifth brings CHORD FINDER; every button and the figure are named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
+| `tanline` | the Tome opens the tangent line workshop on √x at a = 4, with L(x) = 2 + (1/4)(x − 4) worked and the two touching; at 4.1 the estimate 2.025 is too high by about 0.0002, within 0.001; from 6 halving to 5 cuts the miss from 0.0505 to 0.0139, about a quarter; at 8 it drifts past 0.1; left of 4 it still overshoots, and x stops at 1 and 9; on 1/x near 1 the tangent falls short; on sin x near 0 halving from 0.8 to 0.4 cuts the miss to about an eighth; all six goals and the banner, starting over, every button and the drawing named, a phone's width, and nothing saved |
+| `arclen` | the Tome opens the arc length workshop on the line, one chord measured √(4² + 3²) = 5 beside the runs alone, 4; two chords still exactly 5; on the cubic one chord short of 17/12 by about 0.0601, four chords each worked, doubling from 2 to 4 cutting the gap from 0.01656 to 0.00421, about a quarter, and 16 chords within 0.001; the chords stop at 32, halving drops the note and starting over goes back to one; on the quarter circle 16 chords give 1.5685 and doubling cuts the gap only to about a third; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
+| `arcpick` | the Tome says the arc length workshop can be turned round; the workshop opens on laying chords by hand, and switching to which integral puts away the curves, the figure, the chord buttons, the readout and the goals and states the rule first; a curve and where it runs are shown and four integrals offered, each named by its integral; two wrong picks are each named as their slip and checked at one x, where the slope gives a tiny step's length, shut and told as not the length, and not counted; the right pick works 1 + f′² through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings CURVE MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `logistic` | the Tome opens the logistic workshop starting small at 20, A = 49 worked and the rate 0.5 × 20 × 0.98 = 9.8; one step grows P to 32.6, 1.6276 times as much, almost e^0.5, with the rate rising; P passes 500 at t = 8 with rK/4 = 125 told, and at t = 9 the rate falls from 124.6 to 114.1; by t = 17 P is within 1% of 1000; the steps stop at 20, stepping back drops the step note and starting over goes back to t = 0; half way the rate falls from 125; above the ceiling the rate is −480 and P falls to 1294.4; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
 | `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
-| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 51 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
+| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 54 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |
 | `matpick` | the Tome says the matrix workshop can be turned round; the workshop opens on free play, and switching to which matrix puts away the steppers and goals and states the rule first; four matrices are offered, each named and read out row by row, and the shape is drawn dashed over the square, never given as numbers; a wrong pick says where it sends î and ĵ against the dashed ones, names its slip, is drawn in gold over the shape, is shut and told as not this one, and is not counted; the right pick reads its columns back, counts (not as a first try after a miss), toasts and deals a new shape with all four open; a first try counts as one, and the fifth pick brings MATRIX SPOTTER; every button is named, nothing runs off a phone, the matrices sit two by two with î and ĵ's colours on their columns, match the shape and free play come back, and the save is unchanged |
 | `eigspot` | the Tome says the eigenvector hunt can be turned round; the hunt opens on hunting by hand, and switching to spot one puts away the matrices, the arrow, the figure and the goals and states the rule first; the matrix is read out row by row; four arrows are offered, each named with where A sends it and drawn with v in green, A·v in gold and v's dotted line; a wrong pick is multiplied out, told how many degrees it is knocked off its line, shut, drawn in red, told as not an eigenvector and not counted; the right pick is written as λ times itself, counts (not as a first try after a miss), toasts and deals a new matrix with all four open; a first try counts as one, and the fifth spot brings EIGEN SPOTTER; every button is named, nothing runs off a phone, the arrows sit two by two, hunting by hand comes back, and the save is unchanged |

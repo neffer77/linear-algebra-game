@@ -1948,13 +1948,77 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
     <div style="height:20px"></div>
   </div>
 
+  <!-- ============ LOGISTIC WORKSHOP ============ -->
+  <div class="screen" id="s-logistic">
+    <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
+    <div class="panel">
+      <div id="lgwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Where the population starts"></div>
+      <div id="lgwFig"></div>
+      <div id="lgwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step through time">
+        <button class="btn sm ghost" id="lgwBack" onclick="LogiGrow.back()" aria-label="Step back one unit of time">◀ Step back</button>
+        <button class="btn sm" id="lgwFwd" onclick="LogiGrow.fwd()" aria-label="Step forward one unit of time">Step forward ▶</button>
+        <button class="btn sm ghost" id="lgwAgain" onclick="LogiGrow.again()" aria-label="Go back to t = 0">Start over</button>
+      </div>
+      <div id="lgwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="lgwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="lgwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ ARC LENGTH WORKSHOP ============ -->
+  <div class="screen" id="s-arclen">
+    <div class="panel"><h2>🧵 Arc Length Workshop</h2><div class="sub">How long is a curve? Lay straight chords along it, measure each by Pythagoras, √(run² + rise²), and add them up. More chords hug the curve closer, and the total climbs toward the true length, ∫ √(1 + f′(x)²) dx.</div></div>
+    <div id="arcwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Lay chords by hand or pick the integral that is the length"></div>
+    <div class="panel">
+      <div id="alqBox"></div>
+      <div id="arcwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="arcwFig"></div>
+      <div id="arcwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="How many chords">
+        <button class="btn sm ghost" id="arcwFewer" onclick="ArcLen.fewer()" aria-label="Halve the number of chords">◀ Halve the chords</button>
+        <button class="btn sm" id="arcwMore" onclick="ArcLen.more()" aria-label="Double the number of chords">Double the chords ▶</button>
+        <button class="btn sm ghost" id="arcwAgain" onclick="ArcLen.again()" aria-label="Go back to one chord">Start over</button>
+      </div>
+      <div id="arcwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="arcwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="arcwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
+  <!-- ============ TANGENT LINE WORKSHOP ============ -->
+  <div class="screen" id="s-tanline">
+    <div class="panel"><h2>🪡 Tangent Line Workshop</h2><div class="sub">Near a, a curve and its tangent line are almost the same, so f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve, step x away from a, and watch how far the tangent's estimate misses, and which way.</div></div>
+    <div class="panel">
+      <div id="tlwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
+      <div id="tlwFig"></div>
+      <div id="tlwMoveRow" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move x">
+        <button class="btn sm ghost" id="tlwL" onclick="TanLine.move(-10)" aria-label="Move x one whole left">◀ 1</button>
+        <button class="btn sm ghost" id="tlwl" onclick="TanLine.move(-1)" aria-label="Move x a tenth left">◀ 0.1</button>
+        <button class="btn sm ghost" id="tlwr" onclick="TanLine.move(1)" aria-label="Move x a tenth right">0.1 ▶</button>
+        <button class="btn sm" id="tlwR" onclick="TanLine.move(10)" aria-label="Move x one whole right">1 ▶</button>
+        <button class="btn sm ghost" id="tlwHalf" onclick="TanLine.halve()" aria-label="Halve x minus a, moving x half way back to a">Halve x − a</button>
+        <button class="btn sm ghost" id="tlwAgain" onclick="TanLine.again()" aria-label="Go back to x = a">Start over</button>
+      </div>
+      <div id="tlwRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
+    </div>
+    <div class="panel" id="tlwGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+      <div id="tlwGoals"></div></div>
+    <button class="btn ghost" onclick="UI.back()">← Back</button>
+    <div style="height:20px"></div>
+  </div>
+
   <!-- ============ CHORD WORKSHOP ============ -->
   <div class="screen" id="s-mvt">
     <div class="panel"><h2>📐 Chord Workshop</h2><div class="sub">The mean value theorem says a smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Pick a curve, walk the point along it, and set the tangent's slope against the chord's until they match.</div></div>
+    <div id="mvtTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk a curve by hand or pick which number is c"></div>
     <div class="panel">
+      <div id="mvpBox"></div>
       <div id="mvtSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="mvtFig"></div>
-      <div class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move the point">
+      <div class="wsModes" id="mvtMoveRow" style="flex-wrap:wrap" role="group" aria-label="Move the point">
         <button class="btn sm ghost" id="mvtL" onclick="MeanValue.move(-5)" aria-label="Move the point a quarter left">◀ ¼</button>
         <button class="btn sm ghost" id="mvtl" onclick="MeanValue.move(-1)" aria-label="Move the point a twentieth left">◀ 0.05</button>
         <button class="btn sm ghost" id="mvtr" onclick="MeanValue.move(1)" aria-label="Move the point a twentieth right">0.05 ▶</button>
@@ -1963,7 +2027,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
       </div>
       <div id="mvtRead" aria-live="polite" style="font-size:14px;line-height:1.6"></div>
     </div>
-    <div class="panel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
+    <div class="panel" id="mvtGoalPanel"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2>
       <div id="mvtGoals"></div></div>
     <button class="btn ghost" onclick="UI.back()">← Back</button>
     <div style="height:20px"></div>
@@ -4045,6 +4109,238 @@ meanValue(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`The chord from (\${show(a)}, \${show(fa)}) to (\${show(b)}, \${show(fb)}) has slope (\${show(fb)} − \${inB(fa)})/(\${show(b)} − \${inB(a)}) = \${show(div(rise,add(b,mul(a,F(-1)))))}. \`+why};
   }
+},
+/* Linear approximation: near a, f(x) ≈ f(a) + f′(a)(x − a), the tangent line
+   at a standing in for the curve. √x near a perfect square at depth 1; x² or
+   x³ a small step from a whole number at depth 2; ∛x near a perfect cube at
+   depth 3. Whole and fractional answers come up about equally. The wrong
+   answers are the slips people make: leaving off f(a) and giving the step
+   alone, multiplying the slope by x instead of by x − a, adding the step
+   x − a with no slope, stepping the wrong way, a slope missing its ½, its ⅓
+   or its power, and, where it is a fraction, the exact value f(x), which is
+   not what the tangent line gives. */
+linApprox(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):\`(\${show(u)})\`;
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    let fs, fname, a, h, fa, sl, slipSl, why, exact=null;
+    if(d===1){
+      const n=R.i(2,9); a=F(n*n); fa=F(n); sl=F(1,2*n); slipSl=F(1,n);
+      h=whole ? F(R.pick([1,-1])*2*n*R.pick([1,1,2])) : F(R.pick([1,2,3,-1,-2,-3]));
+      if(n*n+h[0]<=0) continue;
+      fs='√x'; fname=x=>\`√\${inB(x)}\`;
+      why=\`f(\${show(a)}) = √\${show(a)} = \${show(fa)} and f′(x) = 1/(2√x), so f′(\${show(a)}) = 1/\${2*n}\`;
+    } else if(d===2){
+      const k=R.pick([2,3]), A=R.pick([1,2,3,4,-1,-2,-3]); a=F(A);
+      fa=F(A**k); sl=F(k*A**(k-1)); slipSl=F(A**(k-1));
+      h=whole ? F(R.pick([1,-1])) : F(R.pick([1,-1]),R.pick([2,3,4,5,10]));
+      fs=k===2?'x²':'x³'; fname=x=>\`\${inB(x)}\${k===2?'²':'³'}\`;
+      exact=F(1); const x=add(a,h); for(let i=0;i<k;i++) exact=mul(exact,x);
+      why=\`f(\${show(a)}) = \${inB(a)}\${k===2?'²':'³'} = \${show(fa)} and f′(x) = \${k}x\${k===3?'²':''}, so f′(\${show(a)}) = \${show(sl)}\`;
+    } else {
+      const m=R.pick([1,2,3,-2]); a=F(m**3); fa=F(m); sl=F(1,3*m*m); slipSl=F(1,m*m);
+      h=whole ? F(R.pick([1,-1])*3*m*m) : F(R.pick([1,2,3,4,-1,-2,-3,-4]));
+      fs='∛x'; fname=x=>\`∛\${inB(x)}\`;
+      why=\`f(\${show(a)}) = ∛\${inB(a)} = \${show(fa)} and f′(x) = 1/(3∛x²), so f′(\${show(a)}) = \${show(sl)}\`;
+    }
+    const x=add(a,h), step=mul(sl,h), ans=add(fa,step);
+    if(x[0]===0) continue;   // f(0) is known outright, so there is nothing to estimate
+    // the working's first step, which a nudge shows, names a, f(a) and f′(a): the estimate must not be one of those
+    // numbers, or the nudge would show it more often than the question does
+    const seenIn=t=>(t.match(new RegExp('(?<![0-9A-Za-z.−])'+show(ans).replace(/[\\/]/g,'\\\\$&')+'(?![0-9A-Za-z¹²³⁰-⁹])','g'))||[]).length;
+    if(seenIn(why)>seenIn(\`f(x) = \${fs}. Use its tangent line at x = \${show(a)} to estimate \${fname(x)}.\`) && g<400) continue;
+    if((ans[1]===1)!==whole && g<400) continue;
+    const slips=[
+      [step,\`that is only the step along the tangent, f′(a)(x − a); the estimate starts from f(\${show(a)}) = \${show(fa)} and adds it\`],
+      [add(fa,mul(sl,x)),\`that multiplies the slope by x = \${show(x)} itself; the tangent steps from a, so the slope multiplies x − a = \${show(h)}\`],
+      [add(fa,h),\`that adds x − a = \${show(h)} with no slope, as if the curve rose one for one; it rises at f′(a) = \${show(sl)}\`],
+      [add(fa,mul(sl,F(-h[0],h[1]))),\`that steps the wrong way along the tangent: x − a is \${show(h)}\`],
+      [add(fa,mul(slipSl,h)),d===2?\`that takes the slope of \${fs} as \${show(slipSl)}, forgetting the power \${fs==='x²'?2:3} that comes down in front\`
+        :\`that takes the slope as \${show(slipSl)}, forgetting the \${d===1?'½':'⅓'} that \${fs} brings down\`]
+    ];
+    if(exact) slips.push([exact,\`that is the exact value of \${fname(x)}, worked out in full; the tangent line gives \${show(fa)} plus the step, a little \${exact[0]*ans[1]>ans[0]*exact[1]?'under':'over'} it\`]);
+    const ok=v=>v[0]!==0 && Math.abs(v[0]/v[1])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form and one of its sign
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;
+    if((dist.length<4 || ans[0]===0 || same<2 || sign<2) && g<400) continue;
+    return {topic:'Linear Approximation',
+      codex:{rule:'Near a, f(x) ≈ f(a) + f′(a)(x − a): the tangent line at a stands in for the curve. Pick a where f and f′ are easy, then step from f(a) along the slope.',
+             eg:'√x near 4: f(4) = 2 and f′(4) = 1/4, so √5 ≈ 2 + (1/4)(1) = 9/4.'},
+      q:\`f(x) = \${fs}. Use its tangent line at x = \${show(a)} to estimate \${fname(x)}.\`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}. The tangent line is L(x) = \${show(fa)} + \${inB(sl)}(x − \${inB(a)}), and x − a = \${show(x)} − \${inB(a)} = \${show(h)}, so \${fname(x)} ≈ \${show(fa)} + \${inB(sl)} × \${inB(h)} = \${show(ans)}.\`};
+  }
+},/* Arc length: the length of y = f(x) from a to b is ∫ₐᵇ √(1 + f′(x)²) dx,
+   each tiny step having run dx and rise f′ dx. A straight line at depth 1,
+   where √(1 + m²) is the same all along; y = (2/3)x√x at depth 2, where
+   f′ = √x and the root is √(1 + x); and at depth 3 y = x³/(3c) + c/(4x),
+   built so that 1 + f′² is a perfect square. Whole and fractional answers
+   come up about equally at the first two depths; at the third the length is
+   always a fraction, and so are most of the slips. The wrong answers are the
+   slips people make: the run b − a alone, the rise f(b) − f(a) alone, rise
+   and run added instead of put through Pythagoras, ∫(1 + f′²) with the square
+   root forgotten, and at depth 2 the antiderivative's 2/3 dropped, turned
+   upside down, or its lower end left off. */
+arcLength(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const pow=(u,k)=>{ let r=F(1); for(let i=0;i<k;i++) r=mul(r,u); return r; }, abs=u=>[Math.abs(u[0]),u[1]];
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], inB=u=>u[1]===1&&u[0]>=0?show(u):\`(\${show(u)})\`;
+  // at depth 3 the length is a fraction: where it comes out whole, too few slips do, so the form would give it away
+  const whole=d<3 && R.chance(0.5);
+  for(let g=0;;g++){
+    let fs, a, b, ans, why, slips;
+    if(d===1){
+      // m with √(1 + m²) a fraction: the sides of a right triangle with whole sides
+      const [p,q,h]=R.pick([[3,4,5],[4,3,5],[5,12,13],[12,5,13],[8,15,17],[15,8,17]]), sg=R.pick([1,-1]);
+      const m=F(sg*p,q), r=F(h,q), c=R.i(-5,5);
+      a=F(R.i(-3,3));
+      const w=whole ? q*(q<=5?R.i(1,2):1) : R.i(1,9);
+      b=add(a,F(w));
+      const W=F(w), rise=mul(abs(m),W);
+      fs=\`\${sg<0?'−':''}(\${p}/\${q})x\${c===0?'':c>0?\` + \${c}\`:\` − \${-c}\`}\`;
+      ans=mul(r,W);
+      why=\`f′(x) = \${show(m)} everywhere, so √(1 + f′²) = √(1 + \${p*p}/\${q*q}) = √(\${h*h}/\${q*q}) = \${show(r)} all along. The length is \${show(r)} × (b − a) = \${show(r)} × \${w} = \${show(ans)}\`;
+      slips=[
+        [W,\`that is the run b − a = \${w} alone; along a slope each step is longer than its run\`],
+        [rise,\`that is how far the line rises, |f(b) − f(a)| = \${show(rise)}; the length also counts the run\`],
+        [add(W,rise),\`that adds the run \${w} and the rise \${show(rise)}; a slanted step is the hypotenuse, √(run² + rise²), not run + rise\`],
+        [mul(W,add(F(1),mul(m,m))),\`that is ∫(1 + f′²) dx with the square root forgotten: 1 + f′² = \${show(add(F(1),mul(m,m)))}, but each step is √(1 + f′²) = \${show(r)} times its run\`]
+      ];
+    } else if(d===2){
+      // √(1 + x) whole at both ends: 1 + a = A², 1 + b = B²; the length (2/3)(B³ − A³) is whole when B − A is a multiple of 3
+      const A=R.i(1,4), B=R.i(A+1,6);
+      if(((B-A)%3===0)!==whole && g<400) continue;
+      a=F(A*A-1); b=F(B*B-1);
+      const D=F(B**3-A**3);
+      fs='(2/3)x√x';
+      ans=mul(F(2,3),D);
+      why=\`f′(x) = √x, so √(1 + f′²) = √(1 + x). An antiderivative is (2/3)(1 + x)^(3/2), so the length is (2/3)((1 + \${show(b)})^(3/2) − (1 + \${show(a)})^(3/2)) = (2/3)(\${B}³ − \${A}³) = (2/3) × \${show(D)} = \${show(ans)}\`;
+      slips=[
+        [D,\`that drops the 2/3: (1 + x)^(3/2) has slope (3/2)√(1 + x), so the antiderivative of √(1 + x) carries 2/3 in front\`],
+        [mul(F(3,2),D),\`that puts 3/2 in front, the slope's number, instead of 2/3; integrating raises the power and divides by it\`],
+        [sub(b,a),\`that is the run b − a = \${show(sub(b,a))} alone; the curve climbs as it goes, so it is longer than its run\`],
+        [add(sub(b,a),F((B*B-1)**2-(A*A-1)**2,2)),\`that is ∫(1 + f′²) dx = ∫(1 + x) dx with the square root forgotten; each step is √(1 + x) times its run\`]
+      ];
+      slips.push([mul(F(2,3),F(B**3)),\`that leaves off the lower end: (2/3)(1 + x)^(3/2) at x = \${show(a)} is \${show(mul(F(2,3),F(A**3)))}, and it has to be taken away\`]);
+    } else {
+      // y = x³/(3c) + c/(4x): f′ = x²/c − c/(4x²), and 1 + f′² = (x²/c + c/(4x²))², so the length is [x³/(3c) − c/(4x)] from a to b
+      const pairs=[[2,[1,1],[2,1]],[2,[1,1],[3,1]],[2,[2,1],[3,1]],[2,[1,2],[1,1]],[2,[2,1],[4,1]],[1,[1,1],[2,1]],[1,[1,2],[1,1]],[1,[1,1],[3,1]],[3,[1,1],[3,1]],[3,[1,2],[3,2]],[4,[1,1],[2,1]],[4,[2,1],[3,1]],[4,[1,1],[3,1]],[4,[2,1],[4,1]]];
+      const [c,aa,bb]=R.pick(pairs); a=F(...aa); b=F(...bb);
+      const fx=x=>add(mul(pow(x,3),F(1,3*c)),mul(F(c,4),F(x[1],x[0]))), G=x=>sub(mul(pow(x,3),F(1,3*c)),mul(F(c,4),F(x[1],x[0])));
+      ans=sub(G(b),G(a));
+      if((ans[1]===1)!==whole && g<400) continue;
+      // c/(4x) and c/(4x²) in lowest terms: 1/(4x), 1/(2x), 3/(4x), 1/x
+      const [cn,cd]=F(c,4), over=v=>cd===1 ? \`\${cn}/\${v}\` : \`\${cn}/(\${cd}\${v})\`;
+      const t1=\`x³/\${3*c}\`, t2=over('x');
+      fs=\`\${t1} + \${t2}\`;
+      const dp=c===1?'x²':\`x²/\${c}\`, d2=over('x²'), G2=t2;
+      why=\`f′(x) = \${dp} − \${d2}, and 1 + f′² = (\${dp} + \${d2})², a perfect square. So √(1 + f′²) = \${dp} + \${d2}, whose antiderivative is \${t1} − \${G2}, and the length is [\${t1} − \${G2}] from \${show(a)} to \${show(b)} = \${show(G(b))} − \${inB(G(a))} = \${show(ans)}\`;
+      const rise=sub(fx(b),fx(a)), W=sub(b,a);
+      // ∫(1 + f′²) dx = ∫(x⁴/c² + 1/2 + c²/(16x⁴)) dx = [x⁵/(5c²) + x/2 − c²/(48x³)]
+      const H=x=>add(add(mul(pow(x,5),F(1,5*c*c)),mul(x,F(1,2))),mul(F(-c*c,48),F(x[1]**3,x[0]**3)));
+      slips=[
+        [rise,\`that is how far the curve rises, f(b) − f(a): the + of f stayed a + where √(1 + f′²) needs \${t1} − \${G2}\`],
+        [W,\`that is the run b − a = \${show(W)} alone; the curve climbs as it goes, so it is longer than its run\`],
+        [add(W,rise),\`that adds the run and the rise; each tiny step is the hypotenuse, √(run² + rise²), not run + rise\`],
+        [sub(H(b),H(a)),\`that is ∫(1 + f′²) dx with the square root forgotten; 1 + f′² is a perfect square, so take its root first\`]
+      ];
+    }
+    const ok=v=>v[0]!==0 && Math.abs(v[0])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form and one of its sign
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>s[0][0]*ans[0]>0).length;
+    if((dist.length<4 || Math.abs(ans[0])>999 || ans[1]>999 || same<2 || sign<2) && g<400) continue;
+    if((ans[1]===1)!==whole && g<400) continue;
+    return {topic:'Arc Length',
+      codex:{rule:'The length of y = f(x) from a to b is ∫ₐᵇ √(1 + f′(x)²) dx. Each tiny step runs dx and rises f′ dx, so Pythagoras makes it √(1 + f′²) dx long.',
+             eg:'y = (3/4)x from 0 to 4: √(1 + 9/16) = 5/4 all along, so the length is 5/4 × 4 = 5.'},
+      q:\`Find the length of the curve y = \${fs} from x = \${show(a)} to x = \${show(b)}.\`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
+},/* Logistic growth: dP/dt = rP(1 − P/K) grows like rP while P is small and
+   slows to nothing as P nears the ceiling K. At depth 1, how fast it grows at
+   a given P; at depth 2, how fast it grows at its fastest, rK/4 at P = K/2;
+   at depth 3, P at the moment e^(rt) reaches a given number, from the
+   solution P(t) = K/(1 + A·e^(−rt)) with A = (K − P(0))/P(0). Whole and
+   fractional answers come up about equally. The wrong answers are the slips
+   people make: rP with no ceiling, P/K where the room left is 1 − P/K, the
+   P or the r or the ÷ K dropped, the population K/2 given for the rate, A
+   turned upside down, and e^(rt) where the solution has e^(−rt). */
+logistic(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]), dv=(u,v)=>mul(u,[v[1],v[0]]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], one=F(1);
+  const dec=u=>String(+(u[0]/u[1]).toFixed(3));
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const r=R.pick([[1,10],[1,5],[1,4],[3,10],[2,5],[1,2],[3,5],[3,4],[4,5],[3,2],[2,1]]).slice(), rs=dec(r);
+    // at depth 2 rK/4 comes out whole for most round K, so K there also takes the odd tens
+    const K=F(R.pick(d===2?[30,50,70,90,100,150,200,250,300,350,500]:[100,200,300,400,500,600,800,1000,1200])), Ks=show(K);
+    const eq=\`dP/dt = \${rs}P(1 − P/\${Ks})\`;
+    let q, ans, why, slips;
+    if(d===1){
+      const P=mul(K,F(R.i(1,9),10)), Ps=show(P), room=sub(one,dv(P,K));
+      ans=mul(mul(r,P),room);
+      q=\`\${eq}. How fast is the population growing when P = \${Ps}?\`;
+      why=\`Put P = \${Ps} into rP(1 − P/K): the room left is 1 − \${Ps}/\${Ks} = \${show(room)}, so dP/dt = \${rs} × \${Ps} × \${show(room)} = \${show(ans)}\`;
+      slips=[
+        [mul(r,P),\`that is rP alone, growth with no ceiling; the factor 1 − P/K is what slows it as P nears \${Ks}\`],
+        [mul(mul(r,P),dv(P,K)),\`that uses P/K = \${show(dv(P,K))}, the share already filled, where the formula needs 1 − P/K, the room left\`],
+        [mul(r,room),\`that drops the P in front: the rate is r times P times the room left\`],
+        [mul(mul(r,P),sub(K,P)),\`that leaves off the ÷ \${Ks}: 1 − P/K is (K − P)/K, a share, not a count\`],
+        [mul(mul(r,P),add(one,dv(P,K))),\`that adds P/K where it takes it away: the room left is 1 − P/K\`]
+      ];
+    } else if(d===2){
+      const half=mul(K,F(1,2));
+      ans=mul(mul(r,K),F(1,4));
+      q=\`\${eq}. How fast is the population growing at its fastest?\`;
+      why=\`rP(1 − P/K) is a hump that is 0 at P = 0 and at P = \${Ks}, so it peaks half way, at P = \${show(half)}. There dP/dt = \${rs} × \${show(half)} × (1 − 1/2) = rK/4 = \${show(ans)}\`;
+      slips=[
+        [half,\`that is the population where growth is fastest, P = K/2 = \${show(half)}, not how fast it grows there\`],
+        [mul(r,half),\`that puts P = K/2 into rP alone and forgets the room left, 1 − P/K = 1/2\`],
+        [mul(r,K),\`that is rP at P = K, but there 1 − P/K = 0 and growth has stopped\`],
+        [mul(K,F(1,4)),\`that leaves out r: at P = K/2 the rate is r × K/2 × 1/2\`],
+        [mul(r,mul(half,half)),\`that leaves off the ÷ K: at P = K/2 the room left is the share 1/2, not K/2\`]
+      ];
+    } else {
+      const P0=mul(K,F(R.i(1,9),10)), E=F(R.pick([2,3,4,5,9])), A=dv(sub(K,P0),P0), Es=show(E), P0s=show(P0);
+      const sol=a=>dv(K,add(one,a));
+      ans=sol(dv(A,E));
+      q=\`\${eq} with P(0) = \${P0s}. Find P at the moment e^(\${rs}t) = \${Es}.\`;
+      why=\`The solution is P(t) = K/(1 + A·e^(−rt)) with A = (K − P(0))/P(0) = \${show(sub(K,P0))}/\${P0s} = \${show(A)}. When e^(\${rs}t) = \${Es}, e^(−\${rs}t) = 1/\${Es}, so P = \${Ks}/(1 + \${A[1]===1?show(A):\`(\${show(A)})\`}/\${Es}) = \${show(ans)}\`;
+      slips=[
+        [sol(dv(dv(P0,sub(K,P0)),E)),\`that turns A upside down: A = (K − P(0))/P(0) = \${show(A)}, so that P(0) = K/(1 + A)\`],
+        [sol(mul(A,E)),\`that uses e^(\${rs}t) = \${Es} where the solution has e^(−\${rs}t) = 1/\${Es}; with it P would shrink\`],
+        [mul(P0,E),\`that is P(0) × e^(\${rs}t), growth with no ceiling; logistic growth slows as P nears \${Ks}\`],
+        [sol(dv(dv(K,P0),E)),\`that takes A = K/P(0); A is (K − P(0))/P(0), so that P(0) comes out right at t = 0\`],
+        [P0,\`that is P(0) itself, where e^(\${rs}t) = 1; the population has grown since\`]
+      ];
+    }
+    const ok=v=>v[0]>0 && v[0]<=9999 && Math.abs(v[0]/v[1])<=999 && v[1]<=999 && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)) if(dist.length<4 && ok(s[0]) && !seen.has(key(s[0]))){ dist.push(s); seen.add(key(s[0])); }
+    // any three of the four wrong answers shown hold one of the answer's form
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || ans[0]>9999 || ans[1]>999 || same<2 || (ans[1]===1)!==whole) && g<400) continue;
+    return {topic:'Logistic Growth',
+      codex:{rule:'dP/dt = rP(1 − P/K) slows to 0 as P nears the ceiling K, and is fastest at P = K/2, where it is rK/4. P(t) = K/(1 + A·e^(−rt)), with A = (K − P(0))/P(0).',
+             eg:'dP/dt = 0.2P(1 − P/500) at P = 100: the room left is 1 − 100/500 = 4/5, so dP/dt = 0.2 × 100 × 4/5 = 16.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
 }
 };
 
@@ -4158,7 +4454,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4171,7 +4467,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4223,6 +4519,9 @@ const WORKSHOP_FOR = (() => {
     EulerWalk: ["👣 Euler Step Workshop", ['euler']],
     Doubling: ["⏳ Doubling Workshop", ['growth']],
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
+    TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
+    ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
+    LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -4757,7 +5056,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
@@ -13692,6 +13991,9 @@ const UI = {
     if(id==='s-eulerwalk') EulerWalk.render();
     if(id==='s-double') Doubling.render();
     if(id==='s-mvt') MeanValue.render();
+    if(id==='s-tanline') TanLine.render();
+    if(id==='s-arclen') ArcLen.render();
+    if(id==='s-logistic') LogiGrow.render();
     if(id==='s-dot') Dot.render();
     if(id==='s-eig') Eigen.render();
     if(id==='s-compose') Compose.render();
@@ -14524,8 +14826,23 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📐 Chord Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">The mean value theorem by hand: walk a point along x², x³ or 4/x and set its tangent's slope against the chord's until they match. On x² c falls half way; on x³ and 4/x it does not. Then turn it round: see a curve on an interval with its chord, and pick which of four numbers is c.</div>
          <button class="btn sm" id="tomeMeanValue" style="width:auto;margin-top:8px" onclick="MeanValue.open()">Open the chord workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🪡 Tangent Line Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Estimate √x, 1/x and sin x from a tangent line, L(x) = f(a) + f′(a)(x − a), and watch how far it misses. See why √x is always overshot and 1/x always undershot, and halve the step to cut the miss to a quarter, or on sin x to an eighth.</div>
+         <button class="btn sm" id="tomeTanLine" style="width:auto;margin-top:8px" onclick="TanLine.open()">Open the tangent line workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🧵 Arc Length Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Lay straight chords along a line, a cubic and a quarter circle, measure each by Pythagoras, and add them up. Double the chords and watch the total climb toward the true length, ∫ √(1 + f′²) dx, and measure π/2 with nothing but right triangles. Then turn it round: see a curve, and pick which of four integrals is its length.</div>
+         <button class="btn sm" id="tomeArcLen" style="width:auto;margin-top:8px" onclick="ArcLen.open()">Open the arc length workshop</button>
+       </div>\` +
+      \`<div class="panel" style="border-color:var(--gold-dk)">
+         <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step.</div>
+         <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⏳ Doubling Workshop</h2>
@@ -17376,8 +17693,9 @@ const Undo = {
    line through the origin, the line from the origin to the middle point, or
    x fitted on y. A wrong slope L is checked by what makes the best line
    best: its misses from the middle point, each times its x − x̄, add to 0,
-   and with slope L they add to Σ(x − x̄)(y − ȳ) − L·Σ(x − x̄)², which is not
-   0. Nothing is saved. */
+   and with slope L they do not. The check works that sum one point at a
+   time and never writes the two sums, which would give the slope away.
+   Nothing is saved. */
 const FitPick = {
   SLIPS:['ends','first','origin','mean','flip'],
   RULE:'The best line, the one whose squared misses add up to the least, goes through the middle point (x̄, ȳ), and its slope is m = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)². Find x̄ and ȳ, then for each point multiply its two gaps from them and add, and add the squares of the x gaps. Which slope does the best line have?',
@@ -17478,9 +17796,18 @@ const FitPick = {
     if(k==='mean') return \`\${L} is ȳ / x̄, the line from (0, 0) to the middle point. The best line goes through the middle point, but not through (0, 0).\`;
     return \`\${L} is Σ(y − ȳ)² / Σ(x − x̄)(y − ȳ), x fitted on y. That line makes the sideways misses least; the best line here makes the up-and-down misses least.\`;
   },
+  // a number in brackets unless it is a whole number of at least 0, so a product reads one way
+  pb(f){ return f[1]===1 && f[0]>=0 ? this.fs(f) : \`(\${this.fs(f)})\`; },
+  // each point's miss from the line with slope v through the middle point, times its x − x̄, worked one point at a time:
+  // the sums Σ(x − x̄)(y − ȳ) and Σ(x − x̄)² are never written, so a wrong pick's check does not hand over the slope
+  terms(S,v){
+    const T=this.sums(S);
+    return S.p.map(([x,y])=>{ const dx=this.frac(T.n*x-T.sx,T.n), m=this.frac((T.n*y-T.sy)*v[1]-v[0]*(T.n*x-T.sx),T.n*v[1]);
+      return \`\${this.pb(m)} × \${this.pb(dx)}\`; }).join(' + ');
+  },
   check(S,k,L){
     const M=this.mid(S), v=this.val(S,k), K=this.frac(M.sxy[0]*M.sxx[1]*v[1]-v[0]*M.sxx[0]*M.sxy[1],M.sxy[1]*M.sxx[1]*v[1]);
-    return \`Check \${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope \${this.fs(v)} they add to Σ(x − x̄)(y − ȳ) − \${this.pf(v)} × Σ(x − x̄)² = \${this.fs(M.sxy)} − \${this.pf(v)} × \${this.fs(M.sxx)} = \${this.fs(K)}, not 0, so a \${K[0]>0?'bigger':'smaller'} slope fits better.\`;
+    return \`Check \${L}: on the best line the misses from the middle point, each times its x − x̄, add to 0. With slope \${this.fs(v)} they give \${this.terms(S,v)} = \${this.fs(K)}, not 0, so a \${K[0]>0?'bigger':'smaller'} slope fits better.\`;
   },
   html(){
     this.start();
@@ -27678,6 +28005,761 @@ const Doubling = {
   }
 };
 
+/* ---------- Which c? The chord workshop turned round ----------
+   A curve f on [a, b] is drawn with its chord, and four numbers offered, one
+   of them the c strictly between a and b where the tangent runs parallel to
+   the chord. The rule is stated first: work the chord's slope from the two
+   ends, then solve f′(c) = it. The curves are a parabola, k√x, n/x and
+   x³ + px + q. The wrong numbers are the slips people make: the chord's
+   slope itself, the middle of the interval where f is not a parabola, a
+   forgotten doubling or halving, where the tangent is flat, stopping at c² or at √c, the root
+   at an end of the interval, and a height, f(c) or the average of f(a) and
+   f(b), instead of a place. A wrong pick is checked by putting it into f′,
+   and its tangent is drawn beside the chord; a check never names c itself.
+   Nothing is saved. */
+const ChordPick = {
+  SLIPS:['chord','mid','nodbl','flat','sq','half','end','fc','avg'],
+  RULE:'A smooth curve on [a, b] has, somewhere strictly between a and b, a tangent parallel to the chord joining its ends. Work the chord\\'s slope, (f(b) − f(a))/(b − a), then solve f′(c) = it. Which number is c?',
+  CUBES:[[-8,4,-4],[-6,3,-3],[-4,2,-2],[-4,8,4],[-3,6,3],[-2,1,-1],[-2,4,2],[-1,2,1]],
+  RECIPS:[[[1,1],[4,1],[2,1]],[[1,1],[9,1],[3,1]],[[4,1],[9,1],[6,1]],[[2,1],[8,1],[4,1]],[[1,1],[16,1],[4,1]],[[3,1],[12,1],[6,1]],[[2,1],[18,1],[6,1]],[[9,1],[16,1],[12,1]],
+    [[1,4],[1,1],[1,2]],[[1,9],[1,1],[1,3]],[[1,4],[9,1],[3,2]],[[1,9],[4,1],[2,3]],[[4,9],[1,1],[2,3]],[[1,4],[4,9],[1,3]],[[9,4],[4,1],[3,1]],[[1,4],[25,1],[5,2]]],
+  // k√x runs from a² to b², with a from RA and b = a plus a gap from RD, so b is never past 6
+  RA:[[0,1],[1,2],[1,1],[3,2],[2,1],[3,1]], RD:[[1,2],[1,1],[3,2],[2,1],[3,1]],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  frac(p,q){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(f,g){ return this.frac(f[0]*g[1]+g[0]*f[1],f[1]*g[1]); },
+  sub(f,g){ return this.add(f,[-g[0],g[1]]); },
+  mul(f,g){ return this.frac(f[0]*g[0],f[1]*g[1]); },
+  div(f,g){ return this.frac(f[0]*g[1],f[1]*g[0]); },
+  isq(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? s : null; },
+  root(f){ const a=this.isq(f[0]), b=this.isq(f[1]); return f[0]>=0 && a!==null && b!==null ? [a,b] : null; },
+  fs:f=>f[1]===1 ? neg(f[0]) : \`\${neg(f[0])}/\${f[1]}\`,
+  pf(f){ return f[0]<0 ? \`(\${this.fs(f)})\` : this.fs(f); },
+  key(v){ return this.fs(v); },
+  whole(v){ return v[1]===1; },
+  fl(v){ return v[0]/v[1]; },
+  // a sum of terms, each a whole number and what it multiplies, written as it is read
+  poly(T){
+    let out='';
+    for(const [c,x] of T){ if(!c) continue;
+      const a=Math.abs(c), s=(a===1 && x) ? x : \`\${a}\${x}\`;
+      out+= out ? \` \${c<0?'−':'+'} \${s}\` : \`\${c<0?'−':''}\${s}\`; }
+    return out||'0';
+  },
+  ends(S){
+    if(S.t==='par') return [[S.A,1],[S.B,1]];
+    if(S.t==='root') return [this.mul(S.a,S.a),this.mul(S.b,S.b)];
+    if(S.t==='recip') return [S.A,S.B];
+    return [this.frac(S.A,S.h),this.frac(S.B,S.h)];
+  },
+  // f at x exactly, or null where k√x is not a fraction
+  f(S,x){
+    if(S.t==='par') return this.add(this.add(this.mul([S.p,1],this.mul(x,x)),this.mul([S.q,1],x)),[S.r,1]);
+    if(S.t==='root'){ const s=this.root(x); return s && this.mul([S.k,1],s); }
+    if(S.t==='recip') return this.div([S.n,1],x);
+    return this.add(this.add(this.mul(x,this.mul(x,x)),this.mul([S.p,1],x)),[S.q,1]);
+  },
+  ff(S,x){ return S.t==='par' ? S.p*x*x+S.q*x+S.r : S.t==='root' ? S.k*Math.sqrt(x) : S.t==='recip' ? S.n/x : x*x*x+S.p*x+S.q; },
+  // f′ at x exactly, or null where it is not a fraction
+  df(S,x){
+    if(S.t==='par') return this.add(this.mul([2*S.p,1],x),[S.q,1]);
+    if(S.t==='root'){ const s=this.root(x); return s && s[0] ? this.div([S.k,1],this.mul([2,1],s)) : null; }
+    if(S.t==='recip') return this.div([-S.n,1],this.mul(x,x));
+    return this.add(this.mul([3,1],this.mul(x,x)),[S.p,1]);
+  },
+  dff(S,x){ return S.t==='par' ? 2*S.p*x+S.q : S.t==='root' ? S.k/(2*Math.sqrt(x)) : S.t==='recip' ? -S.n/(x*x) : 3*x*x+S.p; },
+  fstr(S){
+    if(S.t==='par') return this.poly([[S.p,'x²'],[S.q,'x'],[S.r,'']]);
+    if(S.t==='root') return S.k===1 ? '√x' : \`\${S.k}√x\`;
+    if(S.t==='recip') return \`\${S.n}/x\`;
+    return this.poly([[1,'x³'],[S.p,'x'],[S.q,'']]);
+  },
+  dstr(S){
+    if(S.t==='par') return this.poly([[2*S.p,'x'],[S.q,'']]);
+    if(S.t==='root') return S.k%2 ? \`\${S.k}/(2√x)\` : \`\${S.k/2}/√x\`;
+    if(S.t==='recip') return \`−\${S.n}/x²\`;
+    return this.poly([[3,'x²'],[S.p,'']]);
+  },
+  slope(S){ const [a,b]=this.ends(S); return this.div(this.sub(this.f(S,b),this.f(S,a)),this.sub(b,a)); },
+  // each number as the option named k works it out
+  val(S,k){
+    const [a,b]=this.ends(S);
+    if(k==='right'){
+      if(S.t==='par') return this.frac(S.A+S.B,2);
+      if(S.t==='root'){ const h=this.mul(this.add(S.a,S.b),[1,2]); return this.mul(h,h); }
+      if(S.t==='recip') return S.C;
+      return this.frac(S.C,S.h); }
+    const c=this.val(S,'right');
+    if(k==='chord') return this.slope(S);
+    if(k==='mid') return this.mul(this.add(a,b),[1,2]);
+    if(k==='nodbl') return S.t==='par' ? this.frac(S.A+S.B,1) : S.t==='root' ? this.mul(this.add(S.a,S.b),this.add(S.a,S.b)) : null;
+    if(k==='flat') return S.t==='par' ? this.frac(-S.q,2*S.p) : null;
+    if(k==='sq') return S.t==='recip'||S.t==='cube' ? this.mul(c,c) : null;
+    if(k==='half') return S.t==='root' ? this.mul(this.add(S.a,S.b),[1,2]) : null;
+    if(k==='end') return S.t==='cube' ? [-c[0],c[1]] : null;
+    if(k==='fc') return this.f(S,c);
+    return this.mul(this.add(this.f(S,a),this.f(S,b)),[1,2]);
+  },
+  ok(v){ return !!v && v[0]!==0 && Math.abs(v[0])<=999 && v[1]<=999; },
+  slips(S){
+    const seen=new Set([this.key(this.val(S,'right'))]), keep=[];
+    for(const k of this.SLIPS){ const v=this.val(S,k);
+      if(!this.ok(v) || seen.has(this.key(v))) continue;
+      seen.add(this.key(v)); keep.push(k); }
+    return keep;
+  },
+  sums(S,ks){
+    const v=ks.map(k=>this.val(S,k));
+    for(let i=0;i<4;i++) for(let j=0;j<4;j++) for(let k=j+1;k<4;k++){
+      if(i===j||i===k) continue;
+      const s=this.add(v[j],v[k]);
+      if(s[0]===v[i][0] && s[1]===v[i][1]) return true; }
+    return false;
+  },
+  trios(S){
+    const rest=this.slips(S), out=[], W=this.val(S,'right'), form=this.whole(W);
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]];
+      if(t.some(x=>this.whole(this.val(S,x))===form) && t.some(x=>this.val(S,x)[0]*W[0]>0) && !this.sums(S,['right',...t])) out.push(t); }
+    return out;
+  },
+  // the numbers the page and the checks name: the ends, f at the ends, the chord's slope, the numbers in f and f′, and f′ at every number a check may test
+  named(S){
+    const [a,b]=this.ends(S), out=[a,b,this.f(S,a),this.f(S,b),this.slope(S)];
+    const co=S.t==='par' ? [S.p,2*S.p,S.q,S.r] : S.t==='root' ? [S.k,S.k/2] : S.t==='recip' ? [S.n] : [3,S.p,S.q];
+    for(const n of co) if(Number.isInteger(n)) out.push([n,1],[-n,1]);
+    for(const k of this.SLIPS){ const v=this.val(S,k); if(this.ok(v)){ const d=this.df(S,v); if(d) out.push(d); } }
+    return out;
+  },
+  STANDBY:{t:'cube',p:1,q:2,h:2,A:-2,B:4,C:2},
+  build(){
+    const wantWhole=R.i(0,1)===1;
+    for(let g=0;g<3000;g++){
+      const t=['par','root','recip','cube'][R.i(0,3)];
+      let S;
+      if(t==='par'){ const A=R.i(-4,3); S={t,p:[1,-1,2,-2,3][R.i(0,4)],q:R.i(-6,6),r:R.i(-5,5),A,B:A+R.i(1,5)}; }
+      else if(t==='root'){ const a=this.RA[R.i(0,this.RA.length-1)], b=this.add(a,this.RD[R.i(0,this.RD.length-1)]);
+        S={t,k:[1,2,3,4,6][R.i(0,4)],a,b}; }
+      else if(t==='recip'){ const [A,B,C]=this.RECIPS[R.i(0,this.RECIPS.length-1)]; S={t,n:[1,2,3,4,6,12][R.i(0,5)],A,B,C}; }
+      else { const [A,B,C]=this.CUBES[R.i(0,this.CUBES.length-1)]; S={t,p:R.i(-3,3),q:R.i(-5,5),h:R.i(1,2),A,B,C}; }
+      const W=this.val(S,'right');
+      if(W[0]===0 || this.whole(W)!==wantWhole || Math.abs(W[0])>999 || W[1]>99) continue;
+      // a check names the ends, f there, the chord's slope and f′ at the numbers it tests, so none of them may be c
+      if(this.named(S).some(n=>this.key(n)===this.key(W))) continue;
+      if(this.slips(S).length<3 || !this.trios(S).length) continue;
+      return S;
+    }
+    return {...this.STANDBY};
+  },
+  // the right answer, worked
+  work(S){
+    const [a,b]=this.ends(S), m=this.slope(S), c=this.val(S,'right'), M=this.fs(m);
+    let solve;
+    if(S.t==='par') solve=\`\${this.poly([[2*S.p,'c'],[S.q,'']])} = \${M} gives c = \${this.fs(c)}, half way between \${this.fs(a)} and \${this.fs(b)}, as on every parabola\`;
+    else if(S.t==='root') solve=\`\${S.k%2 ? \`\${S.k}/(2√c)\` : \`\${S.k/2}/√c\`} = \${M} gives √c = \${this.fs(this.val(S,'half'))} and c = \${this.fs(c)}\`;
+    else if(S.t==='recip') solve=\`−\${S.n}/c² = \${M} gives c² = \${this.fs(this.mul(c,c))} and c = \${this.fs(c)}, the root between \${this.fs(a)} and \${this.fs(b)}\`;
+    else { const e=this.val(S,'end');
+      solve=\`\${this.poly([[3,'c²'],[S.p,'']])} = \${M} gives c² = \${this.fs(this.mul(c,c))}, so c is \${this.fs(c)} or \${this.fs(e)}; \${this.fs(e)} is an end of the interval, so c = \${this.fs(c)}\`; }
+    return \`the chord's slope is (\${this.fs(this.f(S,b))} − \${this.pf(this.f(S,a))})/(\${this.fs(b)} − \${this.pf(a)}) = \${M}, and f′(x) = \${this.dstr(S)}, so \${solve}\`;
+  },
+  slip(S,k,L){
+    if(k==='chord') return \`\${L} is the chord's slope itself, (f(b) − f(a))/(b − a). c is not that number but the place where the tangent has that slope.\`;
+    if(k==='mid') return \`\${L} is the middle of [a, b]. c falls half way only on a parabola, and \${this.fstr(S)} is not one.\`;
+    if(k==='nodbl') return S.t==='par' ? \`\${L} takes f′(x) as \${this.poly([[S.p,'x'],[S.q,'']])}, forgetting that x² comes down doubled.\`
+      : \`\${L} takes the slope of \${this.fstr(S)} as \${S.k}/√x, forgetting that √x comes down halved: its slope is \${this.dstr(S)}.\`;
+    if(k==='flat') return \`\${L} is where the tangent is flat, f′(x) = 0. The tangent has to run parallel to the chord, and this chord is not level.\`;
+    if(k==='sq') return \`\${L} stops at c²: solving f′(c) = the chord's slope gives c² first, and c is its square root.\`;
+    if(k==='half') return \`\${L} stops at √c: solving f′(c) = the chord's slope gives √c first, and c is its square.\`;
+    if(k==='end') return \`\${L} does give a tangent parallel to the chord, but it is an end of the interval, and the theorem's c lies strictly between a and b.\`;
+    if(k==='fc') return \`\${L} is a height on the curve: f where the tangent is parallel. The question asks for the place itself, c, along the x-axis.\`;
+    return \`\${L} is the average of f(a) and f(b), a height half way along the chord, not a place between a and b.\`;
+  },
+  // four places, with = when the value is exact and ≈ when it is not
+  approx(x){ return (x<0?'−':'')+Math.abs(x).toFixed(4); },
+  check(S,k,L){
+    const [a,b]=this.ends(S), m=this.slope(S), v=this.val(S,k), d=this.df(S,v), V=this.fs(v);
+    if(d && this.key(d)===this.key(m)) return \`Check \${L}: f′(\${V}) = \${this.fs(m)}, the chord's slope, but \${V} is \${this.key(v)===this.key(a)?'a':'b'}, an end of [\${this.fs(a)}, \${this.fs(b)}], not strictly between.\`;
+    const inside=this.fl(v)>this.fl(a) && this.fl(v)<this.fl(b);
+    return \`Check \${L}: f′(x) = \${this.dstr(S)}, so f′(\${V}) \${d ? '= '+this.fs(d) : '≈ '+this.approx(this.dff(S,this.fl(v)))}, but the chord's slope is \${this.fs(m)}, so the tangent there is not parallel to the chord.\`
+      +(inside ? '' : \` \${V} is not even between \${this.fs(a)} and \${this.fs(b)}.\`);
+  },
+  // the window the figure shows: a little either side of [a, b], and never x ≤ 0 where k√x or n/x stop
+  win(S){
+    const [a,b]=this.ends(S).map(v=>this.fl(v)), w=b-a;
+    let x0=a-0.08*w; const x1=b+0.08*w;
+    if(S.t==='root') x0=Math.max(0,x0);
+    if(S.t==='recip') x0=Math.max(x0,0.9*a);
+    let y0=Infinity, y1=-Infinity;
+    for(let i=0;i<=80;i++){ const y=this.ff(S,x0+(x1-x0)*i/80); y0=Math.min(y0,y); y1=Math.max(y1,y); }
+    const pad=(y1-y0)*0.1||1;
+    return [x0,x1,y0-pad,y1+pad];
+  },
+  L:30, TOP:10, W:300, H:200,
+  px(S,x){ const w=this.win(S); return Math.round((this.L+(x-w[0])/(w[1]-w[0])*this.W)*10)/10; },
+  py(S,y){ const w=this.win(S); return Math.round((this.TOP+this.H-(y-w[2])/(w[3]-w[2])*this.H)*10)/10; },
+  svg(S,out){
+    const [a,b]=this.ends(S), w=this.win(S), fa=this.f(S,a), fb=this.f(S,b), P=(x,y)=>\`\${this.px(S,x)},\${this.py(S,y)}\`;
+    const pts=[]; for(let i=0;i<=80;i++){ const x=w[0]+(w[1]-w[0])*i/80; pts.push(P(x,this.ff(S,x))); }
+    let tan='', said='';
+    for(const v of out){ const x=this.fl(v);
+      if(x<=w[0] || x>=w[1]) continue;
+      const y=this.ff(S,x), s=this.dff(S,x), h=(w[1]-w[0])*0.22;
+      tan+=\`<line class="mvpTan" data-x="\${this.fs(v)}" x1="\${this.px(S,x-h)}" y1="\${this.py(S,y-s*h)}" x2="\${this.px(S,x+h)}" y2="\${this.py(S,y+s*h)}" stroke="var(--red)" stroke-width="2" stroke-dasharray="5 3"/>\`
+        +\`<circle cx="\${this.px(S,x)}" cy="\${this.py(S,y)}" r="3.5" fill="var(--red)"/>\`;
+      said+=\`; the tangent at x = \${this.fs(v)}, a missed pick, is drawn dashed in red and is not parallel to it\`; }
+    const axis=w[2]<0 && w[3]>0 ? \`<line x1="\${this.L}" y1="\${this.py(S,0)}" x2="\${this.L+this.W}" y2="\${this.py(S,0)}" stroke="var(--dim)" stroke-width="1"/>\` : '';
+    return \`<svg viewBox="0 0 340 236" width="100%" role="img" aria-label="f(x) = \${this.fstr(S)} from \${this.fs(a)} to \${this.fs(b)}, with the chord dashed from (\${this.fs(a)}, \${this.fs(fa)}) to (\${this.fs(b)}, \${this.fs(fb)})\${said}">\`
+      +\`<defs><clipPath id="mvpClip"><rect x="\${this.L}" y="\${this.TOP}" width="\${this.W}" height="\${this.H}"/></clipPath></defs>\`
+      +\`<g clip-path="url(#mvpClip)">\${axis}<polyline points="\${pts.join(' ')}" fill="none" stroke="var(--gold)" stroke-width="2.5"/>\`
+      +\`<line class="mvpChord" x1="\${this.px(S,this.fl(a))}" y1="\${this.py(S,this.fl(fa))}" x2="\${this.px(S,this.fl(b))}" y2="\${this.py(S,this.fl(fb))}" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="6 4"/>\${tan}</g>\`
+      +\`<circle cx="\${this.px(S,this.fl(a))}" cy="\${this.py(S,this.fl(fa))}" r="4" fill="var(--ink)"/><circle cx="\${this.px(S,this.fl(b))}" cy="\${this.py(S,this.fl(fb))}" r="4" fill="var(--ink)"/>\`
+      +\`<text x="\${this.px(S,this.fl(a))}" y="228" text-anchor="middle" font-size="12" fill="var(--dim)">a = \${this.fs(a)}</text><text x="\${this.px(S,this.fl(b))}" y="228" text-anchor="middle" font-size="12" fill="var(--dim)">b = \${this.fs(b)}</text></svg>\`;
+  },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    // a number of the right one's form and sign always stands beside it, and it sits low, high or between as often as these slips allow
+    const T=this.trios(S), W=this.val(S,'right'), rk=t=>t.filter(x=>{ const v=this.val(S,x); return v[0]*W[1]<W[0]*v[1]; }).length;
+    const ranks=[...new Set(T.map(rk))], want=ranks[R.i(0,ranks.length-1)], fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];
+    const opts=['right',...take].map(k=>({k}));
+    for(let i=opts.length-1;i>0;i--){ const j=R.i(0,i); [opts[i],opts[j]]=[opts[j],opts[i]]; }
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CHORD FINDER', this.matched+' tangents matched','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is c, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    MeanValue.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed(), [a,b]=this.ends(S);
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="mvpQ" style="text-align:center;font-size:16px;margin-bottom:2px">f(x) = \${this.fstr(S)} on [\${this.fs(a)}, \${this.fs(b)}]</div>\`;
+    out+=\`<div class="small" style="text-align:center">Where is the tangent parallel to the chord? Which is c?</div>\`;
+    out+=\`<div id="mvpFig">\${this.svg(S,[...r.out].sort().map(i=>this.val(S,r.opts[i].k)))}</div>\`;
+    out+=\`<div id="mvpPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.fs(this.val(S,o.k)), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ChordPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not c':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last) lines.push(\`That was it: \${this.work(this.last.S)}. Here is a new one.\`);
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="mvpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+/* ---------- The logistic workshop: growth with a ceiling, step by step ----------
+   dP/dt = 0.5P(1 − P/1000), solved exactly: P(t) = 1000/(1 + A·e^(−0.5t)) with
+   A = (1000 − P(0))/P(0). Start small at 20, start half way at 500, or start
+   above the ceiling at 1600, and step t forward a whole unit at a time. Each
+   step works e^(−0.5t), P, the room left 1 − P/1000 and the rate rP(1 − P/K),
+   and draws the tangent at the point, as steep as the rate. Small, P grows
+   almost like e^(0.5t); past 500 the room left shrinks faster than P grows, so
+   the rate falls; and from either side P settles on 1000. Nothing is saved. */
+const LogiGrow = {
+  r:0.5, K:1000, TMAX:20,
+  SETS:[
+    {id:'small', btn:'Start small', name:'starting small at P(0) = 20', P0:20, Y:[0,1100],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 20. A = (1000 − 20)/20 = 49, so P(t) = 1000/(1 + 49·e^(−0.5t)).'},
+    {id:'half', btn:'Start half way', name:'starting half way at P(0) = 500', P0:500, Y:[0,1100],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 500. A = (1000 − 500)/500 = 1, so P(t) = 1000/(1 + e^(−0.5t)).'},
+    {id:'above', btn:'Start above', name:'starting above the ceiling at P(0) = 1600', P0:1600, Y:[0,1700],
+     intro:'dP/dt = 0.5P(1 − P/1000), starting at P(0) = 1600, above the ceiling. A = (1000 − 1600)/1600 = −0.375, so P(t) = 1000/(1 − 0.375·e^(−0.5t)).'}
+  ],
+  si:0, t:0, stepped:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'early', t:'Starting small, step once and see P grow almost as if there were no ceiling.', toast:'Small means nearly exponential',
+     ok:K=>K.si===0 && K.stepped && K.t===1},
+    {id:'half', t:'Starting small, step P past half the ceiling, 500.', toast:'Past K/2',
+     ok:K=>K.si===0 && K.stepped && K.P(K.t-1)<500 && K.P()>=500},
+    {id:'slow', t:'Starting small, step until the rate is lower than a step before.', toast:'Growth slows',
+     ok:K=>K.si===0 && K.stepped && K.rate()<K.rate(K.t-1)},
+    {id:'near', t:'Starting small, come within 1% of the ceiling.', toast:'Within 1% of K',
+     ok:K=>K.si===0 && K.K-K.P()<K.K/100},
+    {id:'peak', t:'Starting half way, step once and see the rate fall from its peak, rK/4 = 125.', toast:'Fastest at K/2',
+     ok:K=>K.si===1 && K.stepped},
+    {id:'above', t:'Starting above the ceiling, step once and see P fall toward it.', toast:'Down to the ceiling',
+     ok:K=>K.si===2 && K.stepped}
+  ],
+  set(){ return this.SETS[this.si]; },
+  A(){ const P0=this.set().P0; return (this.K-P0)/P0; },
+  P(t=this.t){ return this.K/(1+this.A()*Math.exp(-this.r*t)); },
+  rate(t=this.t){ const P=this.P(t); return this.r*P*(1-P/this.K); },
+  /* a number to d places, with = when that is exact and ≈ when it is not */
+  num(v,d){ const q=Math.round(v*10**d)/10**d; return neg(Object.is(q,-0)?0:q); },
+  is(v,d){ return (Math.abs(Math.round(v*10**d)-v*10**d)<1e-6 ? '= ' : '≈ ')+this.num(v,d); },
+  working(){
+    const S=this.set(), t=this.t, P=this.P(), room=1-P/this.K, R=this.rate(), e=Math.exp(-this.r*t), A=this.A();
+    const Aw=S.id==='half' ? '' : \`\${neg(Math.abs(A))} × \`, sg=A<0?'−':'+';
+    const out=[S.intro];
+    out.push(t===0 ? \`At t = 0, e^0 = 1, so P = 1000/(1 \${sg} \${neg(Math.abs(A))}) = \${this.num(P,1)}, the start.\`
+      : \`At t = \${t}, e^(−0.5 × \${t}) ≈ \${this.sig(e)}, so P = 1000/(1 \${sg} \${Aw}\${this.sig(e)}) \${this.is(P,1)}.\`);
+    out.push(\`The room left is 1 − P/1000 \${this.is(room,4)}, so the rate is 0.5 × \${this.num(P,1)} × \${this.pf(room)} \${this.is(R,1)}: \`+
+      (R>0 ? 'P is growing.' : 'below 0, so P is shrinking.'));
+    if(this.stepped){
+      const P0=this.P(t-1), R0=this.rate(t-1);
+      let note=\`From t = \${t-1} to \${t}, P went from \${this.num(P0,1)} to \${this.num(P,1)}, \${this.num(P/P0,4)} times as much\`;
+      if(S.id==='small' && t===1) note+=\`: almost e^0.5 ≈ 1.6487, as if there were no ceiling, since with P small the room left is nearly 1.\`;
+      else if(S.id==='above') note+=\`: above the ceiling the room left is below 0, so P falls back toward 1000.\`;
+      else note+='.';
+      out.push(note);
+      if(R0>0 && R>0) out.push(R<R0 ? \`The rate fell from \${this.num(R0,1)} to \${this.num(R,1)}: past 500, the room left is shrinking faster than P is growing.\`
+        : \`The rate rose from \${this.num(R0,1)} to \${this.num(R,1)}: below 500, P is growing faster than the room left is shrinking.\`);
+      if(P0<500 && P>=500) out.push(\`P passed K/2 = 500 in this step, where growth is fastest: rK/4 = 0.5 × 1000/4 = 125.\`);
+    }
+    if(Math.abs(this.K-P)<this.K/100) out.push(\`P is within 1% of the ceiling, 1000, and keeps closing in without ever reaching it.\`);
+    return out;
+  },
+  /* a small number to four significant figures */
+  sig(v){ return String(+v.toPrecision(4)); },
+  pf(v){ const s=this.num(v,4); return /−/.test(s) ? \`(\${s})\` : s; },
+  /* P against t, the ceiling dashed, a dot at each whole t, the tangent at t */
+  L:42, TOP:10, W:296, Hh:220,
+  PX(t){ return this.L+t*this.W/this.TMAX; },
+  PY(v){ const Y=this.set().Y; return this.TOP+this.Hh-(v-Y[0])*this.Hh/(Y[1]-Y[0]); },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), y0=this.PY(0);
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="P against t from 0 to \${this.TMAX} in gold, \${S.name}, with the ceiling 1000 dashed, a blue dot at each whole t up to t = \${this.t}, and the tangent there in red">\`;
+    out+=\`<line data-k="taxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(y0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<line data-k="paxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${this.L}" y2="\${this.TOP}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of [0,5,10,15,20]) out+=\`<text data-k="tick" x="\${f(this.PX(t))}" y="\${f(y0+13)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${t}</text>\`;
+    for(const v of [500,1000].concat(S.Y[1]>1500?[1500]:[])) out+=\`<text data-k="tick" x="\${this.L-4}" y="\${f(this.PY(v)+3)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="end">\${v}</text>\`;
+    out+=\`<line data-k="ceiling" x1="\${this.L}" y1="\${f(this.PY(1000))}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(this.PY(1000))}" stroke="\${FIG_COL.dim}" stroke-width="1.2" stroke-dasharray="5 4"/>\`;
+    out+=\`<line data-k="half" x1="\${this.L}" y1="\${f(this.PY(500))}" x2="\${f(this.PX(this.TMAX))}" y2="\${f(this.PY(500))}" stroke="\${FIG_COL.dim}" stroke-width="0.8" stroke-dasharray="2 4"/>\`;
+    const pts=[]; for(let i=0;i<=160;i++){ const t=this.TMAX*i/160; pts.push(\`\${f(this.PX(t))},\${f(this.PY(this.P(t)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    // the tangent through (t, P) with slope the rate, one unit of t either side, kept inside the figure
+    const t=this.t, P=this.P(), R=this.rate(), t1=Math.max(0,t-1), t2=Math.min(this.TMAX,t+1);
+    out+=\`<line data-k="tan" x1="\${f(this.PX(t1))}" y1="\${f(this.PY(P+R*(t1-t)))}" x2="\${f(this.PX(t2))}" y2="\${f(this.PY(P+R*(t2-t)))}" stroke="\${FIG_COL.d}" stroke-width="2"/>\`;
+    for(let k=0;k<=t;k++) out+=\`<circle data-k="\${k===t?'now':'dot'}" cx="\${f(this.PX(k))}" cy="\${f(this.PY(this.P(k)))}" r="\${k===t?4.5:2.6}" fill="\${FIG_COL.a}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-logistic'); },
+  can(dt){ const t=this.t+dt; return t>=0 && t<=this.TMAX; },
+  pick(i){ this.si=i; this.t=0; this.stepped=false; this.touched=true; this.render(); },
+  fwd(){ if(!this.can(1)) return; this.t++; this.stepped=true; this.touched=true; this.render(); },
+  back(){ if(!this.can(-1)) return; this.t--; this.stepped=false; this.touched=true; this.render(); },
+  again(){ this.t=0; this.stepped=false; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('lgwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="LogiGrow.pick(\${i})" aria-label="Grow a population \${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('lgwBack').disabled=!this.can(-1);
+    document.getElementById('lgwFwd').disabled=!this.can(1);
+    document.getElementById('lgwAgain').disabled=this.t===0;
+    document.getElementById('lgwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is P(t); the dashed line is the ceiling, 1000, and the dotted one half of it. The blue dots are P at each whole t so far, and the red line is the tangent at the last, as steep as the rate dP/dt.</div>\`;
+    document.getElementById('lgwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('lgwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('KEEPER OF THE CEILING','every population brought to rest','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- Which integral? The arc length workshop turned round ----------
+   A curve y = c·xᵖ from a to b, and four integrals, one of them its length,
+   ∫ₐᵇ √(1 + f′(x)²) dx. The rule is stated first; the wrong integrals are the
+   slips people make setting it up: the root left off, f squared in place of
+   f′, f′ not squared, only its number or only its power of x squared, the 1
+   dropped, or the area ∫ f dx taken for the length. Every integral shares
+   something with the right one, and the right one never shares the most, so
+   its look gives nothing away. A wrong pick is checked at one x, where a tiny
+   step's length is worked from the slope there. Nothing is saved. */
+const ArcPick = {
+  SLIPS:['noRoot','useF','noSquare','coefOnly','powOnly','noOne','area'],
+  CURVES:[[1,2],[1,3],[1,4],[2,2],[2,3],[2,4],[3,2]],
+  RULE:'A tiny step along y = f(x) runs dx and rises f′(x) dx, so by Pythagoras it is √(dx² + (f′(x) dx)²) = √(1 + f′(x)²) dx long. Add up the steps from a to b: the length is ∫ₐᵇ √(1 + f′(x)²) dx. Find f′, square all of it, add 1 and take the root. Which integral is the length?',
+  SB:'₀₁₂₃₄₅₆₇₈₉',
+  xp(e){ return e===0 ? '' : e===1 ? 'x' : 'x'+sup(e); },
+  term(k,e){ return e===0 ? String(k) : (k===1?'':String(k))+this.xp(e); },
+  fs(S){ return this.term(S.c,S.p); },
+  fps(S){ return this.term(S.c*S.p,S.p-1); },
+  // what each option is: under a root or not, with the 1 or not, and the term k·xᵉ
+  form(S,k){
+    const {c,p}=S, cp=c*p;
+    return k==='right' ? {root:true,one:true,k:cp*cp,e:2*p-2} : k==='noRoot' ? {root:false,one:true,k:cp*cp,e:2*p-2}
+      : k==='useF' ? {root:true,one:true,k:c*c,e:2*p} : k==='noSquare' ? {root:true,one:true,k:cp,e:p-1}
+      : k==='coefOnly' ? {root:true,one:true,k:cp*cp,e:p-1} : k==='powOnly' ? {root:true,one:true,k:cp,e:2*p-2}
+      : k==='noOne' ? {root:true,one:false,k:cp*cp,e:2*p-2} : {root:false,one:false,k:c,e:p};
+  },
+  inner(F){ return (F.one?'1 + ':'')+this.term(F.k,F.e); },
+  body(F){ return F.root ? \`√(\${this.inner(F)})\` : F.one ? \`(\${this.inner(F)})\` : this.inner(F); },
+  show(S,k){ return \`∫\${this.SB[S.a]}\${sup(S.b)} \${this.body(this.form(S,k))} dx\`; },
+  // the slips: with p ≥ 2 no two of them, and none of them and the length, are ever the same integral
+  slips(S){ return this.SLIPS.slice(); },
+  // how many features (root, the 1, the number, the power) option k shares with the others shown
+  share(S,k,shown){
+    const F=this.form(S,k);
+    return shown.filter(x=>x!==k).reduce((n,x)=>{ const G=this.form(S,x); return n+(G.root===F.root)+(G.one===F.one)+(G.k===F.k)+(G.e===F.e); },0);
+  },
+  // the sets of three slips that may stand beside the right one: two under a root as it is, each of its
+  // features found in some wrong one, and some wrong one sharing as much with the rest as the right one does
+  trios(S){
+    const rest=this.slips(S), out=[], R0=this.form(S,'right');
+    for(let i=0;i<rest.length;i++) for(let j=i+1;j<rest.length;j++) for(let k=j+1;k<rest.length;k++){
+      const t=[rest[i],rest[j],rest[k]], F=t.map(x=>this.form(S,x)), shown=['right',...t];
+      if(F.filter(G=>G.root).length<2) continue;
+      if(!F.some(G=>G.one===R0.one&&G.root) || !F.some(G=>G.k===R0.k) || !F.some(G=>G.e===R0.e)) continue;
+      const r=this.share(S,'right',shown);
+      if(!t.some(x=>this.share(S,x,shown)>=r)) continue;
+      out.push(t);
+    }
+    return out;
+  },
+  build(){
+    for(let g=0;g<200;g++){
+      const [c,p]=this.CURVES[R.i(0,this.CURVES.length-1)], a=R.i(0,1), S={c,p,a,b:a+R.i(1,2)};
+      if(this.trios(S).length) return S;
+    }
+    return {c:3,p:2,a:0,b:2};
+  },
+  // where a wrong integral is checked: x = 2, or 3 where squaring f would agree with the length at 2
+  at(S){ return S.p===2 ? 3 : 2; },
+  round:null, matched:0, firstTry:0, misses:0, picked:null, last:null,
+  newRound(){
+    const prev=this.round && this.round.S;
+    let S;
+    for(let g=0;g<50;g++){ S=this.build(); if(!prev||JSON.stringify(S)!==JSON.stringify(prev)) break; }
+    const T=this.trios(S), take=T[R.i(0,T.length-1)], opts=R.shuffle(['right',...take]).map(k=>({k}));
+    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;
+  },
+  start(){ if(!this.round) this.newRound(); },
+  choose(i){
+    const r=this.round;
+    if(!r||r.out.has(i)) return;
+    this.picked=i;
+    if(r.opts[i].k==='right'){
+      this.matched++;
+      if(this.misses===0) this.firstTry++;
+      const tries=this.misses+1;
+      Sfx.good();
+      if(this.matched===5||this.matched===10||this.matched===25)
+        Celebrate.banner('CURVE MEASURER', this.matched+' lengths set up','var(--gold)',()=>Sfx.milestone());
+      else UI.toast(\`✓ \${'ABCD'[i]} is the length, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
+      this.last={S:r.S};
+      this.newRound();
+    } else {
+      r.out.add(i); this.misses++; this.last=null;
+    }
+    ArcLen.render();
+  },
+  missed(){ const r=this.round; return this.picked!==null && r.out.has(this.picked) ? this.picked : null; },
+  slip(S,k,L){
+    const cp=S.c*S.p, fp=this.fps(S), xo=this.xp(S.p-1);
+    if(k==='noRoot') return \`\${L} leaves off the square root. A tiny step is the long side of a triangle with run dx and rise f′(x) dx, so its length is √(1 + f′(x)²) dx: the 1 + f′(x)² goes under a root.\`;
+    if(k==='useF') return \`\${L} squares f(x) = \${this.fs(S)}, the height, where the rise of a step needs the slope. The rise of a tiny step is f′(x) dx, and here f′(x) = \${fp}.\`;
+    if(k==='noSquare') return \`\${L} puts f′(x) = \${fp} under the root without squaring it. Pythagoras squares the rise, so all of \${fp} has to be squared.\`;
+    if(k==='coefOnly') return \`\${L} squares the \${cp} in f′(x) = \${fp} but leaves the \${xo} alone. Squaring \${xo} doubles its power as well.\`;
+    if(k==='powOnly') return \`\${L} squares the \${xo} in f′(x) = \${fp} but leaves the \${cp} alone. Squaring \${fp} squares the \${cp} as well.\`;
+    if(k==='noOne') return \`\${L} drops the 1, the run. √(f′(x)²) dx is only the rise of a tiny step; its length counts the run dx too, so it is √(1 + f′(x)²) dx.\`;
+    return \`\${L} is the area under the curve, ∫ f(x) dx. The length adds up the slanted steps along the curve, √(1 + f′(x)²) dx each, not the heights.\`;
+  },
+  // a whole number, or √n with n not a square
+  rt(n){ const s=Math.round(Math.sqrt(n)); return s*s===n ? String(s) : '√'+n; },
+  value(S,k,h){
+    const F=this.form(S,k), t=F.k*h**F.e, n=(F.one?1:0)+t, sum=\`\${F.one?'1 + ':''}\${F.k===1?'':F.k+' × '}\${h}\${F.e===1?'':sup(F.e)}\`;
+    if(!F.root) return F.one ? \`\${sum} = \${n}\` : \`\${F.k===1?'':F.k+' × '}\${h}\${sup(F.e)} = \${n}\`;
+    const r=this.rt(n);
+    return \`√(\${sum}) = \${r==='√'+n ? r : '√'+n+' = '+r}\`;
+  },
+  check(S,k,L){
+    const h=this.at(S), m=S.c*S.p*h**(S.p-1), n=1+m*m;
+    return \`Check \${L} at x = \${h}: there the slope is f′(\${h}) = \${m}, so a tiny step is √(1 + \${m}²) = \${this.rt(n)==='√'+n?'√'+n:'√'+n+' = '+this.rt(n)} times its run. \${L}'s integrand at x = \${h} is \${this.value(S,k,h)}, not \${this.rt(n)}.\`;
+  },
+  html(){
+    this.start();
+    const r=this.round, S=r.S, m=this.missed();
+    let out=\`<div class="small" style="margin:2px 0 6px">\${this.RULE}</div>\`;
+    out+=\`<div id="alqQ" style="text-align:center;font-size:16px;margin-bottom:2px">y = \${this.fs(S)} from x = \${S.a} to x = \${S.b}</div>\`;
+    out+=\`<div class="small" style="text-align:center">Which integral is its length?</div>\`;
+    out+=\`<div id="alqPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+r.opts.map((o,i)=>{
+      const gone=r.out.has(i), v=this.show(S,o.k), L='ABCD'[i];
+      return \`<button class="btn sm ghost smOpt\${gone?' miss':''}" data-opt="\${L}" \${gone?'disabled ':''}onclick="ArcPick.choose(\${i})" aria-label="\${L}: \${v}\${gone?'. Not the length':''}" style="margin:0"><b>\${L}</b> \${v}</button>\`;
+    }).join('')+\`</div>\`;
+    const lines=[];
+    if(m!==null) lines.push(this.slip(S,r.opts[m].k,'ABCD'[m]), this.check(S,r.opts[m].k,'ABCD'[m]));
+    else if(this.last){ const B=this.last.S, F=this.form(B,'right');
+      lines.push(\`That was it: f′(x) = \${this.fps(B)}, so 1 + f′(x)² = \${this.inner(F)}, and adding up its root from \${B.a} to \${B.b} gives the length. Here is a new one.\`); }
+    lines.push(\`\${this.matched} picked this visit, \${this.firstTry} on the first try.\`);
+    out+=\`<div id="alqRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${lines.map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    return out;
+  }
+};
+
+/* ---------- The arc length workshop: measuring a curve with chords ----------
+   Lay straight chords along a curve, measure each one by Pythagoras,
+   √(run² + rise²), and add them up. A line (3/4)x from 0 to 4, the cubic
+   x³/6 + 1/(2x) from 1 to 2, whose true length ∫√(1 + f′²) dx is 17/12, and a
+   quarter circle, whose length is π/2. Double or halve the chords and watch
+   the total close in on the true length from below: each chord cuts a corner,
+   so chords always come up short. On the line one chord is already exact; on
+   the cubic doubling cuts the gap to about a quarter; on the circle, which
+   stands straight up at x = 1, only to about a third. With four chords or
+   fewer every chord is worked in the readout, so nothing is held in the head,
+   and the runs alone are added too, to show the slip of forgetting the rise.
+   Nothing is saved. */
+const ArcLen = {
+  SETS:[
+    {id:'line', btn:'Line', name:'the line y = 3/4 x from 0 to 4', fs:'(3/4)x', a:0, b:4, f:x=>0.75*x, T:5, Ts:'5',
+     intro:'y = (3/4)x from 0 to 4. f′(x) = 3/4, so the true length is ∫₀⁴ √(1 + 9/16) dx = (5/4) × 4 = 5.',
+     X:[-0.2,4.2], Y:[-0.2,3.2], ticks:[0,1,2,3,4]},
+    {id:'cubic', btn:'Cubic', name:'the curve y = x cubed over 6 plus 1 over 2x from 1 to 2', fs:'x³/6 + 1/(2x)', a:1, b:2, f:x=>x**3/6+1/(2*x), T:17/12, Ts:'17/12',
+     intro:'y = x³/6 + 1/(2x) from 1 to 2. Here 1 + f′² = (x²/2 + 1/(2x²))², a perfect square, so the true length is ∫₁² (x²/2 + 1/(2x²)) dx = 17/12 ≈ 1.4167.',
+     X:[0.9,2.1], Y:[0.55,1.7], ticks:[1,1.5,2]},
+    {id:'circle', btn:'Quarter circle', name:'a quarter circle y = square root of 1 minus x squared from 0 to 1', fs:'√(1 − x²)', a:0, b:1, f:x=>Math.sqrt(Math.max(0,1-x*x)), T:Math.PI/2, Ts:'π/2',
+     intro:'y = √(1 − x²) from 0 to 1, a quarter of a circle of radius 1. Its true length is a quarter of 2π, π/2 ≈ 1.5708.',
+     X:[-0.08,1.08], Y:[-0.08,1.08], ticks:[0,0.5,1]}
+  ],
+  MAXJ:5,
+  si:0, j:0, prev:null, doubled:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'line', t:'On the line, double the chords and see the total stay exactly 5.', toast:'A line is its own chord',
+     ok:K=>K.si===0 && K.doubled},
+    {id:'short', t:'On the cubic, see the chords come up short of 17/12.', toast:'Chords cut corners',
+     ok:K=>K.si===1},
+    {id:'close', t:'On the cubic, come within 0.001 of 17/12.', toast:'Within 0.001',
+     ok:K=>K.si===1 && K.gap()<0.001},
+    {id:'quarter', t:'On the cubic, double the chords and watch the gap fall to about a quarter.', toast:'Double the chords, quarter the gap',
+     ok:K=>K.si===1 && K.doubled},
+    {id:'pi', t:'On the quarter circle, measure π/2 to two decimal places.', toast:'π/2 ≈ 1.57',
+     ok:K=>K.si===2 && K.total().toFixed(2)==='1.57'},
+    {id:'third', t:'On the quarter circle, double the chords and see the gap fall only to about a third.', toast:'Steep ends shrink slowly',
+     ok:K=>K.si===2 && K.doubled}
+  ],
+  set(){ return this.SETS[this.si]; },
+  n(j=this.j){ return 2**j; },
+  xs(j=this.j){ const S=this.set(), n=this.n(j), out=[]; for(let i=0;i<=n;i++) out.push(S.a+(S.b-S.a)*i/n); return out; },
+  total(j=this.j){ const S=this.set(), xs=this.xs(j); let s=0; for(let i=1;i<xs.length;i++) s+=Math.hypot(xs[i]-xs[i-1],S.f(xs[i])-S.f(xs[i-1])); return s; },
+  /* how far the chords fall short of the true length */
+  gap(j=this.j){ return this.set().T-this.total(j); },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  /* a gap, small as it gets, to five places */
+  g5(v){ return neg(Math.round(v*1e5)/1e5); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? \`(\${s})\` : s; },
+  working(){
+    const S=this.set(), n=this.n(), xs=this.xs(), out=[S.intro], run=(S.b-S.a)/n;
+    if(n<=4){
+      for(let i=1;i<=n;i++){
+        const r=xs[i]-xs[i-1], h=S.f(xs[i])-S.f(xs[i-1]);
+        out.push(\`Chord \${i}, from x = \${this.num(xs[i-1])} to \${this.num(xs[i])}: run \${this.num(r)}, rise \${this.num(h)}, length √(\${this.pf(r)}² + \${this.pf(h)}²) \${this.is(Math.hypot(r,h))}.\`);
+      }
+    } else out.push(\`\${n} chords, each with run (b − a)/\${n} \${this.is(run)}: too many to list one by one, so only their total is shown.\`);
+    const lead=n===1 ? 'The one chord measures' : \`Together the \${n} chords measure\`, t=this.total();
+    if(S.id==='line') out.push(\`\${lead} exactly 5, the true length: a straight line is its own chord.\`);
+    else out.push(\`\${lead} \${this.is(t)}, short of the true length by about \${this.g5(this.gap())}: each chord cuts a corner off the curve, so chords always come up short.\`);
+    out.push(\`The runs alone add up to b − a = \${this.num(S.b-S.a)}, far less: forget the rise and you measure only the width.\`);
+    if(this.doubled){
+      if(S.id==='line') out.push(\`You doubled the chords from \${n/2} to \${n}, and the total is still exactly 5: a straight line has no corners to cut.\`);
+      else {
+        const g0=this.gap(this.prev), g1=this.gap();
+        out.push(\`You doubled the chords from \${n/2} to \${n}, and the gap went from \${this.g5(g0)} to \${this.g5(g1)}, \${this.num(g1/g0)} times as much. \`+
+          (S.id==='cubic' ? 'Each chord is half as long and cuts a corner about an eighth as deep, and there are twice as many, so the gap falls to about a quarter.'
+            : 'Near x = 1 the circle stands straight up, so the chords there cut deeper corners than anywhere else, and the gap falls only to about a third.'));
+      }
+    }
+    return out;
+  },
+  /* the curve, and the chords laid along it, on one scale both ways */
+  L:20, TOP:10, W:310, Hh:230,
+  sc(){ const S=this.set(); return Math.min(this.W/(S.X[1]-S.X[0]), this.Hh/(S.Y[1]-S.Y[0])); },
+  PX(t){ return this.L+(t-this.set().X[0])*this.sc(); },
+  PY(v){ return this.TOP+this.Hh-(v-this.set().Y[0])*this.sc(); },
+  svg(){
+    const S=this.set(), f=v=>v.toFixed(2), n=this.n(), xs=this.xs(), y0=this.PY(Math.max(0,S.Y[0]));
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="\${S.name} in gold, with \${n===1?'one straight chord':\`\${n} straight chords\`} in blue joining points on it">\`;
+    out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(y0)}" x2="\${f(this.PX(S.X[1]))}" y2="\${f(y0)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of S.ticks) out+=\`<text data-k="tick" x="\${f(this.PX(t))}" y="\${f(Math.min(this.TOP+this.Hh+12,y0+12))}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${neg(t)}</text>\`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=S.a+(S.b-S.a)*i/120; pts.push(\`\${f(this.PX(t))},\${f(this.PY(S.f(t)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="3"/>\`;
+    for(let i=1;i<xs.length;i++)
+      out+=\`<line data-k="chord" x1="\${f(this.PX(xs[i-1]))}" y1="\${f(this.PY(S.f(xs[i-1])))}" x2="\${f(this.PX(xs[i]))}" y2="\${f(this.PY(S.f(xs[i])))}" stroke="\${FIG_COL.a}" stroke-width="1.8"/>\`;
+    for(const x of xs) out+=\`<circle data-k="node" cx="\${f(this.PX(x))}" cy="\${f(this.PY(S.f(x)))}" r="\${n>8?2:3.5}" fill="\${FIG_COL.a}"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-arclen'); },
+  can(dj){ const j=this.j+dj; return j>=0 && j<=this.MAXJ; },
+  pick(i){ this.si=i; this.j=0; this.prev=null; this.doubled=false; this.touched=true; this.render(); },
+  more(){ if(!this.can(1)) return; this.prev=this.j; this.j++; this.doubled=true; this.touched=true; this.render(); },
+  fewer(){ if(!this.can(-1)) return; this.prev=this.j; this.j--; this.doubled=false; this.touched=true; this.render(); },
+  again(){ this.j=0; this.prev=null; this.doubled=false; this.touched=true; this.render(); },
+  tab:'hand', // chords by hand, or which integral
+  setTab(t){ this.tab=t; this.render(); },
+  render(){
+    document.getElementById('arcwTab').innerHTML=[['hand','🧵 Lay chords by hand','Lay chords along a curve by hand and measure them'],['pick','🎯 Which integral?','See a curve, and pick which of four integrals is its length']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="ArcLen.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['arcwSets','arcwFig','arcwMoveRow','arcwRead','arcwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('alqBox').innerHTML=pick ? ArcPick.html() : '';
+    if(pick) return;
+    document.getElementById('arcwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="ArcLen.pick(\${i})" aria-label="Measure \${s.name}">\${s.btn}</button>\`).join('');
+    document.getElementById('arcwFewer').disabled=!this.can(-1);
+    document.getElementById('arcwMore').disabled=!this.can(1);
+    document.getElementById('arcwAgain').disabled=this.j===0 && this.prev===null;
+    document.getElementById('arcwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is f from a to b, and the blue chords join points on it. Each chord is measured by Pythagoras; their total is the estimate of the curve's length.</div>\`;
+    document.getElementById('arcwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('arcwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE MEASURE','every curve laid straight','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
+/* ---------- The tangent line workshop: linear approximation by hand ----------
+   Near a, f(x) ≈ L(x) = f(a) + f′(a)(x − a). Pick a curve (√x near 4, 1/x
+   near 1, sin x near 0) and step x away from a a tenth or a whole one at a
+   time, or halve x − a. The figure draws the curve, its tangent at a and the
+   gap between them at x, and the readout works L(x) beside the curve's own
+   value and says by how much and which way the tangent misses, so nothing
+   is held in the head. √x bends under its tangent, so the tangent always
+   overshoots; 1/x bends over it, so it always falls short; halving x − a
+   cuts the miss to about a quarter, and on sin x, which does not bend at 0,
+   to about an eighth. Nothing is saved. */
+const TanLine = {
+  SETS:[
+    {id:'root', btn:'√x near 4', name:'square root of x near 4', fs:'√x', dfs:'1/(2√x)', a:4, fa:2, m:1/4, ms:'1/4',
+     Ls:'2 + (1/4)(x − 4)', f:Math.sqrt, fx:s=>\`√\${s}\`, lo:-30, hi:50, R:[0.8,3.5], ticks:[1,2,3,4,5,6,7,8,9],
+     bend:'√x bends down, under its tangent, so the tangent overshoots on both sides of 4.'},
+    {id:'recip', btn:'1/x near 1', name:'1 over x near 1', fs:'1/x', dfs:'−1/x²', a:1, fa:1, m:-1, ms:'−1',
+     Ls:'1 − (x − 1)', f:x=>1/x, fx:s=>\`1/\${s}\`, lo:-5, hi:15, R:[-0.6,2.1], ticks:[0.5,1,1.5,2,2.5],
+     bend:'1/x bends up, over its tangent, so the tangent falls short on both sides of 1.'},
+    {id:'sin', btn:'sin x near 0', name:'sine of x near 0', fs:'sin x', dfs:'cos x', a:0, fa:0, m:1, ms:'1',
+     Ls:'0 + 1(x − 0) = x', f:Math.sin, fx:s=>/−/.test(s) ? \`sin(\${s})\` : \`sin \${s}\`, lo:-15, hi:15, R:[-1.6,1.6], ticks:[-1,0,1],
+     bend:'Right of 0, sin x bends down under its tangent, so the tangent overshoots; left of 0 it bends up, so the tangent falls short.'}
+  ],
+  si:0, k:0, prev:null, halved:false, touched:false,
+  done:new Set(),
+  GOALS:[
+    {id:'close', t:'On √x, estimate √4.1 and come within 0.001 of it.', toast:'Within 0.001',
+     ok:K=>K.si===0 && K.k===1},
+    {id:'far', t:'On √x, step out until the tangent misses by more than 0.1.', toast:'Far from 4, the tangent drifts',
+     ok:K=>K.si===0 && Math.abs(K.miss())>0.1},
+    {id:'left', t:'On √x, step left of 4 and see the tangent still overshoot.', toast:'√x bends below its tangent',
+     ok:K=>K.si===0 && K.k<0},
+    {id:'quarter', t:'On √x, halve x − a and watch the miss fall to about a quarter.', toast:'Halve the step, quarter the miss',
+     ok:K=>K.si===0 && K.halved},
+    {id:'short', t:'On 1/x, see the tangent fall short of the curve.', toast:'1/x bends above its tangent',
+     ok:K=>K.si===1 && K.k!==0},
+    {id:'eighth', t:'On sin x, halve x − a and watch the miss fall to about an eighth.', toast:'No bend at 0, an eighth',
+     ok:K=>K.si===2 && K.halved}
+  ],
+  set(){ return this.SETS[this.si]; },
+  x(k=this.k){ return (this.set().a*10+k)/10; },
+  /* L(x) − f(x): above 0 the tangent is too high, below 0 too low */
+  miss(k=this.k){ const S=this.set(); return S.fa+S.m*k/10-S.f(this.x(k)); },
+  can(dk){ const S=this.set(), k=this.k+dk; return k>=S.lo && k<=S.hi; },
+  canHalve(){ return this.k!==0 && this.k%2===0; },
+  /* a number to four places, with = when that is exact and ≈ when it is not */
+  num(v){ const q=Math.round(v*1e4)/1e4; return neg(Object.is(q,-0)?0:q); },
+  is(v){ return (Math.abs(Math.round(v*1e4)-v*1e4)<1e-6 ? '= ' : '≈ ')+this.num(v); },
+  pf(v){ const s=this.num(v); return /−/.test(s) ? \`(\${s})\` : s; },
+  working(){
+    const S=this.set(), x=this.x(), xs=this.num(x), out=[];
+    out.push(\`f(x) = \${S.fs} near a = \${S.a}: f(\${S.a}) = \${S.fa} and f′(x) = \${S.dfs}, so f′(\${S.a}) = \${S.ms}. The tangent line is L(x) = \${S.Ls}.\`);
+    if(this.k===0){
+      out.push(\`At x = \${S.a} itself, L(\${S.a}) = f(\${S.a}) = \${S.fa}: the tangent touches the curve here. Step x away and watch them part.\`);
+      return out;
+    }
+    const h=this.k/10, L=S.fa+S.m*h, e=this.miss();
+    out.push(\`At x = \${xs}: x − a = \${this.num(h)}, so L(\${xs}) = \${S.fa} + \${S.ms==='1'?'1':\`(\${S.ms})\`} × \${this.pf(h)} \${this.is(L)}.\`);
+    out.push(\`The curve gives \${S.fx(xs)} \${this.is(S.f(x))}, so the tangent is too \${e>0?'high':'low'} by \${this.is(Math.abs(e))[0]==='='?'':'about '}\${this.num(Math.abs(e))}.\`);
+    out.push(S.bend);
+    if(this.halved){
+      const e0=Math.abs(this.miss(this.prev)), e1=Math.abs(e);
+      out.push(\`You halved x − a from \${this.num(this.prev/10)} to \${this.num(h)}, and the miss went from \${this.num(e0)} to \${this.num(e1)}, \${this.num(e1/e0)} times as much. \`+
+        (S.id==='sin' ? 'Close to 0, halving cuts the miss to about an eighth: sin x does not bend at 0, so the miss grows like (x − a)³.'
+          : 'Close to a, halving cuts the miss to about a quarter: the miss grows like (x − a)².'));
+    }
+    return out;
+  },
+  /* the curve, its tangent at a, and the gap between them at x */
+  L:30, TOP:12, W:310, Hh:230,
+  span(){ const S=this.set(); return [S.a+S.lo/10, S.a+S.hi/10]; },
+  PX(t){ const [p,q]=this.span(); return this.L+(t-p)/(q-p)*this.W; },
+  PY(v){ const [a,b]=this.set().R; return this.TOP+this.Hh-(v-a)/(b-a)*this.Hh; },
+  svg(){
+    const S=this.set(), [c,d]=S.R, [p,q]=this.span(), f=v=>v.toFixed(2), x=this.x(), y=S.f(x), Lx=S.fa+S.m*(x-S.a), Tl=t=>S.fa+S.m*(t-S.a);
+    let out=\`<svg viewBox="0 0 350 260" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${S.fs} from \${this.num(p)} to \${this.num(q)} in gold, its tangent at x = \${S.a} in blue\${this.k===0?', touching the curve at your point':\`, and at x = \${this.num(x)} the gap between them marked in red, the tangent \${Lx>y?'above':'below'} the curve\`}">\`;
+    const y0=Math.min(Math.max(0,c),d);
+    out+=\`<line data-k="xaxis" x1="\${this.L}" y1="\${f(this.PY(y0))}" x2="\${this.L+this.W}" y2="\${f(this.PY(y0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    for(const t of S.ticks) out+=\`<text data-k="tick" x="\${f(this.PX(t))}" y="\${f(Math.min(this.TOP+this.Hh+10,this.PY(y0)+12))}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="middle">\${neg(t)}</text>\`;
+    const pts=[]; for(let i=0;i<=120;i++){ const t=p+(q-p)*i/120; pts.push(\`\${f(this.PX(t))},\${f(this.PY(S.f(t)))}\`); }
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+    out+=\`<line data-k="tangent" x1="\${f(this.PX(p))}" y1="\${f(this.PY(Tl(p)))}" x2="\${f(this.PX(q))}" y2="\${f(this.PY(Tl(q)))}" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+    out+=\`<circle data-k="touch" cx="\${f(this.PX(S.a))}" cy="\${f(this.PY(S.fa))}" r="3.5" fill="\${FIG_COL.dim}"/>\`;
+    if(this.k!==0){
+      out+=\`<line data-k="gap" x1="\${f(this.PX(x))}" y1="\${f(this.PY(y))}" x2="\${f(this.PX(x))}" y2="\${f(this.PY(Lx))}" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      out+=\`<circle data-k="est" cx="\${f(this.PX(x))}" cy="\${f(this.PY(Lx))}" r="4" fill="\${FIG_COL.a}"/>\`;
+    }
+    out+=\`<circle data-k="pt" cx="\${f(this.PX(x))}" cy="\${f(this.PY(y))}" r="5" fill="\${FIG_COL.b}" stroke="\${FIG_COL.ink}" stroke-width="1"/>\`;
+    return out+\`</svg>\`;
+  },
+  open(){ UI.go('s-tanline'); },
+  pick(i){ this.si=i; this.k=0; this.prev=null; this.halved=false; this.touched=true; this.render(); },
+  move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.halved=false; this.touched=true; this.render(); },
+  halve(){ if(!this.canHalve()) return; this.prev=this.k; this.k/=2; this.halved=true; this.touched=true; this.render(); },
+  again(){ this.k=0; this.prev=null; this.halved=false; this.touched=true; this.render(); },
+  render(){
+    document.getElementById('tlwSets').innerHTML=this.SETS.map((s,i)=>
+      \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TanLine.pick(\${i})" aria-label="f(x) = \${s.name}">\${s.btn}</button>\`).join('');
+    for(const [id,dk] of [['tlwL',-10],['tlwl',-1],['tlwr',1],['tlwR',10]]) document.getElementById(id).disabled=!this.can(dk);
+    document.getElementById('tlwHalf').disabled=!this.canHalve();
+    document.getElementById('tlwAgain').disabled=this.k===0 && this.prev===null;
+    document.getElementById('tlwFig').innerHTML=this.svg()+
+      \`<div class="figcap">The gold curve is f and the blue line is its tangent at a, the grey dot. At your x the red line is the gap between them: how far the estimate L(x) misses f(x).</div>\`;
+    document.getElementById('tlwRead').innerHTML=this.working().map(l=>\`<div>\${l}</div>\`).join('');
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    document.getElementById('tlwGoals').innerHTML=
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF THE TANGENT','every miss measured','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+  }
+};
+
 /* ---------- The chord workshop: the mean value theorem by hand ----------
    Somewhere strictly between a and b the tangent runs parallel to the chord.
    Pick a curve (x² on [0, 4], x³ on [0, 3], 4/x on [1, 4]) and walk a point
@@ -27756,10 +28838,18 @@ const MeanValue = {
     return out+\`</svg>\`;
   },
   open(){ UI.go('s-mvt'); },
+  tab:'hand',
+  setTab(t){ this.tab=t; this.render(); },
   pick(i){ this.si=i; this.k=this.SETS[i].k0; this.prev=null; this.touched=true; this.render(); },
   move(dk){ if(!this.can(dk)) return; this.prev=this.k; this.k+=dk; this.touched=true; this.render(); },
   again(){ this.k=this.set().k0; this.prev=null; this.touched=true; this.render(); },
   render(){
+    document.getElementById('mvtTab').innerHTML=[['hand','📐 Walk it by hand','Pick a curve and walk a point along it until its tangent matches the chord'],['pick','🎯 Which c?','See a curve on an interval with its chord, and pick which of four numbers is c']]
+      .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="MeanValue.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
+    const pick=this.tab==='pick';
+    for(const id of ['mvtSets','mvtFig','mvtMoveRow','mvtRead','mvtGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
+    document.getElementById('mvpBox').innerHTML=pick ? ChordPick.html() : '';
+    if(pick) return;
     document.getElementById('mvtSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="MeanValue.pick(\${i})" aria-label="f(x) = \${s.name}">\${s.btn}</button>\`).join('');
     for(const [id,dk] of [['mvtL',-5],['mvtl',-1],['mvtr',1],['mvtR',5]]) document.getElementById(id).disabled=!this.can(dk);
@@ -29017,12 +30107,14 @@ const MixPick = {
     ['LnPick','LogDiff','🪵 Log Slope Workshop'],
     ['PathPick','PathChain','🛤️ Path Chain Workshop'],
     ['StretchPick','Doubling','⏳ Doubling Workshop'],
+    ['ChordPick','MeanValue','📐 Chord Workshop'],
     ['EulerPick','EulerWalk','👣 Euler Step Workshop'],
     ['GrowPick','ExpInt','🪴 Growth Integral Workshop'],
     ['CisternPick','Cistern','💧 Cistern Workshop'],
-    ['BuildPick','Optim','🏗️ Biggest Build Workshop']
+    ['BuildPick','Optim','🏗️ Biggest Build Workshop'],
+    ['ArcPick','ArcLen','🧵 Arc Length Workshop']
   ],
-  refs(){ return {Anti, AntiPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
+  refs(){ return {Anti, AntiPick, ArcLen, ArcPick, Area, Arrow, ArrowPick, Avg, AvgPick, Bend, BuildPick, Castles, Chain, ChainPick, ChordPick, Cistern, CisternPick, CofPick, Cofactor, Compose, ComposePick, CovPick, Cover, Cross, CrossPick, Descent, DescentPick, Detect, Diag, Dot, DotPick, Doubling, Elim, ElimPick, EulerPick, EulerWalk, ExpInt, Fit, FitPick, FlipPick, Geo, GeoPick, Gram, GramPick, GrowPick, Hill, HillPick, HopPick, Hopital, Horizon, HzPick, ImpPick, Implicit, IntPick, InvPick, InvSlope, Kernel, LadPick, Ladder, LamPick, Lathe, LathePick, LnPick, LogDiff, MeanValue, Newton, NewtonPick, NullPick, Optim, Parts, PartsPick, PathChain, PathPick, PowPick, Product, ProductPick, Quot, QuotPick, SecantPick, SeriesPick, Slice, SlicePick, Slope, Span, SpanPick, SplitPick, StretchPick, Swap, SwapPick, Tail, TailPick, TanPick, TanPlane, Taylor, TransPick, Transpose, TrigInt, TrigPick, Undo, UndoPick}; },
   cur:-1, base:0, done:false, firstTry:false, solved:0, first:0, seen:new Set(), from:new Set(),
   mod(){ return this.refs()[this.LIST[this.cur][0]]; },
   host(){ return this.refs()[this.LIST[this.cur][1]]; },
