@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-nine topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy-nine in the game, drawing from all of them would build a run
+have actually met — with eighty in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,10 +277,10 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices, least squares |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method, Simpson's rule |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**79 problem generators** in total, each producing randomised problems at three difficulty
+**80 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -369,7 +369,7 @@ its coefficient dropped, its power not lowered, or the px left out. It joins the
 strand and the Infinite Expanse, and a fight that shows it up points to the 🔎 Newton's Method
 Workshop.
 
-**Least squares**, the newest, fits a line y = mx + c to three or four points so that the
+**Least squares** fits a line y = mx + c to three or four points so that the
 squared misses in y add up to the least: m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and the line passes
 through the middle point (x̄, ȳ), so c = ȳ − m·x̄. The first depth asks for the slope through
 three points, the second through four, and the third where the line crosses the y-axis. Whole
@@ -380,6 +380,17 @@ given for c, ȳ alone, x̄ and ȳ swapped, and the end points' line's c. Its che
 line by sliding m and c to the bottom of the squared misses, never from the formula. It joins
 the Eigen & Subspaces strand and the Spectral Reach, and a fight that shows it up points to the
 📏 Best Fit Workshop.
+
+**Simpson's rule**, the newest, estimates an integral from a table of heights by fitting a
+parabola through each pair of strips: with n even and h = (b − a)/n,
+S = h/3 × (f(x₀) + 4f(x₁) + 2f(x₂) + … + 4f(xₙ₋₁) + f(xₙ)). The heights are given as a table,
+as measured ones would be. The first depth has two strips, the second four, and the third four
+or six with h of 1/2, 2 or 3. Whole and fractional answers come up about equally. The wrong
+answers are the slips people make: the trapezoid rule, the 4s and 2s swapped, the 1/3 left out,
+h/2 taken for h/3, every height counted once, one parabola across the whole interval, and the
+left-hand sum. Its check fits each parabola by solving for its three coefficients and takes its
+area from the antiderivative, never from the rule. It joins the Integrals strand and the
+Infinite Expanse, and a fight that shows it up points to the 🪟 Trapezoid Workshop.
 
 ---
 
@@ -645,7 +656,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy-three of the seventy-nine topics
+  where every answer would echo is asked the plain way. Seventy-three of the eighty topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -1220,7 +1231,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Seventy-nine topics link to fifty-seven workshops,
+  back button returns to the summary. Eighty topics link to fifty-seven workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -2126,10 +2137,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy-nine bars.
+  reading eighty bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy-nine topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Eighty topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all

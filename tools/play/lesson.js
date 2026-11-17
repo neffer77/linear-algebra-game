@@ -109,7 +109,7 @@ module.exports = {
       const shadowed = Object.keys(RULES).filter(k => !GEN[k] || GEN[k](1).codex);
       return { n: Object.keys(GEN).length, bad, shadowed };
     });
-    t.eq('all seventy-nine topics carry a rule and a small example', rules.bad, []);
+    t.eq('all eighty topics carry a rule and a small example', rules.bad, []);
     t.eq('and no fallback rule hides one written beside its generator', rules.shadowed, []);
 
     // ------------------------------------------------------------------

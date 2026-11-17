@@ -4430,6 +4430,61 @@ trapezoid(d){
       ex:`${why}.`};
   }
 },
+/* Simpson's rule: n even, h = (b − a)/n, and a parabola through each pair of
+   strips. Added up, S = h/3 × (f(x₀) + 4f(x₁) + 2f(x₂) + … + 4f(xₙ₋₁) + f(xₙ)).
+   The heights are given as a table, as measured ones would be, so nothing has
+   to be worked out before the rule is used. At depth 1 two strips, at depth 2
+   four, and at depth 3 four or six with h of 1/2, 2 or 3. Whole and fractional
+   answers come up about equally. The wrong answers are the slips people make:
+   the trapezoid rule, the 4s and 2s swapped, the 1/3 left out, h/2 taken for
+   h/3, every height counted once, one parabola across the whole interval, and
+   the left-hand sum. */
+simpson(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===1?2:d===2?4:R.pick([4,6]), h=d===3?R.pick([F(1,2),F(2),F(3)]):R.pick([F(1,2),F(1),F(1),F(2)]), a=R.i(0,2);
+    const xs=[...Array(n+1)].map((_,i)=>add(F(a),mul(F(i),h))), ys=xs.map(()=>R.i(1,9)), b=xs[n];
+    const wt=i=>i===0||i===n?1:i%2?4:2, W=ys.reduce((s,y,i)=>s+wt(i)*y,0), third=mul(h,F(1,3));
+    const ans=mul(third,F(W));
+    const T=mul(mul(h,F(1,2)),F(ys.reduce((s,y,i)=>s+(i===0||i===n?1:2)*y,0)));
+    const swap=mul(third,F(ys.reduce((s,y,i)=>s+(i===0||i===n?1:i%2?2:4)*y,0)));
+    const all=ys.reduce((s,y)=>s+y,0), left=mul(h,F(all-ys[n]));
+    const one=mul(mul(F(n),h),F(ys[0]+4*ys[n/2]+ys[n],6));
+    const hs=show(h), as=String(a), bs=show(b), hw=h[1]===1?hs:`(${hs})`;
+    const S=`∫<sub>${as}</sub><sup>${bs}</sup> f(x) dx`;
+    const q=`A table gives f(x) = ${ys.join(', ')} at x = ${xs.map(show).join(', ')}. Use Simpson's rule to estimate ${S}.`;
+    const terms=ys.map((y,i)=>wt(i)===1?String(y):`${wt(i)} × ${y}`).join(' + ');
+    const why=`h = (${bs} − ${as})/${n} = ${hs}, and the weights are ${ys.map((y,i)=>wt(i)).join(', ')}, so S = h/3 × (${terms}) = ${show(third)} × ${W} = ${show(ans)}`;
+    const slips=[
+      [T,'that is the trapezoid rule, h/2 with the inside heights doubled; Simpson fits a parabola through each pair of strips'],
+      [swap,'that swaps the 4s and 2s: the odd points, the middle of each parabola, take 4, and the even inside points 2'],
+      [mul(h,F(W)),'that leaves out the 1/3: Simpson\'s rule is h/3 times the weighted heights'],
+      [mul(mul(h,F(1,2)),F(W)),'that takes h/2, the trapezoid rule\'s factor; Simpson\'s is h/3'],
+      [mul(third,F(all)),'that adds every height once; Simpson weights them 1, 4, 2, …, 4, 1'],
+      ...(n>2 ? [[one,`that fits one parabola across the whole interval, through its ends and middle; n = ${n} makes ${n/2} parabolas, one on each pair of strips`]] : []),
+      [left,'that is the left-hand sum, a rectangle at each strip\'s left height']
+    ];
+    const big=v=>v[0]>999 || v[1]>99;
+    const ok=v=>v[0]>0 && !big(v) && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<600) continue;
+    return {topic:"Simpson's Rule",
+      codex:{rule:'n even, h = (b − a)/n. S = h/3 × (f(x₀) + 4f(x₁) + 2f(x₂) + … + 4f(xₙ₋₁) + f(xₙ)): ends once, odd points 4 times, even inside points twice.',
+             eg:'Heights 1, 3, 2 at x = 0, 1, 2: h = 1, so S = 1/3 × (1 + 4 × 3 + 2) = 1/3 × 15 = 5.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`${why}.`};
+  }
+},
 /* Newton's method: from a guess x₀, follow the tangent at x₀ down to the
    axis, x₁ = x₀ − f(x₀)/f′(x₀). At depth 1 one step on x² − k, at depth 2 on
    x³ − k, and at depth 3 on x³ + px − k, where the slope has two terms.
@@ -4663,7 +4718,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4675,7 +4730,7 @@ const STRANDS = [
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
-  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid']],
+  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
@@ -4731,7 +4786,7 @@ const WORKSHOP_FOR = (() => {
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
     ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
     LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
-    Trap: ["🪟 Trapezoid Workshop", ['trapezoid']],
+    Trap: ["🪟 Trapezoid Workshop", ['trapezoid','simpson']],
     Newton: ["🔎 Newton's Method Workshop", ['newton']],
     Fit: ["📏 Best Fit Workshop", ['leastSq']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
@@ -5268,7 +5323,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
