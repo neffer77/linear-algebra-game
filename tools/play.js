@@ -153,6 +153,7 @@ const SUITES = [
   require('./play/flowmatch'), // see the arrows of x′ = Ax, pick which of four matrices drew them
   require('./play/tanpick'), // see a surface and a point, pick which of four planes touches it there
   require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
+  require('./play/cisternsketch'), // see a spring's flow, set the total at the end of each hour and draw F
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there
   require('./play/hzpick'), // see a fraction with the same power on top and underneath, pick which of four numbers it heads for
   require('./play/fitpick'), // see a few points, pick which of four numbers is the slope of the best line through them

@@ -1354,6 +1354,21 @@ The game is built so that losing teaches you as much as winning.
   button, checks it against the slip it is named as, checks the right one
   alone against the area under the flow by Simpson's sum, and works every
   check in the readout again.
+
+  **✏️ Sketch the total** has you build F yourself: a spring's flow, a straight
+  line f(t) = a + bt, is drawn for four hours, and at the end of each hour you
+  set what the cistern holds with + and −, starting from F(0) = 0. Tapping an
+  hour shades the area under f across it, gold where water comes in and red
+  where it runs out, split where f crosses 0. A check rings the hours that are
+  wrong and works each: the area of that hour as a trapezoid, added to the
+  total before it, with the sign written straight. Once all four are right the
+  true F is drawn through the dots and the readout says why it climbs in a line,
+  tops out where f drops below 0, or bottoms out where f climbs above 0. Eight
+  springs in a fixed order, every total a whole number from −8 to 8, six goals.
+  Nothing is saved, and there is no clock. `npm test` adds up the area under
+  every flow in a thousand strips, checks every total, every shade and every
+  readout, sets each hour wrong to every value it could take, and plays the
+  goals through.
 - **🔬 L'Hôpital Workshop** — a ratio that gives 0/0 at a point says nothing there,
   so step h toward 0 from either side and read the top, the bottom and their ratio at
   x = a + h. The figure draws the top in gold and the bottom in blue, both crossing 0 at
@@ -2546,7 +2561,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and sixty-one suites, about 6,190 checks, about a minute:
+loop only exists once the page is running. A hundred and sixty-two suites, about 6,190 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2687,6 +2702,7 @@ loop only exists once the page is running. A hundred and sixty-one suites, about
 | `flowmatch` | the Tome says a flow can be matched; the mode is pressed and the hand workshop steps aside; 80 arrows are drawn, each along A times its point, and four matrices offered; the rule comes before any pick; a wrong pick is caught at the first arrow it turns, with its own arrow and a ring drawn, and shut; the match is explained by its eigenvalues and is not a first try after a miss; three first tries in a row are counted; every goal can be found with the buttons and the last brings a banner; every button is named, the drawing is named, it fits a phone, the hand workshop comes back, and nothing is saved |
 | `tanpick` | the Tome says the tangent plane workshop can be turned round; the workshop opens on building a plane by hand, and switching to which plane puts away the surfaces, the slices, the plane, its steppers, the readout and the goals and states the rule first; the surface and the point are shown, and four planes offered one under another, each named by its plane; a wrong slope is named as its slip and checked by a step of 1, a wrong height named and checked at the point, each shut and told as not the tangent plane, and neither counted; the right pick works the height and both slopes out, counts (not as a first try after a miss), toasts and deals a new surface; a first try counts as one, and the fifth brings PLANE TOUCHER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `cisternpick` | the Tome says the cistern workshop can be turned round; the workshop opens on stepping a spring by hand, and switching to which total puts away the springs, the figure, the stepper, the readout and the goals and states the rule first; the flow is shown and four totals offered, each named by its number; two wrong picks are each named as their slip and checked by differentiating their G, shut and told as not the total, and not counted; the right pick works F(T) out term by term, counts (not as a first try after a miss), toasts and deals a new spring; a first try counts as one, and the fifth brings CISTERN KEEPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `cisternsketch` | the Tome says the total can be sketched by hand; the mode is pressed and stepping by hand steps aside; the task and the rule come first, with four hours unset, the check shut, the first hour shaded gold and F(0) = 0 drawn; a sketch with a slip rings only that hour and works its area as a trapezoid, giving nothing away; changing it clears its ring, and the fix is explained, draws the true F, shuts the totals and is not a first check; a dip's second hour shades red then gold; a peak, a dip and a steady drain are explained; three first checks in a row are counted; every goal can be found and the last brings a banner; totals stop at 8 and −8; every button and the drawing are named, it fits a phone, stepping by hand comes back, and nothing is saved |
 | `invpick` | the Tome says the inverse slope workshop can be turned round; the workshop opens on mirroring a curve by hand, and switching to which slope puts away the curves, the figure, the stepper, the modes, the readout and the goals and states the rule first; a rising curve and the point it sends to u are shown, and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked against g′(u) × f′(p) = 1, shut and told as not g′(u), and not counted; the right pick works f′ at the point out and flips it, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings SLOPE FLIPPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `hzpick` | the Tome says the horizon workshop can be turned round; the workshop opens on stepping x out by hand, and switching to where does it head puts away the fractions, the figure, the stepper, the readout and the goals and states the rule first; a fraction is shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the biggest-power part of the gap, shut and told as not where f heads, and not counted; the right pick divides top and bottom by the biggest power, counts (not as a first try after a miss), toasts and deals a new fraction; a first try counts as one, and the fifth brings HORIZON GAZER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `fitpick` | the Tome says the best fit workshop can be turned round; the workshop opens on setting the line by hand, and switching to which slope fits best puts away the sets, the steppers, the figure, the readout and the goals and states the rule first; a few points are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the misses from the middle point times their x gaps, shut and told as not the best slope, and not counted; the right pick works the slope from the two sums, counts (not as a first try after a miss), toasts and deals new points; a first try counts as one, and the fifth brings LINE LAYER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
