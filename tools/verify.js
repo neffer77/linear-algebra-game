@@ -5791,6 +5791,14 @@ const cofMovesNotes = (() => {
     S.done = new Set(); S.touched = true; S.pick(0); S.row(1); S.use(0); S.go('minus'); S.go('minus'); S.row(2); S.go('plus'); S.use(1); S.go('minus'); S.go('minus'); S.go('swap'); S.go('swap'); S.go('minus'); S.html();
     if (!S.done.has('tri') || S.done.has('pure')) fail('cofmoves', 'hunt', 'a run with swaps in it counts as additions alone');
   }
+  { // doubling row 1 of the plain matrix stops before an entry passes 999, halving it before a bottom passes 64
+    S.pick(0); S.row(0); let n = 0;
+    for (let i = 0; i < 15; i++) { const M0 = S.M; S.go('dbl'); if (S.M !== M0) n++; }
+    if (n !== 8 || !/data-move="dbl" disabled/.test(S.html()) || !S.M[0].some(v => Math.abs(v[0]) === 512)) fail('cofmoves', 'limits', `row 1 doubles ${n} times, not 8, before its entries would pass 999`);
+    S.again(); n = 0;
+    for (let i = 0; i < 15; i++) { const M0 = S.M; S.go('half'); if (S.M !== M0) n++; }
+    if (n !== 6 || !/data-move="half" disabled/.test(S.html())) fail('cofmoves', 'limits', `row 1 halves ${n} times, not 6, before a bottom would pass 64`);
+  }
   S.si = 0; S.M = null; S.t = 1; S.s = 0; S.done = new Set(); S.touched = false; S.last = null; S.hist = [];
   return { presses, tris, shut, hints };
 })();
