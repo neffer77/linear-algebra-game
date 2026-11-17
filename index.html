@@ -4884,15 +4884,14 @@ separable(d){
     if(dist.length<4 || big(ans) || same<2 || sign<2 || ((ans[1]===1)!==whole && g<3000)) continue;
     const kc=k===1?'':k===-1?'−':neg(k);
     const c=F(k,m+1), cs=c[1]===1 ? (c[0]===1?'':c[0]===-1?'−':neg(c[0])) : `${c[0]<0?'−':''}(${Math.abs(c[0])}/${c[1]})`;
-    const Wx=`${cs}${xp(m+1)}`, Wp=c[0]<0?`(${Wx})`:Wx;
-    const paren=u=>u[0]<0?`(${show(u)})`:show(u);
+    const Wx=`${cs}${xp(m+1)}`;
     return {topic:'Separable Equations',
       codex:{rule:'A separable equation y′ = g(x)h(y) splits into dy/h(y) = g(x) dx; integrate both sides, then use the starting value to fix the constant. For y′ = kxᵐy², ∫y⁻² dy = −1/y.',
              eg:'y′ = xy² with y(0) = 1: dy/y² = x dx gives −1/y = x²/2 + c, so 1/y = 1 − x²/2. At x = 1, 1/y = 1/2, so y = 2.'},
       q:`y′ = ${kc}${xp(m)}y², with y(0) = ${show(Y0)}. What is y when x = ${neg(a)}?`,
       a:show(ans),
       d:dist.map(([u,w])=>[show(u),w]),
-      ex:`Separate the variables: dy/y² = ${m===0?neg(k):kc+xp(m)} dx. Integrating, −1/y = ${Wx} + c, and at x = 0 this gives c = −1/y(0), so 1/y = ${show(inv0)} − ${Wp}. At x = ${neg(a)}, ${Wx} = ${show(W)}, so 1/y = ${show(inv0)} − ${paren(W)} = ${show(invY)}, and y = ${show(ans)}.`};
+      ex:`Separate the variables: dy/y² = ${m===0?neg(k):kc+xp(m)} dx. Integrating, −1/y = ${Wx} + c, and at x = 0 this gives c = −1/y(0), so 1/y = ${show(inv0)} ${c[0]<0?'+ '+Wx.slice(1):'− '+Wx}. At x = ${neg(a)}, ${Wx} = ${show(W)}, so 1/y = ${show(inv0)} ${W[0]<0?'+ '+show([-W[0],W[1]]):'− '+show(W)} = ${show(invY)}, and y = ${show(ans)}.`};
   }
 },
 /* Determinant rules. Told det A and det B for two n×n matrices, find the

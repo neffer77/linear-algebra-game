@@ -1,88 +1,32 @@
 {
-  "change": "Add a Match the flow mode to the diagonal workshop",
+  "change": "Write the separable working without taking away a minus",
   "mutations": [
     {
-      "name": "a spiral out drawn from another matrix",
+      "name": "taking away a minus again: 3 − (−2)",
       "file": "index.html",
-      "find": "spout:    {M:[[1,-1],[1,1]],",
-      "replace": "spout:    {M:[[1,-1],[2,1]],",
+      "find": "${W[0]<0?'+ '+show([-W[0],W[1]]):'− '+show(W)}",
+      "replace": "− ${show(W)}",
       "run": "verify"
     },
     {
-      "name": "a sink's eigenvalues told wrong",
+      "name": "the formula line keeps the minus when the term is negative",
       "file": "index.html",
-      "find": "ev:'−1 and −3',",
-      "replace": "ev:'−1 and −2',",
+      "find": "${c[0]<0?'+ '+Wx.slice(1):'− '+Wx}",
+      "replace": "${c[0]<0?'− '+Wx.slice(1):'− '+Wx}",
       "run": "verify"
     },
     {
-      "name": "a centre told as turning the wrong way",
+      "name": "the plus written with a minus number: + −2",
       "file": "index.html",
-      "find": "ccw:      {M:[[0,-1],[1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, anticlockwise'}",
-      "replace": "ccw:      {M:[[0,-1],[1,0]],   k:'centre', ev:'i and −i',           why:'with no real part, the paths circle (0, 0) for ever, clockwise'}",
+      "find": "${W[0]<0?'+ '+show([-W[0],W[1]]):'− '+show(W)}",
+      "replace": "${W[0]<0?'+ '+show(W):'− '+show(W)}",
       "run": "verify"
     },
     {
-      "name": "an answer moved out of its place",
+      "name": "the formula line written with + for a positive term",
       "file": "index.html",
-      "find": "{a:'cw',       o:['ccw','source','spin','cw']}",
-      "replace": "{a:'cw',       o:['ccw','source','cw','spin']}",
-      "run": "verify"
-    },
-    {
-      "name": "a source with no other node beside it",
-      "file": "index.html",
-      "find": "{a:'source',   o:['sink','shear','source','cw']}",
-      "replace": "{a:'source',   o:['spin','ccw','source','cw']}",
-      "run": "verify"
-    },
-    {
-      "name": "a backwards arrow counted as the same way",
-      "file": "index.html",
-      "find": "same(u,v){ return u[0]*v[1]-u[1]*v[0]===0 && u[0]*v[0]+u[1]*v[1]>0; },",
-      "replace": "same(u,v){ return u[0]*v[1]-u[1]*v[0]===0; },",
-      "run": "verify"
-    },
-    {
-      "name": "every arrow drawn upside down",
-      "file": "index.html",
-      "find": "dx=v[0]/n*8, dy=-v[1]/n*8,",
-      "replace": "dx=v[0]/n*8, dy=v[1]/n*8,",
-      "run": "verify"
-    },
-    {
-      "name": "the arrows on the axes left out",
-      "file": "index.html",
-      "find": "const q=[i/2,j/2]; out+=this.arrow('arr',q,this.push(R.a,q)",
-      "replace": "const q=[i/2,j/2]; if(!i || !j) continue; out+=this.arrow('arr',q,this.push(R.a,q)",
-      "run": "verify"
-    },
-    {
-      "name": "a wrong pick that never counts as a catch",
-      "file": "index.html",
-      "find": "} else { this.gone.add(i); this.last=i; this.caught=true; this.streak=0; }\n    Diag.render();",
-      "replace": "} else { this.gone.add(i); this.last=i; this.streak=0; }\n    Diag.render();",
-      "run": "verify"
-    },
-    {
-      "name": "a sink goal that waits for a source",
-      "file": "index.html",
-      "find": "ok:M=>M.kinds.has('in')},",
-      "replace": "ok:M=>M.kinds.has('out')},",
-      "run": "verify"
-    },
-    {
-      "name": "the banner names another workshop",
-      "file": "index.html",
-      "find": "Celebrate.banner('FLOW READER','every arrow read'",
-      "replace": "Celebrate.banner('MAP READER','every arrow read'",
-      "run": "verify"
-    },
-    {
-      "name": "the next flow dealt before this one is matched",
-      "file": "index.html",
-      "find": "next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Diag.render(); }",
-      "replace": "next(){ this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Diag.render(); }",
+      "find": "${c[0]<0?'+ '+Wx.slice(1):'− '+Wx}",
+      "replace": "${c[0]<0?'+ '+Wx.slice(1):'+ '+Wx}",
       "run": "verify"
     }
   ]
