@@ -8160,6 +8160,7 @@ const trapPickNotes = (() => {
   const KINDS = ['noDouble', 'noHalf', 'allDouble', 'left', 'rightHand', 'one', 'exact'];
   let rounds = 0, misses = 0, worked = 0, fives = 0, wholes = 0;
   const slots = new Set(), kinds = {}, places = [0, 0, 0, 0];
+  const ns = {}, as = {};   // how many strips, and where the curve starts
   const BTN = /<button class="btn sm ghost smOpt" data-opt="([ABCD])" onclick="TrapPick\.choose\((\d)\)" aria-label="([ABCD]): ([^"]+)" style="margin:0"><b>([ABCD])<\/b> ([^<]+)<\/button>/g;
   for (let seed = 1; seed <= 300; seed++) {
     env.seed = seed * 7919; P.round = null; P.last = null; P.matched = 0; P.firstTry = 0;
@@ -8167,7 +8168,7 @@ const trapPickNotes = (() => {
     let prev = null;
     for (let k = 0; k < (seed % 10 === 0 ? 6 : 4); k++) {
       const r = P.round, Q = r.S, key = `seed ${seed} round ${k}`, sig = JSON.stringify(Q), { h, xs, ys, b } = parts(Q);
-      rounds++;
+      rounds++; ns[Q.n] = (ns[Q.n] || 0) + 1; as[Q.a] = (as[Q.a] || 0) + 1;
       const okQ = [1, 2, 3].includes(Q.c) && Q.k >= 0 && Q.k <= 3 && [0, 1].includes(Q.a) && [2, 3, 4].includes(Q.n)
         && ['1/2', '1', '2'].includes(show(Q.h)) && num(Q.h) * Q.n <= 4;
       if (!okQ) fail('trappick', key, `${sig} is not a curve of the kind dealt`);
@@ -8259,6 +8260,20 @@ const trapPickNotes = (() => {
     if (JSON.stringify(P.round.S) === JSON.stringify(S0)) fail('trappick', 'repeat', 'the same curve is dealt twice in a row');
     P.build = real;
   }
+  { // a slip that is T itself, or not above 0, is never offered: each is forced on the deal and must be turned away
+    const S0 = { c: 1, k: 1, a: 0, n: 2, h: [1, 1] }, real = P.v, T0 = real.call(P, S0, 'right');
+    for (const [k, bad, why] of [['noDouble', T0, 'T itself'], ['noHalf', [0, 1], '0'], ['allDouble', [-3, 2], 'below 0']]) {
+      P.v = function (S, x) { return x === k ? bad : real.call(this, S, x); };
+      if (P.slips(S0).includes(k)) fail('trappick', 'guards', `a slip that comes to ${why} is offered`);
+      P.v = real;
+    }
+  }
+  { // the area under x, the plain area the sums are checked on, is (b² − a²)/2 for a curve starting anywhere
+    const S1 = { c: 1, k: 0, a: 2, n: 2, h: [1, 1] }, line = P.check(S1, 'left', 'A');
+    if (!line.includes('(4² − 2²)/2 = 6:')) fail('trappick', 'check', `the area under x from 2 to 4 is not worked as 6: ${line}`);
+  }
+  [2, 3, 4].forEach(n => { if (!ns[n] || ns[n] < rounds * 0.15) fail('trappick', 'deal', `${n} strips come in only ${ns[n] || 0} of ${rounds} rounds`); });
+  [0, 1].forEach(a => { if (!as[a] || as[a] < rounds * 0.2) fail('trappick', 'deal', `the curve starts at ${a} in only ${as[a] || 0} of ${rounds} rounds`); });
   for (const k of KINDS) if (!kinds[k] || kinds[k] < rounds * 0.2) fail('trappick', 'slips', `the slip ${k} is offered ${kinds[k] || 0} times in ${rounds} rounds`);
   if (wholes < rounds * 0.4 || wholes > rounds * 0.6) fail('trappick', 'deal', `T is whole in ${wholes} of ${rounds} rounds, not about half`);
   if (slots.size !== 4) fail('trappick', 'deal', `T only ever sits at ${[...slots].sort().map(i => 'ABCD'[i]).join(', ')}`);
