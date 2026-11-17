@@ -4760,10 +4760,10 @@ quadForm(d){
     const full=dg+2*cr, ans=F(full,2);
     const slips=[
       [F(full),'that leaves off the ½: xᵀAx itself is twice Q'],
-      [F(dg+cr,2),'that counts each off-diagonal pair once; A is symmetric, so a_ij and a_ji both add xᵢxⱼ, twice in all'],
+      [F(dg+cr,2),'that counts each off-diagonal pair once; A is symmetric, so aᵢⱼ and aⱼᵢ both add xᵢxⱼ, twice in all'],
       [F(dg,2),'that leaves the off-diagonal pairs out; only a diagonal A has none'],
-      [F(dg-2*cr,2),'that turns the pairs\\' sign; each adds a_ij xᵢxⱼ with the signs as they are'],
-      [F(ln+2*cr,2),'that does not square the diagonal terms; each a_ii multiplies xᵢ²'],
+      [F(dg-2*cr,2),'that turns the pairs\\' sign; each adds aᵢⱼ xᵢxⱼ with the signs as they are'],
+      [F(ln+2*cr,2),'that does not square the diagonal terms; each aᵢᵢ multiplies xᵢ²'],
       [F(sAx,2),'that adds up the entries of Ax; xᵀ(Ax) dots Ax with x, each entry times its own xᵢ']
     ];
     const big=v=>Math.abs(v[0])>999 || v[1]>99;
@@ -4780,7 +4780,7 @@ quadForm(d){
     for(let i=0;i<n;i++) terms.push(\`\${P(A[i][i])} × \${P(x[i])}²\`);
     for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) terms.push(\`2 × \${P(A[i][j])} × \${P(x[i])} × \${P(x[j])}\`);
     return {topic:'Quadratic Forms',
-      codex:{rule:'xᵀAx adds a_ii xᵢ² for each diagonal entry and a_ij xᵢxⱼ for each other entry, so for a symmetric A every pair counts twice. Q(x) = ½ xᵀAx.',
+      codex:{rule:'xᵀAx adds aᵢᵢ xᵢ² for each diagonal entry and aᵢⱼ xᵢxⱼ for each other entry, so for a symmetric A every pair counts twice. Q(x) = ½ xᵀAx.',
              eg:'A = [[2, 1], [1, 3]], x = ⟨1, 2⟩: xᵀAx = 2 × 1² + 3 × 2² + 2 × 1 × 1 × 2 = 18, so Q = 9.'},
       q:\`Q(x) = ½ xᵀAx with A = \${mat(A)} and x = \${vecR(x)}. What is Q(x)?\`,
       a:show(ans),

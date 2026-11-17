@@ -393,7 +393,7 @@ area from the antiderivative, never from the rule. It joins the Integrals strand
 Infinite Expanse, and a fight that shows it up points to the 🪟 Trapezoid Workshop.
 
 **Quadratic forms** read Q(x) = ½ xᵀAx for a symmetric A and a vector x. Written
-out, xᵀAx adds a_ii xᵢ² for each diagonal entry and a_ij xᵢxⱼ for every other entry, so each
+out, xᵀAx adds aᵢᵢ xᵢ² for each diagonal entry and aᵢⱼ xᵢxⱼ for every other entry, so each
 pair off the diagonal counts twice. The first depth uses a 2×2 A with small positive entries and
 x, the second lets the signs go, and the third is 3×3. Whole and fractional answers come up about
 equally. The wrong answers are the slips people make: the ½ left off, each pair counted once,

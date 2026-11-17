@@ -1593,8 +1593,8 @@ Object.assign(ANALYSIS, {
       const terms = wm[1].split(' + '), P = t => +t.replace(/[()]/g, '');
       if (terms.length !== n * (n + 1) / 2) fail('analysis', 'quadForm', `the working does not have one term for each entry on or above the diagonal: ${w}`);
       let sum = 0, k = 0;
-      for (let i = 0; i < n; i++) { const m = terms[k++].match(/^(\S+) × (\S+)²$/); if (!m || P(m[1]) !== A[i][i] || P(m[2]) !== x[i]) fail('analysis', 'quadForm', `a square term is not a_ii xᵢ²: ${w}`); else sum += P(m[1]) * P(m[2]) ** 2; }
-      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const m = (terms[k++] || '').match(/^2 × (\S+) × (\S+) × (\S+)$/); if (!m || P(m[1]) !== A[i][j] || P(m[2]) !== x[i] || P(m[3]) !== x[j]) fail('analysis', 'quadForm', `a pair term is not 2 a_ij xᵢxⱼ: ${w}`); else sum += 2 * P(m[1]) * P(m[2]) * P(m[3]); }
+      for (let i = 0; i < n; i++) { const m = terms[k++].match(/^(\S+) × (\S+)²$/); if (!m || P(m[1]) !== A[i][i] || P(m[2]) !== x[i]) fail('analysis', 'quadForm', `a square term is not aᵢᵢ xᵢ²: ${w}`); else sum += P(m[1]) * P(m[2]) ** 2; }
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const m = (terms[k++] || '').match(/^2 × (\S+) × (\S+) × (\S+)$/); if (!m || P(m[1]) !== A[i][j] || P(m[2]) !== x[i] || P(m[3]) !== x[j]) fail('analysis', 'quadForm', `a pair term is not 2 aᵢⱼ xᵢxⱼ: ${w}`); else sum += 2 * P(m[1]) * P(m[2]) * P(m[3]); }
       if (sum !== xAx) fail('analysis', 'quadForm', `the working's terms do not add up to xᵀAx: ${w}`);
     }
     p.d.forEach(([v, why]) => {
