@@ -134,6 +134,7 @@ const SUITES = [
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum
   require('./play/georeach'), // step x along a power series and find how far it still adds up
   require('./play/rowmoves'), // work a 3×3 matrix down with row moves and keep track of its determinant
+  require('./play/elimcramer'), // find each unknown of a 2×2 system as a ratio of two parallelogram areas
   require('./play/ladpick'), // see a ladder, pick which of four numbers is the top's speed
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A

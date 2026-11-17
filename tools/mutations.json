@@ -1,81 +1,88 @@
 {
-  "change": "Add a Row moves mode to the cofactor workshop: work a matrix down with row moves and track its determinant.",
+  "change": "Add a Cramer's rule mode to the elimination workshop: find each unknown as a ratio of two areas.",
   "mutations": [
     {
-      "name": "a swap that leaves the tally alone",
+      "name": "b put in the wrong column",
       "file": "index.html",
-      "find": "if(k==='swap'){ [M[t],M[s]]=[M[s],M[t]]; f=this.mul(f,[-1,1]); }",
-      "replace": "if(k==='swap'){ [M[t],M[s]]=[M[s],M[t]]; }",
+      "find": "Mk(k){ const A=this.sys().A, b=this.B(); return A.map((r,i)=>r.map((v,j)=>j===k ? b[i] : v)); },",
+      "replace": "Mk(k){ const A=this.sys().A, b=this.B(); return A.map((r,i)=>r.map((v,j)=>k!==null&&j===1-k ? b[i] : v)); },",
       "run": "verify"
     },
     {
-      "name": "a scaling that multiplies the tally instead of dividing it",
+      "name": "det with the wrong sign on the cross term",
       "file": "index.html",
-      "find": "M[t]=M[t].map(v=>this.mul(v,m)); f=this.mul(f,[m[1],m[0]]); }",
-      "replace": "M[t]=M[t].map(v=>this.mul(v,m)); f=this.mul(f,m); }",
+      "find": "d2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],",
+      "replace": "d2:M=>M[0][0]*M[1][1]+M[0][1]*M[1][0],",
       "run": "verify"
     },
     {
-      "name": "an addition that adds the row the other way round",
+      "name": "the ratio turned upside down",
       "file": "index.html",
-      "find": "M[t]=M[t].map((v,j)=>this.add(v,this.mul([c,1],M[s][j]))); }",
-      "replace": "M[t]=M[t].map((v,j)=>this.add(M[s][j],this.mul([c,1],v))); }",
+      "find": "= ${neg(Dk)}/${this.amt(D)} = ${this.fs(Dk,D)}.`",
+      "replace": "= ${neg(Dk)}/${this.amt(D)} = ${this.fs(D,Dk)}.`",
       "run": "verify"
     },
     {
-      "name": "triangular read without the last entry below the diagonal",
+      "name": "rows read as columns",
       "file": "index.html",
-      "find": "if(!M[1][0][0] && !M[2][0][0] && !M[2][1][0]) return 'up';",
-      "replace": "if(!M[1][0][0] && !M[2][0][0]) return 'up';",
+      "find": "cols(){ const A=this.sys().A; return [[A[0][0],A[1][0]],[A[0][1],A[1][1]]]; },",
+      "replace": "cols(){ const A=this.sys().A; return [[A[0][0],A[0][1]],[A[1][0],A[1][1]]]; },",
       "run": "verify"
     },
     {
-      "name": "a 0 on the diagonal left without its swap",
+      "name": "a flat A said to have no solution either way",
       "file": "index.html",
-      "find": "if(M[j][j][0]===0) s+=",
-      "replace": "if(M[j][j][0]===9) s+=",
+      "find": "(this.Dk(0)||this.Dk(1) ? ' Here b is off",
+      "replace": "(true ? ' Here b is off",
       "run": "verify"
     },
     {
-      "name": "scalings counted as swaps",
+      "name": "a negative x never dashed",
       "file": "index.html",
-      "find": "${this.cnt(c(['swap']),'swap','swaps')}",
-      "replace": "${this.cnt(c(['swap','neg']),'swap','swaps')}",
+      "find": "${this.d2(this.Mk(k))*this.D()<0?' stroke-dasharray=\"5 3\"':''}",
+      "replace": "${this.d2(this.Mk(k))*this.D()<-99?' stroke-dasharray=\"5 3\"':''}",
       "run": "verify"
     },
     {
-      "name": "the row used outlined as the row changed",
+      "name": "the gold parallelogram drawn on the wrong columns",
       "file": "index.html",
-      "find": "stroke=\"${role==='t'?FIG_COL.b:role==='s'?FIG_COL.a:'none'}\"",
-      "replace": "stroke=\"${role==='t'||role==='s'?FIG_COL.b:'none'}\"",
+      "find": "const gc=k===null ? null : k===0 ? [b,a2] : [a1,b];",
+      "replace": "const gc=k===null ? null : k===0 ? [b,a1] : [a2,b];",
       "run": "verify"
     },
     {
-      "name": "a cleared entry still drawn red",
+      "name": "the stepper goes past 12",
       "file": "index.html",
-      "find": "stroke=\"${below?(z?FIG_COL.c:FIG_COL.d):FIG_COL.grid}\"",
-      "replace": "stroke=\"${below?FIG_COL.d:FIG_COL.grid}\"",
+      "find": "const b=this.B(), v=b[i]+by; if(v<this.LO||v>this.HI) return;",
+      "replace": "const b=this.B(), v=b[i]+by; if(v<this.LO||v>this.HI+1) return;",
       "run": "verify"
     },
     {
-      "name": "additions alone that count a swap",
+      "name": "the check uses the wrong row",
       "file": "index.html",
-      "find": "K.hist.every(h=>['plus','minus'].includes(h.move.k))}",
-      "replace": "K.hist.some(h=>['plus','minus'].includes(h.move.k))}",
+      "find": "= ${neg(b[i])}`).join(' and ')}, both equations.`",
+      "replace": "= ${neg(b[1-i])}`).join(' and ')}, both equations.`",
       "run": "verify"
     },
     {
-      "name": "no move shut for running too far",
+      "name": "an unknown never noted as found",
       "file": "index.html",
-      "find": "if(M.flat().some(v=>Math.abs(v[0])>999||v[1]>64)) return null;",
-      "replace": "if(M.flat().some(v=>Math.abs(v[0])>99999||v[1]>9999)) return null;",
+      "find": "note(){ if(this.col===null || !this.D()) return;",
+      "replace": "note(){ return;",
       "run": "verify"
     },
     {
-      "name": "undo that leaves the tally where it was",
+      "name": "the zero goal met without x = 0",
       "file": "index.html",
-      "find": "this.hist.pop(); if(!h) return; this.M=h.M; this.f=h.f;",
-      "replace": "this.hist.pop(); if(!h) return; this.M=h.M;",
+      "find": "ok:K=>K.col===0 && K.D()!==0 && K.Dk(0)===0}",
+      "replace": "ok:K=>K.col===0 && K.D()!==0}",
+      "run": "verify"
+    },
+    {
+      "name": "a flat system lets x be divided out",
+      "file": "index.html",
+      "find": "if(!D){ out.push(`With b in column",
+      "replace": "if(false){ out.push(`With b in column",
       "run": "verify"
     }
   ]
