@@ -1,96 +1,96 @@
 {
-  "change": "Add a Mirror or not mode to the transpose workshop",
+  "change": "Add a Name the undo mode to the undo workshop",
   "mutations": [
     {
-      "name": "Aᵀ = −A is tested without the diagonal",
+      "name": "the 3×3 det skips the sign of the middle term",
       "file": "index.html",
-      "find": "for(let j=c==='S'?i+1:i;j<n;j++)",
-      "replace": "for(let j=i+1;j<n;j++)",
+      "find": "s+(j%2?-1:1)*x*this.minor(A,j)",
+      "replace": "s+x*this.minor(A,j)",
       "run": "verify"
     },
     {
-      "name": "the first slip skips the last row",
+      "name": "Aᵀ is swapped for A with its signs dropped",
       "file": "index.html",
-      "find": "for(let i=0;i<n;i++) for(let j=c==='S'",
-      "replace": "for(let i=0;i<n-1;i++) for(let j=c==='S'",
+      "find": ": !this.off(this.mul(this.tr(A),A)) ? 'T' : 'N'; },",
+      "replace": ": !this.off(this.mul(A,A.map(r=>r.map(x=>Math.abs(x))))) ? 'T' : 'N'; },",
       "run": "verify"
     },
     {
-      "name": "a wrong mirror is never found",
+      "name": "the off-I entry reads only the diagonal",
       "file": "index.html",
-      "find": "antis(){ return [0,1,2,3].filter(i=>this.truth(i)==='N' && this.anti(this.R()[i])); },",
-      "replace": "antis(){ return []; },",
+      "find": "for(let j=0;j<M.length;j++) if(M[i][j]!==(i===j?1:0)) return [i,j];",
+      "replace": "if(M[i][i]!==1) return [i,i];",
       "run": "verify"
     },
     {
-      "name": "the skew goal takes a 2×2",
+      "name": "the 2×2 det work swaps b and c",
       "file": "index.html",
-      "find": "if(this.skews().some(i=>this.R()[i].length===3)) t.push('skew');",
-      "replace": "if(this.skews().length) t.push('skew');",
+      "find": "− ${this.amt(A[0][1])}·${this.amt(A[1][0])} = ${d}`;",
+      "replace": "− ${this.amt(A[1][0])}·${this.amt(A[1][0])} = ${d}`;",
       "run": "verify"
     },
     {
-      "name": "the quoted mirror entry is the same entry",
+      "name": "a shear is any 2×2 with 1s down the diagonal",
       "file": "index.html",
-      "find": "but ${this.a(j,i)} = ${neg(A[j][i])}, so Aᵀ ≠ A`;",
-      "replace": "but ${this.a(j,i)} = ${neg(A[i][j])}, so Aᵀ ≠ A`;",
+      "find": "A[0][0]===1 && A[1][1]===1 && (A[0][1]===0)!==(A[1][0]===0); },",
+      "replace": "A[0][0]===1 && A[1][1]===1; },",
       "run": "verify"
     },
     {
-      "name": "the zero-diagonal hint is given for any slip",
+      "name": "big numbers start at 2",
       "file": "index.html",
-      "find": "if(t==='N' && c==='K' && this.near(A)) s+=",
-      "replace": "if(t==='N' && this.near(A)) s+=",
+      "find": "r.some(x=>Math.abs(x)>=3))); },",
+      "replace": "r.some(x=>Math.abs(x)>=2))); },",
       "run": "verify"
     },
     {
-      "name": "the cells are drawn with rows and columns swapped",
+      "name": "the shear hint is given for any wrong name",
       "file": "index.html",
-      "find": "data-rc=\"${r},${c}\" x=\"${cx+cs/2}\" y=\"${cy+cs/2+5}\" fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[r][c])}",
-      "replace": "data-rc=\"${r},${c}\" x=\"${cx+cs/2}\" y=\"${cy+cs/2+5}\" fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[c][r])}",
+      "find": "if(t==='N' && c==='S' && this.shear(A)) s+=",
+      "replace": "if(t==='N' && this.shear(A)) s+=",
       "run": "verify"
     },
     {
-      "name": "the mirror line runs the other way",
+      "name": "the rows-in-step hint ignores zeros",
       "file": "index.html",
-      "find": "x1=\"${x0-4}\" y1=\"${y0-4}\" x2=\"${x0+W+4}\" y2=\"${y0+W+4}\"",
-      "replace": "x1=\"${x0+W+4}\" y1=\"${y0-4}\" x2=\"${x0-4}\" y2=\"${y0+W+4}\"",
-      "run": "verify"
-    },
-    {
-      "name": "calling neither edges the cells red",
-      "file": "index.html",
-      "find": "bk=miss && this.calls[i]!=='N' ? this.breaks(A,this.calls[i]) : null;",
-      "replace": "bk=miss ? this.breaks(A,this.calls[i]==='N'?'S':this.calls[i]) : null;",
+      "find": "A.length===2 && A.every(r=>r.every(x=>x!==0))) s+=",
+      "replace": "A.length===2) s+=",
       "run": "verify"
     },
     {
       "name": "a fix counts as a first check",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Transpose.render();",
-      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Transpose.render();",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Undo.render();",
+      "replace": "{ this.wins++; this.streak++; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Undo.render();",
       "run": "verify"
     },
     {
-      "name": "the neither button calls Aᵀ = A",
+      "name": "the nothing button names it as another",
       "file": "index.html",
-      "find": "this.btn(i,'N','Neither')",
-      "replace": "this.btn(i,'S','Neither')",
+      "find": "+this.btn(i,'Z','Nothing')+",
+      "replace": "+this.btn(i,'N','Nothing')+",
       "run": "verify"
     },
     {
-      "name": "the mirror tab opens the pick mode",
+      "name": "a matrix's cells are drawn transposed",
       "file": "index.html",
-      "find": "this.tab==='pick' ? TransPick.html() : TransSort.html();",
-      "replace": "TransPick.html();",
-      "run": "play:transsort"
+      "find": "fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[r][c])}</text>`;\n      out+=`<text x=\"${X+16}\"",
+      "replace": "fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[c][r])}</text>`;\n      out+=`<text x=\"${X+16}\"",
+      "run": "verify"
     },
     {
-      "name": "the pair edged red is only one cell",
+      "name": "the name-the-undo tab opens the pick mode",
       "file": "index.html",
-      "find": "const red=bk ? [bk.join(), [bk[1],bk[0]].join()] : [];",
-      "replace": "const red=bk ? [bk.join()] : [];",
-      "run": "play:transsort"
+      "find": "this.tab==='pick' ? UndoPick.html() : UndoSort.html();",
+      "replace": "this.tab!=='hand' ? UndoPick.html() : UndoSort.html();",
+      "run": "play:undosort"
+    },
+    {
+      "name": "a slip rings every matrix",
+      "file": "index.html",
+      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\" rx=\"8\" fill=\"none\" stroke=\"${FIG_COL.d}\" stroke-width=\"2.5\"/>`;\n      if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"tag\"",
+      "replace": "if(this.marks) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\" rx=\"8\" fill=\"none\" stroke=\"${FIG_COL.d}\" stroke-width=\"2.5\"/>`;\n      if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"tag\"",
+      "run": "play:undosort"
     }
   ]
 }

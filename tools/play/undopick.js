@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see A, and pick which of four matrices is A⁻¹\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeUndo');
     t.eq('the undo workshop opens', await t.screen(), 's-undo');
-    t.eq('building B by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('building B by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6161));
     await t.tapText(/Which A⁻¹\?/);
-    t.eq('which A⁻¹ is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which A⁻¹ is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the matrices, B, the drawing, the readout and the goals step aside',
       await hidden(t, 'uvMats') && await hidden(t, 'uvBLabel') && await hidden(t, 'uvB') && await hidden(t, 'uvFig') && await hidden(t, 'uvRead') && await hidden(t, 'uvGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('uiBox').innerText)).startsWith(
