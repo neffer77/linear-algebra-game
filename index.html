@@ -4699,6 +4699,69 @@ changeBasis(d){
       ex:`v = c₁b₁ + c₂b₂ is two equations, ${side(p,r,v[0])} and ${side(q,s,v[1])}. With b₁ and b₂ as the columns of P, det P = ${P(p)} × ${P(s)} − ${P(r)} × ${P(q)} = ${neg(det)}. So ${C[k]} = (${top})/${P(det)} = ${neg(num[k])}/${P(det)} = ${show(ans)}.`};
   }
 },
+/* Linear differential equations. y′ + py = q with p > 0 and q constant, from
+   a given y(0): y heads for the steady value q/p, where y′ = 0, and every
+   solution is y = q/p + Ce^(−pt), so t = 0 gives C = y(0) − q/p. The question
+   asks for the steady value or for C. The first depth keeps every number
+   above 0; the second lets q and y(0) be negative and p reach 6; the third
+   puts a number a in front of y′, so the equation is divided by it first.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips: q/p upside down, its sign turned, the division left out, a
+   divided by in place of p, y(0) for the steady value, the steady value and
+   C mixed up, C taken the wrong way round, and C read off as y(0). */
+linODE(d){
+  const F=(a,b=1)=>{ if(b<0){ a=-a; b=-b; } const g=gcd(a,b)||1; return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const sub=(x,y)=>F(x[0]*y[1]-y[0]*x[1],x[1]*y[1]), add=(x,y)=>F(x[0]*y[1]+y[0]*x[1],x[1]*y[1]);
+  const whole=R.chance(0.5);
+  const co=n=>n===1?'':String(n);
+  for(let g=0;;g++){
+    const a=d===3?R.i(2,4):1;
+    const b=d===1?R.i(1,4):d===2?R.i(1,6):R.i(2,9);
+    const c=d===1?R.i(1,12):d===2?R.nz(-12,12):R.nz(-20,20);
+    const y0=d===1?R.i(1,9):R.i(-9,9);
+    const k=R.i(0,1);
+    const L=F(c,b), y=F(y0), C=sub(y,L);
+    const ans=k?C:L;
+    const slips = k ? [
+      [add(y,L),'that adds the steady value to y(0); at t = 0, y = steady value + C, so C = y(0) − steady value'],
+      [sub(L,y),'that takes y(0) from the steady value; C is y(0) minus the steady value, how far y starts from where it settles'],
+      [y,'that is y(0) itself; at t = 0 the solution is the steady value + C, not C alone'],
+      [L,'that is the steady value, where y settles; C is how far y(0) starts from it'],
+      [sub(y,F(b,c)),'that turns the steady value upside down; at the steady value y′ = 0, so it is q/p, not p/q'],
+      [sub(y,F(c,a)),a===1?'that leaves out dividing by p when finding the steady value':'that divides by the number in front of y′ to find the steady value; set y′ = 0 and divide by the number in front of y']
+    ] : [
+      [F(b,c),'that is upside down; at the steady value y′ = 0, so (number in front of y) × y = right-hand side'],
+      [F(-c,b),'that has the sign turned; with y′ = 0 the equation is p·y = q, so y = q/p with no minus'],
+      [F(c,a),a===1?'that leaves out dividing by p; with y′ = 0 the equation is p·y = q':'that divides by the number in front of y′; with y′ = 0 that term is gone, and you divide by the number in front of y'],
+      [y,'that is y(0), where y starts; it moves away from there toward the value where y′ = 0'],
+      [C,'that is C, how far y starts from the steady value, not the steady value itself']
+    ];
+    const big=u=>Math.abs(u[0])>999 || u[1]>99;
+    const ok=u=>u[0]!==0 && !big(u) && key(u)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(sl=>(sl[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const eq=`${co(a)}y′ + ${co(b)}y = ${neg(c)}`;
+    const give = b===1 || gcd(c,b)===1 ? show(L) : `${neg(c)}/${b} = ${show(L)}`;
+    const steady = a===1
+      ? `At the steady value y stops changing, so y′ = 0 and ${co(b)}y = ${neg(c)}, giving y = ${give}.`
+      : `At the steady value y stops changing, so y′ = 0, the ${a}y′ term drops out, and ${co(b)}y = ${neg(c)}, giving y = ${give}.`;
+    return {topic:'Linear Differential Equations',
+      codex:{rule:'y′ + py = q with p > 0 settles where y′ = 0, at y = q/p. Every solution is y = q/p + Ce^(−pt), and t = 0 gives C = y(0) − q/p.',
+             eg:'y′ + 2y = 6 with y(0) = 5: y settles at 6/2 = 3, and C = 5 − 3 = 2, so y = 3 + 2e^(−2t).'},
+      q: k ? `${eq}, with y(0) = ${neg(y0)}. Its solution has the form y = A + Ce^(−kt). What is C?`
+           : `${eq}, with y(0) = ${neg(y0)}. As t grows, y settles at a steady value. What is it?`,
+      a:show(ans),
+      d:dist.map(([u,w])=>[show(u),w]),
+      ex: k ? `${steady} So y = ${show(L)} + Ce^(−kt), and at t = 0 that is ${show(L)} + C = ${neg(y0)}. So C = ${neg(y0)} − ${L[0]<0?'('+show(L)+')':show(L)} = ${show(ans)}.`
+            : `${steady} Every solution is that value plus Ce^(−kt), which dies away, so y settles at ${show(ans)}.`};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -5063,7 +5126,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis', linODE:'Linear Differential Equations'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -5076,7 +5139,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq','changeBasis']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff','paramDeriv']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton','linODE']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv']]
 ];
 
@@ -5125,7 +5188,7 @@ const WORKSHOP_FOR = (() => {
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
-    EulerWalk: ["👣 Euler Step Workshop", ['euler']],
+    EulerWalk: ["👣 Euler Step Workshop", ['euler','linODE']],
     Doubling: ["⏳ Doubling Workshop", ['growth']],
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
@@ -5668,7 +5731,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson','paramDeriv'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson','paramDeriv','linODE'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},

@@ -1,88 +1,102 @@
 {
-  "change": "Add change of basis as a fight topic: the coordinates of v in a basis b₁, b₂ are P⁻¹v.",
+  "change": "Add linear differential equations as a fight topic: y′ + py = q settles at q/p, and C = y(0) − q/p.",
   "mutations": [
     {
-      "name": "the coordinate solved upside down",
+      "name": "the steady value upside down",
       "file": "index.html",
-      "find": "const ans=F(num[k],det);\n    const rows",
-      "replace": "const ans=F(det,num[k]||1);\n    const rows",
+      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
+      "replace": "    const L=F(b,c), y=F(y0), C=sub(y,L);",
       "run": "verify"
     },
     {
-      "name": "c₁ worked with c₂'s top",
+      "name": "C taken the wrong way round",
       "file": "index.html",
-      "find": "const num=[v[0]*s-r*v[1], p*v[1]-q*v[0]];",
-      "replace": "const num=[p*v[1]-q*v[0], v[0]*s-r*v[1]];",
+      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
+      "replace": "    const L=F(c,b), y=F(y0), C=sub(L,y);",
       "run": "verify"
     },
     {
-      "name": "the determinant taken the wrong way round",
+      "name": "the steady value divided by a",
       "file": "index.html",
-      "find": "const det=p*s-r*q;\n    if(!det || (!p && !q)",
-      "replace": "const det=r*q-p*s;\n    if(!det || (!p && !q)",
+      "find": "    const L=F(c,b), y=F(y0), C=sub(y,L);",
+      "replace": "    const L=F(c,b*a), y=F(y0), C=sub(y,L);",
       "run": "verify"
     },
     {
-      "name": "the other coordinate named as the one asked",
+      "name": "the sign slip named as the flip",
       "file": "index.html",
-      "find": "[F(num[o],det),`that is ${C[o]}, the weight on b${o?'₂':'₁'}; the question asks for ${C[k]}`],",
-      "replace": "[F(num[o],det),`that is ${C[k]}, the weight on b${k?'₂':'₁'}; the question asks for ${C[o]}`],",
+      "find": "[F(-c,b),'that has the sign turned;",
+      "replace": "[F(b,c),'that has the sign turned;",
       "run": "verify"
     },
     {
-      "name": "P·v worked with the rows",
+      "name": "the y(0) slip for C named as y(0) − q/p",
       "file": "index.html",
-      "find": "const Pv=[p*v[0]+r*v[1], q*v[0]+s*v[1]];",
-      "replace": "const Pv=[p*v[0]+q*v[1], r*v[0]+s*v[1]];",
+      "find": "[y,'that is y(0) itself;",
+      "replace": "[C,'that is y(0) itself;",
       "run": "verify"
     },
     {
-      "name": "the rows slip is the columns again",
+      "name": "the a slip named for a = 1 at the third depth",
       "file": "index.html",
-      "find": "const rows=[v[0]*s-q*v[1], p*v[1]-r*v[0]];",
-      "replace": "const rows=[v[0]*s-r*v[1], p*v[1]-q*v[0]];",
+      "find": "[F(c,a),a===1?'that leaves out dividing by p; with y′ = 0 the equation is p·y = q':",
+      "replace": "[F(c,a),a>0?'that leaves out dividing by p; with y′ = 0 the equation is p·y = q':",
       "run": "verify"
     },
     {
-      "name": "signs let in at the first depth",
+      "name": "negatives let in at the first depth",
       "file": "index.html",
-      "find": "const lo=d===1?1:d===2?-4:-6,",
-      "replace": "const lo=d===1?0:d===2?-4:-6,",
+      "find": "const c=d===1?R.i(1,12):",
+      "replace": "const c=d===1?R.i(-12,12)||1:",
       "run": "verify"
     },
     {
-      "name": "the third depth no wider",
+      "name": "no number in front of y′ at the third depth",
       "file": "index.html",
-      "find": "hi=d===1?4:d===2?4:6, vl=",
-      "replace": "hi=d===1?4:d===2?4:4, vl=",
+      "find": "const a=d===3?R.i(2,4):1;",
+      "replace": "const a=1;",
+      "run": "verify"
+    },
+    {
+      "name": "p no bigger at the second depth",
+      "file": "index.html",
+      "find": "const b=d===1?R.i(1,4):d===2?R.i(1,6):R.i(2,9);",
+      "replace": "const b=d===1?R.i(1,4):d===2?R.i(1,4):R.i(2,9);",
       "run": "verify"
     },
     {
       "name": "the answer's form never chosen",
       "file": "index.html",
-      "find": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const top",
-      "replace": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const top",
+      "find": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const eq=",
+      "replace": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const eq=",
       "run": "verify"
     },
     {
-      "name": "the working's top for c₂ written for c₁",
+      "name": "the question always the steady value",
       "file": "index.html",
-      "find": "const top = k===0 ? `${P(v[0])} × ${P(s)} − ${P(r)} × ${P(v[1])}` : `${P(p)} × ${P(v[1])} − ${P(q)} × ${P(v[0])}`;",
-      "replace": "const top = `${P(v[0])} × ${P(s)} − ${P(r)} × ${P(v[1])}`;",
+      "find": "    const k=R.i(0,1);\n    const L=F(c,b)",
+      "replace": "    const k=0;\n    const L=F(c,b)",
       "run": "verify"
     },
     {
-      "name": "an equation's coefficients swapped",
+      "name": "the working's steady value left undivided",
       "file": "index.html",
-      "find": "two equations, ${side(p,r,v[0])} and ${side(q,s,v[1])}.",
-      "replace": "two equations, ${side(p,q,v[0])} and ${side(r,s,v[1])}.",
+      "find": "`${neg(c)}/${b} = ${show(L)}`;",
+      "replace": "`${neg(c)}/${b} = ${neg(c)}`;",
       "run": "verify"
     },
     {
-      "name": "the coordinate asked always c₁",
+      "name": "the working's C on the wrong side",
       "file": "index.html",
-      "find": "const v=[R.i(vl,vh),R.i(vl,vh)], k=R.i(0,1), o=1-k;",
-      "replace": "const v=[R.i(vl,vh),R.i(vl,vh)], k=0, o=1-k;",
+      "find": "So C = ${neg(y0)} − ${L[0]<0?'('+show(L)+')':show(L)} = ${show(ans)}.",
+      "replace": "So C = ${show(L)} − ${neg(y0)} = ${show(ans)}.",
+      "run": "verify"
+    },
+    {
+      "name": "y(0) never negative later",
+      "file": "index.html",
+      "find": "const y0=d===1?R.i(1,9):R.i(-9,9);",
+      "replace": "const y0=d===1?R.i(1,9):R.i(1,9);",
       "run": "verify"
     }
   ]
