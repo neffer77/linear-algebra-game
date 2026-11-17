@@ -1657,9 +1657,12 @@ Object.assign(ANALYSIS, {
       sepSeen.add(sl[2]);
     });
     const w = fl(p.ex), N = '(-?\\d+(?:\\/\\d+)?)';
-    const end = w.match(new RegExp(`At x = (-?\\d+), [^=]+ = ${N}, so 1/y = ${N} - \\(?${N}\\)? = ${N}, and y = ${N}\\.$`));
-    if (!w.startsWith('Separate the variables: dy/y² = ') || !/ -1\/y = /.test(w) || !end || +end[1] !== a || Math.abs(val(end[2]) - W) > 1e-12
-      || Math.abs(val(end[3]) - 1 / y0) > 1e-12 || Math.abs(val(end[4]) - W) > 1e-12 || Math.abs(val(end[5]) - (1 / y0 - W)) > 1e-12 || Math.abs(val(end[6]) - ansV) > 1e-12)
+    // the working never takes away a minus: 1/y = 3 + x², not 3 - (-x²)
+    const end = w.match(new RegExp(`At x = (-?\\d+), [^=]+ = ${N}, so 1/y = ${N} ([-+]) (\\d+(?:\\/\\d+)?) = ${N}, and y = ${N}\\.$`));
+    const law = w.match(/so 1\/y = -?\d+(?:\/\d+)? ([-+]) (\(?\d+(?:\/\d+)?\)?)?x/);
+    if (!w.startsWith('Separate the variables: dy/y² = ') || !/ -1\/y = /.test(w) || !end || !law || /- \(-|- -|\+ -/.test(w.split('so 1/y')[1] || '')
+      || (law[1] === '+') !== (k < 0) || +end[1] !== a || Math.abs(val(end[2]) - W) > 1e-12
+      || Math.abs(val(end[3]) - 1 / y0) > 1e-12 || Math.abs((end[4] === '-' ? 1 : -1) * val(end[5]) - W) > 1e-12 || Math.abs(val(end[6]) - (1 / y0 - W)) > 1e-12 || Math.abs(val(end[7]) - ansV) > 1e-12)
       fail('analysis', 'separable', `the working does not separate, integrate and carry 1/y to the answer: ${w}`);
     if (y0 < 0 || a < 0) sepShape.neg = 1;
     if (!Number.isInteger(y0)) sepShape.frac = 1;
