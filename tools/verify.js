@@ -744,6 +744,7 @@ let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgott
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
+let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
 let lsWhole = 0, lsFour = 0, lsSeen = new Set();   // least squares: how often the answer is whole, how often there are four points, and which slips turn up
@@ -1398,6 +1399,74 @@ Object.assign(ANALYSIS, {
     });
     covered.add('simpson');
   },
+  // Determinant rules, worked again here on actual matrices: an A and a B are
+  // built with the stated determinants (a diagonal scaled, then mixed by
+  // matrices of determinant 1), the expression is multiplied out, transposed
+  // and inverted as written, and its determinant taken by cofactors. Each
+  // wrong answer is worked again as the slip its reason names.
+  detRules: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const q = fl(p.q).match(/^A and B are ([23])×\1 matrices with det A = (-?\d+) and det B = (-?\d+)\. What is det\((-?\d*)((?:[AB]ᵀ?(?:⁻¹|²|³)?)+)\)\?$/);
+    if (!q) { fail('analysis', 'detRules', `the question does not read as determinant rules: ${fl(p.q)}`); return; }
+    const n = +q[1], dv = { A: +q[2], B: +q[3] }, k = q[4] === '-' ? -1 : +q[4];
+    if (!k || q[4] === '1') { fail('analysis', 'detRules', `the scalar does not read: ${fl(p.q)}`); return; }
+    const fs = [...q[5].matchAll(/([AB])(ᵀ?)(⁻¹|²|³)?/g)].map(m => ({ M: m[1], t: !!m[2], p: m[3] === '⁻¹' ? -1 : m[3] === '²' ? 2 : m[3] === '³' ? 3 : 1 }));
+    // exact arithmetic: entries are [numerator, denominator] in BigInt
+    const gB = (a, b) => { a = a < 0n ? -a : a; b = b < 0n ? -b : b; while (b) [a, b] = [b, a % b]; return a; };
+    const Q = (a, b = 1n) => { if (b < 0n) { a = -a; b = -b; } const g = gB(a, b) || 1n; return [a / g, b / g]; };
+    const qa = (x, y) => Q(x[0] * y[1] + y[0] * x[1], x[1] * y[1]), qm = (x, y) => Q(x[0] * y[0], x[1] * y[1]);
+    const mul = (X, Y) => X.map(r => Y[0].map((_, j) => r.reduce((s, a, i) => qa(s, qm(a, Y[i][j])), Q(0n))));
+    const tr = X => X[0].map((_, j) => X.map(r => r[j]));
+    const minor = (X, i, j) => X.filter((_, r) => r !== i).map(r => r.filter((_, c) => c !== j));
+    const det = X => X.length === 1 ? X[0][0]
+      : X[0].reduce((s, a, j) => qa(s, qm(Q(j % 2 ? -1n : 1n), qm(a, det(minor(X, 0, j))))), Q(0n));
+    const inv = X => { const D = det(X);   // the adjugate over the determinant
+      return X.map((_, i) => X.map((_, j) => qm(Q((i + j) % 2 ? -1n : 1n), qm(det(minor(X, j, i)), Q(D[1], D[0]))))); };
+    const I = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => Q(BigInt(+(i === j)))));
+    const build = D => {
+      const X = I.map((r, i) => r.map((v, j) => i === j ? Q(BigInt(i === 0 ? D : 1)) : Q(0n)));
+      const L = I.map((r, i) => r.map((v, j) => j < i ? Q(BigInt(1 + ((i * 7 + j * 3 + D + 20) % 3))) : v));
+      const U = I.map((r, i) => r.map((v, j) => j > i ? Q(BigInt(2 - ((i + j * 5 + D + 20) % 4))) : v));
+      return mul(mul(L, X), U);
+    };
+    const MX = { A: build(dv.A), B: build(dv.B) };
+    let P = I.map(r => r.map(v => qm(v, Q(BigInt(k)))));
+    for (const f of fs) {
+      let X = f.t ? tr(MX[f.M]) : MX[f.M];
+      if (f.p === -1) X = inv(X); else for (let i = 1; i < f.p; i++) X = mul(X, MX[f.M]);
+      P = mul(P, X);
+    }
+    const tq = det(P), truth = Number(tq[0]) / Number(tq[1]), tol = 1e-9;
+    if (tq[1] === 1n ? String(tq[0]) !== fl(p.a) : `${tq[0]}/${tq[1]}` !== fl(p.a))
+      fail('analysis', 'detRules', `the determinant worked exactly is ${tq[0]}/${tq[1]}, not ${fl(p.a)}: ${fl(p.q)}`);
+    // the slips, from the stated determinants
+    const fv = (f, o = {}) => { const v = dv[f.M] * (f.t && o.trans ? -1 : 1);
+      return f.p === -1 ? (o.invNeg ? -v : o.invDrop ? v : 1 / v) : f.p > 1 && o.powMul ? f.p * v : v ** f.p; };
+    const prod = o => fs.reduce((s, f) => s * fv(f, o), 1), kn = k ** n;
+    const slip = [[/^that takes k out once/, k * prod({})], [/^that multiplies by k × n/, k * n * prod({})],
+      [/^that takes det M⁻¹ as -det M/, kn * prod({ invNeg: 1 })], [/^that drops the inverse/, kn * prod({ invDrop: 1 })],
+      [/^that turns the sign for a transpose/, kn * prod({ trans: 1 })], [/^that multiplies by the power/, kn * prod({ powMul: 1 })],
+      [/^that adds the determinants/, kn * fs.reduce((s, f) => s + fv(f), 0)]];
+    // the working names the rules, then multiplies kⁿ by each factor in order
+    const w = fl(p.ex), SUP = { 1: '', 2: '²', 3: '³' };
+    const P_ = v => v < 0 ? `(${v})` : `${v}`;
+    const terms = [`${P_(k)}${SUP[n]}`, ...fs.map(f => f.p === -1 ? `1/${P_(dv[f.M])}` : `${P_(dv[f.M])}${SUP[f.p]}`)].join(' × ');
+    const wr = w.match(/^For ([23])×\1 matrices, det\(kM\) = k([²³]) det M, a product's determinant is the product of the determinants, det Mᵀ = det M and det M⁻¹ = 1\/det M\. So det\((.*?)\) = (.*) = (-?\d+(?:\/\d+)?)\.$/);
+    if (!wr || +wr[1] !== n || wr[2] !== SUP[n] || wr[3] !== fl(p.q).match(/det\((.*)\)\?$/)[1] || Math.abs(val(wr[5]) - truth) > tol)
+      fail('analysis', 'detRules', `the working does not take the rules to the answer: ${w}`);
+    else if (wr[4] !== terms) fail('analysis', 'detRules', `the working's factors are not kⁿ and each determinant in turn (${terms}): ${w}`);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'detRules', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-7) fail('analysis', 'detRules', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      drSeen.add(String(sl[0]));
+    });
+    drShape.n[n] = 1; drShape.f[fs.length] = 1; if (k < 0) drShape.neg = 1;
+    if (fs.some(f => f.p > 1)) drShape.pow = 1; if (fs.some(f => f.p === -1)) drShape.inv++;
+    covered.add('detRules');
+  },
   // Cramer's rule, solved again here by elimination in exact fractions rather
   // than by determinants, so the ratio the generator takes is checked against
   // a different method; each wrong answer is worked again as its slip.
@@ -1701,7 +1770,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 82, sig: 0xc247 };
+  const PINNED = { count: 83, sig: 0x8721 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16902,6 +16971,36 @@ for (let d = 1; d <= 3; d++) {
   // left to themselves the tables come out whole only about 37% of the time at the first two depths and
   // 62% at the third, so the band is tight enough to see the coin flip that evens them out
   if (spWhole < SP * 0.42 || spWhole > SP * 0.58) fail('analysis', 'simpson', `depth ${d} gives a whole answer ${spWhole} times in ${SP}, not about half`);
+}
+
+// Determinant rules at every depth: five different exact numbers, none 0,
+// two of the four wrong ones sharing the answer's sign and two its form;
+// every slip the depth allows turns up; the size, scalar and number of
+// factors are the depth's; and whole and fractional answers come up about
+// equally.
+for (let d = 1; d <= 3; d++) {
+  const DR = 3000;
+  drWhole = 0; drSeen = new Set(); drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };
+  for (let i = 0; i < DR; i++) {
+    const p = GEN.detRules(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'detRules', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'detRules', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const neg0 = vals[0].startsWith('-');
+    if (vals.slice(1).filter(v => v.startsWith('-') === neg0).length < 2) fail('analysis', 'detRules', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'detRules', `a number runs too long: ${vals.join(', ')}`);
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'detRules', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) drWhole++;
+    ANALYSIS.detRules(p);
+  }
+  const sh = drShape, ns = Object.keys(sh.n).sort().join(), fsz = Object.keys(sh.f).sort().join();
+  if (ns !== (d === 1 ? '2' : d === 2 ? '2,3' : '3')) fail('analysis', 'detRules', `depth ${d} uses ${ns}×${ns} matrices`);
+  if (fsz !== (d === 3 ? '2,3' : '2')) fail('analysis', 'detRules', `depth ${d} multiplies ${fsz} factors`);
+  if (!!sh.neg !== (d > 1) || !!sh.pow !== (d > 1)) fail('analysis', 'detRules', `depth ${d} ${d > 1 ? 'never' : 'already'} brings in a negative scalar or a power`);
+  if (d > 1 && sh.inv !== DR) fail('analysis', 'detRules', `depth ${d} leaves out the inverse in ${DR - sh.inv} of ${DR}`);
+  if (drSeen.size !== (d === 1 ? 6 : 7)) fail('analysis', 'detRules', `depth ${d} offers only ${drSeen.size} of its slips`);
+  if (drWhole < DR * 0.42 || drWhole > DR * 0.58) fail('analysis', 'detRules', `depth ${d} gives a whole answer ${drWhole} times in ${DR}, not about half`);
 }
 
 // Cramer's rule at every depth: five different exact numbers, none 0, with

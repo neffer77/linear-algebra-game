@@ -1,95 +1,95 @@
 {
-  "change": "Add Cramer's rule as a fight topic, linked to the Elimination Workshop.",
+  "change": "Add determinant rules as a fight topic, linked to the Cofactor Workshop.",
   "mutations": [
     {
-      "name": "the answer upside down",
+      "name": "kⁿ taken as k",
       "file": "index.html",
-      "find": "const Ak=col(k), Dk=det(Ak), ans=F(Dk,DA);",
-      "replace": "const Ak=col(k), Dk=det(Ak), ans=F(DA,Dk||1);",
+      "find": "const kn=F(k**n), ans=mulF(kn,prod({}));",
+      "replace": "const kn=F(k), ans=mulF(kn,prod({}));",
       "run": "verify"
     },
     {
-      "name": "the right-hand side down the wrong column",
+      "name": "an inverse read as the determinant itself",
       "file": "index.html",
-      "find": "const col=j=>A.map((r,i)=>r.map((a,c)=>c===j?bv[i]:a));\n    const Ak=col(k)",
-      "replace": "const col=j=>A.map((r,i)=>r.map((a,c)=>c===j?bv[i]:a));\n    const Ak=col((k+1)%n)",
+      "find": "if(f.p===-1) return o.invNeg ? F(-v) : o.invDrop ? F(v) : F(1,v);",
+      "replace": "if(f.p===-1) return o.invNeg ? F(-v) : o.invDrop ? F(v) : F(v);",
       "run": "verify"
     },
     {
-      "name": "depth 1 asks for y too",
+      "name": "a transpose turns the sign",
       "file": "index.html",
-      "find": "k=d===1?0:R.i(0,n-1)",
-      "replace": "k=R.i(0,n-1)",
+      "find": "const v=dv[f.M]*(f.t && o.trans ? -1 : 1);",
+      "replace": "const v=dv[f.M]*(f.t ? -1 : 1);",
       "run": "verify"
     },
     {
-      "name": "depth 2 never asks for y",
+      "name": "the sum slip multiplies instead",
       "file": "index.html",
-      "find": "k=d===1?0:R.i(0,n-1)",
-      "replace": "k=d===1?0:R.i(0,n-2)",
+      "find": "[mulF(kn,sum),'that adds the determinants;",
+      "replace": "[mulF(kn,prod({})),'that adds the determinants;",
       "run": "verify"
     },
     {
-      "name": "depth 3 stays 2×2",
+      "name": "the k-once slip named as k × n",
       "file": "index.html",
-      "find": "const n=d===3?3:2, k=d===1",
-      "replace": "const n=2, k=d===1",
-      "run": "verify"
-    },
-    {
-      "name": "depth 1 lets a sign go",
-      "file": "index.html",
-      "find": "lo=d===1?1:d===2?-5:-3",
-      "replace": "lo=d===1?-1:d===2?-5:-3",
-      "run": "verify"
-    },
-    {
-      "name": "whole and fractional answers not balanced",
-      "file": "index.html",
-      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
-      "replace": "big(ans) || same<2 || sign<2) && g<3000",
+      "find": "[mulF(F(k*n),prod({})),'that multiplies by k × n;",
+      "replace": "[mulF(F(k),prod({})),'that multiplies by k × n;",
       "run": "verify"
     },
     {
       "name": "two of the answer's sign not required",
       "file": "index.html",
-      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
-      "replace": "big(ans) || same<2 || (ans[1]===1)!==whole) && g<3000",
+      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
+      "replace": "if((dist.length<4 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
       "run": "verify"
     },
     {
       "name": "two of the answer's form not required",
       "file": "index.html",
-      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
-      "replace": "big(ans) || sign<2 || (ans[1]===1)!==whole) && g<3000",
+      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
+      "replace": "if((dist.length<4 || big(ans) || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
       "run": "verify"
     },
     {
-      "name": "the row slip replaces a column",
+      "name": "depth 1 can be 3×3",
       "file": "index.html",
-      "find": "Dr=det(A.map((r,i)=>i===k?bv.slice():r.slice()))",
-      "replace": "Dr=det(A.map((r,i)=>r.map((a,c)=>c===k?bv[i]:a)).map(r=>r.reverse()))",
+      "find": "const n=d===1?2:d===2?R.pick([2,3]):3;",
+      "replace": "const n=d===3?3:R.pick([2,3]);",
       "run": "verify"
     },
     {
-      "name": "the added-products slip takes them away",
+      "name": "depth 1 lets k be negative",
       "file": "index.html",
-      "find": "[F(Ak[0][0]*Ak[1][1]+Ak[0][1]*Ak[1][0],DA),",
-      "replace": "[F(Ak[0][0]*Ak[1][1]-Ak[0][1]*Ak[1][0]+1,DA),",
+      "find": "const k=d===1?R.pick([2,3]):R.pick([2,3,-2,-1]);",
+      "replace": "const k=R.pick([2,3,-2,-1]);",
       "run": "verify"
     },
     {
-      "name": "the working's det A off by one",
+      "name": "depth 2 may leave out the inverse",
       "file": "index.html",
-      "find": "and det A = ${dA}.",
-      "replace": "and det A = ${dA}${n===3?'':''}0.",
+      "find": "if(!fs.some(f=>f.p===-1) && d>1) continue;",
+      "replace": "if(!fs.some(f=>f.p===-1) && d>2) continue;",
       "run": "verify"
     },
     {
-      "name": "the working swaps the wrong column",
+      "name": "depth 3 never takes three factors",
       "file": "index.html",
-      "find": "Swap column ${k+1}, the ${V[k]} column, for the right-hand side: det ${mat(Ak)}",
-      "replace": "Swap column ${k+1}, the ${V[k]} column, for the right-hand side: det ${mat(A)}",
+      "find": "const nf=d===3?R.pick([2,3]):2;",
+      "replace": "const nf=2;",
+      "run": "verify"
+    },
+    {
+      "name": "the working's scalar loses its power",
+      "file": "index.html",
+      "find": "const terms=[`${P(k)}${SUP[n]}`,",
+      "replace": "const terms=[`${P(k)}`,",
+      "run": "verify"
+    },
+    {
+      "name": "whole answers not balanced",
+      "file": "index.html",
+      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
+      "replace": "if((dist.length<4 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
       "run": "verify"
     }
   ]
