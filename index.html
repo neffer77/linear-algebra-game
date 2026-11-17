@@ -4538,6 +4538,73 @@ newton(d){
       ex:`${why}.`};
   }
 },
+/* Determinant rules. Told det A and det B for two n×n matrices, find the
+   determinant of an expression in them without ever writing a matrix down:
+   det(kM) = kⁿ det M, the determinant of a product is the product of the
+   determinants, det Mᵀ = det M and det M⁻¹ = 1/det M. The first depth is
+   2×2 with k of 2 or 3 and two factors; the second lets n be 3, k be
+   negative and a factor be squared; the third is 3×3 with up to three
+   factors. The wrong answers are the slips: k taken out once instead of n
+   times, k times n, det A⁻¹ read as −det A, the inverse dropped, a sign
+   turned for a transpose, a power multiplied instead of raised, and the
+   determinants added instead of multiplied. */
+detRules(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const mulF=(x,y)=>F(x[0]*y[0],x[1]*y[1]), powF=(x,p)=>p>=0 ? F(x[0]**p,x[1]**p) : F(x[1]**-p,x[0]**-p);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const SUP={2:'²',3:'³'}, whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===1?2:d===2?R.pick([2,3]):3;
+    const k=d===1?R.pick([2,3]):R.pick([2,3,-2,-1]);
+    const dv={A:R.pick([2,3,4,5,-2,-3,-4]), B:R.pick([2,3,5,-2,-3,-5])};
+    const nf=d===3?R.pick([2,3]):2;
+    const fs=[];
+    for(let i=0;i<nf;i++){
+      const M=i===0?'A':i===1?'B':R.pick(['A','B']);
+      const p=d===1?R.pick([1,1,-1]):R.pick([1,2,-1,-1]);
+      fs.push({M, p, t:p===1 && R.chance(0.5)});
+    }
+    if(R.chance(0.5)) fs.reverse();
+    if(!fs.some(f=>f.p===-1) && d>1) continue;
+    const val=(f,o={})=>{
+      const v=dv[f.M]*(f.t && o.trans ? -1 : 1);
+      if(f.p===-1) return o.invNeg ? F(-v) : o.invDrop ? F(v) : F(1,v);
+      if(f.p>1 && o.powMul) return F(f.p*v);
+      return powF(F(v),f.p);
+    };
+    const prod=o=>fs.reduce((s,f)=>mulF(s,val(f,o)),F(1));
+    const kn=F(k**n), ans=mulF(kn,prod({}));
+    const sum=fs.reduce((s,f)=>{ const v=val(f); return F(s[0]*v[1]+v[0]*s[1],s[1]*v[1]); },F(0));
+    const slips=[
+      [mulF(F(k),prod({})),'that takes k out once; each of the n rows carries a k, so it comes out as kⁿ'],
+      [mulF(F(k*n),prod({})),'that multiplies by k × n; k comes out once for each row, so it is k to the power n'],
+      ...(fs.some(f=>f.p===-1) ? [[mulF(kn,prod({invNeg:1})),'that takes det M⁻¹ as −det M; it is 1/det M, since M⁻¹M = I and det I = 1'],
+                                  [mulF(kn,prod({invDrop:1})),'that drops the inverse; det M⁻¹ is 1/det M, not det M']] : []),
+      ...(fs.some(f=>f.t) ? [[mulF(kn,prod({trans:1})),'that turns the sign for a transpose; a transpose keeps its determinant, det Mᵀ = det M']] : []),
+      ...(fs.some(f=>f.p>1) ? [[mulF(kn,prod({powMul:1})),'that multiplies by the power; det(M²) is (det M)², not 2 det M']] : []),
+      [mulF(kn,sum),'that adds the determinants; the determinant of a product is the product of the determinants']
+    ];
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>(s[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const P=v=>v<0?`(${neg(v)})`:neg(v);
+    const ks=k===-1?'−':neg(k), expr=ks+fs.map(f=>f.M+(f.t?'ᵀ':'')+(f.p===-1?'⁻¹':SUP[f.p]||'')).join('');
+    const terms=[`${P(k)}${SUP[n]}`, ...fs.map(f=>f.p===-1 ? `1/${P(dv[f.M])}` : `${P(dv[f.M])}${SUP[f.p]||''}`)].join(' × ');
+    return {topic:'Determinant Rules',
+      codex:{rule:'For n×n matrices: det(kM) = kⁿ det M, det(MN) = det M × det N, det Mᵀ = det M, and det M⁻¹ = 1/det M.',
+             eg:'3×3 with det A = 2: det(2A⁻¹) = 2³ × 1/2 = 4.'},
+      q:`A and B are ${n}×${n} matrices with det A = ${neg(dv.A)} and det B = ${neg(dv.B)}. What is det(${expr})?`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`For ${n}×${n} matrices, det(kM) = k${SUP[n]} det M, a product's determinant is the product of the determinants, det Mᵀ = det M and det M⁻¹ = 1/det M. So det(${expr}) = ${terms} = ${show(ans)}.`};
+  }
+},
 /* Cramer's rule. A system with det A ≠ 0 has one solution, and each unknown
    is a ratio of determinants: A with that unknown's column swapped for the
    right-hand side, over A itself. The first depth asks x of a 2×2 with
@@ -4835,7 +4902,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule"
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4844,7 +4911,7 @@ const TOPIC_LABEL = {
    what the screens collapse into. */
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
-  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm','cramer']],
+  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm','cramer','detRules']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
@@ -4862,7 +4929,7 @@ const WORKSHOP_FOR = (() => {
     Dot:     ["🎯 Dot Product Workshop", ['dot','angleVec','orth','proj','vecProj']],
     Eigen:   ["👑 Eigenvector Hunt", ['eigen2','eigenvec']],
     Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
-    Cofactor:["♟️ Cofactor Workshop", ['det3']],
+    Cofactor:["♟️ Cofactor Workshop", ['det3','detRules']],
     Compose: ["🔁 Order Matters", ['matMul']],
     Span:    ["🧭 Span Workshop", ['vecCombo','rank']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2','cramer']],
@@ -5414,7 +5481,7 @@ const REALMS = [
        far:'crags', farCol:'#351621', near:'keep', nearCol:'#1c0b12',
        ground:['#361a22','#100608'], rim:'rgba(255,170,180,.17)', haze:'rgba(40,16,22,.82)',
        glow:'#ffdde1', weather:'snow', accent:'#ffe9ec'},
-   pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule','cramer'],
+   pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule','cramer','detRules'],
    foes:[
      {nm:'Basis Knight',    art:'knightfoe',hp:420,atk:58, gold:200,xp:170, col:'#f08a8d'},
      {nm:'Nullspace Drake', art:'dragon',   hp:480,atk:66, gold:235,xp:200, col:'#d4585c'},
