@@ -37,11 +37,11 @@ module.exports = {
       /Then turn it round: see a fraction and pick which of four numbers it heads for\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeHorizon');
     t.eq('the horizon workshop opens', await t.screen(), 's-horizon');
-    t.eq('stepping it out by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('stepping it out by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6262));
     await t.tapText(/Where does it head\?/);
-    t.eq('where does it head is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('where does it head is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the fractions, figure, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('zpBox').innerText)).startsWith(

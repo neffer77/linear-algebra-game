@@ -1683,7 +1683,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ HORIZON WORKSHOP ============ -->
   <div class="screen" id="s-horizon">
     <div class="panel"><h2>🌅 Horizon Workshop</h2><div class="sub">Where does a fraction head as x grows without end? Step x out, ten times further each time, and watch the biggest power on top and underneath take over. Their ratio is where f heads.</div></div>
-    <div id="hzTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x out by hand or pick where a fraction heads"></div>
+    <div id="hzTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x out by hand, pick where a fraction heads, or rank a race"></div>
     <div class="panel">
       <div id="zpBox"></div>
       <div id="hzSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
@@ -15600,7 +15600,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌅 Horizon Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first. Then turn it round: see a fraction and pick which of four numbers it heads for.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step x out toward infinity and watch the biggest powers take over a fraction. Find where it settles, where it is crushed to 0, where it runs away, and a slow starter that heads the wrong way first. Then turn it round: see a fraction and pick which of four numbers it heads for. Or rank a race: put four functions in order from slowest to fastest as x grows.</div>
          <button class="btn sm" id="tomeHorizon" style="width:auto;margin-top:8px" onclick="Horizon.open()">Open the horizon workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -27041,11 +27041,11 @@ const Horizon = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('hzTab').innerHTML=[['hand','🌅 Step it out by hand','Step x out toward infinity by hand'],['pick','🎯 Where does it head?','See a fraction and pick which of four numbers it heads for as x grows']]
+    document.getElementById('hzTab').innerHTML=[['hand','🌅 Step it out by hand','Step x out toward infinity by hand'],['pick','🎯 Where does it head?','See a fraction and pick which of four numbers it heads for as x grows'],['race','🏁 Race to infinity','See four functions and rank them from slowest to fastest as x grows without end']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Horizon.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['hzSets','hzFig','hzStep','hzRead','hzGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('zpBox').innerHTML=pick ? HzPick.html() : '';
+    document.getElementById('zpBox').innerHTML=!pick ? '' : this.tab==='pick' ? HzPick.html() : HzRace.html();
     if(pick) return;
     document.getElementById('hzSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Horizon.pick(\${i})" aria-label="\${s.btn}: f(x) = (\${this.poly(s.top)})/(\${this.poly(s.bot)})">\${s.btn}</button>\`).join('');
@@ -27066,6 +27066,183 @@ const Horizon = {
         Celebrate.banner('MASTER OF THE HORIZON','every limit reached','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Race to infinity: the horizon workshop's third mode ----------
+   The other two modes step a fraction out or offer where it heads. This one
+   races whole functions: four are shown, and you tap them in order from the
+   slowest to the fastest as x grows without end. The rule comes first: logs
+   are outgrown by powers, and powers by exponentials. A picture shows who
+   leads at x = 10 beside the order you have called, with a line for each, so
+   a line that climbs is an overtake you are claiming. A check marks the places
+   that are wrong and works each pair you put the wrong way round, with both
+   values far out. Fix them and check again. The races come round in a fixed
+   order, and nothing is random, saved or timed. */
+const HzRace = {
+  /* each grows like bˣ (b) or like xᵖ(ln x)ˡ (p and l) */
+  FN:{
+    ln:  {s:'ln x',    p:0,   l:1},
+    ln3: {s:'(ln x)³', p:0,   l:3},
+    sqrt:{s:'√x',      p:0.5, l:0},
+    x:   {s:'x',       p:1,   l:0},
+    xln: {s:'x ln x',  p:1,   l:1},
+    x2:  {s:'x²',      p:2,   l:0},
+    x3:  {s:'x³',      p:3,   l:0},
+    x10: {s:'x¹⁰',     p:10,  l:0},
+    x100:{s:'x¹⁰⁰',    p:100, l:0},
+    e2:  {s:'2ˣ',      b:2},
+    e:   {s:'eˣ',      b:Math.E},
+    e3:  {s:'3ˣ',      b:3}
+  },
+  RACES:[
+    {fs:['x2','e2','ln','x'],     tags:['tiers']},
+    {fs:['x10','e2','x2','sqrt'], tags:['late']},
+    {fs:['e3','x3','e2','ln'],    tags:['base']},
+    {fs:['xln','x2','sqrt','x'],  tags:['between']},
+    {fs:['ln3','x','ln','sqrt'],  tags:['late']},
+    {fs:['e','x100','xln','e2'],  tags:['base','late']}
+  ],
+  ri:0, order:[], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',     t:'Rank a whole race right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'late',    t:'Rank a race where the winner is behind at x = 10.', toast:'The winner started behind',
+     ok:K=>K.kinds.has('late')},
+    {id:'base',    t:'Rank two exponentials against each other.', toast:'The bigger base wins',
+     ok:K=>K.kinds.has('base')},
+    {id:'between', t:'Place x ln x between two powers of x.', toast:'x ln x sits between x and x²',
+     ok:K=>K.kinds.has('between')},
+    {id:'fix',     t:'Check a race with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',   t:'Rank three races in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'As x grows without end, every power of ln x is outgrown by every positive power of x, and every power of x by every bˣ with b above 1. Of two powers of x the bigger power wins, with the same power the bigger power of ln x wins, and of two exponentials the bigger base wins. Near the start the order can look different. Tap the four from slowest to fastest.',
+  R(){ return this.RACES[this.ri]; },
+  /* log₁₀ of f at X, so the giants never overflow */
+  lg(k,X){ const F=this.FN[k]; return F.b ? X*Math.log10(F.b) : F.p*Math.log10(X)+F.l*Math.log10(Math.log(X)); },
+  val(k,X){ const F=this.FN[k]; return F.b ? F.b**X : X**F.p*Math.log(X)**F.l; },
+  /* does a outgrow b as x grows without end? */
+  beats(a,b){ const A=this.FN[a], B=this.FN[b];
+    if(A.b || B.b) return (A.b||0)>(B.b||0);
+    return A.p!==B.p ? A.p>B.p : A.l>B.l; },
+  truth(){ return this.R().fs.slice().sort((a,b)=>this.beats(a,b)?1:-1); },
+  sup(n){ return String(n).split('').map(d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[+d]).join(''); },
+  big(X){ const e=Math.round(Math.log10(X)); return e<=6 ? X.toLocaleString('en-US') : '10'+this.sup(e); },
+  /* f at X written out: = 1,024, ≈ 2.3, = 10¹⁰ or ≈ 1.1 × 10³⁰¹ */
+  show(k,X){
+    const v=this.lg(k,X);
+    if(v<6){ const n=this.val(k,X), r=Math.round(n);
+      return Math.abs(n-r)<1e-9 ? '= '+r.toLocaleString('en-US') : '≈ '+n.toLocaleString('en-US',{maximumFractionDigits:1}); }
+    let e=Math.floor(v+1e-9), m=Math.round(10**(v-e)*10)/10;
+    if(m>=10){ m=1; e++; }
+    return Math.abs(10**(v-Math.floor(v+1e-9))-1)<1e-9 ? '= 10'+this.sup(e) : m===1 ? '≈ 10'+this.sup(e) : \`≈ \${m.toFixed(1)} × 10\${this.sup(e)}\`;
+  },
+  /* the same in words: is 1,024, is about 2.3 */
+  says(k,X){ const t=this.show(k,X); return (t[0]==='='?'is ':'is about ')+t.slice(2); },
+  /* the first power of ten from a thousand on where fast is ahead and stays ahead */
+  far(a,b){ for(let e=3;e<=12;e++){ let ok=true; for(let k=e;k<=14;k++) if(this.lg(b,10**k)<=this.lg(a,10**k)){ ok=false; break; } if(ok) return 10**e; } return 10**12; },
+  /* why the slower a loses to the faster b, and both at work */
+  why(a,b){
+    const A=this.FN[a], B=this.FN[b];
+    const lead = A.b && B.b ? 'Of two exponentials the bigger base wins'
+      : B.b ? 'Every bˣ with b above 1 outgrows every power of x'
+      : A.p===0 && B.p>0 ? 'Every power of ln x is outgrown by every positive power of x'
+      : A.p!==B.p ? 'Of two powers of x the bigger power wins'
+      : A.p===0 ? 'Of two powers of ln x the bigger power wins'
+      : 'With the same power of x, the bigger power of ln x wins';
+    const X=this.far(a,b), at=\`at x = \${this.big(X)}, \${A.s} \${this.says(a,X)} and \${B.s} \${this.says(b,X)}\`;
+    const nums = this.lg(a,10)>this.lg(b,10)
+      ? \`At x = 10, \${A.s} \${this.says(a,10)} and \${B.s} only \${this.says(b,10).slice(3)}, but \${at}.\`
+      : \`At x = 10, \${A.s} \${this.says(a,10)} and \${B.s} \${this.says(b,10)}, and \${at}.\`;
+    return \`\${lead}: \${A.s} ÷ \${B.s} heads for 0. \${nums}\`;
+  },
+  /* who leads at x = 10, biggest first */
+  start(){ return this.R().fs.slice().sort((a,b)=>this.lg(b,10)-this.lg(a,10)); },
+  working(){
+    const out=[], s=k=>this.FN[k].s;
+    if(this.solved){
+      const T=this.truth();
+      out.push(\`Yes: from slowest to fastest, \${T.map(s).join(', ')}.\`);
+      const pass=[];
+      for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(this.lg(T[i],10)>this.lg(T[j],10)) pass.push(\`\${s(T[i])} is ahead of \${s(T[j])} at x = 10, but \${s(T[j])} passes it in the end.\`);
+      out.push(...(pass.length ? pass : ['They already stand in this order at x = 10, and the gaps only grow.']));
+    } else if(this.marks){
+      out.push(\`\${this.got} of 4 in the right place. Tap one to take it out, then put it back where it goes.\`);
+      for(let i=0;i<3;i++){ const a=this.order[i], b=this.order[i+1];
+        if(this.beats(a,b)) out.push(\`You ranked \${s(a)} slower than \${s(b)}, but it grows faster. \${this.why(b,a)}\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.order.length} of 4 placed.\`);
+    }
+    out.push(\`\${this.wins} ranked right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* left, the four as they stand at x = 10, biggest on top; right, the order
+     called, fastest on top; a line joins each function's two places */
+  svg(){
+    const f=v=>v.toFixed(2), Y=r=>48+r*34, L=this.start(), T=this.truth(), s=k=>this.FN[k].s;
+    const right=k=>3-this.order.indexOf(k);
+    let out=\`<svg viewBox="0 0 320 \${f(Y(3)+22)}" style="width:100%;height:auto;display:block" role="img" aria-label="At x = 10, from the biggest: \${L.map(s).join(', ')}. \${this.order.length ? \`Your order, slowest first: \${this.order.map(s).join(', ')}\` : 'Nothing ranked yet'}\${this.solved ? ', and it is right' : ''}">\`;
+    out+=\`<text x="66" y="20" fill="\${FIG_COL.dim}" font-size="12" text-anchor="middle">at x = 10</text>\`;
+    out+=\`<text x="250" y="20" fill="\${FIG_COL.dim}" font-size="12" text-anchor="middle">as x grows</text>\`;
+    L.forEach((k,r)=>{ out+=\`<text data-k="left" data-f="\${k}" x="112" y="\${f(Y(r)+4)}" fill="\${FIG_COL.ink}" font-size="12" text-anchor="end">\${s(k)} \${this.show(k,10)}</text>\`; });
+    this.order.forEach(k=>{ const a=L.indexOf(k), b=right(k), up=this.solved && b<a;
+      out+=\`<line data-k="\${up?'pass':'line'}" data-f="\${k}" x1="118" y1="\${f(Y(a))}" x2="202" y2="\${f(Y(b))}" stroke="\${up?FIG_COL.b:FIG_COL.a}" stroke-width="\${up?3:2}"/>\`; });
+    for(let r=0;r<4;r++){ const i=3-r, k=this.order[i];
+      out+=\`<text data-k="slot" data-f="\${k||''}" x="208" y="\${f(Y(r)+4)}" fill="\${k?FIG_COL.ink:FIG_COL.dim}" font-size="13">\${k?s(k):'?'}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="203" y="\${f(Y(r)-11)}" width="80" height="22" rx="6" fill="none" stroke="\${FIG_COL.d}" stroke-width="2"/>\`; }
+    out+=\`<text x="300" y="\${f(Y(0)+4)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="end">fast</text>\`;
+    out+=\`<text x="300" y="\${f(Y(3)+4)}" fill="\${FIG_COL.dim}" font-size="10" text-anchor="end">slow</text>\`;
+    return out+\`</svg>\`;
+  },
+  tap(k){
+    if(this.solved || !this.R().fs.includes(k)) return;
+    const i=this.order.indexOf(k);
+    if(i>=0) this.order.splice(i,1); else this.order.push(k);
+    this.marks=null; this.touched=true;
+    Horizon.render();
+  },
+  ready(){ return this.order.length===4; },
+  check(){
+    if(this.solved || !this.ready()) return;
+    const T=this.truth(); this.tries++; this.touched=true;
+    this.marks=this.order.map((k,i)=>k===T[i]);
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      this.R().tags.forEach(t=>this.kinds.add(t));
+    } else this.streak=0;
+    Horizon.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.RACES.length; this.order=[]; this.marks=null; this.tries=0; this.solved=false; Horizon.render(); },
+  html(){
+    const s=k=>this.FN[k].s;
+    let out=\`<div class="small" style="margin:2px 0 6px">Race \${this.ri+1} of \${this.RACES.length}: which grows fastest as x grows without end? Tap the four from slowest to fastest.</div>\`;
+    out+=\`<div id="hzrFig">\${this.svg()}<div class="figcap">Left, the four at x = 10, biggest on top. Right, the order you call, fastest on top, with a line from each one’s start. A line that climbs is an overtake.</div></div>\`;
+    out+=\`<div id="hzrStops" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px">\`+this.R().fs.map(k=>{
+      const i=this.order.indexOf(k), m=this.marks && i>=0 ? this.marks[i] : null;
+      return \`<button class="btn sm ghost hzrStop" data-f="\${k}" style="margin:0;border-color:\${m===false?FIG_COL.d:m===true?FIG_COL.c:''}" aria-pressed="\${i>=0}" \${this.solved?'disabled ':''}onclick="HzRace.tap('\${k}')" aria-label="\${i>=0 ? \`Take \${s(k)} out of place \${i+1}\` : \`Put \${s(k)} in place \${this.order.length+1}, counting from the slowest\`}">\${i>=0 ? \`\${i+1} · \` : ''}\${s(k)}</button>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="hzrRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="hzrNext" onclick="HzRace.next()" aria-label="Show the next race">Next race →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="hzrCheck" \${this.ready()?'':'disabled '}onclick="HzRace.check()" aria-label="\${this.ready()?'Check the order of all four':'Rank all four to check them'}">\${this.ready()?'Check my order':'Rank all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="hzrGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="hzrGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('RACE CALLER','every finish called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
