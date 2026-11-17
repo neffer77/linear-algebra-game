@@ -267,7 +267,7 @@ module.exports = {
                mats: d.ok ? d.g.mats : null, runes: d.ok ? d.g.runes : null,
                ownsForged: d.ok ? !!d.g.owned.wD : null };
     });
-    t.eq('codes are tagged KE8-', carried.head, 'KE8-');
+    t.eq('codes are tagged KE9-', carried.head, 'KE9-');
     t.ok('a carried knight keeps their ore and essence',
       carried.ok && carried.mats.ore === 37 && carried.mats.essence === 21,
       JSON.stringify(carried));

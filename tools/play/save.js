@@ -36,8 +36,8 @@ module.exports = {
     /* The format version. Bump it here ON PURPOSE when the save gains a field,
        and add a case below proving the previous version still reads — those
        two together are the whole backward-compatibility contract. */
-    t.eq('the codec is at version 8', codec.ver, 8);
-    t.eq('codes are tagged KE8-', codec.head, 'KE8-');
+    t.eq('the codec is at version 9', codec.ver, 9);
+    t.eq('codes are tagged KE9-', codec.head, 'KE9-');
     t.ok('a knight round-trips through a code', codec.ok && codec.lvl === 9 && codec.gold === 4321,
       JSON.stringify(codec));
     t.eq('the revision rides along in the code', codec.rev, codec.savedRev);

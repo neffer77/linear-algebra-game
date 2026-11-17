@@ -4853,6 +4853,67 @@ lagrange(d){
       ex:work+tail};
   }
 },
+/* Separable equations. y′ = kxᵐy² with y(0) given: dividing by y² separates
+   the variables, dy/y² = kxᵐ dx, and integrating gives −1/y = kxᵐ⁺¹/(m + 1)
+   + c, so 1/y = 1/y(0) − kxᵐ⁺¹/(m + 1). The question asks for y at x = a,
+   always before the solution runs off to infinity. y(0) is sometimes a
+   fraction, since with a whole y(0) a whole y is rare. The first depth keeps
+   y(0) and a above 0 with m = 0 or 1; the second lets signs in and m reach
+   2; the third has m from 1 to 3 and k up to 6. The wrong answers are the
+   slips: the minus from ∫y⁻² dy lost, xᵐ integrated without dividing by
+   m + 1, xᵐ differentiated instead, y(0) put in for C where 1/y(0) belongs,
+   1/y given for y, y held at y(0) for one Euler-like step, and y(0) itself. */
+separable(d){
+  const F=(a,b=1)=>{ if(b<0){ a=-a; b=-b; } const g=gcd(a,b)||1; return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const add=(x,y)=>F(x[0]*y[1]+y[0]*x[1],x[1]*y[1]), sub=(x,y)=>F(x[0]*y[1]-y[0]*x[1],x[1]*y[1]), mul=(x,y)=>F(x[0]*y[0],x[1]*y[1]);
+  const rec=u=>F(u[1],u[0]);
+  const POW=['','','²','³','⁴'], xp=m=>m===0?'':'x'+POW[m];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);
+    const k=R.nz(-(d===3?6:4),d===3?6:4);
+    const p0=d===1?R.i(1,6):R.nz(d===2?-6:-9,d===2?6:9), q0=R.chance(0.4)?R.i(2,d===3?4:3):1;
+    if(gcd(p0,q0)!==1) continue;
+    const a=d===1?R.i(1,3):R.nz(-3,3);
+    const Y0=F(p0,q0), W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=sub(inv0,W);
+    // the solution must reach x = a: 1/y keeps its sign from 0 to a
+    if(invY[0]===0 || (invY[0]>0)!==(inv0[0]>0)) continue;
+    const ans=rec(invY);
+    const slips=[
+      [rec(add(inv0,W)),'that loses the minus: ∫y⁻² dy = −1/y, so 1/y = 1/y(0) − kxᵐ⁺¹/(m + 1)'],
+      [Y0,'that is y(0), where y starts; y changes as x moves from 0'],
+      [invY,'that is 1/y; turn it over to get y'],
+      [rec(sub(Y0,W)),'that puts y(0) in for the constant; at x = 0, 1/y = 1/y(0)'],
+      [add(Y0,mul(mul(Y0,Y0),W)),'that holds y at y(0) on the right, as one Euler-like step; y² changes as y does, so separate the variables']
+    ];
+    if(m>=1){
+      slips.push([rec(sub(inv0,F(k*a**(m+1)))),\`that integrates \${xp(m)} to \${xp(m+1)} without dividing by \${m+1}\`]);
+      slips.push([rec(sub(inv0,F(k*m*a**(m-1)))),\`that differentiates \${xp(m)} instead of integrating it\`]);
+    }
+    const big=u=>Math.abs(u[0])>999 || u[1]>99;
+    const ok=u=>u[0]!==0 && u[1]!==0 && !big(u) && key(u)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(sl=>(sl[0][0]>0)===(ans[0]>0)).length;
+    // Past 3000 draws the form may give way, never the four slips.
+    if(dist.length<4 || big(ans) || same<2 || sign<2 || ((ans[1]===1)!==whole && g<3000)) continue;
+    const kc=k===1?'':k===-1?'−':neg(k);
+    const c=F(k,m+1), cs=c[1]===1 ? (c[0]===1?'':c[0]===-1?'−':neg(c[0])) : \`\${c[0]<0?'−':''}(\${Math.abs(c[0])}/\${c[1]})\`;
+    const Wx=\`\${cs}\${xp(m+1)}\`, Wp=c[0]<0?\`(\${Wx})\`:Wx;
+    const paren=u=>u[0]<0?\`(\${show(u)})\`:show(u);
+    return {topic:'Separable Equations',
+      codex:{rule:'A separable equation y′ = g(x)h(y) splits into dy/h(y) = g(x) dx; integrate both sides, then use the starting value to fix the constant. For y′ = kxᵐy², ∫y⁻² dy = −1/y.',
+             eg:'y′ = xy² with y(0) = 1: dy/y² = x dx gives −1/y = x²/2 + c, so 1/y = 1 − x²/2. At x = 1, 1/y = 1/2, so y = 2.'},
+      q:\`y′ = \${kc}\${xp(m)}y², with y(0) = \${show(Y0)}. What is y when x = \${neg(a)}?\`,
+      a:show(ans),
+      d:dist.map(([u,w])=>[show(u),w]),
+      ex:\`Separate the variables: dy/y² = \${m===0?neg(k):kc+xp(m)} dx. Integrating, −1/y = \${Wx} + c, and at x = 0 this gives c = −1/y(0), so 1/y = \${show(inv0)} − \${Wp}. At x = \${neg(a)}, \${Wx} = \${show(W)}, so 1/y = \${show(inv0)} − \${paren(W)} = \${show(invY)}, and y = \${show(ans)}.\`};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -5217,7 +5278,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis', linODE:'Linear Differential Equations', lagrange:'Lagrange Multipliers'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis', linODE:'Linear Differential Equations', lagrange:'Lagrange Multipliers', separable:'Separable Equations'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -5230,7 +5291,7 @@ const STRANDS = [
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq','changeBasis']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff','paramDeriv']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton','linODE']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton','linODE','separable']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv','lagrange']]
 ];
 
@@ -5279,7 +5340,7 @@ const WORKSHOP_FOR = (() => {
     LogDiff: ["🪵 Log Slope Workshop", ['logDiff']],
     PathChain: ["🛤️ Path Chain Workshop", ['chainMulti']],
     ExpInt: ["🪴 Growth Integral Workshop", ['intExp']],
-    EulerWalk: ["👣 Euler Step Workshop", ['euler','linODE']],
+    EulerWalk: ["👣 Euler Step Workshop", ['euler','linODE','separable']],
     Doubling: ["⏳ Doubling Workshop", ['growth']],
     MeanValue: ["📐 Chord Workshop", ['meanValue']],
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
@@ -5822,7 +5883,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson','paramDeriv','linODE'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson','paramDeriv','linODE','separable'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
@@ -5908,8 +5969,8 @@ const Codec = {
   // human-facing family prefix. decode() accepts any KE<digit>- prefix and
   // reads the real version from the first byte, so codes made by an earlier
   // build still import.
-  VER:8,
-  TAG:'KE8-',
+  VER:9,
+  TAG:'KE9-',
 
 
   topics(){ return Object.keys(TOPIC_LABEL); },
@@ -6071,7 +6132,11 @@ const Codec = {
       const s4=Math.round((r.seen||0)*4), w4=Math.min(s4, Math.round((r.w||0)*4));
       o.varint(s4);
       o.bits(w4, this.bitLen(s4));
-      o.bits(Math.round(clamp(r.m||0,0,1)*1023), 10);
+      // v9: mastery in eight bits, steps of 1/255. The scheduler and every
+      // screen read it far coarser than that, and the two bits a topic are what
+      // let the eighty-ninth topic in without pushing the heaviest knight's
+      // code past the QR version a phone camera can scan.
+      o.bits(Math.round(clamp(r.m||0,0,1)*255), 8);
       o.bits(r.mastered?1:0, 1);
       // How long ago in questions, and in hours. Questions are read through a
       // hard ceiling: dueIn is at most 25 and staleness stops at 2.5 times it,
@@ -6231,7 +6296,7 @@ const Codec = {
       for(let i=0;i<nTop;i++){
         if(!has[i]) continue;
         const s4=b.varint(), seen=s4/4, w=(ver>=8 ? b.bits(this.bitLen(s4)) : b.varint())/4;
-        const m=b.bits(10)/1023, mastered=b.bits(1);
+        const m=ver>=9 ? b.bits(8)/255 : b.bits(10)/1023, mastered=b.bits(1);
         const dLast=b.bits(ver>=8 ? 6 : 8), dSix=b.bits(8);
         const key=T[i];
         if(!key) continue;

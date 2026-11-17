@@ -561,8 +561,8 @@ module.exports = {
     });
     t.ok('SETTING_ORDER still matches SETTINGS', codec.ordersMatch);
     t.ok('with the Library appended rather than inserted', codec.libraryLast);
-    t.eq('the format has moved on since the crucible', codec.ver, 8);
-    t.eq('and the tag with it', codec.tag, 'KE8-');
+    t.eq('the format has moved on since the crucible', codec.ver, 9);
+    t.eq('and the tag with it', codec.tag, 'KE9-');
     t.ok('a knight code carries the pages', codec.ok);
     t.eq('exactly', codec.page, 231);
     t.eq('without disturbing what was already in there', codec.herb, 12);

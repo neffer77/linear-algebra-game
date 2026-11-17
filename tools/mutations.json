@@ -1,88 +1,102 @@
 {
-  "change": "Walk the fence, the hillwalker workshop's third mode",
+  "change": "Add separable equations as a fight topic, and trim knight codes to KE9",
   "mutations": [
     {
-      "name": "λ worked from the wrong part of ∇f",
+      "name": "the minus lost in the answer",
       "file": "index.html",
-      "find": "const lam=Hill.fr(A,S.p);",
-      "replace": "const lam=Hill.fr(B,S.p);",
+      "find": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=sub(inv0,W);",
+      "replace": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=add(inv0,W);",
       "run": "verify"
     },
     {
-      "name": "the slope along the fence with a sign turned",
+      "name": "the division by m + 1 left out",
       "file": "index.html",
-      "find": "return A*v[0]+B*v[1]; },",
-      "replace": "return A*v[0]-B*v[1]; },",
+      "find": "W=F(k*a**(m+1),m+1), inv0=rec(Y0), invY=sub(inv0,W);",
+      "replace": "W=F(k*a**(m+1),1), inv0=rec(Y0), invY=sub(inv0,W);",
       "run": "verify"
     },
     {
-      "name": "the nearest post measured by x alone",
+      "name": "the constant slip worked with 1/y(0)",
       "file": "index.html",
-      "find": "d=t=>this.at(t)[0]**2+this.at(t)[1]**2;",
-      "replace": "d=t=>Math.abs(this.at(t)[0]);",
+      "find": "[rec(sub(Y0,W)),'that puts y(0) in for the constant",
+      "replace": "[rec(sub(inv0,F(2*W[0],W[1]))),'that puts y(0) in for the constant",
       "run": "verify"
     },
     {
-      "name": "∇f drawn along ∇g",
+      "name": "the Euler-like step without y²",
       "file": "index.html",
-      "find": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', true);",
-      "replace": "out+=arrow(len*S.p/m, len*S.q/m, FIG_COL.b, 'grad', true);",
+      "find": "[add(Y0,mul(mul(Y0,Y0),W)),'that holds y",
+      "replace": "[add(Y0,mul(Y0,W)),'that holds y",
       "run": "verify"
     },
     {
-      "name": "∇f no longer dashed",
+      "name": "the differentiating slip named one power up",
       "file": "index.html",
-      "find": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', true);",
-      "replace": "out+=arrow(len*A/n, len*B/n, FIG_COL.b, 'grad', false);",
+      "find": "`that differentiates ${xp(m)} instead of integrating it`",
+      "replace": "`that differentiates ${xp(m+1)} instead of integrating it`",
       "run": "verify"
     },
     {
-      "name": "the lowest contour drawn bold",
+      "name": "whole answers asked too often",
       "file": "index.html",
-      "find": "stroke-width=\"${c===F?2.5:1}\" opacity=\"${c===F?1:0.5}\"",
-      "replace": "stroke-width=\"${c===L[0]?2.5:1}\" opacity=\"${c===F?1:0.5}\"",
+      "find": "  const whole=R.chance(0.5);\n  for(let g=0;;g++){\n    const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);",
+      "replace": "  const whole=R.chance(0.7);\n  for(let g=0;;g++){\n    const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);",
       "run": "verify"
     },
     {
-      "name": "the post on read one short of the end",
+      "name": "the first depth starting y below 0",
       "file": "index.html",
-      "find": "if(t<S.T[1]) nb.push",
-      "replace": "if(t<S.T[1]-1) nb.push",
+      "find": "const p0=d===1?R.i(1,6):R.nz(",
+      "replace": "const p0=d===1?R.nz(-6,6):R.nz(",
       "run": "verify"
     },
     {
-      "name": "the walk-on button shut a post early",
+      "name": "the third depth letting m be 0",
       "file": "index.html",
-      "find": "${t>=S.T[1]?' disabled':''}",
-      "replace": "${t>=S.T[1]-1?' disabled':''}",
+      "find": "const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(1,3);\n    const k=R.nz(",
+      "replace": "const m=d===1?R.i(0,1):d===2?R.i(0,2):R.i(0,3);\n    const k=R.nz(",
       "run": "verify"
     },
     {
-      "name": "walking back past the first post",
+      "name": "the third depth keeping k to 4",
       "file": "index.html",
-      "find": "if(t<S.T[0]||t>S.T[1]) return;",
-      "replace": "if(t<S.T[0]-1||t>S.T[1]) return;",
+      "find": "const k=R.nz(-(d===3?6:4),d===3?6:4);\n    const p0",
+      "replace": "const k=R.nz(-4,4);\n    const p0",
       "run": "verify"
     },
     {
-      "name": "the x-axis crossing not told",
+      "name": "y(0) never a fraction",
       "file": "index.html",
-      "find": "if(D && (x===0 || y===0))",
-      "replace": "if(D && x===0)",
+      "find": "q0=R.chance(0.4)?R.i(2,d===3?4:3):1;",
+      "replace": "q0=R.chance(0)?R.i(2,d===3?4:3):1;",
       "run": "verify"
     },
     {
-      "name": "the oval bowl made rounder",
+      "name": "the solution let run past infinity",
       "file": "index.html",
-      "find": "{btn:'Oval bowl', a:1, b:3,",
-      "replace": "{btn:'Oval bowl', a:1, b:2,",
+      "find": "if(invY[0]===0 || (invY[0]>0)!==(inv0[0]>0)) continue;\n    const ans=rec(invY);",
+      "replace": "if(invY[0]===0) continue;\n    const ans=rec(invY);",
       "run": "verify"
     },
     {
-      "name": "a contour left out",
+      "name": "the working's 1/y(0) shown as y(0)",
       "file": "index.html",
-      "find": "const L=[...new Set(posts.map(p=>this.f(...p)))]",
-      "replace": "const L=[...new Set(posts.slice(1).map(p=>this.f(...p)))]",
+      "find": "so 1/y = ${show(inv0)} − ${paren(W)} = ${show(invY)}",
+      "replace": "so 1/y = ${show(Y0)} − ${paren(W)} = ${show(invY)}",
+      "run": "verify"
+    },
+    {
+      "name": "v8 codes read with eight-bit mastery",
+      "file": "index.html",
+      "find": "const m=ver>=9 ? b.bits(8)/255 : b.bits(10)/1023,",
+      "replace": "const m=ver>=8 ? b.bits(8)/255 : b.bits(10)/1023,",
+      "run": "verify"
+    },
+    {
+      "name": "mastery written in ten bits again",
+      "file": "index.html",
+      "find": "o.bits(Math.round(clamp(r.m||0,0,1)*255), 8);",
+      "replace": "o.bits(Math.round(clamp(r.m||0,0,1)*1023), 10);",
       "run": "verify"
     }
   ]
