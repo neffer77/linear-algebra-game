@@ -32,14 +32,14 @@ module.exports = {
 
     await t.ev(() => UI.go('s-tome'));
     t.ok('the Tome says the diagonal workshop can be turned round', await t.ev(() =>
-      /Then turn it round: see A, its eigenvectors and a vector v, and pick which of four vectors is Aⁿv\./.test(document.getElementById('s-tome').innerText)));
+      /Then turn it round: pick which of four vectors is Aⁿv, or which of four matrices drew the arrows of x′ = Ax\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeDiag');
     t.eq('the diagonal workshop opens', await t.screen(), 's-diag');
-    t.eq('building P by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('building P by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5858));
     await t.tapText(/Which Aⁿv\?/);
-    t.eq('which Aⁿv is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which Aⁿv is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the matrices, drawing, columns of P, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('pwBox').innerText)).startsWith(
