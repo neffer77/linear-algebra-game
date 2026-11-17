@@ -1,33 +1,96 @@
 {
-  "change": "Show which answer is picked in every answer row",
+  "change": "Add a Mirror or not mode to the transpose workshop",
   "mutations": [
     {
-      "name": "no rule turns a pressed answer gold",
+      "name": "Aᵀ = −A is tested without the diagonal",
       "file": "index.html",
-      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}\n",
-      "replace": "",
+      "find": "for(let j=c==='S'?i+1:i;j<n;j++)",
+      "replace": "for(let j=i+1;j<n;j++)",
       "run": "verify"
     },
     {
-      "name": "a pressed answer keeps its plain border",
+      "name": "the first slip skips the last row",
       "file": "index.html",
-      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
-      "replace": ".btn.ghost[aria-pressed=\"true\"]{color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "find": "for(let i=0;i<n;i++) for(let j=c==='S'",
+      "replace": "for(let i=0;i<n-1;i++) for(let j=c==='S'",
       "run": "verify"
     },
     {
-      "name": "a pressed answer keeps its plain text",
+      "name": "a wrong mirror is never found",
       "file": "index.html",
-      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
-      "replace": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "find": "antis(){ return [0,1,2,3].filter(i=>this.truth(i)==='N' && this.anti(this.R()[i])); },",
+      "replace": "antis(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the in or out answers are not ghost buttons",
+      "name": "the skew goal takes a 2×2",
       "file": "index.html",
-      "find": "<button class=\"btn sm ghost\" style=\"margin:0;padding:4px 2px\" data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"CrossTurn",
-      "replace": "<button class=\"btn sm\" style=\"margin:0;padding:4px 2px\" data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"CrossTurn",
+      "find": "if(this.skews().some(i=>this.R()[i].length===3)) t.push('skew');",
+      "replace": "if(this.skews().length) t.push('skew');",
       "run": "verify"
+    },
+    {
+      "name": "the quoted mirror entry is the same entry",
+      "file": "index.html",
+      "find": "but ${this.a(j,i)} = ${neg(A[j][i])}, so Aᵀ ≠ A`;",
+      "replace": "but ${this.a(j,i)} = ${neg(A[i][j])}, so Aᵀ ≠ A`;",
+      "run": "verify"
+    },
+    {
+      "name": "the zero-diagonal hint is given for any slip",
+      "file": "index.html",
+      "find": "if(t==='N' && c==='K' && this.near(A)) s+=",
+      "replace": "if(t==='N' && this.near(A)) s+=",
+      "run": "verify"
+    },
+    {
+      "name": "the cells are drawn with rows and columns swapped",
+      "file": "index.html",
+      "find": "data-rc=\"${r},${c}\" x=\"${cx+cs/2}\" y=\"${cy+cs/2+5}\" fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[r][c])}",
+      "replace": "data-rc=\"${r},${c}\" x=\"${cx+cs/2}\" y=\"${cy+cs/2+5}\" fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[c][r])}",
+      "run": "verify"
+    },
+    {
+      "name": "the mirror line runs the other way",
+      "file": "index.html",
+      "find": "x1=\"${x0-4}\" y1=\"${y0-4}\" x2=\"${x0+W+4}\" y2=\"${y0+W+4}\"",
+      "replace": "x1=\"${x0+W+4}\" y1=\"${y0-4}\" x2=\"${x0-4}\" y2=\"${y0+W+4}\"",
+      "run": "verify"
+    },
+    {
+      "name": "calling neither edges the cells red",
+      "file": "index.html",
+      "find": "bk=miss && this.calls[i]!=='N' ? this.breaks(A,this.calls[i]) : null;",
+      "replace": "bk=miss ? this.breaks(A,this.calls[i]==='N'?'S':this.calls[i]) : null;",
+      "run": "verify"
+    },
+    {
+      "name": "a fix counts as a first check",
+      "file": "index.html",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Transpose.render();",
+      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Transpose.render();",
+      "run": "verify"
+    },
+    {
+      "name": "the neither button calls Aᵀ = A",
+      "file": "index.html",
+      "find": "this.btn(i,'N','Neither')",
+      "replace": "this.btn(i,'S','Neither')",
+      "run": "verify"
+    },
+    {
+      "name": "the mirror tab opens the pick mode",
+      "file": "index.html",
+      "find": "this.tab==='pick' ? TransPick.html() : TransSort.html();",
+      "replace": "TransPick.html();",
+      "run": "play:transsort"
+    },
+    {
+      "name": "the pair edged red is only one cell",
+      "file": "index.html",
+      "find": "const red=bk ? [bk.join(), [bk[1],bk[0]].join()] : [];",
+      "replace": "const red=bk ? [bk.join()] : [];",
+      "run": "play:transsort"
     }
   ]
 }

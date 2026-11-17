@@ -13060,6 +13060,168 @@ const horizonRaceNotes = (() => {
   reset();
   return { checks, wrongs, pairs };
 })();
+/* Mirror or not? The transpose workshop's third mode. Each round's four
+   matrices are transposed here by the definition, (Aᵀ)ᵢⱼ = aⱼᵢ, and compared
+   with A and −A, never by the workshop's own test; every entry the readout
+   quotes is read back against the matrix, every wrong call is made and
+   caught, the drawing is read back cell by cell, and the hunt is played. */
+const transSortNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Transpose = {render(){ env.renders++; }};" +
+    cut('const TransSort = {', '/* ---------- Which Aⁿv?') + 'return TransSort;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const SUB = { '₁': 0, '₂': 1, '₃': 2 };
+  const tr = A => A[0].map((_, j) => A.map(r => r[j]));
+  const same = (A, B) => A.every((r, i) => r.every((x, j) => x === B[i][j]));
+  const minus = A => A.map(r => r.map(x => -x));
+  const callOf = A => same(tr(A), A) ? 'S' : same(tr(A), minus(A)) ? 'K' : 'N';
+  // the other diagonal: turn A a half turn, then transpose it
+  const antiOf = A => same(tr(A.slice().reverse().map(r => r.slice().reverse())), A);
+  const nearOf = A => { const P = A.map((r, i) => r.map((x, j) => x + tr(A)[i][j])); return P.every((r, i) => r.every((x, j) => i === j || x === 0)) && A.some((r, i) => r[i] !== 0); };
+  const WD = { S: 'Aᵀ = A', K: 'Aᵀ = −A', N: 'neither' };
+  const LBL = { S: 'its transpose is A', K: 'its transpose is −A', N: 'its transpose is neither A nor −A' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // every aᵢⱼ = x the readout quotes must be what A holds there
+  const quotes = (line, A) => { let ok = true, n = 0;
+    for (const m of line.matchAll(/a([₁₂₃])([₁₂₃]) = (−?\d+)/g)) { n++; const x = +m[3].replace('−', '-'); if (A[SUB[m[1]]][SUB[m[2]]] !== x) ok = false; }
+    return ok && n > 0; };
+  if (S.ROUNDS.length !== 6) fail('transsort', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, cells = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('transsort', key, `it holds ${P.length} matrices, not four`); return; }
+    P.forEach((A, i) => { const k = JSON.stringify(A); if (seen.has(k)) fail('transsort', key, `${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (!A.every(r => r.length === A.length) || A.length < 2 || A.length > 3) fail('transsort', key, `${'ABCD'[i]} is not a 2×2 or 3×3 square`);
+      if (A.every(r => r.every(x => x === 0))) fail('transsort', key, `${'ABCD'[i]} is the zero matrix, which is both`); });
+    const truth = P.map(callOf);
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('transsort', key, `its matrices are called ${[0, 1, 2, 3].map(i => S.truth(i)).join('')}, not ${truth.join('')}`);
+    if (new Set(truth).size < 3) fail('transsort', key, `it does not hold all three calls: ${truth.join('')}`);
+    const an = [0, 1, 2, 3].filter(i => truth[i] === 'N' && antiOf(P[i])), nr = [0, 1, 2, 3].filter(i => truth[i] === 'N' && nearOf(P[i]));
+    const sk = [0, 1, 2, 3].filter(i => truth[i] === 'K');
+    an.forEach(i => { if (nr.includes(i)) fail('transsort', key, `${'ABCD'[i]} is both a wrong mirror and a near miss, so the readout cannot name it once`); });
+    const tags = [sk.some(i => P[i].length === 3) ? 'skew' : null, an.length ? 'anti' : null, nr.length ? 'near' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('transsort', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every matrix called wrong, one at a time, in both wrong ways
+    P.forEach((A, i) => {
+      for (const c of ['S', 'K', 'N']) {
+        if (c === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
+        const w = S.working();
+        if (w.length !== 3 || w[0] !== '3 of 4 right. Fix the ones in red and check again.' || w[2] !== '0 called right on the first check this visit.') fail('transsort', key, `with ${'ABCD'[i]} called ${WD[c]} the readout is ${w.join(' | ')}`);
+        const l = w[1] || '';
+        if (!l.startsWith(`In ${'ABCD'[i]}, `) || !l.endsWith(`You had it as ${WD[c]}.`)) fail('transsort', key, `the slip in ${'ABCD'[i]} is not named with its call: ${l}`);
+        if (truth[i] === 'S' && !l.includes('every entry matches its mirror across the main diagonal, so Aᵀ = A.')) fail('transsort', key, `${'ABCD'[i]} is not told as Aᵀ = A: ${l}`);
+        if (truth[i] === 'K' && !l.includes('every entry is the negative of its mirror and the diagonal is all 0, so Aᵀ = −A.')) fail('transsort', key, `${'ABCD'[i]} is not told as Aᵀ = −A: ${l}`);
+        if (truth[i] === 'N') {
+          if (!/so Aᵀ ≠ A; and .*so Aᵀ ≠ −A\. It is neither\./.test(l) || !quotes(l, A)) fail('transsort', key, `why ${'ABCD'[i]} is neither is not worked from its own entries: ${l}`);
+          // the entry quoted against Aᵀ = A really differs from its mirror, and the one against −A really is not its negative
+          const m1 = l.match(/a([₁₂₃])([₁₂₃]) = (−?\d+) but a([₁₂₃])([₁₂₃]) = (−?\d+), so Aᵀ ≠ A/);
+          if (!m1 || m1[1] !== m1[5] || m1[2] !== m1[4] || m1[3] === m1[6]) fail('transsort', key, `the entry against Aᵀ = A in ${'ABCD'[i]} is not a pair that differs: ${l}`);
+          const m2 = l.match(/and a([₁₂₃])([₁₂₃]) = (−?\d+)(?: but a([₁₂₃])([₁₂₃]) = (−?\d+), not (−?\d+))?(?:, not 0)?, so Aᵀ ≠ −A/);
+          if (!m2) fail('transsort', key, `the entry against Aᵀ = −A in ${'ABCD'[i]} is not quoted: ${l}`);
+          else if (m2[4]) { const x = +m2[3].replace('−', '-'), y = +m2[6].replace('−', '-'); if (m2[1] !== m2[5] || m2[2] !== m2[4] || y === -x || +m2[7].replace('−', '-') !== -x) fail('transsort', key, `the pair against Aᵀ = −A in ${'ABCD'[i]} is wrong: ${l}`); }
+          else if (m2[1] !== m2[2] || m2[3] === '0') fail('transsort', key, `the diagonal entry against Aᵀ = −A in ${'ABCD'[i]} is wrong: ${l}`);
+        }
+        if ((c === 'S' && truth[i] === 'N' && antiOf(A)) !== l.includes('It mirrors across the other diagonal, but the transpose flips across the main one.')) fail('transsort', key, `the wrong-mirror hint for ${'ABCD'[i]} called ${WD[c]} is ${l.includes('other diagonal') ? 'given' : 'missing'}`);
+        if ((c === 'K' && truth[i] === 'N' && nearOf(A)) !== l.includes('but Aᵀ = −A also needs 0s down the diagonal.')) fail('transsort', key, `the zero-diagonal hint for ${'ABCD'[i]} called ${WD[c]} is ${l.includes('also needs 0s') ? 'given' : 'missing'}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(mirror|tag)"/.test(svg)) fail('transsort', key, `with ${'ABCD'[i]} wrong, the wrong matrix is not ringed alone or the answers are given away`);
+        // the cells edged red are the ones that break the wrong call
+        const red = [...svg.matchAll(/data-k="pair" data-rc="(\d),(\d)"/g)].map(m => [+m[1], +m[2]]);
+        if (c === 'N') { if (red.length) fail('transsort', key, `calling ${'ABCD'[i]} neither edges cells red`); }
+        else if (!red.length || red.length > 2 || red.some(([r, q]) => (c === 'S' ? A[r][q] === A[q][r] : A[r][q] === -A[q][r]))) fail('transsort', key, `the cells edged red in ${'ABCD'[i]} do not break ${WD[c]}`);
+        if (S.solved || S.streak) fail('transsort', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="(miss|pair)"/.test(S.svg())) fail('transsort', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('transsort', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('transsort', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="txsCheck" disabled /.test(S.html())) fail('transsort', key, 'the check is open before the matrices are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="txsCheck" disabled /.test(S.html())) fail('transsort', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('transsort', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="TransSort\\.call\\(${i},'([SKN])'\\)" aria-label="Matrix ${'ABCD'[i]}: ${LBL[t]}"`));
+      if (!m || m[1] !== t) fail('transsort', key, `the button for ${'ABCD'[i]}, ${LBL[t]}, does not call it`);
+      else S.call(i, m[1]);
+      if ((h0.match(new RegExp(`TransSort\\.call\\(${i},`, 'g')) || []).length !== 3) fail('transsort', key, `${'ABCD'[i]} does not offer all three calls`);
+    });
+    if (S.calls.join() !== truth.join()) fail('transsort', key, 'the buttons cannot make the right calls');
+    if (/id="txsCheck" disabled /.test(S.html())) fail('transsort', key, 'the check stays shut with every matrix called');
+    S.check(); checks++;
+    const list = ix => { const n = ix.map(i => 'ABCD'[i]); return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
+    const want = ['Yes: all four are called right.'];
+    if (sk.length) want.push(`${list(sk)} ${sk.length > 1 ? 'have' : 'has'} only 0s down the diagonal, as Aᵀ = −A needs: aᵢᵢ = −aᵢᵢ only when aᵢᵢ = 0.`);
+    if (an.length) want.push(`${list(an)} ${an.length > 1 ? 'mirror' : 'mirrors'} across the other diagonal, from top right to bottom left, but the transpose flips across the main one, so ${an.length > 1 ? 'each is' : 'it is'} neither.`);
+    if (nr.length) want.push(`${list(nr)} ${nr.length > 1 ? 'flip' : 'flips'} the signs off the diagonal, but ${nr.length > 1 ? 'their diagonals are' : 'its diagonal is'} not all 0, so ${nr.length > 1 ? 'each is' : 'it is'} neither.`);
+    want.push('Any square A splits into a part with Aᵀ = A and a part with Aᵀ = −A: A = ½(A + Aᵀ) + ½(A − Aᵀ).');
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('transsort', key, `once called the readout is ${S.working().join(' | ')}`);
+    sk.forEach(i => { if (P[i].some((r, k) => r[k] !== 0)) fail('transsort', key, `${'ABCD'[i]} is told as having 0s down its diagonal, but it does not`); });
+    P.forEach((A, i) => { const H = A.map((r, p) => r.map((x, q) => (x + A[q][p]) / 2)), K = A.map((r, p) => r.map((x, q) => (x - A[q][p]) / 2));
+      if (!same(tr(H), H) || !same(tr(K), minus(K)) || !A.every((r, p) => r.every((x, q) => H[p][q] + K[p][q] === x))) fail('transsort', key, `${'ABCD'[i]} does not split as told`); });
+    // the drawing: each matrix read back cell by cell, in its own square, its diagonal edged gold
+    const svg = S.svg();
+    const cs = [...svg.matchAll(/data-k="cell" data-rc="(\d),(\d)" x="([^"]+)" y="([^"]+)"[^>]*>([^<]+)</g)];
+    let k = 0;
+    P.forEach((A, i) => { const n = A.length, X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      for (let r = 0; r < n; r++) for (let q = 0; q < n; q++) { const m = cs[k++]; cells++;
+        if (!m || +m[1] !== r || +m[2] !== q || m[5] !== ng(A[r][q])) { fail('transsort', key, `${'ABCD'[i]} is not drawn as its entries`); return; }
+        if (+m[3] < X || +m[3] > X + 180 || +m[4] < Y || +m[4] > Y + 130) fail('transsort', key, `${'ABCD'[i]} runs out of its own square`); } });
+    if (k !== cs.length) fail('transsort', key, `${cs.length} cells are drawn, not ${k}`);
+    if ((svg.match(/data-k="diag"/g) || []).length !== P.reduce((s, A) => s + A.length, 0)) fail('transsort', key, 'the diagonals are not edged cell for cell');
+    const mir = [...svg.matchAll(/data-k="mirror" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)];
+    if (mir.length !== 4) fail('transsort', key, `${mir.length} mirror lines are drawn, not four`);
+    // each mirror line runs through the middle of every diagonal cell
+    let c0 = 0;
+    P.forEach((A, i) => { const n = A.length, m = mir[i]; if (!m) return;
+      const [x1, y1, x2, y2] = m.slice(1).map(Number);
+      for (let r = 0; r < n; r++) { const cell = cs[c0 + r * n + r]; const px = +cell[3], py = +cell[4] - 5;
+        const d = Math.abs((x2 - x1) * (y1 - py) - (x1 - px) * (y2 - y1)) / Math.hypot(x2 - x1, y2 - y1);
+        if (d > 0.5) fail('transsort', key, `the mirror line of ${'ABCD'[i]} misses its diagonal`); }
+      c0 += n * n; });
+    const tg = [...svg.matchAll(/data-k="tag" data-c="([SKN])"[^>]*>([^<]+)</g)];
+    if (tg.map(m => m[1]).join('') !== truth.join('') || tg.some(m => m[2] !== WD[m[1]])) fail('transsort', key, `the matrices are tagged ${tg.map(m => m[2]).join(', ')}`);
+    const h = S.html();
+    if (!h.includes('id="txsNext"') || /onclick="TransSort\.call/.test(h.replace(/disabled onclick="TransSort\.call/g, ''))) fail('transsort', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 'S' ? 'N' : 'S');
+    if (S.calls.join() !== before) fail('transsort', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('transsort', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('transsort', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const P = S.R(); S.calls = P.map(callOf); if (slip) S.calls[1] = S.calls[1] === 'S' ? 'N' : 'S';
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, callOf(P[1])); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'anti,fix'], [false, 'anti,fix,near,one'], [false, 'anti,fix,near,one,skew'], [false, 'anti,fix,near,one,skew,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('transsort', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ The wrong mirror · A slip caught and fixed | ✓ Right on the first check · Skew needs 0s down the diagonal | ✓ A 3×3 with Aᵀ = −A') fail('transsort', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MIRROR KEEPER / every matrix called') fail('transsort', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, cells };
+})();
+
 /* In or out? The cross product workshop's third mode. Every pair is worked
    again from its own numbers: u × v taken in full in 3D with both arrows on the
    floor, its sign read as out, in or zero, every pair called wrong in both
@@ -20410,8 +20572,9 @@ console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 1
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
-console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  pressed shown     ${pad(pressedNotes.n.toLocaleString(), 12)}  (buttons a player can press, each a ghost button that turns gold once pressed, so every call in a round shows what was chosen)`);
+console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
+console.log(`  mirrors called    ${pad(transSortNotes.checks.toLocaleString(), 12)}  (checks of four square matrices called Aᵀ = A, Aᵀ = −A or neither in the transpose workshop, each transposed here by (Aᵀ)ᵢⱼ = aⱼᵢ; ${transSortNotes.wrongs} of them with one matrix called wrong and caught, and ${transSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
