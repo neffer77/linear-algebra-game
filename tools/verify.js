@@ -12079,6 +12079,157 @@ const fieldMatchNotes = (() => {
   reset();
   return { rounds, misses, dashes };
 })();
+/* Read the graph, the limit workshop's third mode. Every point is worked again
+   from the pieces alone: each side found by stepping in towards the point and
+   watching where the values settle or blow up, then sorted as joined up, a
+   hole, a jump or running off. Every point is called wrong in all three wrong
+   ways and its readout worked in full, each graph's traps found afresh, and the
+   drawing checked: pieces, dots, open circles, dashed lines and limits sit
+   where the numbers say. */
+const gapReadNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Limit = {render(){ env.renders++; }};" +
+    cut('const GapRead = {', '/* ---------- Which limit? The limit workshop turned round') + 'return GapRead;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L4 = 'ABCD';
+  // where a piece heads as x closes in on a from one side: step in and watch the values
+  const approach = (fn, a, s) => {
+    const ys = [1e-2, 1e-3, 1e-4, 1e-5].map(h => fn(a + s * h));
+    const last = ys[3], prev = ys[2];
+    if (Math.abs(last) > 1e3 && Math.abs(last) > 5 * Math.abs(prev)) return Math.sign(last) * Infinity;
+    return Math.round(last * 1000) / 1000;
+  };
+  const kindOf = (Lf, Rf, v) => !isFinite(Lf) || !isFinite(Rf) ? 'R' : Lf !== Rf ? 'J' : v === Lf ? 'C' : 'H';
+  const WORD = { C: 'joined up', H: 'a hole', J: 'a jump', R: 'running off' };
+  const heads = y => isFinite(y) ? `heads for ${ng(y)}` : y > 0 ? 'climbs without end' : 'drops without end';
+  const reset = () => { S.gi = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.GRAPHS.length !== 6) fail('gapread', 'setup', `there are ${S.GRAPHS.length} graphs, not six`);
+  const PX = v => 20 + (v + 4) * 40, PY = v => 104 - v * 23;
+  const near = (a, b) => Math.abs(a - b) < 0.02;
+  let checks = 0, wrongs = 0, points = 0;
+  const all = { C: 0, H: 0, J: 0, R: 0 };
+  S.GRAPHS.forEach((G, gi) => {
+    const key = `graph ${gi + 1}`;
+    reset(); S.gi = gi;
+    if (G.xs.length !== 4 || G.p.length !== 5 || G.v.length !== 4) { fail('gapread', key, 'it does not hold four points and five pieces'); return; }
+    if (G.xs.some((x, i) => i && x <= G.xs[i - 1]) || G.xs[0] <= -4 || G.xs[3] >= 4) fail('gapread', key, 'its points are not in order inside the window');
+    const sides = G.xs.map((x, i) => [approach(G.p[i], x, -1), approach(G.p[i + 1], x, 1)]);
+    const truth = sides.map(([a, b], i) => kindOf(a, b, G.v[i]));
+    truth.forEach(k => all[k]++);
+    sides.forEach(([a, b], i) => { points++;
+      for (const y of [a, b, G.v[i]]) if (y !== null && isFinite(y) && Math.abs(y) > 3.5) fail('gapread', key, `${L4[i]} has a number, ${y}, that falls off the picture`);
+      if (S.side(i, -1) !== a || S.side(i, 1) !== b) fail('gapread', key, `${L4[i]} has its sides as ${S.side(i, -1)} and ${S.side(i, 1)}, not ${a} and ${b}`); });
+    if ([0, 1, 2, 3].some(i => S.truth(i) !== truth[i])) fail('gapread', key, `its points are read ${[0, 1, 2, 3].map(i => S.truth(i)).join('')}, not ${truth.join('')}`);
+    if (new Set(truth).size < 3) fail('gapread', key, 'it holds fewer than three kinds of point');
+    // the traps, found afresh
+    const mv = truth.findIndex((k, i) => k === 'H' && G.v[i] !== null), jd = truth.findIndex((k, i) => k === 'J' && G.v[i] !== null), rn = truth.indexOf('R');
+    const tags = [mv >= 0 ? 'moved' : null, jd >= 0 ? 'jumpdot' : null, rn >= 0 ? 'runs' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('gapread', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every point called wrong, one at a time, in each of the three wrong ways
+    G.xs.forEach((x, i) => {
+      const [a, b] = sides[i], v = G.v[i], X = ng(x), k = truth[i];
+      let why = `At ${L4[i]}, x = ${X}: from the left f ${heads(a)}, and from the right it ${heads(b)}.`;
+      why += k === 'R' ? ' So there is no limit: it runs off.'
+        : k === 'J' ? ` They disagree, so there is no limit${v !== null ? `, though f(${X}) = ${ng(v)}` : ''}: a jump.`
+          : k === 'H' ? ` They agree, so the limit is ${ng(a)}, but f(${X}) ${v === null ? 'is not defined' : '= ' + ng(v)}: a hole.`
+            : ` They agree, so the limit is ${ng(a)}, and f(${X}) = ${ng(v)} too: joined up.`;
+      for (const c of ['C', 'H', 'J', 'R']) {
+        if (c === k) continue;
+        reset(); S.gi = gi; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.', `${why} You had it ${WORD[c]}.`, '0 read right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('gapread', key, `with ${L4[i]} called ${WORD[c]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        const ring = svg.match(/data-k="miss" cx="([^"]+)"/g) || [];
+        if (ring.length !== 1 || !near(+ring[0].match(/cx="([^"]+)"/)[1], PX(x)) || /data-k="(lim|none)"/.test(svg)) fail('gapread', key, `with ${L4[i]} wrong, it is not ringed alone or the limits are given away`);
+        if (S.solved || S.streak) fail('gapread', key, 'a wrong reading is counted');
+        S.call(i, k);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('gapread', key, `changing ${L4[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 read right on the first check this visit.'].join(' | ')) fail('gapread', key, `after changing ${L4[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('gapread', key, `fixing ${L4[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.gi = gi;
+    if (!/id="lgrCheck" disabled /.test(S.html())) fail('gapread', key, 'the check is open before the points are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="lgrCheck" disabled /.test(S.html())) fail('gapread', key, `the check opens with ${L4[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('gapread', key, `a check runs with ${L4[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const LAB = { C: 'is joined up: the limit is f there', H: 'has a hole: a limit, but f is missing or elsewhere', J: 'jumps: the sides disagree, no limit', R: 'runs off without end: no limit' };
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="GapRead\\.call\\(${i},'([CHJR])'\\)" aria-label="Point ${L4[i]} ${LAB[t].replace(/[()]/g, '\\$&')}"`));
+      if (!m || m[1] !== t) fail('gapread', key, `the button for ${L4[i]} ${WORD[t]} does not call it`);
+      else S.call(i, m[1]);
+      if ((h0.match(new RegExp(`GapRead\\.call\\(${i},`, 'g')) || []).length !== 4) fail('gapread', key, `${L4[i]} does not offer all four readings`);
+    });
+    if (S.calls.join() !== truth.join()) fail('gapread', key, 'the buttons cannot make the right calls');
+    if (/id="lgrCheck" disabled /.test(S.html())) fail('gapread', key, 'the check stays shut with every point called');
+    S.check(); checks++;
+    const want = ['Yes: all four points are read right.'];
+    if (mv >= 0) want.push(`At ${L4[mv]} the dot sits off the line, at f(${ng(G.xs[mv])}) = ${ng(G.v[mv])}, but the limit only asks where f heads, so it is still ${ng(sides[mv][0])}.`);
+    if (jd >= 0) want.push(`At ${L4[jd]}, f(${ng(G.xs[jd])}) = ${ng(G.v[jd])} is there, but the two sides still disagree, so there is no limit.`);
+    if (rn >= 0) want.push(`At ${L4[rn]}, f runs off without end, so no number is its limit; the dashed line is where it runs off.`);
+    want.push(`The limits: ${truth.map((k, i) => `${L4[i]} ${k === 'C' || k === 'H' ? ng(sides[i][0]) : 'none'}`).join(', ')}.`);
+    want.push('1 read right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('gapread', key, `once read the readout is ${S.working().join(' | ')}`);
+    // the drawing, from the numbers
+    const svg = S.svg();
+    const pcs = [...svg.matchAll(/data-k="piece"[^>]* points="([^"]+)"/g)].map(m => m[1].split(' ').map(q => q.split(',').map(Number)));
+    if (pcs.length !== 5) fail('gapread', key, `${pcs.length} pieces are drawn, not five`);
+    pcs.forEach((pts, s) => { const lo = s ? G.xs[s - 1] : -4, hi = s < 4 ? G.xs[s] : 4;
+      if (Math.abs(pts[0][0] - PX(lo)) > 0.1 || Math.abs(pts[pts.length - 1][0] - PX(hi)) > 0.1) fail('gapread', key, `piece ${s + 1} does not run from x = ${lo} to x = ${hi}`);
+      const mid = pts[Math.floor(pts.length / 2)], xm = (mid[0] - 20) / 40 - 4, ym = Math.max(-6, Math.min(6, G.p[s](xm)));
+      if (Math.abs(mid[1] - PY(ym)) > 0.5) fail('gapread', key, `piece ${s + 1} is not drawn where it lies`); });
+    const at = re => [...svg.matchAll(re)].map(m => [+m[1], +m[2]]);
+    const dots = at(/data-k="dot" cx="([^"]+)" cy="([^"]+)"/g), opens = at(/data-k="open" cx="([^"]+)" cy="([^"]+)"/g);
+    const asym = [...svg.matchAll(/data-k="asym" x1="([^"]+)"/g)].map(m => +m[1]);
+    const lims = at(/data-k="lim" cx="([^"]+)" cy="([^"]+)"/g), nones = [...svg.matchAll(/data-k="none" x="([^"]+)"/g)].map(m => +m[1]);
+    const wantDots = [], wantOpens = [], wantAsym = [], wantLims = [], wantNones = [];
+    G.xs.forEach((x, i) => { const [a, b] = sides[i], v = G.v[i];
+      if (v !== null) wantDots.push([PX(x), PY(v)]);
+      for (const y of new Set([a, b])) if (isFinite(y) && y !== v) wantOpens.push([PX(x), PY(y)]);
+      if (truth[i] === 'R') wantAsym.push(PX(x));
+      if (truth[i] === 'C' || truth[i] === 'H') wantLims.push([PX(x), PY(a)]); else wantNones.push(PX(x)); });
+    const same = (got, want) => got.length === want.length && got.every((g, k) => Array.isArray(g) ? near(g[0], want[k][0]) && near(g[1], want[k][1]) : near(g, want[k]));
+    if (!same(dots, wantDots)) fail('gapread', key, 'the filled dots are not at f of each point');
+    if (!same(opens, wantOpens)) fail('gapread', key, 'the open circles are not where the graph leaves a point out');
+    if (!same(asym, wantAsym)) fail('gapread', key, 'the dashed lines are not where f runs off');
+    if (!same(lims, wantLims) || !same(nones, wantNones)) fail('gapread', key, 'the limits are not marked where they are');
+    const h = S.html();
+    if (!h.includes('id="lgrNext"') || /onclick="GapRead\.call/.test(h.replace(/disabled onclick="GapRead\.call/g, ''))) fail('gapread', key, 'once read, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 'C' ? 'J' : 'C');
+    if (S.calls.join() !== before) fail('gapread', key, 'a call moves after the graph is read');
+    S.next();
+    if (S.gi !== (gi + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('gapread', key, 'Next does not deal the next graph fresh');
+  });
+  for (const k of ['C', 'H', 'J', 'R']) if (all[k] < 3) fail('gapread', 'setup', `only ${all[k]} points are ${WORD[k]}`);
+  // the hunt, played as a player would: a slip fixed, then first checks round the graphs
+  reset(); S.html();
+  if (S.done.size) fail('gapread', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const t = [0, 1, 2, 3].map(i => S.truth(i)); S.calls = t.slice(); if (slip) S.calls[1] = t[1] === 'C' ? 'H' : 'C';
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, t[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix'], [false, 'fix,moved,one'], [false, 'fix,moved,one,runs'], [false, 'fix,jumpdot,moved,one,runs,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('gapread', 'hunt', `graph ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A slip caught and fixed | ✓ Right on the first check · A dot off the line is still a hole | ✓ Running off, no limit') fail('gapread', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'GAP READER / every break named') fail('gapread', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, points };
+})();
 /* Sketch f′, the slope tracer's third mode. Every curve's slope at the five
    stops worked again here by nudging f itself, never from the f′ it is
    named with; each curve told as a line, a turn or a flat spot by watching
@@ -19464,7 +19615,7 @@ console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 
 console.log(`  slopes sketched   ${pad(slopeSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn f′ in the slope tracer, ${slopeSketchNotes.wrongs} of them with one slope set wrong and caught, and ${slopeSketchNotes.tans} tangents measured off the square grid)`);
 console.log(`  totals sketched   ${pad(cisternSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn total in the cistern workshop, ${cisternSketchNotes.wrongs} of them with one total set wrong and caught, and ${cisternSketchNotes.shades} hours of area shaded)`);
 console.log(`  shapes read       ${pad(shapeReadNotes.checks.toLocaleString(), 12)}  (checks of a curve read point by point in the bend workshop, ${shapeReadNotes.wrongs} of them with one point read wrong and caught)`);
-console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
+console.log(`  graphs read       ${pad(gapReadNotes.checks.toLocaleString(), 12)}  (checks of a graph read point by point in the limit workshop, ${gapReadNotes.wrongs} of them with one point read wrong and caught)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
@@ -19475,6 +19626,7 @@ console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 1
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
+console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
