@@ -166,6 +166,7 @@ const SUITES = [
   require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
   require('./play/lnpick'), // see a product of powers, pick which of four numbers is the slope of ln y
   require('./play/eulerpick'), // see y′ = px + qy, a start and a step, pick which of four numbers is Euler's estimate
+  require('./play/fieldmatch'), // see a slope field and pick which of four equations y′ = f(x, y) drew it
   require('./play/area'),        // rectangles under a curve close in on the integral
   require('./play/taylor'),      // a function rebuilt from powers of x
   require('./play/lesson'),      // S14

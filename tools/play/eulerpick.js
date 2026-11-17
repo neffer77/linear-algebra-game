@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeEulerWalk');
     t.eq('the Euler step workshop opens', await t.screen(), 's-eulerwalk');
-    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7474));
     await t.tapText(/Which estimate\?/);
-    t.eq('which estimate is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which estimate is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the equations, the steps, the figure, the walk buttons, the readout and the goals step aside', await hidden(t, 'ewSets') && await hidden(t, 'ewHs') && await hidden(t, 'ewFig') && await hidden(t, 'ewWalkRow') && await hidden(t, 'ewRead') && await hidden(t, 'ewGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('euBox').innerText)).startsWith(
       'Euler’s method walks y′ = f(x, y) forward in straight steps'));

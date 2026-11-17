@@ -1,60 +1,88 @@
 {
-  "change": "Add y′ = y² to the Euler step workshop",
+  "change": "Add a Match the field mode to the Euler step workshop",
   "mutations": [
     {
-      "name": "the slope read as y, not y²",
+      "name": "y′ = x² drawn as x³",
       "file": "index.html",
-      "find": "     f:(x,y)=>y*y, sol:x=>1/(2-x),",
-      "replace": "     f:(x,y)=>y, sol:x=>1/(2-x),",
+      "find": "xx:  {s:'y′ = x²',    r:'x²',    z:'the line x = 0',   f:(x,y)=>x*x},",
+      "replace": "xx:  {s:'y′ = x²',    r:'x²',    z:'the line x = 0',   f:(x,y)=>x*x*x},",
       "run": "verify"
     },
     {
-      "name": "the true curve drawn as 1/(2 + x)",
+      "name": "1 − y told as flat along y = 0",
       "file": "index.html",
-      "find": "     f:(x,y)=>y*y, sol:x=>1/(2-x),",
-      "replace": "     f:(x,y)=>y*y, sol:x=>1/(2+x),",
+      "find": "omy: {s:'y′ = 1 − y', r:'1 − y', z:'the line y = 1',",
+      "replace": "omy: {s:'y′ = 1 − y', r:'1 − y', z:'the line y = 0',",
       "run": "verify"
     },
     {
-      "name": "the separated curve met on y′ = x",
+      "name": "a field with two right answers",
       "file": "index.html",
-      "find": "     ok:K=>K.si===3 && K.atEnd()},\n    {id:'sepnear'",
-      "replace": "     ok:K=>K.si===2 && K.atEnd()},\n    {id:'sepnear'",
+      "find": "{a:'ny',  o:['y','nx','ny','omy']},",
+      "replace": "{a:'ny',  o:['ny','nx','ny','omy']},",
       "run": "verify"
     },
     {
-      "name": "steps of 1/4 counted close enough",
+      "name": "a slope only of y called one of x",
       "file": "index.html",
-      "find": "Math.abs(K.walk()[K.N()].y-1)<0.1}",
-      "replace": "Math.abs(K.walk()[K.N()].y-1)<0.2}",
+      "find": "return vx&&vy ? 'xy' : vx ? 'x' : 'y';",
+      "replace": "return vx&&vy ? 'xy' : vy ? 'x' : 'y';",
       "run": "verify"
     },
     {
-      "name": "a rounded square said with =",
+      "name": "the wrong pick checked at a point where it agrees",
       "file": "index.html",
-      "find": "${this.exact(p.y)!==null && this.exact(p.s)!==null ? '=' : '≈'}",
-      "replace": "${this.exact(p.y)!==null ? '=' : '≈'}",
+      "find": "this.PTS.find(([x,y])=>W(x,y)!==A(x,y))",
+      "replace": "this.PTS.find(([x,y])=>W(x,y)===A(x,y)) || this.PTS[0]",
       "run": "verify"
     },
     {
-      "name": "y(0) written as a decimal",
+      "name": "the dashes drawn with y running up the screen",
       "file": "index.html",
-      "find": "starting from y(0) = ${this.fr(S.y0)}. Euler",
-      "replace": "starting from y(0) = ${neg(S.y0)}. Euler",
+      "find": "const f=v=>v.toFixed(2), dx=60, dy=-s*55,",
+      "replace": "const f=v=>v.toFixed(2), dx=60, dy=s*55,",
       "run": "verify"
     },
     {
-      "name": "the constant from y(0) worked wrong",
+      "name": "the wrong equation's dash drawn with the field's slope",
       "file": "index.html",
-      "find": "and y(0) = 1/2 makes c = −2, so the true curve",
-      "replace": "and y(0) = 1/2 makes c = −1/2, so the true curve",
+      "find": "out+=this.dash(x,y,W.f(x,y),'wrong',FIG_COL.a,15,3.5);",
+      "replace": "out+=this.dash(x,y,A.f(x,y),'wrong',FIG_COL.a,15,3.5);",
       "run": "verify"
     },
     {
-      "name": "the true value at x = 1 named as 2",
+      "name": "a match after a miss counted as a first try",
       "file": "index.html",
-      "find": "solS:'y = 1/(2 − x)', trueS:'1',",
-      "replace": "solS:'y = 1/(2 − x)', trueS:'2',",
+      "find": "if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;",
+      "replace": "this.wins++; this.streak++;",
+      "run": "verify"
+    },
+    {
+      "name": "Next offered before the field is matched",
+      "file": "index.html",
+      "find": "next(){ if(!this.solved) return; this.ri=",
+      "replace": "next(){ this.ri=",
+      "run": "verify"
+    },
+    {
+      "name": "a shut choice can be picked again",
+      "file": "index.html",
+      "find": "if(this.solved || this.gone.has(i)) return;",
+      "replace": "if(this.solved) return;",
+      "run": "verify"
+    },
+    {
+      "name": "three in a row found at two",
+      "file": "index.html",
+      "find": "ok:F=>F.streak>=3}",
+      "replace": "ok:F=>F.streak>=2}",
+      "run": "verify"
+    },
+    {
+      "name": "the flat line told with the whole equation",
+      "file": "index.html",
+      "find": "where ${A.r} is 0.`",
+      "replace": "where ${A.s} is 0.`",
       "run": "verify"
     }
   ]
