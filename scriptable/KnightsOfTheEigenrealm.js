@@ -4657,6 +4657,67 @@ paramDeriv(d){
       ex:why};
   }
 },
+/* Change of basis. A basis b₁, b₂ of the plane and a vector v; find one of
+   v's coordinates in that basis, the weights in v = c₁b₁ + c₂b₂. With b₁ and
+   b₂ the columns of P, (c₁, c₂) = P⁻¹v, which for a 2×2 is Cramer's rule:
+   c₁ = (v₁b₂₂ − b₂₁v₂)/det P and c₂ = (b₁₁v₂ − b₁₂v₁)/det P. The first depth
+   keeps every entry above 0; the second lets signs and zeros in; the third
+   widens the numbers. Whole and fractional answers come up about equally.
+   The wrong answers are the slips: the other coordinate, the determinant
+   taken the wrong way round, the division by it left out, v multiplied by P
+   instead of P⁻¹, the basis put in the rows instead of the columns, and v's
+   own coordinate in the standard basis. */
+changeBasis(d){
+  const F=(a,b=1)=>{ if(b<0){ a=-a; b=-b; } const g=gcd(a,b); return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const whole=R.chance(0.5), C=['c₁','c₂'];
+  const P=v=>v<0?\`(\${neg(v)})\`:neg(v);
+  const side=(a,b,t)=>{
+    let s='';
+    [[a,'c₁'],[b,'c₂']].forEach(([x,c])=>{
+      if(!x) return;
+      const m=(Math.abs(x)===1?'':Math.abs(x))+c;
+      s += s ? \` \${x<0?'−':'+'} \${m}\` : (x<0?'−':'')+m;
+    });
+    return \`\${s} = \${neg(t)}\`;
+  };
+  for(let g=0;;g++){
+    const lo=d===1?1:d===2?-4:-6, hi=d===1?4:d===2?4:6, vl=d===1?1:d===2?-9:-12, vh=d===1?9:d===2?9:12;
+    const [p,q,r,s]=[R.i(lo,hi),R.i(lo,hi),R.i(lo,hi),R.i(lo,hi)];
+    const v=[R.i(vl,vh),R.i(vl,vh)], k=R.i(0,1), o=1-k;
+    const det=p*s-r*q;
+    if(!det || (!p && !q) || (!r && !s) || (!v[0] && !v[1])) continue;
+    const num=[v[0]*s-r*v[1], p*v[1]-q*v[0]];
+    const ans=F(num[k],det);
+    const rows=[v[0]*s-q*v[1], p*v[1]-r*v[0]];
+    const Pv=[p*v[0]+r*v[1], q*v[0]+s*v[1]];
+    const slips=[
+      [F(num[o],det),\`that is \${C[o]}, the weight on b\${o?'₂':'₁'}; the question asks for \${C[k]}\`],
+      [F(-num[k],det),'that takes the determinant the wrong way round; det P = b₁₁b₂₂ − b₂₁b₁₂, b₁ times b₂ across the main diagonal first'],
+      [F(num[k]),'that leaves out dividing by the determinant of P'],
+      [F(Pv[k]),'that multiplies v by P; the coordinates undo P, so they are P⁻¹v'],
+      [F(rows[k],det),'that puts b₁ and b₂ in the rows of P; they go in its columns, since v = c₁b₁ + c₂b₂ adds columns'],
+      [F(v[k]),\`that is v's own coordinate in the standard basis, its weight on (1, 0) or (0, 1), not on b\${k?'₂':'₁'}\`]
+    ];
+    const big=u=>Math.abs(u[0])>999 || u[1]>99;
+    const ok=u=>u[0]!==0 && !big(u) && key(u)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(sl=>(sl[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const top = k===0 ? \`\${P(v[0])} × \${P(s)} − \${P(r)} × \${P(v[1])}\` : \`\${P(p)} × \${P(v[1])} − \${P(q)} × \${P(v[0])}\`;
+    return {topic:'Change of Basis',
+      codex:{rule:'The coordinates of v in a basis b₁, b₂ are the weights with v = c₁b₁ + c₂b₂. Put b₁ and b₂ in the columns of P; then (c₁, c₂) = P⁻¹v.',
+             eg:'b₁ = (1, 1), b₂ = (1, −1), v = (3, 1): c₁ + c₂ = 3 and c₁ − c₂ = 1, so c₁ = 2 and c₂ = 1.'},
+      q:\`The basis B is b₁ = (\${neg(p)}, \${neg(q)}) and b₂ = (\${neg(r)}, \${neg(s)}). Write v = (\${neg(v[0])}, \${neg(v[1])}) as v = c₁b₁ + c₂b₂. What is \${C[k]}?\`,
+      a:show(ans),
+      d:dist.map(([u,w])=>[show(u),w]),
+      ex:\`v = c₁b₁ + c₂b₂ is two equations, \${side(p,r,v[0])} and \${side(q,s,v[1])}. With b₁ and b₂ as the columns of P, det P = \${P(p)} × \${P(s)} − \${P(r)} × \${P(q)} = \${neg(det)}. So \${C[k]} = (\${top})/\${P(det)} = \${neg(num[k])}/\${P(det)} = \${show(ans)}.\`};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -5021,7 +5082,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives', changeBasis:'Change of Basis'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -5031,7 +5092,7 @@ const TOPIC_LABEL = {
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm','cramer','detRules']],
-  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
+  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq','changeBasis']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff','paramDeriv']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
@@ -5050,7 +5111,7 @@ const WORKSHOP_FOR = (() => {
     Detect:  ["🔍 Eigenvalue Detective", ['charPoly','trace']],
     Cofactor:["♟️ Cofactor Workshop", ['det3','detRules']],
     Compose: ["🔁 Order Matters", ['matMul']],
-    Span:    ["🧭 Span Workshop", ['vecCombo','rank']],
+    Span:    ["🧭 Span Workshop", ['vecCombo','rank','changeBasis']],
     Elim:    ["⚖️ Elimination Workshop", ['solve2','cramer']],
     Undo:    ["↩️ Undo Workshop", ['inv2']],
     Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
@@ -5613,7 +5674,7 @@ const REALMS = [
        ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
        glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
    pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
-         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq','quadForm'],
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq','quadForm','changeBasis'],
    foes:[
      {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
      {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},

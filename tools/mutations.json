@@ -1,102 +1,88 @@
 {
-  "change": "Add an Along a curve mode to the chain rule workshop: step t and read dy/dx as (dy/dt) ÷ (dx/dt).",
+  "change": "Add change of basis as a fight topic: the coordinates of v in a basis b₁, b₂ are P⁻¹v.",
   "mutations": [
     {
-      "name": "the slope upside down",
+      "name": "the coordinate solved upside down",
       "file": "index.html",
-      "find": "s(){ const a=this.a(), b=this.b(); return a[0]===0 ? null : this.frac(b[0]*a[1], b[1]*a[0]); },",
-      "replace": "s(){ const a=this.a(), b=this.b(); return a[0]===0 ? null : this.frac(a[0]*b[1], a[1]*b[0]); },",
+      "find": "const ans=F(num[k],det);\n    const rows",
+      "replace": "const ans=F(det,num[k]||1);\n    const rows",
       "run": "verify"
     },
     {
-      "name": "dx/dt worked from y",
+      "name": "c₁ worked with c₂'s top",
       "file": "index.html",
-      "find": "a(){ return this.at(this.der(this.cur().X),this.k); },",
-      "replace": "a(){ return this.at(this.der(this.cur().Y),this.k); },",
+      "find": "const num=[v[0]*s-r*v[1], p*v[1]-q*v[0]];",
+      "replace": "const num=[p*v[1]-q*v[0], v[0]*s-r*v[1]];",
       "run": "verify"
     },
     {
-      "name": "the power rule's factor dropped",
+      "name": "the determinant taken the wrong way round",
       "file": "index.html",
-      "find": "der(P){ return P.filter(([,p])=>p>0).map(([c,p])=>[c*p,p-1]); },",
-      "replace": "der(P){ return P.filter(([,p])=>p>0).map(([c,p])=>[c,p-1]); },",
+      "find": "const det=p*s-r*q;\n    if(!det || (!p && !q)",
+      "replace": "const det=r*q-p*s;\n    if(!det || (!p && !q)",
       "run": "verify"
     },
     {
-      "name": "the point worked over the wrong bottom",
+      "name": "the other coordinate named as the one asked",
       "file": "index.html",
-      "find": "for(const [c,p] of P) s+=c*k**p*2**(D-p); return this.frac(s, 2**D); },",
-      "replace": "for(const [c,p] of P) s+=c*k**p*2**(D-p); return this.frac(s, 2**D+1); },",
+      "find": "[F(num[o],det),`that is ${C[o]}, the weight on b${o?'₂':'₁'}; the question asks for ${C[k]}`],",
+      "replace": "[F(num[o],det),`that is ${C[k]}, the weight on b${k?'₂':'₁'}; the question asks for ${C[o]}`],",
       "run": "verify"
     },
     {
-      "name": "backwards never said",
+      "name": "P·v worked with the rows",
       "file": "index.html",
-      "find": "return `${v} moves ${m==='1' ? 'as fast as' : m+' times as fast as'} t${f[0]<0 ? ', backwards' : ''}`;",
-      "replace": "return `${v} moves ${m==='1' ? 'as fast as' : m+' times as fast as'} t${''}`;",
+      "find": "const Pv=[p*v[0]+r*v[1], q*v[0]+s*v[1]];",
+      "replace": "const Pv=[p*v[0]+q*v[1], r*v[0]+s*v[1]];",
       "run": "verify"
     },
     {
-      "name": "straight up told as a dead stop",
+      "name": "the rows slip is the columns again",
       "file": "index.html",
-      "find": "else if(b[0]!==0) out.push(`dx/dt = 0, so (dy/dt)",
-      "replace": "else if(b[0]===0) out.push(`dx/dt = 0, so (dy/dt)",
+      "find": "const rows=[v[0]*s-q*v[1], p*v[1]-r*v[0]];",
+      "replace": "const rows=[v[0]*s-r*v[1], p*v[1]-q*v[0]];",
       "run": "verify"
     },
     {
-      "name": "the crossing never told",
+      "name": "signs let in at the first depth",
       "file": "index.html",
-      "find": "if(this.ci===0 && x[0]===0 && y[0]===0){",
-      "replace": "if(this.ci===9 && x[0]===0 && y[0]===0){",
+      "find": "const lo=d===1?1:d===2?-4:-6,",
+      "replace": "const lo=d===1?0:d===2?-4:-6,",
       "run": "verify"
     },
     {
-      "name": "the tangent drawn upside down",
+      "name": "the third depth no wider",
       "file": "index.html",
-      "find": "const dx=a[0]/a[1], dy=-b[0]/b[1], n=Math.hypot(dx,dy)",
-      "replace": "const dx=a[0]/a[1], dy=b[0]/b[1], n=Math.hypot(dx,dy)",
+      "find": "hi=d===1?4:d===2?4:6, vl=",
+      "replace": "hi=d===1?4:d===2?4:4, vl=",
       "run": "verify"
     },
     {
-      "name": "the stub points backwards",
+      "name": "the answer's form never chosen",
       "file": "index.html",
-      "find": "x2=\"${f(px+ux*26)}\" y2=\"${f(py+uy*26)}\"",
-      "replace": "x2=\"${f(px-ux*26)}\" y2=\"${f(py-uy*26)}\"",
+      "find": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const top",
+      "replace": "if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const top",
       "run": "verify"
     },
     {
-      "name": "one pass counts as the crossing",
+      "name": "the working's top for c₂ written for c₁",
       "file": "index.html",
-      "find": "ok:P=>P.cross.size===2},",
-      "replace": "ok:P=>P.cross.size>=1},",
+      "find": "const top = k===0 ? `${P(v[0])} × ${P(s)} − ${P(r)} × ${P(v[1])}` : `${P(p)} × ${P(v[1])} − ${P(q)} × ${P(v[0])}`;",
+      "replace": "const top = `${P(v[0])} × ${P(s)} − ${P(r)} × ${P(v[1])}`;",
       "run": "verify"
     },
     {
-      "name": "the stepper goes past t = 2",
+      "name": "an equation's coefficients swapped",
       "file": "index.html",
-      "find": "if(v<this.KLO || v>this.KHI) return; this.k=v; this.touched=true; Chain.render();",
-      "replace": "if(v<this.KLO || v>this.KHI+1) return; this.k=v; this.touched=true; Chain.render();",
+      "find": "two equations, ${side(p,r,v[0])} and ${side(q,s,v[1])}.",
+      "replace": "two equations, ${side(p,q,v[0])} and ${side(r,s,v[1])}.",
       "run": "verify"
     },
     {
-      "name": "the crossing counted before a press",
+      "name": "the coordinate asked always c₁",
       "file": "index.html",
-      "find": "if(this.touched && this.ci===0 && this.x()[0]===0",
-      "replace": "if(this.ci===0 && this.x()[0]===0",
-      "run": "verify"
-    },
-    {
-      "name": "the nudge takes y one way",
-      "file": "index.html",
-      "find": "const r=(this.val(Y,t+h)-this.val(Y,t-h))/(this.val(X,t+h)-this.val(X,t-h));",
-      "replace": "const r=(this.val(Y,t+h)-this.val(Y,t))/(this.val(X,t+h)-this.val(X,t-h));",
-      "run": "verify"
-    },
-    {
-      "name": "y drawn to its own scale",
-      "file": "index.html",
-      "find": "return {sc, X:x=>180+(x-cx)*sc, Y:y=>130-(y-cy)*sc};",
-      "replace": "return {sc, X:x=>180+(x-cx)*sc, Y:y=>130-(y-cy)*sc*0.8};",
+      "find": "const v=[R.i(vl,vh),R.i(vl,vh)], k=R.i(0,1), o=1-k;",
+      "replace": "const v=[R.i(vl,vh),R.i(vl,vh)], k=0, o=1-k;",
       "run": "verify"
     }
   ]
