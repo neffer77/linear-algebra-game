@@ -41,11 +41,11 @@ module.exports = {
       /Then turn it round: see a few points and pick which of four numbers is the slope of the best line\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeFit');
     t.eq('the best fit workshop opens', await t.screen(), 's-fit');
-    t.eq('setting it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('setting it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6363));
     await t.tapText(/Which slope fits best\?/);
-    t.eq('which slope fits best is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which slope fits best is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the sets, steppers, figure, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('fpBox').innerText)).startsWith(
