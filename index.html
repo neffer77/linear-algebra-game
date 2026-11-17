@@ -1085,7 +1085,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ UNDO WORKSHOP ============ -->
   <div class="screen" id="s-undo">
     <div class="panel"><h2>↩️ Undo Workshop</h2><div class="sub">A matrix A moves the plane. Turn the four numbers of B until B puts everything back: follow î and ĵ through A, then through B, and bring both home. The B that does it is A⁻¹, the inverse of A.</div></div>
-    <div id="uvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build B by hand or pick A⁻¹"></div>
+    <div id="uvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build B by hand, pick A⁻¹, or name each undo"></div>
     <div class="panel">
       <div id="uiBox"></div>
       <div id="uvMats" class="wsModes wrap" role="group" aria-label="The matrix A"></div>
@@ -15477,7 +15477,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">↩️ Undo Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo. Then turn it round: see A, and pick which of four matrices is A⁻¹.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build the matrix that puts a shear, a turn or a flip back the way it was, and meet the one move nothing can undo. Then turn it round: see A, and pick which of four matrices is A⁻¹. Or name the undo: for four matrices, say whether A undoes itself, Aᵀ undoes it, another matrix does, or nothing can.</div>
          <button class="btn sm" id="tomeUndo" style="width:auto;margin-top:8px" onclick="Undo.open()">Open the undo workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -18530,6 +18530,165 @@ const UndoPick = {
   }
 };
 
+/* ---------- Name the undo: the undo workshop's third mode ----------
+   Four square matrices; for each, say whether A undoes itself, Aᵀ undoes it,
+   another matrix undoes it, or nothing does. */
+const UndoSort = {
+  ROUNDS:[
+    [[[0,-1],[1,0]], [[1,2],[0,-1]], [[2,4],[1,2]], [[1,2],[3,1]]],
+    [[[2,6],[1,3]], [[1,0],[-4,1]], [[0,0,-1],[0,1,0],[1,0,0]], [[0,1],[-1,0]]],
+    [[[1,3],[0,1]], [[0,0,1],[1,0,0],[0,1,0]], [[3,-6],[-1,2]], [[3,4],[-2,-3]]],
+    [[[-1,0],[2,1]], [[1,1,0],[0,1,1],[1,2,1]], [[0.6,-0.8],[0.8,0.6]], [[3,0],[0,0]]],
+    [[[1,0,0],[0,0,-1],[0,1,0]], [[1,0],[5,-1]], [[2,-3],[1,-2]], [[4,-2],[-6,3]]],
+    [[[0,0],[3,1]], [[0.8,0.6],[-0.6,0.8]], [[1,2],[0,1]], [[-3,2],[-4,3]]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',    t:'Name all four undos right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'turn3',  t:'Name the undo of a 3×3 turn.', toast:'A 3×3 turn, undone by Aᵀ',
+     ok:K=>K.kinds.has('turn3')},
+    {id:'shear',  t:'Name the undo of a shear.', toast:'A shear, undone by shearing back',
+     ok:K=>K.kinds.has('shear')},
+    {id:'sneaky', t:'Find a matrix with big numbers that is its own undo.', toast:'Its own undo, with big numbers',
+     ok:K=>K.kinds.has('sneaky')},
+    {id:'fix',    t:'Check a set of names with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',  t:'Name three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A⁻¹ is the matrix that puts back what A moves: A⁻¹A = I. If det A = 0, A flattens the plane and nothing undoes it. If A·A = I, doing A twice puts everything back, so A undoes itself. If AᵀA = I, the columns of A have length 1 and stand at right angles, as in a turn, so Aᵀ undoes it. Otherwise another matrix does.',
+  L:'ABCD',
+  WORD:{S:'A⁻¹ = A', T:'A⁻¹ = Aᵀ', N:'another A⁻¹', Z:'no A⁻¹'},
+  SAY:{S:'A undoes itself', T:'its transpose undoes it', N:'another matrix undoes it', Z:'nothing undoes it'},
+  SUB:'₁₂₃',
+  R(){ return this.ROUNDS[this.ri]; },
+  rd(x){ return Math.round(x*1e9)/1e9; },
+  tr(A){ return A[0].map((_,j)=>A.map(r=>r[j])); },
+  mul(A,B){ return A.map(r=>B[0].map((_,j)=>this.rd(r.reduce((s,x,k)=>s+x*B[k][j],0)))); },
+  /* the first entry of M that differs from I, read along the rows: [i, j], or null */
+  off(M){ for(let i=0;i<M.length;i++) for(let j=0;j<M.length;j++) if(M[i][j]!==(i===j?1:0)) return [i,j]; return null; },
+  det(A){ const n=A.length;
+    if(n===2) return this.rd(A[0][0]*A[1][1]-A[0][1]*A[1][0]);
+    return this.rd(A[0].reduce((s,x,j)=>s+(j%2?-1:1)*x*this.minor(A,j),0)); },
+  minor(A,j){ const M=A.slice(1).map(r=>r.filter((_,k)=>k!==j)); return this.rd(M[0][0]*M[1][1]-M[0][1]*M[1][0]); },
+  truth(i){ const A=this.R()[i];
+    return this.det(A)===0 ? 'Z' : !this.off(this.mul(A,A)) ? 'S' : !this.off(this.mul(this.tr(A),A)) ? 'T' : 'N'; },
+  /* a 2×2 shear: 1s down the diagonal and one corner that is not 0 */
+  shear(A){ return A.length===2 && A[0][0]===1 && A[1][1]===1 && (A[0][1]===0)!==(A[1][0]===0); },
+  turns3(){ return [0,1,2,3].filter(i=>this.truth(i)==='T' && this.R()[i].length===3); },
+  shears(){ return [0,1,2,3].filter(i=>this.truth(i)==='N' && this.shear(this.R()[i])); },
+  sneakies(){ return [0,1,2,3].filter(i=>this.truth(i)==='S' && this.R()[i].some(r=>r.some(x=>Math.abs(x)>=3))); },
+  tags(){ const t=[]; if(this.turns3().length) t.push('turn3'); if(this.shears().length) t.push('shear'); if(this.sneakies().length) t.push('sneaky'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  amt(n){ return n<0 ? `(${neg(n)})` : neg(n); },
+  rows(A){ return A.map(r=>`(${r.map(x=>neg(x)).join(', ')})`).join(', '); },
+  /* det A worked out: ad − bc for a 2×2, along the top row for a 3×3 */
+  detWork(A){ const d=neg(this.det(A));
+    if(A.length===2) return `det A = ${neg(A[0][0])}·${this.amt(A[1][1])} − ${this.amt(A[0][1])}·${this.amt(A[1][0])} = ${d}`;
+    return `along the top row, det A = ${neg(A[0][0])}·${this.amt(this.minor(A,0))} − ${this.amt(A[0][1])}·${this.amt(this.minor(A,1))} + ${this.amt(A[0][2])}·${this.amt(this.minor(A,2))} = ${d}`; },
+  /* one entry of a product that is not I's: (A·A)ᵢⱼ = x, not y */
+  miss(name,M){ const [i,j]=this.off(M); return `(${name})${this.SUB[i]}${this.SUB[j]} = ${neg(M[i][j])}, not ${i===j?1:0}`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four undos are named right.');
+      const t3=this.turns3(), sh=this.shears(), sn=this.sneakies();
+      if(t3.length) out.push(`${this.list(t3)} ${t3.length>1?'are 3×3 turns':'is a 3×3 turn'}: the columns are î, ĵ and k̂ moved, each still length 1 and at right angles, so Aᵀ undoes ${t3.length>1?'each':'it'}.`);
+      if(sh.length) out.push(`${this.list(sh)} ${sh.length>1?'are shears':'is a shear'}: the undo shears back the other way, with the corner's sign flipped.`);
+      if(sn.length) out.push(`${this.list(sn)} ${sn.length>1?'have':'has'} big numbers, yet A·A = I: undoing itself is not just for flips.`);
+      out.push('A flip, or any A with A·A = I, undoes itself; a turn is undone by its transpose; and with det A = 0 nothing can undo A.');
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const A=this.R()[i], t=this.truth(i), c=this.calls[i];
+        const AA=this.mul(A,A), TA=this.mul(this.tr(A),A);
+        let s = t==='Z' ? `In ${this.L[i]}, ${this.detWork(A)}: A flattens ${A.length===2?'the plane':'space'}, so nothing can undo it.`
+          : t==='S' ? `In ${this.L[i]}, ${this.detWork(A)}, not 0, and A·A = I: doing A twice puts everything back, so A undoes itself.`
+          : t==='T' ? `In ${this.L[i]}, ${this.detWork(A)}, not 0, and AᵀA = I: each column has length 1 and they stand at right angles, so Aᵀ undoes A.`
+          : `In ${this.L[i]}, ${this.detWork(A)}, not 0, so A has an undo; but ${this.miss('A·A',AA)}, so it is not A, and ${this.miss('AᵀA',TA)}, so it is not Aᵀ either.`;
+        if(t==='N' && c==='S' && this.shear(A)) s+=' A shear is undone by shearing back the other way: flip the sign of its corner.';
+        if(t==='Z' && c!=='Z' && A.length===2 && A.every(r=>r.every(x=>x!==0))) s+=' Its two rows are in step: one is a multiple of the other.';
+        out.push(`${s} You had it as ${this.WORD[c]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 named.`);
+    }
+    out.push(`${this.wins} named right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each matrix in its own square; a slip is ringed red, and once named right
+     each gets what undoes it, in green */
+  svg(){
+    const P=this.R();
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four matrices: ${P.map((A,i)=>`${this.L[i]}, rows ${this.rows(A)}`).join('; ')}${this.solved?', each with what undoes it':''}">`;
+    P.forEach((A,i)=>{
+      const n=A.length, X=(i%2)*180, Y=Math.floor(i/2)*130, cs=n===2?38:28, x0=X+90-n*cs/2, y0=Y+70-n*cs/2, W=n*cs, br=6;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<path data-k="bracket" d="M ${x0+br-2} ${y0-3} H ${x0-2} V ${y0+W+3} H ${x0+br-2} M ${x0+W-br+2} ${y0-3} H ${x0+W+2} V ${y0+W+3} H ${x0+W-br+2}" fill="none" stroke="${FIG_COL.ink}" stroke-width="1.5"/>`;
+      for(let r=0;r<n;r++) for(let c=0;c<n;c++)
+        out+=`<text data-k="cell" data-rc="${r},${c}" x="${x0+c*cs+cs/2}" y="${y0+r*cs+cs/2+5}" fill="${FIG_COL.ink}" font-size="14" text-anchor="middle">${neg(A[r][c])}</text>`;
+      out+=`<text x="${X+16}" y="${Y+22}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="tag" data-c="${t}" x="${X+170}" y="${Y+22}" fill="${t==='Z'?FIG_COL.d:FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${this.WORD[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Undo.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Undo.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Undo.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="UndoSort.call(${i},'${c}')" aria-label="Matrix ${this.L[i]}: ${this.SAY[c]}">${b}</button>`;
+  },
+  html(){
+    const P=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four square matrices. What undoes each one: A itself, its transpose Aᵀ, another matrix, or nothing?</div>`;
+    out+=`<div id="unsFig">${this.svg()}<div class="figcap">Once all four are named right, each gets what undoes it, in green, or no A⁻¹ in red.</div></div>`;
+    out+=`<div id="unsStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+P.map((A,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="unsStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 3;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${A.length}×${A.length}</span></b>`+
+        this.btn(i,'S','A itself')+this.btn(i,'T','Aᵀ')+this.btn(i,'N','Another')+this.btn(i,'Z','Nothing')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="unsRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="unsNext" onclick="UndoSort.next()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="unsCheck" ${this.ready()?'':'disabled '}onclick="UndoSort.check()" aria-label="${this.ready()?'Check the four undos':'Name all four undos to check them'}">${this.ready()?'Check my names':'Name all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="unsGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="unsGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('UNDO KEEPER','every undo named','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Undo = {
   MATS:[
     {m:[[1,1],[0,1]],  btn:'Shear',  is:'a shear'},
@@ -18593,11 +18752,11 @@ const Undo = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('uvTab').innerHTML=[['hand','↩️ Build B by hand','Build B by hand and bring î and ĵ home'],['pick','🎯 Which A⁻¹?','See A, and pick which of four matrices is A⁻¹']]
+    document.getElementById('uvTab').innerHTML=[['hand','↩️ Build B by hand','Build B by hand and bring î and ĵ home'],['pick','🎯 Which A⁻¹?','See A, and pick which of four matrices is A⁻¹'],['sort','🗝️ Name the undo','See four matrices, and say whether each is undone by itself, by its transpose, by another matrix, or by nothing']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Undo.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['uvMats','uvBLabel','uvB','uvFig','uvRead','uvGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('uiBox').innerHTML=pick ? UndoPick.html() : '';
+    document.getElementById('uiBox').innerHTML=!pick ? '' : this.tab==='pick' ? UndoPick.html() : UndoSort.html();
     if(pick) return;
     const A=this.A(), B=this.B;
     document.getElementById('uvMats').innerHTML=this.MATS.map((o,i)=>

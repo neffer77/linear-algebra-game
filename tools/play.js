@@ -130,6 +130,7 @@ const SUITES = [
   require('./play/crosspick'), // see u and v, pick which of four arrows is u × v
   require('./play/crossturn'), // call four pairs flat on the page: u × v out, in or zero
   require('./play/undopick'), // see A, pick which of four matrices is A⁻¹
+  require('./play/undosort'), // see four matrices, name what undoes each
   require('./play/nullpick'), // see a flat A, pick which of four arrows it crushes
   require('./play/kermatch'), // see four flat matrices and four arrows, and match each matrix to the arrow it crushes
   require('./play/grampick'), // see u₁ and u₂, pick which of four numbers is c
