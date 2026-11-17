@@ -33,11 +33,11 @@ module.exports = {
       /Then turn it round: see a valley, a start and a step size, and pick which of four numbers one step lands on\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeDescent');
     t.eq('the downhill workshop opens', await t.screen(), 's-descent');
-    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('walking by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7151));
     await t.tapText(/Which step\?/);
-    t.eq('which step is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which step is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the step sizes, the figure, the step buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('dhBox').innerText)).startsWith(

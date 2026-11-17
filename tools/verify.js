@@ -10894,7 +10894,7 @@ const descentPickNotes = (() => {
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
     "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
     "const Descent = {render(){ env.renders++; }};" +
-    cut('const DescentPick = {', '/* ============ DOWNHILL WORKSHOP') + 'return DescentPick;')(R, env);
+    cut('const DescentPick = {', '/* ---------- Match the map') + 'return DescentPick;')(R, env);
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
   const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
@@ -11945,6 +11945,154 @@ const fieldMatchNotes = (() => {
   if (!S.working().join(' | ').endsWith('3 matched on the first try this visit, 3 in a row.')) fail('fieldmatch', 'hunt', `the count reads ${S.working().join(' | ')}`);
   reset();
   return { rounds, misses, dashes };
+})();
+const contourMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Descent = {render(){ env.renders++; }};" +
+    cut('const ContourMatch = {', '/* ============ DOWNHILL WORKSHOP') + 'return ContourMatch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pt = p => `(${ng(p[0])}, ${ng(p[1])})`;
+  // the ten functions as plain code, with their names and the levels drawn
+  const FN = {
+    bowl: ['x² + y²', (x, y) => x * x + y * y, [1, 2, 4, 6, 9]], wide: ['x² + 4y²', (x, y) => x * x + 4 * y * y, [1, 4, 9]],
+    tall: ['4x² + y²', (x, y) => 4 * x * x + y * y, [1, 4, 9]], shift: ['x² − 2x + y²', (x, y) => (x - 1) ** 2 + y * y - 1, [0, 1, 3, 8]],
+    saddle: ['x² − y²', (x, y) => (x - y) * (x + y), [-4, -1, 0, 1, 4]], twist: ['xy', (x, y) => x * y, [-4, -1, 0, 1, 4]],
+    tilt: ['x + y', (x, y) => x + y, [-4, -2, 0, 2, 4]], ramp: ['x − 2y', (x, y) => x - 2 * y, [-4, -2, 0, 2, 4]],
+    trough: ['y − x²', (x, y) => y - x * x, [-6, -4, -2, 0, 2]], valley: ['x²', (x, y) => x * x, [1, 4]] };
+  // the kind of map, found from f: a single lowest point inside means rings, a flat point that is
+  // neither lowest nor highest near it means a saddle, anything else never closes up
+  const fine = []; for (let i = -12; i <= 12; i++) for (let j = -12; j <= 12; j++) fine.push([i / 4, j / 4]);
+  const kindOf = f => {
+    const lo = Math.min(...fine.map(p => f(...p))), at = fine.filter(p => f(...p) === lo);
+    if (at.length === 1 && Math.abs(at[0][0]) < 3 && Math.abs(at[0][1]) < 3) return 'ring';
+    const e = 1e-4, flat = fine.filter(([x, y]) => Math.abs(x) < 3 && Math.abs(y) < 3 && Math.abs(f(x + e, y) - f(x - e, y)) < 1e-6 && Math.abs(f(x, y + e) - f(x, y - e)) < 1e-6);
+    const near = ([x, y]) => [[.25, 0], [-.25, 0], [0, .25], [0, -.25], [.25, .25], [-.25, -.25], [.25, -.25], [-.25, .25]].map(([a, b]) => f(x + a, y + b) - f(x, y));
+    return flat.some(p => near(p).some(d => d > 0) && near(p).some(d => d < 0)) ? 'cross' : 'open';
+  };
+  const G = []; for (let x = -2; x <= 2; x++) for (let y = -2; y <= 2; y++) G.push([x, y]);
+  if (Object.keys(S.FNS).sort().join() !== Object.keys(FN).sort().join()) fail('contourmatch', 'functions', Object.keys(S.FNS).join());
+  for (const id in FN) {
+    const E = S.FNS[id], [s, f, lv] = FN[id];
+    if (E.s !== s) fail('contourmatch', id, `named ${E.s}, not ${s}`);
+    if (fine.some(([x, y]) => Math.abs(E.f(x, y) - f(x, y)) > 1e-9)) fail('contourmatch', id, `its values are not those of ${s}`);
+    if (E.lv.join() !== lv.join()) fail('contourmatch', id, `it draws the levels ${E.lv.join()}`);
+    if (E.k !== kindOf(f)) fail('contourmatch', id, `its map is told as ${E.k}, not ${kindOf(f)}`);
+  }
+  // the rounds: eight maps with eight different answers, the answer twice in each place
+  const R = S.ROUNDS, place = [0, 0, 0, 0];
+  if (R.length !== 8 || new Set(R.map(r => r.a)).size !== 8) fail('contourmatch', 'rounds', 'there are not eight maps with eight different functions');
+  R.forEach((r, ri) => {
+    if (r.o.length !== 4 || new Set(r.o).size !== 4 || r.o.filter(o => o === r.a).length !== 1 || r.o.some(o => !FN[o])) fail('contourmatch', `map ${ri + 1}`, 'the four choices are not four functions with the answer once');
+    place[r.o.indexOf(r.a)]++;
+    // a fair map: some wrong choice draws the same kind of map, so the shape alone does not settle it
+    if (!r.o.some(o => o !== r.a && kindOf(FN[o][1]) === kindOf(FN[r.a][1]))) fail('contourmatch', `map ${ri + 1}`, 'no wrong choice draws the same kind of map as the answer');
+  });
+  if (place.join() !== '2,2,2,2') fail('contourmatch', 'rounds', `the answer sits in the four places ${place.join()} times`);
+  if (S.ri !== 0 || S.solved || S.gone.size || S.done.size || S.touched || S.wins || S.streak) fail('contourmatch', 'open', 'the mode does not open on the first map with nothing picked');
+  // a drawn contour read back: every segment end sits on f = c, inside the frame
+  const PXi = X => (X - 150) / 40, PYi = Y => (130 - Y) / 40;
+  const ends = d => [...d.matchAll(/[ML](-?[\d.]+) (-?[\d.]+)/g)].map(m => [PXi(+m[1]), PYi(+m[2])]);
+  let segs = 0;
+  const readPath = (d, f, c, key, what) => {
+    const e = ends(d);
+    if (!e.length || e.length % 2) { fail('contourmatch', key, `${what} at level ${c} is not drawn`); return e; }
+    const bad = e.find(([x, y]) => Math.abs(x) > 3.001 || Math.abs(y) > 3.001 || Math.abs(f(x, y) - c) > 0.12);
+    if (bad) fail('contourmatch', key, `${what} at level ${c} strays to (${bad[0].toFixed(2)}, ${bad[1].toFixed(2)}), where f is ${f(...bad).toFixed(3)}`);
+    segs += e.length / 2;
+    return e;
+  };
+  const near = (e, p) => Math.min(...e.map(([x, y]) => Math.hypot(x - p[0], y - p[1])));
+  const readMap = (svg, id, key) => {
+    const [, f, lv] = FN[id], ps = [...svg.matchAll(/<path data-k="lv" data-c="(-?\d+)" d="([^"]*)"/g)];
+    if (ps.map(m => +m[1]).join() !== lv.join()) fail('contourmatch', key, `the levels drawn are ${ps.map(m => m[1]).join()}`);
+    for (const m of ps) {
+      const e = readPath(m[2], f, +m[1], key, 'the contour');
+      // each grid point on this level has the contour pass through it
+      const on = G.filter(p => f(...p) === +m[1]);
+      if (on.some(p => near(e, p) > 0.15)) fail('contourmatch', key, `the contour at level ${m[1]} misses a point where f is ${m[1]}`);
+    }
+  };
+  // the pair a wrong pick is caught at, found again from the plain functions
+  const PTS = [[1, 0], [0, 1], [1, 1], [2, 0], [0, 2], [2, 1], [1, 2], [-1, 0], [0, -1], [-1, 1], [1, -1], [2, 2], [-2, 0], [0, -2]];
+  const NEAR = G.slice().sort((p, q) => (Math.abs(p[0]) + Math.abs(p[1])) - (Math.abs(q[0]) + Math.abs(q[1])) || p[0] - q[0] || p[1] - q[1]);
+  // the wrong function must climb at the first point (else its contour there is a lone point or flat),
+  // and its contour must clear the second point by at least 0.4: the gap in value over the steepness
+  const steep = (f, [x, y]) => { const e = 1e-4; return Math.hypot(f(x + e, y) - f(x - e, y), f(x, y + e) - f(x, y - e)) / (2 * e); };
+  const pairOf = (a, w) => { const [, A, lv] = FN[a], W = w && FN[w][1];
+    for (const P of PTS) { const c = A(...P); if (!lv.includes(c) || (W && steep(W, P) < 0.01)) continue;
+      for (const Q of NEAR) if ((Q[0] !== P[0] || Q[1] !== P[1]) && A(...Q) === c && (!W || Math.abs(W(...Q) - W(...P)) >= 0.4 * steep(W, Q))) return [P, Q]; }
+    return null; };
+  const RULE = 'Each curve joins the points where f takes one value, like the lines on a hill walker’s map. So two points on the same curve must give the same f. Rings mean f has a lowest or highest point inside them; curves that cross mean a saddle; lines that never close mean f keeps on rising one way.';
+  let rounds = 0, misses = 0;
+  const reset = () => { S.ri = 0; S.gone = new Set(); S.last = null; S.solved = false; S.streak = 0; S.wins = 0; S.touched = false; S.done = new Set(); S.kinds = new Set(); S.caught = false; env.toasts = []; env.banners = []; };
+  R.forEach((r, ri) => {
+    const key = `map ${ri + 1}`, [As, Af] = FN[r.a];
+    for (let miss = 0; miss <= 3; miss++) {
+      reset(); S.ri = ri;
+      let h = S.html();
+      if (!h.startsWith(`<div class="small" style="margin:2px 0 6px">Map ${ri + 1} of 8. Which f(x, y) drew this contour map?</div>`)) fail('contourmatch', key, 'the question is not asked');
+      if (S.working().join(' | ') !== RULE + ' | 0 matched on the first try this visit.') fail('contourmatch', key, `before a pick the readout is ${S.working().join(' | ')}`);
+      if (miss === 0) readMap(S.svg(), r.a, key);
+      const wrongs = r.o.map((o, i) => i).filter(i => r.o[i] !== r.a).slice(0, miss);
+      for (const i of wrongs) {
+        S.choose(i); misses++;
+        const [Ws, Wf] = FN[r.o[i]], pq = pairOf(r.a, r.o[i]);
+        if (!pq) { fail('contourmatch', key, `no two points on one contour tell ${Ws} apart`); continue; }
+        const [P, Q] = pq;
+        if (Af(...P) !== Af(...Q) || Wf(...P) === Wf(...Q)) fail('contourmatch', key, `the pair for ${Ws} does not catch it`);
+        const w = S.working();
+        if (w[0] !== `${'ABCD'[i]}, f = ${Ws}, is not it: ${pt(P)} and ${pt(Q)} sit on the same contour here, but it gives ${ng(Wf(...P))} at one and ${ng(Wf(...Q))} at the other. Its own contour through ${pt(P)} is drawn in blue, and misses ${pt(Q)}.`) fail('contourmatch', key, `a wrong ${Ws} is not caught: ${w[0]}`);
+        const svg = S.svg(), wr = svg.match(/<path data-k="wrong" data-c="(-?\d+)" d="([^"]*)"/);
+        const cp = svg.match(/data-k="p" cx="([-\d.]+)" cy="([-\d.]+)"/), cq = svg.match(/data-k="q" cx="([-\d.]+)" cy="([-\d.]+)"/);
+        if (!cp || Math.abs(PXi(+cp[1]) - P[0]) > 1e-6 || Math.abs(PYi(+cp[2]) - P[1]) > 1e-6 || !cq || Math.abs(PXi(+cq[1]) - Q[0]) > 1e-6 || Math.abs(PYi(+cq[2]) - Q[1]) > 1e-6) fail('contourmatch', key, `the two points are not ringed at ${pt(P)} and ${pt(Q)}`);
+        if (!wr || +wr[1] !== Wf(...P)) fail('contourmatch', key, `${Ws}’s own contour is not drawn at its value at ${pt(P)}`);
+        else { const e = readPath(wr[2], Wf, +wr[1], key, `${Ws}’s own contour`);
+          if (near(e, P) > 0.15) fail('contourmatch', key, `${Ws}’s own contour does not pass through ${pt(P)}`);
+          if (near(e, Q) < 0.3) fail('contourmatch', key, `${Ws}’s own contour reaches ${pt(Q)} after all`); }
+        h = S.html();
+        const b = h.match(new RegExp(`data-opt="${'ABCD'[i]}" ([^>]*)aria-label="([^"]+)"`));
+        if (!b || !/disabled/.test(b[1]) || b[2] !== `${'ABCD'[i]}: f = ${Ws}. Not this map`) fail('contourmatch', key, `the wrong ${Ws} is not shut`);
+        const was = env.renders; S.choose(i);
+        if (S.gone.size !== wrongs.indexOf(i) + 1 || env.renders !== was) fail('contourmatch', key, 'a shut choice can be picked again');
+        if (h.includes('id="cmapNext"')) fail('contourmatch', key, 'Next is offered before the map is matched');
+      }
+      S.next(); if (S.ri !== ri) fail('contourmatch', key, 'Next moves on before the map is matched');
+      S.choose(r.o.indexOf(r.a)); rounds++;
+      const [P, Q] = pairOf(r.a, null);
+      const want = [`Yes, this map is f = ${As}.`, `Its contours are ${S.FNS[r.a].sh}.`, `${pt(P)} and ${pt(Q)} both give f = ${ng(Af(...P))}, so they sit on the same contour.`, `${miss ? 0 : 1} matched on the first try this visit.`];
+      if (Af(...P) !== Af(...Q) || !FN[r.a][2].includes(Af(...P))) fail('contourmatch', key, 'the two points named are not on one drawn contour');
+      const w = S.working();
+      if (w.join(' | ') !== want.join(' | ')) fail('contourmatch', key, `after a match the readout is ${w.join(' | ')}`);
+      const svg = S.svg();
+      if (/data-k="(wrong|p|q)"/.test(svg)) fail('contourmatch', key, 'the wrong contour is still drawn after the match');
+      if (!svg.includes(`, drawn by f = ${As}">`)) fail('contourmatch', key, 'the drawing is not named once matched');
+      h = S.html();
+      if (!h.includes('id="cmapNext"') || (h.match(/smOpt[^"]*" data-opt="[ABCD]" disabled /g) || []).length !== 4) fail('contourmatch', key, 'once matched, Next is not offered or a choice is still open');
+      if (!h.includes(`aria-label="${'ABCD'[r.o.indexOf(r.a)]}: f = ${As}. This map"`)) fail('contourmatch', key, 'the match is not named on its button');
+      S.next();
+      if (S.ri !== (ri + 1) % 8 || S.solved || S.gone.size || S.last !== null) fail('contourmatch', key, 'Next does not deal the next map fresh');
+    }
+  });
+  // the hunt, played as a player would: a miss, then first tries round the maps
+  reset(); S.html();
+  if (S.done.size) fail('contourmatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = miss => { const r = S.R(); if (miss) { S.choose(r.o.findIndex(o => o !== r.a)); S.html(); } S.choose(r.o.indexOf(r.a)); S.html(); S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'catch,ring'], [false, 'catch,cross,one,ring'], [false, 'catch,cross,one,open,ring'], [false, 'catch,cross,one,open,ring,three']];
+  plan.forEach(([miss, want], i) => { const got = play(miss); if (got !== want) fail('contourmatch', 'hunt', `map ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Caught a wrong function at two points | ✓ Read a map of rings | ✓ Matched on the first try · Read a saddle | ✓ Read a map that never closes') fail('contourmatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MAP READER / every contour read') fail('contourmatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (S.streak !== 3 || S.wins !== 3) fail('contourmatch', 'hunt', `the run is counted as ${S.streak} in a row and ${S.wins} first tries`);
+  if (!S.working().join(' | ').endsWith('3 matched on the first try this visit, 3 in a row.')) fail('contourmatch', 'hunt', `the count reads ${S.working().join(' | ')}`);
+  reset();
+  return { rounds, misses, segs };
 })();
 
 /* Which c? The chord workshop turned round. Every number is read back off
@@ -18505,6 +18653,7 @@ console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString()
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
+console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
 console.log(`  chord picks       ${pad(chordPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the chord workshop, every number worked again from the curve and the interval alone and checked against the slip it is named as, the right one alone giving a tangent as steep as the chord strictly inside [a, b] in floats; ${chordPickNotes.misses.toLocaleString()} wrong picks explained and checked by putting them into f′, and no check ever naming c)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);

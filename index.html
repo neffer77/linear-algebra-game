@@ -1121,7 +1121,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ DOWNHILL WORKSHOP ============ -->
   <div class="screen" id="s-descent">
     <div class="panel"><h2>⛰️ Downhill Workshop</h2><div class="sub">f(x, y) = (x − 1)² + 2(y + 1)² is a valley with its bottom at (1, −1). The gradient ∇f points straight uphill, so a step against it, of size η, heads down. Pick η and walk: too small crawls, too big overshoots.</div></div>
-    <div id="gdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk by hand or pick where a step lands"></div>
+    <div id="gdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk by hand, pick where a step lands, or match a contour map"></div>
     <div class="panel">
       <div id="dhBox"></div>
       <div id="gdEtas" class="wsModes" role="group" aria-label="Step size"></div>
@@ -15712,7 +15712,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⛰️ Downhill Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be. Then turn it round: see a valley, a start and a step size, and pick which of four numbers one step lands on.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Where the two subjects meet: walk down a valley against its gradient, one step at a time, and find out how big a step should be. Then turn it round: see a valley, a start and a step size, and pick which of four numbers one step lands on. Or read a contour map from above and pick which of four functions drew it.</div>
          <button class="btn sm" id="tomeDescent" style="width:auto;margin-top:8px" onclick="Descent.open()">Open the downhill workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -19264,6 +19264,161 @@ const DescentPick = {
   }
 };
 
+/* ---------- Match the map: the downhill workshop's third mode ----------
+ * A contour map seen from above, and four functions f(x, y); one of them
+ * drew it. Each curve joins the points where f takes one value, so two
+ * points on the same contour must get the same f. A wrong pick is caught
+ * at two such points where it gives two different values, and its own
+ * contour through the first is drawn in blue, missing the second. The
+ * contours are traced cell by cell over a grid, so they are drawn from f
+ * itself. The maps come round in a fixed order: nothing is random, nothing
+ * is saved and there is no clock.
+ */
+const ContourMatch = {
+  FNS:{
+    bowl:   {s:'x² + y²',      k:'ring',  sh:'circles round (0, 0)',                                   lv:[1,2,4,6,9],       f:(x,y)=>x*x+y*y},
+    wide:   {s:'x² + 4y²',     k:'ring',  sh:'ovals round (0, 0), twice as wide as they are tall',     lv:[1,4,9],           f:(x,y)=>x*x+4*y*y},
+    tall:   {s:'4x² + y²',     k:'ring',  sh:'ovals round (0, 0), twice as tall as they are wide',     lv:[1,4,9],           f:(x,y)=>4*x*x+y*y},
+    shift:  {s:'x² − 2x + y²', k:'ring',  sh:'circles round (1, 0)',                                   lv:[0,1,3,8],         f:(x,y)=>x*x-2*x+y*y},
+    saddle: {s:'x² − y²',      k:'cross', sh:'curves that bend away from (0, 0), with the lines y = x and y = −x crossing there at level 0', lv:[-4,-1,0,1,4], f:(x,y)=>x*x-y*y},
+    twist:  {s:'xy',           k:'cross', sh:'curves that hug the axes, with the axes themselves crossing at (0, 0) at level 0', lv:[-4,-1,0,1,4], f:(x,y)=>x*y},
+    tilt:   {s:'x + y',        k:'open',  sh:'straight parallel lines, each falling 1 for each 1 across', lv:[-4,-2,0,2,4],     f:(x,y)=>x+y},
+    ramp:   {s:'x − 2y',       k:'open',  sh:'straight parallel lines, each rising 1 for each 2 across',  lv:[-4,-2,0,2,4],     f:(x,y)=>x-2*y},
+    trough: {s:'y − x²',       k:'open',  sh:'parabolas opening upward, the same shape stacked one above another', lv:[-6,-4,-2,0,2], f:(x,y)=>y-x*x},
+    valley: {s:'x²',           k:'open',  sh:'straight up-and-down lines, in pairs either side of x = 0', lv:[1,4],           f:(x,y)=>x*x}
+  },
+  ROUNDS:[
+    {a:'bowl',   o:['bowl','saddle','shift','tilt']},
+    {a:'saddle', o:['twist','bowl','saddle','valley']},
+    {a:'tilt',   o:['ramp','tilt','trough','twist']},
+    {a:'wide',   o:['tall','bowl','wide','saddle']},
+    {a:'trough', o:['valley','tilt','shift','trough']},
+    {a:'twist',  o:['twist','saddle','ramp','wide']},
+    {a:'valley', o:['trough','valley','tall','tilt']},
+    {a:'shift',  o:['bowl','trough','twist','shift']}
+  ],
+  /* the first point of a pair is tried in this order, the second in the
+     order of the grid points nearest (0, 0) */
+  PTS:[[1,0],[0,1],[1,1],[2,0],[0,2],[2,1],[1,2],[-1,0],[0,-1],[-1,1],[1,-1],[2,2],[-2,0],[0,-2]],
+  G:(()=>{ const g=[]; for(let x=-2;x<=2;x++) for(let y=-2;y<=2;y++) g.push([x,y]);
+    return g.sort((p,q)=>(Math.abs(p[0])+Math.abs(p[1]))-(Math.abs(q[0])+Math.abs(q[1])) || p[0]-q[0] || p[1]-q[1]); })(),
+  ri:0, gone:new Set(), last:null, solved:false, streak:0, wins:0, touched:false,
+  done:new Set(), kinds:new Set(), caught:false,
+  GOALS:[
+    {id:'one',   t:'Match a map on the first try.', toast:'Matched on the first try',
+     ok:M=>M.wins>=1},
+    {id:'ring',  t:'Match a map of closed rings, where f has a lowest point.', toast:'Read a map of rings',
+     ok:M=>M.kinds.has('ring')},
+    {id:'cross', t:'Match a map where two contours cross: a saddle.', toast:'Read a saddle',
+     ok:M=>M.kinds.has('cross')},
+    {id:'open',  t:'Match a map whose contours never close up.', toast:'Read a map that never closes',
+     ok:M=>M.kinds.has('open')},
+    {id:'catch', t:'Pick a wrong function and see two points on one contour that it pulls apart.', toast:'Caught a wrong function at two points',
+     ok:M=>M.caught},
+    {id:'three', t:'Match three maps in a row, each on the first try.', toast:'Three in a row',
+     ok:M=>M.streak>=3}
+  ],
+  R(){ return this.ROUNDS[this.ri]; },
+  F(id){ return this.FNS[id]; },
+  pt(p){ return `(${neg(p[0])}, ${neg(p[1])})`; },
+  /* how steeply f climbs at a point, measured by a small nudge each way */
+  steep(f,p){ const e=1e-4; return Math.hypot(f(p[0]+e,p[1])-f(p[0]-e,p[1]), f(p[0],p[1]+e)-f(p[0],p[1]-e))/(2*e); },
+  /* two points on one drawn contour of the answer that w gives different
+     values; with no w, the first two points on one drawn contour. w must
+     not be flat at the first point, so its contour there is a curve, and
+     its contour must pass well clear of the second, at least 0.4 away by
+     the gap in value over the steepness */
+  pair(w){
+    const A=this.F(this.R().a), W=w ? this.F(w).f : null;
+    for(const P of this.PTS){ const c=A.f(...P); if(!A.lv.includes(c) || (W && this.steep(W,P)<0.01)) continue;
+      for(const Q of this.G) if((Q[0]!==P[0] || Q[1]!==P[1]) && A.f(...Q)===c && (!W || Math.abs(W(...Q)-W(...P))>=0.4*this.steep(W,Q))) return [P,Q]; }
+    return null;
+  },
+  RULE:'Each curve joins the points where f takes one value, like the lines on a hill walker’s map. So two points on the same curve must give the same f. Rings mean f has a lowest or highest point inside them; curves that cross mean a saddle; lines that never close mean f keeps on rising one way.',
+  working(){
+    const R=this.R(), A=this.F(R.a), out=[];
+    if(this.solved){
+      const [P,Q]=this.pair(null);
+      out.push(`Yes, this map is f = ${A.s}.`);
+      out.push(`Its contours are ${A.sh}.`);
+      out.push(`${this.pt(P)} and ${this.pt(Q)} both give f = ${neg(A.f(...P))}, so they sit on the same contour.`);
+    } else if(this.last!==null){
+      const w=R.o[this.last], W=this.F(w), [P,Q]=this.pair(w);
+      out.push(`${'ABCD'[this.last]}, f = ${W.s}, is not it: ${this.pt(P)} and ${this.pt(Q)} sit on the same contour here, but it gives ${neg(W.f(...P))} at one and ${neg(W.f(...Q))} at the other. Its own contour through ${this.pt(P)} is drawn in blue, and misses ${this.pt(Q)}.`);
+    } else out.push(this.RULE);
+    out.push(`${this.wins} matched on the first try this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* x and y from −3 to 3, one scale both ways */
+  N:47, X:x=>150+x*40, Y:y=>130-y*40,
+  /* the contour f = c traced over the grid, cell by cell: where f crosses c
+     along a cell's side, the crossing is placed by straight-line share */
+  trace(f,c){
+    const N=this.N, h=6/N, fx=v=>v.toFixed(2), segs=[];
+    const v=[]; for(let i=0;i<=N;i++){ v.push([]); for(let j=0;j<=N;j++) v[i].push(f(-3+i*h,-3+j*h)-c); }
+    for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+      const C=[[i,j],[i+1,j],[i+1,j+1],[i,j+1]], pts=[];
+      for(let e=0;e<4;e++){ const [a,b]=[C[e],C[(e+1)%4]], p=v[a[0]][a[1]], q=v[b[0]][b[1]];
+        if((p<0)!==(q<0)){ const t=p/(p-q); pts.push([-3+(a[0]+t*(b[0]-a[0]))*h, -3+(a[1]+t*(b[1]-a[1]))*h]); } }
+      if(pts.length===2) segs.push([pts[0],pts[1]]);
+      else if(pts.length===4){
+        // a saddle inside the cell: pair the crossings by the value at its centre
+        const m=(v[i][j]+v[i+1][j]+v[i+1][j+1]+v[i][j+1])/4;
+        if((m<0)===(v[i][j]<0)) segs.push([pts[0],pts[1]],[pts[2],pts[3]]); else segs.push([pts[0],pts[3]],[pts[1],pts[2]]);
+      }
+    }
+    return segs.map(([p,q])=>`M${fx(this.X(p[0]))} ${fx(this.Y(p[1]))}L${fx(this.X(q[0]))} ${fx(this.Y(q[1]))}`).join('');
+  },
+  svg(){
+    const R=this.R(), A=this.F(R.a), f=v=>v.toFixed(2);
+    const odd=!this.solved && this.last!==null ? this.pair(R.o[this.last]) : null;
+    let out=`<svg viewBox="0 0 300 260" style="width:100%;height:auto;display:block" role="img" aria-label="A contour map for x and y from −3 to 3, map ${this.ri+1} of ${this.ROUNDS.length}${this.solved ? `, drawn by f = ${A.s}` : ''}${odd ? `, with the wrong function’s contour through ${this.pt(odd[0])}` : ''}">`;
+    out+=`<line data-k="xaxis" x1="30" y1="${f(this.Y(0))}" x2="270" y2="${f(this.Y(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${f(this.X(0))}" y1="10" x2="${f(this.X(0))}" y2="250" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(const c of A.lv) out+=`<path data-k="lv" data-c="${c}" d="${this.trace(A.f,c)}" fill="none" stroke="${this.solved?FIG_COL.b:FIG_COL.ink}" stroke-width="2" stroke-linecap="round"/>`;
+    if(odd){
+      const [P,Q]=odd, W=this.F(R.o[this.last]);
+      out+=`<path data-k="wrong" data-c="${W.f(...P)}" d="${this.trace(W.f,W.f(...P))}" fill="none" stroke="${FIG_COL.a}" stroke-width="3" stroke-linecap="round"/>`;
+      for(const [k,p] of [['p',P],['q',Q]]) out+=`<circle data-k="${k}" cx="${f(this.X(p[0]))}" cy="${f(this.Y(p[1]))}" r="6" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+    }
+    return out+`</svg>`;
+  },
+  choose(i){
+    if(this.solved || this.gone.has(i)) return;
+    const R=this.R(); this.touched=true;
+    if(R.o[i]===R.a){
+      this.solved=true; this.last=null;
+      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;
+      this.kinds.add(this.F(R.a).k);
+    } else { this.gone.add(i); this.last=i; this.caught=true; this.streak=0; }
+    Descent.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; Descent.render(); },
+  html(){
+    const R=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Map ${this.ri+1} of ${this.ROUNDS.length}. Which f(x, y) drew this contour map?</div>`;
+    out+=`<div id="cmapFig">${this.svg()}<div class="figcap">Seen from above: each curve joins the points where f takes one value, for x and y from −3 to 3.</div></div>`;
+    out+=`<div id="cmapPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+R.o.map((id,i)=>{
+      const gone=this.gone.has(i), right=this.solved && id===R.a, L='ABCD'[i], s=this.F(id).s;
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone||this.solved?'disabled ':''}onclick="ContourMatch.choose(${i})" aria-label="${L}: f = ${s}${gone?'. Not this map':right?'. This map':''}" style="margin:0"><b>${L}</b> f = ${s}</button>`;
+    }).join('')+`</div>`;
+    out+=`<div id="cmapRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    if(this.solved) out+=`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cmapNext" onclick="ContourMatch.next()" aria-label="Show the next contour map">Next map →</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="cmapGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cmapGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MAP READER','every contour read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ============ DOWNHILL WORKSHOP ============
    Where the two subjects meet: a valley f(x, y), its gradient as an arrow
    pointing straight uphill, and a walk against that arrow, one step of size η
@@ -19351,11 +19506,11 @@ const Descent = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('gdTab').innerHTML=[['hand','⛰️ Walk it by hand','Walk down the valley by hand, one step at a time'],['pick','🎯 Which step?','See a valley, a start and a step size, and pick which of four numbers one step lands on']]
+    document.getElementById('gdTab').innerHTML=[['hand','⛰️ Walk it by hand','Walk down the valley by hand, one step at a time'],['pick','🎯 Which step?','See a valley, a start and a step size, and pick which of four numbers one step lands on'],['map','🗺️ Match the map','See a contour map and pick which of four functions drew it']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Descent.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['gdEtas','gdFig','gdStepRow','gdRead','gdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('dhBox').innerHTML=pick ? DescentPick.html() : '';
+    document.getElementById('dhBox').innerHTML=this.tab==='pick' ? DescentPick.html() : this.tab==='map' ? ContourMatch.html() : '';
     if(pick) return;
     const atBottom=this.atBottom();
     document.getElementById('gdEtas').innerHTML=this.ETAS.map((e,i)=>
