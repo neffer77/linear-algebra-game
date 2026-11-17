@@ -746,7 +746,7 @@ let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: 
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
 let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
-let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
+let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, ny: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
 let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, lo: 0, hi: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the smallest and largest entries
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
@@ -1575,7 +1575,8 @@ Object.assign(ANALYSIS, {
     const st = w.match(/y′ = 0(, the (\d+)y′ term drops out,)? and (\d*)y = (-?\d+), giving y = (?:(-?\d+)\/(\d+) = )?(-?\d+(?:\/\d+)?)\./), end = w.match(/(?:=|at) (-?\d+(?:\/\d+)?)\.$/);
     if (!st || (a > 1) !== !!st[1] || (st[2] && +st[2] !== a) || (st[3] ? +st[3] : 1) !== b || +st[4] !== c || (st[5] && (+st[5] !== c || +st[6] !== b)) || Math.abs(val(st[7]) - L) > 1e-12 || !end || Math.abs(val(end[1]) - ansV) > 1e-12 || (k && !w.includes(`C = ${y0} - `)))
       fail('analysis', 'linODE', `the working does not set y′ = 0 and carry the steady value to the answer: ${w}`);
-    if (c < 0 || y0 < 0) loShape.neg = 1;
+    if (c < 0) loShape.neg = 1;
+    if (y0 < 0) loShape.ny = 1;
     loShape.a[a] = 1; loShape.ask[k] = 1; loShape.bmax = Math.max(loShape.bmax, b);
     covered.add('linODE');
   },
@@ -17793,7 +17794,7 @@ for (let d = 1; d <= 3; d++) {
 // come up about equally.
 for (let d = 1; d <= 3; d++) {
   const LO = 3000;
-  loWhole = 0; loSeen = new Set(); loShape = { neg: 0, a: {}, ask: {}, bmax: 0 };
+  loWhole = 0; loSeen = new Set(); loShape = { neg: 0, ny: 0, a: {}, ask: {}, bmax: 0 };
   for (let i = 0; i < LO; i++) {
     const p = GEN.linODE(d), vals = [p.a, ...p.d.map(x => x[0])]
       .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
@@ -17809,6 +17810,7 @@ for (let d = 1; d <= 3; d++) {
   if (loSeen.size !== 11) fail('analysis', 'linODE', `depth ${d} offers only ${loSeen.size} of its 11 slips`);
   if (Object.keys(loShape.ask).length !== 2) fail('analysis', 'linODE', `depth ${d} asks only one of its two questions`);
   if (!!loShape.neg !== (d > 1)) fail('analysis', 'linODE', `depth ${d} ${d > 1 ? 'never has' : 'has'} a negative number`);
+  if (!!loShape.ny !== (d > 1)) fail('analysis', 'linODE', `depth ${d} ${d > 1 ? 'never starts' : 'starts'} y below 0`);
   if (!!loShape.a[1] !== (d < 3) || Object.keys(loShape.a).length !== (d < 3 ? 1 : 3)) fail('analysis', 'linODE', `depth ${d} puts ${Object.keys(loShape.a).join(', ')} in front of y′`);
   if (loShape.bmax !== [4, 6, 9][d - 1]) fail('analysis', 'linODE', `depth ${d} reaches p = ${loShape.bmax}`);
   if (loWhole < LO * 0.42 || loWhole > LO * 0.58) fail('analysis', 'linODE', `depth ${d} gives a whole answer ${loWhole} times in ${LO}, not about half`);
