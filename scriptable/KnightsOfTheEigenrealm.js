@@ -4606,6 +4606,57 @@ radiusConv(d){
       ex:why};
   }
 },
+/* Parametric derivatives. A curve traced by x(t) and y(t): the chain rule
+   gives dy/dt = (dy/dx)(dx/dt), so dy/dx = (dy/dt)/(dx/dt) wherever dx/dt
+   is not 0. The first depth moves x along a line; the second makes x a
+   quadratic and y a cubic; the third adds every lower term and lets t go
+   negative. The wrong answers are the slips: the ratio turned upside down,
+   dy/dt taken for dy/dx, y over x instead of their rates, the power rule's
+   factor forgotten in both rates, and the two rates multiplied. */
+paramDeriv(d){
+  const F=(a,b=1)=>{ if(b<0){ a=-a; b=-b; } const g=gcd(a,b); return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const at=(P,t)=>P.reduce((s,[c,p])=>s+c*t**p,0);
+  const slack=P=>P.map(([c,p])=>[c,p-1]).filter(([c,p])=>p>=0 && c!==0);   // t^p read as t^(p−1), the factor p forgotten
+  const whole=R.chance(0.5);
+  const nz=(lo,hi)=>{ let v=0; while(!v) v=R.i(lo,hi); return v; };
+  for(let g=0;;g++){
+    let X, Y, t0;
+    if(d===1){ X=[[R.i(2,6),1],[R.i(-5,5),0]]; Y=[[nz(-4,4),2],[R.i(-6,6),1]]; t0=R.i(1,3); }
+    else if(d===2){ X=[[nz(-3,3),2],[R.i(-5,5),1]]; Y=[[nz(-3,3),3],[R.i(-6,6),1]]; t0=nz(-3,3); }
+    else { X=[[nz(-3,3),2],[R.i(-5,5),1],[R.i(-4,4),0]]; Y=[[nz(-2,2),3],[R.i(-4,4),2],[R.i(-6,6),1]]; t0=nz(-3,3); }
+    X=X.filter(([c])=>c!==0); Y=Y.filter(([c])=>c!==0);
+    const dX=dPoly(X), dY=dPoly(Y), Xv=at(dX,t0), Yv=at(dY,t0), xv=at(X,t0), yv=at(Y,t0);
+    if(!Xv || !Yv) continue;
+    const ans=F(Yv,Xv);
+    const Xs=at(slack(X),t0), Ys=at(slack(Y),t0);
+    const slips=[
+      [F(Xv,Yv),'that turns the ratio upside down: dy/dx is dy/dt over dx/dt, not dx/dt over dy/dt'],
+      [F(Yv),'that is dy/dt, how fast y changes with t; dy/dx divides it by dx/dt'],
+      ...(xv && yv ? [[F(yv,xv),'that is y over x, where the point is, not how it moves; dy/dx is the ratio of the rates dy/dt and dx/dt']] : []),
+      ...(Xs && Ys ? [[F(Ys,Xs),'that forgets the power rule\\'s factor in both rates: the derivative of tⁿ is n·tⁿ⁻¹']] : []),
+      [F(Yv*Xv),'that multiplies the two rates; the chain rule gives dy/dt = (dy/dx)(dx/dt), so dy/dx divides them']
+    ];
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(sl=>(sl[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const amt=n=>n<0?\`(\${neg(n)})\`:neg(n);
+    const why=\`dx/dt = \${poly(dX,'t')}, which is \${neg(Xv)} at t = \${neg(t0)}, and dy/dt = \${poly(dY,'t')}, which is \${neg(Yv)}. So dy/dx = (dy/dt)/(dx/dt) = \${neg(Yv)}/\${amt(Xv)} = \${show(ans)}.\`;
+    return {topic:'Parametric Derivatives',
+      codex:{rule:'For a curve traced by x(t) and y(t), the chain rule gives dy/dt = (dy/dx)(dx/dt), so dy/dx = (dy/dt)/(dx/dt) wherever dx/dt is not 0.',
+             eg:'x = t², y = t³ at t = 2: dx/dt = 4 and dy/dt = 12, so dy/dx = 12/4 = 3.'},
+      q:\`A curve is traced by x = \${poly(X,'t')} and y = \${poly(Y,'t')}. What is dy/dx at t = \${neg(t0)}?\`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:why};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -4970,7 +5021,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence', paramDeriv:'Parametric Derivatives'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4981,7 +5032,7 @@ const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm','cramer','detRules']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
-  ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
+  ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff','paramDeriv']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv']]
@@ -5014,7 +5065,7 @@ const WORKSHOP_FOR = (() => {
     Cistern: ["💧 Cistern Workshop", ['defPoly']],
     Geo:     ["🧮 Geometric Series Workshop", ['geoSeries','radiusConv']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
-    Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
+    Chain:   ["⛓️ Chain Rule Workshop", ['chainRule','paramDeriv']],
     Parts:   ["✂️ Parts Workshop", ['byParts']],
     Cover:   ["🙈 Cover-up Workshop", ['partialFrac']],
     Slice:   ["🍞 Slice Workshop", ['doubleInt']],
@@ -5575,7 +5626,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson','paramDeriv'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},

@@ -745,6 +745,7 @@ let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how oft
 let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
+let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
@@ -1436,6 +1437,48 @@ Object.assign(ANALYSIS, {
     rcShape.p[pw] = 1; rcShape.m[m] = 1; rcShape.a[a] = 1;
     covered.add('radiusConv');
   },
+  // Parametric derivatives, worked again here by a central difference on the
+  // curve itself, dy/dx ≈ (y(t + h) − y(t − h))/(x(t + h) − x(t − h)), never by
+  // differentiating. Each wrong answer is worked again as the slip it names.
+  paramDeriv: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const q = fl(p.q).match(/^A curve is traced by x = (.+) and y = (.+)\. What is dy\/dx at t = (-?\d+)\?$/);
+    if (!q) { fail('analysis', 'paramDeriv', `the question does not read as a curve in t: ${fl(p.q)}`); return; }
+    const SP = { '': 1, '²': 2, '³': 3 };
+    const parse = s => s.replace(/ - /g, ' + -').split(' + ').map(tm => {
+      const m = tm.match(/^(-?)(\d*)(t?)([²³]?)$/);
+      if (!m) return null;
+      return [(m[1] ? -1 : 1) * (m[2] ? +m[2] : 1), m[3] ? SP[m[4]] : 0];
+    });
+    const X = parse(q[1]), Y = parse(q[2]), t = +q[3];
+    if (X.includes(null) || Y.includes(null)) { fail('analysis', 'paramDeriv', `a polynomial in t does not read: ${fl(p.q)}`); return; }
+    const at = (P, v) => P.reduce((s, [c, k]) => s + c * v ** k, 0);
+    const h = 1e-5, rate = P => (at(P, t + h) - at(P, t - h)) / (2 * h);
+    const xr = rate(X), yr = rate(Y);
+    valueCheck('paramDeriv', yr / xr, p.a, 1e-6);
+    const lazy = P => at(P.map(([c, k]) => [c, k - 1]).filter(([c, k]) => k >= 0), t);
+    const slip = [[/^that turns the ratio upside down/, xr / yr], [/^that is dy\/dt/, yr], [/^that is y over x/, at(Y, t) / at(X, t)],
+      [/^that forgets the power rule's factor/, lazy(Y) / lazy(X)], [/^that multiplies the two rates/, xr * yr]];
+    const w = fl(p.ex);
+    const wr = w.match(/^dx\/dt = (.+), which is (-?\d+) at t = (-?\d+), and dy\/dt = (.+), which is (-?\d+)\. So dy\/dx = \(dy\/dt\)\/\(dx\/dt\) = (-?\d+)\/\(?(-?\d+)\)? = (-?\d+(?:\/\d+)?)\.$/);
+    if (!wr || Math.abs(+wr[2] - xr) > 1e-6 || +wr[3] !== t || Math.abs(+wr[5] - yr) > 1e-6 || +wr[6] !== +wr[5] || +wr[7] !== +wr[2] || Math.abs(val(wr[8]) - yr / xr) > 1e-6)
+      fail('analysis', 'paramDeriv', `the working does not take the two rates to dy/dx: ${w}`);
+    else {
+      const dX = parse(wr[1]), dY = parse(wr[4]);
+      if (dX.includes(null) || dY.includes(null) || [-1.5, 0.5, 2].some(v => Math.abs(at(dX, v) - (at(X, v + h) - at(X, v - h)) / (2 * h)) > 1e-5 || Math.abs(at(dY, v) - (at(Y, v + h) - at(Y, v - h)) / (2 * h)) > 1e-5))
+        fail('analysis', 'paramDeriv', `the working's dx/dt or dy/dt is not the derivative: ${w}`);
+    }
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'paramDeriv', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6) fail('analysis', 'paramDeriv', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      pdSeen.add(String(sl[0]));
+    });
+    pdShape.x[Math.max(...X.map(e => e[1]))] = 1; pdShape.y[Math.max(...Y.map(e => e[1]))] = 1; pdShape.t[t] = 1;
+    covered.add('paramDeriv');
+  },
   // Determinant rules, worked again here on actual matrices: an A and a B are
   // built with the stated determinants (a diagonal scaled, then mixed by
   // matrices of determinant 1), the expression is multiplied out, transposed
@@ -1807,7 +1850,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 84, sig: 0x1067 };
+  const PINNED = { count: 85, sig: 0x9882 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -17450,6 +17493,35 @@ for (let d = 1; d <= 3; d++) {
   if (as !== '-4,-3,-2,-1,1,2,3,4,5') fail('analysis', 'radiusConv', `depth ${d} centres its series only at ${as}`);
   if (rcSeen.size !== (d === 3 ? 5 : 4)) fail('analysis', 'radiusConv', `depth ${d} offers only ${rcSeen.size} of its slips`);
   if (rcWhole < RC * 0.42 || rcWhole > RC * 0.58) fail('analysis', 'radiusConv', `depth ${d} gives a whole answer ${rcWhole} times in ${RC}, not about half`);
+}
+
+// Parametric derivatives at every depth: five different exact numbers, none
+// 0, two of the four wrong ones sharing the answer's sign and two its form;
+// every slip turns up; x is a line, then a quadratic; y a quadratic, then a
+// cubic; t goes negative from the second depth; and whole and fractional
+// answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const PD = 3000;
+  pdWhole = 0; pdSeen = new Set(); pdShape = { x: {}, y: {}, t: {} };
+  for (let i = 0; i < PD; i++) {
+    const p = GEN.paramDeriv(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'paramDeriv', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'paramDeriv', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const pos = v => !v.startsWith('-'), whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => pos(v) === pos(vals[0])).length < 2) fail('analysis', 'paramDeriv', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'paramDeriv', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'paramDeriv', `a number runs too long: ${vals.join(', ')}`);
+    if (whole(vals[0])) pdWhole++;
+    ANALYSIS.paramDeriv(p);
+  }
+  const xs = Object.keys(pdShape.x).sort().join(), ys = Object.keys(pdShape.y).sort().join();
+  if (xs !== (d === 1 ? '1' : '2')) fail('analysis', 'paramDeriv', `depth ${d} makes x of degree ${xs}`);
+  if (ys !== (d === 1 ? '2' : '3')) fail('analysis', 'paramDeriv', `depth ${d} makes y of degree ${ys}`);
+  const ts = Object.keys(pdShape.t).map(Number).sort((a, b) => a - b).join();
+  if (ts !== (d === 1 ? '1,2,3' : '-3,-2,-1,1,2,3')) fail('analysis', 'paramDeriv', `depth ${d} asks only at t = ${ts}`);
+  if (pdSeen.size !== 5) fail('analysis', 'paramDeriv', `depth ${d} offers only ${pdSeen.size} of its slips`);
+  if (pdWhole < PD * 0.42 || pdWhole > PD * 0.58) fail('analysis', 'paramDeriv', `depth ${d} gives a whole answer ${pdWhole} times in ${PD}, not about half`);
 }
 
 // Determinant rules at every depth: five different exact numbers, none 0,

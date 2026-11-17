@@ -1,88 +1,74 @@
 {
-  "change": "Add a Cramer's rule mode to the elimination workshop: find each unknown as a ratio of two areas.",
+  "change": "Add parametric derivatives as a fight topic: dy/dx = (dy/dt)/(dx/dt) for a curve x(t), y(t).",
   "mutations": [
     {
-      "name": "b put in the wrong column",
+      "name": "the ratio upside down",
       "file": "index.html",
-      "find": "Mk(k){ const A=this.sys().A, b=this.B(); return A.map((r,i)=>r.map((v,j)=>j===k ? b[i] : v)); },",
-      "replace": "Mk(k){ const A=this.sys().A, b=this.B(); return A.map((r,i)=>r.map((v,j)=>k!==null&&j===1-k ? b[i] : v)); },",
+      "find": "const ans=F(Yv,Xv);",
+      "replace": "const ans=F(Xv,Yv);",
       "run": "verify"
     },
     {
-      "name": "det with the wrong sign on the cross term",
+      "name": "dx/dt worked from y",
       "file": "index.html",
-      "find": "d2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],",
-      "replace": "d2:M=>M[0][0]*M[1][1]+M[0][1]*M[1][0],",
+      "find": "const dX=dPoly(X), dY=dPoly(Y),",
+      "replace": "const dX=dPoly(Y), dY=dPoly(Y),",
       "run": "verify"
     },
     {
-      "name": "the ratio turned upside down",
+      "name": "the slip named upside down is dy/dt",
       "file": "index.html",
-      "find": "= ${neg(Dk)}/${this.amt(D)} = ${this.fs(Dk,D)}.`",
-      "replace": "= ${neg(Dk)}/${this.amt(D)} = ${this.fs(D,Dk)}.`",
+      "find": "[F(Xv,Yv),'that turns the ratio upside down",
+      "replace": "[F(Yv),'that turns the ratio upside down",
       "run": "verify"
     },
     {
-      "name": "rows read as columns",
+      "name": "the product slip divides",
       "file": "index.html",
-      "find": "cols(){ const A=this.sys().A; return [[A[0][0],A[1][0]],[A[0][1],A[1][1]]]; },",
-      "replace": "cols(){ const A=this.sys().A; return [[A[0][0],A[0][1]],[A[1][0],A[1][1]]]; },",
+      "find": "[F(Yv*Xv),'that multiplies the two rates",
+      "replace": "[F(Yv,Xv*Xv),'that multiplies the two rates",
       "run": "verify"
     },
     {
-      "name": "a flat A said to have no solution either way",
+      "name": "y over x read as x over y",
       "file": "index.html",
-      "find": "(this.Dk(0)||this.Dk(1) ? ' Here b is off",
-      "replace": "(true ? ' Here b is off",
+      "find": "[[F(yv,xv),'that is y over x",
+      "replace": "[[F(xv,yv),'that is y over x",
       "run": "verify"
     },
     {
-      "name": "a negative x never dashed",
+      "name": "the power rule slip keeps the factor",
       "file": "index.html",
-      "find": "${this.d2(this.Mk(k))*this.D()<0?' stroke-dasharray=\"5 3\"':''}",
-      "replace": "${this.d2(this.Mk(k))*this.D()<-99?' stroke-dasharray=\"5 3\"':''}",
+      "find": "const slack=P=>P.map(([c,p])=>[c,p-1])",
+      "replace": "const slack=P=>P.map(([c,p])=>[c*p,p-1])",
       "run": "verify"
     },
     {
-      "name": "the gold parallelogram drawn on the wrong columns",
+      "name": "t never negative",
       "file": "index.html",
-      "find": "const gc=k===null ? null : k===0 ? [b,a2] : [a1,b];",
-      "replace": "const gc=k===null ? null : k===0 ? [b,a1] : [a2,b];",
+      "find": "t0=nz(-3,3); }\n    else {",
+      "replace": "t0=R.i(1,3); }\n    else {",
       "run": "verify"
     },
     {
-      "name": "the stepper goes past 12",
+      "name": "x a line at every depth",
       "file": "index.html",
-      "find": "const b=this.B(), v=b[i]+by; if(v<this.LO||v>this.HI) return;",
-      "replace": "const b=this.B(), v=b[i]+by; if(v<this.LO||v>this.HI+1) return;",
+      "find": "else if(d===2){ X=[[nz(-3,3),2],[R.i(-5,5),1]];",
+      "replace": "else if(d===2){ X=[[nz(-3,3),1],[R.i(-5,5),0]];",
       "run": "verify"
     },
     {
-      "name": "the check uses the wrong row",
+      "name": "always a whole answer",
       "file": "index.html",
-      "find": "= ${neg(b[i])}`).join(' and ')}, both equations.`",
-      "replace": "= ${neg(b[1-i])}`).join(' and ')}, both equations.`",
+      "find": "(ans[1]===1)!==whole) && g<3000) continue;\n    const amt=n=>n<0?`(${neg(n)})`:neg(n);\n    const why=`dx/dt",
+      "replace": "(ans[1]!==1)) && g<3000) continue;\n    const amt=n=>n<0?`(${neg(n)})`:neg(n);\n    const why=`dx/dt",
       "run": "verify"
     },
     {
-      "name": "an unknown never noted as found",
+      "name": "the working shows dy/dt as dx/dt",
       "file": "index.html",
-      "find": "note(){ if(this.col===null || !this.D()) return;",
-      "replace": "note(){ return;",
-      "run": "verify"
-    },
-    {
-      "name": "the zero goal met without x = 0",
-      "file": "index.html",
-      "find": "ok:K=>K.col===0 && K.D()!==0 && K.Dk(0)===0}",
-      "replace": "ok:K=>K.col===0 && K.D()!==0}",
-      "run": "verify"
-    },
-    {
-      "name": "a flat system lets x be divided out",
-      "file": "index.html",
-      "find": "if(!D){ out.push(`With b in column",
-      "replace": "if(false){ out.push(`With b in column",
+      "find": "which is ${neg(Xv)} at t = ${neg(t0)}, and dy/dt = ${poly(dY,'t')}, which is ${neg(Yv)}.",
+      "replace": "which is ${neg(Xv)} at t = ${neg(t0)}, and dy/dt = ${poly(dY,'t')}, which is ${neg(Xv)}.",
       "run": "verify"
     }
   ]
