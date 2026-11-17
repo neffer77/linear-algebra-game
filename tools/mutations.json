@@ -1,110 +1,110 @@
 {
-  "change": "Add a Sketch the total mode to the cistern workshop",
+  "change": "Add a Read the shape mode to the bend workshop",
   "mutations": [
     {
-      "name": "a total is taken as the flow at that hour",
+      "name": "rises or falls is read from f″",
       "file": "index.html",
-      "find": "this.marks=this.TS.map((t,i)=>this.vals[i]===this.F(t));",
-      "replace": "this.marks=this.TS.map((t,i)=>this.vals[i]===this.f(t));",
+      "find": "sgo(i){ const C=this.C(); return Math.sign(this.r(C.d1(",
+      "replace": "sgo(i){ const C=this.C(); return Math.sign(this.r(C.d2(",
       "run": "verify"
     },
     {
-      "name": "an hour's area is the flow at its end",
+      "name": "cup and cap are swapped",
       "file": "index.html",
-      "find": "area(k){ return this.F(k)-this.F(k-1); },",
-      "replace": "area(k){ return this.f(k); },",
+      "find": "return Math.sign(this.r(C.d2(C.xs[i])));",
+      "replace": "return -Math.sign(this.r(C.d2(C.xs[i])));",
       "run": "verify"
     },
     {
-      "name": "a spring's total forgets the half",
+      "name": "the check marks only rises or falls",
       "file": "index.html",
-      "find": "F(t){ const W=this.W(); return W.a*t+W.b*t*t/2; },",
-      "replace": "F(t){ const W=this.W(); return W.a*t+W.b*t*t; },",
+      "find": "this.marks=[0,1,2,3].map(i=>this.go[i]===this.sgo(i) && this.bd[i]===this.sbd(i));",
+      "replace": "this.marks=[0,1,2,3].map(i=>this.go[i]===this.sgo(i));",
       "run": "verify"
     },
     {
-      "name": "a minus area is added as a minus",
+      "name": "the check opens with only the slopes set",
       "file": "index.html",
-      "find": "plus(p,q){ return q<0 ? `${neg(p)} − ${-q}` : `${neg(p)} + ${q}`; },",
-      "replace": "plus(p,q){ return `${neg(p)} + ${neg(q)}`; },",
+      "find": "ready(){ return this.go.every(v=>v!==null) && this.bd.every(v=>v!==null); }",
+      "replace": "ready(){ return this.go.every(v=>v!==null); }",
       "run": "verify"
     },
     {
-      "name": "a peak is called the lowest point",
+      "name": "a fix is counted as a first check",
       "file": "index.html",
-      "find": "so the cistern is fullest there,",
-      "replace": "so the cistern is lowest there,",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      this.kinds.add(this.C().kind);",
+      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      this.kinds.add(this.C().kind);",
       "run": "verify"
     },
     {
-      "name": "the turn is read off the wrong side",
+      "name": "a ring is kept after the point changes",
       "file": "index.html",
-      "find": "turn(){ const W=this.W(); return W.b ? this.r(-W.a/W.b) : null; },",
-      "replace": "turn(){ const W=this.W(); return W.b ? this.r(W.a/W.b) : null; },",
+      "find": "if(this.marks) this.marks[i]=null;\n    Bend.render();",
+      "replace": "Bend.render();",
       "run": "verify"
     },
     {
-      "name": "the area below the axis is shaded gold",
+      "name": "the tangent takes the colour of the slope",
       "file": "index.html",
-      "find": "fill=\"${up?FIG_COL.b:FIG_COL.d}\" fill-opacity",
-      "replace": "fill=\"${FIG_COL.b}\" fill-opacity",
+      "find": "stroke=\"${C.d2(x)>0?FIG_COL.c:FIG_COL.d}\"",
+      "replace": "stroke=\"${C.d1(x)>0?FIG_COL.c:FIG_COL.d}\"",
       "run": "verify"
     },
     {
-      "name": "the shade is not split where f crosses 0",
+      "name": "the tangent slopes the wrong way",
       "file": "index.html",
-      "find": "cuts=[a, ...(z!==null && z>a && z<k ? [z] : []), k];",
-      "replace": "cuts=[a, k];",
+      "find": "y1=\"${f(PY(y-s*h))}\" x2=\"${f(b)}\" y2=\"${f(PY(y+s*h))}\"",
+      "replace": "y1=\"${f(PY(y+s*h))}\" x2=\"${f(b)}\" y2=\"${f(PY(y-s*h))}\"",
       "run": "verify"
     },
     {
-      "name": "the check opens with a total unset",
+      "name": "the working says rises where it bends up",
       "file": "index.html",
-      "find": "ready(){ return this.vals.every(v=>v!==null); },\n  check(){\n    if(this.solved || !this.ready()) return;\n    const W=this.W();",
-      "replace": "ready(){ return this.vals.some(v=>v!==null); },\n  check(){\n    if(this.solved || !this.ready()) return;\n    const W=this.W();",
+      "find": "so the curve ${s>0?'rises':'falls'}",
+      "replace": "so the curve ${c>0?'rises':'falls'}",
       "run": "verify"
     },
     {
-      "name": "a fix counts as a first check",
+      "name": "the working tells the player the right answer as theirs",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      this.kinds.add(W.kind);",
-      "replace": "this.wins++; this.streak++;\n      this.kinds.add(W.kind);",
+      "find": "You had it ${this.goW(this.go[i])}",
+      "replace": "You had it ${this.goW(this.sgo(i))}",
       "run": "verify"
     },
     {
-      "name": "changing a ringed total keeps its ring",
+      "name": "the climbing cap is named at the wrong point",
       "file": "index.html",
-      "find": "    if(this.marks) this.marks[i]=null;\n    Cistern.render();",
-      "replace": "    Cistern.render();",
+      "find": "At ${this.first(1,-1)} the curve climbs",
+      "replace": "At ${this.first(1,1)} the curve climbs",
       "run": "verify"
     },
     {
-      "name": "a total runs past 8",
+      "name": "Next keeps the answers",
       "file": "index.html",
-      "find": "if(v<this.LO || v>this.HI) return;\n    this.vals[i]=v; this.sel=i; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cistern.render();",
-      "replace": "if(v<this.LO || v>this.HI+1) return;\n    this.vals[i]=v; this.sel=i; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cistern.render();",
+      "find": "this.go=[null,null,null,null]; this.bd=[null,null,null,null]; this.marks=null;",
+      "replace": "this.bd=[null,null,null,null]; this.marks=null;",
       "run": "verify"
     },
     {
-      "name": "Next keeps the old totals",
+      "name": "a button sets the opposite answer",
       "file": "index.html",
-      "find": "this.fi=(this.fi+1)%this.FLOWS.length; this.vals=[null,null,null,null];",
-      "replace": "this.fi=(this.fi+1)%this.FLOWS.length;",
+      "find": "onclick=\"ShapeRead.set(${i},'${part}',${v})\"",
+      "replace": "onclick=\"ShapeRead.set(${i},'${part}',${-v})\"",
       "run": "verify"
     },
     {
-      "name": "the sketch mode is not offered",
+      "name": "the mode's tab is gone",
       "file": "index.html",
-      "find": ",['sketch','✏️ Sketch the total','See a spring’s flow and set the total at the end of each hour to draw F yourself']]",
+      "find": ",['shape','🧭 Read the shape','See a curve with four points, and say at each whether it rises or falls and bends like a cup or a cap']]",
       "replace": "]",
-      "run": "play:cisternsketch"
+      "run": "play:shaperead"
     },
     {
-      "name": "the sketch tab shows which total",
+      "name": "the tab shows Where does it flip instead",
       "file": "index.html",
-      "find": "this.tab==='pick' ? CisternPick.html() : CisternSketch.html();",
-      "replace": "CisternPick.html();",
-      "run": "play:cisternsketch"
+      "find": "this.tab==='pick' ? FlipPick.html() : ShapeRead.html();",
+      "replace": "this.tab==='pick' ? FlipPick.html() : FlipPick.html();",
+      "run": "play:shaperead"
     }
   ]
 }

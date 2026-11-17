@@ -1397,7 +1397,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BEND WORKSHOP ============ -->
   <div class="screen" id="s-bend">
     <div class="panel"><h2>〰️ Bend Workshop</h2><div class="sub">The first derivative is the slope. The second, f″, is how fast that slope is changing. Slide a point along a curve and watch its tangent: where the slope rises the curve bends up like a cup, where it falls it bends down like a cap, and where the bend flips over the tangent cuts straight through.</div></div>
-    <div id="bdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Slide along by hand or pick where it flips"></div>
+    <div id="bdTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Slide along by hand, pick where it flips, or read the shape"></div>
     <div class="panel">
       <div id="bkBox"></div>
       <div id="bdSets" class="wsModes" role="group" aria-label="Which curve"></div>
@@ -15720,7 +15720,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">〰️ Bend Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Slide along a curve and watch the slope of its slope: where it rises the curve bends up like a cup, where it falls it bends down like a cap. Find where the bend flips, and the flat spot that only looks like it does. Then turn it round: see a cubic, and pick which of four numbers is where its bend flips.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide along a curve and watch the slope of its slope: where it rises the curve bends up like a cup, where it falls it bends down like a cap. Find where the bend flips, and the flat spot that only looks like it does. Then turn it round: see a cubic, and pick which of four numbers is where its bend flips. Or read the shape: say at each point whether it rises or falls and bends like a cup or a cap.</div>
          <button class="btn sm" id="tomeBend" style="width:auto;margin-top:8px" onclick="Bend.open()">Open the bend workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -22860,11 +22860,11 @@ const Bend = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('bdTab').innerHTML=[['hand','〰️ Slide it by hand','Slide a point along a curve by hand and watch its tangent'],['pick','🎯 Where does it flip?','See a cubic, and pick which of four numbers is where its bend flips']]
+    document.getElementById('bdTab').innerHTML=[['hand','〰️ Slide it by hand','Slide a point along a curve by hand and watch its tangent'],['pick','🎯 Where does it flip?','See a cubic, and pick which of four numbers is where its bend flips'],['shape','🧭 Read the shape','See a curve with four points, and say at each whether it rises or falls and bends like a cup or a cap']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Bend.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['bdSets','bdFig','bdStep','bdRead','bdGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('bkBox').innerHTML=pick ? FlipPick.html() : '';
+    document.getElementById('bkBox').innerHTML=!pick ? '' : this.tab==='pick' ? FlipPick.html() : ShapeRead.html();
     if(pick) return;
     document.getElementById('bdSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Bend.pick(\${i})" aria-label="\${s.btn}: f(x) = \${s.fs}">\${s.btn}</button>\`).join('');
@@ -22885,6 +22885,158 @@ const Bend = {
         Celebrate.banner('MASTER OF THE BEND','every flip found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Read the shape: the bend workshop's third mode ----------
+ * A curve with four lettered points. At each the player says two things from
+ * the picture alone: does the curve rise or fall there, and does it bend up
+ * like a cup or down like a cap. The first is the sign of f′ and the second
+ * the sign of f″, and the curves are picked so the two can disagree: a curve
+ * can climb while bending down and fall while bending up. Every point has
+ * f′ and f″ both away from 0. The check marks each point whole, and works
+ * f′ and f″ at the ones that miss. Nothing is saved.
+ */
+const ShapeRead = {
+  CURVES:[
+    {fs:'x³ − 3x', d1s:'3x² − 3', d2s:'6x', D:[-2.3,2.3], xs:[-2,-0.5,0.5,2], kind:'four',
+     f:x=>x**3-3*x, d1:x=>3*x*x-3, d2:x=>6*x},
+    {fs:'x²', d1s:'2x', d2s:'2', D:[-2.5,2.5], xs:[-2,-1,1,2], kind:'cup',
+     f:x=>x*x, d1:x=>2*x, d2:x=>2},
+    {fs:'4 − x²', d1s:'−2x', d2s:'−2', D:[-2.5,2.5], xs:[-2,-1,1,2], kind:'cap',
+     f:x=>4-x*x, d1:x=>-2*x, d2:x=>-2},
+    {fs:'x³/3 − x²', d1s:'x² − 2x', d2s:'2x − 2', D:[-1.6,3.6], xs:[-1,0.5,1.5,3], kind:'four',
+     f:x=>x**3/3-x*x, d1:x=>x*x-2*x, d2:x=>2*x-2},
+    {fs:'x − x³/3', d1s:'1 − x²', d2s:'−2x', D:[-2.4,2.4], xs:[-2,-0.5,0.5,2], kind:'four',
+     f:x=>x-x**3/3, d1:x=>1-x*x, d2:x=>-2*x},
+    {fs:'x⁴/4 − 2x²', d1s:'x³ − 4x', d2s:'3x² − 4', D:[-2.8,2.8], xs:[-2.5,-1.5,-0.5,1], kind:'four',
+     f:x=>x**4/4-2*x*x, d1:x=>x**3-4*x, d2:x=>3*x*x-4}
+  ],
+  ci:0, go:[null,null,null,null], bd:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Read every point of a curve right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'four',  t:'Read a curve that shows all four shapes: rising or falling, cup or cap.', toast:'All four shapes on one curve',
+     ok:K=>K.kinds.has('four')},
+    {id:'cup',   t:'Read a curve that bends up like a cup everywhere, though it falls on one side.', toast:'A cup can fall',
+     ok:K=>K.kinds.has('cup')},
+    {id:'cap',   t:'Read a curve that bends down like a cap everywhere, though it rises on one side.', toast:'A cap can climb',
+     ok:K=>K.kinds.has('cap')},
+    {id:'fix',   t:'Check a reading with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Read three curves in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'f′ says which way a curve goes: it rises where f′ > 0 and falls where f′ < 0. f″ says which way it bends: up like a cup where f″ > 0, and down like a cap where f″ < 0. Read each lettered point off the picture and set both.',
+  L:'ABCD',
+  C(){ return this.CURVES[this.ci]; },
+  r(v){ const q=Math.round(v*1e6)/1e6; return Object.is(q,-0)?0:q; },
+  /* the truth at point i: 1 rises or cup, −1 falls or cap */
+  sgo(i){ const C=this.C(); return Math.sign(this.r(C.d1(C.xs[i]))); },
+  sbd(i){ const C=this.C(); return Math.sign(this.r(C.d2(C.xs[i]))); },
+  ready(){ return this.go.every(v=>v!==null) && this.bd.every(v=>v!==null); },
+  count(){ let n=0; for(let i=0;i<4;i++) n+=(this.go[i]!==null)+(this.bd[i]!==null); return n; },
+  goW:v=>v>0?'rising':'falling',
+  bdW:v=>v>0?'a cup':'a cap',
+  /* the first point of a shape, by its letter */
+  first(g,b){ const i=[0,1,2,3].find(i=>this.sgo(i)===g && this.sbd(i)===b); return i===undefined ? null : this.L[i]; },
+  working(){
+    const C=this.C(), out=[];
+    if(this.solved){
+      out.push('Yes: all four points are read right.');
+      if(C.kind==='four') out.push(\`At \${this.first(1,-1)} the curve climbs while bending down like a cap, and at \${this.first(-1,1)} it falls while bending up like a cup: f′ says which way it goes and f″ which way it bends, and the two need not agree.\`);
+      else if(C.kind==='cup') out.push(\`Every point bends up like a cup, though A and B fall and C and D rise: f″(x) = \${C.d2s} is more than 0 everywhere, while f′(x) = \${C.d1s} changes sign at 0.\`);
+      else out.push(\`Every point bends down like a cap, though A and B rise and C and D fall: f″(x) = \${C.d2s} is less than 0 everywhere, while f′(x) = \${C.d1s} changes sign at 0.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      out.push(\`f(x) = \${C.fs}, so f′(x) = \${C.d1s} and f″(x) = \${C.d2s}.\`);
+      for(const i of bad){ const x=C.xs[i], X=neg(x), s=this.r(C.d1(x)), c=this.r(C.d2(x));
+        out.push(\`At \${this.L[i]}, x = \${X}: f′(\${X}) = \${neg(s)} is \${s>0?'more':'less'} than 0, so the curve \${s>0?'rises':'falls'}, and f″(\${X}) = \${neg(c)} is \${c>0?'more':'less'} than 0, so it bends \${c>0?'up like a cup':'down like a cap'}. You had it \${this.goW(this.go[i])} and \${this.bdW(this.bd[i])}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 8 set.\`);
+    }
+    out.push(\`\${this.wins} read right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  span(){
+    const C=this.C(); let lo=Infinity, hi=-Infinity;
+    for(let i=0;i<=90;i++){ const y=C.f(C.D[0]+(C.D[1]-C.D[0])*i/90); lo=Math.min(lo,y); hi=Math.max(hi,y); }
+    const pad=(hi-lo)*0.1; return [lo-pad, hi+pad];
+  },
+  /* the curve in blue with its four points in gold; a slip is ringed red, and
+     once read right each point gets its tangent, green on a cup, red on a cap */
+  svg(){
+    const C=this.C(), [lo,hi]=this.span(), f=v=>v.toFixed(2);
+    const PX=v=>20+(v-C.D[0])/(C.D[1]-C.D[0])*320, PY=v=>188-(v-lo)/(hi-lo)*176;
+    const pts=[]; for(let i=0;i<=90;i++){ const t=C.D[0]+(C.D[1]-C.D[0])*i/90; pts.push(\`\${f(PX(t))},\${f(PY(C.f(t)))}\`); }
+    let out=\`<svg viewBox="0 0 360 200" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = \${C.fs} in blue, with points \${C.xs.map((x,i)=>\`\${this.L[i]} at x = \${neg(x)}\`).join(', ')}\${this.solved?', each with its tangent':''}">\`;
+    if(lo<0 && hi>0) out+=\`<line x1="20" y1="\${f(PY(0))}" x2="340" y2="\${f(PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    if(C.D[0]<0 && C.D[1]>0) out+=\`<line x1="\${f(PX(0))}" y1="8" x2="\${f(PX(0))}" y2="192" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+    out+=\`<polyline data-k="curve" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>\`;
+    C.xs.forEach((x,i)=>{ const y=C.f(x), cx=PX(x), cy=PY(y);
+      if(this.solved){ const s=C.d1(x), h=0.35, a=PX(x-h), b=PX(x+h);
+        out+=\`<line data-k="tan" x1="\${f(a)}" y1="\${f(PY(y-s*h))}" x2="\${f(b)}" y2="\${f(PY(y+s*h))}" stroke="\${C.d2(x)>0?FIG_COL.c:FIG_COL.d}" stroke-width="2.5" stroke-linecap="round"/>\`; }
+      out+=\`<circle data-k="pt" cx="\${f(cx)}" cy="\${f(cy)}" r="5" fill="\${FIG_COL.b}"/>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<circle data-k="miss" cx="\${f(cx)}" cy="\${f(cy)}" r="10" fill="none" stroke="\${FIG_COL.d}" stroke-width="2"/>\`;
+      const up=cy>40;
+      out+=\`<text x="\${f(cx)}" y="\${f(up?cy-12:cy+22)}" fill="\${FIG_COL.ink}" font-size="13" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`; });
+    return out+\`</svg>\`;
+  },
+  set(i,part,v){
+    if(this.solved) return;
+    const a=part==='go'?this.go:this.bd;
+    if(a[i]===v) return;
+    a[i]=v; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Bend.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.go[i]===this.sgo(i) && this.bd[i]===this.sbd(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      this.kinds.add(this.C().kind);
+    } else this.streak=0;
+    Bend.render();
+  },
+  next(){ if(!this.solved) return; this.ci=(this.ci+1)%this.CURVES.length; this.go=[null,null,null,null]; this.bd=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Bend.render(); },
+  btn(i,part,v,b,word){
+    const on=(part==='go'?this.go:this.bd)[i]===v, P=this.L[i];
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-v="\${v}" aria-pressed="\${on}" \${this.solved?'disabled ':''}onclick="ShapeRead.set(\${i},'\${part}',\${v})" aria-label="Point \${P} \${word}">\${b}</button>\`;
+  },
+  html(){
+    const C=this.C();
+    let out=\`<div class="small" style="margin:2px 0 6px">Curve \${this.ci+1} of \${this.CURVES.length}: f(x) = \${C.fs}. At each lettered point, does it rise or fall, and does it bend like a cup or a cap?</div>\`;
+    out+=\`<div id="shpFig">\${this.svg()}<div class="figcap">The curve is f, in blue, with four points in gold. Once they are read right, each gets its tangent: green where the curve bends up, red where it bends down.</div></div>\`;
+    out+=\`<div id="shpStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+C.xs.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="shpStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">x = \${neg(x)}</span></b>\`+
+        this.btn(i,'go',1,'↗ Rises','rises')+this.btn(i,'go',-1,'↘ Falls','falls')+
+        this.btn(i,'bd',1,'∪ Cup','bends up like a cup')+this.btn(i,'bd',-1,'∩ Cap','bends down like a cap')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="shpRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="shpNext" onclick="ShapeRead.next()" aria-label="Show the next curve">Next curve →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="shpCheck" \${this.ready()?'':'disabled '}onclick="ShapeRead.check()" aria-label="\${this.ready()?'Check the four points':'Set both answers at all four points to check them'}">\${this.ready()?'Check my reading':'Set all four points'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="shpGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="shpGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SHAPE READER','every rise and bend named','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
