@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see A, and pick which of four matrices is Aᵀ\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTranspose');
     t.eq('the transpose workshop opens', await t.screen(), 's-transpose');
-    t.eq('moving by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('moving by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7272));
     await t.tapText(/Which Aᵀ\?/);
-    t.eq('which Aᵀ is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which Aᵀ is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the matrices, the grids, the readout and the goals step aside', await hidden(t, 'tpSets') && await hidden(t, 'tpFig') && await hidden(t, 'tpRead') && await hidden(t, 'tpGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('txBox').innerText)).startsWith(
       'The transpose Aᵀ turns each row of A into a column'));

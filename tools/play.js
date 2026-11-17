@@ -126,6 +126,7 @@ const SUITES = [
   require('./play/dotpick'),  // see two arrows, pick which of four numbers is u·v
   require('./play/antipick'), // see f, pick which of four F has f as its slope
   require('./play/transpick'), // see A, pick which of four matrices is Aᵀ
+  require('./play/transsort'), // call four square matrices: Aᵀ = A, Aᵀ = −A or neither
   require('./play/crosspick'), // see u and v, pick which of four arrows is u × v
   require('./play/crossturn'), // call four pairs flat on the page: u × v out, in or zero
   require('./play/undopick'), // see A, pick which of four matrices is A⁻¹

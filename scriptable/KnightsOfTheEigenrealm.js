@@ -1783,7 +1783,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRANSPOSE WORKSHOP ============ -->
   <div class="screen" id="s-transpose">
     <div class="panel"><h2>🪞 Transpose Workshop</h2><div class="sub">The transpose Aᵀ flips a matrix across its main diagonal, so its rows become columns. Pick up each entry of A and put it down where it belongs in Aᵀ; a slot only takes the right number, and tells you why when it turns one away.</div></div>
-    <div id="tpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move entries by hand or pick Aᵀ"></div>
+    <div id="tpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Move entries by hand, pick Aᵀ, or call each mirror"></div>
     <div class="panel">
       <div id="txBox"></div>
       <div id="tpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
@@ -15621,7 +15621,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪞 Transpose Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose. Then turn it round: see A, and pick which of four matrices is Aᵀ.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Move every entry of A to its place in Aᵀ by hand. Watch a row become a column and a wide matrix turn tall, see the diagonal stay put, catch the copy-without-flipping slip, and meet a matrix that is its own transpose. Then turn it round: see A, and pick which of four matrices is Aᵀ. Or call the mirror: for four square matrices, say whether Aᵀ = A, Aᵀ = −A, or neither.</div>
          <button class="btn sm" id="tomeTranspose" style="width:auto;margin-top:8px" onclick="Transpose.open()">Open the transpose workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -29552,11 +29552,11 @@ const Transpose = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tpTab').innerHTML=[['hand','🪞 Move by hand','Move each entry of A to its place in Aᵀ by hand'],['pick','🎯 Which Aᵀ?','See A, and pick which of four matrices is Aᵀ']]
+    document.getElementById('tpTab').innerHTML=[['hand','🪞 Move by hand','Move each entry of A to its place in Aᵀ by hand'],['pick','🎯 Which Aᵀ?','See A, and pick which of four matrices is Aᵀ'],['sort','🪞 Mirror or not?','See four square matrices, and say whether each has Aᵀ = A, Aᵀ = −A, or neither']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Transpose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tpSets','tpFig','tpRead','tpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('txBox').innerHTML=pick ? TransPick.html() : '';
+    document.getElementById('txBox').innerHTML=!pick ? '' : this.tab==='pick' ? TransPick.html() : TransSort.html();
     if(pick) return;
     if(!this.fill) this.start();
     document.getElementById('tpSets').innerHTML=this.SETS.map((s,i)=>
@@ -29575,6 +29575,166 @@ const Transpose = {
         Celebrate.banner('MASTER OF THE TRANSPOSE','every row turned','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Mirror or not? The transpose workshop's third mode ----------
+   Four square matrices; for each, say whether Aᵀ = A, Aᵀ = −A, or neither. */
+const TransSort = {
+  ROUNDS:[
+    [[[1,2],[2,3]], [[0,3],[-3,0]], [[1,2],[3,1]], [[2,-1,0],[-1,3,4],[0,4,5]]],
+    [[[2,1],[3,2]], [[0,-2],[2,0]], [[4,0],[0,-1]], [[1,-2],[2,3]]],
+    [[[0,1,-2],[-1,0,3],[2,-3,0]], [[1,2,3],[2,4,5],[3,5,6]], [[1,2,3],[4,5,2],[6,4,1]], [[0,1],[1,0]]],
+    [[[3,-1],[1,0]], [[0,0,1],[0,0,-2],[-1,2,0]], [[5,7],[7,5]], [[0,2],[2,0]]],
+    [[[0,-4],[4,0]], [[1,0,0],[0,2,0],[0,0,3]], [[2,5],[5,-2]], [[0,1,2],[-1,0,3],[-2,-3,1]]],
+    [[[1,3],[3,1]], [[6,2],[-2,1]], [[0,-1,4],[1,0,-2],[-4,2,0]], [[2,3,1],[1,4,3],[5,1,2]]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four matrices right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'skew',  t:'Call a 3×3 matrix whose transpose is its negative.', toast:'A 3×3 with Aᵀ = −A',
+     ok:K=>K.kinds.has('skew')},
+    {id:'anti',  t:'Call a matrix that mirrors across the other diagonal.', toast:'The wrong mirror',
+     ok:K=>K.kinds.has('anti')},
+    {id:'near',  t:'Call a matrix that flips its signs but keeps a diagonal that is not 0.', toast:'Skew needs 0s down the diagonal',
+     ok:K=>K.kinds.has('near')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The transpose flips A across its main diagonal, from top left to bottom right: the entry in row i, column j moves to row j, column i. If every entry matches its mirror, aᵢⱼ = aⱼᵢ, then Aᵀ = A. If every entry is the negative of its mirror, aᵢⱼ = −aⱼᵢ, then Aᵀ = −A, and the diagonal must be all 0. Otherwise it is neither.',
+  L:'ABCD',
+  WORD:{S:'Aᵀ = A', K:'Aᵀ = −A', N:'neither'},
+  SUB:'₁₂₃',
+  R(){ return this.ROUNDS[this.ri]; },
+  /* the first entry that breaks Aᵀ = A, or Aᵀ = −A, read along the rows: [i, j], or null */
+  breaks(A,c){ const n=A.length;
+    for(let i=0;i<n;i++) for(let j=c==='S'?i+1:i;j<n;j++) if(c==='S' ? A[i][j]!==A[j][i] : A[i][j]!==-A[j][i]) return [i,j];
+    return null; },
+  truth(i){ const A=this.R()[i]; return !this.breaks(A,'S') ? 'S' : !this.breaks(A,'K') ? 'K' : 'N'; },
+  /* mirrored across the other diagonal, from top right to bottom left */
+  anti(A){ const n=A.length; return A.every((r,i)=>r.every((x,j)=>x===A[n-1-j][n-1-i])); },
+  /* every entry off the diagonal the negative of its mirror, but the diagonal not all 0 */
+  near(A){ return A.every((r,i)=>r.every((x,j)=>i===j || x===-A[j][i])); },
+  antis(){ return [0,1,2,3].filter(i=>this.truth(i)==='N' && this.anti(this.R()[i])); },
+  nears(){ return [0,1,2,3].filter(i=>this.truth(i)==='N' && this.near(this.R()[i])); },
+  skews(){ return [0,1,2,3].filter(i=>this.truth(i)==='K'); },
+  tags(){ const t=[]; if(this.skews().some(i=>this.R()[i].length===3)) t.push('skew'); if(this.antis().length) t.push('anti'); if(this.nears().length) t.push('near'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  a(i,j){ return 'a'+this.SUB[i]+this.SUB[j]; },
+  rows(A){ return A.map(r=>\`(\${r.map(x=>neg(x)).join(', ')})\`).join(', '); },
+  /* why A is not S or not K, in words, from the first entry that breaks it */
+  why(A,c){ const [i,j]=this.breaks(A,c);
+    if(c==='S') return \`\${this.a(i,j)} = \${neg(A[i][j])} but \${this.a(j,i)} = \${neg(A[j][i])}, so Aᵀ ≠ A\`;
+    if(i===j) return \`\${this.a(i,i)} = \${neg(A[i][i])}, not 0, so Aᵀ ≠ −A\`;
+    return \`\${this.a(i,j)} = \${neg(A[i][j])} but \${this.a(j,i)} = \${neg(A[j][i])}, not \${neg(-A[i][j])}, so Aᵀ ≠ −A\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const sk=this.skews(), an=this.antis(), nr=this.nears();
+      if(sk.length) out.push(\`\${this.list(sk)} \${sk.length>1?'have':'has'} only 0s down the diagonal, as Aᵀ = −A needs: aᵢᵢ = −aᵢᵢ only when aᵢᵢ = 0.\`);
+      if(an.length) out.push(\`\${this.list(an)} \${an.length>1?'mirror':'mirrors'} across the other diagonal, from top right to bottom left, but the transpose flips across the main one, so \${an.length>1?'each is':'it is'} neither.\`);
+      if(nr.length) out.push(\`\${this.list(nr)} \${nr.length>1?'flip':'flips'} the signs off the diagonal, but \${nr.length>1?'their diagonals are':'its diagonal is'} not all 0, so \${nr.length>1?'each is':'it is'} neither.\`);
+      out.push('Any square A splits into a part with Aᵀ = A and a part with Aᵀ = −A: A = ½(A + Aᵀ) + ½(A − Aᵀ).');
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const A=this.R()[i], t=this.truth(i), c=this.calls[i];
+        let s = t==='S' ? \`In \${this.L[i]}, every entry matches its mirror across the main diagonal, so Aᵀ = A.\`
+          : t==='K' ? \`In \${this.L[i]}, every entry is the negative of its mirror and the diagonal is all 0, so Aᵀ = −A.\`
+          : \`In \${this.L[i]}, \${this.why(A,'S')}; and \${this.why(A,'K')}. It is neither.\`;
+        if(t==='N' && c==='S' && this.anti(A)) s+=' It mirrors across the other diagonal, but the transpose flips across the main one.';
+        if(t==='N' && c==='K' && this.near(A)) s+=' Every entry off the diagonal is the negative of its mirror, but Aᵀ = −A also needs 0s down the diagonal.';
+        out.push(\`\${s} You had it as \${this.WORD[c]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each matrix in its own square, with the main diagonal edged gold; a slip
+     is ringed red with the entries that break the call edged red, and once
+     called right each gets its mirror line and what its transpose is, in green */
+  svg(){
+    const P=this.R();
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four matrices: \${P.map((A,i)=>\`\${this.L[i]}, rows \${this.rows(A)}\`).join('; ')}\${this.solved?', each with its mirror line and what its transpose is':''}">\`;
+    P.forEach((A,i)=>{
+      const n=A.length, X=(i%2)*180, Y=Math.floor(i/2)*130, cs=n===2?34:28, x0=X+90-n*cs/2, y0=Y+70-n*cs/2;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      const W=n*cs, br=6;
+      out+=\`<path data-k="bracket" d="M \${x0+br-2} \${y0-3} H \${x0-2} V \${y0+W+3} H \${x0+br-2} M \${x0+W-br+2} \${y0-3} H \${x0+W+2} V \${y0+W+3} H \${x0+W-br+2}" fill="none" stroke="\${FIG_COL.ink}" stroke-width="1.5"/>\`;
+      const miss=this.marks && this.marks[i]===false, bk=miss && this.calls[i]!=='N' ? this.breaks(A,this.calls[i]) : null;
+      const red=bk ? [bk.join(), [bk[1],bk[0]].join()] : [];
+      for(let r=0;r<n;r++) for(let c=0;c<n;c++){
+        const cx=x0+c*cs, cy=y0+r*cs;
+        if(r===c) out+=\`<rect data-k="diag" x="\${cx+2}" y="\${cy+2}" width="\${cs-4}" height="\${cs-4}" rx="4" fill="none" stroke="\${FIG_COL.b}" stroke-width="1"/>\`;
+        if(red.includes(r+','+c)) out+=\`<rect data-k="pair" data-rc="\${r},\${c}" x="\${cx+1}" y="\${cy+1}" width="\${cs-2}" height="\${cs-2}" rx="4" fill="none" stroke="\${FIG_COL.d}" stroke-width="2"/>\`;
+        out+=\`<text data-k="cell" data-rc="\${r},\${c}" x="\${cx+cs/2}" y="\${cy+cs/2+5}" fill="\${FIG_COL.ink}" font-size="14" text-anchor="middle">\${neg(A[r][c])}</text>\`;
+      }
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(miss) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<line data-k="mirror" x1="\${x0-4}" y1="\${y0-4}" x2="\${x0+W+4}" y2="\${y0+W+4}" stroke="\${FIG_COL.c}" stroke-width="1.5" stroke-dasharray="4 3"/>\`;
+        out+=\`<text data-k="tag" data-c="\${t}" x="\${X+170}" y="\${Y+22}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${this.WORD[t]}</text>\`;
+      }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Transpose.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Transpose.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Transpose.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="TransSort.call(\${i},'\${c}')" aria-label="Matrix \${this.L[i]}: \${c==='N'?'its transpose is neither A nor −A':'its transpose is '+(c==='S'?'A':'−A')}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four square matrices. Is the transpose of each one A itself, −A, or neither?</div>\`;
+    out+=\`<div id="txsFig">\${this.svg()}<div class="figcap">The gold-edged cells are each matrix's main diagonal, the line the transpose flips across. Once all four are called right, each gets its mirror line and what its transpose is, in green.</div></div>\`;
+    out+=\`<div id="txsStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map((A,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="txsStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${A.length}×\${A.length}</span></b>\`+
+        this.btn(i,'S','= A')+this.btn(i,'K','= −A')+this.btn(i,'N','Neither')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="txsRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="txsNext" onclick="TransSort.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="txsCheck" \${this.ready()?'':'disabled '}onclick="TransSort.check()" aria-label="\${this.ready()?'Check the four matrices':'Call all four matrices to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="txsGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="txsGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MIRROR KEEPER','every matrix called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
