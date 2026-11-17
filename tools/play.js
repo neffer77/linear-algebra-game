@@ -53,6 +53,7 @@ const SUITES = [
   require('./play/compose'),     // two moves of the plane, and why their order matters
   require('./play/limit'),       // closing in on a point from the left and the right
   require('./play/limpick'),   // see a ratio and where x heads, pick its limit or that it has none
+  require('./play/gapread'),   // see a graph with four points, say at each whether it is joined up, has a hole, jumps or runs off
   require('./play/descent'),     // a walk down a valley against its gradient
   require('./play/span'),        // a of one arrow and b of another
   require('./play/elim'),        // two equations solved with row operations

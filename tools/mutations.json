@@ -1,103 +1,103 @@
 {
-  "change": "Add an In or out mode to the cross product workshop",
+  "change": "Add a Read the graph mode to the limit workshop",
   "mutations": [
     {
-      "name": "the third part is taken the wrong way round",
+      "name": "a jump is read as a hole",
       "file": "index.html",
-      "find": "z(i){ const [u,v]=this.R()[i]; return u[0]*v[1]-u[1]*v[0]; },",
-      "replace": "z(i){ const [u,v]=this.R()[i]; return u[1]*v[0]-u[0]*v[1]; },",
+      "find": "if(L!==R) return 'J';",
+      "replace": "if(false) return 'J';",
       "run": "verify"
     },
     {
-      "name": "the swap is missed",
+      "name": "f(a) decides the limit",
       "file": "index.html",
-      "find": "if(P[i][0].join()===P[j][1].join() && P[i][1].join()===P[j][0].join()) out.push([i,j]);",
-      "replace": "if(P[i][0].join()===P[j][0].join() && P[i][1].join()===P[j][1].join()) out.push([i,j]);",
+      "find": "return v===L ? 'C' : 'H';",
+      "replace": "return v===null ? 'H' : 'C';",
       "run": "verify"
     },
     {
-      "name": "a right angle counts as wide",
+      "name": "running off is missed on one side",
       "file": "index.html",
-      "find": "wides(){ return [0,1,2,3].filter(i=>this.z(i)!==0 && this.dot(i)<0); },",
-      "replace": "wides(){ return [0,1,2,3].filter(i=>this.z(i)!==0 && this.dot(i)<=0); },",
+      "find": "if(!isFinite(L) || !isFinite(R)) return 'R';",
+      "replace": "if(!isFinite(L) && !isFinite(R)) return 'R';",
       "run": "verify"
     },
     {
-      "name": "the check opens with three called",
+      "name": "the left side is read from the right piece",
       "file": "index.html",
-      "find": "ready(){ return this.calls.every(c=>c!==null); },",
-      "replace": "ready(){ return this.calls.filter(c=>c!==null).length>=3; },",
+      "find": "y=G.p[s<0?i:i+1](G.xs[i]+s*1e-9)",
+      "replace": "y=G.p[i+1](G.xs[i]+s*1e-9)",
       "run": "verify"
     },
     {
-      "name": "the check opens with three placed",
+      "name": "a hole's missing f(a) is given as 0",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);",
-      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);",
+      "find": "${v===null?'is not defined':'= '+neg(v)}: a hole.",
+      "replace": "= ${neg(v||0)}: a hole.",
       "run": "verify"
     },
     {
-      "name": "a ring is kept after the call changes",
+      "name": "the dot on a jump is not told",
       "file": "index.html",
-      "find": "if(this.marks) this.marks[i]=null;\n    Cross.render();",
-      "replace": "Cross.render();",
+      "find": "if(jd>=0) out.push(",
+      "replace": "if(false) out.push(",
       "run": "verify"
     },
     {
-      "name": "the turn runs the long way round",
+      "name": "a hole's limit is listed as none",
       "file": "index.html",
-      "find": "A ${r} ${r} 0 0 ${z>0?0:1}",
-      "replace": "A ${r} ${r} 0 0 ${z>0?1:0}",
+      "find": "${k==='C'||k==='H' ? neg(this.side(i,-1)) : 'none'}",
+      "replace": "${k==='C' ? neg(this.side(i,-1)) : 'none'}",
       "run": "verify"
     },
     {
-      "name": "in and out arrows are drawn swapped",
+      "name": "an open circle is drawn on the dot too",
       "file": "index.html",
-      "find": "out+=`<circle data-k=\"${z>0?'out':'in'}\"",
-      "replace": "out+=`<circle data-k=\"${z>0?'in':'out'}\"",
+      "find": "if(isFinite(y) && y!==v) out+=`<circle data-k=\"open\"",
+      "replace": "if(isFinite(y)) out+=`<circle data-k=\"open\"",
       "run": "verify"
     },
     {
-      "name": "the slip readout says clockwise for out",
+      "name": "the dashed line is drawn at every point",
       "file": "index.html",
-      "find": "so it points out of the page: the short turn from u to v is counterclockwise.`",
-      "replace": "so it points out of the page: the short turn from u to v is clockwise.`",
+      "find": "if(!isFinite(L) || !isFinite(R)) out+=`<line data-k=\"asym\"",
+      "replace": "if(true) out+=`<line data-k=\"asym\"",
       "run": "verify"
     },
     {
-      "name": "the areas are the dot products",
+      "name": "a fix counts as a first check",
       "file": "index.html",
-      "find": "`${this.L[i]} ${Math.abs(this.z(i))}`",
-      "replace": "`${this.L[i]} ${Math.abs(this.dot(i))}`",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Limit.render();",
+      "replace": "{ this.wins++; this.streak++; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Limit.render();",
       "run": "verify"
     },
     {
-      "name": "a call moves after the round is right",
+      "name": "the check opens with a point uncalled",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice();",
+      "find": "ready(){ return this.calls.every(c=>c!==null); },\n  count(){ return this.calls.filter(c=>c!==null).length; },\n  heads(y){ return isFinite(y) ? `heads for ${neg(y)}` : y>0 ? 'climbs without end' : 'drops without end'; },",
+      "replace": "ready(){ return this.calls.some(c=>c!==null); },\n  count(){ return this.calls.filter(c=>c!==null).length; },\n  heads(y){ return isFinite(y) ? `heads for ${neg(y)}` : y>0 ? 'climbs without end' : 'drops without end'; },",
       "run": "verify"
     },
     {
-      "name": "the zero button calls into the page",
+      "name": "the hole button calls a jump",
       "file": "index.html",
-      "find": "+this.btn(i,0,'0')+",
-      "replace": "+this.btn(i,-1,'0')+",
+      "find": "+this.btn(i,'H','○ Hole')+",
+      "replace": "+this.btn(i,'J','○ Hole')+",
       "run": "verify"
     },
     {
-      "name": "the slip pair is not ringed",
+      "name": "the slip point is not ringed",
       "file": "index.html",
-      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
-      "replace": "if(false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
-      "run": "play:crossturn"
+      "find": "if(this.marks && this.marks[i]===false) out+=`<circle data-k=\"miss\" cx=\"${cx}\" cy=\"208\"",
+      "replace": "if(false) out+=`<circle data-k=\"miss\" cx=\"${cx}\" cy=\"208\"",
+      "run": "play:gapread"
     },
     {
-      "name": "in or out is not offered as a tab",
+      "name": "read the graph is not offered as a tab",
       "file": "index.html",
-      "find": "['turn','🧭 In or out?','See pairs u and v flat on the page, and say whether u × v points out of it, into it, or is zero']]",
+      "find": ",['read','🔍 Read the graph','See a graph with four lettered points, and say at each whether it is joined up, has a hole, jumps, or runs off']]",
       "replace": "]",
-      "run": "play:crossturn"
+      "run": "play:gapread"
     }
   ]
 }

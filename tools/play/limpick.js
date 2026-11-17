@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see a ratio and the x it closes in on, and pick its limit, or that it has none\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLimit');
     t.eq('the limit workshop opens', await t.screen(), 's-limit');
-    t.eq('closing in by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('closing in by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5150));
     await t.tapText(/Which limit\?/);
-    t.eq('which limit is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which limit is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the formulas, the sides, the figure, the h buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('lmqBox').innerText)).startsWith(

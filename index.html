@@ -1141,7 +1141,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LIMIT WORKSHOP ============ -->
   <div class="screen" id="s-limit">
     <div class="panel"><h2>🌫️ Limit Workshop</h2><div class="sub">Some formulas give no number at one point. Close in on it from the left or the right, h at a time, and watch where f(x) is heading. A limit is what both sides agree on.</div></div>
-    <div id="lmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the limit"></div>
+    <div id="lmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand, pick the limit, or read the graph"></div>
     <div class="panel">
       <div id="lmqBox"></div>
       <div id="lmFns" class="wsModes wrap" role="group" aria-label="Function"></div>
@@ -15501,7 +15501,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌫️ Limit Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading. Then turn it round: see a ratio and the x it closes in on, and pick its limit, or that it has none.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Close in on a point where the formula breaks, from the left and from the right, and see whether both sides agree on where it is heading. Then turn it round: see a ratio and the x it closes in on, and pick its limit, or that it has none. Or read the graph: at four points on a graph, say whether it is joined up, has a hole, jumps, or runs off.</div>
          <button class="btn sm" id="tomeLimit" style="width:auto;margin-top:8px" onclick="Limit.open()">Open the limit workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -19871,11 +19871,11 @@ const Limit = {
   tab:'hand', // close in by hand, or which limit
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('lmTab').innerHTML=[['hand','🌫️ Close in by hand','Close in on the point from the left and the right by hand'],['pick','🎯 Which limit?','See a ratio and the x it closes in on, and pick which number is its limit, or that it has none']]
+    document.getElementById('lmTab').innerHTML=[['hand','🌫️ Close in by hand','Close in on the point from the left and the right by hand'],['pick','🎯 Which limit?','See a ratio and the x it closes in on, and pick which number is its limit, or that it has none'],['read','🔍 Read the graph','See a graph with four lettered points, and say at each whether it is joined up, has a hole, jumps, or runs off']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Limit.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['lmFns','lmSide','lmFig','lmMoveRow','lmRead','lmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('lmqBox').innerHTML=pick ? LimPick.html() : '';
+    document.getElementById('lmqBox').innerHTML=!pick ? '' : this.tab==='pick' ? LimPick.html() : GapRead.html();
     if(pick) return;
     const F=this.fn(), x=this.x(), v=this.fx();
     if(this.touched && this.closest()) (this.near[F.id]=this.near[F.id]||new Set()).add(this.side);
@@ -19901,6 +19901,186 @@ const Limit = {
         Celebrate.banner('LIMIT SEEKER','every side watched','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.t.replace(/(\.(?!\d)|[:,]).*$/,'')).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Read the graph: the limit workshop's third mode ----------
+   A graph made of pieces, with four lettered points. At each the player says
+   what the graph does there: joined up, a hole, a jump, or running off. The
+   rule is stated first, with what a filled dot and an open circle mean. Each
+   point's sides are worked from the pieces themselves, closing in from the
+   left and from the right, so the answer is never stored, only read. A slip
+   rings just that point and works both sides and f(a); once right, each point
+   gets its limit drawn, or no limit marked. The traps are the ones people fall
+   in: a dot moved off its line still leaves a limit, a dot on one side does
+   not mend a jump, and running off is no number at all. Nothing is saved. */
+const GapRead = {
+  /* each graph: four x values, five pieces (before A, A to B, B to C, C to D,
+     after D), and f at each point, null where the graph leaves it out */
+  GRAPHS:[
+    {xs:[-3,-1,1,3], v:[1,null,null,1],
+     p:[x=>x/2+2.5, x=>x/2+2.5, x=>x/2+2.5, x=>x-2, x=>x-2]},
+    {xs:[-3,-1,1,3], v:[0,-1,null,2],
+     p:[x=>x*x/2-1.5, x=>x*x/2-1.5, x=>x*x/2-1.5, x=>x*x/2-2.5, x=>x*x/2-2.5]},
+    {xs:[-3,-1,1,3], v:[1,null,2,null],
+     p:[x=>x+4, x=>1/(x+1)+1.5, x=>1/(x+1)+1.5, x=>2-(x-1)/2, x=>2-(x-1)/2]},
+    {xs:[-3,-1,1,3], v:[2,1,null,-2],
+     p:[x=>-x-1, x=>x+2, x=>x+2, x=>4-x, x=>x-5]},
+    {xs:[-3,-1,1,3], v:[null,2,1,0],
+     p:[x=>4/((x+3)*(x+3))-2, x=>4/((x+3)*(x+3))-2, x=>x, x=>x-3, x=>x-3]},
+    {xs:[-3,-1,1,3], v:[-1,null,1,-2],
+     p:[x=>x+5, x=>-1/(x+1)+1.5, x=>x, x=>x, x=>x-5]}
+  ],
+  KINDS:['C','H','J','R'],
+  WORD:{C:'joined up', H:'a hole', J:'a jump', R:'running off'},
+  gi:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',     t:'Read every point of a graph right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'moved',   t:'Read a hole whose dot sits off the line: f(a) is there, but somewhere else.', toast:'A dot off the line is still a hole',
+     ok:K=>K.kinds.has('moved')},
+    {id:'jumpdot', t:'Read a jump with a dot on one side: f(a) is there, but the sides disagree.', toast:'A dot does not mend a jump',
+     ok:K=>K.kinds.has('jumpdot')},
+    {id:'runs',    t:'Read a point where f runs off without end.', toast:'Running off, no limit',
+     ok:K=>K.kinds.has('runs')},
+    {id:'fix',     t:'Check a reading with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',   t:'Read three graphs in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A limit at x = a is where f heads as x closes in from both sides; f(a) itself does not count. Joined up: both sides head for f(a). A hole: both sides head for one number, but f(a) is missing or sits elsewhere, so the limit is still there. A jump: the sides head for different numbers, so there is no limit. Running off: f climbs or drops without end, so there is no limit. A filled dot is f(a), and an open circle is a point the graph leaves out.',
+  L:'ABCD',
+  G(){ return this.GRAPHS[this.gi]; },
+  r(v){ const q=Math.round(v*1e6)/1e6; return Object.is(q,-0)?0:q; },
+  /* where f heads from one side of point i: −1 the left, 1 the right; a side that runs off is ±Infinity */
+  side(i,s){ const G=this.G(), y=G.p[s<0?i:i+1](G.xs[i]+s*1e-9); return Math.abs(y)>1e6 ? Math.sign(y)*Infinity : this.r(y); },
+  truth(i){
+    const L=this.side(i,-1), R=this.side(i,1), v=this.G().v[i];
+    if(!isFinite(L) || !isFinite(R)) return 'R';
+    if(L!==R) return 'J';
+    return v===L ? 'C' : 'H';
+  },
+  /* what the graph holds: a hole with its dot off the line, a jump with a dot, a point that runs off */
+  tags(){
+    const G=this.G(), t=[0,1,2,3].map(i=>this.truth(i)), out=[];
+    if(t.some((k,i)=>k==='H' && G.v[i]!==null)) out.push('moved');
+    if(t.some((k,i)=>k==='J' && G.v[i]!==null)) out.push('jumpdot');
+    if(t.includes('R')) out.push('runs');
+    return out;
+  },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  heads(y){ return isFinite(y) ? `heads for ${neg(y)}` : y>0 ? 'climbs without end' : 'drops without end'; },
+  /* why point i is what it is, worked from its two sides and f there */
+  why(i){
+    const G=this.G(), x=G.xs[i], X=neg(x), L=this.side(i,-1), R=this.side(i,1), v=G.v[i], k=this.truth(i);
+    let s=`At ${this.L[i]}, x = ${X}: from the left f ${this.heads(L)}, and from the right it ${this.heads(R)}.`;
+    if(k==='R') s+=' So there is no limit: it runs off.';
+    else if(k==='J') s+=` They disagree, so there is no limit${v!==null?`, though f(${X}) = ${neg(v)}`:''}: a jump.`;
+    else if(k==='H') s+=` They agree, so the limit is ${neg(L)}, but f(${X}) ${v===null?'is not defined':'= '+neg(v)}: a hole.`;
+    else s+=` They agree, so the limit is ${neg(L)}, and f(${X}) = ${neg(v)} too: joined up.`;
+    return s;
+  },
+  working(){
+    const G=this.G(), out=[];
+    if(this.solved){
+      out.push('Yes: all four points are read right.');
+      const t=[0,1,2,3].map(i=>this.truth(i));
+      const mv=t.findIndex((k,i)=>k==='H' && G.v[i]!==null), jd=t.findIndex((k,i)=>k==='J' && G.v[i]!==null), rn=t.indexOf('R');
+      if(mv>=0) out.push(`At ${this.L[mv]} the dot sits off the line, at f(${neg(G.xs[mv])}) = ${neg(G.v[mv])}, but the limit only asks where f heads, so it is still ${neg(this.side(mv,-1))}.`);
+      if(jd>=0) out.push(`At ${this.L[jd]}, f(${neg(G.xs[jd])}) = ${neg(G.v[jd])} is there, but the two sides still disagree, so there is no limit.`);
+      if(rn>=0) out.push(`At ${this.L[rn]}, f runs off without end, so no number is its limit; the dashed line is where it runs off.`);
+      out.push(`The limits: ${t.map((k,i)=>`${this.L[i]} ${k==='C'||k==='H' ? neg(this.side(i,-1)) : 'none'}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad) out.push(`${this.why(i)} You had it ${this.WORD[this.calls[i]]}.`);
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} read right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* the pieces in blue on x from −4 to 4 and y from −4 to 4; dots for f, open
+     circles for points left out, a dashed line where f runs off; a slip rings
+     its letter, and once read right each limit is drawn in gold */
+  svg(){
+    const G=this.G(), f=v=>v.toFixed(2), PX=v=>20+(v+4)*40, PY=v=>104-v*23;
+    const ends=[-4,...G.xs,4];
+    let out=`<svg viewBox="0 0 360 230" style="width:100%;height:auto;display:block" role="img" aria-label="The graph of f in blue, with points ${G.xs.map((x,i)=>`${this.L[i]} at x = ${neg(x)}`).join(', ')}${this.solved?', each with its limit marked':''}">`;
+    out+=`<defs><clipPath id="lgrClip"><rect x="20" y="12" width="320" height="184"/></clipPath></defs>`;
+    out+=`<line x1="20" y1="104" x2="340" y2="104" stroke="${FIG_COL.axis}" stroke-width="1"/><line x1="180" y1="12" x2="180" y2="196" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    G.xs.forEach(x=>{ out+=`<line data-k="at" x1="${f(PX(x))}" y1="12" x2="${f(PX(x))}" y2="196" stroke="${FIG_COL.grid}" stroke-width="1" stroke-dasharray="2 4"/>`; });
+    for(let s=0;s<5;s++){
+      const a=ends[s]+(s?1e-3:0), b=ends[s+1]-(s<4?1e-3:0), pts=[];
+      for(let k=0;k<=80;k++){ const t=a+(b-a)*k/80, y=Math.max(-6,Math.min(6,G.p[s](t))); pts.push(`${f(PX(t))},${f(PY(y))}`); }
+      out+=`<polyline data-k="piece" clip-path="url(#lgrClip)" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5" stroke-linejoin="round"/>`;
+    }
+    G.xs.forEach((x,i)=>{
+      const L=this.side(i,-1), R=this.side(i,1), v=G.v[i], cx=f(PX(x));
+      if(!isFinite(L) || !isFinite(R)) out+=`<line data-k="asym" x1="${cx}" y1="12" x2="${cx}" y2="196" stroke="${FIG_COL.d}" stroke-width="1.5" stroke-dasharray="6 4"/>`;
+      for(const y of new Set([L,R])) if(isFinite(y) && y!==v) out+=`<circle data-k="open" cx="${cx}" cy="${f(PY(y))}" r="4.5" fill="#171129" stroke="${FIG_COL.a}" stroke-width="2"/>`;
+      if(v!==null) out+=`<circle data-k="dot" cx="${cx}" cy="${f(PY(v))}" r="4.5" fill="${FIG_COL.a}"/>`;
+      if(this.solved){ const k=this.truth(i);
+        if(k==='C' || k==='H') out+=`<circle data-k="lim" cx="${cx}" cy="${f(PY(L))}" r="8" fill="none" stroke="${FIG_COL.b}" stroke-width="2.5"/>`;
+        else out+=`<text data-k="none" x="${cx}" y="226" fill="${FIG_COL.d}" font-size="10" text-anchor="middle">no limit</text>`; }
+      if(this.marks && this.marks[i]===false) out+=`<circle data-k="miss" cx="${cx}" cy="208" r="10" fill="none" stroke="${FIG_COL.d}" stroke-width="2"/>`;
+      out+=`<text x="${cx}" y="213" fill="${FIG_COL.ink}" font-size="13" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Limit.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Limit.render();
+  },
+  next(){ if(!this.solved) return; this.gi=(this.gi+1)%this.GRAPHS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Limit.render(); },
+  NAME:{C:'is joined up: the limit is f there', H:'has a hole: a limit, but f is missing or elsewhere', J:'jumps: the sides disagree, no limit', R:'runs off without end: no limit'},
+  btn(i,c,b){
+    const on=this.calls[i]===c;
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 2px" aria-pressed="${on}" ${this.solved?'disabled ':''}onclick="GapRead.call(${i},'${c}')" aria-label="Point ${this.L[i]} ${this.NAME[c]}">${b}</button>`;
+  },
+  html(){
+    const G=this.G();
+    let out=`<div class="small" style="margin:2px 0 6px">Graph ${this.gi+1} of ${this.GRAPHS.length}: four lettered points on f. At each, is the graph joined up, does it have a hole, does it jump, or does it run off?</div>`;
+    out+=`<div id="lgrFig">${this.svg()}<div class="figcap">The graph of f, in blue. A filled dot is f at that point, an open circle is a point the graph leaves out, and a dashed line is where f runs off. Once read right, each limit is ringed in gold.</div></div>`;
+    out+=`<div id="lgrStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+G.xs.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="lgrStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 3;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">x = ${neg(x)}</span></b>`+
+        this.btn(i,'C','● Joined')+this.btn(i,'H','○ Hole')+this.btn(i,'J','⇅ Jump')+this.btn(i,'R','↕ Runs off')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="lgrRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgrNext" onclick="GapRead.next()" aria-label="Show the next graph">Next graph →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgrCheck" ${this.ready()?'':'disabled '}onclick="GapRead.check()" aria-label="${this.ready()?'Check the four points':'Call all four points to check them'}">${this.ready()?'Check my reading':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="lgrGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="lgrGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('GAP READER','every break named','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
