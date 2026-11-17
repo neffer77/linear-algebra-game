@@ -4538,6 +4538,67 @@ newton(d){
       ex:`${why}.`};
   }
 },
+/* Cramer's rule. A system with det A ≠ 0 has one solution, and each unknown
+   is a ratio of determinants: A with that unknown's column swapped for the
+   right-hand side, over A itself. The first depth asks x of a 2×2 with
+   positive entries, the second any unknown of a 2×2 with signs, the third
+   one unknown of a 3×3. The wrong answers are the slips: the ratio upside
+   down, the right-hand side in the wrong column, a row replaced instead of a
+   column, det A left out, det A's sign turned, and on a 2×2 the products
+   added rather than subtracted. */
+cramer(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const D2=M=>M[0][0]*M[1][1]-M[0][1]*M[1][0];
+  const D3=M=>M[0][0]*(M[1][1]*M[2][2]-M[1][2]*M[2][1])-M[0][1]*(M[1][0]*M[2][2]-M[1][2]*M[2][0])+M[0][2]*(M[1][0]*M[2][1]-M[1][1]*M[2][0]);
+  const V=['x','y','z'], whole=R.chance(0.5);
+  const eq=(r,b)=>{
+    let s='';
+    r.forEach((a,j)=>{
+      if(!a) return;
+      const m=(Math.abs(a)===1?'':Math.abs(a))+V[j];
+      s += s ? ` ${a<0?'−':'+'} ${m}` : (a<0?'−':'')+m;
+    });
+    return `${s} = ${neg(b)}`;
+  };
+  for(let g=0;;g++){
+    const n=d===3?3:2, k=d===1?0:R.i(0,n-1), lo=d===1?1:d===2?-5:-3, hi=d===1?6:d===2?5:3;
+    const A=[...Array(n)].map(()=>[...Array(n)].map(()=>R.i(lo,hi)));
+    const bv=[...Array(n)].map(()=>d===1?R.i(1,12):R.nz(-9,9));
+    const det=n===2?D2:D3, DA=det(A);
+    if(DA===0 || A.some(r=>r.every(a=>a===0))) continue;
+    const col=j=>A.map((r,i)=>r.map((a,c)=>c===j?bv[i]:a));
+    const Ak=col(k), Dk=det(Ak), ans=F(Dk,DA);
+    const o=(k+1)%n, Do=det(col(o)), Dr=det(A.map((r,i)=>i===k?bv.slice():r.slice()));
+    const slips=[
+      [Dk ? F(DA,Dk) : [0,1],`that divides the wrong way up; ${V[k]} is the swapped matrix's determinant over det A, not det A over it`],
+      [F(Do,DA),`that puts the right-hand side in the ${V[o]} column, which gives ${V[o]}; ${V[k]} takes it in column ${k+1}`],
+      [F(Dr,DA),'that replaces a row of A; the right-hand side goes down a column, the one of the unknown asked for'],
+      [F(Dk),'that leaves out dividing by det A'],
+      [F(-Dk,DA),`that turns the sign of det A; ${n===2?'det A is ad − bc, the main diagonal first':'the cofactor signs run +, −, + along the first row'}`],
+      ...(n===2 ? [[F(Ak[0][0]*Ak[1][1]+Ak[0][1]*Ak[1][0],DA),'that adds the two products in det Aᵢ; a 2×2 determinant takes the second away']] : [])
+    ];
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && key(v)!==key(ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>(s[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;
+    const P=v=>v<0?`(${neg(v)})`:neg(v);
+    const dA = n===2 ? `${P(A[0][0])} × ${P(A[1][1])} − ${P(A[0][1])} × ${P(A[1][0])} = ${neg(DA)}` : neg(DA);
+    const dK = n===2 ? `${P(Ak[0][0])} × ${P(Ak[1][1])} − ${P(Ak[0][1])} × ${P(Ak[1][0])} = ${neg(Dk)}` : neg(Dk);
+    return {topic:"Cramer's Rule",
+      codex:{rule:'For Ax = b with det A ≠ 0, each unknown is a ratio: xᵢ = det Aᵢ / det A, where Aᵢ is A with column i swapped for b.',
+             eg:'x + y = 3, x − y = 1: det A = −2, and det Aₓ = det [[3, 1], [1, −1]] = −4, so x = −4/−2 = 2.'},
+      q:`Use Cramer's rule to solve<br>${A.map((r,i)=>eq(r,bv[i])).join('<br>')}<br>What is ${V[k]}?`,
+      a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:`The coefficient matrix is A = ${mat(A)}, and det A = ${dA}. Swap column ${k+1}, the ${V[k]} column, for the right-hand side: det ${mat(Ak)} = ${dK}. So ${V[k]} = ${neg(Dk)}/${P(DA)} = ${show(ans)}.`};
+  }
+},
 /* Quadratic forms: Q(x) = ½ xᵀAx for a symmetric A, the form gradient
    descent and the energy of a spring system are written in. xᵀAx adds each
    diagonal entry times its square and each off-diagonal entry times its
@@ -4774,7 +4835,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4783,7 +4844,7 @@ const TOPIC_LABEL = {
    what the screens collapse into. */
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
-  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm']],
+  ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix','quadForm','cramer']],
   ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
@@ -4804,7 +4865,7 @@ const WORKSHOP_FOR = (() => {
     Cofactor:["♟️ Cofactor Workshop", ['det3']],
     Compose: ["🔁 Order Matters", ['matMul']],
     Span:    ["🧭 Span Workshop", ['vecCombo','rank']],
-    Elim:    ["⚖️ Elimination Workshop", ['solve2']],
+    Elim:    ["⚖️ Elimination Workshop", ['solve2','cramer']],
     Undo:    ["↩️ Undo Workshop", ['inv2']],
     Kernel:  ["🕳️ Null Space Workshop", ['nullSpace','colSpace','rankNullity']],
     Gram:    ["📐 Gram–Schmidt Workshop", ['gramSchmidt']],
@@ -5353,7 +5414,7 @@ const REALMS = [
        far:'crags', farCol:'#351621', near:'keep', nearCol:'#1c0b12',
        ground:['#361a22','#100608'], rim:'rgba(255,170,180,.17)', haze:'rgba(40,16,22,.82)',
        glow:'#ffdde1', weather:'snow', accent:'#ffe9ec'},
-   pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule'],
+   pool:['inv2','det3','cross','rank','eigen2','proj','secondDeriv','critical','partial','solve2','chainRule','cramer'],
    foes:[
      {nm:'Basis Knight',    art:'knightfoe',hp:420,atk:58, gold:200,xp:170, col:'#f08a8d'},
      {nm:'Nullspace Drake', art:'dragon',   hp:480,atk:66, gold:235,xp:200, col:'#d4585c'},

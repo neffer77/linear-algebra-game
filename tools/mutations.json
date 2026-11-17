@@ -1,95 +1,95 @@
 {
-  "change": "Add quadratic forms as a fight topic, and pack knight codes tighter to fit it.",
+  "change": "Add Cramer's rule as a fight topic, linked to the Elimination Workshop.",
   "mutations": [
     {
-      "name": "the ½ left off the answer",
+      "name": "the answer upside down",
       "file": "index.html",
-      "find": "const full=dg+2*cr, ans=F(full,2);",
-      "replace": "const full=dg+2*cr, ans=F(full);",
+      "find": "const Ak=col(k), Dk=det(Ak), ans=F(Dk,DA);",
+      "replace": "const Ak=col(k), Dk=det(Ak), ans=F(DA,Dk||1);",
       "run": "verify"
     },
     {
-      "name": "A not symmetric",
+      "name": "the right-hand side down the wrong column",
       "file": "index.html",
-      "find": "A[i][j]=v; A[j][i]=v;",
-      "replace": "A[i][j]=v; A[j][i]=v+1;",
+      "find": "const col=j=>A.map((r,i)=>r.map((a,c)=>c===j?bv[i]:a));\n    const Ak=col(k)",
+      "replace": "const col=j=>A.map((r,i)=>r.map((a,c)=>c===j?bv[i]:a));\n    const Ak=col((k+1)%n)",
       "run": "verify"
     },
     {
-      "name": "x may hold a 0",
+      "name": "depth 1 asks for y too",
       "file": "index.html",
-      "find": "R.nz(d===3?-2:-3,d===3?2:3)",
-      "replace": "R.i(d===3?-2:-3,d===3?2:3)",
+      "find": "k=d===1?0:R.i(0,n-1)",
+      "replace": "k=R.i(0,n-1)",
       "run": "verify"
     },
     {
-      "name": "two of the answer's sign not required",
+      "name": "depth 2 never asks for y",
       "file": "index.html",
-      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<2000",
-      "replace": "big(ans) || same<2 || (ans[1]===1)!==whole) && g<2000",
-      "run": "verify"
-    },
-    {
-      "name": "two of the answer's form not required",
-      "file": "index.html",
-      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<2000",
-      "replace": "big(ans) || sign<2 || (ans[1]===1)!==whole) && g<2000",
-      "run": "verify"
-    },
-    {
-      "name": "the unsquared slip squares the pairs instead",
-      "file": "index.html",
-      "find": "[F(ln+2*cr,2),'that does not square",
-      "replace": "[F(ln+cr,2),'that does not square",
-      "run": "verify"
-    },
-    {
-      "name": "the Ax slip forgets the half",
-      "file": "index.html",
-      "find": "[F(sAx,2),'that adds up",
-      "replace": "[F(sAx),'that adds up",
-      "run": "verify"
-    },
-    {
-      "name": "the working's pair terms lose their 2",
-      "file": "index.html",
-      "find": "terms.push(`2 × ${P(A[i][j])}",
-      "replace": "terms.push(`${P(A[i][j])}",
-      "run": "verify"
-    },
-    {
-      "name": "the working's xᵀAx off by one",
-      "file": "index.html",
-      "find": "= ${neg(full)}, so Q = ½",
-      "replace": "= ${neg(full+1)}, so Q = ½",
+      "find": "k=d===1?0:R.i(0,n-1)",
+      "replace": "k=d===1?0:R.i(0,n-2)",
       "run": "verify"
     },
     {
       "name": "depth 3 stays 2×2",
       "file": "index.html",
-      "find": "const n=d===3?3:2, A=[...Array(n)]",
-      "replace": "const n=2, A=[...Array(n)]",
+      "find": "const n=d===3?3:2, k=d===1",
+      "replace": "const n=2, k=d===1",
       "run": "verify"
     },
     {
       "name": "depth 1 lets a sign go",
       "file": "index.html",
-      "find": "const v=d===1 ? R.i(1,4) :",
-      "replace": "const v=d===1 ? R.i(-1,4) :",
+      "find": "lo=d===1?1:d===2?-5:-3",
+      "replace": "lo=d===1?-1:d===2?-5:-3",
       "run": "verify"
     },
     {
-      "name": "the questions-ago field wraps instead of saturating",
+      "name": "whole and fractional answers not balanced",
       "file": "index.html",
-      "find": "o.bits(Math.min(63, Math.max(0, (g.qCount||0)",
-      "replace": "o.bits(Math.min(255, Math.max(0, (g.qCount||0)",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
+      "replace": "big(ans) || same<2 || sign<2) && g<3000",
       "run": "verify"
     },
     {
-      "name": "a v7 code read at v8 widths",
+      "name": "two of the answer's sign not required",
       "file": "index.html",
-      "find": "const dLast=b.bits(ver>=8 ? 6 : 8)",
-      "replace": "const dLast=b.bits(6)",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
+      "replace": "big(ans) || same<2 || (ans[1]===1)!==whole) && g<3000",
+      "run": "verify"
+    },
+    {
+      "name": "two of the answer's form not required",
+      "file": "index.html",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000",
+      "replace": "big(ans) || sign<2 || (ans[1]===1)!==whole) && g<3000",
+      "run": "verify"
+    },
+    {
+      "name": "the row slip replaces a column",
+      "file": "index.html",
+      "find": "Dr=det(A.map((r,i)=>i===k?bv.slice():r.slice()))",
+      "replace": "Dr=det(A.map((r,i)=>r.map((a,c)=>c===k?bv[i]:a)).map(r=>r.reverse()))",
+      "run": "verify"
+    },
+    {
+      "name": "the added-products slip takes them away",
+      "file": "index.html",
+      "find": "[F(Ak[0][0]*Ak[1][1]+Ak[0][1]*Ak[1][0],DA),",
+      "replace": "[F(Ak[0][0]*Ak[1][1]-Ak[0][1]*Ak[1][0]+1,DA),",
+      "run": "verify"
+    },
+    {
+      "name": "the working's det A off by one",
+      "file": "index.html",
+      "find": "and det A = ${dA}.",
+      "replace": "and det A = ${dA}${n===3?'':''}0.",
+      "run": "verify"
+    },
+    {
+      "name": "the working swaps the wrong column",
+      "file": "index.html",
+      "find": "Swap column ${k+1}, the ${V[k]} column, for the right-hand side: det ${mat(Ak)}",
+      "replace": "Swap column ${k+1}, the ${V[k]} column, for the right-hand side: det ${mat(A)}",
       "run": "verify"
     }
   ]
