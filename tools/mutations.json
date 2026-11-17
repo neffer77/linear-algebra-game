@@ -88,8 +88,8 @@
     {
       "name": "the slip pair is not ringed",
       "file": "index.html",
-      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\"",
-      "replace": "if(false) out+=`<rect data-k=\"miss\"",
+      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
+      "replace": "if(false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\"",
       "run": "play:crossturn"
     },
     {
