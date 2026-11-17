@@ -1,95 +1,95 @@
 {
-  "change": "Add determinant rules as a fight topic, linked to the Cofactor Workshop.",
+  "change": "Add radius of convergence as a fight topic, linked to the Geometric Series Workshop.",
   "mutations": [
     {
-      "name": "kⁿ taken as k",
+      "name": "the radius taken as c/b without the root",
       "file": "index.html",
-      "find": "const kn=F(k**n), ans=mulF(kn,prod({}));",
-      "replace": "const kn=F(k), ans=mulF(kn,prod({}));",
+      "find": "const Rr=F(r,s);                              // the radius",
+      "replace": "const Rr=m===2?F(r*r,s*s):F(r,s);              // the radius",
       "run": "verify"
     },
     {
-      "name": "an inverse read as the determinant itself",
+      "name": "the limit slip names the radius instead",
       "file": "index.html",
-      "find": "if(f.p===-1) return o.invNeg ? F(-v) : o.invDrop ? F(v) : F(1,v);",
-      "replace": "if(f.p===-1) return o.invNeg ? F(-v) : o.invDrop ? F(v) : F(v);",
+      "find": "      [L,'that is the ratio\\'s limit, not the radius:",
+      "replace": "      [F(s,r),'that is the ratio\\'s limit, not the radius:",
       "run": "verify"
     },
     {
-      "name": "a transpose turns the sign",
+      "name": "the width slip taken as R",
       "file": "index.html",
-      "find": "const v=dv[f.M]*(f.t && o.trans ? -1 : 1);",
-      "replace": "const v=dv[f.M]*(f.t ? -1 : 1);",
+      "find": "[F(2*r,s),'that is the width",
+      "replace": "[F(r,s),'that is the width",
       "run": "verify"
     },
     {
-      "name": "the sum slip multiplies instead",
+      "name": "the ends swapped",
       "file": "index.html",
-      "find": "[mulF(kn,sum),'that adds the determinants;",
-      "replace": "[mulF(kn,prod({})),'that adds the determinants;",
+      "find": "[F(a*s+r,s),'that is the right-hand end",
+      "replace": "[F(a*s-r,s),'that is the right-hand end",
       "run": "verify"
     },
     {
-      "name": "the k-once slip named as k × n",
+      "name": "the root slip shown at every depth",
       "file": "index.html",
-      "find": "[mulF(F(k*n),prod({})),'that multiplies by k × n;",
-      "replace": "[mulF(F(k),prod({})),'that multiplies by k × n;",
+      "find": "...(m===2 ? [[F(c,b),'that forgets the square root",
+      "replace": "...(true ? [[F(c,b),'that forgets the square root",
       "run": "verify"
     },
     {
-      "name": "two of the answer's sign not required",
+      "name": "depth 1 gets a power of n",
       "file": "index.html",
-      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
-      "replace": "if((dist.length<4 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
+      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
+      "replace": "const m=d===3?2:1, p=R.pick([0,1,2,3]);",
+      "run": "verify"
+    },
+    {
+      "name": "depth 2 never puts n³",
+      "file": "index.html",
+      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
+      "replace": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2]);",
+      "run": "verify"
+    },
+    {
+      "name": "depth 3 stays at the nth power",
+      "file": "index.html",
+      "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
+      "replace": "const m=1, p=d===1?0:R.pick([0,1,2,3]);",
+      "run": "verify"
+    },
+    {
+      "name": "the centre at 0",
+      "file": "index.html",
+      "find": "const a=R.pick([1,2,3,4,5,-1,-2,-3,-4]);\n    const s=whole",
+      "replace": "const a=R.pick([1,2,3,4,5,-1,-2,-3,-4])*0+1;\n    const s=whole",
       "run": "verify"
     },
     {
       "name": "two of the answer's form not required",
       "file": "index.html",
-      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
-      "replace": "if((dist.length<4 || big(ans) || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
-      "run": "verify"
-    },
-    {
-      "name": "depth 1 can be 3×3",
-      "file": "index.html",
-      "find": "const n=d===1?2:d===2?R.pick([2,3]):3;",
-      "replace": "const n=d===3?3:R.pick([2,3]);",
-      "run": "verify"
-    },
-    {
-      "name": "depth 1 lets k be negative",
-      "file": "index.html",
-      "find": "const k=d===1?R.pick([2,3]):R.pick([2,3,-2,-1]);",
-      "replace": "const k=R.pick([2,3,-2,-1]);",
-      "run": "verify"
-    },
-    {
-      "name": "depth 2 may leave out the inverse",
-      "file": "index.html",
-      "find": "if(!fs.some(f=>f.p===-1) && d>1) continue;",
-      "replace": "if(!fs.some(f=>f.p===-1) && d>2) continue;",
-      "run": "verify"
-    },
-    {
-      "name": "depth 3 never takes three factors",
-      "file": "index.html",
-      "find": "const nf=d===3?R.pick([2,3]):2;",
-      "replace": "const nf=2;",
-      "run": "verify"
-    },
-    {
-      "name": "the working's scalar loses its power",
-      "file": "index.html",
-      "find": "const terms=[`${P(k)}${SUP[n]}`,",
-      "replace": "const terms=[`${P(k)}`,",
+      "find": "if((dist.length<4 || same<2 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
+      "replace": "if((dist.length<4 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
       "run": "verify"
     },
     {
       "name": "whole answers not balanced",
       "file": "index.html",
-      "find": "if((dist.length<4 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
-      "replace": "if((dist.length<4 || big(ans) || same<2 || sign<2) && g<3000) continue;\n    const P=v=>v<0?`(${neg(v)})`:neg(v);\n    const ks=",
+      "find": "if((dist.length<4 || same<2 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;\n    const xa=",
+      "replace": "if((dist.length<4 || same<2 || sign<2) && g<3000) continue;\n    const xa=",
+      "run": "verify"
+    },
+    {
+      "name": "the working leaves out why nᵖ does not count",
+      "file": "index.html",
+      "find": "${p?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`",
+      "replace": "${p>1?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`",
+      "run": "verify"
+    },
+    {
+      "name": "the working's inequality loses the square",
+      "file": "index.html",
+      "find": "That is under 1 when |x ${a>0?'−':'+'} ${Math.abs(a)}|${m===2?'²':''} <",
+      "replace": "That is under 1 when |x ${a>0?'−':'+'} ${Math.abs(a)}| <",
       "run": "verify"
     }
   ]

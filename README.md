@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-three topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-four topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with eighty-three in the game, drawing from all of them would build a run
+have actually met — with eighty-four in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -278,9 +278,9 @@ stays forgotten.
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives, Cramer's rule, determinant rules |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices, least squares, quadratic forms |
 | 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method, Simpson's rule |
-| 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
+| 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials, radius of convergence — the capstone, where the two subjects finally meet |
 
-**83 problem generators** in total, each producing randomised problems at three difficulty
+**84 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -412,7 +412,7 @@ turned, and on a 2×2 the two products added. Its check solves the system again 
 never by determinants. It joins the Matrices strand and the Eigen Citadel, and a fight that
 shows it up points to the ⚖️ Elimination Workshop.
 
-**Determinant rules**, the newest, never writes a matrix down. Told det A and det B for two
+**Determinant rules** never writes a matrix down. Told det A and det B for two
 n×n matrices, the player finds the determinant of an expression in them, like det(2A⁻¹Bᵀ),
 using det(kM) = kⁿ det M, det(MN) = det M × det N, det Mᵀ = det M and det M⁻¹ = 1/det M. The
 first depth is 2×2 with a positive scalar and two factors; the second brings in 3×3, a negative
@@ -423,6 +423,16 @@ dropped, a sign turned for a transpose, a power multiplied instead of raised, an
 determinants added. Its check builds an actual A and B with those determinants and works the
 expression out in exact fractions. It joins the Matrices strand and the Eigen Citadel, and a
 fight that shows it up points to the ♟️ Cofactor Workshop.
+
+**Radius of convergence**, the newest, asks how far x can stray from the centre of a power
+series Σ nᵖ·bⁿ(x − a)ᵐⁿ/cⁿ before it stops converging. The ratio test leaves (b/c)|x − a|ᵐ,
+which is under 1 when |x − a|ᵐ < c/b. The first depth has no power of n; the second adds one,
+which changes nothing, since (n + 1)ᵖ/nᵖ tends to 1; the third puts (x − a)²ⁿ, so the radius
+is a square root. Whole and fractional answers come up about equally. The wrong answers are the
+slips people make: the ratio's limit taken for R, the width of the interval, its two ends, and
+on the third depth the square root forgotten. Its check finds R again by the root test, never
+the ratio test. It joins the Multivariable & Series strand and the Gradient Summit, and a fight
+that shows it up points to the 🧮 Geometric Series Workshop.
 
 ---
 
@@ -688,7 +698,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy-three of the eighty-three topics
+  where every answer would echo is asked the plain way. Seventy-three of the eighty-four topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -1263,7 +1273,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Eighty-three topics link to fifty-seven workshops,
+  back button returns to the summary. Eighty-four topics link to fifty-seven workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -2169,10 +2179,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading eighty-three bars.
+  reading eighty-four bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Eighty-three topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Eighty-four topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all

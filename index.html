@@ -4538,6 +4538,55 @@ newton(d){
       ex:`${why}.`};
   }
 },
+/* Radius of convergence. A power series Σ nᵖ·bⁿ(x − a)ᵐⁿ/cⁿ: the ratio test
+   leaves (b/c)|x − a|ᵐ, since (n + 1)ᵖ/nᵖ tends to 1, and that is under 1
+   when |x − a|ᵐ < c/b. The first depth is bⁿ(x − a)ⁿ/cⁿ with a centre off 0;
+   the second adds a power of n that changes nothing; the third puts
+   (x − a)²ⁿ, so the radius is a square root. The wrong answers are the slips:
+   the ratio's limit taken for R, the interval's width, its two ends, and on
+   the third the square root forgotten. */
+radiusConv(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1];
+  const SUP=['','','²','³'], whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);
+    const a=R.pick([1,2,3,4,5,-1,-2,-3,-4]);
+    const s=whole?1:R.pick([2,3,4,5]), r=R.i(2,d===3?6:9);
+    if(gcd(r,s)!==1 || r===s) continue;
+    const Rr=F(r,s);                              // the radius
+    const b=s**m, c=r**m;                         // so that (c/b)^(1/m) = r/s
+    const L=F(b,c);
+    const slips=[
+      [L,'that is the ratio\'s limit, not the radius: the series converges while that limit times |x − a| stays under 1, so R is its reciprocal'],
+      [F(2*r,s),'that is the width of the interval of convergence; the radius is half of it, how far x can go from the centre'],
+      [F(a*s+r,s),'that is the right-hand end of the interval, a + R; the radius is how far x can go from the centre'],
+      [F(a*s-r,s),'that is the left-hand end of the interval, a − R; the radius is how far x can go from the centre'],
+      ...(m===2 ? [[F(c,b),'that forgets the square root: the power is 2n, so the test asks for |x − a|² < c/b, and R is the root of c/b']] : [])
+    ];
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && key(v)!==key(Rr);
+    const dist=[], seen=new Set([key(Rr)]);
+    for(const sl of R.shuffle(slips)){
+      if(dist.length===4 || !ok(sl[0]) || seen.has(key(sl[0]))) continue;
+      dist.push(sl); seen.add(key(sl[0]));
+    }
+    const same=dist.filter(sl=>(sl[0][1]===1)===(Rr[1]===1)).length, sign=dist.filter(sl=>sl[0][0]>0).length;
+    if((dist.length<4 || same<2 || sign<2 || (Rr[1]===1)!==whole) && g<3000) continue;
+    const xa=a>0?`(x − ${a})`:`(x + ${-a})`, pw=m===2?'²ⁿ':'ⁿ';
+    const np=p===0?'':p===1?'n·':`n${SUP[p]}·`, bp=b===1?'':`${b}ⁿ`;
+    const term=`${np}${bp}${xa}${pw} / ${c}ⁿ`;
+    const lim=`(${show(L)})|x ${a>0?'−':'+'} ${Math.abs(a)}|${m===2?'²':''}`;
+    const why=`The ratio of one term to the one before tends to ${lim}${p?`, since (n + 1)${SUP[p]||''}/n${SUP[p]||''} tends to 1`.replace('(n + 1)/n','(n + 1)/n'):''}. That is under 1 when |x ${a>0?'−':'+'} ${Math.abs(a)}|${m===2?'²':''} < ${show(F(c,b))}, so R = ${m===2?`√(${show(F(c,b))}) = `:''}${show(Rr)}.`;
+    return {topic:'Radius of Convergence',
+      codex:{rule:'For Σ cₙ(x − a)ⁿ, the ratio test gives L = lim |cₙ₊₁/cₙ|; the series converges for |x − a| < 1/L, so R = 1/L. A factor like nᵖ tends to ratio 1 and leaves R alone.',
+             eg:'Σ (x − 1)ⁿ/5ⁿ: L = 1/5, so R = 5, and it converges for −4 < x < 6.'},
+      q:`What is the radius of convergence of Σ (n = 1 to ∞) ${term}?`,
+      a:show(Rr),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:why};
+  }
+},
 /* Determinant rules. Told det A and det B for two n×n matrices, find the
    determinant of an expression in them without ever writing a matrix down:
    det(kM) = kⁿ det M, the determinant of a product is the product of the
@@ -4902,7 +4951,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule", quadForm:'Quadratic Forms', cramer:"Cramer's Rule", detRules:'Determinant Rules', radiusConv:'Radius of Convergence'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4916,7 +4965,7 @@ const STRANDS = [
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
-  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
+  ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor','radiusConv']]
 ];
 
 /* The hands-on workshop that shows a topic working, for the topics one
@@ -4944,7 +4993,7 @@ const WORKSHOP_FOR = (() => {
     Slope:   ["📈 Slope Workshop", ['evalDeriv','powerRule','tangent']],
     Area:    ["🏺 Area Workshop", ['area','riemannToInt']],
     Cistern: ["💧 Cistern Workshop", ['defPoly']],
-    Geo:     ["🧮 Geometric Series Workshop", ['geoSeries']],
+    Geo:     ["🧮 Geometric Series Workshop", ['geoSeries','radiusConv']],
     Taylor:  ["🌀 Taylor Workshop", ['taylor']],
     Chain:   ["⛓️ Chain Rule Workshop", ['chainRule']],
     Parts:   ["✂️ Parts Workshop", ['byParts']],
@@ -5520,7 +5569,7 @@ const REALMS = [
        ground:['#3a2a11','#120b04'], rim:'rgba(255,210,130,.2)', haze:'rgba(40,28,10,.8)',
        glow:'#fff0cd', weather:'shards', accent:'#ffcf7a'},
    pool:['gradient','dirDeriv','chainMulti','tangentPlane','doubleInt','geoSeries','taylor',
-         'partial','vecProj','optimisation','byParts','eigenvec'],
+         'partial','vecProj','optimisation','byParts','eigenvec','radiusConv'],
    foes:[
      {nm:'Saddle Point Sentinel', art:'golem',    hp:1300,atk:182,gold:640,xp:600,  col:'#ffcf7a'},
      {nm:'Steepest Descent',      art:'wraith',   hp:1450,atk:197,gold:720,xp:680,  col:'#ffb648'},
