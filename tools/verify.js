@@ -744,6 +744,7 @@ let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgott
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
+let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
 let lsWhole = 0, lsFour = 0, lsSeen = new Set();   // least squares: how often the answer is whole, how often there are four points, and which slips turn up
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
@@ -1397,6 +1398,69 @@ Object.assign(ANALYSIS, {
     });
     covered.add('simpson');
   },
+  // Cramer's rule, solved again here by elimination in exact fractions rather
+  // than by determinants, so the ratio the generator takes is checked against
+  // a different method; each wrong answer is worked again as its slip.
+  cramer: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const lines = String(p.q).split('<br>'), V = ['x', 'y', 'z'];
+    const ask = (lines[lines.length - 1].match(/^What is ([xyz])\?$/) || [])[1];
+    if (lines[0] !== "Use Cramer's rule to solve" || !ask) { fail('analysis', 'cramer', `the question does not read as Cramer's rule: ${fl(p.q)}`); return; }
+    const eqs = lines.slice(1, -1), n = eqs.length, k = V.indexOf(ask);
+    const A = [], b = [];
+    for (const e of eqs) {
+      const m = fl(e).match(/^(.*) = (-?\d+)$/);
+      if (!m) { fail('analysis', 'cramer', `an equation does not read: ${e}`); return; }
+      const row = Array(n).fill(0);
+      for (const t of m[1].replace(/ - /g, ' + -').split(' + ')) {
+        const tm = t.match(/^(-?)(\d*)([xyz])$/);
+        if (!tm || V.indexOf(tm[3]) >= n) { fail('analysis', 'cramer', `a term does not read: ${t} in ${e}`); return; }
+        row[V.indexOf(tm[3])] = (tm[1] ? -1 : 1) * (tm[2] ? +tm[2] : 1);
+      }
+      A.push(row); b.push(+m[2]);
+    }
+    if (k >= n) fail('analysis', 'cramer', `the question asks for ${ask} of a ${n}×${n} system`);
+    // Gauss–Jordan in floating point, with partial pivoting
+    const M = A.map((r, i) => [...r, b[i]]);
+    for (let c = 0; c < n; c++) {
+      let piv = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[piv][c])) piv = r;
+      if (Math.abs(M[piv][c]) < 1e-12) { fail('analysis', 'cramer', `the system has no single solution: ${fl(p.q)}`); return; }
+      [M[c], M[piv]] = [M[piv], M[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let j = c; j <= n; j++) M[r][j] -= f * M[c][j]; }
+    }
+    const sol = M.map((r, i) => r[n] / r[i]);
+    valueCheck('cramer', sol[k], p.a, 1e-9);
+    // the slips, from determinants worked here by cofactors
+    const det = X => X.length === 2 ? X[0][0] * X[1][1] - X[0][1] * X[1][0]
+      : X[0].reduce((s, a, j) => s + (j % 2 ? -1 : 1) * a * det(X.slice(1).map(r => r.filter((_, c) => c !== j))), 0);
+    const col = j => A.map((r, i) => r.map((a, c) => c === j ? b[i] : a));
+    const DA = det(A), Ak = col(k), Dk = det(Ak), o = (k + 1) % n;
+    const slip = [[/^that divides the wrong way up/, DA / Dk], [new RegExp(`^that puts the right-hand side in the ${V[o]} column`), det(col(o)) / DA],
+      [/^that replaces a row of A/, det(A.map((r, i) => i === k ? b.slice() : r)) / DA], [/^that leaves out dividing by det A/, Dk],
+      [/^that turns the sign of det A/, -Dk / DA]];
+    if (n === 2) slip.push([/^that adds the two products in det Aᵢ/, (Ak[0][0] * Ak[1][1] + Ak[0][1] * Ak[1][0]) / DA]);
+    // the working names A, det A, the swapped matrix and its determinant, and lands on the answer
+    const w = fl(p.ex), wm = mats(p.ex);
+    const wr = w.match(/^The coefficient matrix is A = .*, and det A = (.*?)(-?\d+)\. Swap column (\d), the ([xyz]) column, for the right-hand side: det [-\d ]+ = (.*?)(-?\d+)\. So ([xyz]) = \(?(-?\d+)\)?\/\(?(-?\d+)\)? = (-?\d+(?:\/\d+)?)\.$/);
+    if (!wr || +wr[2] !== DA || +wr[3] !== k + 1 || wr[4] !== ask || +wr[6] !== Dk || wr[7] !== ask || +wr[8] !== Dk || +wr[9] !== DA || Math.abs(val(wr[10]) - sol[k]) > 1e-9)
+      fail('analysis', 'cramer', `the working does not take det Aᵢ over det A: ${w}`);
+    else if (wm.length !== 2 || JSON.stringify(wm[0]) !== JSON.stringify(A) || JSON.stringify(wm[1]) !== JSON.stringify(Ak))
+      fail('analysis', 'cramer', `the working's matrices are not A and A with column ${k + 1} swapped: ${w}`);
+    else if (n === 2) {
+      const ex2 = (X, D) => `${X[0][0] < 0 ? `(${X[0][0]})` : X[0][0]} × ${X[1][1] < 0 ? `(${X[1][1]})` : X[1][1]} - ${X[0][1] < 0 ? `(${X[0][1]})` : X[0][1]} × ${X[1][0] < 0 ? `(${X[1][0]})` : X[1][0]} = `;
+      if (wr[1] !== ex2(A) || wr[5] !== ex2(Ak)) fail('analysis', 'cramer', `a 2×2 determinant is not worked as ad − bc: ${w}`);
+    }
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'cramer', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-9) fail('analysis', 'cramer', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      crSeen.add(String(sl[0]).replace(/the [xyz] column/, 'the other column'));
+    });
+    crAsk[ask] = (crAsk[ask] || 0) + 1;
+    covered.add('cramer');
+  },
   // Quadratic forms, worked again here as a product: A read off the question,
   // Ax multiplied out row by row, and x dotted with it; each wrong answer
   // worked again as the slip its reason names.
@@ -1637,7 +1701,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 81, sig: 0xc595 };
+  const PINNED = { count: 82, sig: 0xc247 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16838,6 +16902,35 @@ for (let d = 1; d <= 3; d++) {
   // left to themselves the tables come out whole only about 37% of the time at the first two depths and
   // 62% at the third, so the band is tight enough to see the coin flip that evens them out
   if (spWhole < SP * 0.42 || spWhole > SP * 0.58) fail('analysis', 'simpson', `depth ${d} gives a whole answer ${spWhole} times in ${SP}, not about half`);
+}
+
+// Cramer's rule at every depth: five different exact numbers, none 0, with
+// two of the four wrong ones sharing the answer's sign and two its form;
+// every slip turns up; every unknown is asked where the depth allows; and
+// whole and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const CR = 3000;
+  crWhole = 0; crSeen = new Set(); crAsk = {};
+  for (let i = 0; i < CR; i++) {
+    const p = GEN.cramer(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'cramer', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'cramer', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const neg0 = vals[0].startsWith('-');
+    if (vals.slice(1).filter(v => v.startsWith('-') === neg0).length < 2) fail('analysis', 'cramer', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'cramer', `a number runs too long: ${vals.join(', ')}`);
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'cramer', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) crWhole++;
+    const eqs = String(p.q).split('<br>').length - 2;
+    if (eqs !== (d === 3 ? 3 : 2)) fail('analysis', 'cramer', `depth ${d} gives ${eqs} equations: ${plainT(p.q)}`);
+    if (d === 1 && /−/.test(p.q)) fail('analysis', 'cramer', `depth 1 has a minus sign in it: ${plainT(p.q)}`);
+    ANALYSIS.cramer(p);
+  }
+  const want = d === 1 ? 'x' : d === 2 ? 'x,y' : 'x,y,z';
+  if (Object.keys(crAsk).sort().join() !== want) fail('analysis', 'cramer', `depth ${d} asks for ${Object.keys(crAsk).sort().join()}, not ${want}`);
+  if (crSeen.size !== (d === 3 ? 5 : 6)) fail('analysis', 'cramer', `depth ${d} offers only ${crSeen.size} of its slips`);
+  if (crWhole < CR * 0.42 || crWhole > CR * 0.58) fail('analysis', 'cramer', `depth ${d} gives a whole answer ${crWhole} times in ${CR}, not about half`);
 }
 
 // Quadratic forms at every depth: the answer and its four slips are five
