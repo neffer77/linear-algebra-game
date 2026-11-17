@@ -29,11 +29,11 @@ module.exports = {
       /Then turn it round: see a 3×3 matrix, and pick which of four numbers is its determinant\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCof');
     t.eq('the cofactor workshop opens', await t.screen(), 's-cof');
-    t.eq('expanding by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('expanding by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which det A\?/);
-    t.eq('which det A is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which det A is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the matrices, the grid, the lines, the readout and the goals step aside',
       await hidden(t, 'cfSets') && await hidden(t, 'cfFig') && await hidden(t, 'cfLines') && await hidden(t, 'cfRead') && await hidden(t, 'cfGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('cfpBox').innerText)).startsWith(
