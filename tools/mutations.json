@@ -1,74 +1,102 @@
 {
-  "change": "Add parametric derivatives as a fight topic: dy/dx = (dy/dt)/(dx/dt) for a curve x(t), y(t).",
+  "change": "Add an Along a curve mode to the chain rule workshop: step t and read dy/dx as (dy/dt) ÷ (dx/dt).",
   "mutations": [
     {
-      "name": "the ratio upside down",
+      "name": "the slope upside down",
       "file": "index.html",
-      "find": "const ans=F(Yv,Xv);",
-      "replace": "const ans=F(Xv,Yv);",
+      "find": "s(){ const a=this.a(), b=this.b(); return a[0]===0 ? null : this.frac(b[0]*a[1], b[1]*a[0]); },",
+      "replace": "s(){ const a=this.a(), b=this.b(); return a[0]===0 ? null : this.frac(a[0]*b[1], a[1]*b[0]); },",
       "run": "verify"
     },
     {
       "name": "dx/dt worked from y",
       "file": "index.html",
-      "find": "const dX=dPoly(X), dY=dPoly(Y),",
-      "replace": "const dX=dPoly(Y), dY=dPoly(Y),",
+      "find": "a(){ return this.at(this.der(this.cur().X),this.k); },",
+      "replace": "a(){ return this.at(this.der(this.cur().Y),this.k); },",
       "run": "verify"
     },
     {
-      "name": "the slip named upside down is dy/dt",
+      "name": "the power rule's factor dropped",
       "file": "index.html",
-      "find": "[F(Xv,Yv),'that turns the ratio upside down",
-      "replace": "[F(Yv),'that turns the ratio upside down",
+      "find": "der(P){ return P.filter(([,p])=>p>0).map(([c,p])=>[c*p,p-1]); },",
+      "replace": "der(P){ return P.filter(([,p])=>p>0).map(([c,p])=>[c,p-1]); },",
       "run": "verify"
     },
     {
-      "name": "the product slip divides",
+      "name": "the point worked over the wrong bottom",
       "file": "index.html",
-      "find": "[F(Yv*Xv),'that multiplies the two rates",
-      "replace": "[F(Yv,Xv*Xv),'that multiplies the two rates",
+      "find": "for(const [c,p] of P) s+=c*k**p*2**(D-p); return this.frac(s, 2**D); },",
+      "replace": "for(const [c,p] of P) s+=c*k**p*2**(D-p); return this.frac(s, 2**D+1); },",
       "run": "verify"
     },
     {
-      "name": "y over x read as x over y",
+      "name": "backwards never said",
       "file": "index.html",
-      "find": "[[F(yv,xv),'that is y over x",
-      "replace": "[[F(xv,yv),'that is y over x",
+      "find": "return `${v} moves ${m==='1' ? 'as fast as' : m+' times as fast as'} t${f[0]<0 ? ', backwards' : ''}`;",
+      "replace": "return `${v} moves ${m==='1' ? 'as fast as' : m+' times as fast as'} t${''}`;",
       "run": "verify"
     },
     {
-      "name": "the power rule slip keeps the factor",
+      "name": "straight up told as a dead stop",
       "file": "index.html",
-      "find": "const slack=P=>P.map(([c,p])=>[c,p-1])",
-      "replace": "const slack=P=>P.map(([c,p])=>[c*p,p-1])",
+      "find": "else if(b[0]!==0) out.push(`dx/dt = 0, so (dy/dt)",
+      "replace": "else if(b[0]===0) out.push(`dx/dt = 0, so (dy/dt)",
       "run": "verify"
     },
     {
-      "name": "t never negative",
+      "name": "the crossing never told",
       "file": "index.html",
-      "find": "t0=nz(-3,3); }\n    else {",
-      "replace": "t0=R.i(1,3); }\n    else {",
+      "find": "if(this.ci===0 && x[0]===0 && y[0]===0){",
+      "replace": "if(this.ci===9 && x[0]===0 && y[0]===0){",
       "run": "verify"
     },
     {
-      "name": "x a line at every depth",
+      "name": "the tangent drawn upside down",
       "file": "index.html",
-      "find": "else if(d===2){ X=[[nz(-3,3),2],[R.i(-5,5),1]];",
-      "replace": "else if(d===2){ X=[[nz(-3,3),1],[R.i(-5,5),0]];",
+      "find": "const dx=a[0]/a[1], dy=-b[0]/b[1], n=Math.hypot(dx,dy)",
+      "replace": "const dx=a[0]/a[1], dy=b[0]/b[1], n=Math.hypot(dx,dy)",
       "run": "verify"
     },
     {
-      "name": "always a whole answer",
+      "name": "the stub points backwards",
       "file": "index.html",
-      "find": "(ans[1]===1)!==whole) && g<3000) continue;\n    const amt=n=>n<0?`(${neg(n)})`:neg(n);\n    const why=`dx/dt",
-      "replace": "(ans[1]!==1)) && g<3000) continue;\n    const amt=n=>n<0?`(${neg(n)})`:neg(n);\n    const why=`dx/dt",
+      "find": "x2=\"${f(px+ux*26)}\" y2=\"${f(py+uy*26)}\"",
+      "replace": "x2=\"${f(px-ux*26)}\" y2=\"${f(py-uy*26)}\"",
       "run": "verify"
     },
     {
-      "name": "the working shows dy/dt as dx/dt",
+      "name": "one pass counts as the crossing",
       "file": "index.html",
-      "find": "which is ${neg(Xv)} at t = ${neg(t0)}, and dy/dt = ${poly(dY,'t')}, which is ${neg(Yv)}.",
-      "replace": "which is ${neg(Xv)} at t = ${neg(t0)}, and dy/dt = ${poly(dY,'t')}, which is ${neg(Xv)}.",
+      "find": "ok:P=>P.cross.size===2},",
+      "replace": "ok:P=>P.cross.size>=1},",
+      "run": "verify"
+    },
+    {
+      "name": "the stepper goes past t = 2",
+      "file": "index.html",
+      "find": "if(v<this.KLO || v>this.KHI) return; this.k=v; this.touched=true; Chain.render();",
+      "replace": "if(v<this.KLO || v>this.KHI+1) return; this.k=v; this.touched=true; Chain.render();",
+      "run": "verify"
+    },
+    {
+      "name": "the crossing counted before a press",
+      "file": "index.html",
+      "find": "if(this.touched && this.ci===0 && this.x()[0]===0",
+      "replace": "if(this.ci===0 && this.x()[0]===0",
+      "run": "verify"
+    },
+    {
+      "name": "the nudge takes y one way",
+      "file": "index.html",
+      "find": "const r=(this.val(Y,t+h)-this.val(Y,t-h))/(this.val(X,t+h)-this.val(X,t-h));",
+      "replace": "const r=(this.val(Y,t+h)-this.val(Y,t))/(this.val(X,t+h)-this.val(X,t-h));",
+      "run": "verify"
+    },
+    {
+      "name": "y drawn to its own scale",
+      "file": "index.html",
+      "find": "return {sc, X:x=>180+(x-cx)*sc, Y:y=>130-(y-cy)*sc};",
+      "replace": "return {sc, X:x=>180+(x-cx)*sc, Y:y=>130-(y-cy)*sc*0.8};",
       "run": "verify"
     }
   ]

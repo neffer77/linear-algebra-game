@@ -115,6 +115,7 @@ const SUITES = [
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
   require('./play/chainpick'), // see y = f(g(x)), pick which of four formulas is its slope
+  require('./play/chaincurve'), // step t along a curve and read dy/dx as dy/dt over dx/dt
   require('./play/productpick'), // see y = f(x) · g(x), pick which of four formulas is its slope
   require('./play/quotpick'), // see y = f(x) / g(x), pick which of four formulas is its slope
   require('./play/lampick'),  // see a matrix, pick which of four pairs are its eigenvalues

@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see y = f\(g\(x\)\), and pick which of four formulas is its slope\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeChain');
     t.eq('the chain rule workshop opens', await t.screen(), 's-chain');
-    t.eq('the two links is the pressed mode', await pressed(t), 'true,false');
+    t.eq('the two links is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(7171));
     await t.tapText(/Which dy\/dx\?/);
-    t.eq('which dy/dx is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which dy/dx is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the two links and their goals step aside', await hidden(t, 'chPairs') && await hidden(t, 'chFig') && await hidden(t, 'chRules') && await hidden(t, 'chXs') && await hidden(t, 'chRead') && await hidden(t, 'chGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('chPick').innerText)).startsWith(
       'The chain rule: if y = f(u) with u = g(x), then dy/dx = f′(u) × g′(x).'));
