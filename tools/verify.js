@@ -743,6 +743,7 @@ let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how 
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
+let lsWhole = 0, lsFour = 0, lsSeen = new Set();   // least squares: how often the answer is whole, how often there are four points, and which slips turn up
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
@@ -1372,6 +1373,53 @@ Object.assign(ANALYSIS, {
     });
     covered.add('newton');
   },
+  // Least squares, worked again here in floating point and never by the
+  // formula the game uses: the points read off the question, the slope found
+  // by minimising the squared misses directly (Σ(y − mx − c)² is a bowl in m
+  // and c, so a few Newton steps on its slopes land on the bottom exactly),
+  // and each wrong answer worked again as the slip its reason names.
+  leastSq: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^(?:Find the slope m of the least-squares line y = mx \+ c through the points (.*)\.|Where does the least-squares line y = mx \+ c through the points (.*) cross the y-axis\? Find c\.)$/);
+    if (!m) { fail('analysis', 'leastSq', `the question does not read as least squares: ${t}`); return; }
+    const icpt = m[2] !== undefined, P = [...(m[1] || m[2]).matchAll(/\((\d), (-?\d)\)/g)].map(q => [+q[1], +q[2]]);
+    if (![3, 4].includes(P.length) || new Set(P.map(q => q[0])).size !== P.length) fail('analysis', 'leastSq', `not three or four points at different x: ${t}`);
+    if (P.length === 4) lsFour++;
+    // the bottom of the bowl E(m, c) = Σ(y − mx − c)², by Newton's method on its two slopes
+    let a = 0, b = 0;
+    for (let it = 0; it < 3; it++) {
+      let gm = 0, gc = 0, hmm = 0, hmc = 0, hcc = 0;
+      for (const [x, y] of P) { const r = y - a * x - b; gm -= 2 * r * x; gc -= 2 * r; hmm += 2 * x * x; hmc += 2 * x; hcc += 2; }
+      const det = hmm * hcc - hmc * hmc; a -= (hcc * gm - hmc * gc) / det; b -= (hmm * gc - hmc * gm) / det;
+    }
+    const n = P.length, mean = f => P.reduce((s, q) => s + f(q), 0) / n, xb = mean(q => q[0]), yb = mean(q => q[1]);
+    if (Math.abs(yb - a * xb - b) > 1e-9) fail('analysis', 'leastSq', `the best line misses the middle point: ${t}`);
+    const two = (q, r) => { const s = (r[1] - q[1]) / (r[0] - q[0]); return [s, q[1] - s * q[0]]; };
+    const E = two(P[0], P[n - 1]), Fs = two(P[0], P[1]), Ls = two(P[n - 2], P[n - 1]);
+    const sxy = P.reduce((s, q) => s + (q[0] - xb) * (q[1] - yb), 0), syy = P.reduce((s, q) => s + (q[1] - yb) ** 2, 0);
+    const slip = icpt
+      ? [[/^that adds m·x̄/, yb + a * xb], [/^that is the slope m;/, a], [/^that is ȳ alone/, yb], [/^that swaps x̄ and ȳ/, xb - a * yb], [/^that is where the line through the two end points crosses/, E[1]]]
+      : [[/^that joins the two end points/, E[0]], [/^that joins the first two points only/, Fs[0]], [/^that joins the last two points only/, Ls[0]],
+        [/^that forces the line through the origin/, P.reduce((s, q) => s + q[0] * q[1], 0) / P.reduce((s, q) => s + q[0] * q[0], 0)],
+        [/^that is ȳ\/x̄/, yb / xb], [/^that turns the fit round/, syy / sxy]];
+    valueCheck('leastSq', icpt ? b : a, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'leastSq', `the working does not end on ${p.a}: ${w}`);
+    // the sums in the working are the points' own
+    const sm = w.match(/^n = (\d), Σx = (-?\d+), Σy = (-?\d+), Σxy = (-?\d+) and Σx² = (\d+), so m = /);
+    const tot = f => P.reduce((s, q) => s + f(q), 0);
+    if (!sm || +sm[1] !== n || +sm[2] !== tot(q => q[0]) || +sm[3] !== tot(q => q[1]) || +sm[4] !== tot(q => q[0] * q[1]) || +sm[5] !== tot(q => q[0] * q[0]))
+      fail('analysis', 'leastSq', `the sums are not the points' own: ${w}`);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'leastSq', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'leastSq', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      lsSeen.add(String(sl[0]));
+    });
+    covered.add('leastSq');
+  },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
       .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
@@ -1493,7 +1541,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 78, sig: 0x79be };
+  const PINNED = { count: 79, sig: 0xa7a7 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16664,6 +16712,33 @@ for (let d = 1; d <= 3; d++) {
   // answers all start below; fractional ones start either side
   if (ntBelow < NT * 0.6 || ntBelow > NT * 0.9) fail('analysis', 'newton', `depth ${d} starts below the root ${ntBelow} times in ${NT}, not about three in four`);
   if (ntWhole < NT * 0.35 || ntWhole > NT * 0.65) fail('analysis', 'newton', `depth ${d} gives a whole answer ${ntWhole} times in ${NT}, not about half`);
+}
+
+// Least squares at every depth: the answer and its four slips are five
+// different exact numbers, none 0, each slip with its reason; two of the four
+// share the answer's sign and two its form; every slip turns up; and whole
+// and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const LS = 3000;
+  lsWhole = 0; lsFour = 0; lsSeen = new Set();
+  for (let i = 0; i < LS; i++) {
+    const p = GEN.leastSq(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'leastSq', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'leastSq', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const neg0 = vals[0].startsWith('-');
+    if (vals.slice(1).filter(v => v.startsWith('-') === neg0).length < 2) fail('analysis', 'leastSq', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'leastSq', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'leastSq', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'leastSq', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) lsWhole++;
+    ANALYSIS.leastSq(p);
+  }
+  if (lsSeen.size !== (d < 3 ? 6 : 5)) fail('analysis', 'leastSq', `depth ${d} offers only ${lsSeen.size} of its slips`);
+  // three points at depth 1, four at depth 2, and either at depth 3
+  if (d < 3 && lsFour !== [0, LS][d - 1] || d === 3 && (lsFour < LS * 0.3 || lsFour > LS * 0.7)) fail('analysis', 'leastSq', `depth ${d} has four points ${lsFour} times in ${LS}`);
+  if (lsWhole < LS * 0.35 || lsWhole > LS * 0.65) fail('analysis', 'leastSq', `depth ${d} gives a whole answer ${lsWhole} times in ${LS}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

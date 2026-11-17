@@ -1,87 +1,101 @@
 {
-  "change": "Add Newton's method as a fight topic, linked to its workshop.",
+  "change": "Add least squares as a fight topic, linked to the Best Fit workshop.",
   "mutations": [
     {
-      "name": "the step is added",
+      "name": "the slope's top takes n away",
       "file": "index.html",
-      "find": "step=dv(fx,dfx), ans=sub(X,step);",
-      "replace": "step=dv(fx,dfx), ans=add(X,step);",
+      "find": "const A=n*sxy-sx*sy, B=n*sxx-sx*sx,",
+      "replace": "const A=sxy-sx*sy, B=n*sxx-sx*sx,",
       "run": "verify"
     },
     {
-      "name": "the slope drops its coefficient",
+      "name": "the slope's bottom does not square Σx",
       "file": "index.html",
-      "find": "sv=pw*x0**(pw-1)+p;",
-      "replace": "sv=x0**(pw-1)+p;",
+      "find": "B=n*sxx-sx*sx, C=n*syy-sy*sy;",
+      "replace": "B=n*sxx-sx, C=n*syy-sy*sy;",
       "run": "verify"
     },
     {
-      "name": "the guess always starts below the root",
+      "name": "c adds m·x̄",
       "file": "index.html",
-      "find": "const x0=R.chance(0.5)?lo:lo+1;",
-      "replace": "const x0=lo;",
+      "find": "const m=F(A,B), xb=F(sx,n), yb=F(sy,n), c=sub(yb,mul(m,xb));",
+      "replace": "const m=F(A,B), xb=F(sx,n), yb=F(sy,n), c=add(yb,mul(m,xb));",
       "run": "verify"
     },
     {
-      "name": "the guess may start far from the root",
+      "name": "the last two are the first two",
       "file": "index.html",
-      "find": "const x0=R.chance(0.5)?lo:lo+1;",
-      "replace": "const x0=R.chance(0.5)?lo:lo+2;",
+      "find": "[ml]=line(P[n-2],P[n-1]);",
+      "replace": "[ml]=line(P[0],P[1]);",
+      "run": "verify"
+    },
+    {
+      "name": "the turned fit is the slope upside down",
+      "file": "index.html",
+      "find": "[F(C,A),'that turns the fit round",
+      "replace": "[F(B,A),'that turns the fit round",
+      "run": "verify"
+    },
+    {
+      "name": "the swap slip is ȳ − m·x̄",
+      "file": "index.html",
+      "find": "[sub(xb,mul(m,yb)),'that swaps",
+      "replace": "[sub(yb,mul(m,xb)),'that swaps",
+      "run": "verify"
+    },
+    {
+      "name": "the end points' c is the first two's",
+      "file": "index.html",
+      "find": "[ce,'that is where the line through the two end points crosses",
+      "replace": "[cf,'that is where the line through the two end points crosses",
+      "run": "verify"
+    },
+    {
+      "name": "Σxy is shown as Σx²",
+      "file": "index.html",
+      "find": "Σxy = ${neg(sxy)} and Σx² = ${sxx}, so m",
+      "replace": "Σxy = ${sxx} and Σx² = ${sxx}, so m",
       "run": "verify"
     },
     {
       "name": "the form asked for is not kept",
       "file": "index.html",
-      "find": "same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
-      "replace": "same<2) && g<600) continue;\n    return {topic:\"Newton's Method\",",
+      "find": "sign<2 || (ans[1]===1)!==whole) && g<5000) continue;",
+      "replace": "sign<2) && g<5000) continue;",
       "run": "verify"
     },
     {
       "name": "fewer than two may share the answer's form",
       "file": "index.html",
-      "find": "(dist.length<4 || same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
-      "replace": "(dist.length<4 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Newton's Method\",",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<5000",
+      "replace": "big(ans) || sign<2 || (ans[1]===1)!==whole) && g<5000",
       "run": "verify"
     },
     {
-      "name": "the px slip is never offered",
+      "name": "fewer than two may share the answer's sign",
       "file": "index.html",
-      "find": "      ...(p ? [[sub(X,dv(fx,F(3*x0*x0))),",
-      "replace": "      ...(false ? [[sub(X,dv(fx,F(3*x0*x0))),",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<5000",
+      "replace": "big(ans) || same<2 || (ans[1]===1)!==whole) && g<5000",
       "run": "verify"
     },
     {
-      "name": "the unlowered power is worked wrong",
+      "name": "the x's may repeat",
       "file": "index.html",
-      "find": "[[sub(X,dv(fx,F(3*x0+p))),",
-      "replace": "[[sub(X,dv(fx,F(3*x0))),",
+      "find": "const xs=R.shuffle([0,1,2,3,4,5].slice(0,d===1?5:6)).slice(0,n)",
+      "replace": "const xs=[...Array(n)].map(()=>R.i(0,d===1?4:5))",
       "run": "verify"
     },
     {
-      "name": "the upside-down step is the step",
+      "name": "four points come only at depth 2",
       "file": "index.html",
-      "find": "[sub(X,dv(dfx,fx)),'that turns",
-      "replace": "[sub(X,dv(fx,dfx)),'that turns",
-      "run": "verify"
-    },
-    {
-      "name": "the working shows f(x₀) with the wrong sign",
-      "file": "index.html",
-      "find": "− ${k} = ${neg(fv)} and f′(${x0})",
-      "replace": "− ${k} = ${neg(-fv)} and f′(${x0})",
-      "run": "verify"
-    },
-    {
-      "name": "0 may be offered",
-      "file": "index.html",
-      "find": "const ok=v=>v[0]!==0 && !eq(v,ans);",
-      "replace": "const ok=v=>!eq(v,ans);",
+      "find": "const n=d===1?3:d===2?4:R.pick([3,4]);",
+      "replace": "const n=d===1?3:d===2?4:3;",
       "run": "verify"
     },
     {
       "name": "the topic is not linked to its workshop",
       "file": "index.html",
-      "find": "    Newton: [\"🔎 Newton's Method Workshop\", ['newton']],\n",
+      "find": "    Fit: [\"📏 Best Fit Workshop\", ['leastSq']],\n",
       "replace": "",
       "run": "verify"
     }

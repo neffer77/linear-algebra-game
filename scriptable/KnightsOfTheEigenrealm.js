@@ -4499,6 +4499,76 @@ newton(d){
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`\${why}.\`};
   }
+},
+/* Least squares: the line y = mx + c whose squared misses add up to the
+   least, through three or four points. With n points,
+   m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and the line passes through the middle
+   point (x̄, ȳ), so c = ȳ − m·x̄. At depth 1 the slope through three points,
+   at depth 2 through four, and at depth 3 where the line crosses the y-axis.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips people make: the line through the two end points, or through
+   the first two or the last two, the line forced through the origin, ȳ/x̄,
+   and the fit turned round, x on y; at depth 3, c with m·x̄ added, the slope
+   given for c, ȳ alone, x̄ and ȳ swapped, and the end points' line's c. */
+leastSq(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===1?3:d===2?4:R.pick([3,4]);
+    const xs=R.shuffle([0,1,2,3,4,5].slice(0,d===1?5:6)).slice(0,n).sort((a,b)=>a-b), ys=xs.map(()=>R.i(-2,8));
+    const P=xs.map((x,i)=>[x,ys[i]]), sum=a=>a.reduce((s,v)=>s+v,0);
+    const sx=sum(xs), sy=sum(ys), sxy=sum(P.map(([x,y])=>x*y)), sxx=sum(xs.map(x=>x*x)), syy=sum(ys.map(y=>y*y));
+    const A=n*sxy-sx*sy, B=n*sxx-sx*sx, C=n*syy-sy*sy;
+    if(A===0) continue;   // a flat best line has nothing to find
+    const m=F(A,B), xb=F(sx,n), yb=F(sy,n), c=sub(yb,mul(m,xb));
+    const line=(p,q)=>{ const s=F(q[1]-p[1],q[0]-p[0]); return [s, sub(F(p[1]),mul(s,F(p[0])))]; };
+    const [me,ce]=line(P[0],P[n-1]), [mf,cf]=line(P[0],P[1]), [ml]=line(P[n-2],P[n-1]);
+    const pn=v=>v<0?\`(\${neg(v)})\`:String(v);
+    const pts=P.map(([x,y])=>\`(\${x}, \${neg(y)})\`).join(', ');
+    const work=\`n = \${n}, Σx = \${sx}, Σy = \${neg(sy)}, Σxy = \${neg(sxy)} and Σx² = \${sxx}, so m = (\${n} × \${pn(sxy)} − \${sx} × \${pn(sy)})/(\${n} × \${sxx} − \${sx}²) = \${show(m)}\`;
+    let q, ans, why, slips;
+    if(d<3){
+      ans=m;
+      q=\`Find the slope m of the least-squares line y = mx + c through the points \${pts}.\`;
+      why=work;
+      slips=[
+        [me,'that joins the two end points; the least-squares line weighs every point, not only the ends'],
+        [mf,'that joins the first two points only; the least-squares line weighs every point'],
+        [ml,'that joins the last two points only; the least-squares line weighs every point'],
+        [F(sxy,sxx),'that forces the line through the origin, Σxy/Σx²; the best line need not pass through it, so the means come out first'],
+        ...(sx ? [[F(sy,sx),'that is ȳ/x̄, the slope from the origin to the middle point; the best line goes through the middle point but not the origin']] : []),
+        [F(C,A),'that turns the fit round, fitting x to y; the misses are measured up and down, in y, so Σ(x − x̄)² goes below']
+      ];
+    } else {
+      ans=c;
+      q=\`Where does the least-squares line y = mx + c through the points \${pts} cross the y-axis? Find c.\`;
+      why=\`\${work}. The line passes through the middle point (x̄, ȳ) = (\${show(xb)}, \${show(yb)}), so c = \${show(yb)} − \${m[0]<0||m[1]!==1?\`(\${show(m)})\`:show(m)} × \${xb[1]===1?show(xb):\`(\${show(xb)})\`} = \${show(c)}\`;
+      slips=[
+        [add(yb,mul(m,xb)),'that adds m·x̄; the line passes through (x̄, ȳ), so ȳ = m·x̄ + c and c = ȳ − m·x̄'],
+        [m,'that is the slope m; c is where the line crosses the y-axis, ȳ − m·x̄'],
+        [yb,'that is ȳ alone, which is c only if the line is flat; take m·x̄ away'],
+        [sub(xb,mul(m,yb)),'that swaps x̄ and ȳ: the line passes through (x̄, ȳ), so c = ȳ − m·x̄'],
+        [ce,'that is where the line through the two end points crosses; the least-squares line weighs every point']
+      ];
+    }
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>(s[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<5000) continue;
+    return {topic:'Least Squares',
+      codex:{rule:'The best line y = mx + c makes the squared misses in y add up to the least: m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and it passes through (x̄, ȳ), so c = ȳ − m·x̄.',
+             eg:'(0, 1), (1, 1), (2, 4): n = 3, Σx = 3, Σy = 6, Σxy = 9, Σx² = 5, so m = (27 − 18)/(15 − 9) = 3/2 and c = 2 − 3/2 × 1 = 1/2.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
 }
 };
 
@@ -4612,7 +4682,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method"
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares'
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4622,7 +4692,7 @@ const TOPIC_LABEL = {
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
-  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
+  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
   ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid']],
   ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
@@ -4682,6 +4752,7 @@ const WORKSHOP_FOR = (() => {
     LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
     Trap: ["🪟 Trapezoid Workshop", ['trapezoid']],
     Newton: ["🔎 Newton's Method Workshop", ['newton']],
+    Fit: ["📏 Best Fit Workshop", ['leastSq']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -5203,7 +5274,7 @@ const REALMS = [
        ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
        glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
    pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
-         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2'],
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq'],
    foes:[
      {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
      {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},
