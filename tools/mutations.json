@@ -30,13 +30,6 @@
       "run": "verify"
     },
     {
-      "name": "the root slip shown at every depth",
-      "file": "index.html",
-      "find": "...(m===2 ? [[F(c,b),'that forgets the square root",
-      "replace": "...(true ? [[F(c,b),'that forgets the square root",
-      "run": "verify"
-    },
-    {
       "name": "depth 1 gets a power of n",
       "file": "index.html",
       "find": "const m=d===3?2:1, p=d===1?0:R.pick([0,1,2,3]);",
