@@ -8178,6 +8178,7 @@ const trapPickNotes = (() => {
       const fw = `${Q.c === 1 ? '' : Q.c}x²${Q.k ? ` + ${Q.k}` : ''}`;
       const want0 = `${RULE} f(x) = ${fw} on [${Q.a}, ${show(b)}], n = ${Q.n}, h = ${show(h)} x: ${xs.map(show).join(', ')} f(x): ${ys.map(show).join(', ')} A `;
       if (!head.startsWith(want0)) fail('trappick', key, `the rule, the curve and its heights are not shown first: ${head.slice(RULE.length, RULE.length + 120)}`);
+      if (/<[^>]*\shidden[\s>=]/.test(h0)) fail('trappick', key, 'part of the card is hidden, so its heights cannot be read');
       // the heights shown are the curve's own, worked in floats
       ys.forEach((y, i) => { const x = num(xs[i]); if (Math.abs(num(y) - (Q.c * x * x + Q.k)) > 1e-12) fail('trappick', key, `f(${show(xs[i])}) is not ${show(y)}`); });
       if (!same(ad(b, [-Q.a, 1]), mu([Q.n, 1], h))) fail('trappick', key, 'h is not (b − a)/n');
