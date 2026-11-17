@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see an endless area, and pick which of four numbers it closes in on\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTail');
     t.eq('the endless area workshop opens', await t.screen(), 's-tail');
-    t.eq('pushing it out by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('pushing it out by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5353));
     await t.tapText(/Where does it close in\?/);
-    t.eq('where does it close in is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('where does it close in is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, drawing, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('taBox').innerText)).startsWith(
