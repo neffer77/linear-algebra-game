@@ -1,102 +1,95 @@
 {
-  "change": "Add Simpson's rule as a fight topic, linked to the Trapezoid workshop.",
+  "change": "Add quadratic forms as a fight topic, and pack knight codes tighter to fit it.",
   "mutations": [
     {
-      "name": "the 4s and 2s swapped in the answer",
+      "name": "the ½ left off the answer",
       "file": "index.html",
-      "find": "const wt=i=>i===0||i===n?1:i%2?4:2,",
-      "replace": "const wt=i=>i===0||i===n?1:i%2?2:4,",
+      "find": "const full=dg+2*cr, ans=F(full,2);",
+      "replace": "const full=dg+2*cr, ans=F(full);",
       "run": "verify"
     },
     {
-      "name": "h/2 taken for h/3",
+      "name": "A not symmetric",
       "file": "index.html",
-      "find": "third=mul(h,F(1,3));",
-      "replace": "third=mul(h,F(1,2));",
+      "find": "A[i][j]=v; A[j][i]=v;",
+      "replace": "A[i][j]=v; A[j][i]=v+1;",
       "run": "verify"
     },
     {
-      "name": "whole and fractional answers not balanced",
+      "name": "x may hold a 0",
       "file": "index.html",
-      "find": "same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Simpson's Rule\"",
-      "replace": "same<2) && g<600) continue;\n    return {topic:\"Simpson's Rule\"",
+      "find": "R.nz(d===3?-2:-3,d===3?2:3)",
+      "replace": "R.i(d===3?-2:-3,d===3?2:3)",
+      "run": "verify"
+    },
+    {
+      "name": "two of the answer's sign not required",
+      "file": "index.html",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<2000",
+      "replace": "big(ans) || same<2 || (ans[1]===1)!==whole) && g<2000",
       "run": "verify"
     },
     {
       "name": "two of the answer's form not required",
       "file": "index.html",
-      "find": "if((dist.length<4 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Simpson's Rule\"",
-      "replace": "if((dist.length<4 || big(ans) || (ans[1]===1)!==whole) && g<600) continue;\n    return {topic:\"Simpson's Rule\"",
+      "find": "big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<2000",
+      "replace": "big(ans) || sign<2 || (ans[1]===1)!==whole) && g<2000",
       "run": "verify"
     },
     {
-      "name": "one parabola over a third, not a sixth",
+      "name": "the unsquared slip squares the pairs instead",
       "file": "index.html",
-      "find": "F(ys[0]+4*ys[n/2]+ys[n],6)",
-      "replace": "F(ys[0]+4*ys[n/2]+ys[n],3)",
+      "find": "[F(ln+2*cr,2),'that does not square",
+      "replace": "[F(ln+cr,2),'that does not square",
       "run": "verify"
     },
     {
-      "name": "the swap slip not swapped",
+      "name": "the Ax slip forgets the half",
       "file": "index.html",
-      "find": "s+(i===0||i===n?1:i%2?2:4)*y,0)));",
-      "replace": "s+(i===0||i===n?1:i%2?4:2)*y,0)));",
+      "find": "[F(sAx,2),'that adds up",
+      "replace": "[F(sAx),'that adds up",
       "run": "verify"
     },
     {
-      "name": "the left-hand sum takes the right end",
+      "name": "the working's pair terms lose their 2",
       "file": "index.html",
-      "find": "left=mul(h,F(all-ys[n]));",
-      "replace": "left=mul(h,F(all-ys[0]));",
+      "find": "terms.push(`2 × ${P(A[i][j])}",
+      "replace": "terms.push(`${P(A[i][j])}",
       "run": "verify"
     },
     {
-      "name": "a height of 0 allowed",
+      "name": "the working's xᵀAx off by one",
       "file": "index.html",
-      "find": "ys=xs.map(()=>R.i(1,9))",
-      "replace": "ys=xs.map(()=>R.i(0,9))",
+      "find": "= ${neg(full)}, so Q = ½",
+      "replace": "= ${neg(full+1)}, so Q = ½",
       "run": "verify"
     },
     {
-      "name": "the working names the weights one place out",
+      "name": "depth 3 stays 2×2",
       "file": "index.html",
-      "find": "The weights are ${ys.map((y,i)=>wt(i)).join(', ')}",
-      "replace": "The weights are ${ys.map((y,i)=>wt(i+1)).join(', ')}",
+      "find": "const n=d===3?3:2, A=[...Array(n)]",
+      "replace": "const n=2, A=[...Array(n)]",
       "run": "verify"
     },
     {
-      "name": "the working divides by n + 1",
+      "name": "depth 1 lets a sign go",
       "file": "index.html",
-      "find": "so h = (${bs} − ${as})/${n} = ${hs}. The weights",
-      "replace": "so h = (${bs} − ${as})/${n+1} = ${hs}. The weights",
+      "find": "const v=d===1 ? R.i(1,4) :",
+      "replace": "const v=d===1 ? R.i(-1,4) :",
       "run": "verify"
     },
     {
-      "name": "the working's weighted sum off by one height",
+      "name": "the questions-ago field wraps instead of saturating",
       "file": "index.html",
-      "find": "so S = h/3 × (${terms}) = ${show(third)} × ${W} =",
-      "replace": "so S = h/3 × (${terms}) = ${show(third)} × ${W+1} =",
+      "find": "o.bits(Math.min(63, Math.max(0, (g.qCount||0)",
+      "replace": "o.bits(Math.min(255, Math.max(0, (g.qCount||0)",
       "run": "verify"
     },
     {
-      "name": "depth 3 never takes six strips",
+      "name": "a v7 code read at v8 widths",
       "file": "index.html",
-      "find": "const n=d===1?2:d===2?4:R.pick([4,6]), h=d===3",
-      "replace": "const n=d===1?2:d===2?4:4, h=d===3",
-      "run": "verify"
-    },
-    {
-      "name": "the trapezoid slip forgets to double",
-      "file": "index.html",
-      "find": "s+(i===0||i===n?1:2)*y,0)));",
-      "replace": "s+y,0)));",
-      "run": "verify"
-    },
-    {
-      "name": "the trapezoid working divides by n + 1",
-      "file": "index.html",
-      "find": "const est=`There are ${n} strips, so h = (${bs} − ${as})/${n} = ${hs}.",
-      "replace": "const est=`There are ${n} strips, so h = (${bs} − ${as})/${n+1} = ${hs}.",
+      "find": "const dLast=b.bits(ver>=8 ? 6 : 8)",
+      "replace": "const dLast=b.bits(6)",
       "run": "verify"
     }
   ]

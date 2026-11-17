@@ -443,10 +443,10 @@ module.exports = {
       const back = Codec.decode(code);
       out.ok = back.ok;
       out.bests = back.ok ? back.g.bests : null;
-      out.tagIsCurrent = /^KE7-/.test(code);
+      out.tagIsCurrent = /^KE8-/.test(code);
       return out;
     });
-    t.eq('the format is at version seven', codec.ver, 7);
+    t.eq('the format is at version eight', codec.ver, 8);
     t.ok('and SETTING_ORDER has not drifted from SETTINGS',
       codec.orderMatchesSettings, JSON.stringify(codec.orderCoversSettings));
     t.ok('a knight code carries the depth records', codec.ok);

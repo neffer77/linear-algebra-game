@@ -56,8 +56,8 @@ module.exports = {
       return out;
     });
     t.eq('every generator in the game can be worked', cover.bad, []);
-    t.ok('across all eighty topics at three difficulties',
-      cover.n >= 200 && cover.topics === 80, `${cover.n} questions, ${cover.topics} topics`);
+    t.ok('across all eighty-one topics at three difficulties',
+      cover.n >= 200 && cover.topics === 81, `${cover.n} questions, ${cover.topics} topics`);
     t.ok('some are worked from a hand-written ladder', cover.sources.ladder > 0,
       String(cover.sources.ladder));
     t.ok('and the rest from the explanation of that very instance',

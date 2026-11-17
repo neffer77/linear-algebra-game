@@ -743,6 +743,7 @@ let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how 
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
 let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
+let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
 let lsWhole = 0, lsFour = 0, lsSeen = new Set();   // least squares: how often the answer is whole, how often there are four points, and which slips turn up
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
@@ -1396,6 +1397,44 @@ Object.assign(ANALYSIS, {
     });
     covered.add('simpson');
   },
+  // Quadratic forms, worked again here as a product: A read off the question,
+  // Ax multiplied out row by row, and x dotted with it; each wrong answer
+  // worked again as the slip its reason names.
+  quadForm: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const A = mats(p.q)[0], xm = fl(p.q).match(/x = ⟨([-\d, ]+)⟩\. What is Q\(x\)\?$/);
+    if (!A || !xm || !/^Q\(x\) = ½ xᵀAx with A = /.test(fl(p.q))) { fail('analysis', 'quadForm', `the question does not read as a quadratic form: ${fl(p.q)}`); return; }
+    const x = xm[1].split(', ').map(Number), n = x.length;
+    if (A.length !== n || A.some((r, i) => r.length !== n || r.some((a, j) => a !== A[j][i]))) fail('analysis', 'quadForm', `A is not square and symmetric to fit x: ${fl(p.q)}`);
+    if (x.some(t => t === 0)) fail('analysis', 'quadForm', `x has a 0 in it: ${fl(p.q)}`);
+    const Ax = A.map(r => r.reduce((s, a, j) => s + a * x[j], 0)), xAx = Ax.reduce((s, v, i) => s + v * x[i], 0);
+    let dg = 0, cr = 0, ln = 0;
+    for (let i = 0; i < n; i++) { dg += A[i][i] * x[i] ** 2; ln += A[i][i] * x[i]; for (let j = i + 1; j < n; j++) cr += A[i][j] * x[i] * x[j]; }
+    valueCheck('quadForm', xAx / 2, p.a, 1e-9);
+    const slip = [[/^that leaves off the ½/, xAx], [/^that counts each off-diagonal pair once/, (dg + cr) / 2], [/^that leaves the off-diagonal pairs out/, dg / 2],
+      [/^that turns the pairs' sign/, (dg - 2 * cr) / 2], [/^that does not square the diagonal terms/, (ln + 2 * cr) / 2], [/^that adds up the entries of Ax/, Ax.reduce((s, v) => s + v, 0) / 2]];
+    const w = fl(p.ex);
+    const wm = w.match(/^xᵀAx = (.*) = (-?\d+), so Q = ½ × \(?(-?\d+)\)? = (-?\d+(?:\/\d+)?)\.$/);
+    if (!wm || +wm[2] !== xAx || +wm[3] !== xAx || Math.abs(val(wm[4]) - xAx / 2) > 1e-9) fail('analysis', 'quadForm', `the working does not come to xᵀAx and half of it: ${w}`);
+    else {
+      // each term of the working is a diagonal entry times its square, or twice a pair, and they add up
+      const terms = wm[1].split(' + '), P = t => +t.replace(/[()]/g, '');
+      if (terms.length !== n * (n + 1) / 2) fail('analysis', 'quadForm', `the working does not have one term for each entry on or above the diagonal: ${w}`);
+      let sum = 0, k = 0;
+      for (let i = 0; i < n; i++) { const m = terms[k++].match(/^(\S+) × (\S+)²$/); if (!m || P(m[1]) !== A[i][i] || P(m[2]) !== x[i]) fail('analysis', 'quadForm', `a square term is not a_ii xᵢ²: ${w}`); else sum += P(m[1]) * P(m[2]) ** 2; }
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const m = (terms[k++] || '').match(/^2 × (\S+) × (\S+) × (\S+)$/); if (!m || P(m[1]) !== A[i][j] || P(m[2]) !== x[i] || P(m[3]) !== x[j]) fail('analysis', 'quadForm', `a pair term is not 2 a_ij xᵢxⱼ: ${w}`); else sum += 2 * P(m[1]) * P(m[2]) * P(m[3]); }
+      if (sum !== xAx) fail('analysis', 'quadForm', `the working's terms do not add up to xᵀAx: ${w}`);
+    }
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'quadForm', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-9) fail('analysis', 'quadForm', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      qfSeen.add(String(sl[0]));
+    });
+    covered.add('quadForm');
+  },
   // Newton's method, worked again here in floating point: the curve and x₀
   // read off the question, x₁ = x₀ − f(x₀)/f′(x₀) worked with the slope found
   // by a nudge on f, never by the power rule, and each wrong answer worked
@@ -1598,7 +1637,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 80, sig: 0x36b4 };
+  const PINNED = { count: 81, sig: 0xc595 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -1713,6 +1752,28 @@ let codeNotes = null;
     fail('codes', 'append', `a code from before the last topic was added lost its topic history: ${Object.keys(d70.g.topicStats).join(', ') || 'none'}`);
   else if (d70.g.topicStats.dot.seen !== 12 || d70.g.gold !== 777) fail('codes', 'append', 'a code from before the last topic was added came back changed');
 
+  /* v8 packs each topic tighter: the wrong answers in exactly as many bits as
+     the seen count takes, and how many questions ago in six bits, since the
+     scheduler reads nothing past 63 alike. Both have to come back exactly
+     where they fit, at quarter precision, and the question count saturate at
+     63 rather than wrap. */
+  {
+    const T0 = Codec.topics(), g8 = { lvl: 3, qCount: 500, stats: {}, items: {}, cleared: {}, titles: {}, streak: {},
+      bounties: [], riteWins: {}, topicStats: {
+        [T0[0]]: { seen: 13.25, w: 5.5, m: 0.5, last: 460, t: NOW - 3 * 864e5 },
+        [T0[1]]: { seen: 40, w: 40, m: 0.1, last: 437, t: NOW - 864e5 },
+        [T0[2]]: { seen: 0.25, w: 0, m: 0.9, last: 100, t: NOW } } };
+    const d8 = Codec.decode(Codec.encode({ nm: 'Packed' }, g8, NOW)), r8 = d8.ok ? d8.g.topicStats : {};
+    const a8 = r8[T0[0]], b8 = r8[T0[1]], c8 = r8[T0[2]];
+    if (!d8.ok || !a8 || !b8 || !c8) fail('codes', 'pack', `a v8 code lost a topic's record (${d8.why || 'missing'})`);
+    else {
+      if (a8.seen !== 13.25 || a8.w !== 5.5 || b8.seen !== 40 || b8.w !== 40 || c8.seen !== 0.25 || c8.w !== 0)
+        fail('codes', 'pack', `seen and wrong did not come back exactly: ${JSON.stringify([a8, b8, c8].map(r => [r.seen, r.w]))}`);
+      if (a8.last !== 460 || b8.last !== 437) fail('codes', 'pack', `how many questions ago did not come back exactly: ${a8.last}, ${b8.last}`);
+      if (c8.last !== 500 - 63) fail('codes', 'pack', `a topic 400 questions ago came back as ${500 - c8.last} ago, not 63`);
+    }
+  }
+
   /* 3. The QR encoder was checked module-for-module against an independent
         implementation across versions 1–25, at every mask. That cannot run
         here without a dependency, so the symbols it produced are pinned by
@@ -1752,15 +1813,18 @@ let codeNotes = null;
          new item or topic pushes on it. So measure a real one rather than trust
          the assumption: a knight who has met every topic, owns every piece of
          gear, has cleared every foe, and has two thousand attempts on each of
-         the seventy topics — every one of them WRONG, which is the shape that
+         the topics — every one of them WRONG, which is the shape that
          encodes largest, since `w` is stored and `c` is derived.
 
-         That is roughly 140,000 questions answered, far past any real player,
-         and it still lands on version 19 with a version to spare. The format
-         holds this flat for an enormous range because the per-topic recency
-         fields are capped at a byte each; the only unbounded parts are the two
-         attempt varints, which widen from two bytes to three at 4,096 attempts
-         on a single topic (about 287,000 questions answered). If a future field
+         At eighty-one topics that is 162,000 questions, far past any real
+         player, and under v7 it tipped into version 21. Topics are what grow
+         the code: each one adds about seven bytes whatever its counts. So v8
+         writes the wrong answers in only as many bits as the seen count takes
+         and the questions-ago field in six bits, and the same knight lands on
+         version 20 with about six topics' room to spare. When the topics
+         reach that, this test fails again, and the next trim has to come from
+         somewhere: the 10-bit mastery, or the alphabet the code is written in.
+         If a future field
          pushes the common case up a version, this is the test that says so. */
   const HEAVY = 2000;
   const maxG = {
@@ -16768,6 +16832,35 @@ for (let d = 1; d <= 3; d++) {
   // left to themselves the tables come out whole only about 37% of the time at the first two depths and
   // 62% at the third, so the band is tight enough to see the coin flip that evens them out
   if (spWhole < SP * 0.42 || spWhole > SP * 0.58) fail('analysis', 'simpson', `depth ${d} gives a whole answer ${spWhole} times in ${SP}, not about half`);
+}
+
+// Quadratic forms at every depth: the answer and its four slips are five
+// different exact numbers, none 0, each slip with its reason; two of the four
+// share the answer's sign and two its form; every slip turns up; and whole
+// and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const QF = 3000;
+  qfWhole = 0; qfSeen = new Set();
+  for (let i = 0; i < QF; i++) {
+    const p = GEN.quadForm(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'quadForm', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'quadForm', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const neg0 = vals[0].startsWith('-');
+    if (vals.slice(1).filter(v => v.startsWith('-') === neg0).length < 2) fail('analysis', 'quadForm', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'quadForm', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'quadForm', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'quadForm', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) qfWhole++;
+    // the third depth is 3×3 and the others 2×2; the first keeps every entry and component positive
+    const A = mats(p.q)[0] || [], xs = (plainT(p.q).replace(/−/g, '-').match(/x = ⟨([-\d, ]+)⟩/) || ['', ''])[1].split(', ').map(Number);
+    if (A.length !== (d === 3 ? 3 : 2)) fail('analysis', 'quadForm', `depth ${d} gives a ${A.length}×${A.length} matrix: ${plainT(p.q)}`);
+    if (d === 1 && (A.some(r => r.some(a => a <= 0)) || xs.some(t => t <= 0))) fail('analysis', 'quadForm', `depth 1 has an entry that is not positive: ${plainT(p.q)}`);
+    ANALYSIS.quadForm(p);
+  }
+  if (qfSeen.size !== 6) fail('analysis', 'quadForm', `depth ${d} offers only ${qfSeen.size} of its slips`);
+  if (qfWhole < QF * 0.42 || qfWhole > QF * 0.58) fail('analysis', 'quadForm', `depth ${d} gives a whole answer ${qfWhole} times in ${QF}, not about half`);
 }
 
 // Newton's method at every depth: the answer and its four slips are five
