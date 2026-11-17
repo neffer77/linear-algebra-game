@@ -1180,6 +1180,9 @@ Object.assign(ANALYSIS, {
     if (Math.abs(f(x) - L) < 1e-9) fail('analysis', 'linApprox', `the tangent's estimate is f(x) itself, so there is nothing to approximate: ${t}`);
     const w = fl(p.ex);
     if (!/The tangent line is L\(x\) = /.test(w) || !w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'linApprox', `the working does not give the tangent line and end on ${p.a}: ${w}`);
+    // the working's first step is what a nudge shows: it names a, f(a) and f′(a), and must not show the estimate more often than the question does
+    const seen = s => (s.match(new RegExp('(?<![0-9A-Za-z.-])' + fl(p.a).replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&') + '(?![0-9A-Za-z¹²³⁰-⁹])', 'g')) || []).length;
+    if (seen(w.split('. The tangent line is')[0]) > seen(t)) fail('analysis', 'linApprox', `the working's first step, which a nudge shows, gives the estimate ${p.a} away: ${w}`);
     // each wrong answer is the slip its reason names, worked again here
     const k = { '√x': 1 / 2, '∛x': 1 / 3, 'x²': 2, 'x³': 3 }[m[1]];
     const slip = [[/^that is only the step along the tangent/, d * (x - a)], [/^that multiplies the slope by x = /, f(a) + d * x],

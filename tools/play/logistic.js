@@ -60,7 +60,7 @@ module.exports = {
     t.ok('which is found', (await found(t)).includes('slow'));
     await press(t, 'lgwFwd', 8);
     r = await read(t);
-    t.ok('by t = 17 P is within 1% of 1000', /P ≈ 990\.1\./.test(r) && /P is within 1% of the ceiling, 1000, and keeps closing in without ever reaching it\./.test(r), r);
+    t.ok('by t = 17 P is within 1% of 1000', /P = 1000\/\(1 \+ 49 × 0\.0002035\) ≈ 990\.1\./.test(r) && /P is within 1% of the ceiling, 1000, and keeps closing in without ever reaching it\./.test(r), r);
     t.ok('which is found', (await found(t)).includes('near'));
     await press(t, 'lgwFwd', 4);
     t.ok('the steps stop at t = 20', /At t = 20, e\^\(−0\.5 × 20\) ≈ 0\.0000454/.test(await read(t)) && await off(t, 'lgwFwd'));

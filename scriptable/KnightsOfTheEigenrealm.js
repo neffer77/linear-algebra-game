@@ -4148,6 +4148,10 @@ linApprox(d){
     }
     const x=add(a,h), step=mul(sl,h), ans=add(fa,step);
     if(x[0]===0) continue;   // f(0) is known outright, so there is nothing to estimate
+    // the working's first step, which a nudge shows, names a, f(a) and f′(a): the estimate must not be one of those
+    // numbers, or the nudge would show it more often than the question does
+    const seenIn=t=>(t.match(new RegExp('(?<![0-9A-Za-z.−])'+show(ans).replace(/[\\/]/g,'\\\\$&')+'(?![0-9A-Za-z¹²³⁰-⁹])','g'))||[]).length;
+    if(seenIn(why)>seenIn(\`f(x) = \${fs}. Use its tangent line at x = \${show(a)} to estimate \${fname(x)}.\`) && g<400) continue;
     if((ans[1]===1)!==whole && g<400) continue;
     const slips=[
       [step,\`that is only the step along the tangent, f′(a)(x − a); the estimate starts from f(\${show(a)}) = \${show(fa)} and adds it\`],
