@@ -13066,6 +13066,28 @@ const horizonRaceNotes = (() => {
    wrong ways, each round's swaps, lines and wide turns found afresh, and the
    drawing checked: the turn runs the short way from u to v, in the direction
    the call says. */
+/* Every choice a player can press has to show that it is pressed: a ghost
+   button gets a gold border and gold text once aria-pressed is true. */
+const pressedNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const css = (html.match(/<style>([\s\S]*?)<\/style>/) || ['', ''])[1];
+  const rule = css.match(/(?:^|\})\s*\.btn\.ghost\[aria-pressed="true"\]\s*\{([^}]*)\}/m);
+  if (!rule) fail('pressed', 'css', 'no rule shows that a ghost button is pressed');
+  else {
+    if (!/border-color:\s*var\(--gold\)/.test(rule[1])) fail('pressed', 'css', 'a pressed ghost button gets no gold border');
+    if (!/(?:^|;)\s*color:\s*var\(--gold\)/.test(rule[1])) fail('pressed', 'css', 'a pressed ghost button gets no gold text');
+  }
+  const tags = html.match(/<button\b[^>]*aria-pressed="\$\{[^>]*>/g) || [];
+  for (const t of tags) {
+    const raw = (t.match(/class="([^"]*)"/) || ['', ''])[1], cls = raw.split(/\s+/);
+    /* the crest swatches mark their pick with an on class of their own */
+    const marked = /\?' on':''\}/.test(raw) && /\.(?:sw|cr)\.on\{/.test(css);
+    if (!(cls.includes('btn') && cls.includes('ghost')) && !marked) fail('pressed', 'class', `a button that can be pressed is not a ghost button: ${t.slice(0, 90)}`);
+  }
+  if (tags.length < 50) fail('pressed', 'count', `only ${tags.length} pressable buttons found`);
+  return { n: tags.length };
+})();
+
 const crossTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -20389,6 +20411,7 @@ console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 1
 console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-F in the antiderivative workshop, every F read back as a power of x and checked against the slip it is named as, the right one alone having slope f; ${antiPickNotes.misses.toLocaleString()} wrong picks checked by their slope; ${antiPickNotes.curves.toLocaleString()} red slopes read back off their ticks)`);
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
+console.log(`  pressed shown     ${pad(pressedNotes.n.toLocaleString(), 12)}  (buttons a player can press, each a ghost button that turns gold once pressed, so every call in a round shows what was chosen)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
