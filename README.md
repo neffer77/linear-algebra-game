@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-six topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all seventy-seven topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with seventy-six in the game, drawing from all of them would build a run
+have actually met — with seventy-seven in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -277,10 +277,10 @@ stays forgotten.
 | 🟣 **Integral Abyss** | Indefinite and definite integrals, u-substitution, integrating trig and eˣ, area under curves, chain rule, quotient rule |
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices |
-| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth |
+| 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule |
 | 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials — the capstone, where the two subjects finally meet |
 
-**76 problem generators** in total, each producing randomised problems at three difficulty
+**77 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -336,7 +336,7 @@ instead of put through Pythagoras, the square root forgotten, and at the second 
 the antiderivative's 2/3 dropped or turned upside down, or its lower end left off. It
 joins the Applications strand and the Infinite Expanse.
 
-**Logistic growth**, the newest, is growth with a ceiling: dP/dt = rP(1 − P/K) grows like
+**Logistic growth** is growth with a ceiling: dP/dt = rP(1 − P/K) grows like
 rP while P is small and slows to nothing as P nears K. The first depth asks how fast it
 grows at a given P, the second how fast at its fastest, rK/4 at P = K/2, and the third
 where P stands once e^(rt) reaches a given number, from P(t) = K/(1 + A·e^(−rt)) with
@@ -345,6 +345,18 @@ are the slips people make: rP with no ceiling, the share filled P/K where the ro
 1 − P/K belongs, the P or the r or the ÷ K dropped, the population K/2 given for the
 rate, A turned upside down or taken as K/P(0), and e^(rt) where the solution has e^(−rt).
 It joins the Applications strand and the Infinite Expanse.
+
+**The trapezoid rule**, the newest, estimates an integral by cutting [a, b] into n strips of
+width h and joining the curve's heights with straight lines: T = h/2 × (f(x₀) + 2f(x₁) + … +
+f(xₙ)), the end heights once and the inside ones twice. The first depth asks for the estimate
+with two strips, the second with four, and the third how far it overshoots the true integral,
+which for a quadratic or a cubic is h²/12 × (f′(b) − f′(a)). Whole and fractional answers come
+up about equally. The wrong answers are the slips people make: the inside heights not doubled,
+the left, right or midpoint sum, the whole interval as one trapezoid, the exact integral given
+for the estimate, and for the gap the estimate or the integral itself, h left unsquared, f used
+where the slopes belong, or one strip's gap for all of them. The left and right sums never
+stand together, since the estimate is their average. It joins the Integrals strand and the
+Infinite Expanse.
 
 ---
 
@@ -610,7 +622,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy-three of the seventy-six topics
+  where every answer would echo is asked the plain way. Seventy-three of the seventy-seven topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -629,14 +641,14 @@ The game is built so that losing teaches you as much as winning.
   grid, a curve, a shaded region, Riemann bars, and a number line with a hole in it.
 - **📖 Tome of Lore** — thirteen short pages covering the conceptual spine of both subjects,
   ending with how gradients tie them together.
-- **🧭 Workshop index** — the top of the Tome lists all fifty-four workshops
+- **🧭 Workshop index** — the top of the Tome lists all fifty-five workshops
   as chips, under the seven strands and in each strand's order, so any one is a
   tap away instead of a long scroll down. A chip turns green with a ✓ once every
   topic it covers is solid, and is ringed in gold while one of them needs work, as
   the Training Grounds count it, which is where a visit pays most. Both are read off mastery as it
   stands; nothing is saved.
 - **🎲 Turn It Round, Mixed** — just under the index, one button deals a
-  question from a different workshop's turned-round mode each time: fifty-three
+  question from a different workshop's turned-round mode each time: fifty-four
   of them, every one but the matrix match (which needs its figure). Each comes
   with its workshop's name and its rule stated first, and is played exactly as
   in that workshop: a wrong pick is shut and explained, the right one is marked
@@ -1185,7 +1197,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Seventy-six topics link to fifty-four workshops,
+  back button returns to the summary. Seventy-seven topics link to fifty-five workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -2060,6 +2072,27 @@ The game is built so that losing teaches you as much as winning.
   the right one alone by nudging the solution through P, and works every check
   again.
 
+- **🪟 Trapezoid Workshop** — cutting an area into strips. Take x², which bends up,
+  4x − x², which bends down, or the straight line x/2 + 1 on [0, 4], and cut it into 1, 2, 4,
+  8 or 16 strips. Each count lists h and the heights, adds T = h/2 × (ends + 2 × inside), and
+  sets it against the exact area in fractions, with the gap checked against
+  h²/12 × (f′(4) − f′(0)). The curve that bends up is overshot, the one that bends down
+  undershot, and the line met exactly; each doubling quarters the gap. Six things to find,
+  and a fight on the trapezoid rule now offers it.
+
+  **🎯 Which estimate?** turns the workshop round: a quadratic on an interval, cut
+  into two to four strips of width 1/2, 1 or 2, with the x's and their heights laid
+  out, and four numbers, one of them T. The rule is stated first. The wrong numbers
+  are the slips people make: the inside heights not doubled, h used where the rule
+  has h/2, every height doubled, the left-hand or right-hand sum (never both, since T
+  is their average), the whole interval taken as one trapezoid, or the exact area.
+  No number is 0, two share T's form, whole or fraction, no wrong one is two others
+  added, T is whole about half the time, and it sits lowest, highest or between
+  about as often. A wrong pick is shut and its rule run on f(x) = 1 or f(x) = x,
+  whose areas are plain, or on h itself, or shown to be the exact area. The right
+  pick works T through. Nothing is saved, and there is no clock. `npm test` deals
+  three hundred rounds and works every number, slip and check again.
+
 - **🎯 Training Grounds** — practise any single topic with no combat, no damage, and no
   gold. Adaptive drills sit at the top: **Bring back what's fading** is the map's review
   round, **Drill my weakest** pulls from your six worst topics as you know them now, and
@@ -2070,10 +2103,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading seventy-six bars.
+  reading seventy-seven bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Seventy-six topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Seventy-seven topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
@@ -2224,7 +2257,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and forty-nine suites, about 5,913 checks, about a minute:
+loop only exists once the page is running. A hundred and fifty-one suites, about 5,980 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2315,9 +2348,11 @@ loop only exists once the page is running. A hundred and forty-nine suites, abou
 | `arcpick` | the Tome says the arc length workshop can be turned round; the workshop opens on laying chords by hand, and switching to which integral puts away the curves, the figure, the chord buttons, the readout and the goals and states the rule first; a curve and where it runs are shown and four integrals offered, each named by its integral; two wrong picks are each named as their slip and checked at one x, where the slope gives a tiny step's length, shut and told as not the length, and not counted; the right pick works 1 + f′² through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings CURVE MEASURER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `logistic` | the Tome opens the logistic workshop starting small at 20, A = 49 worked and the rate 0.5 × 20 × 0.98 = 9.8; one step grows P to 32.6, 1.6276 times as much, almost e^0.5, with the rate rising; P passes 500 at t = 8 with rK/4 = 125 told, and at t = 9 the rate falls from 124.6 to 114.1; by t = 17 P is within 1% of 1000; the steps stop at 20, stepping back drops the step note and starting over goes back to t = 0; half way the rate falls from 125; above the ceiling the rate is −480 and P falls to 1294.4; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
 | `logipick` | the Tome says the logistic workshop can be turned round; the workshop opens on stepping by hand, and switching to which rate puts away the starts, the figure, the step buttons, the readout and the goals and states the rule first; r, K and P are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked where their formula must fail, shut and told as not dP/dt, and not counted; the right pick works rP(1 − P/K) through, counts (not as a first try after a miss), toasts and deals a new population; a first try counts as one, and the fifth brings RATE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `trapezoid` | the Tome opens the trapezoid workshop on x² with one strip, T = 32 over the area 64/3 by 32/3 and checked as 4²/12 × 8; two strips list the heights 0, 4, 16, add T = 24 and quarter the gap to 8/3; eight strips sum seven inside heights to 35 for T = 43/2, within 1%; the strips stop at 16, and halving from 16 takes the gap from 1/24 to 1/6; 4x − x² comes out under by 1/6 with the check −1/6; the straight line is met exactly with no slivers; all six goals and the banner, every button and the drawing named, a phone's width, and nothing saved |
+| `trappick` | the Tome says the trapezoid workshop can be turned round; the workshop opens on cutting by hand, and switching to which estimate puts away the curves, the figure, the strip buttons, the readout and the goals and states the rule first; the curve, its interval, n and h are shown with the heights laid out, and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked on f(x) = 1 or x, shut and told as not T, and not counted; the right pick works T through, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings TRAPEZOID TALLIER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `stretchpick` | the Tome says the doubling workshop can be turned round; the mode is pressed and the stories, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; y(0) and y one stretch on are shown, a later time asked and four numbers offered, each named; a wrong pick is named as its slip, checked against the factor, shut and told as not y, and not counted; the right pick is worked as a power, counted but not as a first try, toasted, and deals a new question; a first try is counted as one; the fifth brings STRETCH READER; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
 | `eulerpick` | the Tome says the Euler step workshop can be turned round; the mode is pressed and the equations, the steps, the figure, the walk buttons, the readout and the goals step aside; the rule comes first; the equation is shown with its start and step and four numbers are offered, each named; a wrong pick is named as its slip, checked at the step it gets wrong, shut and told as not Euler's estimate, and not counted; the right pick is worked step by step, counted but not as a first try, toasted, and deals a new equation; a first try is counted as one; the fifth brings SURE-FOOTED; every button is named, it fits a phone with the four two by two, the hand-worked walk comes back with the four put away, and the save is unchanged |
-| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 54 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
+| `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 55 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |
 | `matpick` | the Tome says the matrix workshop can be turned round; the workshop opens on free play, and switching to which matrix puts away the steppers and goals and states the rule first; four matrices are offered, each named and read out row by row, and the shape is drawn dashed over the square, never given as numbers; a wrong pick says where it sends î and ĵ against the dashed ones, names its slip, is drawn in gold over the shape, is shut and told as not this one, and is not counted; the right pick reads its columns back, counts (not as a first try after a miss), toasts and deals a new shape with all four open; a first try counts as one, and the fifth pick brings MATRIX SPOTTER; every button is named, nothing runs off a phone, the matrices sit two by two with î and ĵ's colours on their columns, match the shape and free play come back, and the save is unchanged |
 | `eigspot` | the Tome says the eigenvector hunt can be turned round; the hunt opens on hunting by hand, and switching to spot one puts away the matrices, the arrow, the figure and the goals and states the rule first; the matrix is read out row by row; four arrows are offered, each named with where A sends it and drawn with v in green, A·v in gold and v's dotted line; a wrong pick is multiplied out, told how many degrees it is knocked off its line, shut, drawn in red, told as not an eigenvector and not counted; the right pick is written as λ times itself, counts (not as a first try after a miss), toasts and deals a new matrix with all four open; a first try counts as one, and the fifth spot brings EIGEN SPOTTER; every button is named, nothing runs off a phone, the arrows sit two by two, hunting by hand comes back, and the save is unchanged |

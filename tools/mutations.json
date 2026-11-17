@@ -1,47 +1,103 @@
 {
-  "change": "Close the gaps the breaks found in the logistic and tangent line picks.",
+  "change": "Check the trapezoid deal's guards, its spread, the area under x and that nothing on the card is hidden.",
   "mutations": [
     {
-      "name": "the slips are always the first trio",
+      "name": "a slip may be T itself",
       "file": "index.html",
-      "find": "fit=T.filter(t=>rk(t)===want), take=fit[R.i(0,fit.length-1)];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
-      "replace": "fit=T.filter(t=>rk(t)===want), take=fit[0];\n    const opts=R.shuffle(['right',...take]).map(k=>({k}));\n    this.round={S,opts,out:new Set()}; this.misses=0; this.picked=null;\n  },\n  start(){ if(!this.round) this.newRound(); },\n  choose(i){\n    const r=this.round;\n    if(!r||r.out.has(i)) return;\n    this.picked=i;\n    if(r.opts[i].k==='right'){\n      this.matched++;\n      if(this.misses===0) this.firstTry++;\n      const tries=this.misses+1;\n      Sfx.good();\n      if(this.matched===5||this.matched===10||this.matched===25)\n        Celebrate.banner('R",
+      "find": "const seen=new Set([this.key(this.v(S,'right'))]), keep=[];",
+      "replace": "const seen=new Set(), keep=[];",
       "run": "verify"
     },
     {
-      "name": "the root slip uses the right slope",
+      "name": "a slip may be 0",
       "file": "index.html",
-      "find": "h:[d,1], x:[n*n+d,1], m2:[1,n]}",
-      "replace": "h:[d,1], x:[n*n+d,1], m2:[1,2*n]}",
+      "find": "if(v[0]<=0 || this.big(v) || seen.has(this.key(v))) continue;",
+      "replace": "if(this.big(v) || seen.has(this.key(v))) continue;",
       "run": "verify"
     },
     {
-      "name": "√x always steps forward",
+      "name": "there are always two strips",
       "file": "index.html",
-      "find": "d=wantWhole ? 2*n*[-1,1,2][R.i(0,2)] : R.i(-2*n,2*n); }",
-      "replace": "d=wantWhole ? 2*n*[1,2][R.i(0,1)] : R.i(1,2*n); }",
+      "find": "const n=R.i(2,4), h=",
+      "replace": "const n=2, h=",
       "run": "verify"
     },
     {
-      "name": "√x may step 0",
+      "name": "the curve always starts at 0",
       "file": "index.html",
-      "find": "if(d===0 || this.A(S)+d<1) continue;",
-      "replace": "if(this.A(S)+d<1) continue;",
+      "find": "a:R.i(0,1), n, h};",
+      "replace": "a:0, n, h};",
       "run": "verify"
     },
     {
-      "name": "the form asked for is not kept",
+      "name": "the f(x) = x check uses the wrong area",
       "file": "index.html",
-      "find": "      if(this.whole(this.val(S,'right'))!==wantWhole) continue;\n      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
-      "replace": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
+      "find": "A=this.mul(this.add(this.mul(b,b),[-S.a*S.a,1]),[1,2])",
+      "replace": "A=this.mul(this.add(this.mul(b,b),[-S.a,1]),[1,2])",
       "run": "verify"
     },
     {
-      "name": "a curve with no trio may be dealt",
+      "name": "the left check takes the right x's",
       "file": "index.html",
-      "find": "      if(!this.trios(S).length) continue;\n      return S;\n    }\n    return {k",
-      "replace": "      return S;\n    }\n    return {k",
+      "find": "const use=k==='left' ? xs.slice(0,n) : xs.slice(1)",
+      "replace": "const use=k==='left' ? xs.slice(1) : xs.slice(0,n)",
       "run": "verify"
+    },
+    {
+      "name": "the antiderivative loses its third",
+      "file": "index.html",
+      "find": "anti(S){ return `${S.c===3?'x³':S.c===1?'x³/3':`${S.c}x³/3`}",
+      "replace": "anti(S){ return `${S.c===1?'x³':`${S.c}x³`}",
+      "run": "verify"
+    },
+    {
+      "name": "the exact check runs on the curve itself",
+      "file": "index.html",
+      "find": "return `Check what ${L} is: [${this.anti(S)}]",
+      "replace": "return `Check what ${L} is: [${this.fw(S)}]",
+      "run": "verify"
+    },
+    {
+      "name": "the right line forgets to double",
+      "file": "index.html",
+      "find": "`2 × ${this.pb(v)}`).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
+      "replace": "this.pb(v)).join(' + ')}) = ${this.fs(this.v(B,'right'))}",
+      "run": "verify"
+    },
+    {
+      "name": "the count line is lost",
+      "file": "index.html",
+      "find": "    lines.push(`${this.matched} picked this visit, ${this.firstTry} on the first try.`);\n    out+=`<div id=\"tz",
+      "replace": "    out+=`<div id=\"tz",
+      "run": "verify"
+    },
+    {
+      "name": "the rule is not shown",
+      "file": "index.html",
+      "find": "let out=`<div class=\"small\" style=\"margin:2px 0 6px\">${this.RULE}</div>`;\n    out+=`<div id=\"tz",
+      "replace": "let out='';\n    out+=`<div id=\"tz",
+      "run": "verify"
+    },
+    {
+      "name": "the heights are not shown",
+      "file": "index.html",
+      "find": "out+=`<div id=\"tzqH\"",
+      "replace": "out+=`<div id=\"tzqH\" hidden",
+      "run": "verify"
+    },
+    {
+      "name": "a shut number keeps its name",
+      "file": "index.html",
+      "find": "${gone?'. Not T':''}",
+      "replace": "",
+      "run": "verify"
+    },
+    {
+      "name": "the hand workshop does not step aside",
+      "file": "index.html",
+      "find": "for(const id of ['tzwSets','tzwFig','tzwMoveRow','tzwRead','tzwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';",
+      "replace": "",
+      "run": "play:trappick"
     }
   ]
 }
