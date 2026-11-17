@@ -1751,6 +1751,12 @@ let codeNotes = null;
   else if (d70.lostTopics || Object.keys(d70.g.topicStats).sort().join() !== 'dot,matMul,taylor')
     fail('codes', 'append', `a code from before the last topic was added lost its topic history: ${Object.keys(d70.g.topicStats).join(', ') || 'none'}`);
   else if (d70.g.topicStats.dot.seen !== 12 || d70.g.gold !== 777) fail('codes', 'append', 'a code from before the last topic was added came back changed');
+  else {
+    /* Every field of every topic, not only the first: a v7 code read at the
+       v8 widths keeps the first count right and shifts everything after it. */
+    const t70 = d70.g.topicStats, got = [t70.dot.last, t70.matMul.seen, t70.matMul.last, t70.taylor.seen, t70.taylor.w, t70.taylor.last];
+    if (got.join() !== '280,20,295,8,2,290') fail('codes', 'append', `a v7 code's later topics came back shifted: ${got.join(', ')}`);
+  }
 
   /* v8 packs each topic tighter: the wrong answers in exactly as many bits as
      the seen count takes, and how many questions ago in six bits, since the
@@ -1762,7 +1768,7 @@ let codeNotes = null;
       bounties: [], riteWins: {}, topicStats: {
         [T0[0]]: { seen: 13.25, w: 5.5, m: 0.5, last: 460, t: NOW - 3 * 864e5 },
         [T0[1]]: { seen: 40, w: 40, m: 0.1, last: 437, t: NOW - 864e5 },
-        [T0[2]]: { seen: 0.25, w: 0, m: 0.9, last: 100, t: NOW } } };
+        [T0[2]]: { seen: 0.25, w: 0, m: 0.9, last: 400, t: NOW } } };
     const d8 = Codec.decode(Codec.encode({ nm: 'Packed' }, g8, NOW)), r8 = d8.ok ? d8.g.topicStats : {};
     const a8 = r8[T0[0]], b8 = r8[T0[1]], c8 = r8[T0[2]];
     if (!d8.ok || !a8 || !b8 || !c8) fail('codes', 'pack', `a v8 code lost a topic's record (${d8.why || 'missing'})`);
@@ -1770,7 +1776,7 @@ let codeNotes = null;
       if (a8.seen !== 13.25 || a8.w !== 5.5 || b8.seen !== 40 || b8.w !== 40 || c8.seen !== 0.25 || c8.w !== 0)
         fail('codes', 'pack', `seen and wrong did not come back exactly: ${JSON.stringify([a8, b8, c8].map(r => [r.seen, r.w]))}`);
       if (a8.last !== 460 || b8.last !== 437) fail('codes', 'pack', `how many questions ago did not come back exactly: ${a8.last}, ${b8.last}`);
-      if (c8.last !== 500 - 63) fail('codes', 'pack', `a topic 400 questions ago came back as ${500 - c8.last} ago, not 63`);
+      if (c8.last !== 500 - 63) fail('codes', 'pack', `a topic 100 questions ago came back as ${500 - c8.last} ago, not 63`);
     }
   }
 
