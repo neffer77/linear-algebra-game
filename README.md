@@ -1860,6 +1860,21 @@ The game is built so that losing teaches you as much as winning.
   at the x where it breaks the rule, with that spot marked on f and on the
   graph; a right one deals a new f, on a line, a parabola or a wave. Nothing is
   saved, and there is no clock.
+
+  Its third mode, **✏️ Sketch f′**, has you build the derivative yourself. f
+  is drawn on a square grid, and at five stops, x = −2 to 2, you set its slope
+  with + and −, from −4 to 4. Tapping a stop draws its tangent in green, so the
+  climb for each 1 across can be counted off the grid. The check opens once all
+  five are set; it rings the stops that are wrong and says, for each, what the
+  tangent does there. Fix them and check again, and once all five are right
+  the true f′ is drawn dashed through your dots. Eight curves come round in a
+  fixed order: lines whose slope graph is flat, curves that turn where f′
+  crosses 0, and x³/3, which goes flat at 0 without turning. Six things to
+  find, among them a slip fixed and three right on the first check in a row.
+  Nothing is saved, and there is no clock. `npm test` works every slope again
+  by nudging f, tells each curve as a line, a turn or a flat spot from the
+  signs of its slopes, sets every stop to every wrong value and reads back
+  what the check says, and measures every tangent off the drawing.
 - **➡️ Arrow Workshop** — vectors as arrows. Stretch u by k, walk v from its
   tip if you like, and the green arrow w goes straight to where you land. Its
   length is Pythagoras on the right triangle under it, dividing by that length
@@ -2531,7 +2546,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and fifty-seven suites, about 6,190 checks, about a minute:
+loop only exists once the page is running. A hundred and sixty-one suites, about 6,190 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2629,6 +2644,7 @@ loop only exists once the page is running. A hundred and fifty-seven suites, abo
 | `fieldmatch` | the mode is pressed and the walk by hand steps aside; 81 dashes are drawn and four equations offered; the rule comes before any pick; a wrong pick is caught at one point with its own dash and a ring drawn there, and shut; the match is explained and is not a first try after a miss; three first tries in a row are counted; every goal can be found with the buttons and the last brings a banner; every button is named, the drawing is named, it fits a phone, the walk comes back, and nothing is saved |
 | `wsindex` | the Tome's second card is the workshop index, on screen when it opens; it lists all 55 workshops once each under the seven strands in order, with a chip for every workshop card below, the vectors row in the strand's order; a new knight's chips are all plain; the Bend chip opens the same screen as its card; with one of its two topics solid it stays plain, with both solid it turns green with a ✓ and says so to a screen reader, and with one needing work it is ringed in gold and says so; chips sit side by side and wrap; every chip named; fits a phone; nothing saved |
 | `slopematch` | the Tome says the slope tracer can be turned round; the tracer opens tracing, and switching to which is f′ hides the tracer and states the rule first; three graphs are offered, each named and told as words, and f is told as words; a wrong pick is explained at the x where f breaks it, names its slip, marks the spot on f and on the graph, is shut and told as not f′, and is not counted; the right pick after it is counted but not as a first try, with a toast and a new f; a first try counts as one; the fifth read brings a banner; every button named; fits a phone; the three graphs sit side by side; tracing comes back; nothing saved |
+| `slopesketch` | the Tome says f′ can be sketched by hand; the mode is pressed and the tracer steps aside; the task and the rule come first, with five stops unset and the check shut; x = 0's tangent lies flat and picking x = 1 tilts it up; a sketch with a slip rings only that stop, says what its tangent does and gives nothing away; changing it clears its ring, and the fix is explained, draws the true f′, shuts the slopes and is not a first check; a line and a flat spot without a turn are explained; four first checks in a row are counted; every goal can be found and the last brings a banner; slopes stop at 4 and −4; every button and the drawing are named, it fits a phone, tracing comes back, and nothing is saved |
 | `matpick` | the Tome says the matrix workshop can be turned round; the workshop opens on free play, and switching to which matrix puts away the steppers and goals and states the rule first; four matrices are offered, each named and read out row by row, and the shape is drawn dashed over the square, never given as numbers; a wrong pick says where it sends î and ĵ against the dashed ones, names its slip, is drawn in gold over the shape, is shut and told as not this one, and is not counted; the right pick reads its columns back, counts (not as a first try after a miss), toasts and deals a new shape with all four open; a first try counts as one, and the fifth pick brings MATRIX SPOTTER; every button is named, nothing runs off a phone, the matrices sit two by two with î and ĵ's colours on their columns, match the shape and free play come back, and the save is unchanged |
 | `eigspot` | the Tome says the eigenvector hunt can be turned round; the hunt opens on hunting by hand, and switching to spot one puts away the matrices, the arrow, the figure and the goals and states the rule first; the matrix is read out row by row; four arrows are offered, each named with where A sends it and drawn with v in green, A·v in gold and v's dotted line; a wrong pick is multiplied out, told how many degrees it is knocked off its line, shut, drawn in red, told as not an eigenvector and not counted; the right pick is written as λ times itself, counts (not as a first try after a miss), toasts and deals a new matrix with all four open; a first try counts as one, and the fifth spot brings EIGEN SPOTTER; every button is named, nothing runs off a phone, the arrows sit two by two, hunting by hand comes back, and the save is unchanged |
 | `intpick` | the Tome says the area workshop can be turned round; the workshop opens on closing in with rectangles, and switching to which integral puts away the curves, the figure, the stepper, the rules, the readout and the goals and states the rule first; the curve is named with its ends and the picture is read out, saying where it crosses and that part is under the axis; four numbers are offered two by two, each named; a wrong pick is shut, told which slip it is and not counted; the right pick shows F worked at both ends, counts (not as a first try after a miss), toasts and deals a new curve with all four open; a first try counts as one, and the fifth brings INTEGRAL READER; every button is named, nothing runs off a phone, closing in comes back, and the save is unchanged |

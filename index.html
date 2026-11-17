@@ -1622,7 +1622,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <div class="screen" id="s-tracer">
     <div class="panel"><h2>✍️ Slope Tracer Workshop</h2><div class="sub">The derivative of a curve is another curve: at each x, how steep the first one is there. Step along a curve, mark its slope at each stop as a dot at that height, and watch the dots draw the derivative for you.</div></div>
     <div class="panel">
-      <div id="tcMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Trace slopes or read them"></div>
+      <div id="tcMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Trace slopes, read them, or sketch them"></div>
       <div id="tcMatch"></div>
       <div id="tcSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
       <div id="tcFig"></div>
@@ -15571,7 +15571,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">✍️ Slope Tracer Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x. Then turn it round: see f, and pick which of three graphs is f′.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along sin x, cos x, eˣ or ln x and mark the slope at each stop as a dot. The dots draw the derivative: cos x, −sin x, eˣ itself and 1/x. Then turn it round: see f, and pick which of three graphs is f′, or sketch f′ yourself, one slope at a time.</div>
          <button class="btn sm" id="tomeTracer" style="width:auto;margin-top:8px" onclick="Tracer.open()">Open the slope tracer workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -26090,6 +26090,155 @@ const SlopeMatch = {
   }
 };
 
+/* ---------- Sketch f′: the slope tracer's third mode ----------
+   The other two modes draw f′ for you or offer it to pick. This one has you
+   build it: f is drawn on a square grid, and at each of five stops, x = −2 to
+   2, you set how far its tangent climbs for each 1 step right. Tapping a stop
+   draws its tangent on f, so the slope can be counted off the grid. A check
+   marks the stops that are wrong and says, for each, what the tangent does
+   there; fix them and check again. Once all five are right the true f′ is
+   drawn through your dots. The curves come round in a fixed order and every
+   slope is a whole number from −4 to 4, so nothing is random, nothing is
+   saved and there is no clock. */
+const SlopeSketch = {
+  CURVES:[
+    {fs:'x²/2',      ds:'x',      f:x=>x*x/2,        d:x=>x,       kind:'turn'},
+    {fs:'x + 1',     ds:'1',      f:x=>x+1,          d:x=>1,       kind:'line'},
+    {fs:'x³/3 − x',  ds:'x² − 1', f:x=>x**3/3-x,     d:x=>x*x-1,   kind:'turn'},
+    {fs:'−x²/2',     ds:'−x',     f:x=>-x*x/2,       d:x=>-x,      kind:'turn'},
+    {fs:'x³/3',      ds:'x²',     f:x=>x**3/3,       d:x=>x*x,     kind:'bend'},
+    {fs:'1 − x',     ds:'−1',     f:x=>1-x,          d:x=>-1,      kind:'line'},
+    {fs:'x − x³/3',  ds:'1 − x²', f:x=>x-x**3/3,     d:x=>1-x*x,   kind:'turn'},
+    {fs:'x²/2 + x',  ds:'x + 1',  f:x=>x*x/2+x,      d:x=>x+1,     kind:'turn'}
+  ],
+  XS:[-2,-1,0,1,2], LO:-4, HI:4,
+  ci:0, vals:[null,null,null,null,null], sel:2, marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Sketch a whole f′ right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'line',  t:'Sketch f′ for a straight line: the same slope at every stop.', toast:'A line has one slope',
+     ok:K=>K.kinds.has('line')},
+    {id:'turn',  t:'Sketch f′ for a curve that turns, and see f′ cross 0 at the turn.', toast:'f′ crosses 0 where f turns',
+     ok:K=>K.kinds.has('turn')},
+    {id:'bend',  t:'Sketch f′ for x³/3, which goes flat at x = 0 but never turns.', toast:'Flat for a moment, but no turn',
+     ok:K=>K.kinds.has('bend')},
+    {id:'fix',   t:'Check a sketch with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Sketch three curves in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  C(){ return this.CURVES[this.ci]; },
+  RULE:'f′ at a stop is the slope of f’s tangent there: how far it climbs for each 1 step right. Climbing is a plus, falling a minus, and flat is 0. Tap a stop to see its tangent on the grid, then set its slope.',
+  /* what the tangent does at x, as words, with its slope */
+  tan(x){ const d=this.C().d(x);
+    return d>0 ? `its tangent climbs ${d} for each 1 across` : d<0 ? `its tangent falls ${-d} for each 1 across` : 'its tangent lies flat'; },
+  zeros(){ return this.XS.filter(x=>this.C().d(x)===0); },
+  and(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; },
+  working(){
+    const C=this.C(), out=[];
+    if(this.solved){
+      out.push(`Yes: the slope of ${C.fs} is f′(x) = ${C.ds}, and the five dots lie on it.`);
+      if(C.kind==='line') out.push(`A straight line climbs the same at every step, so its slope graph is flat, at ${neg(C.d(0))}.`);
+      else if(C.kind==='bend') out.push(`At x = 0 the slope is 0, yet ${C.fs} does not turn: it flattens for a moment and climbs on, so f′ touches 0 without crossing it.`);
+      else out.push(`f′ crosses 0 at x = ${this.and(this.zeros().map(neg))}, where ${C.fs} turns: there its tangent lies flat.`);
+    } else if(this.marks){
+      const bad=this.XS.map((x,i)=>i).filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 5 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const x=this.XS[i];
+        out.push(`At x = ${neg(x)}, ${this.tan(x)}, so f′(${neg(x)}) = ${neg(C.d(x))}, not ${neg(this.vals[i])}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`Stop x = ${neg(this.XS[this.sel])} is picked: its tangent is drawn in green.`);
+    }
+    out.push(`${this.wins} sketched right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* the window f is drawn in: x from −2.5 to 2.5, y around the curve, one unit
+     the same size both ways so a slope can be counted off the grid */
+  U:36,
+  win(){ const ys=this.XS.map(this.C().f); return [Math.floor(Math.min(...ys))-0.5, Math.ceil(Math.max(...ys))+0.5]; },
+  svg(){
+    const C=this.C(), U=this.U, [y0,y1]=this.win(), f=v=>v.toFixed(2);
+    const top=10, H1=(y1-y0)*U, b0=top+H1+26, u2=12, H2=(this.HI-this.LO+1)*u2;
+    const X=x=>150+x*U, Y=y=>top+(y1-y)*U, Y2=v=>b0+(this.HI+0.5-v)*u2, W=top+H1+26+H2+8;
+    const lbl=this.solved ? `, with f′(x) = ${C.ds} drawn through the dots` : '';
+    let out=`<svg viewBox="0 0 300 ${f(W)}" style="width:100%;height:auto;display:block" role="img" aria-label="f(x) = ${C.fs} on a square grid, its tangent at x = ${neg(this.XS[this.sel])} in green, and below it the slopes you have set${lbl}">`;
+    for(let g=Math.ceil(y0);g<=Math.floor(y1);g++) out+=`<line x1="${f(X(-2.5))}" y1="${f(Y(g))}" x2="${f(X(2.5))}" y2="${f(Y(g))}" stroke="${g===0?FIG_COL.axis:FIG_COL.grid}" stroke-width="1"/>`;
+    for(let g=-2;g<=2;g++) out+=`<line x1="${f(X(g))}" y1="${f(Y(y1))}" x2="${f(X(g))}" y2="${f(Y(y0))}" stroke="${g===0?FIG_COL.axis:FIG_COL.grid}" stroke-width="1"/>`;
+    const pts=[]; for(let i=0;i<=100;i++){ const x=-2.5+5*i/100, y=C.f(x); if(y>=y0 && y<=y1) pts.push(`${f(X(x))},${f(Y(y))}`); }
+    out+=`<polyline data-k="curve" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.5"/>`;
+    const x=this.XS[this.sel], y=C.f(x), d=C.d(x);
+    let t0=Math.max(-2.5,x-1), t1=Math.min(2.5,x+1); const cut=t=>{ const v=y+d*(t-x); return v>y1 ? x+(y1-y)/d : v<y0 ? x+(y0-y)/d : t; };
+    if(d){ t0=cut(t0); t1=cut(t1); }
+    out+=`<line data-k="tan" x1="${f(X(t0))}" y1="${f(Y(y+d*(t0-x)))}" x2="${f(X(t1))}" y2="${f(Y(y+d*(t1-x)))}" stroke="${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/>`;
+    this.XS.forEach((s,i)=>{ out+=`<circle data-k="stop" cx="${f(X(s))}" cy="${f(Y(C.f(s)))}" r="${i===this.sel?5.5:3.5}" fill="${i===this.sel?FIG_COL.c:FIG_COL.a}"/>`; });
+    out+=`<text x="8" y="${f(top+12)}" fill="${FIG_COL.dim}" font-size="12">f</text>`;
+    // the slopes set, on their own axis from −4 to 4
+    for(let v=this.LO;v<=this.HI;v++) out+=`<line x1="${f(X(-2.5))}" y1="${f(Y2(v))}" x2="${f(X(2.5))}" y2="${f(Y2(v))}" stroke="${v===0?FIG_COL.axis:FIG_COL.grid}" stroke-width="1"/>`;
+    out+=`<text x="8" y="${f(b0+12)}" fill="${FIG_COL.dim}" font-size="12">f′</text>`;
+    out+=`<line x1="${f(X(this.XS[this.sel]))}" y1="${f(Y2(this.HI+0.5))}" x2="${f(X(this.XS[this.sel]))}" y2="${f(Y2(this.LO-0.5))}" stroke="${FIG_COL.c}" stroke-width="1" stroke-dasharray="3 3"/>`;
+    if(this.solved){ const q=[]; for(let i=0;i<=100;i++){ const s=-2.5+5*i/100, v=C.d(s); if(v>=this.LO-0.5 && v<=this.HI+0.5) q.push(`${f(X(s))},${f(Y2(v))}`); }
+      out+=`<polyline data-k="true" points="${q.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="6 4"/>`; }
+    this.XS.forEach((s,i)=>{ const v=this.vals[i]; if(v===null) return;
+      out+=`<circle data-k="dot" cx="${f(X(s))}" cy="${f(Y2(v))}" r="5" fill="${FIG_COL.b}"/>`;
+      if(this.marks && this.marks[i]===false) out+=`<circle data-k="miss" cx="${f(X(s))}" cy="${f(Y2(v))}" r="10" fill="none" stroke="${FIG_COL.d}" stroke-width="2"/>`; });
+    return out+`</svg>`;
+  },
+  pick(i){ if(this.sel===i) return; this.sel=i; this.touched=true; Tracer.render(); },
+  set(i,by){
+    if(this.solved) return;
+    const v=(this.vals[i]===null?0:this.vals[i])+by;
+    if(v<this.LO || v>this.HI) return;
+    this.vals[i]=v; this.sel=i; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Tracer.render();
+  },
+  ready(){ return this.vals.every(v=>v!==null); },
+  check(){
+    if(this.solved || !this.ready()) return;
+    const C=this.C(); this.tries++; this.touched=true;
+    this.marks=this.XS.map((x,i)=>this.vals[i]===C.d(x));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      this.kinds.add(C.kind);
+    } else this.streak=0;
+    Tracer.render();
+  },
+  next(){ if(!this.solved) return; this.ci=(this.ci+1)%this.CURVES.length; this.vals=[null,null,null,null,null]; this.sel=2; this.marks=null; this.tries=0; this.solved=false; Tracer.render(); },
+  html(){
+    const C=this.C();
+    let out=`<div class="small" style="margin:2px 0 6px">Curve ${this.ci+1} of ${this.CURVES.length}: f(x) = ${C.fs}. Set the slope at each stop and draw f′.</div>`;
+    out+=`<div id="ssFig">${this.svg()}<div class="figcap">Top, f in blue on a square grid, with the picked stop’s tangent in green. Below, the slopes you set, as gold dots from −4 to 4.</div></div>`;
+    out+=`<div id="ssStops" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px">`+this.XS.map((x,i)=>{
+      const v=this.vals[i], m=this.marks?this.marks[i]:null, X=neg(x), shut=this.solved;
+      return `<div class="ssStop" data-i="${i}" style="display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:8px;padding:3px 0;border:1px solid ${m===false?FIG_COL.d:i===this.sel?FIG_COL.c:'transparent'}">`+
+        `<button class="btn sm ghost" style="margin:0;padding:4px 6px;width:100%" aria-pressed="${i===this.sel}" onclick="SlopeSketch.pick(${i})" aria-label="Show the tangent at x = ${X}">x = ${X}</button>`+
+        `<button class="btn sm ghost" style="margin:0;width:100%" ${shut||v===this.HI?'disabled ':''}onclick="SlopeSketch.set(${i},1)" aria-label="Raise the slope at x = ${X}">+</button>`+
+        `<b data-k="val" style="font-size:20px;color:${m===false?FIG_COL.d:m===true?FIG_COL.c:'var(--gold)'}">${v===null?'?':neg(v)}</b>`+
+        `<button class="btn sm ghost" style="margin:0;width:100%" ${shut||v===this.LO?'disabled ':''}onclick="SlopeSketch.set(${i},-1)" aria-label="Lower the slope at x = ${X}">−</button></div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="ssRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ssNext" onclick="SlopeSketch.next()" aria-label="Show the next curve">Next curve →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ssCheck" ${this.ready()?'':'disabled '}onclick="SlopeSketch.check()" aria-label="${this.ready()?'Check the five slopes':'Set all five slopes to check them'}">${this.ready()?'Check my f′':'Set all five slopes'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="ssGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ssGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE SKETCHER','every f′ drawn by hand','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- The slope tracer workshop: what the slopes of a curve draw ----------
    Step along sin x, cos x, eˣ or ln x. At each stop the tangent's slope is
    worked out with a nudge and marked as a gold dot at that height. The dots
@@ -26182,11 +26331,11 @@ const Tracer = {
   render(){
     document.getElementById('tcSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Tracer.pick(${i})" aria-label="f(x) = ${s.fs}">${s.btn}</button>`).join('');
-    document.getElementById('tcMode').innerHTML=[['trace','✍️ Trace the slopes'],['match','🧩 Which is f′?']]
-      .map(([m,t])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Tracer.setMode('${m}')" aria-label="${m==='trace'?'Trace the slopes of f along the curve':'See f and pick which of three graphs is f′'}">${t}</button>`).join('');
-    const match=this.mode==='match';
+    document.getElementById('tcMode').innerHTML=[['trace','✍️ Trace the slopes','Trace the slopes of f along the curve'],['match','🧩 Which is f′?','See f and pick which of three graphs is f′'],['sketch','✏️ Sketch f′','See f and set its slope at five stops to draw f′ yourself']]
+      .map(([m,t,l])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Tracer.setMode('${m}')" aria-label="${l}">${t}</button>`).join('');
+    const match=this.mode!=='trace';
     for(const id of ['tcSets','tcFig','tcStep','tcRead','tcGoalPanel']) document.getElementById(id).style.display=match?'none':'';
-    document.getElementById('tcMatch').innerHTML=match ? SlopeMatch.html() : '';
+    document.getElementById('tcMatch').innerHTML=this.mode==='match' ? SlopeMatch.html() : this.mode==='sketch' ? SlopeSketch.html() : '';
     if(match) return;
     document.getElementById('tcX').textContent=`x = ${this.xl()}`;
     document.getElementById('tcXLo').disabled=this.k<=0;
