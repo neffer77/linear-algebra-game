@@ -5929,6 +5929,7 @@ const elimCramerNotes = (() => {
     S.got = {}; S.pick(0); S.put(0); S.move(0, 1); S.move(0, -1);
     if (S.working().length !== 4) fail('elimcramer', 'hunt', 'only x was found, but the check is given');
     for (let i = 0; i < 30; i++) S.move(0, -1); if (S.B()[0] !== -12) fail('elimcramer', 'hunt', 'the stepper does not stop at −12');
+    for (let i = 0; i < 30; i++) S.move(1, 1); if (S.B()[1] !== 12) fail('elimcramer', 'hunt', 'the stepper does not stop at 12');
   }
   S.si = 0; S.b = null; S.col = null; S.got = {}; S.done = new Set(); S.touched = false;
   return { states, ratios, flats, checks, drawn };
