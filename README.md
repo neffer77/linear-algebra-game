@@ -140,7 +140,7 @@ keeps it in to come round again; and when the last is back the round says nothin
 fading now and ends, rather than asking more. It pays no gold, and nothing new is saved:
 the list is read off the same two fields the fade already uses.
 
-**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-seven topics in
+**The whole curriculum on one screen.** The 🧭 Competency Map shows all eighty-eight topics in
 their seven strands, laid out as the curriculum runs: a linear algebra track (vectors,
 matrices, then eigenvalues and subspaces) and a calculus track (limits and derivatives,
 then integrals and applications) that meet in multivariable calculus. Each strand says
@@ -244,7 +244,7 @@ per consecutive hit, so a hot streak literally rises in pitch, and streaks of 3 
 these can be turned off — see Settings.
 
 **🏟️ The Arena** opens once the final realm falls. Endless waves drawn from every topic you
-have actually met — with eighty-seven in the game, drawing from all of them would build a run
+have actually met — with eighty-eight in the game, drawing from all of them would build a run
 out of material you had never been taught — scaling until they kill you. There is no free
 healing between waves — only a poultice after each fifth-wave champion — so a run is a war of attrition. Every third wave
 you draft one of three run-scoped boons (more health, damage, defence, crit, supplies, a
@@ -278,9 +278,9 @@ stays forgotten.
 | 🔴 **Eigen Citadel** | Matrix inverses, 3×3 determinants, cross products, linear independence, eigenvalues, projections, second derivatives, critical points, partial derivatives, Cramer's rule, determinant rules |
 | 🩵 **Spectral Reach** | Characteristic polynomials, eigenvectors, diagonalisability, matrix powers, null space, rank–nullity, column space, Gram–Schmidt, vector projection, unit vectors, angles between vectors, transformation matrices, least squares, quadratic forms, change of basis |
 | 🔷 **Infinite Expanse** | L'Hôpital's rule, implicit differentiation, related rates, optimisation, inflection points, inverse-trig derivatives, logarithmic differentiation, integration by parts, partial fractions, improper integrals, average value, volumes of revolution, Riemann sums, Euler's method, exponential growth, the mean value theorem, linear approximation, arc length, logistic growth, the trapezoid rule, Newton's method, Simpson's rule, parametric derivatives, linear differential equations |
-| 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials, radius of convergence — the capstone, where the two subjects finally meet |
+| 🟠 **Gradient Summit** | Gradient vectors, directional derivatives, the multivariable chain rule, tangent planes, double integrals, geometric series, Taylor polynomials, radius of convergence, Lagrange multipliers — the capstone, where the two subjects finally meet |
 
-**87 problem generators** in total, each producing randomised problems at three difficulty
+**88 problem generators** in total, each producing randomised problems at three difficulty
 levels — so you cannot memorise your way through. Every realm's difficulty curve is
 simulated rather than guessed: see *Correctness* below.
 
@@ -455,7 +455,7 @@ coordinate in the standard basis. Its check solves the system again by eliminati
 weights back to get v. It joins the Eigen & Subspaces strand and the Spectral Reach, and a fight
 that shows it up points to the 🧭 Span Workshop.
 
-**Linear differential equations**, the newest, give y′ + py = q with a starting value y(0), and ask
+**Linear differential equations** give y′ + py = q with a starting value y(0), and ask
 where y settles or for the C in its solution y = A + Ce^(−kt). Setting y′ = 0 gives the steady value
 q/p, every solution heads for it as Ce^(−kt) dies away, and t = 0 gives C = y(0) − q/p. The first
 depth keeps every number above 0; the second lets q and y(0) be negative; the third puts a number in
@@ -465,6 +465,19 @@ left out or done by the number in front of y′, y(0) for the steady value, the 
 mixed up, C taken the wrong way round, and C read off as y(0). Its check steps the equation itself
 with Runge–Kutta, far on for the steady value and to t = 1 for C. It joins the Applications strand
 and the Infinite Expanse, and a fight that shows it up points to the 👣 Euler Step Workshop.
+
+**Lagrange multipliers**, the newest, ask for the lowest point of f = ax² + by² on a line
+px + qy = s: x at that point, the multiplier λ, or the smallest value f takes there. Setting
+∇f = λ∇g gives 2ax = λp and 2by = λq, so x and y are each a multiple of λ, and putting them into
+the line fixes λ. The first depth is plain x² + y² with every number above 0; the second puts
+numbers up to 4 in front of x² and y² and lets signs in; the third widens those to 6 and the line's
+numbers to 5. Whole and fractional answers come up about equally. The wrong answers are the slips
+people make: the 2 in ∇f left out, λ with its sign turned, the numbers in front of x² and y² left
+out or multiplied instead of divided, y given for x, λ given for x or for f, f read as λ/2 or λs
+instead of λs/2, and the point where the line crosses an axis. Its check never uses the multiplier:
+it walks the line, reads f along it as a parabola, takes its vertex, and only then reads λ back from
+2ax = λp. It joins the Multivariable & Series strand and the Gradient Summit, and a fight that shows
+it up points to the 🗺️ Hillwalker Workshop.
 
 ---
 
@@ -730,7 +743,7 @@ The game is built so that losing teaches you as much as winning.
   squire ever given an answer whose own mistake shares more of its words than the others
   do: "You would need the angle between them" beside "You never need the angle" can be
   matched without working anything, so the squire answers something else, and a question
-  where every answer would echo is asked the plain way. Seventy-three of the eighty-seven topics
+  where every answer would echo is asked the plain way. Seventy-three of the eighty-eight topics
   can be asked it. The verdict lays each mistake beside the answer it
   gives, with the squire's marked, and then what the problem comes to done right. It
   strikes and is struck like any other question and counts as a whole answer; picking the
@@ -1338,7 +1351,7 @@ The game is built so that losing teaches you as much as winning.
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
   chain rule to the Chain Rule Workshop. The biggest fall comes first, one button per
   workshop, two at most; a topic no workshop fits is offered nothing. The workshop's
-  back button returns to the summary. Eighty-seven topics link to fifty-seven workshops,
+  back button returns to the summary. Eighty-eight topics link to fifty-seven workshops,
   and `npm test` checks each link is a real topic, opens its workshop, and uses the
   Tome's own name for it.
 - **🌾 Product Rule Workshop** — a field f(x) wide and g(x) deep has area f × g.
@@ -2272,10 +2285,10 @@ The game is built so that losing teaches you as much as winning.
   that has slipped while you were away rises to the top), in full, then
   the other sixty-five folded into their strands. Each strand shows either its average
   mastery or how many of its topics need work, so you can see where you stand without
-  reading eighty-seven bars.
+  reading eighty-eight bars.
 - **🧭 Competency Map** (from the map, or the Ledger) — every topic on its rung, strand by
   strand, with what each strand builds on and where you are on each track.
-- **Eighty-seven topics that stay reachable.** Both the Chronicle and the Training picker group
+- **Eighty-eight topics that stay reachable.** Both the Chronicle and the Training picker group
   topics into seven strands you tap open; opening one closes the rest and pulls it to the
   top, so the list never grows out from under your thumb. Measured at 320×568, the furthest
   topic is 1.1 viewports away in Training and 1.5 in the Chronicle — a flat list of all
