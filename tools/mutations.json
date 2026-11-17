@@ -1,88 +1,88 @@
 {
-  "change": "Add a Match the field mode to the Euler step workshop",
+  "change": "Add a Match the map mode to the downhill workshop",
   "mutations": [
     {
-      "name": "y′ = x² drawn as x³",
+      "name": "x² + 4y² drawn as x² + 2y²",
       "file": "index.html",
-      "find": "xx:  {s:'y′ = x²',    r:'x²',    z:'the line x = 0',   f:(x,y)=>x*x},",
-      "replace": "xx:  {s:'y′ = x²',    r:'x²',    z:'the line x = 0',   f:(x,y)=>x*x*x},",
+      "find": "lv:[1,4,9],           f:(x,y)=>x*x+4*y*y}",
+      "replace": "lv:[1,4,9],           f:(x,y)=>x*x+2*y*y}",
       "run": "verify"
     },
     {
-      "name": "1 − y told as flat along y = 0",
+      "name": "xy told as a map that never closes",
       "file": "index.html",
-      "find": "omy: {s:'y′ = 1 − y', r:'1 − y', z:'the line y = 1',",
-      "replace": "omy: {s:'y′ = 1 − y', r:'1 − y', z:'the line y = 0',",
+      "find": "twist:  {s:'xy',           k:'cross',",
+      "replace": "twist:  {s:'xy',           k:'open',",
       "run": "verify"
     },
     {
-      "name": "a field with two right answers",
+      "name": "a level dropped from the bowl",
       "file": "index.html",
-      "find": "{a:'ny',  o:['y','nx','ny','omy']},",
-      "replace": "{a:'ny',  o:['ny','nx','ny','omy']},",
+      "find": "lv:[1,2,4,6,9],",
+      "replace": "lv:[1,2,4,9],",
       "run": "verify"
     },
     {
-      "name": "a slope only of y called one of x",
+      "name": "the answer twice in the first place",
       "file": "index.html",
-      "find": "return vx&&vy ? 'xy' : vx ? 'x' : 'y';",
-      "replace": "return vx&&vy ? 'xy' : vy ? 'x' : 'y';",
+      "find": "{a:'wide',   o:['tall','bowl','wide','saddle']}",
+      "replace": "{a:'wide',   o:['wide','bowl','tall','saddle']}",
       "run": "verify"
     },
     {
-      "name": "the wrong pick checked at a point where it agrees",
+      "name": "a crossing traced the wrong way round",
       "file": "index.html",
-      "find": "this.PTS.find(([x,y])=>W(x,y)!==A(x,y))",
-      "replace": "this.PTS.find(([x,y])=>W(x,y)===A(x,y)) || this.PTS[0]",
+      "find": "const t=p/(p-q);",
+      "replace": "const t=q/(q-p);",
       "run": "verify"
     },
     {
-      "name": "the dashes drawn with y running up the screen",
+      "name": "the y scale flipped",
       "file": "index.html",
-      "find": "const f=v=>v.toFixed(2), dx=60, dy=-s*55,",
-      "replace": "const f=v=>v.toFixed(2), dx=60, dy=s*55,",
+      "find": "N:47, X:x=>150+x*40, Y:y=>130-y*40,",
+      "replace": "N:47, X:x=>150+x*40, Y:y=>130+y*40,",
       "run": "verify"
     },
     {
-      "name": "the wrong equation's dash drawn with the field's slope",
+      "name": "a wrong pick caught at points it agrees on",
       "file": "index.html",
-      "find": "out+=this.dash(x,y,W.f(x,y),'wrong',FIG_COL.a,15,3.5);",
-      "replace": "out+=this.dash(x,y,A.f(x,y),'wrong',FIG_COL.a,15,3.5);",
+      "find": "A.f(...Q)===c && (!W || Math.abs(W(...Q)-W(...P))>=0.4*this.steep(W,Q))",
+      "replace": "A.f(...Q)===c",
       "run": "verify"
     },
     {
-      "name": "a match after a miss counted as a first try",
+      "name": "a flat point allowed as the first point",
       "file": "index.html",
-      "find": "if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;",
-      "replace": "this.wins++; this.streak++;",
+      "find": "if(!A.lv.includes(c) || (W && this.steep(W,P)<0.01)) continue;",
+      "replace": "if(!A.lv.includes(c)) continue;",
       "run": "verify"
     },
     {
-      "name": "Next offered before the field is matched",
+      "name": "the wrong contour drawn at the answer's level",
       "file": "index.html",
-      "find": "next(){ if(!this.solved) return; this.ri=",
-      "replace": "next(){ this.ri=",
+      "find": "out+=`<path data-k=\"wrong\" data-c=\"${W.f(...P)}\" d=\"${this.trace(W.f,W.f(...P))}\"",
+      "replace": "out+=`<path data-k=\"wrong\" data-c=\"${W.f(...P)}\" d=\"${this.trace(W.f,A.f(...P))}\"",
       "run": "verify"
     },
     {
       "name": "a shut choice can be picked again",
       "file": "index.html",
-      "find": "if(this.solved || this.gone.has(i)) return;",
-      "replace": "if(this.solved) return;",
+      "find": "if(this.solved || this.gone.has(i)) return;\n    const R=this.R(); this.touched=true;\n    if(R.o[i]===R.a){\n      this.solved=true; this.last=null;\n      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
+      "replace": "if(this.solved) return;\n    const R=this.R(); this.touched=true;\n    if(R.o[i]===R.a){\n      this.solved=true; this.last=null;\n      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
+      "run": "verify"
+    },
+    {
+      "name": "a match after a miss counted as a first try",
+      "file": "index.html",
+      "find": "if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;\n      this.kinds.add(this.F(R.a).k);",
+      "replace": "this.wins++; this.streak++;\n      this.kinds.add(this.F(R.a).k);",
       "run": "verify"
     },
     {
       "name": "three in a row found at two",
       "file": "index.html",
-      "find": "ok:F=>F.streak>=3}",
-      "replace": "ok:F=>F.streak>=2}",
-      "run": "verify"
-    },
-    {
-      "name": "the flat line told with the whole equation",
-      "file": "index.html",
-      "find": "where ${A.r} is 0.`",
-      "replace": "where ${A.s} is 0.`",
+      "find": "ok:M=>M.streak>=3}\n  ],\n  R(){ return this.ROUNDS[this.ri]; },\n  F(id)",
+      "replace": "ok:M=>M.streak>=2}\n  ],\n  R(){ return this.ROUNDS[this.ri]; },\n  F(id)",
       "run": "verify"
     }
   ]
