@@ -142,6 +142,7 @@ const SUITES = [
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
   require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
+  require('./play/shaperead'), // read a curve's four points: rises or falls, cup or cap
   require('./play/tailpick'), // see an endless area, pick which of four numbers it closes in on
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
