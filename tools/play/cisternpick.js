@@ -35,11 +35,11 @@ module.exports = {
       /Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCistern');
     t.eq('the cistern workshop opens', await t.screen(), 's-cistern');
-    t.eq('stepping it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('stepping it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which total\?/);
-    t.eq('which total is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which total is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the springs, figure, stepper, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('cwBox').innerText)).startsWith(

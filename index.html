@@ -2091,7 +2091,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ CISTERN WORKSHOP ============ -->
   <div class="screen" id="s-cistern">
     <div class="panel"><h2>💧 Cistern Workshop</h2><div class="sub">A spring fills the castle cistern at a rate f that you cannot change, and the total so far is the area under f. Step the hours and watch the total climb as fast as the water flows, turn where the flow turns, and fall when the water runs out.</div></div>
-    <div id="ciTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a spring by hand or pick its total"></div>
+    <div id="ciTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a spring by hand, pick its total, or sketch it"></div>
     <div class="panel">
       <div id="cwBox"></div>
       <div id="ciSets" class="wsModes" role="group" aria-label="Which spring"></div>
@@ -15531,7 +15531,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">💧 Cistern Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away. Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">A spring fills a cistern: watch the total, the area under the flow, climb exactly as fast as the water comes in, and see area below the axis take water away. Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours, or sketch the total yourself, one hour at a time.</div>
          <button class="btn sm" id="tomeCistern" style="width:auto;margin-top:8px" onclick="Cistern.open()">Open the cistern workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -32522,11 +32522,11 @@ const Cistern = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('ciTab').innerHTML=[['hand','💧 Step it by hand','Step a spring through the hours by hand'],['pick','🎯 Which total?','See a spring’s flow, and pick which of four numbers is the total after so many hours']]
+    document.getElementById('ciTab').innerHTML=[['hand','💧 Step it by hand','Step a spring through the hours by hand'],['pick','🎯 Which total?','See a spring’s flow, and pick which of four numbers is the total after so many hours'],['sketch','✏️ Sketch the total','See a spring’s flow and set the total at the end of each hour to draw F yourself']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cistern.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ciSets','ciFig','ciStep','ciRead','ciGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('cwBox').innerHTML=pick ? CisternPick.html() : '';
+    document.getElementById('cwBox').innerHTML=!pick ? '' : this.tab==='pick' ? CisternPick.html() : CisternSketch.html();
     if(pick) return;
     const S=this.set(), t=this.t(), f=this.f();
     document.getElementById('ciSets').innerHTML=this.SETS.map((s,i)=>
@@ -32550,6 +32550,162 @@ const Cistern = {
         Celebrate.banner('KEEPER OF THE CISTERN','every total read','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Sketch the total: the cistern workshop's third mode ----------
+   The other two modes work the total out for you or offer it to pick. This
+   one has you build it: a spring's flow f is drawn for four hours, and at the
+   end of each hour, t = 1 to 4, you set how much the cistern holds. Tapping
+   an hour shades the area under f across it, the water that hour brings, red
+   where it runs out. A check marks the hours that are wrong and works each
+   one: the area of that hour added to the total before it. Fix them and check
+   again. Once all four are right the true total F is drawn through your dots.
+   Every flow is a straight line with whole numbers each hour, the flows come
+   round in a fixed order, and nothing is random, saved or timed. */
+const CisternSketch = {
+  /* f(t) = a + bt, so F(t) = at + bt²/2 with b even, a whole number at every hour */
+  FLOWS:[
+    {a:2,  b:0,  fs:'2',      Fs:'2t',      kind:'line'},
+    {a:4,  b:-2, fs:'4 − 2t', Fs:'4t − t²', kind:'peak'},
+    {a:-3, b:2,  fs:'2t − 3', Fs:'t² − 3t', kind:'dip'},
+    {a:-1, b:0,  fs:'−1',     Fs:'−t',      kind:'line'},
+    {a:-2, b:2,  fs:'2t − 2', Fs:'t² − 2t', kind:'dip'},
+    {a:3,  b:-2, fs:'3 − 2t', Fs:'3t − t²', kind:'peak'},
+    {a:-4, b:2,  fs:'2t − 4', Fs:'t² − 4t', kind:'dip'},
+    {a:5,  b:-2, fs:'5 − 2t', Fs:'5t − t²', kind:'peak'}
+  ],
+  TS:[1,2,3,4], LO:-8, HI:8,
+  fi:0, vals:[null,null,null,null], sel:0, marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Sketch a whole total right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'line',  t:'Sketch the total of a steady flow: the same every hour.', toast:'A steady flow adds the same each hour',
+     ok:K=>K.kinds.has('line')},
+    {id:'peak',  t:'Sketch a total that tops out where the flow drops below 0.', toast:'F is highest where f turns negative',
+     ok:K=>K.kinds.has('peak')},
+    {id:'dip',   t:'Sketch a total that bottoms out where the flow climbs above 0.', toast:'F is lowest where f turns positive',
+     ok:K=>K.kinds.has('dip')},
+    {id:'fix',   t:'Check a sketch with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Sketch three totals in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'F(t) is what the cistern holds after t hours: the area under f from 0 to t, starting from F(0) = 0. Each hour adds the area under f across it, and takes it away where f is below 0. Tap an hour to shade its area, then set the total at its end.',
+  W(){ return this.FLOWS[this.fi]; },
+  f(t){ const W=this.W(); return W.a+W.b*t; },
+  F(t){ const W=this.W(); return W.a*t+W.b*t*t/2; },
+  r(v){ const q=Math.round(v*1000)/1000; return Object.is(q,-0)?0:q; },
+  /* the area under f across hour k, from t = k − 1 to k */
+  area(k){ return this.F(k)-this.F(k-1); },
+  /* a sum written with its sign straight: 3 + 2, 3 − 2 */
+  plus(p,q){ return q<0 ? `${neg(p)} − ${-q}` : `${neg(p)} + ${q}`; },
+  turn(){ const W=this.W(); return W.b ? this.r(-W.a/W.b) : null; },
+  working(){
+    const W=this.W(), out=[];
+    if(this.solved){
+      out.push(`Yes: the total is F(t) = ${W.Fs}, and the four dots lie on it.`);
+      if(W.kind==='line') out.push(`A steady flow of ${neg(W.a)} adds the same ${neg(W.a)} every hour, so the total ${W.a>0?'climbs':'falls'} in a straight line, with slope f.`);
+      else { const z=this.turn(), Fz=this.r(this.F(z));
+        out.push(W.kind==='peak'
+          ? `f drops below 0 at t = ${neg(z)}: until then water comes in and after it runs out, so the cistern is fullest there, with F(${neg(z)}) = ${neg(Fz)}.`
+          : `f climbs above 0 at t = ${neg(z)}: until then water runs out and after it comes in, so the cistern is lowest there, with F(${neg(z)}) = ${neg(Fz)}.`); }
+      if(this.F(4)===0) out.push('F(4) = 0: the area above the axis is cancelled by the area below it, so the cistern ends where it began.');
+    } else if(this.marks){
+      const bad=this.TS.map((t,i)=>i).filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const k=this.TS[i], A=this.area(k), p=this.F(k-1), q=this.F(k);
+        out.push(`From t = ${k-1} to ${k} the area under f is (f(${k-1}) + f(${k})) ÷ 2 = (${this.plus(this.f(k-1),this.f(k))}) ÷ 2 = ${neg(A)}, so F(${k}) = F(${k-1}) ${A<0?'−':'+'} ${Math.abs(A)} = ${this.plus(p,A)} = ${neg(q)}, not ${neg(this.vals[i])}.`); }
+    } else {
+      out.push(this.RULE);
+      const k=this.TS[this.sel], A=this.area(k);
+      out.push(`The hour from t = ${k-1} to ${k} is picked: its area is shaded${A<0?' in red, below the axis':A===0?', and it is 0':''}.`);
+    }
+    out.push(`${this.wins} sketched right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* f on top for t from 0 to 4, with the picked hour's area shaded; below it the
+     totals set, as gold dots on their own axis from −8 to 8 */
+  win(){ const v=[0,4].map(t=>this.f(t)); return [Math.floor(Math.min(0,...v))-0.5, Math.ceil(Math.max(0,...v))+0.5]; },
+  svg(){
+    const W=this.W(), [y0,y1]=this.win(), f=v=>v.toFixed(2);
+    const U=62, uy=Math.min(20,150/(y1-y0)), top=10, H1=(y1-y0)*uy, b0=top+H1+26, u2=10, H2=(this.HI-this.LO+1)*u2;
+    const X=t=>24+t*U, Y=y=>top+(y1-y)*uy, Y2=v=>b0+(this.HI+0.5-v)*u2, Hh=b0+H2+8;
+    const lbl=this.solved ? `, with F(t) = ${W.Fs} drawn through the dots` : '';
+    const k=this.TS[this.sel];
+    let out=`<svg viewBox="0 0 300 ${f(Hh)}" style="width:100%;height:auto;display:block" role="img" aria-label="The flow f(t) = ${W.fs} for t from 0 to 4 hours, the area from t = ${k-1} to ${k} shaded, and below it the totals you have set${lbl}">`;
+    for(let g=Math.ceil(y0);g<=Math.floor(y1);g++) out+=`<line x1="${f(X(0))}" y1="${f(Y(g))}" x2="${f(X(4))}" y2="${f(Y(g))}" stroke="${g===0?FIG_COL.axis:FIG_COL.grid}" stroke-width="1"/>`;
+    for(let t=0;t<=4;t++) out+=`<line x1="${f(X(t))}" y1="${f(Y(y1))}" x2="${f(X(t))}" y2="${f(Y(y0))}" stroke="${t===0?FIG_COL.axis:FIG_COL.grid}" stroke-width="1"/>`;
+    // the picked hour's area, split where f crosses 0 so each part takes its own colour
+    const a=k-1, z=this.turn(), cuts=[a, ...(z!==null && z>a && z<k ? [z] : []), k];
+    for(let j=0;j<cuts.length-1;j++){ const p=cuts[j], q=cuts[j+1], up=this.f((p+q)/2)>0;
+      out+=`<polygon data-k="${up?'add':'take'}" points="${f(X(p))},${f(Y(0))} ${f(X(p))},${f(Y(this.f(p)))} ${f(X(q))},${f(Y(this.f(q)))} ${f(X(q))},${f(Y(0))}" fill="${up?FIG_COL.b:FIG_COL.d}" fill-opacity="0.45"/>`; }
+    out+=`<line data-k="flow" x1="${f(X(0))}" y1="${f(Y(this.f(0)))}" x2="${f(X(4))}" y2="${f(Y(this.f(4)))}" stroke="${FIG_COL.a}" stroke-width="2.5"/>`;
+    out+=`<text x="4" y="${f(top+12)}" fill="${FIG_COL.dim}" font-size="12">f</text>`;
+    for(let t=0;t<=4;t++) out+=`<text x="${f(X(t))}" y="${f(top+H1+16)}" fill="${FIG_COL.dim}" font-size="11" text-anchor="middle">${t}</text>`;
+    for(let v=this.LO;v<=this.HI;v++) out+=`<line x1="${f(X(0))}" y1="${f(Y2(v))}" x2="${f(X(4))}" y2="${f(Y2(v))}" stroke="${v===0?FIG_COL.axis:v%4?FIG_COL.grid:FIG_COL.dim}" stroke-width="1"/>`;
+    out+=`<text x="4" y="${f(b0+12)}" fill="${FIG_COL.dim}" font-size="12">F</text>`;
+    out+=`<line x1="${f(X(k))}" y1="${f(Y2(this.HI+0.5))}" x2="${f(X(k))}" y2="${f(Y2(this.LO-0.5))}" stroke="${FIG_COL.c}" stroke-width="1" stroke-dasharray="3 3"/>`;
+    if(this.solved){ const q=[]; for(let i=0;i<=80;i++){ const t=4*i/80; q.push(`${f(X(t))},${f(Y2(this.F(t)))}`); }
+      out+=`<polyline data-k="true" points="${q.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="6 4"/>`; }
+    out+=`<circle data-k="start" cx="${f(X(0))}" cy="${f(Y2(0))}" r="5" fill="${FIG_COL.b}"/>`;
+    this.TS.forEach((t,i)=>{ const v=this.vals[i]; if(v===null) return;
+      out+=`<circle data-k="dot" cx="${f(X(t))}" cy="${f(Y2(v))}" r="5" fill="${FIG_COL.b}"/>`;
+      if(this.marks && this.marks[i]===false) out+=`<circle data-k="miss" cx="${f(X(t))}" cy="${f(Y2(v))}" r="10" fill="none" stroke="${FIG_COL.d}" stroke-width="2"/>`; });
+    return out+`</svg>`;
+  },
+  pick(i){ if(this.sel===i) return; this.sel=i; this.touched=true; Cistern.render(); },
+  set(i,by){
+    if(this.solved) return;
+    const v=(this.vals[i]===null?0:this.vals[i])+by;
+    if(v<this.LO || v>this.HI) return;
+    this.vals[i]=v; this.sel=i; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Cistern.render();
+  },
+  ready(){ return this.vals.every(v=>v!==null); },
+  check(){
+    if(this.solved || !this.ready()) return;
+    const W=this.W(); this.tries++; this.touched=true;
+    this.marks=this.TS.map((t,i)=>this.vals[i]===this.F(t));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      this.kinds.add(W.kind);
+    } else this.streak=0;
+    Cistern.render();
+  },
+  next(){ if(!this.solved) return; this.fi=(this.fi+1)%this.FLOWS.length; this.vals=[null,null,null,null]; this.sel=0; this.marks=null; this.tries=0; this.solved=false; Cistern.render(); },
+  html(){
+    const W=this.W();
+    let out=`<div class="small" style="margin:2px 0 6px">Spring ${this.fi+1} of ${this.FLOWS.length}: f(t) = ${W.fs} barrels an hour. Set the total at the end of each hour and draw F.</div>`;
+    out+=`<div id="cskFig">${this.svg()}<div class="figcap">Top, the flow f in blue, with the picked hour’s area shaded: gold adds water, red takes it away. Below, the totals you set, as gold dots from −8 to 8, starting from F(0) = 0.</div></div>`;
+    out+=`<div id="cskStops" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px">`+this.TS.map((t,i)=>{
+      const v=this.vals[i], m=this.marks?this.marks[i]:null, shut=this.solved;
+      return `<div class="cskStop" data-i="${i}" style="display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:8px;padding:3px 0;border:1px solid ${m===false?FIG_COL.d:i===this.sel?FIG_COL.c:'transparent'}">`+
+        `<button class="btn sm ghost" style="margin:0;padding:4px 6px;width:100%" aria-pressed="${i===this.sel}" onclick="CisternSketch.pick(${i})" aria-label="Shade the area from t = ${t-1} to ${t}">t = ${t}</button>`+
+        `<button class="btn sm ghost" style="margin:0;width:100%" ${shut||v===this.HI?'disabled ':''}onclick="CisternSketch.set(${i},1)" aria-label="Raise the total at t = ${t}">+</button>`+
+        `<b data-k="val" style="font-size:20px;color:${m===false?FIG_COL.d:m===true?FIG_COL.c:'var(--gold)'}">${v===null?'?':neg(v)}</b>`+
+        `<button class="btn sm ghost" style="margin:0;width:100%" ${shut||v===this.LO?'disabled ':''}onclick="CisternSketch.set(${i},-1)" aria-label="Lower the total at t = ${t}">−</button></div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="cskRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cskNext" onclick="CisternSketch.next()" aria-label="Show the next spring">Next spring →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cskCheck" ${this.ready()?'':'disabled '}onclick="CisternSketch.check()" aria-label="${this.ready()?'Check the four totals':'Set all four totals to check them'}">${this.ready()?'Check my F':'Set all four totals'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="cskGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cskGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TALLY KEEPER','every total drawn by hand','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

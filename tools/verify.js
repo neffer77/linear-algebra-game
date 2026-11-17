@@ -12071,6 +12071,133 @@ const slopeSketchNotes = (() => {
   reset();
   return { checks, wrongs, tans };
 })();
+const cisternSketchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cistern = {render(){ env.renders++; }};" +
+    cut('const CisternSketch = {', '/* ---------- Which width? The biggest build workshop turned round') + 'return CisternSketch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const TS = [1, 2, 3, 4];
+  // the eight flows as written, read off their names, and their totals as written
+  const FL = { '2': t => 2, '4 − 2t': t => 4 - 2 * t, '2t − 3': t => 2 * t - 3, '−1': t => -1, '2t − 2': t => 2 * t - 2, '3 − 2t': t => 3 - 2 * t, '2t − 4': t => 2 * t - 4, '5 − 2t': t => 5 - 2 * t };
+  const TOT = { '2t': t => 2 * t, '4t − t²': t => 4 * t - t * t, 't² − 3t': t => t * t - 3 * t, '−t': t => -t, 't² − 2t': t => t * t - 2 * t, '3t − t²': t => 3 * t - t * t, 't² − 4t': t => t * t - 4 * t, '5t − t²': t => 5 * t - t * t };
+  // the area under f from 0 to T, added up in a thousand thin strips
+  const area = (f, T) => { let s = 0; const n = 1000, h = T / n; for (let i = 0; i < n; i++) s += f((i + 0.5) * h) * h; return s; };
+  const whole = v => { const r = Math.round(v); if (Math.abs(v - r) > 1e-6) return null; return r || 0; };
+  const sum = (p, q) => q < 0 ? `${ng(p)} − ${-q}` : `${ng(p)} + ${q}`;
+  const reset = () => { S.fi = 0; S.vals = [null, null, null, null]; S.sel = 0; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.FLOWS.length !== 8 || S.TS.join() !== TS.join() || S.LO !== -8 || S.HI !== 8) fail('cistersketch', 'setup', 'not eight springs on four hours from −8 to 8');
+  if (new Set(S.FLOWS.map(W => W.fs)).size !== 8) fail('cistersketch', 'setup', 'a spring comes round twice');
+  let checks = 0, wrongs = 0, shades = 0;
+  S.FLOWS.forEach((W, fi) => {
+    const key = `spring ${fi + 1} (${W.fs})`, f = FL[W.fs], Ft = TOT[W.Fs];
+    if (!f || !Ft) { fail('cistersketch', key, 'is not one of the springs it is meant to be'); return; }
+    reset(); S.fi = fi;
+    if ([0, 0.5, 1.7, 3, 4].some(t => Math.abs(S.f(t) - f(t)) > 1e-12)) fail('cistersketch', key, `f is not ${W.fs}`);
+    const F = TS.map(t => whole(area(f, t)));
+    if (F.some(v => v === null || v < -8 || v > 8)) fail('cistersketch', key, `a total is not a whole number from −8 to 8: ${F.join()}`);
+    if (TS.some((t, i) => S.F(t) !== F[i])) fail('cistersketch', key, `its totals are ${TS.map(t => S.F(t)).join()}, not ${F.join()}`);
+    if ([0.5, 1.5, 2.5, 3.5].some(t => Math.abs(Ft(t) - area(f, t)) > 1e-6)) fail('cistersketch', key, `F is not ${W.Fs} between the hours`);
+    // a steady flow has one slope; a peak is where f drops through 0, a dip where it climbs through 0
+    const z = W.b ? -W.a / W.b : null;
+    const kind = !W.b ? 'line' : W.b < 0 ? 'peak' : 'dip';
+    if (W.kind !== kind) fail('cistersketch', key, `it is told as a ${W.kind}, not a ${kind}`);
+    if (kind !== 'line' && !(z > 0 && z < 4 && Math.sign(f(z - 0.25)) === -Math.sign(f(z + 0.25)))) fail('cistersketch', key, 'f does not cross 0 inside the four hours');
+    if (kind === 'peak' && TS.some(t => area(f, t) > area(f, z) + 1e-9)) fail('cistersketch', key, 'the total is higher somewhere than at the peak');
+    if (kind === 'dip' && TS.some(t => area(f, t) < area(f, z) - 1e-9)) fail('cistersketch', key, 'the total is lower somewhere than at the dip');
+    // each hour shades its own area, gold where f is above 0 and red where it is below
+    TS.forEach((t, i) => {
+      S.sel = i; const svg = S.svg(); shades++;
+      const parts = [...svg.matchAll(/data-k="(add|take)" points="([^"]+)" fill="([^"]+)"/g)];
+      if (parts.some(p => p[3] !== (p[1] === 'add' ? 'gold' : 'red'))) fail('cistersketch', key, `the hour to t = ${t} is shaded ${parts.map(p => p[3]).join()}, not gold above the axis and red below`);
+      const want = [];
+      const cuts = [t - 1, ...(z !== null && z > t - 1 && z < t ? [z] : []), t];
+      for (let j = 0; j < cuts.length - 1; j++) want.push(f((cuts[j] + cuts[j + 1]) / 2) > 0 ? 'add' : 'take');
+      if (parts.map(p => p[1]).join() !== want.join()) fail('cistersketch', key, `the hour to t = ${t} is shaded ${parts.map(p => p[1]).join() || 'nothing'}, not ${want.join()}`);
+      const xs = parts.flatMap(p => p[2].split(' ').map(q => +q.split(',')[0]));
+      if (Math.abs(Math.min(...xs) - (24 + (t - 1) * 62)) > 0.01 || Math.abs(Math.max(...xs) - (24 + t * 62)) > 0.01) fail('cistersketch', key, `the shade for t = ${t} does not span its hour`);
+      if ((svg.match(/data-k="start"/g) || []).length !== 1) fail('cistersketch', key, 'F(0) = 0 is not drawn');
+      const words = S.working()[1], A = whole(area(f, t) - area(f, t - 1));
+      const tail = A < 0 ? ' in red, below the axis' : A === 0 ? ', and it is 0' : '';
+      if (words !== `The hour from t = ${t - 1} to ${t} is picked: its area is shaded${tail}.`) fail('cistersketch', key, `picking t = ${t} reads ${words}`);
+    });
+    // every hour set wrong, one at a time, to every value it could be
+    TS.forEach((t, i) => {
+      for (let v = -8; v <= 8; v++) {
+        if (v === F[i]) continue;
+        reset(); S.fi = fi; S.vals = F.slice(); S.vals[i] = v; S.check(); checks++; wrongs++;
+        const w = S.working(), A = F[i] - (i ? F[i - 1] : 0), p = i ? F[i - 1] : 0;
+        const trap = whole((f(t - 1) + f(t)) / 2);
+        if (trap !== A) fail('cistersketch', key, `the trapezoid for hour ${t} is ${trap}, not the area ${A}`);
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `From t = ${t - 1} to ${t} the area under f is (f(${t - 1}) + f(${t})) ÷ 2 = (${sum(f(t - 1), f(t))}) ÷ 2 = ${ng(A)}, so F(${t}) = F(${t - 1}) ${A < 0 ? '−' : '+'} ${Math.abs(A)} = ${sum(p, A)} = ${ng(F[i])}, not ${ng(v)}.`,
+          '0 sketched right on the first check this visit.'];
+        if (w.join(' | ') !== want.join(' | ')) fail('cistersketch', key, `with t = ${t} set to ${v} the readout is ${w.join(' | ')}`);
+        if (/[−+-] [−-]|\+ \(?−/.test(w.join(' '))) fail('cistersketch', key, `a minus number is taken away or added: ${w[1]}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="true"/.test(svg)) fail('cistersketch', key, `with t = ${t} set to ${v}, the wrong dot is not ringed alone or F is given away`);
+        if (S.solved || S.streak) fail('cistersketch', key, 'a wrong sketch is counted');
+        S.set(i, F[i] - v);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('cistersketch', key, `changing t = ${t} leaves its ring`);
+        if (S.working()[0] !== '3 of 4 right. Check again.' || S.working().length !== 2) fail('cistersketch', key, `after changing t = ${t} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('cistersketch', key, `fixing t = ${t} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, set with the buttons
+    reset(); S.fi = fi;
+    if (!/id="cskCheck" disabled /.test(S.html())) fail('cistersketch', key, 'the check is open before the totals are set');
+    for (let skip = 0; skip < 4; skip++) {
+      S.vals = F.map((v, i) => i === skip ? null : v);
+      if (!/id="cskCheck" disabled /.test(S.html())) fail('cistersketch', key, `the check opens with t = ${TS[skip]} unset`);
+      S.check();
+      if (S.tries || S.marks) fail('cistersketch', key, `a check runs with t = ${TS[skip]} unset`);
+    }
+    S.vals = [null, null, null, null];
+    TS.forEach((t, i) => { let n = 0; while (S.vals[i] !== F[i] && n++ < 17) S.set(i, (S.vals[i] === null ? F[i] >= 0 : F[i] > S.vals[i]) ? 1 : -1); });
+    if (S.vals.join() !== F.join()) fail('cistersketch', key, `the buttons cannot set ${F.join()}`);
+    if (/id="cskCheck" disabled /.test(S.html())) fail('cistersketch', key, 'the check stays shut with every total set');
+    S.check(); checks++;
+    const want = [`Yes: the total is F(t) = ${W.Fs}, and the four dots lie on it.`];
+    if (kind === 'line') want.push(`A steady flow of ${ng(f(0))} adds the same ${ng(f(0))} every hour, so the total ${f(0) > 0 ? 'climbs' : 'falls'} in a straight line, with slope f.`);
+    else { const Z = Math.round(z * 1000) / 1000, Fz = Math.round(area(f, z) * 1000) / 1000;
+      want.push(kind === 'peak'
+        ? `f drops below 0 at t = ${ng(Z)}: until then water comes in and after it runs out, so the cistern is fullest there, with F(${ng(Z)}) = ${ng(Fz)}.`
+        : `f climbs above 0 at t = ${ng(Z)}: until then water runs out and after it comes in, so the cistern is lowest there, with F(${ng(Z)}) = ${ng(Fz)}.`); }
+    if (F[3] === 0) want.push('F(4) = 0: the area above the axis is cancelled by the area below it, so the cistern ends where it began.');
+    want.push('1 sketched right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('cistersketch', key, `once sketched the readout is ${S.working().join(' | ')}`);
+    const h = S.html();
+    if ((h.match(/data-k="true"/g) || []).length !== 1 || !h.includes('id="cskNext"') || /onclick="CisternSketch\.set\(\d,-?1\)"/.test(h.replace(/disabled onclick="CisternSketch\.set/g, ''))) fail('cistersketch', key, 'once sketched, F is not drawn, Next not offered, or a total still opens');
+    const before = S.vals.join(); S.set(0, 1);
+    if (S.vals.join() !== before) fail('cistersketch', key, 'a total moves after the sketch is right');
+    S.next();
+    if (S.fi !== (fi + 1) % 8 || S.solved || S.marks || S.tries || S.vals.some(v => v !== null)) fail('cistersketch', key, 'Next does not deal the next spring fresh');
+  });
+  // the ends of the scale
+  reset(); for (let k = 0; k < 10; k++) S.set(0, 1);
+  if (S.vals[0] !== 8) fail('cistersketch', 'scale', `pressing + ten times reaches ${S.vals[0]}, not 8`);
+  reset(); for (let k = 0; k < 10; k++) S.set(1, -1);
+  if (S.vals[1] !== -8) fail('cistersketch', 'scale', `pressing − ten times reaches ${S.vals[1]}, not −8`);
+  // the hunt, played as a player would: a slip fixed, then first checks round the springs
+  reset(); S.html();
+  if (S.done.size) fail('cistersketch', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const F = TS.map(t => S.F(t)); S.vals = F.slice(); if (slip) S.vals[3] = F[3] + 1; S.touched = true; S.check(); S.html();
+    if (slip) { S.set(3, -1); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,line'], [false, 'fix,line,one,peak'], [false, 'dip,fix,line,one,peak'], [false, 'dip,fix,line,one,peak,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('cistersketch', 'hunt', `spring ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A steady flow adds the same each hour · A slip caught and fixed | ✓ Right on the first check · F is highest where f turns negative | ✓ F is lowest where f turns positive') fail('cistersketch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TALLY KEEPER / every total drawn by hand') fail('cistersketch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, shades };
+})();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -18913,6 +19040,7 @@ console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
 console.log(`  slopes sketched   ${pad(slopeSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn f′ in the slope tracer, ${slopeSketchNotes.wrongs} of them with one slope set wrong and caught, and ${slopeSketchNotes.tans} tangents measured off the square grid)`);
+console.log(`  totals sketched   ${pad(cisternSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn total in the cistern workshop, ${cisternSketchNotes.wrongs} of them with one total set wrong and caught, and ${cisternSketchNotes.shades} hours of area shaded)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
