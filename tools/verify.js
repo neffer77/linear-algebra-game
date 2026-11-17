@@ -746,6 +746,7 @@ let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: 
 let qfWhole = 0, qfSeen = new Set();   // quadratic forms: how often the answer is whole, and which slips turn up
 let rcWhole = 0, rcSeen = new Set(), rcShape = { p: {}, m: {}, a: {} };   // radius of convergence: whole answers, slips seen, the shapes and centres each depth uses
 let pdWhole = 0, pdSeen = new Set(), pdShape = { x: {}, y: {}, t: {} };   // parametric derivatives: whole answers, slips seen, the degrees and t each depth uses
+let loWhole = 0, loSeen = new Set(), loShape = { neg: 0, ny: 0, a: {}, ask: {}, bmax: 0 };   // linear differential equations: whole answers, slips seen, signs, the number in front of y′, which question is asked and the largest p
 let cbWhole = 0, cbSeen = new Set(), cbShape = { neg: 0, zero: 0, ask: {}, lo: 0, hi: 0 };   // change of basis: whole answers, slips seen, signs, zeros, which coordinate is asked and the smallest and largest entries
 let drWhole = 0, drSeen = new Set(), drShape = { n: {}, f: {}, neg: 0, pow: 0, inv: 0 };   // determinant rules: whole answers, slips seen, the shapes each depth uses
 let crWhole = 0, crSeen = new Set(), crAsk = {};   // Cramer's rule: whole answers, slips seen, which unknown is asked
@@ -1537,6 +1538,48 @@ Object.assign(ANALYSIS, {
     cbShape.ask[k] = 1; cbShape.lo = Math.min(cbShape.lo, ...E); cbShape.hi = Math.max(cbShape.hi, ...E);
     covered.add('changeBasis');
   },
+  // Linear differential equations, checked by stepping the equation itself
+  // with Runge–Kutta rather than trusting q/p: far enough on, y must sit at
+  // the steady value, and at t = 1 it must sit at A + Ce^(−k), with A the
+  // steady value worked here as c/b. Each wrong answer is worked again as
+  // the slip it names.
+  linODE: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const q = fl(p.q).match(/^(\d*)y′ \+ (\d*)y = (-?\d+), with y\(0\) = (-?\d+)\. (As t grows, y settles at a steady value\. What is it\?|Its solution has the form y = A \+ Ce\^\(-kt\)\. What is C\?)$/);
+    if (!q) { fail('analysis', 'linODE', `the question does not read as a linear differential equation: ${fl(p.q)}`); return; }
+    const a = q[1] ? +q[1] : 1, b = q[2] ? +q[2] : 1, c = +q[3], y0 = +q[4], k = q[5].startsWith('Its') ? 1 : 0;
+    if (b <= 0 || a <= 0) { fail('analysis', 'linODE', `y does not settle: ${fl(p.q)}`); return; }
+    const val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const f = y => (c - b * y) / a, rk = (y, h) => { const k1 = f(y), k2 = f(y + h / 2 * k1), k3 = f(y + h / 2 * k2), k4 = f(y + h * k3); return y + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4); };
+    const walk = T => { let y = y0; const n = Math.ceil(T * b / a * 50), h = T / n; for (let i = 0; i < n; i++) y = rk(y, h); return y; };
+    const L = c / b, ansV = val(fl(p.a));
+    if (k === 0) { if (Math.abs(walk(40 * a / b) - ansV) > 1e-6) fail('analysis', 'linODE', `stepping the equation does not settle at ${fl(p.a)}: ${fl(p.q)}`); }
+    else if (Math.abs(walk(1) - (L + ansV * Math.exp(-b / a))) > 1e-6) fail('analysis', 'linODE', `stepping the equation to t = 1 does not give A + Ce^(−k) with C = ${fl(p.a)}: ${fl(p.q)}`);
+    if (ansV === 0) fail('analysis', 'linODE', `the answer is 0: ${fl(p.q)}`);
+    const slip = k ? [[/^that adds the steady value to y\(0\)/, y0 + L, 'add'], [/^that takes y\(0\) from the steady value/, L - y0, 'back'],
+      [/^that is y\(0\) itself/, y0, 'y0C'], [/^that is the steady value, where y settles/, L, 'L'],
+      [/^that turns the steady value upside down/, y0 - b / c, 'flipC'], [/^that (leaves out dividing by p when finding|divides by the number in front of y′ to find) the steady value/, y0 - c / a, 'aC']]
+      : [[/^that is upside down/, b / c, 'flip'], [/^that has the sign turned/, -c / b, 'sign'],
+      [/^that (leaves out dividing by p|divides by the number in front of y′);/, c / a, 'a'], [/^that is y\(0\), where y starts/, y0, 'y0'],
+      [/^that is C, how far y starts/, y0 - L, 'C']];
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'linODE', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-9) fail('analysis', 'linODE', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      if (a > 1 && /leaves out dividing by p/.test(fl(why))) fail('analysis', 'linODE', `the slip is named for a = 1 though a = ${a}: ${why}`);
+      if (a === 1 && /number in front of y′ to find|number in front of y′;/.test(fl(why))) fail('analysis', 'linODE', `the slip is named for a > 1 though a = 1: ${why}`);
+      loSeen.add(sl[2]);
+    });
+    const w = fl(p.ex);
+    const st = w.match(/y′ = 0(, the (\d+)y′ term drops out,)? and (\d*)y = (-?\d+), giving y = (?:(-?\d+)\/(\d+) = )?(-?\d+(?:\/\d+)?)\./), end = w.match(/(?:=|at) (-?\d+(?:\/\d+)?)\.$/);
+    if (!st || (a > 1) !== !!st[1] || (st[2] && +st[2] !== a) || (st[3] ? +st[3] : 1) !== b || +st[4] !== c || (st[5] && (+st[5] !== c || +st[6] !== b)) || Math.abs(val(st[7]) - L) > 1e-12 || !end || Math.abs(val(end[1]) - ansV) > 1e-12 || (k && !w.includes(`C = ${y0} - `)))
+      fail('analysis', 'linODE', `the working does not set y′ = 0 and carry the steady value to the answer: ${w}`);
+    if (c < 0) loShape.neg = 1;
+    if (y0 < 0) loShape.ny = 1;
+    loShape.a[a] = 1; loShape.ask[k] = 1; loShape.bmax = Math.max(loShape.bmax, b);
+    covered.add('linODE');
+  },
   // Determinant rules, worked again here on actual matrices: an A and a B are
   // built with the stated determinants (a diagonal scaled, then mixed by
   // matrices of determinant 1), the expression is multiplied out, transposed
@@ -1908,7 +1951,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 86, sig: 0x693c };
+  const PINNED = { count: 87, sig: 0x4267 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -17741,6 +17784,36 @@ for (let d = 1; d <= 3; d++) {
   if (!!cbShape.neg !== (d > 1) || !!cbShape.zero !== (d > 1)) fail('analysis', 'changeBasis', `depth ${d} ${d > 1 ? 'never has' : 'has'} a sign or a zero`);
   if (cbShape.hi !== (d === 3 ? 6 : 4) || cbShape.lo !== [1, -4, -6][d - 1]) fail('analysis', 'changeBasis', `depth ${d} has entries from ${cbShape.lo} to ${cbShape.hi}`);
   if (cbWhole < CB * 0.42 || cbWhole > CB * 0.58) fail('analysis', 'changeBasis', `depth ${d} gives a whole answer ${cbWhole} times in ${CB}, not about half`);
+}
+
+// Linear differential equations at every depth: five different exact
+// numbers, none 0, two of the four wrong ones sharing the answer's sign and
+// two its form; every slip turns up; both questions are asked; the first
+// depth keeps every number above 0, the second lets signs in and p reach 6,
+// the third puts a number in front of y′; and whole and fractional answers
+// come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const LO = 3000;
+  loWhole = 0; loSeen = new Set(); loShape = { neg: 0, ny: 0, a: {}, ask: {}, bmax: 0 };
+  for (let i = 0; i < LO; i++) {
+    const p = GEN.linODE(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'linODE', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'linODE', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const pos = v => !v.startsWith('-'), whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => pos(v) === pos(vals[0])).length < 2) fail('analysis', 'linODE', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'linODE', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'linODE', `a number runs too long: ${vals.join(', ')}`);
+    if (whole(vals[0])) loWhole++;
+    ANALYSIS.linODE(p);
+  }
+  if (loSeen.size !== 11) fail('analysis', 'linODE', `depth ${d} offers only ${loSeen.size} of its 11 slips`);
+  if (Object.keys(loShape.ask).length !== 2) fail('analysis', 'linODE', `depth ${d} asks only one of its two questions`);
+  if (!!loShape.neg !== (d > 1)) fail('analysis', 'linODE', `depth ${d} ${d > 1 ? 'never has' : 'has'} a negative number`);
+  if (!!loShape.ny !== (d > 1)) fail('analysis', 'linODE', `depth ${d} ${d > 1 ? 'never starts' : 'starts'} y below 0`);
+  if (!!loShape.a[1] !== (d < 3) || Object.keys(loShape.a).length !== (d < 3 ? 1 : 3)) fail('analysis', 'linODE', `depth ${d} puts ${Object.keys(loShape.a).join(', ')} in front of y′`);
+  if (loShape.bmax !== [4, 6, 9][d - 1]) fail('analysis', 'linODE', `depth ${d} reaches p = ${loShape.bmax}`);
+  if (loWhole < LO * 0.42 || loWhole > LO * 0.58) fail('analysis', 'linODE', `depth ${d} gives a whole answer ${loWhole} times in ${LO}, not about half`);
 }
 
 // Determinant rules at every depth: five different exact numbers, none 0,
