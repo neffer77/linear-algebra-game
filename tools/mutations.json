@@ -1,103 +1,33 @@
 {
-  "change": "Add a Rule or plug in mode to the L'Hôpital workshop",
+  "change": "Show which answer is picked in every answer row",
   "mutations": [
     {
-      "name": "a 0 on top alone is sorted as 0/0",
+      "name": "no rule turns a pressed answer gold",
       "file": "index.html",
-      "find": "zz(S){ return Math.abs(this.fa(S))<1e-12 && Math.abs(this.ga(S))<1e-12; },",
-      "replace": "zz(S){ return Math.abs(this.fa(S))<1e-12; },",
-      "run": "verify"
-    },
-    {
-      "name": "the rule divides the slopes upside down",
-      "file": "index.html",
-      "find": "rule(S){ return S.fp(S.a)/S.gp(S.a); },",
-      "replace": "rule(S){ return S.gp(S.a)/S.fp(S.a); },",
-      "run": "verify"
-    },
-    {
-      "name": "the rule is used whatever the ratio",
-      "file": "index.html",
-      "find": "lim(S){ return this.zz(S) ? this.rule(S) : this.plain(S); },",
-      "replace": "lim(S){ return this.rule(S); },",
-      "run": "verify"
-    },
-    {
-      "name": "the slope of sin 2x drops its 2",
-      "file": "index.html",
-      "find": "dtop:'2 cos 2x', dbot:'1', f:x=>Math.sin(2*x), g:x=>x, fp:x=>2*Math.cos(2*x), gp:x=>1},",
-      "replace": "dtop:'cos 2x', dbot:'1', f:x=>Math.sin(2*x), g:x=>x, fp:x=>Math.cos(2*x), gp:x=>1},",
-      "run": "verify"
-    },
-    {
-      "name": "a 0/0 with a 0 limit is not told",
-      "file": "index.html",
-      "find": "zeros(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && Math.abs(this.rule(S))<1e-12; }); },",
-      "replace": "zeros(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && Math.abs(this.rule(S))<1e-12 && S.a>0; }); },",
-      "run": "verify"
-    },
-    {
-      "name": "a log that plugs in is told as hiding a 0",
-      "file": "index.html",
-      "find": "logs(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && !!S.ln; }); },",
-      "replace": "logs(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return /ln/.test(S.top); }); },",
-      "run": "verify"
-    },
-    {
-      "name": "the slip says the right sort is the player's",
-      "file": "index.html",
-      "find": "which is wrong. You had it needing the rule.`); }",
-      "replace": "which is wrong. You had it plugged in.`); }",
-      "run": "verify"
-    },
-    {
-      "name": "a fix counts as a first check",
-      "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
-      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
-      "run": "verify"
-    },
-    {
-      "name": "the tangents go through the curve's own height",
-      "file": "index.html",
-      "find": "x1=\"${f(PX(lo))}\" y1=\"${f(PY(-d))}\" x2=\"${f(PX(S.a+1))}\" y2=\"${f(PY(d))}\"",
-      "replace": "x1=\"${f(PX(lo))}\" y1=\"${f(PY(1-d))}\" x2=\"${f(PX(S.a+1))}\" y2=\"${f(PY(1+d))}\"",
-      "run": "verify"
-    },
-    {
-      "name": "the plugged-in panes get tangents too",
-      "file": "index.html",
-      "find": "if(this.zz(S)) for(const [d,col] of [[S.fp(S.a),FIG_COL.b],[S.gp(S.a),FIG_COL.a]])",
-      "replace": "for(const [d,col] of [[S.fp(S.a),FIG_COL.b],[S.gp(S.a),FIG_COL.a]])",
-      "run": "verify"
-    },
-    {
-      "name": "the curves are drawn from a to a + 2",
-      "file": "index.html",
-      "find": "const lo=S.a-1, xs=[]; for(let k=0;k<=60;k++) xs.push(lo+2*k/60);",
-      "replace": "const lo=S.a-1, xs=[]; for(let k=0;k<=60;k++) xs.push(S.a+2*k/60);",
-      "run": "verify"
-    },
-    {
-      "name": "a check opens with a ratio unsorted",
-      "file": "index.html",
-      "find": "check(){\n    if(this.solved || !this.ready()) return;\n    this.tries++; this.touched=true;\n    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));\n    this.got=this.marks.filter(Boolean).length;\n    if(this.marks.every(Boolean)){\n      this.solved=true;\n      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
-      "replace": "check(){\n    if(this.solved) return;\n    this.tries++; this.touched=true;\n    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));\n    this.got=this.marks.filter(Boolean).length;\n    if(this.marks.every(Boolean)){\n      this.solved=true;\n      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
-      "run": "verify"
-    },
-    {
-      "name": "the sort buttons lose what they sort",
-      "file": "index.html",
-      "find": "data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"HopSort",
-      "replace": "data-k=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"HopSort",
-      "run": "play:hopsort"
-    },
-    {
-      "name": "the sort tab is left out",
-      "file": "index.html",
-      "find": ",['sort','🚦 Rule or plug in?','See four ratios, and sort which are 0/0 and need the rule and which plug straight in']",
+      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}\n",
       "replace": "",
-      "run": "play:hopsort"
+      "run": "verify"
+    },
+    {
+      "name": "a pressed answer keeps its plain border",
+      "file": "index.html",
+      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "replace": ".btn.ghost[aria-pressed=\"true\"]{color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "run": "verify"
+    },
+    {
+      "name": "a pressed answer keeps its plain text",
+      "file": "index.html",
+      "find": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "replace": ".btn.ghost[aria-pressed=\"true\"]{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}",
+      "run": "verify"
+    },
+    {
+      "name": "the in or out answers are not ghost buttons",
+      "file": "index.html",
+      "find": "<button class=\"btn sm ghost\" style=\"margin:0;padding:4px 2px\" data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"CrossTurn",
+      "replace": "<button class=\"btn sm\" style=\"margin:0;padding:4px 2px\" data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"CrossTurn",
+      "run": "verify"
     }
   ]
 }

@@ -767,6 +767,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
 .mpMat i.c1{color:#57cc7a}
 .btn.mpOpt.miss{border-color:#e5484d;opacity:.75}
 .wsModes button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.btn.ghost[aria-pressed="true"]{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:rgba(242,193,78,.12)}
 .wsModes.wrap{flex-wrap:wrap}
 .wsModes.wrap button{flex:1 1 28%;min-width:0}
 .wsGoal{display:flex;gap:8px;align-items:flex-start;padding:5px 0;font-size:14px;border-top:1px solid rgba(140,125,190,.15)}

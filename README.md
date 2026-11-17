@@ -2694,7 +2694,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and seventy-one suites, about 6,510 checks, about a minute:
+loop only exists once the page is running. A hundred and seventy-one suites, about 6,654 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
