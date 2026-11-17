@@ -742,6 +742,9 @@ let mvChordOffered = 0;   // the mean value theorem's questions that offer the c
 let laStepOffered = 0, laWhole = 0, laExact = 0;   // linear approximation: how often the bare step and the exact value are slips, and how often the answer is whole
 let alNoRoot = 0, alRun = 0, alWhole = 0;   // arc length: how often the forgotten root and the bare run are slips, and how often the answer is whole
 let tzKey = 0, tzWhole = 0, tzSeen = new Set();   // the trapezoid rule: how often the commonest slips are offered, and how often the answer is whole
+let spKey = 0, spWhole = 0, spSix = 0, spSeen = new Set();   // Simpson's rule: how often the commonest slips are offered, and how often the answer is whole
+let ntKey = 0, ntWhole = 0, ntBelow = 0, ntSeen = new Set();   // Newton's method: how often the commonest slips are offered, the guess starts below the root, and the answer is whole
+let lsWhole = 0, lsFour = 0, lsSeen = new Set();   // least squares: how often the answer is whole, how often there are four points, and which slips turn up
 let lgKey = 0, lgWhole = 0;   // logistic growth: how often each depth's commonest slip is offered, and how often the answer is whole
 const ANALYSIS = {
   powerRule:   p => derivCheck('powerRule', parens(p.q), p.a),
@@ -1318,6 +1321,10 @@ Object.assign(ANALYSIS, {
     valueCheck('trapezoid', truth, p.a, 1e-6);
     const w = fl(p.ex);
     if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'trapezoid', `the working does not end on ${p.a}: ${w}`);
+    // the first sentence finds h on its own, so that it can stand as the nudge
+    const th = w.match(/^There are (\d) strips, so h = \((\d+(?:\/\d+)?) - (-?\d+)\)\/(\d) = (\d+(?:\/\d+)?)\. At x = /);
+    if (!th || +th[1] !== n || +th[4] !== n || Math.abs(val(th[2]) - b) > 1e-9 || +th[3] !== a || Math.abs(val(th[5]) - h) > 1e-9)
+      fail('analysis', 'trapezoid', `the working does not open by finding h as (b − a)/n: ${w}`);
     // the overshoot's check squares h and times it by the change in slope, and comes out on the same number
     if (gap) {
       const cm = w.match(/As a check, h²\/12 × \(f′\((\S+)\) - f′\((\S+)\)\) = \(?(\d+(?:\/\d+)?)\)?²\/12 × (\d+(?:\/\d+)?) = (\d+(?:\/\d+)?)\.$/);
@@ -1336,6 +1343,139 @@ Object.assign(ANALYSIS, {
     // the estimate is the average of the left and right sums, so the two never stand together
     if (named.includes(slip[1][0]) && named.includes(slip[2][0]) && !gap) fail('analysis', 'trapezoid', `the left and right sums are both offered: ${t}`);
     covered.add('trapezoid');
+  },
+  // Simpson's rule, worked again here without the rule: the table read off
+  // the question, a parabola fitted through each pair of strips by solving for
+  // its three coefficients, and its area found from its antiderivative; each
+  // wrong answer worked again as the slip its reason names.
+  simpson: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^A table gives f\(x\) = ([\d, ]+) at x = ([\d\/, ]+)\. Use Simpson's rule to estimate ∫ (\d+) (\d+(?:\/\d+)?) f\(x\) dx\.$/);
+    if (!m) { fail('analysis', 'simpson', `the question does not read as Simpson's rule: ${t}`); return; }
+    const ys = m[1].split(', ').map(Number), xs = m[2].split(', ').map(val), n = ys.length - 1, a = +m[3], b = val(m[4]);
+    if (xs.length !== n + 1 || ![2, 4, 6].includes(n)) fail('analysis', 'simpson', `the table does not have an even number of strips: ${t}`);
+    if (xs[0] !== a || Math.abs(xs[n] - b) > 1e-9) fail('analysis', 'simpson', `the table does not run from one end of the integral to the other: ${t}`);
+    const h = (b - a) / n;
+    if (xs.some((x, i) => Math.abs(x - (a + i * h)) > 1e-9)) fail('analysis', 'simpson', `the table's x values are not evenly spaced: ${t}`);
+    if (ys.some(y => !(y >= 1 && y <= 9))) fail('analysis', 'simpson', `a height is out of range: ${t}`);
+    if (n === 6) spSix++;
+    // each pair of strips: the parabola A·u² + B·u + C through (0, y0), (h, y1), (2h, y2), and its area A·(2h)³/3 + B·(2h)²/2 + C·2h
+    let S = 0;
+    for (let i = 0; i < n; i += 2) {
+      const [y0, y1, y2] = ys.slice(i, i + 3), C = y0, A = (y2 - 2 * y1 + y0) / (2 * h * h), B = (y1 - y0) / h - A * h;
+      S += A * (2 * h) ** 3 / 3 + B * (2 * h) ** 2 / 2 + C * 2 * h;
+    }
+    let T = 0, L = 0; for (let i = 0; i < n; i++) { T += h * (ys[i] + ys[i + 1]) / 2; L += h * ys[i]; }
+    const W = 3 * S / h, all = ys.reduce((s, y) => s + y, 0);
+    let swap = 0; ys.forEach((y, i) => { swap += (i === 0 || i === n ? 1 : i % 2 ? 2 : 4) * y; }); swap *= h / 3;
+    const slip = [[/^that is the trapezoid rule/, T], [/^that swaps the 4s and 2s/, swap], [/^that leaves out the 1\/3/, h * W],
+      [/^that takes h\/2/, h / 2 * W], [/^that adds every height once/, h / 3 * all],
+      [/^that fits one parabola across the whole interval/, (b - a) / 6 * (ys[0] + 4 * ys[n / 2] + ys[n])], [/^that is the left-hand sum/, L]];
+    valueCheck('simpson', S, p.a, 1e-6);
+    const w = fl(p.ex);
+    const hm = w.match(/^There are (\d) strips, so h = \((\d+(?:\/\d+)?) - (\d+)\)\/(\d) = (\d+(?:\/\d+)?)\. /);
+    if (!hm || +hm[1] !== n || Math.abs(val(hm[2]) - b) > 1e-9 || +hm[3] !== a || +hm[4] !== n || Math.abs(val(hm[5]) - h) > 1e-9) fail('analysis', 'simpson', `the working does not find h as (b − a)/n: ${w}`);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'simpson', `the working does not end on ${p.a}: ${w}`);
+    // the working's weighted sum is the heights with the weights it names
+    const wm = w.match(/The weights are ([\d, ]+), so S = h\/3 × \((.*)\) = (\d+(?:\/\d+)?) × (\d+) = /);
+    if (!wm) fail('analysis', 'simpson', `the working does not name the weights: ${w}`);
+    else {
+      const wts = wm[1].split(', ').map(Number), parts = wm[2].split(' + ');
+      if (wts.length !== n + 1 || wts.some((k, i) => k !== (i === 0 || i === n ? 1 : i % 2 ? 4 : 2))) fail('analysis', 'simpson', `the weights are not 1, 4, 2, …, 4, 1: ${w}`);
+      if (parts.length !== n + 1 || parts.some((s, i) => s !== (wts[i] === 1 ? String(ys[i]) : `${wts[i]} × ${ys[i]}`))) fail('analysis', 'simpson', `the weighted heights are not the table's: ${w}`);
+      if (Math.abs(val(wm[3]) - h / 3) > 1e-9 || Math.abs(+wm[4] - W) > 1e-6) fail('analysis', 'simpson', `h/3 or the weighted sum is worked wrong: ${w}`);
+    }
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'simpson', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'simpson', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      if (/^that (is the trapezoid rule|swaps the 4s and 2s)/.test(fl(why))) spKey++;
+      spSeen.add(String(sl[0]));
+    });
+    covered.add('simpson');
+  },
+  // Newton's method, worked again here in floating point: the curve and x₀
+  // read off the question, x₁ = x₀ − f(x₀)/f′(x₀) worked with the slope found
+  // by a nudge on f, never by the power rule, and each wrong answer worked
+  // again as the slip its reason names.
+  newton: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^Take one step of Newton's method on f\(x\) = x([²³])(?: \+ (\d*)x)? - (\d+) from x₀ = (\d)\. What is x₁\?$/);
+    if (!m) { fail('analysis', 'newton', `the question does not read as Newton's method: ${t}`); return; }
+    const pw = m[1] === '²' ? 2 : 3, p1 = m[2] === undefined ? 0 : m[2] === '' ? 1 : +m[2], k = +m[3], x0 = +m[4];
+    if ((pw === 2 && p1) || x0 < 1 || k < 2) fail('analysis', 'newton', `the curve or x₀ is out of range: ${t}`);
+    const f = x => x ** pw + p1 * x - k, e = 1e-5, df = x => (f(x + e) - f(x - e)) / (2 * e);
+    const fv = f(x0), sv = df(x0), step = fv / sv, truth = x0 - step;
+    // x₀ is a whole number either side of the root, so the step heads toward it
+    if (!(f(x0 - 1) * f(x0) < 0 || f(x0) * f(x0 + 1) < 0)) fail('analysis', 'newton', `x₀ = ${x0} is not next to the root: ${t}`);
+    if (fv < 0) ntBelow++;
+    const slip = [[/^that adds the step/, x0 + step], [/^that is the step f\(x₀\)\/f′\(x₀\) itself/, step], [/^that turns the step upside down/, x0 - sv / fv],
+      [/^that takes away f\(x₀\) with no slope under it/, x0 - fv], [/^that drops the [23] from the slope/, x0 - fv / (sv - (pw - 1) * x0 ** (pw - 1))],
+      [/^that does not lower the power/, x0 - fv / (3 * x0 + p1)], [/^that leaves \d*x out of the slope/, x0 - fv / (sv - p1)]];
+    valueCheck('newton', truth, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'newton', `the working does not end on ${p.a}: ${w}`);
+    const wm = w.match(/f\((\d)\) = .* = (-?\d+) and f′\((\d)\) = (\d+), so x₁ = (\d) - \(?(-?\d+)\)?\/(\d+) = /);
+    if (!wm || +wm[1] !== x0 || +wm[2] !== fv || Math.abs(+wm[4] - sv) > 1e-6 || +wm[6] !== fv || Math.abs(+wm[7] - sv) > 1e-6) fail('analysis', 'newton', `f(x₀) or f′(x₀) is worked wrong: ${w}`);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'newton', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'newton', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      if (/^that (adds the step|is the step)/.test(fl(why))) ntKey++;
+      ntSeen.add(String(sl[0]));
+    });
+    covered.add('newton');
+  },
+  // Least squares, worked again here in floating point and never by the
+  // formula the game uses: the points read off the question, the slope found
+  // by minimising the squared misses directly (Σ(y − mx − c)² is a bowl in m
+  // and c, so a few Newton steps on its slopes land on the bottom exactly),
+  // and each wrong answer worked again as the slip its reason names.
+  leastSq: p => {
+    const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
+      .replace(/<[^>]+>/g, ' ').replace(/−/g, '-').replace(/\s+/g, ' ').trim();
+    const t = fl(p.q), val = v => v.includes('/') ? v.split('/')[0] / v.split('/')[1] : +v;
+    const m = t.match(/^(?:Find the slope m of the least-squares line y = mx \+ c through the points (.*)\.|Where does the least-squares line y = mx \+ c through the points (.*) cross the y-axis\? Find c\.)$/);
+    if (!m) { fail('analysis', 'leastSq', `the question does not read as least squares: ${t}`); return; }
+    const icpt = m[2] !== undefined, P = [...(m[1] || m[2]).matchAll(/\((\d), (-?\d)\)/g)].map(q => [+q[1], +q[2]]);
+    if (![3, 4].includes(P.length) || new Set(P.map(q => q[0])).size !== P.length) fail('analysis', 'leastSq', `not three or four points at different x: ${t}`);
+    if (P.length === 4) lsFour++;
+    // the bottom of the bowl E(m, c) = Σ(y − mx − c)², by Newton's method on its two slopes
+    let a = 0, b = 0;
+    for (let it = 0; it < 3; it++) {
+      let gm = 0, gc = 0, hmm = 0, hmc = 0, hcc = 0;
+      for (const [x, y] of P) { const r = y - a * x - b; gm -= 2 * r * x; gc -= 2 * r; hmm += 2 * x * x; hmc += 2 * x; hcc += 2; }
+      const det = hmm * hcc - hmc * hmc; a -= (hcc * gm - hmc * gc) / det; b -= (hmm * gc - hmc * gm) / det;
+    }
+    const n = P.length, mean = f => P.reduce((s, q) => s + f(q), 0) / n, xb = mean(q => q[0]), yb = mean(q => q[1]);
+    if (Math.abs(yb - a * xb - b) > 1e-9) fail('analysis', 'leastSq', `the best line misses the middle point: ${t}`);
+    const two = (q, r) => { const s = (r[1] - q[1]) / (r[0] - q[0]); return [s, q[1] - s * q[0]]; };
+    const E = two(P[0], P[n - 1]), Fs = two(P[0], P[1]), Ls = two(P[n - 2], P[n - 1]);
+    const sxy = P.reduce((s, q) => s + (q[0] - xb) * (q[1] - yb), 0), syy = P.reduce((s, q) => s + (q[1] - yb) ** 2, 0);
+    const slip = icpt
+      ? [[/^that adds m·x̄/, yb + a * xb], [/^that is the slope m;/, a], [/^that is ȳ alone/, yb], [/^that swaps x̄ and ȳ/, xb - a * yb], [/^that is where the line through the two end points crosses/, E[1]]]
+      : [[/^that joins the two end points/, E[0]], [/^that joins the first two points only/, Fs[0]], [/^that joins the last two points only/, Ls[0]],
+        [/^that forces the line through the origin/, P.reduce((s, q) => s + q[0] * q[1], 0) / P.reduce((s, q) => s + q[0] * q[0], 0)],
+        [/^that is ȳ\/x̄/, yb / xb], [/^that turns the fit round/, syy / sxy]];
+    valueCheck('leastSq', icpt ? b : a, p.a, 1e-6);
+    const w = fl(p.ex);
+    if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'leastSq', `the working does not end on ${p.a}: ${w}`);
+    // the sums in the working are the points' own
+    const sm = w.match(/^n = (\d), Σx = (-?\d+), Σy = (-?\d+), Σxy = (-?\d+) and Σx² = (\d+), so m = /);
+    const tot = f => P.reduce((s, q) => s + f(q), 0);
+    if (!sm || +sm[1] !== n || +sm[2] !== tot(q => q[0]) || +sm[3] !== tot(q => q[1]) || +sm[4] !== tot(q => q[0] * q[1]) || +sm[5] !== tot(q => q[0] * q[0]))
+      fail('analysis', 'leastSq', `the sums are not the points' own: ${w}`);
+    p.d.forEach(([v, why]) => {
+      const sl = slip.find(([re]) => re.test(fl(why)));
+      if (!sl) { fail('analysis', 'leastSq', `a wrong answer's reason is not one of the slips: ${why}`); return; }
+      if (Math.abs(val(fl(v)) - sl[1]) > 1e-6 * Math.max(1, Math.abs(sl[1]))) fail('analysis', 'leastSq', `${fl(v)} is not the slip it is named as (${sl[1]}): ${why}`);
+      lsSeen.add(String(sl[0]));
+    });
+    covered.add('leastSq');
   },
   meanValue: p => {
     const fl = v => String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')
@@ -1458,7 +1598,7 @@ let codeNotes = null;
         message saying so, which is the designed behaviour. But it should never
         happen by accident, so the list is pinned. If this fails and the change
         was deliberate, update the two numbers below. */
-  const PINNED = { count: 77, sig: 0xecef };
+  const PINNED = { count: 80, sig: 0x36b4 };
   const keys = Object.keys(TOPIC_LABEL);
   if (keys.length !== PINNED.count || Codec.sig() !== PINNED.sig) {
     fail('codes', 'topics',
@@ -16598,6 +16738,94 @@ for (let d = 1; d <= 3; d++) {
   if (tzSeen.size !== (d < 3 ? 6 : 5)) fail('analysis', 'trapezoid', `depth ${d} offers only ${tzSeen.size} of its slips`);
   if (tzKey < TZ * 0.8) fail('analysis', 'trapezoid', `depth ${d} offers its commonest slips in only ${tzKey} of ${TZ} questions`);
   if (tzWhole < TZ * 0.35 || tzWhole > TZ * 0.65) fail('analysis', 'trapezoid', `depth ${d} gives a whole answer ${tzWhole} times in ${TZ}, not about half`);
+}
+
+// Simpson's rule at every depth: the answer and its four slips are five
+// different exact numbers above 0, each slip with its reason; two of the four
+// share the answer's form; the commonest slips (the trapezoid rule, or the 4s
+// and 2s swapped) are offered often; every slip turns up; and whole and
+// fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const SP = 3000;
+  spKey = 0; spWhole = 0; spSix = 0; spSeen = new Set();
+  for (let i = 0; i < SP; i++) {
+    const p = GEN.simpson(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')));
+    if (new Set(vals).size !== 5) fail('analysis', 'simpson', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^\d+(\/\d+)?$/.test(v) || /^0/.test(v))) fail('analysis', 'simpson', `a number is not exact, is 0 or is below 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'simpson', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'simpson', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'simpson', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) spWhole++;
+    ANALYSIS.simpson(p);
+  }
+  // every slip turns up at its depth: six with two strips, where one parabola is the rule itself, and seven with more
+  if (spSeen.size !== (d === 1 ? 6 : 7)) fail('analysis', 'simpson', `depth ${d} offers only ${spSeen.size} of its slips`);
+  // two strips at depth 1, four at depth 2, and four or six at depth 3
+  if (d < 3 && spSix !== 0 || d === 3 && (spSix < SP * 0.3 || spSix > SP * 0.7)) fail('analysis', 'simpson', `depth ${d} has six strips ${spSix} times in ${SP}`);
+  if (spKey < SP * 0.6) fail('analysis', 'simpson', `depth ${d} offers its commonest slips in only ${spKey} of ${SP} questions`);
+  // left to themselves the tables come out whole only about 37% of the time at the first two depths and
+  // 62% at the third, so the band is tight enough to see the coin flip that evens them out
+  if (spWhole < SP * 0.42 || spWhole > SP * 0.58) fail('analysis', 'simpson', `depth ${d} gives a whole answer ${spWhole} times in ${SP}, not about half`);
+}
+
+// Newton's method at every depth: the answer and its four slips are five
+// different exact numbers, none 0, each slip with its reason; the answer is
+// above 0, two of the four share its sign and two its form; the commonest
+// slips (the step added, or the step given for the guess) are offered often;
+// and whole and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const NT = 3000;
+  ntKey = 0; ntWhole = 0; ntBelow = 0; ntSeen = new Set();
+  for (let i = 0; i < NT; i++) {
+    const p = GEN.newton(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'newton', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'newton', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    if (vals[0].startsWith('-')) fail('analysis', 'newton', `the answer is below 0: ${vals[0]}`);
+    if (vals.slice(1).filter(v => !v.startsWith('-')).length < 2) fail('analysis', 'newton', `fewer than two wrong answers are above 0: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'newton', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'newton', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'newton', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) ntWhole++;
+    ANALYSIS.newton(p);
+  }
+  // every slip turns up at its depth: five on x² − k, six on x³ − k, seven with px
+  if (ntSeen.size !== d + 4) fail('analysis', 'newton', `depth ${d} offers only ${ntSeen.size} of its slips`);
+  if (ntKey < NT * 0.6) fail('analysis', 'newton', `depth ${d} offers its commonest slips in only ${ntKey} of ${NT} questions`);
+  // from above the root the step lands between it and x₀, never on a whole number, so whole
+  // answers all start below; fractional ones start either side
+  if (ntBelow < NT * 0.6 || ntBelow > NT * 0.9) fail('analysis', 'newton', `depth ${d} starts below the root ${ntBelow} times in ${NT}, not about three in four`);
+  if (ntWhole < NT * 0.35 || ntWhole > NT * 0.65) fail('analysis', 'newton', `depth ${d} gives a whole answer ${ntWhole} times in ${NT}, not about half`);
+}
+
+// Least squares at every depth: the answer and its four slips are five
+// different exact numbers, none 0, each slip with its reason; two of the four
+// share the answer's sign and two its form; every slip turns up; and whole
+// and fractional answers come up about equally.
+for (let d = 1; d <= 3; d++) {
+  const LS = 3000;
+  lsWhole = 0; lsFour = 0; lsSeen = new Set();
+  for (let i = 0; i < LS; i++) {
+    const p = GEN.leastSq(d), vals = [p.a, ...p.d.map(x => x[0])]
+      .map(v => plainT(String(v).replace(/<span class="frac"><span>([^<]*)<\/span><span>([^<]*)<\/span><\/span>/g, '$1/$2')).replace(/−/g, '-'));
+    if (new Set(vals).size !== 5) fail('analysis', 'leastSq', `the answer and its slips are not five different numbers: ${vals.join(', ')}`);
+    if (vals.some(v => !/^-?\d+(\/\d+)?$/.test(v) || /^-?0/.test(v))) fail('analysis', 'leastSq', `a number is not exact, or is 0: ${vals.join(', ')}`);
+    const neg0 = vals[0].startsWith('-');
+    if (vals.slice(1).filter(v => v.startsWith('-') === neg0).length < 2) fail('analysis', 'leastSq', `fewer than two wrong answers share the answer's sign: ${vals.join(', ')}`);
+    if (vals.some(v => v.replace('-', '').split('/')[0].length > 3 || (v.split('/')[1] || '').length > 2)) fail('analysis', 'leastSq', `a number runs too long: ${vals.join(', ')}`);
+    if (p.d.some(x => !x[1])) fail('analysis', 'leastSq', 'a wrong answer has no reason');
+    const whole = v => !v.includes('/');
+    if (vals.slice(1).filter(v => whole(v) === whole(vals[0])).length < 2) fail('analysis', 'leastSq', `fewer than two wrong answers are of the answer's form: ${vals.join(', ')}`);
+    if (whole(vals[0])) lsWhole++;
+    ANALYSIS.leastSq(p);
+  }
+  if (lsSeen.size !== (d < 3 ? 6 : 5)) fail('analysis', 'leastSq', `depth ${d} offers only ${lsSeen.size} of its slips`);
+  // three points at depth 1, four at depth 2, and either at depth 3
+  if (d < 3 && lsFour !== [0, LS][d - 1] || d === 3 && (lsFour < LS * 0.3 || lsFour > LS * 0.7)) fail('analysis', 'leastSq', `depth ${d} has four points ${lsFour} times in ${LS}`);
+  if (lsWhole < LS * 0.35 || lsWhole > LS * 0.65) fail('analysis', 'leastSq', `depth ${d} gives a whole answer ${lsWhole} times in ${LS}, not about half`);
 }
 
 console.log(`  generators                 ${pad(total, 10)}`);

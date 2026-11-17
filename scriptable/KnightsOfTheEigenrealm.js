@@ -4404,7 +4404,8 @@ trapezoid(d){
     const S=\`∫<sub>\${as}</sub><sup>\${bs}</sup> \${fw} dx\`;
     const heights=ys.map(show).join(', '), at=xs.map(show).join(', ');
     const inside=ys.map((y,i)=>i===0||i===n?show(y):\`2 × \${y[1]===1?show(y):\`(\${show(y)})\`}\`).join(' + ');
-    const est=\`h = (\${bs} − \${as})/\${n} = \${hs}, and at x = \${at} the heights are \${heights}, so T = \${show(half)} × (\${inside}) = \${show(T)}\`;
+    // Two sentences, so that the first, which finds h, can stand on its own as a nudge.
+    const est=\`There are \${n} strips, so h = (\${bs} − \${as})/\${n} = \${hs}. At x = \${at} the heights are \${heights}, so T = \${show(half)} × (\${inside}) = \${show(T)}\`;
     let q, ans, why, slips;
     if(d<3){
       ans=T;
@@ -4421,7 +4422,7 @@ trapezoid(d){
     } else {
       ans=E;
       q=\`The trapezoid rule with n = \${n} strips overshoots \${S}. By how much?\`;
-      why=\`The estimate: \${est}. The exact integral is \${show(I)}, so the trapezoid overshoots by \${show(T)} − \${show(I)} = \${show(E)}. As a check, h²/12 × (f′(\${bs}) − f′(\${as})) = \${h[1]===1?hs:\`(\${hs})\`}²/12 × \${show(dd)} = \${show(E)}\`;
+      why=\`\${est}. The exact integral is \${show(I)}, so the trapezoid overshoots by \${show(T)} − \${show(I)} = \${show(E)}. As a check, h²/12 × (f′(\${bs}) − f′(\${as})) = \${h[1]===1?hs:\`(\${hs})\`}²/12 × \${show(dd)} = \${show(E)}\`;
       slips=[
         [T,'that is the estimate itself; the overshoot is the estimate minus the exact integral'],
         [I,'that is the exact integral; the overshoot is the estimate minus it'],
@@ -4444,6 +4445,183 @@ trapezoid(d){
     return {topic:'Trapezoid Rule',
       codex:{rule:'h = (b − a)/n. T = h/2 × (f(x₀) + 2f(x₁) + … + 2f(xₙ₋₁) + f(xₙ)): ends once, inside heights twice. Where f bends up T overshoots, by h²/12 × (f′(b) − f′(a)) for a quadratic or cubic.',
              eg:'∫₀² x² dx with n = 2: h = 1, heights 0, 1, 4, so T = 1/2 × (0 + 2 × 1 + 4) = 3, over the exact 8/3 by 1/3.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
+},
+/* Simpson's rule: n even, h = (b − a)/n, and a parabola through each pair of
+   strips. Added up, S = h/3 × (f(x₀) + 4f(x₁) + 2f(x₂) + … + 4f(xₙ₋₁) + f(xₙ)).
+   The heights are given as a table, as measured ones would be, so nothing has
+   to be worked out before the rule is used. At depth 1 two strips, at depth 2
+   four, and at depth 3 four or six with h of 1/2, 2 or 3. Whole and fractional
+   answers come up about equally. The wrong answers are the slips people make:
+   the trapezoid rule, the 4s and 2s swapped, the 1/3 left out, h/2 taken for
+   h/3, every height counted once, one parabola across the whole interval, and
+   the left-hand sum. */
+simpson(d){
+  // exact fractions as [top, bottom]
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===1?2:d===2?4:R.pick([4,6]), h=d===3?R.pick([F(1,2),F(2),F(3)]):R.pick([F(1,2),F(1),F(1),F(2)]), a=R.i(0,2);
+    const xs=[...Array(n+1)].map((_,i)=>add(F(a),mul(F(i),h))), ys=xs.map(()=>R.i(1,9)), b=xs[n];
+    const wt=i=>i===0||i===n?1:i%2?4:2, W=ys.reduce((s,y,i)=>s+wt(i)*y,0), third=mul(h,F(1,3));
+    const ans=mul(third,F(W));
+    const T=mul(mul(h,F(1,2)),F(ys.reduce((s,y,i)=>s+(i===0||i===n?1:2)*y,0)));
+    const swap=mul(third,F(ys.reduce((s,y,i)=>s+(i===0||i===n?1:i%2?2:4)*y,0)));
+    const all=ys.reduce((s,y)=>s+y,0), left=mul(h,F(all-ys[n]));
+    const one=mul(mul(F(n),h),F(ys[0]+4*ys[n/2]+ys[n],6));
+    const hs=show(h), as=String(a), bs=show(b), hw=h[1]===1?hs:\`(\${hs})\`;
+    const S=\`∫<sub>\${as}</sub><sup>\${bs}</sup> f(x) dx\`;
+    const q=\`A table gives f(x) = \${ys.join(', ')} at x = \${xs.map(show).join(', ')}. Use Simpson's rule to estimate \${S}.\`;
+    const terms=ys.map((y,i)=>wt(i)===1?String(y):\`\${wt(i)} × \${y}\`).join(' + ');
+    // Two sentences, so that the first, which finds h, can stand on its own as a nudge.
+    const why=\`There are \${n} strips, so h = (\${bs} − \${as})/\${n} = \${hs}. The weights are \${ys.map((y,i)=>wt(i)).join(', ')}, so S = h/3 × (\${terms}) = \${show(third)} × \${W} = \${show(ans)}\`;
+    const slips=[
+      [T,'that is the trapezoid rule, h/2 with the inside heights doubled; Simpson fits a parabola through each pair of strips'],
+      [swap,'that swaps the 4s and 2s: the odd points, the middle of each parabola, take 4, and the even inside points 2'],
+      [mul(h,F(W)),'that leaves out the 1/3: Simpson\\'s rule is h/3 times the weighted heights'],
+      [mul(mul(h,F(1,2)),F(W)),'that takes h/2, the trapezoid rule\\'s factor; Simpson\\'s is h/3'],
+      [mul(third,F(all)),'that adds every height once; Simpson weights them 1, 4, 2, …, 4, 1'],
+      ...(n>2 ? [[one,\`that fits one parabola across the whole interval, through its ends and middle; n = \${n} makes \${n/2} parabolas, one on each pair of strips\`]] : []),
+      [left,'that is the left-hand sum, a rectangle at each strip\\'s left height']
+    ];
+    const big=v=>v[0]>999 || v[1]>99;
+    const ok=v=>v[0]>0 && !big(v) && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || big(ans) || same<2 || (ans[1]===1)!==whole) && g<600) continue;
+    return {topic:"Simpson's Rule",
+      codex:{rule:'n even, h = (b − a)/n. S = h/3 × (f(x₀) + 4f(x₁) + 2f(x₂) + … + 4f(xₙ₋₁) + f(xₙ)): ends once, odd points four times, even inside points twice.',
+             eg:'Heights 1, 3, 2 at x = 0, 1, 2: h = 1, so S = 1/3 × (1 + 4 × 3 + 2) = 1/3 × 15 = 5.'},
+      q, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
+},
+/* Newton's method: from a guess x₀, follow the tangent at x₀ down to the
+   axis, x₁ = x₀ − f(x₀)/f′(x₀). At depth 1 one step on x² − k, at depth 2 on
+   x³ − k, and at depth 3 on x³ + px − k, where the slope has two terms.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips people make: the step added instead of taken away, the step
+   f(x₀)/f′(x₀) given for the new guess, the step turned upside down, f(x₀)
+   taken away with no slope under it, and the slope worked wrong (the power's
+   coefficient dropped, the power not lowered, or at depth 3 the p left out). */
+newton(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), dv=(u,v)=>F(u[0]*v[1],u[1]*v[0]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    // x₀ is a whole number either side of the root, so the step heads toward it
+    const pw=d===1?2:3, p=d===3?R.i(1,4):0, k=R.i(2,[0,60,80,60][d]), f=x=>x**pw+p*x-k;
+    let lo=0; while(f(lo+1)<0) lo++;
+    if(f(lo+1)===0) continue;   // a whole root needs no Newton
+    const x0=R.chance(0.5)?lo:lo+1;
+    const fv=f(x0), sv=pw*x0**(pw-1)+p;
+    if(x0<1) continue;
+    const X=F(x0), fx=F(fv), dfx=F(sv), step=dv(fx,dfx), ans=sub(X,step);
+    const fs=\`x\${pw===2?'²':'³'}\${p?\` + \${p===1?'':p}x\`:''} − \${k}\`;
+    const pv=n=>n<0?\`(\${neg(n)})\`:String(n);
+    const why=\`f(x) = \${fs}, so f′(x) = \${pw}x\${pw===3?'²':''}\${p?\` + \${p}\`:''}. At x₀ = \${x0}, f(\${x0}) = \${x0**pw}\${p?\` + \${p*x0}\`:''} − \${k} = \${neg(fv)} and f′(\${x0}) = \${sv}, so x₁ = \${x0} − \${pv(fv)}/\${sv} = \${show(ans)}\`;
+    const slips=[
+      [add(X,step),'that adds the step: the tangent runs down to the axis, so x₁ = x₀ − f(x₀)/f′(x₀), with a minus'],
+      [step,'that is the step f(x₀)/f′(x₀) itself; the new guess is x₀ minus it'],
+      [sub(X,dv(dfx,fx)),'that turns the step upside down: it is f(x₀) over the slope f′(x₀), not the slope over f(x₀)'],
+      [sub(X,fx),'that takes away f(x₀) with no slope under it; the step is f(x₀) divided by f′(x₀)'],
+      [sub(X,dv(fx,F(x0**(pw-1)+p))),\`that drops the \${pw} from the slope: the derivative of x\${pw===2?'²':'³'} is \${pw}x\${pw===3?'²':''}\`],
+      ...(pw===3 ? [[sub(X,dv(fx,F(3*x0+p))),'that does not lower the power: the derivative of x³ is 3x², not 3x']] : []),
+      ...(p ? [[sub(X,dv(fx,F(3*x0*x0))),\`that leaves \${p===1?'':p}x out of the slope: its derivative, \${p}, adds to 3x²\`]] : [])
+    ];
+    // the ranges keep every number short and two of the four above 0, as verify checks
+    const ok=v=>v[0]!==0 && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length;
+    if((dist.length<4 || same<2 || (ans[1]===1)!==whole) && g<600) continue;
+    return {topic:"Newton's Method",
+      codex:{rule:'x₁ = x₀ − f(x₀)/f′(x₀): from a guess, follow the tangent at x₀ down to the axis. Where it lands is the next guess, nearer a root when the start is near one.',
+             eg:'f(x) = x² − 2 from x₀ = 1: f(1) = −1 and f′(1) = 2, so x₁ = 1 − (−1)/2 = 3/2, already near √2 ≈ 1.414.'},
+      q:\`Take one step of Newton's method on f(x) = \${fs} from x₀ = \${x0}. What is x₁?\`, a:show(ans),
+      d:dist.map(([v,w])=>[show(v),w]),
+      ex:\`\${why}.\`};
+  }
+},
+/* Least squares: the line y = mx + c whose squared misses add up to the
+   least, through three or four points. With n points,
+   m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and the line passes through the middle
+   point (x̄, ȳ), so c = ȳ − m·x̄. At depth 1 the slope through three points,
+   at depth 2 through four, and at depth 3 where the line crosses the y-axis.
+   Whole and fractional answers come up about equally. The wrong answers are
+   the slips people make: the line through the two end points, or through
+   the first two or the last two, the line forced through the origin, ȳ/x̄,
+   and the fit turned round, x on y; at depth 3, c with m·x̄ added, the slope
+   given for c, ȳ alone, x̄ and ȳ swapped, and the end points' line's c. */
+leastSq(d){
+  const F=(a,b=1)=>{ const g=gcd(a,b)*(b<0?-1:1); return [a/g,b/g]; };
+  const add=(u,v)=>F(u[0]*v[1]+v[0]*u[1],u[1]*v[1]), sub=(u,v)=>add(u,[-v[0],v[1]]), mul=(u,v)=>F(u[0]*v[0],u[1]*v[1]);
+  const show=u=>rat(u[0],u[1]), key=u=>u[0]+'/'+u[1], eq=(u,v)=>u[0]*v[1]===v[0]*u[1];
+  const whole=R.chance(0.5);
+  for(let g=0;;g++){
+    const n=d===1?3:d===2?4:R.pick([3,4]);
+    const xs=R.shuffle([0,1,2,3,4,5].slice(0,d===1?5:6)).slice(0,n).sort((a,b)=>a-b), ys=xs.map(()=>R.i(-2,8));
+    const P=xs.map((x,i)=>[x,ys[i]]), sum=a=>a.reduce((s,v)=>s+v,0);
+    const sx=sum(xs), sy=sum(ys), sxy=sum(P.map(([x,y])=>x*y)), sxx=sum(xs.map(x=>x*x)), syy=sum(ys.map(y=>y*y));
+    const A=n*sxy-sx*sy, B=n*sxx-sx*sx, C=n*syy-sy*sy;
+    if(A===0) continue;   // a flat best line has nothing to find
+    const m=F(A,B), xb=F(sx,n), yb=F(sy,n), c=sub(yb,mul(m,xb));
+    const line=(p,q)=>{ const s=F(q[1]-p[1],q[0]-p[0]); return [s, sub(F(p[1]),mul(s,F(p[0])))]; };
+    const [me,ce]=line(P[0],P[n-1]), [mf,cf]=line(P[0],P[1]), [ml]=line(P[n-2],P[n-1]);
+    const pn=v=>v<0?\`(\${neg(v)})\`:String(v);
+    const pts=P.map(([x,y])=>\`(\${x}, \${neg(y)})\`).join(', ');
+    const work=\`n = \${n}, Σx = \${sx}, Σy = \${neg(sy)}, Σxy = \${neg(sxy)} and Σx² = \${sxx}, so m = (\${n} × \${pn(sxy)} − \${sx} × \${pn(sy)})/(\${n} × \${sxx} − \${sx}²) = \${show(m)}\`;
+    let q, ans, why, slips;
+    if(d<3){
+      ans=m;
+      q=\`Find the slope m of the least-squares line y = mx + c through the points \${pts}.\`;
+      why=work;
+      slips=[
+        [me,'that joins the two end points; the least-squares line weighs every point, not only the ends'],
+        [mf,'that joins the first two points only; the least-squares line weighs every point'],
+        [ml,'that joins the last two points only; the least-squares line weighs every point'],
+        [F(sxy,sxx),'that forces the line through the origin, Σxy/Σx²; the best line need not pass through it, so the means come out first'],
+        ...(sx ? [[F(sy,sx),'that is ȳ/x̄, the slope from the origin to the middle point; the best line goes through the middle point but not the origin']] : []),
+        [F(C,A),'that turns the fit round, fitting x to y; the misses are measured up and down, in y, so Σ(x − x̄)² goes below']
+      ];
+    } else {
+      ans=c;
+      q=\`Where does the least-squares line y = mx + c through the points \${pts} cross the y-axis? Find c.\`;
+      why=\`\${work}. The line passes through the middle point (x̄, ȳ) = (\${show(xb)}, \${show(yb)}), so c = \${show(yb)} − \${m[0]<0||m[1]!==1?\`(\${show(m)})\`:show(m)} × \${xb[1]===1?show(xb):\`(\${show(xb)})\`} = \${show(c)}\`;
+      slips=[
+        [add(yb,mul(m,xb)),'that adds m·x̄; the line passes through (x̄, ȳ), so ȳ = m·x̄ + c and c = ȳ − m·x̄'],
+        [m,'that is the slope m; c is where the line crosses the y-axis, ȳ − m·x̄'],
+        [yb,'that is ȳ alone, which is c only if the line is flat; take m·x̄ away'],
+        [sub(xb,mul(m,yb)),'that swaps x̄ and ȳ: the line passes through (x̄, ȳ), so c = ȳ − m·x̄'],
+        [ce,'that is where the line through the two end points crosses; the least-squares line weighs every point']
+      ];
+    }
+    const big=v=>Math.abs(v[0])>999 || v[1]>99;
+    const ok=v=>v[0]!==0 && !big(v) && !eq(v,ans);
+    const dist=[], seen=new Set([key(ans)]);
+    for(const s of R.shuffle(slips)){
+      if(dist.length===4 || !ok(s[0]) || seen.has(key(s[0]))) continue;
+      dist.push(s); seen.add(key(s[0]));
+    }
+    const same=dist.filter(s=>(s[0][1]===1)===(ans[1]===1)).length, sign=dist.filter(s=>(s[0][0]>0)===(ans[0]>0)).length;
+    if((dist.length<4 || ans[0]===0 || big(ans) || same<2 || sign<2 || (ans[1]===1)!==whole) && g<5000) continue;
+    return {topic:'Least Squares',
+      codex:{rule:'The best line y = mx + c makes the squared misses in y add up to the least: m = (nΣxy − ΣxΣy)/(nΣx² − (Σx)²), and it passes through (x̄, ȳ), so c = ȳ − m·x̄.',
+             eg:'(0, 1), (1, 1), (2, 4): n = 3, Σx = 3, Σy = 6, Σxy = 9, Σx² = 5, so m = (27 − 18)/(15 − 9) = 3/2 and c = 2 − 3/2 × 1 = 1/2.'},
       q, a:show(ans),
       d:dist.map(([v,w])=>[show(v),w]),
       ex:\`\${why}.\`};
@@ -4561,7 +4739,7 @@ const TOPIC_LABEL = {
   riemannToInt:'Riemann Sums',
   gradient:'Gradient Vector', dirDeriv:'Directional Derivative', chainMulti:'Multivariable Chain Rule',
   tangentPlane:'Tangent Planes', doubleInt:'Double Integrals', geoSeries:'Geometric Series',
-  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule'
+  taylor:'Taylor Polynomials', euler:"Euler's Method", growth:'Exponential Growth', meanValue:'Mean Value Theorem', linApprox:'Linear Approximation', arcLength:'Arc Length', logistic:'Logistic Growth', trapezoid:'Trapezoid Rule', newton:"Newton's Method", leastSq:'Least Squares', simpson:"Simpson's Rule"
 };
 
 /* Topics grouped into strands. Declared once and used by both the Training
@@ -4571,10 +4749,10 @@ const TOPIC_LABEL = {
 const STRANDS = [
   ['Vectors',            ['vecAdd','vecScale','vecCombo','dot','mag','orth','unitVec','angleVec','vecProj','proj','cross']],
   ['Matrices',           ['matVec','det2','transpose','matMul','trace','solve2','inv2','det3','matPow','rank','transMatrix']],
-  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt']],
+  ['Eigen & Subspaces',  ['eigen2','charPoly','eigenvec','diagonalisable','nullSpace','colSpace','rankNullity','gramSchmidt','leastSq']],
   ['Limits & Derivatives',['limPoly','limRational','limInf','lhopital','powerRule','evalDeriv','trigDeriv','expLog','productRule','quotient','chainRule','tangent','implicitDiff','invTrigDeriv','logDiff']],
-  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid']],
-  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic']],
+  ['Integrals',          ['indefPower','defPoly','uSub','intTrig','intExp','area','byParts','partialFrac','improper','avgValue','volRev','riemannToInt','doubleInt','trapezoid','simpson']],
+  ['Applications',       ['secondDeriv','critical','inflection','relatedRates','optimisation','euler','growth','meanValue','linApprox','arcLength','logistic','newton']],
   ['Multivariable & Series',['partial','gradient','dirDeriv','chainMulti','tangentPlane','geoSeries','taylor']]
 ];
 
@@ -4629,7 +4807,9 @@ const WORKSHOP_FOR = (() => {
     TanLine: ["🪡 Tangent Line Workshop", ['linApprox']],
     ArcLen: ["🧵 Arc Length Workshop", ['arcLength']],
     LogiGrow: ["🐇 Logistic Workshop", ['logistic']],
-    Trap: ["🪟 Trapezoid Workshop", ['trapezoid']],
+    Trap: ["🪟 Trapezoid Workshop", ['trapezoid','simpson']],
+    Newton: ["🔎 Newton's Method Workshop", ['newton']],
+    Fit: ["📏 Best Fit Workshop", ['leastSq']],
     Implicit:["⭕ Implicit Slope Workshop", ['implicitDiff']],
     Swap:    ["🔄 Swap Workshop", ['uSub']],
     Lathe:   ["🏺 Lathe Workshop", ['volRev']],
@@ -5151,7 +5331,7 @@ const REALMS = [
        ground:['#123033','#040d0f'], rim:'rgba(120,255,240,.17)', haze:'rgba(8,32,34,.82)',
        glow:'#ccfff8', weather:'shards', accent:'#7ff0e2'},
    pool:['charPoly','eigenvec','nullSpace','unitVec','angleVec','vecProj',
-         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2'],
+         'rankNullity','colSpace','matPow','transMatrix','diagonalisable','gramSchmidt','eigen2','leastSq'],
    foes:[
      {nm:'Echo of a Basis',  art:'wisp',     hp:620,atk:78, gold:290,xp:250, col:'#8ff0e4'},
      {nm:'Defective Warden', art:'golem',    hp:700,atk:88, gold:330,xp:290, col:'#3fd6c4'},
@@ -5164,7 +5344,7 @@ const REALMS = [
        ground:['#1a1d47','#06070f'], rim:'rgba(160,175,255,.17)', haze:'rgba(16,18,44,.82)',
        glow:'#dfe3ff', weather:'motes', accent:'#a8b2ff'},
    pool:['lhopital','implicitDiff','inflection','invTrigDeriv','relatedRates','optimisation',
-         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid'],
+         'logDiff','partialFrac','improper','avgValue','volRev','riemannToInt','byParts','secondDeriv','euler','growth','meanValue','linApprox','arcLength','logistic','trapezoid','newton','simpson'],
    foes:[
      {nm:'Asymptotic Horror', art:'wisp',    hp:900, atk:126,gold:430,xp:400, col:'#aab4ff'},
      {nm:'Divergent Colossus',art:'golem',   hp:1020,atk:140,gold:490,xp:460, col:'#7f8cff'},
