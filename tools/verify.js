@@ -11672,15 +11672,15 @@ const eulerPickNotes = (() => {
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, milestone(){}};" +
     "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
     "const EulerWalk = {render(){ env.renders++; }};" +
-    cut('const EulerPick = {', '/* ---------- The Euler step workshop: walk a differential equation by hand') + 'return EulerPick;')(R, env);
+    cut('const EulerPick = {', '/* ---------- Match the field: the Euler step workshop') + 'return EulerPick;')(R, env);
   // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
   const host = cut('const EulerWalk = {', '\n};\n');
-  if (!html.includes('<div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand or pick Euler’s estimate"></div>\n    <div class="panel">\n      <div id="euBox"></div>')) fail('eulerpick', 'host', 'the tabs and the pick box are not on the page');
+  if (!html.includes('<div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand, pick Euler’s estimate, or match a slope field"></div>\n    <div class="panel">\n      <div id="euBox"></div>')) fail('eulerpick', 'host', 'the tabs and the pick box are not on the page');
   for (const id of ['ewWalkRow', 'ewGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('eulerpick', 'host', `${id} is not on the page once`);
   if (!host.includes("  tab:'hand',\n  setTab(t){ this.tab=t; this.render(); },")) fail('eulerpick', 'host', 'the workshop does not open by hand, or a tab does not switch');
-  if (!host.includes("[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab(\'${t}\')"')) fail('eulerpick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate'],['field','🧭 Match the field','See a slope field and pick which of four equations drew it']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab(\'${t}\')"')) fail('eulerpick', 'host', 'the two tabs are not drawn and pressed as they should be');
   if (!host.includes("for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('eulerpick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
-  if (!host.includes("document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';\n    if(pick) return;")) fail('eulerpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!host.includes("const pick=this.tab!=='hand';") || !host.includes("document.getElementById('euBox').innerHTML=this.tab==='pick' ? EulerPick.html() : this.tab==='field' ? FieldMatch.html() : '';\n    if(pick) return;")) fail('eulerpick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
   if (!html.includes('and y′ = y² lag its separated curve. Then turn it round: see an equation and a step, and pick which of four numbers is Euler’s estimate.</div>')) fail('eulerpick', 'tome', 'the Tome does not tell of the pick');
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
@@ -11822,6 +11822,129 @@ const eulerPickNotes = (() => {
   if (whole < rounds * 0.4 || whole > rounds * 0.6) fail('eulerpick', 'deal', `${whole} of ${rounds} estimates are whole, not about half`);
   if (fives !== 30) fail('eulerpick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked };
+})();
+
+/* Match the field, the Euler step workshop's third mode. Every equation's
+   name, its flat line and whether it hangs on x, y or both, worked again
+   here from a plain function; every field drawn dash by dash and each dash's
+   slope read back; every wrong pick in every round caught at the first
+   point where it parts from the field, with its own dash drawn there; every
+   right pick explained; and the hunt played through with its toasts. */
+const fieldMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const EulerWalk = {render(){ env.renders++; }};" +
+    cut('const FieldMatch = {', '/* ---------- The Euler step workshop: walk a differential equation by hand') + 'return FieldMatch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // the ten equations as plain functions, with what they are called and where they are 0
+  const EQ = {
+    x: ['y′ = x', 'x', (x, y) => x], nx: ['y′ = −x', '−x', (x, y) => -x], xx: ['y′ = x²', 'x²', (x, y) => x ** 2],
+    y: ['y′ = y', 'y', (x, y) => y], ny: ['y′ = −y', '−y', (x, y) => -y], yy: ['y′ = y²', 'y²', (x, y) => y ** 2],
+    omy: ['y′ = 1 − y', '1 − y', (x, y) => 1 - y], xpy: ['y′ = x + y', 'x + y', (x, y) => x + y],
+    xmy: ['y′ = x − y', 'x − y', (x, y) => x - y], xy: ['y′ = xy', 'xy', (x, y) => x * y] };
+  const LINES = { 'the line x = 0': (x, y) => x === 0, 'the line y = 0': (x, y) => y === 0, 'the line y = 1': (x, y) => y === 1,
+    'the line y = −x': (x, y) => y === -x, 'the line y = x': (x, y) => y === x, 'both axes': (x, y) => x === 0 || y === 0 };
+  const G = []; for (let i = -4; i <= 4; i++) for (let j = -4; j <= 4; j++) G.push([i / 2, j / 2]);
+  const kindOf = f => { const vx = G.some(([x, y]) => f(x, y) !== f(0, y)), vy = G.some(([x, y]) => f(x, y) !== f(x, 0)); return vx && vy ? 'xy' : vx ? 'x' : 'y'; };
+  if (Object.keys(S.EQS).sort().join() !== Object.keys(EQ).sort().join()) fail('fieldmatch', 'equations', Object.keys(S.EQS).join());
+  for (const id in EQ) {
+    const E = S.EQS[id], [s, r, f] = EQ[id];
+    if (E.s !== s || E.r !== r) fail('fieldmatch', id, `named ${E.s} with right side ${E.r}`);
+    if (G.some(([x, y]) => E.f(x, y) !== f(x, y))) fail('fieldmatch', id, `its slope is not ${s}`);
+    const on = LINES[E.z];
+    if (!on || G.some(([x, y]) => (f(x, y) === 0) !== on(x, y))) fail('fieldmatch', id, `its dashes are not flat exactly along ${E.z}`);
+    if (S.kind(id) !== kindOf(f)) fail('fieldmatch', id, `it is told as hanging on ${S.kind(id)}, not ${kindOf(f)}`);
+  }
+  // the rounds: each answer once, four different equations, the answer in every place twice
+  const R = S.ROUNDS, place = [0, 0, 0, 0];
+  if (R.length !== 8 || new Set(R.map(r => r.a)).size !== 8) fail('fieldmatch', 'rounds', 'there are not eight fields with eight different equations');
+  R.forEach((r, ri) => {
+    if (r.o.length !== 4 || new Set(r.o).size !== 4 || r.o.filter(o => o === r.a).length !== 1 || r.o.some(o => !EQ[o])) fail('fieldmatch', `field ${ri + 1}`, 'the four choices are not four equations with the answer once');
+    place[r.o.indexOf(r.a)]++;
+    // a fair field: some wrong choice hangs on the same letters as the answer
+    if (!r.o.some(o => o !== r.a && kindOf(EQ[o][2]) === kindOf(EQ[r.a][2]))) fail('fieldmatch', `field ${ri + 1}`, 'no wrong choice hangs on the same letters as the answer, so one look settles it');
+  });
+  if (place.join() !== '2,2,2,2') fail('fieldmatch', 'rounds', `the answer sits in the four places ${place.join()} times`);
+  if (S.ri !== 0 || S.solved || S.gone.size || S.done.size || S.touched || S.wins || S.streak) fail('fieldmatch', 'open', 'the mode does not open on the first field with nothing picked');
+  const PX = x => 150 + x * 60, PY = y => 130 - y * 55;
+  const slopeOf = m => { const dx = +m[3] - +m[1], dy = +m[4] - +m[2]; return -(dy / 55) / (dx / 60); };
+  const dashRe = k => new RegExp(`<line data-k="${k}" data-x="([-\\d.]+)" data-y="([-\\d.]+)" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"`, 'g');
+  const readField = (svg, f, key) => {
+    const ds = [...svg.matchAll(dashRe('dash'))];
+    if (ds.length !== 81) fail('fieldmatch', key, `${ds.length} dashes are drawn, not 81`);
+    for (const m of ds) {
+      const x = +m[1], y = +m[2], c = [m[1], m[3], m[4], m[5], m[6]];
+      if (Math.abs((+m[3] + +m[5]) / 2 - PX(x)) > 0.02 || Math.abs((+m[4] + +m[6]) / 2 - PY(y)) > 0.02) { fail('fieldmatch', key, `the dash at (${x}, ${y}) is not centred there`); break; }
+      if (Math.abs(slopeOf([0, m[3], m[4], m[5], m[6]]) - f(x, y)) > 0.01) { fail('fieldmatch', key, `the dash at (${x}, ${y}) has slope ${slopeOf([0, m[3], m[4], m[5], m[6]])}, not ${f(x, y)}`); break; }
+    }
+    return ds.length;
+  };
+  const RULE = 'Each dash is the slope y′ at its point. Read along a row: if the dashes change as you move across, x is in the equation. Read up a column: if they change as you climb, y is in it. Where the dashes lie flat, y′ is 0.';
+  const KIND = { x: 'Its dashes stay the same all the way up each column, so y′ depends on x alone.', y: 'Its dashes stay the same all the way along each row, so y′ depends on y alone.', xy: 'Its dashes change along the rows and up the columns, so y′ depends on both x and y.' };
+  const PTS = [[1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [1, -1], [-1, 1], [-1, -1], [2, 0], [0, 2], [2, 1], [1, 2], [2, 2]];
+  let rounds = 0, misses = 0, dashes = 0;
+  const reset = () => { S.ri = 0; S.gone = new Set(); S.last = null; S.solved = false; S.streak = 0; S.wins = 0; S.touched = false; S.done = new Set(); S.kinds = new Set(); S.caught = false; env.toasts = []; env.banners = []; };
+  R.forEach((r, ri) => {
+    const key = `field ${ri + 1}`, A = EQ[r.a];
+    // every wrong pick in turn, then the right one
+    for (let miss = 0; miss <= 3; miss++) {
+      reset(); S.ri = ri;
+      let h = S.html();
+      if (!h.startsWith(`<div class="small" style="margin:2px 0 6px">Field ${ri + 1} of 8. Which equation drew this slope field?</div>`)) fail('fieldmatch', key, 'the question is not asked');
+      if (S.working().join(' | ') !== RULE + ' | 0 matched on the first try this visit.') fail('fieldmatch', key, `before a pick the readout is ${S.working().join(' | ')}`);
+      dashes += readField(S.svg(), A[2], key);
+      const wrongs = r.o.map((o, i) => i).filter(i => r.o[i] !== r.a).slice(0, miss);
+      for (const i of wrongs) {
+        S.choose(i); misses++;
+        const W = EQ[r.o[i]], p = PTS.find(([x, y]) => W[2](x, y) !== A[2](x, y));
+        const w = S.working();
+        if (w[0] !== `${'ABCD'[i]}, ${W[0]}, is not it: at (${ng(p[0])}, ${ng(p[1])}) it gives slope ${ng(W[2](...p))}, but the field’s dash there has slope ${ng(A[2](...p))}. Its own dash is drawn in blue.`) fail('fieldmatch', key, `a wrong ${W[0]} is not caught: ${w[0]}`);
+        const svg = S.svg(), ring = svg.match(/data-k="ring" cx="([-\d.]+)" cy="([-\d.]+)"/), wr = [...svg.matchAll(dashRe('wrong'))];
+        if (!ring || Math.abs(+ring[1] - PX(p[0])) > 0.02 || Math.abs(+ring[2] - PY(p[1])) > 0.02) fail('fieldmatch', key, `the ring is not at (${p})`);
+        if (wr.length !== 1 || +wr[0][1] !== p[0] || +wr[0][2] !== p[1] || Math.abs(slopeOf([0, wr[0][3], wr[0][4], wr[0][5], wr[0][6]]) - W[2](...p)) > 0.01) fail('fieldmatch', key, `${W[0]}’s own dash is not drawn at (${p})`);
+        dashes += readField(svg, A[2], key);
+        h = S.html();
+        const b = h.match(new RegExp(`data-opt="${'ABCD'[i]}" ([^>]*)aria-label="([^"]+)"`));
+        if (!b || !/disabled/.test(b[1]) || b[2] !== `${'ABCD'[i]}: ${W[0]}. Not this field`) fail('fieldmatch', key, `the wrong ${W[0]} is not shut`);
+        const was = env.renders; S.choose(i);
+        if (S.gone.size !== wrongs.indexOf(i) + 1 || env.renders !== was) fail('fieldmatch', key, 'a shut choice can be picked again');
+        if (h.includes('id="fmNext"')) fail('fieldmatch', key, 'Next is offered before the field is matched');
+      }
+      S.next(); if (S.ri !== ri) fail('fieldmatch', key, 'Next moves on before the field is matched');
+      S.choose(r.o.indexOf(r.a)); rounds++;
+      const w = S.working();
+      const want = [`Yes, this field is ${A[0]}.`, KIND[kindOf(A[2])], `The dashes lie flat along ${S.EQS[r.a].z}, where ${A[1]} is 0.`, `At (1, 2) it gives slope ${ng(A[2](1, 2))}, the slope of the dash drawn there.`,
+        `${miss ? 0 : 1} matched on the first try this visit.`];
+      if (w.join(' | ') !== want.join(' | ')) fail('fieldmatch', key, `after a match the readout is ${w.join(' | ')}`);
+      const svg = S.svg();
+      if (/data-k="(ring|wrong)"/.test(svg)) fail('fieldmatch', key, 'the wrong dash is still drawn after the match');
+      if (!svg.includes(`, drawn by ${A[0]}">`)) fail('fieldmatch', key, 'the drawing is not named once matched');
+      h = S.html();
+      if (!h.includes('id="fmNext"') || (h.match(/smOpt[^"]*" data-opt="[ABCD]" disabled /g) || []).length !== 4) fail('fieldmatch', key, 'once matched, Next is not offered or a choice is still open');
+      if (!h.includes(`aria-label="${'ABCD'[r.o.indexOf(r.a)]}: ${A[0]}. This field"`)) fail('fieldmatch', key, 'the match is not named on its button');
+      S.next();
+      if (S.ri !== (ri + 1) % 8 || S.solved || S.gone.size || S.last !== null) fail('fieldmatch', key, 'Next does not deal the next field fresh');
+    }
+  });
+  // the hunt, played as a player would: a miss, then first tries round the fields
+  reset(); S.html();
+  if (S.done.size) fail('fieldmatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = miss => { const r = S.R(); if (miss) { S.choose(r.o.findIndex(o => o !== r.a)); S.html(); } S.choose(r.o.indexOf(r.a)); S.html(); S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'catch,xonly'], [false, 'catch,one,xonly,yonly'], [false, 'both,catch,one,xonly,yonly'], [false, 'both,catch,one,three,xonly,yonly']];
+  plan.forEach(([miss, want], i) => { const got = play(miss); if (got !== want) fail('fieldmatch', 'hunt', `field ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Caught a wrong equation at one dash | ✓ Read a field of x alone | ✓ Matched on the first try · Read a field of y alone | ✓ Read a field of x and y') fail('fieldmatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MASTER OF FIELDS / every slope read') fail('fieldmatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (S.streak !== 3 || S.wins !== 3) fail('fieldmatch', 'hunt', `the run is counted as ${S.streak} in a row and ${S.wins} first tries`);
+  if (!S.working().join(' | ').endsWith('3 matched on the first try this visit, 3 in a row.')) fail('fieldmatch', 'hunt', `the count reads ${S.working().join(' | ')}`);
+  reset();
+  return { rounds, misses, dashes };
 })();
 
 /* Which c? The chord workshop turned round. Every number is read back off
@@ -18381,6 +18504,7 @@ console.log(`  picks mixed        ${pad(mixPickNotes.listed.toLocaleString(), 12
 console.log(`  pairs made one     ${pad(composePickNotes.rounds.toLocaleString(), 12)}  (rounds of which-matrix in Order Matters, every matrix read back from its name and its cells and checked against the slip it is named as, BA alone being right and AB always beside it; ${composePickNotes.misses.toLocaleString()} wrong picks checked at their first wrong entry, their ${composePickNotes.reds.toLocaleString()} red cells exactly the entries that differ from BA)`);
 console.log(`  ln y split        ${pad(lnPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-slope-of-ln-y in the log slope workshop, every number read back off its button and checked against the slip it is named as, the right one alone against ln y nudged either side; ${lnPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong piece, and no piece's slope ever the answer)`);
 console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-estimate in the Euler step workshop, every number read back off its button and checked against the slip it is named as, the right one alone against the walk taken again in floats; ${eulerPickNotes.misses.toLocaleString()} wrong picks checked at their first wrong step, and no check ever naming the estimate)`);
+console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
 console.log(`  chord picks       ${pad(chordPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the chord workshop, every number worked again from the curve and the interval alone and checked against the slip it is named as, the right one alone giving a tangent as steep as the chord strictly inside [a, b] in floats; ${chordPickNotes.misses.toLocaleString()} wrong picks explained and checked by putting them into f′, and no check ever naming c)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);

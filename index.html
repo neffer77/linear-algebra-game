@@ -2044,7 +2044,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ EULER STEP WORKSHOP ============ -->
   <div class="screen" id="s-eulerwalk">
     <div class="panel"><h2>👣 Euler Step Workshop</h2><div class="sub">A differential equation gives the slope at every point but not the curve. Euler’s method walks it in straight steps: read the slope where you stand, move h along and h × slope up, and repeat. Pick an equation and a step size, take the steps by hand, and see where the walk lands against the true curve.</div></div>
-    <div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand or pick Euler’s estimate"></div>
+    <div id="ewTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Walk an equation by hand, pick Euler’s estimate, or match a slope field"></div>
     <div class="panel">
       <div id="euBox"></div>
       <div id="ewSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which equation"></div>
@@ -31336,6 +31336,141 @@ const EulerPick = {
     return out;
   }
 };
+/* ---------- Match the field: the Euler step workshop's third mode ----------
+ * A slope field and four equations y′ = f(x, y); one of them drew it. Read
+ * the field the way the equation is built: if the slopes change along a row,
+ * x is in it; if they change up a column, y is in it; where the dashes lie
+ * flat, f is 0. A wrong pick is caught at a point where it and the field
+ * disagree: its own dash is drawn there in blue beside the field's. The
+ * fields come round in a fixed order, so nothing is random, nothing is
+ * saved and there is no clock.
+ */
+const FieldMatch = {
+  EQS:{
+    x:   {s:'y′ = x',     r:'x',     z:'the line x = 0',   f:(x,y)=>x},
+    nx:  {s:'y′ = −x',    r:'−x',    z:'the line x = 0',   f:(x,y)=>-x},
+    xx:  {s:'y′ = x²',    r:'x²',    z:'the line x = 0',   f:(x,y)=>x*x},
+    y:   {s:'y′ = y',     r:'y',     z:'the line y = 0',   f:(x,y)=>y},
+    ny:  {s:'y′ = −y',    r:'−y',    z:'the line y = 0',   f:(x,y)=>-y},
+    yy:  {s:'y′ = y²',    r:'y²',    z:'the line y = 0',   f:(x,y)=>y*y},
+    omy: {s:'y′ = 1 − y', r:'1 − y', z:'the line y = 1',   f:(x,y)=>1-y},
+    xpy: {s:'y′ = x + y', r:'x + y', z:'the line y = −x',  f:(x,y)=>x+y},
+    xmy: {s:'y′ = x − y', r:'x − y', z:'the line y = x',   f:(x,y)=>x-y},
+    xy:  {s:'y′ = xy',    r:'xy',    z:'both axes',        f:(x,y)=>x*y}
+  },
+  ROUNDS:[
+    {a:'x',   o:['x','y','xx','xpy']},
+    {a:'ny',  o:['y','nx','ny','omy']},
+    {a:'xpy', o:['xmy','xpy','xy','x']},
+    {a:'yy',  o:['xx','y','yy','xy']},
+    {a:'xmy', o:['xpy','omy','nx','xmy']},
+    {a:'xy',  o:['xy','yy','xpy','xx']},
+    {a:'omy', o:['ny','omy','y','xmy']},
+    {a:'nx',  o:['x','ny','xx','nx']}
+  ],
+  /* where a wrong equation is checked against the field: the first of these
+     where the two disagree */
+  PTS:[[1,0],[0,1],[1,1],[-1,0],[0,-1],[1,-1],[-1,1],[-1,-1],[2,0],[0,2],[2,1],[1,2],[2,2]],
+  ri:0, gone:new Set(), last:null, solved:false, streak:0, wins:0, touched:false,
+  done:new Set(), kinds:new Set(), caught:false,
+  GOALS:[
+    {id:'one',   t:'Match a field on the first try.', toast:'Matched on the first try',
+     ok:F=>F.wins>=1},
+    {id:'xonly', t:'Match a field whose dashes stay the same all the way up each column: y′ depends on x alone.', toast:'Read a field of x alone',
+     ok:F=>F.kinds.has('x')},
+    {id:'yonly', t:'Match a field whose dashes stay the same all the way along each row: y′ depends on y alone.', toast:'Read a field of y alone',
+     ok:F=>F.kinds.has('y')},
+    {id:'both',  t:'Match a field that changes both along its rows and up its columns.', toast:'Read a field of x and y',
+     ok:F=>F.kinds.has('xy')},
+    {id:'catch', t:'Pick a wrong equation and see the dash where it gives itself away.', toast:'Caught a wrong equation at one dash',
+     ok:F=>F.caught},
+    {id:'three', t:'Match three fields in a row, each on the first try.', toast:'Three in a row',
+     ok:F=>F.streak>=3}
+  ],
+  R(){ return this.ROUNDS[this.ri]; },
+  E(id){ return this.EQS[id]; },
+  /* which of x and y the slope depends on, read off the whole grid */
+  kind(id){
+    const f=this.E(id).f, G=[-2,-1,0,1,2];
+    const vx=G.some(y=>G.some(x=>f(x,y)!==f(0,y))), vy=G.some(x=>G.some(y=>f(x,y)!==f(x,0)));
+    return vx&&vy ? 'xy' : vx ? 'x' : 'y';
+  },
+  /* the first point where a wrong equation and the field part company */
+  odd(w){ const A=this.E(this.R().a).f, W=this.E(w).f; return this.PTS.find(([x,y])=>W(x,y)!==A(x,y)); },
+  pt(x,y){ return `(${neg(x)}, ${neg(y)})`; },
+  KIND:{x:'Its dashes stay the same all the way up each column, so y′ depends on x alone.',
+        y:'Its dashes stay the same all the way along each row, so y′ depends on y alone.',
+        xy:'Its dashes change along the rows and up the columns, so y′ depends on both x and y.'},
+  RULE:'Each dash is the slope y′ at its point. Read along a row: if the dashes change as you move across, x is in the equation. Read up a column: if they change as you climb, y is in it. Where the dashes lie flat, y′ is 0.',
+  working(){
+    const R=this.R(), A=this.E(R.a), out=[];
+    if(this.solved){
+      out.push(`Yes, this field is ${A.s}.`);
+      out.push(this.KIND[this.kind(R.a)]);
+      out.push(`The dashes lie flat along ${A.z}, where ${A.r} is 0.`);
+      out.push(`At (1, 2) it gives slope ${neg(A.f(1,2))}, the slope of the dash drawn there.`);
+    } else if(this.last!==null){
+      const W=this.E(R.o[this.last]), [x,y]=this.odd(R.o[this.last]);
+      out.push(`${'ABCD'[this.last]}, ${W.s}, is not it: at ${this.pt(x,y)} it gives slope ${neg(W.f(x,y))}, but the field’s dash there has slope ${neg(A.f(x,y))}. Its own dash is drawn in blue.`);
+    } else out.push(this.RULE);
+    out.push(`${this.wins} matched on the first try this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* x and y from −2 to 2, one scale both ways, a dash every half */
+  X:x=>150+x*60, Y:y=>130-y*55,
+  dash(x,y,s,k,col,len,w){
+    const f=v=>v.toFixed(2), dx=60, dy=-s*55, n=Math.hypot(dx,dy), ux=len*dx/n, uy=len*dy/n, X=this.X(x), Y=this.Y(y);
+    return `<line data-k="${k}" data-x="${x}" data-y="${y}" x1="${f(X-ux)}" y1="${f(Y-uy)}" x2="${f(X+ux)}" y2="${f(Y+uy)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+  },
+  svg(){
+    const R=this.R(), A=this.E(R.a), f=v=>v.toFixed(2);
+    const odd=!this.solved && this.last!==null ? this.odd(R.o[this.last]) : null;
+    let out=`<svg viewBox="0 0 300 260" style="width:100%;height:auto;display:block" role="img" aria-label="A slope field for x and y from −2 to 2, field ${this.ri+1} of ${this.ROUNDS.length}${this.solved ? `, drawn by ${A.s}` : ''}${odd ? `, with the wrong equation’s dash at ${this.pt(...odd)}` : ''}">`;
+    out+=`<line data-k="xaxis" x1="20" y1="${f(this.Y(0))}" x2="280" y2="${f(this.Y(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<line data-k="yaxis" x1="${f(this.X(0))}" y1="10" x2="${f(this.X(0))}" y2="250" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    for(let i=-4;i<=4;i++) for(let j=-4;j<=4;j++){ const x=i/2, y=j/2; out+=this.dash(x,y,A.f(x,y),'dash',this.solved?FIG_COL.b:FIG_COL.ink,11,2); }
+    if(odd){
+      const [x,y]=odd, W=this.E(R.o[this.last]);
+      out+=`<circle data-k="ring" cx="${f(this.X(x))}" cy="${f(this.Y(y))}" r="17" fill="none" stroke="${FIG_COL.d}" stroke-width="2"/>`;
+      out+=this.dash(x,y,W.f(x,y),'wrong',FIG_COL.a,15,3.5);
+    }
+    return out+`</svg>`;
+  },
+  choose(i){
+    if(this.solved || this.gone.has(i)) return;
+    const R=this.R(); this.touched=true;
+    if(R.o[i]===R.a){
+      this.solved=true; this.last=null;
+      if(this.gone.size===0){ this.wins++; this.streak++; } else this.streak=0;
+      this.kinds.add(this.kind(R.a));
+    } else { this.gone.add(i); this.last=i; this.caught=true; this.streak=0; }
+    EulerWalk.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.gone=new Set(); this.last=null; this.solved=false; EulerWalk.render(); },
+  html(){
+    const R=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Field ${this.ri+1} of ${this.ROUNDS.length}. Which equation drew this slope field?</div>`;
+    out+=`<div id="fmFig">${this.svg()}<div class="figcap">Each dash shows the slope y′ at its point, for x and y from −2 to 2.</div></div>`;
+    out+=`<div id="fmPick" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+R.o.map((id,i)=>{
+      const gone=this.gone.has(i), right=this.solved && id===R.a, L='ABCD'[i], s=this.E(id).s;
+      return `<button class="btn sm ghost smOpt${gone?' miss':''}" data-opt="${L}" ${gone||this.solved?'disabled ':''}onclick="FieldMatch.choose(${i})" aria-label="${L}: ${s}${gone?'. Not this field':right?'. This field':''}" style="margin:0"><b>${L}</b> ${s}</button>`;
+    }).join('')+`</div>`;
+    out+=`<div id="fmRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    if(this.solved) out+=`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="fmNext" onclick="FieldMatch.next()" aria-label="Show the next slope field">Next field →</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="fmGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="fmGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MASTER OF FIELDS','every slope read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- The Euler step workshop: walk a differential equation by hand ----------
    Pick an equation and a step h, then take Euler's steps one at a time: read
    the slope where you stand, move h along and h × slope up. The figure keeps
@@ -31458,11 +31593,11 @@ const EulerWalk = {
   note(){ if(!this.atEnd()) return; const S=this.set(), P=this.walk();
     (this.misses[this.si]=this.misses[this.si]||{})[this.hi]=Math.abs(P[this.N()].y-S.sol(S.end)); },
   render(){
-    document.getElementById('ewTab').innerHTML=[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate']]
+    document.getElementById('ewTab').innerHTML=[['hand','👣 Walk it by hand','Pick an equation and a step, and take Euler’s steps one at a time'],['pick','🎯 Which estimate?','See an equation and a step, and pick which of four numbers is Euler’s estimate'],['field','🧭 Match the field','See a slope field and pick which of four equations drew it']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="EulerWalk.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ewSets','ewHs','ewFig','ewWalkRow','ewRead','ewGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('euBox').innerHTML=pick ? EulerPick.html() : '';
+    document.getElementById('euBox').innerHTML=this.tab==='pick' ? EulerPick.html() : this.tab==='field' ? FieldMatch.html() : '';
     if(pick) return;
     document.getElementById('ewSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="EulerWalk.pick(${i})" aria-label="${s.name}">${s.btn}</button>`).join('');
