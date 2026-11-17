@@ -1098,6 +1098,21 @@ The game is built so that losing teaches you as much as winning.
   reads every number back off its button as an exact fraction, checks it
   against the slip it is named as and that only the right one clears x, and
   works every sum in the readout again.
+
+  **🪟 Cramer's rule** reads the same two rows as columns instead:
+  x·a₁ + y·a₂ = b. det A is the signed area of the blue parallelogram on a₁ and
+  a₂. Put b in place of column 1 and the gold parallelogram on b and a₂ has
+  area det A_x, so x = det A_x / det A, and the same with column 2 gives y. The
+  readout says why: sliding b along a₂ leaves that area the same, and what is
+  left is x times the blue one. Step b's entries from −12 to 12 to put b on
+  the line of a₂ (x = 0, a flat gold parallelogram) or past it (x negative, the
+  gold one dashed and turned the other way). Once x and y are both read for
+  the same b, both equations are checked. A third system has flat columns,
+  det A = 0, and says there is nothing to divide by: no solution or a whole
+  line of them. Six things to find, and nothing saved. `npm test` steps b
+  through every value on all three systems, checks that the two ratios solve
+  the system, and works each parallelogram's area again from the drawing's
+  corners.
 - **↩️ Undo Workshop** — build the matrix that puts a move back. Pick A (a shear, a
   quarter-turn, a flip, a tilt or a squash) and turn the four numbers of B from −2 to 2.
   The readout says where A sends î and ĵ, then works B on each, number by number, and
@@ -2361,7 +2376,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and fifty-four suites, about 6,070 checks, about a minute:
+loop only exists once the page is running. A hundred and fifty-five suites, about 6,110 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2482,6 +2497,7 @@ loop only exists once the page is running. A hundred and fifty-four suites, abou
 | `geopick` | the Tome says the geometric series workshop can be turned round; the workshop opens on adding by hand, and switching to which sum puts away the series, the drawing, the stepper, the readout and the goals and states the rule first; the first four terms are shown with a and r, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked against S = a + rS, shut and told as not the sum, and is not counted; the right pick works a/(1 − r) and checks it, counts (not as a first try after a miss), toasts and deals a new series; a first try counts as one, and the fifth brings TAIL TAMER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `georeach` | the Tome says the geometric series workshop can put x in the ratio; switching to how far puts the staircase away; Σ xⁿ/5ⁿ opens at its centre, where every term is 0, with the interval from −5 to 5 drawn between two open ends; x = 3 works t = 3/5, S₂₀ ≈ 1.4999 and the endless sum 3/2; x = 6 runs away, is found with a toast, and moves the marker right in another colour; the stepper stops at 10; on Σ (x − 2)ⁿ/3ⁿ, x = −1 is an end where the ratio is exactly 1 and the terms swing ±1; on Σ n·xⁿ/2ⁿ, x = 3/2 is the furthest step that adds up, with the sum t/(1 − t)² = 12 and R still 2; on Σ x²ⁿ/4ⁿ the ratio is 1 at x = −2, the root of 4, which brings MASTER OF THE RADIUS; every button is named, twelve bars are drawn, nothing runs off a phone, the staircase comes back, and the save is unchanged |
 | `rowmoves` | the Tome says the cofactor workshop can use row moves; switching to row moves puts the hands-on workshop away; the plain matrix opens with det A = det M and three entries to clear; taking R1 from R2 leaves the tally at 1 and is found with a toast; cleared entries change colour; more additions leave it triangular, det A = −6 is read off the diagonal and the six moves are counted, by additions alone; undo takes the last move back; halving row 1 of the shared-factor matrix doubles the tally to 2; the 0 in the corner calls for a swap, the swap flips the tally, and working it down gives det A = (−2) × 11 = −22 and MASTER OF ROW MOVES; the row being changed cannot be used as well, every button is named, nothing runs off a phone, the hands-on workshop comes back, and the save is unchanged |
+| `elimcramer` | the Tome says the elimination workshop can use Cramer's rule; switching to it puts the row workshop away; the first system is read as columns, det A = −2 is the blue area, and b's place is asked; b in column 1 gives x = −2/(−2) = 1 with the gold parallelogram and a toast, and says why the areas work; b in column 2 gives y = 2 and checks both equations; b = (5, 10) lies on the line of a₂ and gives x = 0; one step on x is −1 and the gold parallelogram is dashed; the flat system has nothing to divide by and brings MASTER OF CRAMER'S RULE; the steppers stop at 12, every button is named, nothing runs off a phone, the row workshop comes back, and the save is unchanged |
 | `ladpick` | the Tome says the ladder workshop can be turned round; the workshop opens on sliding by hand, and switching to which speed puts away the ladders, the drawing, the stepper, the readout and the goals and states the rule first; the ladder is shown with x, x′ and y, and four numbers offered two by two, each named by its value in m/s; a wrong pick is named as its slip, checked against x·x′ + y·y′ = 0, shut and told as not the speed, and is not counted; the right pick works −x·x′/y and checks it, counts (not as a first try after a miss), toasts and deals a new ladder; a first try counts as one, and the fifth brings LADDER READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `imppick` | the Tome says the implicit slope workshop can be turned round; the workshop opens on stepping by hand, and switching to which slope puts away the curves, the drawing, the stepper, the readout and the goals and states the rule first; the curve is shown with its point and a, b and c, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked against 2ax + by + (bx + 2cy)·y′ = 0, shut and told as not the slope, and is not counted; the right pick works the top and bottom out and checks them, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings SLOPE UNVEILER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `covpick` | the Tome says the cover-up workshop can be turned round; the workshop opens on covering up by hand, and switching to which A puts away the fractions, the drawing, the stepper, the keep button, the readout and the goals and states the rule first; the fraction is shown split as A and B, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked against the cleared equation at x = r, shut and told as not A, and is not counted; the right pick works the top and what is left of the bottom out and checks them, counts (not as a first try after a miss), toasts and deals a new fraction; a first try counts as one, and the fifth brings COVER-UP ARTIST; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |

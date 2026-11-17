@@ -1048,7 +1048,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ELIMINATION WORKSHOP ============ -->
   <div class="screen" id="s-elim">
     <div class="panel"><h2>⚖️ Elimination Workshop</h2><div class="sub">Two equations, two unknowns. Change one row at a time: add k times the other row to it, multiply or divide it by k, or swap the rows. Clear x out of one row, then y out of the other, and the answer is left standing. Each row is drawn as its line.</div></div>
-    <div id="elTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Row operations by hand or pick k"></div>
+    <div id="elTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Row operations by hand, pick k or Cramer's rule"></div>
     <div class="panel">
       <div id="epBox"></div>
       <div id="elSys" class="wsModes" role="group" aria-label="Which system"></div>
@@ -15160,7 +15160,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">⚖️ Elimination Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put. Then turn it round: see two rows, and pick which of four numbers k clears x.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Solve two equations by hand with row operations, and watch the lines move while the point where they cross stays put. Then turn it round: see two rows, and pick which of four numbers k clears x. Or read the rows as columns, and find each unknown by Cramer's rule as a ratio of two areas.</div>
          <button class="btn sm" id="tomeElim" style="width:auto;margin-top:8px" onclick="Elim.open()">Open the elimination workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -17927,11 +17927,11 @@ const Elim = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('elTab').innerHTML=[['hand','⚖️ Row operations by hand','Change the rows by hand with row operations'],['pick','🎯 Which k?','See two rows, and pick which of four numbers k clears x']]
+    document.getElementById('elTab').innerHTML=[['hand','⚖️ Row operations by hand','Change the rows by hand with row operations'],['pick','🎯 Which k?','See two rows, and pick which of four numbers k clears x'],['cramer',"🪟 Cramer's rule",'Read the system as columns and find each unknown as a ratio of two areas']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Elim.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['elSys','elRows','elK','elOps','elFig','elRead','elGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('epBox').innerHTML=pick ? ElimPick.html() : '';
+    document.getElementById('epBox').innerHTML=this.tab==='pick' ? ElimPick.html() : this.tab==='cramer' ? ElimCramer.html() : '';
     if(pick) return;
     const rows=this.R(), P=this.point();
     document.getElementById('elSys').innerHTML=this.SYSTEMS.map((S,i)=>
@@ -17972,6 +17972,127 @@ const Elim = {
         Celebrate.banner('ROW REDUCER','every system settled','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Cramer's rule: the elimination workshop's third mode ----------
+   The same two equations read as columns: x·a₁ + y·a₂ = b. det A is the signed
+   area of the parallelogram on a₁ and a₂; put b in x's column and det A_x is
+   the area on b and a₂. Sliding b along a₂ keeps that area, and b is x·a₁
+   plus some of a₂, so the area on b and a₂ is x times the area on a₁ and a₂:
+   x = det A_x / det A. Step b about and watch the gold parallelogram grow,
+   shrink to nothing on a₂'s line, and turn over when x goes negative. The
+   third system's columns lie on one line, so there is nothing to divide by.
+   Every number is an exact fraction. Nothing is saved. */
+const ElimCramer = {
+  SYSTEMS:[
+    {btn:'System 1', A:[[1,2],[3,4]], b:[5,11]},
+    {btn:'System 2', A:[[2,1],[1,-1]], b:[7,-1]},
+    {btn:'Flat columns', A:[[1,2],[2,4]], b:[3,6]}
+  ],
+  LO:-12, HI:12,
+  si:0, b:null, col:null, got:{}, touched:false, done:new Set(),
+  GOALS:[
+    {id:'x', t:'Put b in column 1 and find x as a ratio of two areas.', toast:'x is a ratio of areas',
+     ok:K=>K.col===0 && K.D()!==0},
+    {id:'y', t:'Put b in column 2 to find y the same way.', toast:'y found the same way',
+     ok:K=>K.col===1 && K.D()!==0},
+    {id:'both', t:'Find x and y for the same b, and check them in both equations.', toast:'Both unknowns checked',
+     ok:K=>K.D()!==0 && (K.got[K.key()]||new Set()).size===2},
+    {id:'neg', t:'Move b until x is negative, and see the gold parallelogram turn over.', toast:'A negative x',
+     ok:K=>K.col===0 && K.D()!==0 && K.Dk(0)*K.D()<0},
+    {id:'zero', t:'Move b onto the line of a₂, so that x = 0.', toast:'b on the line of a₂',
+     ok:K=>K.col===0 && K.D()!==0 && K.Dk(0)===0},
+    {id:'flat', t:'Try the system whose columns lie on one line, where there is nothing to divide by.', toast:'det A = 0: no ratio',
+     ok:K=>K.si===2 && K.col!==null}
+  ],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  fs(p,q=1){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; p/=g; q/=g; return q===1 ? neg(p) : `${neg(p)}/${q}`; },
+  amt:n=>n<0 ? `(${neg(n)})` : neg(n),
+  sys(){ return this.SYSTEMS[this.si]; },
+  B(){ if(!this.b) this.b=this.sys().b.slice(); return this.b; },
+  key(){ return this.si+':'+this.B().join(); },
+  cols(){ const A=this.sys().A; return [[A[0][0],A[1][0]],[A[0][1],A[1][1]]]; },
+  // the matrix with b put in column k (k = null leaves A as it is)
+  Mk(k){ const A=this.sys().A, b=this.B(); return A.map((r,i)=>r.map((v,j)=>j===k ? b[i] : v)); },
+  d2:M=>M[0][0]*M[1][1]-M[0][1]*M[1][0],
+  D(){ return this.d2(this.Mk(null)); },
+  Dk(k){ return this.d2(this.Mk(k)); },
+  term(n,v,first){ if(!n) return ''; const m=Math.abs(n), body=(m===1?'':m)+v; return first ? (n<0?'−':'')+body : (n<0?' − ':' + ')+body; },
+  eq(r,c){ const x=this.term(r[0],'x',true), y=this.term(r[1],'y',!x); return `${(x+y)||'0'} = ${neg(c)}`; },
+  vec:v=>`(${neg(v[0])}, ${neg(v[1])})`,
+  dw(M){ return `${this.amt(M[0][0])} × ${this.amt(M[1][1])} − ${this.amt(M[0][1])} × ${this.amt(M[1][0])}`; },
+  // which unknowns have been found for this system and this b
+  note(){ if(this.col===null || !this.D()) return; (this.got[this.key()]||(this.got[this.key()]=new Set())).add(this.col); },
+  pick(i){ this.si=i; this.b=null; this.touched=true; this.note(); Elim.render(); },
+  put(k){ this.col=k; this.touched=true; this.note(); Elim.render(); },
+  move(i,by){ const b=this.B(), v=b[i]+by; if(v<this.LO||v>this.HI) return; b[i]=v; this.touched=true; this.note(); Elim.render(); },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const S=this.sys(), A=S.A, b=this.B(), [a1,a2]=this.cols(), D=this.D(), out=[];
+    out.push(`The system is ${this.eq(A[0],b[0])} and ${this.eq(A[1],b[1])}. In columns that is x·a₁ + y·a₂ = b, with a₁ = ${this.vec(a1)}, a₂ = ${this.vec(a2)} and b = ${this.vec(b)}. Cramer's rule: each unknown is det A with b put in that unknown's column, over det A itself.`);
+    out.push(D ? `det A = ${this.dw(A)} = ${neg(D)}, the signed area of the blue parallelogram on a₁ and a₂.`
+      : `det A = ${this.dw(A)} = 0: a₁ and a₂ lie on one line, so the blue parallelogram is flat and there is nothing to divide by.`+
+        (this.Dk(0)||this.Dk(1) ? ' Here b is off that line, so no x and y reach it: the system has no solution.' : ' Here b lies on that line too, so the system has a whole line of solutions, never just one.'));
+    if(this.col===null){ out.push('Put b in column 1 to find x, or in column 2 to find y.'); return out; }
+    const k=this.col, v=k?'y':'x', M=this.Mk(k), Dk=this.Dk(k), on=k?'a₁ and b':'b and a₂';
+    if(!D){ out.push(`With b in column ${k+1}, det A_${v} = ${this.dw(M)} = ${neg(Dk)}, but det A = 0, so ${v} = det A_${v} / det A cannot be worked out.`); return out; }
+    out.push(`With b in column ${k+1}, A_${v} has columns ${on}, and det A_${v} = ${this.dw(M)} = ${neg(Dk)}, the signed area of the gold parallelogram on ${on}. So ${v} = det A_${v} / det A = ${neg(Dk)}/${this.amt(D)} = ${this.fs(Dk,D)}.`);
+    const keep=k?'a₁':'a₂';
+    let why=`Why the areas: b = x·a₁ + y·a₂, and sliding b along ${keep} leaves the parallelogram on ${on} the same size, so its area is ${v} times the area on a₁ and a₂.`;
+    if(!Dk) why+=` Here ${v} = 0: b lies on the line of ${keep}, and the gold parallelogram is flat.`;
+    else if(Dk*D<0) why+=` Here ${v} is negative, so the gold parallelogram turns the other way round from the blue one.`;
+    out.push(why);
+    if((this.got[this.key()]||new Set()).size===2){
+      const X=[this.Dk(0),D], Y=[this.Dk(1),D], fx=this.fs(...X), fy=this.fs(...Y), p=s=>s.includes('/')||s.startsWith('−') ? `(${s})` : s;
+      out.push(`Check: x = ${fx} and y = ${fy} give ${A.map((r,i)=>`${this.amt(r[0])} × ${p(fx)} + ${this.amt(r[1])} × ${p(fy)} = ${neg(b[i])}`).join(' and ')}, both equations.`);
+    }
+    return out;
+  },
+  /* the plane: a₁, a₂ and b as arrows from the origin, the blue parallelogram
+     on a₁ and a₂, and the gold one with b in the picked column */
+  svg(){
+    const [a1,a2]=this.cols(), b=this.B(), k=this.col;
+    const blue=[[0,0],a1,[a1[0]+a2[0],a1[1]+a2[1]],a2];
+    const gc=k===null ? null : k===0 ? [b,a2] : [a1,b];
+    const gold=gc && [[0,0],gc[0],[gc[0][0]+gc[1][0],gc[0][1]+gc[1][1]],gc[1]];
+    const pts=[...blue,...(gold||[]),b];
+    const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+    const x0=Math.min(...xs)-1, x1=Math.max(...xs)+1, y0=Math.min(...ys)-1, y1=Math.max(...ys)+1;
+    const s=Math.min(320/(x1-x0), 240/(y1-y0)), ox=20+(320-s*(x1-x0))/2-s*x0, oy=20+(240-s*(y1-y0))/2+s*y1;
+    const P=p=>`${+(ox+s*p[0]).toFixed(2)},${+(oy-s*p[1]).toFixed(2)}`;
+    let out=`<svg viewBox="0 0 360 280" data-ox="${+ox.toFixed(4)}" data-oy="${+oy.toFixed(4)}" data-s="${+s.toFixed(4)}" style="width:100%;height:auto;display:block" role="img" aria-label="a₁ = ${this.vec(a1)}, a₂ = ${this.vec(a2)} and b = ${this.vec(b)} as arrows${k===null?'':`, with b in column ${k+1}`}">`;
+    out+=`<line x1="20" y1="${+oy.toFixed(2)}" x2="340" y2="${+oy.toFixed(2)}" stroke="${FIG_COL.axis}" stroke-width="1"/><line x1="${+ox.toFixed(2)}" y1="20" x2="${+ox.toFixed(2)}" y2="260" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+    out+=`<polygon data-k="A" points="${blue.map(P).join(' ')}" fill="${FIG_COL.a}" fill-opacity=".18" stroke="${FIG_COL.a}" stroke-width="1.5"/>`;
+    if(gold) out+=`<polygon data-k="Ak" points="${gold.map(P).join(' ')}" fill="${FIG_COL.b}" fill-opacity=".22" stroke="${FIG_COL.b}" stroke-width="1.5"${this.d2(this.Mk(k))*this.D()<0?' stroke-dasharray="5 3"':''}/>`;
+    for(const [id,v,c] of [['a1',a1,FIG_COL.a],['a2',a2,FIG_COL.a],['b',b,FIG_COL.b]]){
+      const [ex,ey]=P(v).split(',');
+      out+=`<line data-k="${id}" x1="${+ox.toFixed(2)}" y1="${+oy.toFixed(2)}" x2="${ex}" y2="${ey}" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`+
+        `<text x="${+ex+(v[0]>=0?6:-6)}" y="${+ey-6}" text-anchor="${v[0]>=0?'start':'end'}" font-size="14" font-weight="700" fill="${c}">${{a1:'a₁',a2:'a₂',b:'b'}[id]}</text>`;
+    }
+    return out+`</svg>`;
+  },
+  html(){
+    const b=this.B(), D=this.D();
+    let out=`<div class="small" style="margin:2px 0 6px">Read the system as columns, x·a₁ + y·a₂ = b. Each unknown is a ratio of determinants: b put in its column on top, A underneath. Each determinant is the signed area of a parallelogram.</div>`;
+    out+=`<div id="ecSys" class="wsModes" role="group" aria-label="Which system">`+this.SYSTEMS.map((S,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="ElimCramer.pick(${i})" aria-label="${S.btn}: ${this.eq(S.A[0],S.b[0])} and ${this.eq(S.A[1],S.b[1])}">${S.btn}</button>`).join('')+`</div>`;
+    out+=`<div id="ecCol" class="wsModes" role="group" aria-label="Where b goes">`+[[null,'A as it is','Leave A as it is'],[0,'b in column 1','Put b in column 1, to find x'],[1,'b in column 2','Put b in column 2, to find y']].map(([k,t,l])=>
+      `<button class="btn sm ghost" aria-pressed="${k===this.col}" onclick="ElimCramer.put(${k})" aria-label="${l}">${t}</button>`).join('')+`</div>`;
+    out+=`<div id="ecFig">${this.svg()}<div class="figcap">a₁ and a₂ in blue, with their parallelogram; b in gold, and the gold parallelogram with b in the column you picked. It is dashed when it turns the other way round.</div></div>`;
+    out+=`<div id="ecB" class="wsMat dtVecs" style="grid-template-columns:auto 1fr 1fr;max-width:300px" role="group" aria-label="Move b"><b class="dtName">b</b>`+[0,1].map(i=>
+      `<div class="wsCell"><button id="ecB${i}Lo" onclick="ElimCramer.move(${i},-1)" aria-label="Lower b's ${i?'second':'first'} entry"${b[i]<=this.LO?' disabled':''}>−</button><b aria-label="b's ${i?'second':'first'} entry: ${neg(b[i])}">${neg(b[i])}</b><button id="ecB${i}Hi" onclick="ElimCramer.move(${i},1)" aria-label="Raise b's ${i?'second':'first'} entry"${b[i]>=this.HI?' disabled':''}>+</button></div>`).join('')+`</div>`;
+    out+=`<div id="ecRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div id="ecGoalPanel" style="margin-top:8px"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ecGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}"><i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length) Celebrate.banner("MASTER OF CRAMER'S RULE",'every ratio read','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

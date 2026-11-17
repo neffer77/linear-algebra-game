@@ -5803,6 +5803,137 @@ const cofMovesNotes = (() => {
   return { presses, tris, shut, hints };
 })();
 
+/* Cramer's rule, the elimination workshop's third mode. Every b the steppers
+   allow on each of its three systems, with b in neither column, column 1 and
+   column 2. Each sentence is worked again here: det A and det A with b put in
+   the picked column from their own entries, the ratio as an exact fraction,
+   which must solve the system, the reason the areas work, and the check that
+   puts x and y back into both equations. The drawing is read back too: the
+   corners of both parallelograms are turned back into points of the plane,
+   their areas measured by the shoelace rule, and the gold one over the blue
+   one must be the unknown, dashed exactly when it is negative. */
+const elimCramerNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { a: 'blue', b: 'gold', c: 'green', d: 'red', dim: 'dim', ink: 'ink', grid: 'grid', axis: 'axis' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Elim = {render(){ env.renders++; }};" +
+    cut('const ElimCramer = {', '/* ============ UNDO WORKSHOP') + 'return ElimCramer;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const am = n => (n < 0 ? `(${ng(n)})` : ng(n));
+  const rd = s => { const m = s.replace(/[()]/g, '').replace(/−/g, '-').match(/^(-?\d+)(?:\/(\d+))?$/); return m ? fr(+m[1], m[2] ? +m[2] : 1) : null; };
+  const SYS = [{ A: [[1, 2], [3, 4]], b: [5, 11] }, { A: [[2, 1], [1, -1]], b: [7, -1] }, { A: [[1, 2], [2, 4]], b: [3, 6] }];
+  if (S.SYSTEMS.length !== 3 || S.SYSTEMS.some((s, i) => JSON.stringify([s.A, s.b]) !== JSON.stringify([SYS[i].A, SYS[i].b])))
+    fail('elimcramer', 'systems', 'the three systems are not x + 2y = 5 and 3x + 4y = 11, 2x + y = 7 and x − y = −1, and the flat x + 2y = 3 and 2x + 4y = 6');
+  if (S.si !== 0 || S.col !== null || S.b !== null || S.done.size || S.touched) fail('elimcramer', 'open', 'the mode does not open on the first system with A as it is and nothing found');
+  const term = (n, v, first) => { if (!n) return ''; const m = Math.abs(n), body = (m === 1 ? '' : m) + v; return first ? (n < 0 ? '−' : '') + body : (n < 0 ? ' − ' : ' + ') + body; };
+  const eqn = (r, c) => { const x = term(r[0], 'x', true), y = term(r[1], 'y', !x); return `${(x + y) || '0'} = ${ng(c)}`; };
+  const shoe = P => { let s = 0; for (let i = 0; i < P.length; i++) { const [x1, y1] = P[i], [x2, y2] = P[(i + 1) % P.length]; s += x1 * y2 - x2 * y1; } return s / 2; };
+  let states = 0, ratios = 0, flats = 0, checks = 0, drawn = 0;
+  SYS.forEach((Q, si) => {
+    S.pick(si);
+    if (S.B().join() !== Q.b.join()) fail('elimcramer', `system ${si + 1}`, 'picking a system does not put its own b back');
+    for (let b0 = -12; b0 <= 12; b0++) for (let b1 = -12; b1 <= 12; b1++) for (const col of [null, 0, 1]) {
+      S.b = [b0, b1]; S.col = col; S.note(); states++;
+      const key = `system ${si + 1}, b = (${b0}, ${b1}), b in ${col === null ? 'neither column' : 'column ' + (col + 1)}`;
+      const A = Q.A, b = [b0, b1], a1 = [A[0][0], A[1][0]], a2 = [A[0][1], A[1][1]];
+      const D = A[0][0] * A[1][1] - A[0][1] * A[1][0], Dx = b0 * A[1][1] - A[0][1] * b1, Dy = A[0][0] * b1 - b0 * A[1][0];
+      const w = S.working();
+      if (w[0] !== `The system is ${eqn(A[0], b0)} and ${eqn(A[1], b1)}. In columns that is x·a₁ + y·a₂ = b, with a₁ = (${ng(a1[0])}, ${ng(a1[1])}), a₂ = (${ng(a2[0])}, ${ng(a2[1])}) and b = (${ng(b0)}, ${ng(b1)}). Cramer's rule: each unknown is det A with b put in that unknown's column, over det A itself.`)
+        fail('elimcramer', key, `the system is not read as columns: ${w[0]}`);
+      const dA = `${am(A[0][0])} × ${am(A[1][1])} − ${am(A[0][1])} × ${am(A[1][0])}`;
+      if (D) { if (w[1] !== `det A = ${dA} = ${ng(D)}, the signed area of the blue parallelogram on a₁ and a₂.`) fail('elimcramer', key, `det A is not worked: ${w[1]}`); }
+      else {
+        flats++;
+        const on = !Dx && !Dy;
+        if (w[1] !== `det A = ${dA} = 0: a₁ and a₂ lie on one line, so the blue parallelogram is flat and there is nothing to divide by.` + (on ? ' Here b lies on that line too, so the system has a whole line of solutions, never just one.' : ' Here b is off that line, so no x and y reach it: the system has no solution.'))
+          fail('elimcramer', key, `a flat A is not told as one: ${w[1]}`);
+        // a whole line of solutions exactly when b is a multiple of a₁
+        const mult = a1[0] * b1 - a1[1] * b0 === 0;
+        if (on !== mult) fail('elimcramer', key, 'b is said to be on the line of the columns when it is not, or off it when it is on');
+      }
+      if (col === null) { if (w[2] !== 'Put b in column 1 to find x, or in column 2 to find y.' || w.length !== 3) fail('elimcramer', key, 'with b in neither column, the readout does not ask where to put it'); }
+      else {
+        const v = col ? 'y' : 'x', Dk = col ? Dy : Dx, M = col ? [[A[0][0], b0], [A[1][0], b1]] : [[b0, A[0][1]], [b1, A[1][1]]], on = col ? 'a₁ and b' : 'b and a₂';
+        const dM = `${am(M[0][0])} × ${am(M[1][1])} − ${am(M[0][1])} × ${am(M[1][0])}`;
+        if (!D) {
+          if (w[2] !== `With b in column ${col + 1}, det A_${v} = ${dM} = ${ng(Dk)}, but det A = 0, so ${v} = det A_${v} / det A cannot be worked out.` || w.length !== 3) fail('elimcramer', key, `a flat A is still divided by: ${w[2]}`);
+        } else {
+          ratios++;
+          const m = w[2].match(new RegExp(`^With b in column ${col + 1}, A_${v} has columns ${on}, and det A_${v} = (.+) = (\\S+), the signed area of the gold parallelogram on ${on}\\. So ${v} = det A_${v} / det A = (\\S+)\\/(\\S+) = (\\S+)\\.$`));
+          if (!m || m[1] !== dM || m[2] !== ng(Dk) || m[3] !== ng(Dk) || m[4] !== am(D) || m[5] !== fst(fr(Dk, D))) fail('elimcramer', key, `the ratio is not det A_${v} over det A: ${w[2]}`);
+          // the ratio must solve the system
+          const X = fr(Dx, D), Y = fr(Dy, D);
+          for (let i = 0; i < 2; i++) { const l = fr(A[i][0] * X[0] * Y[1] + A[i][1] * Y[0] * X[1], X[1] * Y[1]); if (l[0] !== b[i] * l[1]) fail('elimcramer', key, `x = ${fst(X)} and y = ${fst(Y)} do not solve equation ${i + 1}`); }
+          const keep = col ? 'a₁' : 'a₂';
+          let why = `Why the areas: b = x·a₁ + y·a₂, and sliding b along ${keep} leaves the parallelogram on ${on} the same size, so its area is ${v} times the area on a₁ and a₂.`;
+          if (!Dk) why += ` Here ${v} = 0: b lies on the line of ${keep}, and the gold parallelogram is flat.`;
+          else if (Dk * D < 0) why += ` Here ${v} is negative, so the gold parallelogram turns the other way round from the blue one.`;
+          if (w[3] !== why) fail('elimcramer', key, `the reason for the areas is not given right: ${w[3]}`);
+          const both = (S.got[S.key()] || new Set()).size === 2;
+          if (w.length !== (both ? 5 : 4)) fail('elimcramer', key, `the readout has ${w.length} sentences`);
+          if (both) { checks++;
+            const ms = [...w[4].matchAll(/(\(?−?\d+\)?) × (\(?−?\d+(?:\/\d+)?\)?) \+ (\(?−?\d+\)?) × (\(?−?\d+(?:\/\d+)?\)?) = (−?\d+)/g)];
+            if (ms.length !== 2 || !w[4].startsWith(`Check: x = ${fst(X)} and y = ${fst(Y)} give `) || ms.some((q, i) => { const p = rd(q[1])[0], xx = rd(q[2]), r = rd(q[3])[0], yy = rd(q[4]);
+              const l = fr(p * xx[0] * yy[1] + r * yy[0] * xx[1], xx[1] * yy[1]); return l[1] !== 1 || l[0] !== +q[5].replace('−', '-') || l[0] !== b[i] || p !== A[i][0] || r !== A[i][1]; }))
+              fail('elimcramer', key, `the check does not put x and y back into both equations: ${w[4]}`);
+          }
+        }
+      }
+      // the drawing
+      const svg = S.svg(), ox = +svg.match(/data-ox="([-\d.]+)"/)[1], oy = +svg.match(/data-oy="([-\d.]+)"/)[1], s = +svg.match(/data-s="([-\d.]+)"/)[1];
+      const back = t => t.trim().split(' ').map(p => { const [x, y] = p.split(',').map(Number); return [(x - ox) / s, (oy - y) / s]; });
+      const near = (P, W) => P.length === W.length && P.every((p, i) => Math.abs(p[0] - W[i][0]) < 0.01 && Math.abs(p[1] - W[i][1]) < 0.01);
+      const pb = svg.match(/data-k="A" points="([^"]+)"/), pg = svg.match(/data-k="Ak" points="([^"]+)"[^>]*?(stroke-dasharray="5 3")?\/>/);
+      const blue = pb && back(pb[1]);
+      if (!blue || !near(blue, [[0, 0], a1, [a1[0] + a2[0], a1[1] + a2[1]], a2])) fail('elimcramer', key, 'the blue parallelogram is not on a₁ and a₂');
+      if (blue && Math.abs(shoe(blue) - D) > 0.05) fail('elimcramer', key, `the blue parallelogram's area is ${shoe(blue)}, not det A = ${D}`);
+      if ((col === null) !== !pg) fail('elimcramer', key, 'the gold parallelogram is drawn with b in no column, or missing with b in one');
+      if (pg) { drawn++;
+        const g = back(pg[1]), c0 = col ? a1 : b, c1 = col ? b : a2, Dk = col ? Dy : Dx;
+        if (!near(g, [[0, 0], c0, [c0[0] + c1[0], c0[1] + c1[1]], c1])) fail('elimcramer', key, 'the gold parallelogram is not on the columns of A with b put in');
+        if (Math.abs(shoe(g) - Dk) > 0.05) fail('elimcramer', key, `the gold parallelogram's area is ${shoe(g)}, not ${Dk}`);
+        if (D && Math.abs(shoe(g) * D - Dk * shoe(blue)) > 0.05 * (Math.abs(D) + Math.abs(Dk))) fail('elimcramer', key, 'gold over blue is not the unknown');
+        if (!!pg[2] !== (Dk * D < 0)) fail('elimcramer', key, 'the gold parallelogram is dashed when it should not be, or not when it turns over');
+      }
+      for (const m of svg.matchAll(/points="([^"]+)"/g)) for (const p of m[1].split(' ')) { const [x, y] = p.split(',').map(Number); if (x < 19.9 || x > 340.1 || y < 19.9 || y > 260.1) fail('elimcramer', key, `a corner at ${p} runs off the drawing`); }
+      for (const [id, v] of [['a1', a1], ['a2', a2], ['b', b]]) {
+        const l = svg.match(new RegExp(`data-k="${id}" x1="([-\\d.]+)" y1="([-\\d.]+)" x2="([-\\d.]+)" y2="([-\\d.]+)"`));
+        if (!l || !near(back(`${l[1]},${l[2]} ${l[3]},${l[4]}`), [[0, 0], v])) fail('elimcramer', key, `the arrow ${id} is not drawn from 0 to ${v}`);
+      }
+      const h = S.html();
+      if (/id="ecB0Lo"[^>]*disabled/.test(h) !== (b0 === -12) || /id="ecB1Hi"[^>]*disabled/.test(h) !== (b1 === 12)) fail('elimcramer', key, 'a stepper is shut away from its end, or open at it');
+    }
+  });
+  // the hunt, played through the presses a player would make
+  S.si = 0; S.b = null; S.col = null; S.got = {}; S.done = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  S.html();
+  if (S.done.size) fail('elimcramer', 'hunt', 'a goal is found before anything is pressed');
+  const go = steps => { for (const [fn, ...a] of steps) { S[fn](...a); S.html(); } return [...S.done].sort().join(); };
+  const plan = [[[['put', 0]], 'x'], [[['put', 1]], 'both,x,y'], [[['put', 0], ['move', 1, -1]], 'both,x,y,zero'],
+    [[['move', 1, -1]], 'both,neg,x,y,zero'], [[['pick', 2]], 'both,flat,neg,x,y,zero']];
+  plan.forEach(([steps, want], i) => { const got = go(steps); if (got !== want) fail('elimcramer', 'hunt', `step ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ x is a ratio of areas | ✓ y found the same way · Both unknowns checked | ✓ b on the line of a₂ | ✓ A negative x') fail('elimcramer', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== "MASTER OF CRAMER'S RULE / every ratio read") fail('elimcramer', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  { // moving b to a new place starts its unknowns again
+    S.got = {}; S.pick(0); S.put(0); S.put(1); S.move(0, 1); S.put(0);
+    if ((S.got[S.key()] || new Set()).size !== 2 || S.working().length !== 5) fail('elimcramer', 'hunt', 'both unknowns are not counted for the b they were found with');
+    S.got = {}; S.pick(0); S.put(0); S.move(0, 1); S.move(0, -1);
+    if (S.working().length !== 4) fail('elimcramer', 'hunt', 'only x was found, but the check is given');
+    for (let i = 0; i < 30; i++) S.move(0, -1); if (S.B()[0] !== -12) fail('elimcramer', 'hunt', 'the stepper does not stop at −12');
+  }
+  S.si = 0; S.b = null; S.col = null; S.got = {}; S.done = new Set(); S.touched = false;
+  return { states, ratios, flats, checks, drawn };
+})();
+
 /* Which speed? The pick-the-speed round in the ladder workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from x, y, L and x′ alone.
@@ -17552,6 +17683,7 @@ console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  power series stepped ${pad(geoReachNotes.steps.toLocaleString(), 12)}  (every x the how-far mode allows on its four power series, each sentence worked again: ${geoReachNotes.sums} sums inside against twenty and two thousand terms, ${geoReachNotes.edges} ends where the ratio is 1, ${geoReachNotes.runs} steps outside where the terms run away)`);
 console.log(`  row moves pressed ${pad(cofMovesNotes.presses.toLocaleString(), 15)}  (random runs of swaps, scalings and additions on the cofactor workshop's three matrices, det A = tally × det M checked after every one with det M worked by Sarrus' rule; ${cofMovesNotes.tris.toLocaleString()} triangular matrices read off their diagonals, ${cofMovesNotes.hints} zeros on the diagonal pointed to a swap, ${cofMovesNotes.shut} moves shut for running an entry too far)`);
+console.log(`  Cramer ratios read ${pad(elimCramerNotes.ratios.toLocaleString(), 16)}  (every b the steppers allow on the elimination workshop's three systems, b put in each column: every det worked again, each ratio checked to solve its system, ${elimCramerNotes.drawn.toLocaleString()} gold parallelograms read back off the drawing and measured by the shoelace rule against the blue one, ${elimCramerNotes.flats.toLocaleString()} flat states told apart into no solution or a whole line, ${elimCramerNotes.checks.toLocaleString()} checks put back into both equations)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);

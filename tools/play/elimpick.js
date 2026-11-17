@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see two rows, and pick which of four numbers k clears x\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeElim');
     t.eq('the elimination workshop opens', await t.screen(), 's-elim');
-    t.eq('row operations by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('row operations by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which k\?/);
-    t.eq('which k is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which k is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the systems, rows, k, operations, drawing, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('epBox').innerText)).startsWith(
