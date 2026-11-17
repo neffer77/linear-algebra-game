@@ -1498,6 +1498,22 @@ The game is built so that losing teaches you as much as winning.
   there is no clock. `npm test` reads every arrow back off its button, checks
   it against the slip it is named as and that only the right one is crushed,
   and works every dot product in the readout again.
+
+  **🧩 Match the crush** shows four flat matrices and four arrows, numbered
+  in another order, each arrow in its own pane. Each matrix crushes exactly
+  one of the arrows to ⟨0, 0⟩; match them up and check all four at once. The
+  rounds are built so the easy guesses mislead: an arrow that lies along a
+  matrix's own row, which that matrix can never crush, an arrow along one
+  matrix's column line that another matrix crushes, and a matrix that crushes
+  its own column line, so doing it twice crushes everything. A slip rings the
+  arrow picked and multiplies it out with the matrix's own numbers, then
+  swaps the first row's entries to show the arrow it does crush. Once all four
+  are matched, each pane gets its matrix's letter and that matrix's column
+  line in gold. Six rounds and six things to find. Nothing is saved, and there
+  is no clock. `npm test` finds every crushed arrow again by trying every
+  whole arrow, checks each is crushed by one matrix alone, matches every
+  matrix wrong in all three ways and checks the slip, and checks each column
+  line is drawn through its matrix's own outputs.
 - **📐 Gram–Schmidt Workshop** — u₁ is fixed and u₂ leans along it. Take c
   copies of u₁ away, half a copy at a time, and watch what is left, w = u₂ − c·u₁,
   turn in red. The readout works w and w · u₁ at every step and says which way w
@@ -2647,7 +2663,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and sixty-eight suites, about 6,390 checks, about a minute:
+loop only exists once the page is running. A hundred and sixty-nine suites, about 6,430 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2765,6 +2781,7 @@ loop only exists once the page is running. A hundred and sixty-eight suites, abo
 | `crossturn` | the Tome says the cross product can be called in or out; the mode is pressed and turning v by hand steps aside; the task and the rule come first, with four lettered pairs, no turn drawn and the check shut until all four are called; a set of calls with a slip rings only that pair and works its third part, giving no turn away; changing it clears its ring, and the fix is explained with the areas, draws each turn and arrow, shuts the calls and is not a first check; a swap, arrows on one line and a wide turn are explained; three first checks in a row are counted; every goal can be found and the last brings a banner; every button and the drawing are named, it fits a phone, turning v by hand comes back, and nothing is saved |
 | `undopick` | the Tome says the undo workshop can be turned round; the workshop opens on building B by hand, and switching to which A⁻¹ puts away the matrices, B, the drawing, the readout and the goals and states the rule first; A is drawn, and four matrices offered two by two, each named by its rows; a wrong pick is named as its slip, followed through the arrow that does not come home beside A⁻¹ worked from the rule, shut and told as not A⁻¹, and is not counted; the right pick sends both arrows home, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings INVERSE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `nullpick` | the Tome says the null space workshop can be turned round; the workshop opens on setting v by hand, and switching to which is crushed puts away the matrices, v, the drawing, the readout and the goals and states the rule first; a flat A is drawn, and four arrows offered two by two, each named by its entries; a wrong pick is named as its slip, dotted with both rows to show where A sends it, shut and told as not crushed, and is not counted; the right pick dots to 0 with both rows, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings NULL SPACE READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `kermatch` | the Tome says the crushes can be matched; switching to match the crush puts away the matrices, v, the drawing, the readout and the goals and states the rule first; four panes each hold an arrow and the line it spans, four flat matrices are drawn as matrices, and no letter or column line gives the answer away; the check stays shut until all four are matched; a check with A and C swapped rings the two arrows picked, multiplies each out, names a column line taken for the crush, and finds nothing; changing a match clears its ring, and the fix checks right without counting as a first check, gives every pane its matrix's letter and column line and finds the column line and the fix with a toast; three first checks in a row explain an arrow along a row and a matrix that crushes its own outputs, find every goal and bring CRUSH MATCHER; every button is named, the drawing is read out, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `grampick` | the Tome says the Gram–Schmidt workshop can be turned round; the workshop opens on taking copies by hand, and switching to which c puts away the pairs, the drawing, the stepper, the readout and the goals and states the rule first; u₁ and u₂ are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked through w · u₁ = u₂ · u₁ − c × (u₁ · u₁) to show which way w leans, shut and told as not c, and is not counted; the right pick brings w · u₁ to 0 and shows w, counts (not as a first try after a miss), toasts and deals a new pair; a first try counts as one, and the fifth brings SHADOW READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `cofpick` | the Tome says the cofactor workshop can be turned round; the workshop opens on expanding by hand, and switching to which det A puts away the matrices, the grid, the lines, the readout and the goals and states the rule first; A is shown three by three and named row by row, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, the quickest line is pointed out, and it is shut and told as not det A, and is not counted; the right pick works det A along the quickest line, minor by minor, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings DETERMINANT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `elimpick` | the Tome says the elimination workshop can be turned round; the workshop opens on row operations by hand, and switching to which k puts away the systems, the rows, k, the operations, the drawing, the readout and the goals and states the rule first; both rows are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked through row 2's x coefficient, shut and told as not clearing x, and is not counted; the right pick clears x, reads off y and then x, counts (not as a first try after a miss), toasts and deals new rows; a first try counts as one, and the fifth brings ROW CLEARER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |

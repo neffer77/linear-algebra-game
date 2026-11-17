@@ -1319,7 +1319,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ NULL SPACE WORKSHOP ============ -->
   <div class="screen" id="s-null">
     <div class="panel"><h2>🕳️ Null Space Workshop</h2><div class="sub">A matrix sends each arrow v to a new arrow Av. Some matrices crush a whole line of arrows down to ⟨0, 0⟩, and those are the matrices that lose a direction. Set v by hand, watch where it lands, and hunt for the arrows that vanish.</div></div>
-    <div id="nsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set v by hand or pick the crushed arrow"></div>
+    <div id="nsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Set v by hand, pick the crushed arrow, or match them up"></div>
     <div class="panel">
       <div id="npBox"></div>
       <div id="nsSets" class="wsModes" role="group" aria-label="Which matrix"></div>
@@ -15481,7 +15481,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🕳️ Null Space Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns. Then turn it round: see a flat A, and pick which of four arrows it crushes.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Set an arrow by hand and watch a matrix move it. Hunt for the arrows a flat matrix crushes to ⟨0, 0⟩, and see why rank plus nullity always counts the columns. Then turn it round: see a flat A, and pick which of four arrows it crushes. Or match them up: four flat matrices, four arrows, and each matrix to the arrow it crushes.</div>
          <button class="btn sm" id="tomeNull" style="width:auto;margin-top:8px" onclick="Kernel.open()">Open the null space workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -22346,11 +22346,11 @@ const Kernel = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('nsTab').innerHTML=[['hand','🕳️ Set v by hand','Set v by hand and hunt for crushed arrows'],['pick','🎯 Which is crushed?','See A, and pick which of four arrows it crushes to ⟨0, 0⟩']]
+    document.getElementById('nsTab').innerHTML=[['hand','🕳️ Set v by hand','Set v by hand and hunt for crushed arrows'],['pick','🎯 Which is crushed?','See A, and pick which of four arrows it crushes to ⟨0, 0⟩'],['match','🧩 Match the crush','See four flat matrices and four arrows, and match each matrix to the arrow it crushes']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Kernel.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['nsSets','nsVec','nsFig','nsRead','nsGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('npBox').innerHTML=pick ? NullPick.html() : '';
+    document.getElementById('npBox').innerHTML=!pick ? '' : this.tab==='pick' ? NullPick.html() : KerMatch.html();
     if(pick) return;
     document.getElementById('nsSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Kernel.pick(${i})" aria-label="${s.btn}: rows ${this.v(s.A[0])} and ${this.v(s.A[1])}">${s.btn}</button>`).join('');
@@ -22373,6 +22373,176 @@ const Kernel = {
         Celebrate.banner('MASTER OF THE NULL SPACE','every crushed line found','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Match the crush: the null space workshop's third mode ----------
+   Four flat matrices and four arrows, numbered and in another order. Each
+   matrix crushes exactly one of the arrows to ⟨0, 0⟩, and the player matches
+   them. The rounds are chosen so the easy guesses mislead: an arrow that
+   lies along one matrix's own row, which that matrix can never crush, and an
+   arrow along one matrix's column line, where its outputs land, crushed by
+   another. One matrix crushes its own column line, so doing it twice
+   crushes everything. A slip is worked out from the matrix's own entries.
+   Nothing is saved. */
+const KerMatch = {
+  // each round: four flat matrices, and which matrix crushes each of arrows 1 to 4
+  ROUNDS:[
+    {M:[[[-2,1],[-2,1]], [[3,1],[3,1]], [[-2,-1],[-4,-2]], [[2,3],[-2,-3]]],   order:[2,0,3,1]},
+    {M:[[[-2,-1],[-2,-1]], [[-1,2],[-1,2]], [[-1,-1],[-2,-2]], [[-1,-3],[-1,-3]]], order:[3,1,0,2]},
+    {M:[[[1,0],[-1,0]], [[-1,-2],[1,2]], [[-1,1],[-1,1]], [[-1,2],[2,-4]]],   order:[1,3,0,2]},
+    {M:[[[2,-1],[2,-1]], [[1,1],[-2,-2]], [[-1,-2],[-2,-4]], [[-2,3],[-2,3]]], order:[2,3,1,0]},
+    {M:[[[2,-3],[-2,3]], [[1,1],[-1,-1]], [[3,-1],[3,-1]], [[1,3],[1,3]]],     order:[0,2,1,3]},
+    {M:[[[3,2],[3,2]], [[0,-1],[0,-2]], [[1,-1],[1,-1]], [[-2,-3],[-2,-3]]],   order:[3,0,2,1]}
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Match all four matrices right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'row',   t:'Match a round where an arrow lies along a matrix\'s own row.', toast:'A row is never crushed',
+     ok:K=>K.kinds.has('row')},
+    {id:'col',   t:'Match a round where an arrow lies along a matrix\'s column line, crushed by another.', toast:'Where A lands is not what A crushes',
+     ok:K=>K.kinds.has('col')},
+    {id:'self',  t:'Match a matrix that crushes its own column line.', toast:'A matrix that crushes its own outputs',
+     ok:K=>K.kinds.has('self')},
+    {id:'fix',   t:'Check a matching with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Match three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Each matrix here is flat: its second row is a multiple of its first, ⟨a, b⟩. It crushes v to ⟨0, 0⟩ exactly when v dots to 0 with that row, so it crushes the line through ⟨−b, a⟩: swap the entries and change one sign. Its outputs all land on another line, its column line. Match each matrix to the arrow it crushes.',
+  L:'ABCD',
+  R(){ return this.ROUNDS[this.ri]; },
+  g(a,b){ return b ? this.g(b,a%b) : Math.abs(a); },
+  /* a direction in lowest terms, pointing right, or straight up */
+  dir([x,y]){ const d=this.g(x,y); x/=d; y/=d; if(x<0 || (x===0 && y<0)){ x=-x; y=-y; } return [x===0?0:x, y===0?0:y]; },
+  par(u,v){ return u[0]*v[1]-u[1]*v[0]===0; },
+  v([x,y]){ return `⟨${neg(x)}, ${neg(y)}⟩`; },
+  app(A,[x,y]){ return [A[0][0]*x+A[0][1]*y, A[1][0]*x+A[1][1]*y]; },
+  nul(A){ return this.dir([-A[0][1],A[0][0]]); },
+  row(A){ return this.dir(A[0]); },
+  col(A){ return this.dir(A[0][0] ? [A[0][0],A[1][0]] : [A[0][1],A[1][1]]); },
+  /* arrow n (0 to 3) is the one crushed by matrix order[n] */
+  owner(n){ return this.R().order[n]; },
+  truth(i){ return this.R().order.indexOf(i); },
+  W(n){ return this.nul(this.R().M[this.owner(n)]); },
+  /* what a round holds: an arrow along a matrix's own row, an arrow along a
+     matrix's column line that another matrix crushes, and a matrix that
+     crushes its own column line */
+  rows(){ const out=[]; for(let n=0;n<4;n++) for(let i=0;i<4;i++) if(this.par(this.W(n),this.row(this.R().M[i]))) out.push([n,i]); return out; },
+  cols(){ const out=[]; for(let n=0;n<4;n++) for(let i=0;i<4;i++) if(this.truth(i)!==n && this.par(this.W(n),this.col(this.R().M[i]))) out.push([n,i]); return out; },
+  selfs(){ return [0,1,2,3].filter(i=>{ const A=this.R().M[i]; return this.par(this.nul(A),this.col(A)); }); },
+  tags(){ const t=[]; if(this.rows().length) t.push('row'); if(this.cols().length) t.push('col'); if(this.selfs().length) t.push('self'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  par1(c){ return `(${neg(c)})`; },
+  /* A times w, worked one entry at a time */
+  times(A,w){ const p=this.app(A,w);
+    return `${this.v(w)} = ⟨${this.par1(A[0][0])}${this.par1(w[0])} + ${this.par1(A[0][1])}${this.par1(w[1])}, ${this.par1(A[1][0])}${this.par1(w[0])} + ${this.par1(A[1][1])}${this.par1(w[1])}⟩ = ${this.v(p)}`; },
+  working(){
+    const M=this.R().M, out=[];
+    if(this.solved){
+      out.push('Yes: all four are matched.');
+      const rs=this.rows(), cs=this.cols(), ss=this.selfs();
+      if(rs.length){ const [n,i]=rs[0], A=M[i], w=this.W(n);
+        out.push(`Arrow ${n+1}, ${this.v(w)}, lies along ${this.L[i]}'s own row, so ${this.L[i]}${this.times(A,w)}: a row dotted with itself is never 0. The crushed line always stands square to the rows.`); }
+      if(cs.length){ const [n,i]=cs[0], A=M[i], w=this.W(n);
+        out.push(`Arrow ${n+1}, ${this.v(w)}, is ${this.L[i]}'s column line, where every output of ${this.L[i]} lands, yet ${this.L[i]} sends it to ${this.v(this.app(A,w))}: it is ${this.L[this.owner(n)]} that crushes it. Where a matrix lands and what it crushes are different lines.`); }
+      if(ss.length){ const i=ss[0];
+        out.push(`${this.L[i]} crushes ${this.v(this.nul(M[i]))}, the very line its outputs land on, so doing ${this.L[i]} twice crushes everything: ${this.L[i]}² = 0.`); }
+      out.push(`The column lines, where the outputs land: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.v(this.col(M[i]))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const A=M[i], k=this.calls[i], w=this.W(k), n=this.truth(i), [a,b]=A[0], z=[-b,a];
+        const why = this.par(w,this.row(A)) ? ` That arrow lies along ${this.L[i]}'s own row.` : this.par(w,this.col(A)) ? ` That arrow is ${this.L[i]}'s column line, where its outputs land, not what it crushes.` : '';
+        const hit = z[0]===this.W(n)[0] && z[1]===this.W(n)[1] ? `that is arrow ${n+1}` : `it lies along arrow ${n+1}, ${this.v(this.W(n))}`;
+        out.push(`For ${this.L[i]}, ${this.L[i]}${this.times(A,w)}, not ⟨0, 0⟩.${why} ${this.L[i]}'s first row is ${this.v(A[0])}, so it crushes ${this.v(z)}: ${hit}. You had ${k+1}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 matched.`);
+    }
+    out.push(`${this.wins} matched right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each arrow in its own pane, with x and y from −3 to 3 and the line it
+     spans dashed; a slip rings the arrow that was picked wrongly, and once
+     all four are matched each pane gets its matrix's letter and that
+     matrix's column line in gold */
+  svg(){
+    const f=n=>n.toFixed(2), M=this.R().M;
+    let out=`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="The four arrows: ${[0,1,2,3].map(n=>`${n+1}, ${this.v(this.W(n))}`).join('; ')}${this.solved?', each with the matrix that crushes it and that matrix\'s column line':''}">`;
+    out+=`<defs>${[0,1,2,3].map(n=>`<clipPath id="kmClip${n}"><rect x="${(n%2)*180+4}" y="${Math.floor(n/2)*120+4}" width="172" height="112" rx="8"/></clipPath>`).join('')}</defs>`;
+    for(let n=0;n<4;n++){
+      const X=(n%2)*180, Y=Math.floor(n/2)*120, cx=X+90, cy=Y+60, s=16, w=this.W(n);
+      const thru=(d,col,k)=>{ const t=60/Math.max(Math.abs(d[0]),Math.abs(d[1]));
+        return `<line data-k="${k}" clip-path="url(#kmClip${n})" x1="${f(cx-t*d[0])}" y1="${f(cy+t*d[1])}" x2="${f(cx+t*d[0])}" y2="${f(cy-t*d[1])}" stroke="${col}" stroke-width="1.6" stroke-dasharray="5 4"/>`; };
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<line x1="${cx-60}" y1="${cy}" x2="${cx+60}" y2="${cy}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line x1="${cx}" y1="${cy-52}" x2="${cx}" y2="${cy+52}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=thru(w,FIG_COL.a,'span');
+      out+=`<line data-k="arrow" x1="${cx}" y1="${cy}" x2="${f(cx+s*w[0])}" y2="${f(cy-s*w[1])}" stroke="${FIG_COL.a}" stroke-width="3" stroke-linecap="round"/><circle cx="${f(cx+s*w[0])}" cy="${f(cy-s*w[1])}" r="4" fill="${FIG_COL.a}"/>`;
+      out+=`<text data-k="num" x="${X+16}" y="${Y+22}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${n+1}</text>`;
+      if(this.marks && this.calls.some((c,i)=>c===n && this.marks[i]===false))
+        out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){
+        out+=thru(this.col(M[this.owner(n)]),FIG_COL.b,'col');
+        out+=`<text data-k="who" x="${X+164}" y="${Y+22}" fill="${FIG_COL.c}" font-size="14" font-weight="700" text-anchor="middle">${this.L[this.owner(n)]}</text>`;
+      }
+    }
+    return out+`</svg>`;
+  },
+  call(i,n){
+    if(this.solved || this.calls[i]===n) return;
+    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Kernel.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Kernel.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Kernel.render(); },
+  btn(i,n){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-n="${n}" aria-pressed="${this.calls[i]===n}" ${this.solved?'disabled ':''}onclick="KerMatch.call(${i},${n})" aria-label="Matrix ${this.L[i]} crushes arrow ${n+1}, ${this.v(this.W(n))}">${n+1}</button>`;
+  },
+  html(){
+    const M=this.R().M;
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four flat matrices and four arrows. Which arrow does each matrix crush to ⟨0, 0⟩?</div>`;
+    out+=`<div id="kmArrows" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:15px;margin-bottom:4px">`+
+      [0,1,2,3].map(n=>`<div><b style="color:var(--gold)">${n+1}</b>&nbsp; ${this.v(this.W(n))}</div>`).join('')+`</div>`;
+    out+=`<div id="kmFig">${this.svg()}<div class="figcap">Each arrow is drawn in blue, with the line it spans dashed. Once all four are matched, each pane gets the letter of the matrix that crushes it, and that matrix's column line, where its outputs land, in gold.</div></div>`;
+    out+=`<div id="kmStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+M.map((A,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="kmStop" data-i="${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 5;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} = ${mat(A)}</b>`+
+        [0,1,2,3].map(n=>this.btn(i,n)).join('')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="kmRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="kmNext" onclick="KerMatch.next()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="kmCheck" ${this.ready()?'':'disabled '}onclick="KerMatch.check()" aria-label="${this.ready()?'Check the four matches':'Match all four matrices to check them'}">${this.ready()?'Check my matches':'Match all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="kmGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="kmGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CRUSH MATCHER','every arrow matched','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

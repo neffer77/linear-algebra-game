@@ -14510,6 +14510,166 @@ const nullPickNotes = (() => {
   return { rounds, misses, worked };
 })();
 
+/* Match the crush: the null space workshop's third mode. Every matrix is
+   worked again from its own entries: checked flat, its crushed line found
+   by trying every whole arrow, every arrow crushed by one matrix alone,
+   every matrix matched wrong in all three wrong ways and the slip worked
+   from the matrix's own numbers, each round's rows, column lines and
+   self-crushers found afresh, and the drawing checked: each arrow drawn at
+   its own entries, and once matched, each matrix's column line drawn
+   through its own outputs. */
+const kerMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL; const mat = r => '[' + r.map(x => x.join(' ')).join('; ') + ']';" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Kernel = {render(){ env.renders++; }};" +
+    cut('const KerMatch = {', '/* ---------- The Gram–Schmidt workshop') + 'return KerMatch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const V = ([x, y]) => `⟨${ng(x)}, ${ng(y)}⟩`;
+  const P = n => `(${ng(n)})`;
+  const app = (A, [x, y]) => [A[0][0] * x + A[0][1] * y, A[1][0] * x + A[1][1] * y];
+  const times = (A, w) => `${V(w)} = ⟨${P(A[0][0])}${P(w[0])} + ${P(A[0][1])}${P(w[1])}, ${P(A[1][0])}${P(w[0])} + ${P(A[1][1])}${P(w[1])}⟩ = ${V(app(A, w))}`;
+  const zero = v => v[0] === 0 && v[1] === 0;
+  const par = (u, v) => u[0] * v[1] - u[1] * v[0] === 0;
+  // the arrow a flat A crushes, found by trying every whole arrow and keeping the shortest that points right, or straight up
+  const crushed = A => { let best = null;
+    for (let x = 0; x <= 6; x++) for (let y = -6; y <= 6; y++) {
+      if ((x === 0 && y <= 0) || !zero(app(A, [x, y]))) continue;
+      if (!best || x * x + y * y < best[0] * best[0] + best[1] * best[1]) best = [x, y]; }
+    return best; };
+  const short = v => { for (let k = 6; k > 1; k--) if (v[0] % k === 0 && v[1] % k === 0) return short([v[0] / k, v[1] / k]); return v; };
+  const up = v => (v[0] < 0 || (v[0] === 0 && v[1] < 0)) ? [-v[0] || 0, -v[1] || 0] : v;
+  const colOf = A => up(short(A[0][0] || A[1][0] ? [A[0][0], A[1][0]] : [A[0][1], A[1][1]]));
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('kermatch', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== 'Each matrix here is flat: its second row is a multiple of its first, ⟨a, b⟩. It crushes v to ⟨0, 0⟩ exactly when v dots to 0 with that row, so it crushes the line through ⟨−b, a⟩: swap the entries and change one sign. Its outputs all land on another line, its column line. Match each matrix to the arrow it crushes.') fail('kermatch', 'rule', 'the rule is not stated as it should be');
+  const seen = new Set();
+  let checks = 0, wrongs = 0, worked = 0;
+  S.ROUNDS.forEach((Rd, ri) => {
+    const key = `round ${ri + 1}`, M = Rd.M, L = 'ABCD';
+    reset(); S.ri = ri;
+    if (M.length !== 4 || [...Rd.order].sort().join() !== '0,1,2,3') { fail('kermatch', key, 'it does not hold four matrices and an order of all four'); return; }
+    M.forEach((A, i) => { const k = A.flat().join(); if (seen.has(k)) fail('kermatch', key, `matrix ${L[i]} comes round twice`); seen.add(k);
+      if (A[0][0] * A[1][1] - A[0][1] * A[1][0] !== 0 || zero(A[0]) || zero(A[1])) fail('kermatch', key, `matrix ${L[i]} is not flat with two rows`);
+      if (A.flat().some(v => Math.abs(v) > 4)) fail('kermatch', key, `matrix ${L[i]} has an entry past 4`); });
+    // arrow n is the one crushed by the matrix the order names
+    const W = Rd.order.map(i => crushed(M[i]));
+    const truth = [0, 1, 2, 3].map(i => Rd.order.indexOf(i));
+    W.forEach((w, n) => {
+      if (!w || S.W(n).join() !== w.join()) fail('kermatch', key, `arrow ${n + 1} is ${S.W(n) && V(S.W(n))}, not ${w && V(w)}`);
+      if (w && Math.max(Math.abs(w[0]), Math.abs(w[1])) > 3) fail('kermatch', key, `arrow ${n + 1} runs off its pane`);
+      const by = [0, 1, 2, 3].filter(i => zero(app(M[i], w)));
+      if (by.length !== 1) fail('kermatch', key, `arrow ${n + 1} is crushed by ${by.map(i => L[i]).join(', ') || 'none'}`);
+      worked += 4; });
+    if (new Set(W.map(String)).size !== 4) fail('kermatch', key, 'two arrows are the same');
+    if (truth.join() === '0,1,2,3') fail('kermatch', key, 'the arrows come in the matrices\' order, so the letters give it away');
+    [0, 1, 2, 3].forEach(i => { if (S.truth(i) !== truth[i]) fail('kermatch', key, `${L[i]} is told as crushing arrow ${S.truth(i) + 1}, not ${truth[i] + 1}`); });
+    // what the round holds, found afresh
+    const rows = [], cols = [];
+    for (let n = 0; n < 4; n++) for (let i = 0; i < 4; i++) {
+      if (par(W[n], M[i][0])) rows.push([n, i]);
+      if (truth[i] !== n && par(W[n], colOf(M[i]))) cols.push([n, i]); }
+    const selfs = [0, 1, 2, 3].filter(i => zero(app(M[i], app(M[i], [1, 0]))) && zero(app(M[i], app(M[i], [0, 1]))));
+    const tags = [rows.length ? 'row' : null, cols.length ? 'col' : null, selfs.length ? 'self' : null].filter(Boolean);
+    if (!tags.length) fail('kermatch', key, 'nothing in it misleads');
+    if (S.tags().join() !== tags.join()) fail('kermatch', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (S.rows().join('|') !== rows.join('|') || S.cols().join('|') !== cols.join('|') || S.selfs().join() !== selfs.join()) fail('kermatch', key, 'its rows, column lines or self-crushers are not the ones found afresh');
+    // every matrix matched wrong, one at a time, in all three wrong ways
+    M.forEach((A, i) => {
+      for (let k = 0; k < 4; k++) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const w = W[k], z = [-A[0][1], A[0][0]], n = truth[i];
+        const why = par(w, A[0]) ? ` That arrow lies along ${L[i]}'s own row.` : par(w, colOf(A)) ? ` That arrow is ${L[i]}'s column line, where its outputs land, not what it crushes.` : '';
+        const hit = z.join() === W[n].join() ? `that is arrow ${n + 1}` : `it lies along arrow ${n + 1}, ${V(W[n])}`;
+        if (!par(z, W[n])) fail('kermatch', key, `${L[i]}'s swapped row is not along its arrow`);
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `For ${L[i]}, ${L[i]}${times(A, w)}, not ⟨0, 0⟩.${why} ${L[i]}'s first row is ${V(A[0])}, so it crushes ${V(z)}: ${hit}. You had ${k + 1}.`,
+          '0 matched right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('kermatch', key, `with ${L[i]} matched to ${k + 1} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        const ring = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+        if (ring.length !== 1 || +ring[0][1] !== (k % 2) * 180 + 3 || +ring[0][2] !== Math.floor(k / 2) * 120 + 3) fail('kermatch', key, `with ${L[i]} on arrow ${k + 1}, that arrow's pane is not ringed alone`);
+        if (/data-k="who"|data-k="col"/.test(svg)) fail('kermatch', key, `with ${L[i]} wrong, the matches are given away`);
+        if (S.solved || S.streak) fail('kermatch', key, 'a wrong matching is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('kermatch', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 matched right on the first check this visit.'].join(' | ')) fail('kermatch', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('kermatch', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, matched with the buttons
+    reset(); S.ri = ri;
+    if (!/id="kmCheck" disabled /.test(S.html())) fail('kermatch', key, 'the check is open before the matrices are matched');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="kmCheck" disabled /.test(S.html())) fail('kermatch', key, `the check opens with ${L[skip]} unmatched`);
+      S.check();
+      if (S.tries || S.marks) fail('kermatch', key, `a check runs with ${L[skip]} unmatched`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="KerMatch\\.call\\(${i},(\\d)\\)" aria-label="Matrix ${L[i]} crushes arrow ${t + 1}, ${V(W[t])}"`));
+      if (!m || +m[1] !== t) fail('kermatch', key, `the button matching ${L[i]} to arrow ${t + 1} does not match it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`KerMatch\\.call\\(${i},`, 'g')) || []).length !== 4) fail('kermatch', key, `${L[i]} does not offer all four arrows`);
+    });
+    if (S.calls.join() !== truth.join()) fail('kermatch', key, 'the buttons cannot make the right matching');
+    if (/id="kmCheck" disabled /.test(S.html())) fail('kermatch', key, 'the check stays shut with every matrix matched');
+    S.check(); checks++;
+    const want = ['Yes: all four are matched.'];
+    if (rows.length) { const [n, i] = rows[0]; want.push(`Arrow ${n + 1}, ${V(W[n])}, lies along ${L[i]}'s own row, so ${L[i]}${times(M[i], W[n])}: a row dotted with itself is never 0. The crushed line always stands square to the rows.`); }
+    if (cols.length) { const [n, i] = cols[0]; want.push(`Arrow ${n + 1}, ${V(W[n])}, is ${L[i]}'s column line, where every output of ${L[i]} lands, yet ${L[i]} sends it to ${V(app(M[i], W[n]))}: it is ${L[Rd.order[n]]} that crushes it. Where a matrix lands and what it crushes are different lines.`); }
+    if (selfs.length) { const i = selfs[0]; want.push(`${L[i]} crushes ${V(W[truth[i]])}, the very line its outputs land on, so doing ${L[i]} twice crushes everything: ${L[i]}² = 0.`); }
+    want.push(`The column lines, where the outputs land: ${M.map((A, i) => `${L[i]} ${V(colOf(A))}`).join(', ')}.`);
+    want.push('1 matched right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('kermatch', key, `once matched the readout is ${S.working().join(' | ')}`);
+    // the drawing: each arrow at its own entries, and once matched, the matrix's letter and its column line through its outputs
+    const svg = S.svg();
+    const ar = [...svg.matchAll(/data-k="arrow" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)];
+    if (ar.length !== 4) fail('kermatch', key, `${ar.length} arrows are drawn, not four`);
+    ar.forEach((m, n) => { const cx = (n % 2) * 180 + 90, cy = Math.floor(n / 2) * 120 + 60;
+      if (+m[1] !== cx || +m[2] !== cy || Math.abs((+m[3] - cx) / 16 - W[n][0]) > 0.01 || Math.abs((cy - +m[4]) / 16 - W[n][1]) > 0.01) fail('kermatch', key, `arrow ${n + 1} is not drawn as ${V(W[n])}`); });
+    const who = [...svg.matchAll(/data-k="who"[^>]*>([A-D])</g)].map(m => m[1]).join('');
+    if (who !== Rd.order.map(i => L[i]).join('')) fail('kermatch', key, `the panes are marked ${who}`);
+    const cl = [...svg.matchAll(/data-k="col" clip-path="url\(#kmClip(\d)\)" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)];
+    if (cl.length !== 4) fail('kermatch', key, `${cl.length} column lines are drawn, not four`);
+    cl.forEach((m, n) => { const A = M[Rd.order[n]], cx = (n % 2) * 180 + 90, cy = Math.floor(n / 2) * 120 + 60;
+      // every output of A, worked from whole arrows, lies on the line drawn
+      const d = [+m[4] - +m[2], -(+m[5] - +m[3])];
+      const outs = [[1, 0], [0, 1], [1, 1], [2, -1]].map(v => app(A, v));
+      if (+m[1] !== n || outs.some(o => Math.abs(o[0] * d[1] - o[1] * d[0]) > 0.01 * Math.hypot(...d) * Math.hypot(...o)) || Math.abs((+m[2] + +m[4]) / 2 - cx) > 0.01 || Math.abs((+m[3] + +m[5]) / 2 - cy) > 0.01) fail('kermatch', key, `the column line in pane ${n + 1} is not where ${L[Rd.order[n]]}'s outputs land`); });
+    const h = S.html();
+    if (!h.includes('id="kmNext"') || /onclick="KerMatch\.call/.test(h.replace(/disabled onclick="KerMatch\.call/g, ''))) fail('kermatch', key, 'once matched, Next is not offered or a match still opens');
+    const before = S.calls.join(); S.call(0, (truth[0] + 1) % 4);
+    if (S.calls.join() !== before) fail('kermatch', key, 'a match moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('kermatch', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('kermatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = [0, 1, 2, 3].map(i => S.R().order.indexOf(i));
+    S.calls = right.slice(); if (slip) S.calls[1] = (right[1] + 1) % 4;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'col,fix'], [false, 'col,fix,one,row'], [false, 'col,fix,one,row,self'], [false, 'col,fix,one,row,self,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('kermatch', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Where A lands is not what A crushes · A slip caught and fixed | ✓ Right on the first check · A row is never crushed | ✓ A matrix that crushes its own outputs') fail('kermatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'CRUSH MATCHER / every arrow matched') fail('kermatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, worked };
+})();
+
 /* Which A⁻¹? The pick-an-inverse round in the undo workshop. Every matrix on
    screen is read back from both its name and its cells, and checked against
    the slip it is named as, worked out here from A alone; the right one alone
@@ -19915,6 +20075,7 @@ console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 1
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);
 console.log(`  chord picks       ${pad(chordPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-c in the chord workshop, every number worked again from the curve and the interval alone and checked against the slip it is named as, the right one alone giving a tangent as steep as the chord strictly inside [a, b] in floats; ${chordPickNotes.misses.toLocaleString()} wrong picks explained and checked by putting them into f′, and no check ever naming c)`);
 console.log(`  crushed arrows    ${pad(nullPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-is-crushed in the null space workshop, every arrow read back off its button and checked against the slip it is named as, the right one alone sent to ⟨0, 0⟩; ${nullPickNotes.misses.toLocaleString()} wrong picks checked against both rows, ${nullPickNotes.worked.toLocaleString()} dot products worked again from their own numbers)`);
+console.log(`  crushes matched   ${pad(kerMatchNotes.checks.toLocaleString(), 15)}  (checks of four flat matrices matched to the arrows they crush in the null space workshop, ${kerMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${kerMatchNotes.worked} arrows multiplied by every matrix in their round)`);
 console.log(`  undos picked      ${pad(undoPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-A⁻¹ in the undo workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone sending Aî and Aĵ home; ${undoPickNotes.misses.toLocaleString()} wrong picks checked on the arrow that misses home, ${undoPickNotes.worked.toLocaleString()} arrows worked again from their own numbers)`);
 console.log(`  cross products    ${pad(crossPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-u × v in the cross product workshop, every arrow checked against the slip it is named as, the right one alone being u × v and every slip but the swap failing the square test; ${crossPickNotes.misses.toLocaleString()} wrong picks checked, ${crossPickNotes.dotsWorked.toLocaleString()} dot products worked again from their own numbers)`);
 console.log(`  transposes        ${pad(transPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-Aᵀ in the transpose workshop, every matrix read back from its name and its cells and checked against the slip it is named as, the right one alone being Aᵀ; ${transPickNotes.misses.toLocaleString()} wrong picks checked against A, their ${transPickNotes.reds.toLocaleString()} red cells exactly the entries out of place)`);

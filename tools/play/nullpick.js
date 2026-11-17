@@ -29,11 +29,11 @@ module.exports = {
       /Then turn it round: see a flat A, and pick which of four arrows it crushes\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeNull');
     t.eq('the null space workshop opens', await t.screen(), 's-null');
-    t.eq('setting v by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('setting v by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(4242));
     await t.tapText(/Which is crushed\?/);
-    t.eq('which is crushed is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which is crushed is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the matrices, v, the drawing, the readout and the goals step aside',
       await hidden(t, 'nsSets') && await hidden(t, 'nsVec') && await hidden(t, 'nsFig') && await hidden(t, 'nsRead') && await hidden(t, 'nsGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('npBox').innerText)).startsWith(
