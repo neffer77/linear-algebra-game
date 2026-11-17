@@ -135,6 +135,7 @@ const SUITES = [
   require('./play/cofpick'), // see a 3×3 matrix, pick which of four numbers is det A
   require('./play/elimpick'), // see two rows, pick which of four numbers k clears x
   require('./play/hoppick'), // see a 0/0 ratio, pick which of four numbers is its limit
+  require('./play/hopsort'), // see four ratios, and sort which are 0/0 and need the rule and which plug straight in
   require('./play/newtonpick'), // see a curve and a first guess, pick which of four numbers is the next guess
   require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum

@@ -1275,7 +1275,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ L'HÔPITAL WORKSHOP ============ -->
   <div class="screen" id="s-hopital">
     <div class="panel"><h2>🔬 L'Hôpital Workshop</h2><div class="sub">When a ratio gives 0/0 at a point, look closer: near that point the top and bottom are each almost a straight line, so their ratio heads for the ratio of their slopes. Close h in toward 0 and watch, and find the ratio the rule gets wrong.</div></div>
-    <div id="hpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand or pick the limit"></div>
+    <div id="hpTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in by hand, pick the limit, or sort which need the rule"></div>
     <div class="panel">
       <div id="hkBox"></div>
       <div id="hpSets" class="wsModes" role="group" aria-label="Which ratio"></div>
@@ -15525,7 +15525,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔬 L'Hôpital Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer. Then turn it round: see a 0/0 ratio, and pick which of four numbers is its limit.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">A ratio gives 0/0 at a point. Close in and watch it head for the ratio of the slopes, and catch the one ratio where that rule gives the wrong answer. Then turn it round: see a 0/0 ratio, and pick which of four numbers is its limit. Or sort them: four ratios, and which are 0/0 and need the rule.</div>
          <button class="btn sm" id="tomeHopital" style="width:auto;margin-top:8px" onclick="Hopital.open()">Open the L'Hôpital workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21630,11 +21630,11 @@ const Hopital = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('hpTab').innerHTML=[['hand','🔬 Close in by hand','Close in on the point by hand and watch the ratio'],['pick','🎯 Which limit?','See a 0/0 ratio, and pick which of four numbers is its limit']]
+    document.getElementById('hpTab').innerHTML=[['hand','🔬 Close in by hand','Close in on the point by hand and watch the ratio'],['pick','🎯 Which limit?','See a 0/0 ratio, and pick which of four numbers is its limit'],['sort','🚦 Rule or plug in?','See four ratios, and sort which are 0/0 and need the rule and which plug straight in']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Hopital.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['hpSets','hpFig','hpStep','hpRead','hpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('hkBox').innerHTML=pick ? HopPick.html() : '';
+    document.getElementById('hkBox').innerHTML=!pick ? '' : this.tab==='pick' ? HopPick.html() : HopSort.html();
     if(pick) return;
     const S=this.set(), x=this.x(), X=this.num(x);
     document.getElementById('hpSets').innerHTML=this.SETS.map((s,i)=>
@@ -21658,6 +21658,204 @@ const Hopital = {
         Celebrate.banner('MASTER OF 0/0','every limit run down','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Rule or plug in? The L'Hôpital workshop's third mode ----------
+   Four ratios, each at its own point x = a. For each the player calls whether
+   it is 0/0 there, so the rule is needed, or plugging in already gives the
+   limit. The rounds hold a ratio with a 0 on top alone, which is no 0/0 and
+   which the rule gets wrong; a 0/0 that heads to 0; and a 0/0 hiding in a log,
+   since ln 1 = 0. A slip rings that ratio and works its top and bottom at a,
+   then the rule or the plain value; once all four are right, each pane gets
+   its top and bottom drawn near a, with their tangent lines where it is 0/0.
+   Nothing is saved, and there is no clock. */
+const HopSort = {
+  // each ratio: top and bottom as written, the point, the slopes as written, and the four functions
+  ITEMS:{
+    sq:   {top:'x² − 4', bot:'x − 2', a:2, dtop:'2x', dbot:'1', f:x=>x*x-4, g:x=>x-2, fp:x=>2*x, gp:x=>1},
+    sin:  {top:'sin x', bot:'x', a:0, dtop:'cos x', dbot:'1', f:x=>Math.sin(x), g:x=>x, fp:x=>Math.cos(x), gp:x=>1},
+    exp:  {top:'eˣ − 1', bot:'x', a:0, dtop:'eˣ', dbot:'1', f:x=>Math.exp(x)-1, g:x=>x, fp:x=>Math.exp(x), gp:x=>1},
+    ln:   {top:'ln x', bot:'x − 1', a:1, dtop:'1/x', dbot:'1', ln:'ln x', f:x=>Math.log(x), g:x=>x-1, fp:x=>1/x, gp:x=>1},
+    cube: {top:'x³ − 1', bot:'x² − 1', a:1, dtop:'3x²', dbot:'2x', f:x=>x**3-1, g:x=>x*x-1, fp:x=>3*x*x, gp:x=>2*x},
+    root: {top:'√x − 1', bot:'x − 1', a:1, dtop:'1/(2√x)', dbot:'1', f:x=>Math.sqrt(x)-1, g:x=>x-1, fp:x=>1/(2*Math.sqrt(x)), gp:x=>1},
+    nine: {top:'x² − 9', bot:'x − 3', a:3, dtop:'2x', dbot:'1', f:x=>x*x-9, g:x=>x-3, fp:x=>2*x, gp:x=>1},
+    sin2: {top:'sin 2x', bot:'x', a:0, dtop:'2 cos 2x', dbot:'1', f:x=>Math.sin(2*x), g:x=>x, fp:x=>2*Math.cos(2*x), gp:x=>1},
+    cos:  {top:'1 − cos x', bot:'x', a:0, dtop:'sin x', dbot:'1', f:x=>1-Math.cos(x), g:x=>x, fp:x=>Math.sin(x), gp:x=>1},
+    ln2:  {top:'ln x', bot:'x² − 1', a:1, dtop:'1/x', dbot:'2x', ln:'ln x', f:x=>Math.log(x), g:x=>x*x-1, fp:x=>1/x, gp:x=>2*x},
+    three:{top:'x² − 3x', bot:'x − 3', a:3, dtop:'2x − 3', dbot:'1', f:x=>x*x-3*x, g:x=>x-3, fp:x=>2*x-3, gp:x=>1},
+    ln1:  {top:'ln(x + 1)', bot:'x', a:0, dtop:'1/(x + 1)', dbot:'1', ln:'ln(x + 1)', f:x=>Math.log(x+1), g:x=>x, fp:x=>1/(x+1), gp:x=>1},
+    plus: {top:'x² + 4', bot:'x + 2', a:2, dtop:'2x', dbot:'1', f:x=>x*x+4, g:x=>x+2, fp:x=>2*x, gp:x=>1},
+    cosp: {top:'cos x', bot:'x + 1', a:0, dtop:'−sin x', dbot:'1', f:x=>Math.cos(x), g:x=>x+1, fp:x=>-Math.sin(x), gp:x=>1},
+    half: {top:'x² − 4', bot:'x + 2', a:2, dtop:'2x', dbot:'1', f:x=>x*x-4, g:x=>x+2, fp:x=>2*x, gp:x=>1},
+    sinp: {top:'sin x', bot:'x + 1', a:0, dtop:'cos x', dbot:'1', f:x=>Math.sin(x), g:x=>x+1, fp:x=>Math.cos(x), gp:x=>1},
+    lnp:  {top:'ln x', bot:'x + 1', a:1, dtop:'1/x', dbot:'1', f:x=>Math.log(x), g:x=>x+1, fp:x=>1/x, gp:x=>1},
+    sum:  {top:'x + 1', bot:'x² + 1', a:1, dtop:'1', dbot:'2x', f:x=>x+1, g:x=>x*x+1, fp:x=>1, gp:x=>2*x},
+    cub:  {top:'x³ + 1', bot:'x + 1', a:1, dtop:'3x²', dbot:'1', f:x=>x**3+1, g:x=>x+1, fp:x=>3*x*x, gp:x=>1},
+    sq1:  {top:'x² − 1', bot:'x² + 1', a:1, dtop:'2x', dbot:'2x', f:x=>x*x-1, g:x=>x*x+1, fp:x=>2*x, gp:x=>2*x},
+    cs:   {top:'cos x', bot:'1 + sin x', a:0, dtop:'−sin x', dbot:'cos x', f:x=>Math.cos(x), g:x=>1+Math.sin(x), fp:x=>-Math.sin(x), gp:x=>Math.cos(x)},
+    xe:   {top:'x', bot:'eˣ', a:0, dtop:'1', dbot:'eˣ', f:x=>x, g:x=>Math.exp(x), fp:x=>1, gp:x=>Math.exp(x)},
+    x9:   {top:'x − 3', bot:'x² + 9', a:3, dtop:'1', dbot:'2x', f:x=>x-3, g:x=>x*x+9, fp:x=>1, gp:x=>2*x},
+    ex2:  {top:'eˣ', bot:'x + 2', a:0, dtop:'eˣ', dbot:'1', f:x=>Math.exp(x), g:x=>x+2, fp:x=>Math.exp(x), gp:x=>1}
+  },
+  ROUNDS:[
+    ['sq','half','cos','cosp'],
+    ['plus','ln','sin','sinp'],
+    ['cube','sum','sq1','exp'],
+    ['ex2','cub','ln2','nine'],
+    ['root','lnp','sin2','cs'],
+    ['xe','three','x9','ln1']
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Sort all four ratios right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'half',  t:'Sort a ratio with a 0 on top alone.', toast:'One 0 is not 0/0',
+     ok:K=>K.kinds.has('half')},
+    {id:'zero',  t:'Sort a 0/0 that heads to 0.', toast:'0/0 can head to 0',
+     ok:K=>K.kinds.has('zero')},
+    {id:'log',   t:'Sort a 0/0 with a log in it.', toast:'ln 1 is a 0 too',
+     ok:K=>K.kinds.has('log')},
+    {id:'fix',   t:'Check a sort with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Sort three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Plug x = a into the top and the bottom first. If both are 0, the ratio is 0/0, which is no number: near a each is almost its tangent line, so the limit is f′(a)/g′(a), the ratio of their slopes. If they are not both 0, plugging in already gives the limit, and the rule would give a wrong one.',
+  L:'ABCD',
+  R(){ return this.ROUNDS[this.ri].map(k=>this.ITEMS[k]); },
+  /* a value as a fraction with a small bottom, as it is read */
+  fr(v){ if(Object.is(v,-0) || Math.abs(v)<1e-12) return '0';
+    for(let d=1; d<=12; d++){ const n=Math.round(v*d); if(Math.abs(n/d-v)<1e-9) return neg(n)+(d===1?'':'/'+d); }
+    return neg(Math.round(v*1e4)/1e4); },
+  par(s){ return /[ −+]/.test(s) ? \`(\${s})\` : s; },
+  q(S){ return \`\${this.par(S.top)}/\${this.par(S.bot)}\`; },
+  fa(S){ return S.f(S.a); }, ga(S){ return S.g(S.a); },
+  zz(S){ return Math.abs(this.fa(S))<1e-12 && Math.abs(this.ga(S))<1e-12; },
+  truth(i){ return this.zz(this.R()[i]) ? 1 : 0; },
+  /* the rule's answer, f′(a)/g′(a), and the plain value, f(a)/g(a) */
+  rule(S){ return S.fp(S.a)/S.gp(S.a); },
+  plain(S){ return this.fa(S)/this.ga(S); },
+  lim(S){ return this.zz(S) ? this.rule(S) : this.plain(S); },
+  /* what a round holds: a 0 on top alone, a 0/0 that heads to 0, a 0/0 in a log */
+  halves(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return !this.zz(S) && Math.abs(this.fa(S))<1e-12; }); },
+  zeros(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && Math.abs(this.rule(S))<1e-12; }); },
+  logs(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && !!S.ln; }); },
+  tags(){ const t=[]; if(this.halves().length) t.push('half'); if(this.zeros().length) t.push('zero'); if(this.logs().length) t.push('log'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  slopes(S){ return \`the top's slope is \${S.dtop} and the bottom's is \${S.dbot}, so f′(\${S.a})/g′(\${S.a}) = \${this.fr(S.fp(S.a))}/\${this.fr(S.gp(S.a))} = \${this.fr(this.rule(S))}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are sorted right.');
+      const hf=this.halves(), zr=this.zeros(), lg=this.logs();
+      if(hf.length){ const i=hf[0], S=this.R()[i];
+        out.push(\`\${this.L[i]}, \${this.q(S)}, has a 0 on top alone: at x = \${S.a} it is \${this.fr(this.fa(S))}/\${this.fr(this.ga(S))}, which is just \${this.fr(this.plain(S))}. Only 0 over 0 needs the rule, and here it would give \${this.fr(this.rule(S))}.\`); }
+      if(zr.length){ const i=zr[0], S=this.R()[i];
+        out.push(\`\${this.L[i]}, \${this.q(S)}, is 0/0, yet \${this.slopes(S)}: 0/0 asks a question, and its answer can be 0.\`); }
+      if(lg.length){ const i=lg[0], S=this.R()[i];
+        out.push(\`\${this.L[i]}, \${this.q(S)}, is 0/0 because \${S.ln} is 0 at x = \${S.a}: a log can hide a 0. The rule gives \${this.fr(S.fp(S.a))}/\${this.fr(S.gp(S.a))} = \${this.fr(this.rule(S))}.\`); }
+      out.push(\`The limits: \${[0,1,2,3].map(i=>\`\${this.L[i]} → \${this.fr(this.lim(this.R()[i]))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const S=this.R()[i];
+        out.push(this.zz(S)
+          ? \`In \${this.L[i]}, at x = \${S.a} the top \${S.top} is 0 and the bottom \${S.bot} is 0: plugging in gives 0/0, which is no number. Use the rule: \${this.slopes(S)}. You had it plugged in.\`
+          : \`In \${this.L[i]}, at x = \${S.a} the top \${S.top} is \${this.fr(this.fa(S))} and the bottom \${S.bot} is \${this.fr(this.ga(S))}, so it is \${this.fr(this.fa(S))}/\${this.fr(this.ga(S))}, not 0/0: plugging in gives \${this.fr(this.plain(S))}. The rule would give f′(\${S.a})/g′(\${S.a}) = \${this.fr(S.fp(S.a))}/\${this.fr(S.gp(S.a))} = \${this.fr(this.rule(S))}, which is wrong. You had it needing the rule.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 sorted.\`);
+    }
+    out.push(\`\${this.wins} sorted right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each ratio in its own pane: the ratio and its point until all four are
+     right, then its top (gold) and bottom (blue) from a − 1 to a + 1, their
+     points at x = a, and where it is 0/0 their tangent lines there, whose
+     slopes the rule divides; a slip is ringed red */
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="Four ratios: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.q(this.R()[i])} as x goes to \${this.R()[i].a}\`).join('; ')}\${this.solved?', each with its top and bottom drawn near the point':''}">\`;
+    out+=\`<defs>\${[0,1,2,3].map(i=>\`<clipPath id="hsrClip\${i}"><rect x="\${(i%2)*180+4}" y="\${Math.floor(i/2)*120+4}" width="172" height="112" rx="8"/></clipPath>\`).join('')}</defs>\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*120, S=this.R()[i];
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      if(!this.solved){
+        out+=\`<text data-k="ratio" x="\${X+90}" y="\${Y+62}" fill="\${FIG_COL.ink}" font-size="15" text-anchor="middle">\${this.q(S)}</text>\`;
+        out+=\`<text x="\${X+90}" y="\${Y+86}" fill="\${FIG_COL.dim}" font-size="12" text-anchor="middle">as x → \${S.a}</text>\`;
+      } else {
+        const lo=S.a-1, xs=[]; for(let k=0;k<=60;k++) xs.push(lo+2*k/60);
+        const ys=[]; for(const x of xs) for(const h of [S.f,S.g]){ const y=h(x); if(Number.isFinite(y)) ys.push(y); }
+        const yl=Math.max(Math.min(0,...ys),-6), yh=Math.min(Math.max(0,...ys),10), sp=(yh-yl)||1;
+        const PX=x=>X+14+(x-lo)/2*152, PY=y=>Y+104-(y-yl)/sp*70;
+        out+=\`<line x1="\${X+14}" y1="\${f(PY(0))}" x2="\${X+166}" y2="\${f(PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+        out+=\`<line x1="\${f(PX(S.a))}" y1="\${Y+28}" x2="\${f(PX(S.a))}" y2="\${Y+110}" stroke="\${FIG_COL.axis}" stroke-width="1" stroke-dasharray="3 3"/>\`;
+        for(const [h,col,k] of [[S.f,FIG_COL.b,'top'],[S.g,FIG_COL.a,'bot']]){
+          const pts=xs.filter(x=>Number.isFinite(h(x))).map(x=>\`\${f(PX(x))},\${f(PY(h(x)))}\`);
+          out+=\`<polyline data-k="\${k}" clip-path="url(#hsrClip\${i})" points="\${pts.join(' ')}" fill="none" stroke="\${col}" stroke-width="2"/>\`;
+          out+=\`<circle data-k="dot" cx="\${f(PX(S.a))}" cy="\${f(PY(h(S.a)))}" r="3.5" fill="\${col}"/>\`;
+        }
+        if(this.zz(S)) for(const [d,col] of [[S.fp(S.a),FIG_COL.b],[S.gp(S.a),FIG_COL.a]])
+          out+=\`<line data-k="tan" data-m="\${this.fr(d)}" clip-path="url(#hsrClip\${i})" x1="\${f(PX(lo))}" y1="\${f(PY(-d))}" x2="\${f(PX(S.a+1))}" y2="\${f(PY(d))}" stroke="\${col}" stroke-width="1.5" stroke-dasharray="5 3"/>\`;
+        out+=\`<text x="\${X+164}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="12" text-anchor="end">\${this.q(S)}</text>\`;
+        out+=\`<text data-k="end" x="\${X+164}" y="\${Y+40}" fill="\${this.zz(S)?FIG_COL.c:FIG_COL.b}" font-size="12" font-weight="700" text-anchor="end">\${this.zz(S) ? \`0/0 → \${this.fr(this.rule(S))}\` : \`\${this.fr(this.fa(S))}/\${this.fr(this.ga(S))} = \${this.fr(this.plain(S))}\`}</text>\`;
+      }
+      if(this.marks && this.marks[i]===false)
+        out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Hopital.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Hopital.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Hopital.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="HopSort.call(\${i},\${c})" aria-label="Ratio \${this.L[i]}, \${this.q(this.R()[i])} at x = \${this.R()[i].a}, \${c?'is 0/0 and needs the rule':'plugs straight in'}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four ratios, each at its own point. Which are 0/0 and need the rule, and which do you just plug in?</div>\`;
+    out+=\`<div id="hsrFig">\${this.svg()}<div class="figcap">\${this.solved ? 'Gold is each top and blue its bottom, from a − 1 to a + 1, with their values at x = a. Where both are 0 the dashed lines are their tangents, and the limit is the ratio of their slopes.' : 'Each pane shows a ratio and the point x heads for. Once all four are sorted right, each gets its top and bottom drawn near the point.'}</div></div>\`;
+    out+=\`<div id="hsrStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null, S=this.R()[i];
+      return \`<div class="hsrStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.q(S)} at x = \${S.a}</span></b>\`+
+        this.btn(i,1,'0/0: rule')+this.btn(i,0,'Plug in')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="hsrRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="hsrNext" onclick="HopSort.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="hsrCheck" \${this.ready()?'':'disabled '}onclick="HopSort.check()" aria-label="\${this.ready()?'Check the four sorts':'Sort all four ratios to check them'}">\${this.ready()?'Check my sort':'Sort all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="hsrGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="hsrGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('RULE KEEPER','every ratio sorted','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

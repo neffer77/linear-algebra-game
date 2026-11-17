@@ -1,103 +1,103 @@
 {
-  "change": "Add a Close in or run off mode to the endless area workshop",
+  "change": "Add a Rule or plug in mode to the L'Hôpital workshop",
   "mutations": [
     {
-      "name": "p = 1 is called closing in",
+      "name": "a 0 on top alone is sorted as 0/0",
       "file": "index.html",
-      "find": "truth(i){ return this.pv(i)>1 ? 1 : 0; },",
-      "replace": "truth(i){ return this.pv(i)>=1 ? 1 : 0; },",
+      "find": "zz(S){ return Math.abs(this.fa(S))<1e-12 && Math.abs(this.ga(S))<1e-12; },",
+      "replace": "zz(S){ return Math.abs(this.fa(S))<1e-12; },",
       "run": "verify"
     },
     {
-      "name": "the powers in the bottom are multiplied, not added",
+      "name": "the rule divides the slopes upside down",
       "file": "index.html",
-      "find": "p(i){ let n=0, d=1; for(const [a,b] of this.R()[i].f){ n=n*b+a*d; d*=b; }",
-      "replace": "p(i){ let n=1, d=1; for(const [a,b] of this.R()[i].f){ n=n*a; d*=b; }",
+      "find": "rule(S){ return S.fp(S.a)/S.gp(S.a); },",
+      "replace": "rule(S){ return S.gp(S.a)/S.fp(S.a); },",
       "run": "verify"
     },
     {
-      "name": "where it closes in drops the number in front",
+      "name": "the rule is used whatever the ratio",
       "file": "index.html",
-      "find": "lim(i){ const [n,d]=this.p(i), c=this.R()[i].c, a=c*d, b=n-d,",
-      "replace": "lim(i){ const [n,d]=this.p(i), c=this.R()[i].c, a=d, b=n-d,",
+      "find": "lim(S){ return this.zz(S) ? this.rule(S) : this.plain(S); },",
+      "replace": "lim(S){ return this.rule(S); },",
       "run": "verify"
     },
     {
-      "name": "each doubling adds 2^(p − 1) instead",
+      "name": "the slope of sin 2x drops its 2",
       "file": "index.html",
-      "find": "ratio(i){ return 2**(1-this.pv(i)); },",
-      "replace": "ratio(i){ return 2**(this.pv(i)-1); },",
+      "find": "dtop:'2 cos 2x', dbot:'1', f:x=>Math.sin(2*x), g:x=>x, fp:x=>2*Math.cos(2*x), gp:x=>1},",
+      "replace": "dtop:'cos 2x', dbot:'1', f:x=>Math.sin(2*x), g:x=>x, fp:x=>Math.cos(2*x), gp:x=>1},",
       "run": "verify"
     },
     {
-      "name": "a cube root is written as a square root",
+      "name": "a 0/0 with a 0 limit is not told",
       "file": "index.html",
-      "find": "fac([a,b]){ const r={2:'√',3:'∛',4:'∜'}",
-      "replace": "fac([a,b]){ const r={2:'√',3:'√',4:'∜'}",
+      "find": "zeros(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && Math.abs(this.rule(S))<1e-12; }); },",
+      "replace": "zeros(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && Math.abs(this.rule(S))<1e-12 && S.a>0; }); },",
       "run": "verify"
     },
     {
-      "name": "a root that runs off is told as closing in",
+      "name": "a log that plugs in is told as hiding a 0",
       "file": "index.html",
-      "find": "roots(){ return [0,1,2,3].filter(i=>this.R()[i].f.some(([,b])=>b>1) && this.pv(i)>1); },",
-      "replace": "roots(){ return [0,1,2,3].filter(i=>this.R()[i].f.some(([,b])=>b>1)); },",
+      "find": "logs(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return this.zz(S) && !!S.ln; }); },",
+      "replace": "logs(){ return [0,1,2,3].filter(i=>{ const S=this.R()[i]; return /ln/.test(S.top); }); },",
       "run": "verify"
     },
     {
-      "name": "the slip says the right call is the player's",
+      "name": "the slip says the right sort is the player's",
       "file": "index.html",
-      "find": "You had it ${this.calls[i] ? 'closing in' : 'running off'}.`);",
-      "replace": "You had it ${this.truth(i) ? 'closing in' : 'running off'}.`);",
+      "find": "which is wrong. You had it needing the rule.`); }",
+      "replace": "which is wrong. You had it plugged in.`); }",
       "run": "verify"
     },
     {
       "name": "a fix counts as a first check",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Tail.render();",
-      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Tail.render();",
+      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
+      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
       "run": "verify"
     },
     {
-      "name": "the ring goes on the areas called right",
+      "name": "the tangents go through the curve's own height",
       "file": "index.html",
-      "find": "if(this.marks && this.marks[i]===false)\n        out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"114\"",
-      "replace": "if(this.marks && this.marks[i]===true)\n        out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"114\"",
+      "find": "x1=\"${f(PX(lo))}\" y1=\"${f(PY(-d))}\" x2=\"${f(PX(S.a+1))}\" y2=\"${f(PY(d))}\"",
+      "replace": "x1=\"${f(PX(lo))}\" y1=\"${f(PY(1-d))}\" x2=\"${f(PX(S.a+1))}\" y2=\"${f(PY(1+d))}\"",
       "run": "verify"
     },
     {
-      "name": "the bars all stand at the first doubling",
+      "name": "the plugged-in panes get tangents too",
       "file": "index.html",
-      "find": "for(let k=0;k<5;k++){ const h=Math.min(10*r**k,36);",
-      "replace": "for(let k=0;k<5;k++){ const h=Math.min(10,36);",
+      "find": "if(this.zz(S)) for(const [d,col] of [[S.fp(S.a),FIG_COL.b],[S.gp(S.a),FIG_COL.a]])",
+      "replace": "for(const [d,col] of [[S.fp(S.a),FIG_COL.b],[S.gp(S.a),FIG_COL.a]])",
       "run": "verify"
     },
     {
-      "name": "every pane says it closes in",
+      "name": "the curves are drawn from a to a + 2",
       "file": "index.html",
-      "find": "${this.truth(i) ? `closes in on ${this.fr(this.lim(i))}` : 'runs off'}</text>",
-      "replace": "closes in on ${this.fr(this.lim(i))}</text>",
+      "find": "const lo=S.a-1, xs=[]; for(let k=0;k<=60;k++) xs.push(lo+2*k/60);",
+      "replace": "const lo=S.a-1, xs=[]; for(let k=0;k<=60;k++) xs.push(S.a+2*k/60);",
       "run": "verify"
     },
     {
-      "name": "the curves are drawn as 1/x^(p+1)",
+      "name": "a check opens with a ratio unsorted",
       "file": "index.html",
-      "find": "const pts=xs.map(x=>`${f(PX(x))},${f(PY(x**-p))}`);",
-      "replace": "const pts=xs.map(x=>`${f(PX(x))},${f(PY(x**(-p-1)))}`);",
+      "find": "check(){\n    if(this.solved || !this.ready()) return;\n    this.tries++; this.touched=true;\n    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));\n    this.got=this.marks.filter(Boolean).length;\n    if(this.marks.every(Boolean)){\n      this.solved=true;\n      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
+      "replace": "check(){\n    if(this.solved) return;\n    this.tries++; this.touched=true;\n    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));\n    this.got=this.marks.filter(Boolean).length;\n    if(this.marks.every(Boolean)){\n      this.solved=true;\n      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Hopital.render();",
       "run": "verify"
     },
     {
-      "name": "the call buttons lose what they call",
+      "name": "the sort buttons lose what they sort",
       "file": "index.html",
-      "find": "data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"TailSort",
-      "replace": "data-k=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"TailSort",
-      "run": "play:tailsort"
+      "find": "data-c=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"HopSort",
+      "replace": "data-k=\"${c}\" aria-pressed=\"${this.calls[i]===c}\" ${this.solved?'disabled ':''}onclick=\"HopSort",
+      "run": "play:hopsort"
     },
     {
       "name": "the sort tab is left out",
       "file": "index.html",
-      "find": ",['sort','🚦 Close in or run off?','See four endless areas, and call which close in and which run off']",
+      "find": ",['sort','🚦 Rule or plug in?','See four ratios, and sort which are 0/0 and need the rule and which plug straight in']",
       "replace": "",
-      "run": "play:tailsort"
+      "run": "play:hopsort"
     }
   ]
 }

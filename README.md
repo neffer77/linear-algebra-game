@@ -1424,6 +1424,22 @@ The game is built so that losing teaches you as much as winning.
   number back off its button as an exact fraction, checks it against the slip
   it is named as, checks the right one against the ratio itself a hair from
   the point, and works every slope and fraction in the readout again.
+
+  **🚦 Rule or plug in?** shows four ratios, each at its own point, and asks
+  which are 0/0 and need the rule and which just plug in. The rule comes
+  first: plug the point into the top and the bottom, and only when both are 0
+  is the limit the ratio of their slopes. The rounds are built so the easy
+  guesses mislead: a 0 on top alone, like (x² − 4)/(x + 2) at 2, which is just
+  0 and which the rule gets wrong; a 0/0 like (1 − cos x)/x that heads to 0;
+  and a 0/0 hiding in a log, since ln 1 = 0. Every ratio that plugs in is one
+  where the rule would give another number. A slip rings the ratio, works its
+  top and bottom at the point, then the rule or the plain value. Once all four
+  are sorted, each pane draws its top and bottom near the point, with their
+  tangent lines where it is 0/0. Six rounds and six things to find. Nothing is
+  saved, and there is no clock. `npm test` reads every top, bottom and slope
+  back from its writing, checks the slopes against the curves themselves,
+  sorts each ratio again by plugging in, and checks every limit against the
+  ratio a hair either side of the point.
 - **🔬 See it work by hand** — when a fight ends with a topic that fell, its summary
   offers the workshop that shows that topic working, named as the Tome names it, so a
   miss on L'Hôpital's rule leads straight to the L'Hôpital Workshop and a miss on the
@@ -2678,7 +2694,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and seventy suites, about 6,470 checks, about a minute:
+loop only exists once the page is running. A hundred and seventy-one suites, about 6,510 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2801,6 +2817,7 @@ loop only exists once the page is running. A hundred and seventy suites, about 6
 | `cofpick` | the Tome says the cofactor workshop can be turned round; the workshop opens on expanding by hand, and switching to which det A puts away the matrices, the grid, the lines, the readout and the goals and states the rule first; A is shown three by three and named row by row, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, the quickest line is pointed out, and it is shut and told as not det A, and is not counted; the right pick works det A along the quickest line, minor by minor, counts (not as a first try after a miss), toasts and deals a new A; a first try counts as one, and the fifth brings DETERMINANT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `elimpick` | the Tome says the elimination workshop can be turned round; the workshop opens on row operations by hand, and switching to which k puts away the systems, the rows, k, the operations, the drawing, the readout and the goals and states the rule first; both rows are shown, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked through row 2's x coefficient, shut and told as not clearing x, and is not counted; the right pick clears x, reads off y and then x, counts (not as a first try after a miss), toasts and deals new rows; a first try counts as one, and the fifth brings ROW CLEARER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `hoppick` | the Tome says the L'Hôpital workshop can be turned round; the workshop opens on closing in by hand, and switching to which limit puts away the ratios, the drawing, h, the readout and the goals and states the rule first; the ratio is shown as a limit with its 0/0 pointed out, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, worked out, shut and told as not the limit, and is not counted; the right pick works both slopes at the point, counts (not as a first try after a miss), toasts and deals a new ratio; a first try counts as one, and the fifth brings LIMIT HUNTER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `hopsort` | the Tome says the ratios can be sorted; switching to rule or plug in puts away the ratios, the drawing, the stepper, the readout and the goals and states the rule first; four panes each hold a ratio, each is written with its point, and no curves, tangents or limits give the answer away; the check stays shut until all four are sorted; a check with B and C sorted wrongly rings the two ratios, works the lone 0 and the hidden 0/0, and finds nothing; changing a sort clears its ring, and the fix checks right without counting as a first check, gives every pane its limit, its top and bottom and tangent lines only where it is 0/0, and finds the lone 0, the zero limit and the fix with a toast; three first checks in a row explain a log hiding a 0, find every goal and bring RULE KEEPER; every button is named, the drawing is read out, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `newtonpick` | the Tome says the Newton's method workshop can be turned round; the workshop opens on stepping by hand, and switching to which x₁ puts away the curves, the drawing, the steppers, the readout and the goals and states the rule first; the curve and x₀ are shown with f(x₀) and f′(x₀) worked out, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked on the tangent, shut and told as not x₁, and is not counted; the right pick works the step, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings TANGENT RIDER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `avgpick` | the Tome says the water level workshop can be turned round; the workshop opens on levelling by hand, and switching to which level puts away the curves, the drawing, the level, the readout and the goals and states the rule first; the curve and its interval are shown with the area and the width, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked by what its level holds, shut and told as not the average, and is not counted; the right pick divides the area by the width, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings LEVEL KEEPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `geopick` | the Tome says the geometric series workshop can be turned round; the workshop opens on adding by hand, and switching to which sum puts away the series, the drawing, the stepper, the readout and the goals and states the rule first; the first four terms are shown with a and r, and four numbers offered two by two, each named by its value; a wrong pick is named as its slip, checked against S = a + rS, shut and told as not the sum, and is not counted; the right pick works a/(1 − r) and checks it, counts (not as a first try after a miss), toasts and deals a new series; a first try counts as one, and the fifth brings TAIL TAMER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |

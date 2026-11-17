@@ -14078,6 +14078,167 @@ const hopPickNotes = (() => {
   if (fives !== 30) fail('hoppick', 'banner', `five were picked ${fives} times, not 30`);
   return { rounds, misses, worked, fracR };
 })();
+/* Rule or plug in? The L'Hôpital workshop's third mode. Every ratio is worked
+   again from the way it is written: its top, bottom and their slopes read back
+   into numbers, the slopes checked against the top and bottom themselves, the
+   sort checked by plugging in, the limit checked against the ratio a hair
+   either side of the point, the rule shown wrong wherever it is not 0/0, every
+   ratio sorted wrong and the slip worked, each round's lone zeros, zero limits
+   and logs found afresh, and the drawing checked: each curve through its own
+   top or bottom, and each tangent at its own slope. */
+const hopSortNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Hopital = {render(){ env.renders++; }};" +
+    cut('const HopSort = {', '/* ============================ PRODUCT RULE WORKSHOP') + 'return HopSort;')(env, COL);
+  // a written expression read back into a number at x: powers, eˣ, sin, cos, ln, roots and 1/(…)
+  const read = w => {
+    let s = w;
+    for (const [a, b] of [['ln(x + 1)', 'Math.log(x+1)'], ['1/(x + 1)', '1/(x+1)'], ['1/(2√x)', '1/(2*Math.sqrt(x))'], ['2 cos 2x', '2*Math.cos(2*x)'],
+      ['sin 2x', 'Math.sin(2*x)'], ['sin x', 'Math.sin(x)'], ['cos x', 'Math.cos(x)'], ['ln x', 'Math.log(x)'], ['eˣ', 'Math.exp(x)'], ['√x', 'Math.sqrt(x)'],
+      ['x²', 'x**2'], ['x³', 'x**3'], ['2x', '2*x'], ['3x', '3*x'], ['−', '-'], [' ', '']]) s = s.split(a).join(b);
+    if (!/^[-+*/().\dx]*(Math\.(log|sin|cos|exp|sqrt)\([-+*/.\dx]*\)[-+*/().\dx]*)*$/.test(s)) return null;
+    return new Function('x', 'return ' + s);
+  };
+  const gcd = (a, b) => b ? gcd(b, a % b) : a;
+  const fr = v => { if (Math.abs(v) < 1e-9) return '0'; for (let d = 1; d <= 12; d++) { const n = Math.round(v * d); if (Math.abs(n / d - v) < 1e-7 && gcd(Math.abs(n), d) === 1) return (n < 0 ? '−' + -n : String(n)) + (d === 1 ? '' : '/' + d); } return null; };
+  const par = s => /[ −+]/.test(s) ? `(${s})` : s;
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('hopsort', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== 'Plug x = a into the top and the bottom first. If both are 0, the ratio is 0/0, which is no number: near a each is almost its tangent line, so the limit is f′(a)/g′(a), the ratio of their slopes. If they are not both 0, plugging in already gives the limit, and the rule would give a wrong one.') fail('hopsort', 'rule', 'the rule is not stated as it should be');
+  const seen = new Set();
+  let checks = 0, wrongs = 0, ratios = 0;
+  S.ROUNDS.forEach((Rd, ri) => {
+    const key = `round ${ri + 1}`, L = 'ABCD';
+    reset(); S.ri = ri;
+    if (Rd.length !== 4) { fail('hopsort', key, 'it does not hold four ratios'); return; }
+    const It = S.R();
+    // each ratio read back from its writing, and its slopes checked against its own top and bottom
+    const W = It.map((T, i) => { const w = { f: read(T.top), g: read(T.bot), fp: read(T.dtop), gp: read(T.dbot), a: T.a, q: `${par(T.top)}/${par(T.bot)}` };
+      if (!w.f || !w.g || !w.fp || !w.gp) { fail('hopsort', key, `${L[i]}, ${w.q}, or its slopes ${T.dtop} and ${T.dbot}, do not read back`); return null; }
+      if (seen.has(w.q + '@' + T.a)) fail('hopsort', key, `${w.q} at ${T.a} comes round twice`); seen.add(w.q + '@' + T.a);
+      for (const x of [T.a - 0.5, T.a - 0.1, T.a + 0.1, T.a + 0.5, T.a + 0.9]) {
+        if (Math.abs(w.f(x) - T.f(x)) > 1e-9 || Math.abs(w.g(x) - T.g(x)) > 1e-9) fail('hopsort', key, `${L[i]} is drawn and worked as something other than ${w.q}`);
+        const h = 1e-5, df = (w.f(x + h) - w.f(x - h)) / 2 / h, dg = (w.g(x + h) - w.g(x - h)) / 2 / h;
+        if (Math.abs(df - w.fp(x)) > 1e-5 || Math.abs(dg - w.gp(x)) > 1e-5 || Math.abs(w.fp(x) - T.fp(x)) > 1e-9 || Math.abs(w.gp(x) - T.gp(x)) > 1e-9) fail('hopsort', key, `${L[i]}'s slopes are told as ${T.dtop} and ${T.dbot}, which are not the slopes of ${T.top} and ${T.bot}`);
+      }
+      return w; });
+    if (W.some(w => !w)) return;
+    const fa = W.map(w => w.f(w.a)), ga = W.map(w => w.g(w.a)), z = v => Math.abs(v) < 1e-12;
+    const truth = W.map((w, i) => z(fa[i]) && z(ga[i]) ? 1 : 0);
+    // the limit itself, from the ratio a hair either side of the point
+    const lim = W.map((w, i) => { const e = 1e-6, l = w.f(w.a - e) / w.g(w.a - e), r = w.f(w.a + e) / w.g(w.a + e); return (l + r) / 2; });
+    const rule = W.map(w => w.fp(w.a) / w.gp(w.a));
+    W.forEach((w, i) => { ratios++;
+      if (S.truth(i) !== truth[i]) fail('hopsort', key, `${L[i]} is sorted as ${S.truth(i) ? '0/0' : 'plugging in'}, but plugging in x = ${w.a} gives ${fa[i]}/${ga[i]}`);
+      if (!truth[i] && z(ga[i])) fail('hopsort', key, `${L[i]} has a 0 on the bottom alone, so it has no limit to plug in`);
+      if (Math.abs(S.lim(It[i]) - lim[i]) > 1e-4 || fr(lim[i]) === null || S.fr(S.lim(It[i])) !== fr(lim[i])) fail('hopsort', key, `${L[i]} is told as heading to ${S.fr(S.lim(It[i]))}, but a hair from x = ${w.a} it is ${lim[i]}`);
+      if (!truth[i] && Math.abs(rule[i] - lim[i]) < 0.01) fail('hopsort', key, `${L[i]} is no 0/0, yet the rule happens to give its limit, so the trap does not show`);
+      if (fr(fa[i]) === null || fr(ga[i]) === null || fr(rule[i]) === null || fr(w.fp(w.a)) === null || fr(w.gp(w.a)) === null) fail('hopsort', key, `${L[i]}'s values at x = ${w.a} are not simple fractions`); });
+    if (!truth.includes(0) || !truth.includes(1)) fail('hopsort', key, 'every ratio sorts the same, so nothing needs reading');
+    // what the round holds, found afresh
+    const hf = [0, 1, 2, 3].filter(i => !truth[i] && z(fa[i])), zr = [0, 1, 2, 3].filter(i => truth[i] && Math.abs(lim[i]) < 1e-4), lg = [0, 1, 2, 3].filter(i => truth[i] && /ln/.test(It[i].top + It[i].bot));
+    lg.forEach(i => { const m = (It[i].top + ' ' + It[i].bot).match(/ln(\(x \+ 1\)| x)/)[0]; if (It[i].ln !== m || !z(read(m)(W[i].a))) fail('hopsort', key, `${L[i]}'s hidden 0 is told as ${It[i].ln}, not ${m}`); });
+    const tags = [hf.length ? 'half' : null, zr.length ? 'zero' : null, lg.length ? 'log' : null].filter(Boolean);
+    if (!tags.length) fail('hopsort', key, 'nothing in it misleads');
+    if (S.tags().join() !== tags.join()) fail('hopsort', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const slopes = i => `the top's slope is ${It[i].dtop} and the bottom's is ${It[i].dbot}, so f′(${W[i].a})/g′(${W[i].a}) = ${fr(W[i].fp(W[i].a))}/${fr(W[i].gp(W[i].a))} = ${fr(rule[i])}`;
+    // every ratio sorted wrong, one at a time
+    for (let i = 0; i < 4; i++) {
+      reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = 1 - truth[i]; S.check(); checks++; wrongs++;
+      const T = It[i], a = W[i].a;
+      const want = ['3 of 4 right. Fix the ones in red and check again.',
+        truth[i] ? `In ${L[i]}, at x = ${a} the top ${T.top} is 0 and the bottom ${T.bot} is 0: plugging in gives 0/0, which is no number. Use the rule: ${slopes(i)}. You had it plugged in.`
+          : `In ${L[i]}, at x = ${a} the top ${T.top} is ${fr(fa[i])} and the bottom ${T.bot} is ${fr(ga[i])}, so it is ${fr(fa[i])}/${fr(ga[i])}, not 0/0: plugging in gives ${fr(lim[i])}. The rule would give f′(${a})/g′(${a}) = ${fr(W[i].fp(a))}/${fr(W[i].gp(a))} = ${fr(rule[i])}, which is wrong. You had it needing the rule.`,
+        '0 sorted right on the first check this visit.'];
+      const got = S.working();
+      if (got.join(' | ') !== want.join(' | ')) fail('hopsort', key, `with ${L[i]} sorted wrong the readout is ${got.join(' | ')}`);
+      const svg = S.svg();
+      const ring = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+      if (ring.length !== 1 || +ring[0][1] !== (i % 2) * 180 + 3 || +ring[0][2] !== Math.floor(i / 2) * 120 + 3) fail('hopsort', key, `with ${L[i]} wrong, its pane is not ringed alone`);
+      if (/data-k="(top|bot|tan|end|dot)"/.test(svg)) fail('hopsort', key, `with ${L[i]} wrong, the answers are given away`);
+      if (S.solved || S.streak) fail('hopsort', key, 'a wrong sort is counted');
+      S.call(i, truth[i]);
+      if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('hopsort', key, `changing ${L[i]} leaves its ring`);
+      if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 sorted right on the first check this visit.'].join(' | ')) fail('hopsort', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+      S.check();
+      if (!S.solved || !S.fixed || S.wins) fail('hopsort', key, `fixing ${L[i]} is not counted as a fix`);
+    }
+    // all four right on the first check, sorted with the buttons
+    reset(); S.ri = ri;
+    if (!/id="hsrCheck" disabled /.test(S.html())) fail('hopsort', key, 'the check is open before the ratios are sorted');
+    const panes = [...S.svg().matchAll(/data-k="ratio"[^>]*>([^<]+)</g)].map(m => m[1]);
+    if (panes.join(' | ') !== W.map(w => w.q).join(' | ')) fail('hopsort', key, `the panes show ${panes.join(' | ')}`);
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="hsrCheck" disabled /.test(S.html())) fail('hopsort', key, `the check opens with ${L[skip]} unsorted`);
+      S.check();
+      if (S.tries || S.marks) fail('hopsort', key, `a check runs with ${L[skip]} unsorted`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`data-c="(\\d)" aria-pressed="false" onclick="HopSort\\.call\\(${i},\\1\\)" aria-label="Ratio ${L[i]}, ${W[i].q.replace(/[()+]/g, '\\$&')} at x = ${W[i].a}, ${t ? 'is 0/0 and needs the rule' : 'plugs straight in'}"`));
+      if (!m || +m[1] !== t) fail('hopsort', key, `the button sorting ${L[i]} does not sort it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`HopSort\\.call\\(${i},`, 'g')) || []).length !== 2) fail('hopsort', key, `${L[i]} does not offer both sorts`);
+    });
+    if (S.calls.join() !== truth.join()) fail('hopsort', key, 'the buttons cannot make the right sorts');
+    if (/id="hsrCheck" disabled /.test(S.html())) fail('hopsort', key, 'the check stays shut with every ratio sorted');
+    S.check(); checks++;
+    const want = ['Yes: all four are sorted right.'];
+    if (hf.length) { const i = hf[0]; want.push(`${L[i]}, ${W[i].q}, has a 0 on top alone: at x = ${W[i].a} it is ${fr(fa[i])}/${fr(ga[i])}, which is just ${fr(lim[i])}. Only 0 over 0 needs the rule, and here it would give ${fr(rule[i])}.`); }
+    if (zr.length) { const i = zr[0]; want.push(`${L[i]}, ${W[i].q}, is 0/0, yet ${slopes(i)}: 0/0 asks a question, and its answer can be 0.`); }
+    if (lg.length) { const i = lg[0]; want.push(`${L[i]}, ${W[i].q}, is 0/0 because ${It[i].ln} is 0 at x = ${W[i].a}: a log can hide a 0. The rule gives ${fr(W[i].fp(W[i].a))}/${fr(W[i].gp(W[i].a))} = ${fr(rule[i])}.`); }
+    want.push(`The limits: ${[0, 1, 2, 3].map(i => `${L[i]} → ${fr(lim[i])}`).join(', ')}.`);
+    want.push('1 sorted right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('hopsort', key, `once sorted the readout is ${S.working().join(' | ')}`);
+    // the drawing: each curve through its own top or bottom, and each tangent at its own slope through (a, 0)
+    const svg = S.svg();
+    W.forEach((w, i) => { const X = (i % 2) * 180, Y = Math.floor(i / 2) * 120, lo = w.a - 1;
+      const ys = []; for (let k = 0; k <= 60; k++) for (const h of [w.f, w.g]) { const y = h(lo + 2 * k / 60); if (Number.isFinite(y)) ys.push(y); }
+      const yl = Math.max(Math.min(0, ...ys), -6), yh = Math.min(Math.max(0, ...ys), 10), sp = yh - yl;
+      const bx = px => lo + (px - X - 14) / 152 * 2, by = py => yl + (Y + 104 - py) / 70 * sp;
+      for (const [k, h, col] of [['top', w.f, 'gold'], ['bot', w.g, 'blue']]) {
+        const m = svg.match(new RegExp(`data-k="${k}" clip-path="url\\(#hsrClip${i}\\)" points="([^"]+)" fill="none" stroke="${col}"`));
+        const ok = m && m[1].split(' ').length >= 50 && m[1].split(' ').every(pt => { const [px, py] = pt.split(',').map(Number), x = bx(px);
+          return x >= lo - 1e-6 && x <= w.a + 1 + 1e-6 && Math.abs(by(py) - h(x)) < 0.05 * sp; });
+        if (!ok) fail('hopsort', key, `the ${k === 'top' ? 'top' : 'bottom'} in ${L[i]} is not drawn as ${k === 'top' ? It[i].top : It[i].bot}`);
+      }
+      const tans = [...svg.matchAll(new RegExp(`data-k="tan" data-m="([^"]+)" clip-path="url\\(#hsrClip${i}\\)" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"`, 'g'))];
+      if (tans.length !== (truth[i] ? 2 : 0)) fail('hopsort', key, `${L[i]} has ${tans.length} tangent lines, not ${truth[i] ? 2 : 0}`);
+      tans.forEach((t, j) => { const d = j ? w.gp(w.a) : w.fp(w.a), x1 = bx(+t[2]), y1 = by(+t[3]), x2 = bx(+t[4]), y2 = by(+t[5]);
+        if (Math.abs((y2 - y1) / (x2 - x1) - d) > 0.01 || Math.abs(y1 - d * (x1 - w.a)) > 0.01 || t[1] !== fr(d)) fail('hopsort', key, `a tangent in ${L[i]} is drawn at the wrong slope or place`); }); });
+    const ends = [...svg.matchAll(/data-k="end"[^>]*>([^<]+)</g)].map(m => m[1]).join(' | ');
+    if (ends !== [0, 1, 2, 3].map(i => truth[i] ? `0/0 → ${fr(lim[i])}` : `${fr(fa[i])}/${fr(ga[i])} = ${fr(lim[i])}`).join(' | ')) fail('hopsort', key, `the panes end ${ends}`);
+    const h = S.html();
+    if (!h.includes('id="hsrNext"') || /onclick="HopSort\.call/.test(h.replace(/disabled onclick="HopSort\.call/g, ''))) fail('hopsort', key, 'once sorted, Next is not offered or a sort still opens');
+    const before = S.calls.join(); S.call(0, 1 - truth[0]);
+    if (S.calls.join() !== before) fail('hopsort', key, 'a sort moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('hopsort', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('hopsort', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = [0, 1, 2, 3].map(i => S.truth(i));
+    S.calls = right.slice(); if (slip) S.calls[1] = 1 - right[1];
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,half,zero'], [false, 'fix,half,log,one,zero'], [false, 'fix,half,log,one,zero'], [false, 'fix,half,log,one,three,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('hopsort', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ One 0 is not 0/0 · 0/0 can head to 0 · A slip caught and fixed | ✓ Right on the first check · ln 1 is a 0 too') fail('hopsort', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'RULE KEEPER / every ratio sorted') fail('hopsort', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, ratios };
+})();
 
 /* Which k? The pick-a-multiplier round in the elimination workshop. Every
    number on screen is read back off its button as an exact fraction and
@@ -20159,6 +20320,7 @@ console.log(`  shadows picked    ${pad(gramPickNotes.rounds.toLocaleString(), 15
 console.log(`  determinants picked ${pad(cofPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-det-A in the cofactor workshop, every number read back off its button and checked against the slip it is named as and against det A worked by Sarrus' rule; ${cofPickNotes.misses.toLocaleString()} wrong picks named and pointed to the quickest line, ${cofPickNotes.worked.toLocaleString()} minors and sums worked again from their own numbers)`);
 console.log(`  rows cleared        ${pad(elimPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-k in the elimination workshop, every k read back off its button as an exact fraction and checked against the slip it is named as, the right one alone clearing x from row 2; ${elimPickNotes.misses.toLocaleString()} wrong picks checked, ${elimPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${elimPickNotes.fracK.toLocaleString()} rounds whose right k is a fraction)`);
 console.log(`  limits picked       ${pad(hopPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-limit in the L'Hôpital workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone matching the ratio a hair from the point; ${hopPickNotes.misses.toLocaleString()} wrong picks checked, ${hopPickNotes.worked.toLocaleString()} slopes and fractions worked again from their own numbers, ${hopPickNotes.fracR.toLocaleString()} rounds whose limit is a fraction)`);
+console.log(`  ratios sorted       ${pad(hopSortNotes.ratios.toLocaleString(), 13)}  (ratios sorted in the L'Hôpital workshop's rule or plug in, each top, bottom and slope read back from its writing and checked against the others, the sort checked by plugging in and the limit a hair from the point, the rule shown wrong wherever it is not 0/0; ${hopSortNotes.wrongs.toLocaleString()} wrong sorts worked, ${hopSortNotes.checks.toLocaleString()} checks)`);
 console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-x₁ in the Newton's method workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where the tangent at x₀ meets the axis; ${newtonPickNotes.misses.toLocaleString()} wrong picks checked on the tangent, ${newtonPickNotes.worked.toLocaleString()} steps and tangent heights worked again from their own numbers, ${newtonPickNotes.fracR.toLocaleString()} rounds whose x₁ is a fraction)`);
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
