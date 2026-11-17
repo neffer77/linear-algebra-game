@@ -1321,6 +1321,10 @@ Object.assign(ANALYSIS, {
     valueCheck('trapezoid', truth, p.a, 1e-6);
     const w = fl(p.ex);
     if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'trapezoid', `the working does not end on ${p.a}: ${w}`);
+    // the first sentence finds h on its own, so that it can stand as the nudge
+    const th = w.match(/^There are (\d) strips, so h = \((\d+(?:\/\d+)?) - (-?\d+)\)\/(\d) = (\d+(?:\/\d+)?)\. At x = /);
+    if (!th || +th[1] !== n || +th[4] !== n || Math.abs(val(th[2]) - b) > 1e-9 || +th[3] !== a || Math.abs(val(th[5]) - h) > 1e-9)
+      fail('analysis', 'trapezoid', `the working does not open by finding h as (b − a)/n: ${w}`);
     // the overshoot's check squares h and times it by the change in slope, and comes out on the same number
     if (gap) {
       const cm = w.match(/As a check, h²\/12 × \(f′\((\S+)\) - f′\((\S+)\)\) = \(?(\d+(?:\/\d+)?)\)?²\/12 × (\d+(?:\/\d+)?) = (\d+(?:\/\d+)?)\.$/);
@@ -1371,11 +1375,11 @@ Object.assign(ANALYSIS, {
       [/^that fits one parabola across the whole interval/, (b - a) / 6 * (ys[0] + 4 * ys[n / 2] + ys[n])], [/^that is the left-hand sum/, L]];
     valueCheck('simpson', S, p.a, 1e-6);
     const w = fl(p.ex);
-    const hm = w.match(/^h = \((\d+(?:\/\d+)?) - (\d+)\)\/(\d) = (\d+(?:\/\d+)?),/);
-    if (!hm || Math.abs(val(hm[1]) - b) > 1e-9 || +hm[2] !== a || +hm[3] !== n || Math.abs(val(hm[4]) - h) > 1e-9) fail('analysis', 'simpson', `the working does not find h as (b − a)/n: ${w}`);
+    const hm = w.match(/^There are (\d) strips, so h = \((\d+(?:\/\d+)?) - (\d+)\)\/(\d) = (\d+(?:\/\d+)?)\. /);
+    if (!hm || +hm[1] !== n || Math.abs(val(hm[2]) - b) > 1e-9 || +hm[3] !== a || +hm[4] !== n || Math.abs(val(hm[5]) - h) > 1e-9) fail('analysis', 'simpson', `the working does not find h as (b − a)/n: ${w}`);
     if (!w.endsWith(`= ${fl(p.a)}.`)) fail('analysis', 'simpson', `the working does not end on ${p.a}: ${w}`);
     // the working's weighted sum is the heights with the weights it names
-    const wm = w.match(/the weights are ([\d, ]+), so S = h\/3 × \((.*)\) = (\d+(?:\/\d+)?) × (\d+) = /);
+    const wm = w.match(/The weights are ([\d, ]+), so S = h\/3 × \((.*)\) = (\d+(?:\/\d+)?) × (\d+) = /);
     if (!wm) fail('analysis', 'simpson', `the working does not name the weights: ${w}`);
     else {
       const wts = wm[1].split(', ').map(Number), parts = wm[2].split(' + ');

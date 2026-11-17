@@ -60,15 +60,15 @@
     {
       "name": "the working names the weights one place out",
       "file": "index.html",
-      "find": "the weights are ${ys.map((y,i)=>wt(i)).join(', ')}",
-      "replace": "the weights are ${ys.map((y,i)=>wt(i+1)).join(', ')}",
+      "find": "The weights are ${ys.map((y,i)=>wt(i)).join(', ')}",
+      "replace": "The weights are ${ys.map((y,i)=>wt(i+1)).join(', ')}",
       "run": "verify"
     },
     {
       "name": "the working divides by n + 1",
       "file": "index.html",
-      "find": "why=`h = (${bs} − ${as})/${n} = ${hs},",
-      "replace": "why=`h = (${bs} − ${as})/${n+1} = ${hs},",
+      "find": "so h = (${bs} − ${as})/${n} = ${hs}. The weights",
+      "replace": "so h = (${bs} − ${as})/${n+1} = ${hs}. The weights",
       "run": "verify"
     },
     {
@@ -90,6 +90,13 @@
       "file": "index.html",
       "find": "s+(i===0||i===n?1:2)*y,0)));",
       "replace": "s+y,0)));",
+      "run": "verify"
+    },
+    {
+      "name": "the trapezoid working divides by n + 1",
+      "file": "index.html",
+      "find": "const est=`There are ${n} strips, so h = (${bs} − ${as})/${n} = ${hs}.",
+      "replace": "const est=`There are ${n} strips, so h = (${bs} − ${as})/${n+1} = ${hs}.",
       "run": "verify"
     }
   ]
