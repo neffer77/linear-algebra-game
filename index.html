@@ -1560,7 +1560,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ COFACTOR WORKSHOP ============ -->
   <div class="screen" id="s-cof">
     <div class="panel"><h2>♟️ Cofactor Workshop</h2><div class="sub">A 3×3 determinant can be expanded along any row or any column: each entry times the 2×2 determinant left when its row and column are struck out, with signs from a checkerboard. Every line gives the same answer, so pick the one that saves the most work.</div></div>
-    <div id="cfTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Expand by hand or pick det A"></div>
+    <div id="cfTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Expand by hand, pick det A or use row moves"></div>
     <div class="panel">
       <div id="cfpBox"></div>
       <div id="cfSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
@@ -15145,7 +15145,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">♟️ Cofactor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Expand a 3×3 determinant along any row or column you like and watch every line agree. Find the line with the most zeros, a triangular matrix that is just its diagonal, and a matrix that flattens space. Then turn it round: see a 3×3 matrix, and pick which of four numbers is its determinant.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Expand a 3×3 determinant along any row or column you like and watch every line agree. Find the line with the most zeros, a triangular matrix that is just its diagonal, and a matrix that flattens space. Then turn it round: see a 3×3 matrix, and pick which of four numbers is its determinant. Or swap, scale and add rows, and track what each move does to det.</div>
          <button class="btn sm" id="tomeCof" style="width:auto;margin-top:8px" onclick="Cofactor.open()">Open the cofactor workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -24346,11 +24346,11 @@ const Cofactor = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('cfTab').innerHTML=[['hand','♟️ Expand by hand','Expand a matrix along a row or column by hand'],['pick','🎯 Which det A?','See a 3×3 matrix, and pick which of four numbers is its determinant']]
+    document.getElementById('cfTab').innerHTML=[['hand','♟️ Expand by hand','Expand a matrix along a row or column by hand'],['pick','🎯 Which det A?','See a 3×3 matrix, and pick which of four numbers is its determinant'],['moves','🔧 Row moves','Work a matrix down to triangular with row moves, and keep track of what each move does to its determinant']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cofactor.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['cfSets','cfFig','cfLines','cfRead','cfGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('cfpBox').innerHTML=pick ? CofPick.html() : '';
+    document.getElementById('cfpBox').innerHTML=this.tab==='pick' ? CofPick.html() : this.tab==='moves' ? CofMoves.html() : '';
     if(pick) return;
     document.getElementById('cfSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Cofactor.pick(${i})" aria-label="${s.btn}: A has rows ${this.rows(s.A)}">${s.btn}</button>`).join('');
@@ -24370,6 +24370,159 @@ const Cofactor = {
         Celebrate.banner('COFACTOR MASTER','every line expanded','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Row moves: the cofactor workshop's third mode ----------
+   Work a 3×3 matrix down to triangular form with row moves, and keep a tally
+   so that det A = tally × det M, where M is the matrix as it stands. A swap
+   flips the determinant's sign, so the tally flips; multiplying a row by k
+   multiplies the determinant by k, so the tally is divided by k; adding a
+   multiple of one row to another leaves the determinant alone, and the tally
+   with it. Once M is triangular, det M is its diagonal multiplied, and det A
+   is the tally times that. Every entry is an exact fraction. Nothing is saved. */
+const CofMoves = {
+  SETS:[
+    {id:'plain', btn:'Plain', A:[[1,2,-1],[2,5,1],[-1,1,4]]},
+    {id:'corner', btn:'0 in the corner', A:[[0,2,4],[1,3,2],[2,1,5]]},
+    {id:'shared', btn:'Shared factor', A:[[2,4,6],[1,3,2],[3,5,1]]}
+  ],
+  si:0, M:null, f:[1,1], hist:[], t:1, s:0, last:null, touched:false, done:new Set(),
+  GOALS:[
+    {id:'flip', t:'Swap two rows and see the tally change sign.', toast:'A swap flips the sign',
+     ok:K=>!!K.last && K.last.k==='swap'},
+    {id:'scale', t:'Multiply a row by a number and see the tally make up for it.', toast:'Scaling a row scales det',
+     ok:K=>!!K.last && ['dbl','half','neg'].includes(K.last.k)},
+    {id:'free', t:'Add one row to another and see the tally stay put.', toast:'Adding rows is free',
+     ok:K=>!!K.last && ['plus','minus'].includes(K.last.k)},
+    {id:'tri', t:'Work a matrix down to triangular and read det A off its diagonal.', toast:'Read off the diagonal',
+     ok:K=>K.hist.length>0 && K.tri()!==null},
+    {id:'corner', t:'Work the matrix with a 0 in its corner down to triangular.', toast:'Swapped past the 0',
+     ok:K=>K.si===1 && K.hist.length>0 && K.tri()!==null},
+    {id:'pure', t:'Work the plain matrix down to triangular with additions alone, so det A is just the diagonal.', toast:'The free move alone',
+     ok:K=>K.si===0 && K.hist.length>0 && K.tri()!==null && K.hist.every(h=>['plus','minus'].includes(h.move.k))}
+  ],
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b) [a,b]=[b,a%b]; return a; },
+  F(p,q=1){ if(q<0){ p=-p; q=-q; } const g=this.gcd(p,q)||1; return [p/g,q/g]; },
+  add(x,y){ return this.F(x[0]*y[1]+y[0]*x[1],x[1]*y[1]); },
+  mul(x,y){ return this.F(x[0]*y[0],x[1]*y[1]); },
+  fs:x=>x[1]===1 ? neg(x[0]) : `${neg(x[0])}/${x[1]}`,
+  pf(x){ return x[0]<0||x[1]!==1 ? `(${this.fs(x)})` : this.fs(x); },
+  set(){ return this.SETS[this.si]; },
+  start(){ if(!this.M) this.reset(); },
+  reset(){ this.M=this.set().A.map(r=>r.map(v=>[v,1])); this.f=[1,1]; this.hist=[]; this.last=null; },
+  rows(M){ return M.map(r=>r.map(v=>this.fs(v)).join(', ')).join('; ').replace(/; ([^;]*)$/,' and $1'); },
+  // the matrix a move would leave, and the tally with it; null if an entry would run too big
+  apply(k){
+    const M=this.M.map(r=>r.slice()), t=this.t, s=this.s;
+    let f=this.f;
+    if(k==='swap'){ [M[t],M[s]]=[M[s],M[t]]; f=this.mul(f,[-1,1]); }
+    else if(k==='plus'||k==='minus'){ const c=k==='plus'?1:-1; M[t]=M[t].map((v,j)=>this.add(v,this.mul([c,1],M[s][j]))); }
+    else { const m=k==='dbl'?[2,1]:k==='half'?[1,2]:[-1,1]; M[t]=M[t].map(v=>this.mul(v,m)); f=this.mul(f,[m[1],m[0]]); }
+    if(M.flat().some(v=>Math.abs(v[0])>999||v[1]>64)) return null;
+    return {M,f};
+  },
+  pick(i){ this.si=i; this.reset(); this.t=1; this.s=0; Cofactor.render(); },
+  row(i){ this.t=i; if(this.s===i) this.s=i===0?1:0; Cofactor.render(); },
+  use(i){ if(i!==this.t) this.s=i; Cofactor.render(); },
+  go(k){
+    const r=this.apply(k);
+    if(!r) return;
+    const move={k,t:this.t,s:this.s,f0:this.f,f1:r.f};
+    this.hist.push({M:this.M,f:this.f,move});
+    this.M=r.M; this.f=r.f; this.last=move; this.touched=true;
+    Cofactor.render();
+  },
+  undo(){ const h=this.hist.pop(); if(!h) return; this.M=h.M; this.f=h.f; this.last={k:'undo'}; Cofactor.render(); },
+  again(){ this.reset(); Cofactor.render(); },
+  // 'up' when every entry below the diagonal is 0, 'down' when every one above is, else null
+  tri(M=this.M){
+    if(!M[1][0][0] && !M[2][0][0] && !M[2][1][0]) return 'up';
+    if(!M[0][1][0] && !M[0][2][0] && !M[1][2][0]) return 'down';
+    return null;
+  },
+  detM(M=this.M){ return M[0].reduce((s,v,j)=>{ const m=M.slice(1).map(r=>r.filter((_,c)=>c!==j));
+    const d=this.add(this.mul(m[0][0],m[1][1]),this.mul([-1,1],this.mul(m[0][1],m[1][0])));
+    return this.add(s,this.mul(this.mul([j%2?-1:1,1],v),d)); },[0,1]); },
+  tally(){ const f=this.f; return f[0]===1&&f[1]===1 ? 'det M' : f[0]===-1&&f[1]===1 ? '−det M' : `${this.fs(f)} × det M`; },
+  said(k,f0,f1,t,s){
+    const T=`R${t+1}`, from=` from ${this.fs(f0)} to ${this.fs(f1)}`;
+    if(k==='swap') return `You swapped R${t+1} and R${s+1}. A swap flips the sign of the determinant, so the tally flips too,${from}.`;
+    if(k==='dbl') return `You doubled ${T}. That doubles the determinant, so the tally halves to make up for it,${from}.`;
+    if(k==='half') return `You halved ${T}. That halves the determinant, so the tally doubles to make up for it,${from}.`;
+    if(k==='neg') return `You multiplied ${T} by −1. That flips the sign of the determinant, so the tally flips too,${from}.`;
+    return `You ${k==='plus'?'added':'took'} R${s+1} ${k==='plus'?'to':'from'} ${T}. Adding a multiple of one row to another leaves the determinant as it was, so the tally stays at ${this.fs(f1)}.`;
+  },
+  cnt(n,a,b){ return n===0 ? `no ${b}` : `${n} ${n===1?a:b}`; },
+  /* the readout as plain sentences, so the checks read what the player reads */
+  working(){
+    const A=this.set().A, M=this.M, out=[];
+    out.push(`A has rows ${this.rows(A.map(r=>r.map(v=>[v,1])))}. Row moves change a determinant in set ways: swapping two rows flips its sign, multiplying a row by k multiplies it by k, and adding a multiple of one row to another leaves it as it was. Work A down to a triangular matrix, and its determinant is just the diagonal multiplied.`);
+    const L=this.last;
+    out.push(!L ? 'Pick a row to change, a row to use, and a move.' : L.k==='undo' ? 'You took the last move back.' : this.said(L.k,L.f0,L.f1,L.t,L.s));
+    out.push(`Now M has rows ${this.rows(M)}, and det A = ${this.tally()}.`);
+    const up=this.tri();
+    if(up){
+      const dg=[0,1,2].map(k=>M[k][k]), p=dg.reduce((a,b)=>this.mul(a,b),[1,1]), D=this.mul(this.f,p);
+      out.push(`M is triangular, with zeros ${up==='up'?'below':'above'} its diagonal, so det M is its diagonal multiplied: ${dg.map(v=>this.pf(v)).join(' × ')} = ${this.fs(p)}. That makes det A = `+
+        (this.f[0]===1&&this.f[1]===1 ? `det M = ${this.fs(D)}.` : `${this.pf(this.f)} × ${this.pf(p)} = ${this.fs(D)}.`));
+    } else {
+      const left=[[1,0],[2,0],[2,1]].filter(([i,j])=>M[i][j][0]!==0);
+      let s=`M is not triangular yet: ${left.length===1?'entry':'entries'} ${left.map(([i,j])=>`(${i+1}, ${j+1})`).map((e,n,a)=>n===0?e:(n===a.length-1?' and ':', ')+e).join('')} below the diagonal ${left.length===1?'is':'are'} still to clear.`;
+      const j=left[0][1];
+      if(M[j][j][0]===0) s+=` The diagonal entry (${j+1}, ${j+1}) is 0, so no multiple of row ${j+1} can clear the column beneath it: swap a row with something there into row ${j+1} first.`;
+      out.push(s);
+    }
+    if(this.hist.length){ const n=this.hist.length, c=k=>this.hist.filter(h=>k.includes(h.move.k)).length;
+      out.push(`${n} move${n===1?'':'s'} so far: ${this.cnt(c(['swap']),'swap','swaps')}, ${this.cnt(c(['dbl','half','neg']),'scaling','scalings')} and ${this.cnt(c(['plus','minus']),'addition','additions')}.`); }
+    return out;
+  },
+  /* M as a grid: the row being changed outlined in gold, the row used in blue,
+     and each entry below the diagonal green once it is 0, red until then */
+  svg(){
+    const M=this.M, X=j=>96+j*56, Y=i=>14+i*56;
+    let out=`<svg viewBox="0 0 360 190" style="width:100%;height:auto;display:block" role="img" aria-label="M has rows ${this.rows(M)}">`;
+    for(let i=0;i<3;i++){
+      const role=i===this.t?'t':i===this.s?'s':'';
+      out+=`<rect data-k="row" data-i="${i}" data-role="${role}" x="${X(0)-4}" y="${Y(i)-2}" width="${3*56+4}" height="56" rx="8" fill="none" stroke="${role==='t'?FIG_COL.b:role==='s'?FIG_COL.a:'none'}" stroke-width="2.5"/>`;
+      out+=`<text x="${X(0)-12}" y="${Y(i)+33}" text-anchor="end" font-size="14" fill="${FIG_COL.dim}">R${i+1}</text>`;
+      for(let j=0;j<3;j++){
+        const v=M[i][j], below=i>j, z=v[0]===0;
+        out+=`<g data-k="cell" data-i="${i}" data-j="${j}" data-below="${below}" data-zero="${z}">`+
+          `<rect x="${X(j)}" y="${Y(i)}" width="52" height="52" rx="6" fill="none" stroke="${below?(z?FIG_COL.c:FIG_COL.d):FIG_COL.grid}" stroke-width="1.5"${below?' stroke-dasharray="4 3"':''}/>`+
+          `<text x="${X(j)+26}" y="${Y(i)+33}" text-anchor="middle" font-size="${v[1]===1?20:15}" font-weight="700" fill="${below&&z?FIG_COL.c:FIG_COL.ink}">${this.fs(v)}</text></g>`;
+      }
+    }
+    return out+`</svg>`;
+  },
+  MOVES:[['swap','Swap','Swap R{t} and R{s}'],['minus','R{t} − R{s}','Take R{s} from R{t}'],['plus','R{t} + R{s}','Add R{s} to R{t}'],
+    ['dbl','R{t} × 2','Double R{t}'],['half','R{t} ÷ 2','Halve R{t}'],['neg','R{t} × (−1)','Multiply R{t} by −1']],
+  html(){
+    this.start();
+    const fill=s=>s.replace(/\{t\}/g,this.t+1).replace(/\{s\}/g,this.s+1);
+    let out=`<div class="small" style="margin:2px 0 6px">Swap two rows and det flips sign. Multiply a row by k and det is k times as big. Add a multiple of one row to another and det stays put. Keep a tally so that det A = tally × det M, and work M down to triangular.</div>`;
+    out+=`<div id="rwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix">`+this.SETS.map((s,i)=>
+      `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="CofMoves.pick(${i})" aria-label="${s.btn}: A has rows ${this.rows(s.A.map(r=>r.map(v=>[v,1])))}">${s.btn}</button>`).join('')+`</div>`;
+    out+=`<div id="rwTally" style="text-align:center;font-size:16px;margin:4px 0">det A = <b>${this.tally()}</b></div>`;
+    out+=`<div id="rwFig">${this.svg()}<div class="figcap">The row you change is outlined in gold and the row you use in blue. Entries below the diagonal are red until they are 0, then green.</div></div>`;
+    const rowBtns=(id,lab,cur,fn,off)=>`<div class="small" style="margin-top:4px">${lab}</div><div id="${id}" class="wsModes" role="group" aria-label="${lab}">`+
+      [0,1,2].map(i=>`<button class="btn sm ghost" style="flex:1" aria-pressed="${i===cur}" ${off===i?'disabled ':''}onclick="CofMoves.${fn}(${i})" aria-label="${lab}: R${i+1}">R${i+1}</button>`).join('')+`</div>`;
+    out+=rowBtns('rwT','Row to change',this.t,'row',-1)+rowBtns('rwS','Row to use',this.s,'use',this.t);
+    out+=`<div id="rwMoves" class="wsModes" style="flex-wrap:wrap;margin-top:6px" role="group" aria-label="Moves">`+this.MOVES.map(([k,b,l])=>
+      `<button class="btn sm ghost" style="flex:1 1 28%" data-move="${k}" ${this.apply(k)?'':'disabled '}onclick="CofMoves.go('${k}')" aria-label="${fill(l)}">${fill(b)}</button>`).join('')+
+      `<button class="btn sm ghost" style="flex:1 1 40%" id="rwUndo" ${this.hist.length?'':'disabled '}onclick="CofMoves.undo()" aria-label="Take the last move back">↶ Undo</button>`+
+      `<button class="btn sm ghost" style="flex:1 1 40%" id="rwAgain" ${this.hist.length?'':'disabled '}onclick="CofMoves.again()" aria-label="Start this matrix again">Start again</button></div>`;
+    out+=`<div id="rwRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div id="rwGoalPanel" style="margin-top:8px"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="rwGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}"><i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length) Celebrate.banner('MASTER OF ROW MOVES','every rule seen','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 

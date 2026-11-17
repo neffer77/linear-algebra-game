@@ -5641,6 +5641,160 @@ const geoReachNotes = (() => {
   return { steps, sums, edges, runs };
 })();
 
+/* Row moves, the cofactor workshop's third mode. Random runs of moves on each
+   of its three matrices, and after every press det A = tally × det M is
+   checked with det M worked here from its nine entries, never trusted from the
+   mode. Every sentence of the readout is read back: the move and what it does
+   to the tally, M row by row, and once M is triangular its diagonal and the
+   det A it gives, which must be det A worked from A itself; until then, the
+   entries left to clear and the swap a 0 on the diagonal calls for. The
+   drawing outlines the right rows and colours the entries below the diagonal
+   by whether they are 0 yet, a move that would run an entry past 999 or a
+   bottom past 64 is shut, and the hunt is played through the presses a
+   player would make. */
+const cofMovesNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { a: 'blue', b: 'gold', c: 'green', d: 'red', dim: 'dim', ink: 'ink', grid: 'grid' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cofactor = {render(){ env.renders++; }};" +
+    cut('const CofMoves = {', '/* ---------- The cover-up workshop: partial') + 'return CofMoves;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  const ad = (x, y) => fr(x[0] * y[1] + y[0] * x[1], x[1] * y[1]);
+  const mu = (x, y) => fr(x[0] * y[0], x[1] * y[1]);
+  const eq = (x, y) => x[0] * y[1] === y[0] * x[1];
+  // Sarrus' rule, on exact fractions
+  const det = M => { let s = [0, 1];
+    for (let j = 0; j < 3; j++) {
+      s = ad(s, mu(mu(M[0][j], M[1][(j + 1) % 3]), M[2][(j + 2) % 3]));
+      s = ad(s, mu([-1, 1], mu(mu(M[0][j], M[1][(j + 2) % 3]), M[2][(j + 1) % 3])));
+    }
+    return s; };
+  const rowsOf = M => M.map(r => r.map(fst).join(', ')).join('; ').replace(/; ([^;]*)$/, ' and $1');
+  const SETS = [[[1, 2, -1], [2, 5, 1], [-1, 1, 4]], [[0, 2, 4], [1, 3, 2], [2, 1, 5]], [[2, 4, 6], [1, 3, 2], [3, 5, 1]]];
+  if (S.SETS.length !== 3 || S.SETS.some((s, i) => JSON.stringify(s.A) !== JSON.stringify(SETS[i])))
+    fail('cofmoves', 'sets', 'the three matrices are not the plain one, the one with a 0 in its corner and the one with a factor shared along row 1');
+  const DA = SETS.map(A => det(A.map(r => r.map(v => [v, 1]))));
+  if (DA.map(fst).join() !== '−6,−22,−18') fail('cofmoves', 'sets', `the three determinants are ${DA.map(fst).join(', ')}, not −6, −22 and −18`);
+  if (S.si !== 0 || S.M !== null || S.t !== 1 || S.s !== 0 || S.done.size || S.touched) fail('cofmoves', 'open', 'the mode does not open on the plain matrix, changing R2 with R1, with nothing found');
+  let presses = 0, tris = 0, shut = 0, hints = 0;
+  const NAME = { swap: 'swap', plus: 'plus', minus: 'minus', dbl: 'dbl', half: 'half', neg: 'neg' };
+  const read = (key, prevM, prevF, k, t, s) => {
+    const M = S.M, f = S.f, w = S.working(), si = S.si;
+    if (!eq(mu(f, det(M)), DA[si])) fail('cofmoves', key, `the tally ${fst(f)} times det M = ${fst(det(M))} is not det A = ${fst(DA[si])}`);
+    if (M.flat().some(v => Math.abs(v[0]) > 999 || v[1] > 64)) fail('cofmoves', key, 'an entry has run past what the moves allow');
+    if (w[0] !== `A has rows ${rowsOf(SETS[si].map(r => r.map(v => [v, 1])))}. Row moves change a determinant in set ways: swapping two rows flips its sign, multiplying a row by k multiplies it by k, and adding a multiple of one row to another leaves it as it was. Work A down to a triangular matrix, and its determinant is just the diagonal multiplied.`)
+      fail('cofmoves', key, `the rules are not stated first: ${w[0]}`);
+    // what the last move did
+    if (k) {
+      const T = `R${t + 1}`, from = ` from ${fst(prevF)} to ${fst(f)}`;
+      const want = { swap: `You swapped R${t + 1} and R${s + 1}. A swap flips the sign of the determinant, so the tally flips too,${from}.`,
+        dbl: `You doubled ${T}. That doubles the determinant, so the tally halves to make up for it,${from}.`,
+        half: `You halved ${T}. That halves the determinant, so the tally doubles to make up for it,${from}.`,
+        neg: `You multiplied ${T} by −1. That flips the sign of the determinant, so the tally flips too,${from}.`,
+        plus: `You added R${s + 1} to ${T}. Adding a multiple of one row to another leaves the determinant as it was, so the tally stays at ${fst(f)}.`,
+        minus: `You took R${s + 1} from ${T}. Adding a multiple of one row to another leaves the determinant as it was, so the tally stays at ${fst(f)}.` }[k];
+      if (w[1] !== want) fail('cofmoves', key, `the move is not told as it was: ${w[1]}`);
+      const fx = k === 'swap' || k === 'neg' ? mu(prevF, [-1, 1]) : k === 'dbl' ? mu(prevF, [1, 2]) : k === 'half' ? mu(prevF, [2, 1]) : prevF;
+      if (!eq(f, fx)) fail('cofmoves', key, `after ${k} the tally is ${fst(f)}, not ${fst(fx)}`);
+      const dm = det(M), dp = det(prevM), ratio = k === 'swap' || k === 'neg' ? [-1, 1] : k === 'dbl' ? [2, 1] : k === 'half' ? [1, 2] : [1, 1];
+      if (!eq(dm, mu(dp, ratio))) fail('cofmoves', key, `${k} took det M from ${fst(dp)} to ${fst(dm)}, not by the factor its rule says`);
+    }
+    const tl = eq(f, [1, 1]) ? 'det M' : eq(f, [-1, 1]) ? '−det M' : `${fst(f)} × det M`;
+    if (w[2] !== `Now M has rows ${rowsOf(M)}, and det A = ${tl}.`) fail('cofmoves', key, `M or the tally is not read as it is: ${w[2]}`);
+    const lowZ = !M[1][0][0] && !M[2][0][0] && !M[2][1][0], upZ = !M[0][1][0] && !M[0][2][0] && !M[1][2][0];
+    if (lowZ || upZ) {
+      tris++;
+      const dg = [0, 1, 2].map(i => M[i][i]), p = dg.reduce(mu, [1, 1]);
+      if (!eq(p, det(M))) fail('cofmoves', key, 'a triangular M is not its diagonal multiplied');
+      const tail = eq(f, [1, 1]) ? `det M = ${fst(DA[si])}.` : `${pf(f)} × ${pf(p)} = ${fst(DA[si])}.`;
+      if (w[3] !== `M is triangular, with zeros ${lowZ ? 'below' : 'above'} its diagonal, so det M is its diagonal multiplied: ${dg.map(pf).join(' × ')} = ${fst(p)}. That makes det A = ${tail}`)
+        fail('cofmoves', key, `the diagonal does not take det A to ${fst(DA[si])}: ${w[3]}`);
+    } else {
+      const left = [[1, 0], [2, 0], [2, 1]].filter(([i, j]) => M[i][j][0] !== 0), names = left.map(([i, j]) => `(${i + 1}, ${j + 1})`);
+      const list = names.length === 1 ? names[0] : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1];
+      const m = w[3].match(/^M is not triangular yet: entr(?:y|ies) (.+?) below the diagonal (?:is|are) still to clear\.(.*)$/);
+      if (!m || m[1] !== list) fail('cofmoves', key, `the entries left to clear are not ${list}: ${w[3]}`);
+      const j = left[0][1], zero = M[j][j][0] === 0;
+      if (m && (m[2] === ` The diagonal entry (${j + 1}, ${j + 1}) is 0, so no multiple of row ${j + 1} can clear the column beneath it: swap a row with something there into row ${j + 1} first.`) !== zero)
+        fail('cofmoves', key, `a 0 on the diagonal ${zero ? 'is not' : 'is wrongly'} pointed to a swap: ${w[3]}`);
+      if (zero) hints++;
+    }
+    const H = S.hist.map(h => h.move.k), c = ks => H.filter(x => ks.includes(x)).length;
+    const cn = (n, a, b) => (n === 0 ? `no ${b}` : `${n} ${n === 1 ? a : b}`);
+    const wc = H.length ? `${H.length} move${H.length === 1 ? '' : 's'} so far: ${cn(c(['swap']), 'swap', 'swaps')}, ${cn(c(['dbl', 'half', 'neg']), 'scaling', 'scalings')} and ${cn(c(['plus', 'minus']), 'addition', 'additions')}.` : undefined;
+    if (w[4] !== wc || w.length !== (H.length ? 5 : 4)) fail('cofmoves', key, `the moves are not counted: ${w[4]}`);
+    // the drawing and the buttons
+    const h = S.html(), svg = S.svg();
+    const roles = [...svg.matchAll(/data-k="row" data-i="(\d)" data-role="(\w?)"[^>]*stroke="(\w+)"/g)].map(r => r[2] + ':' + r[3]).join();
+    const wr = [0, 1, 2].map(i => (i === S.t ? 't:gold' : i === S.s ? 's:blue' : ':none')).join();
+    if (roles !== wr) fail('cofmoves', key, `the rows are outlined ${roles}, not ${wr}`);
+    for (const g of svg.matchAll(/data-k="cell" data-i="(\d)" data-j="(\d)" data-below="(\w+)" data-zero="(\w+)"><rect [^>]*stroke="(\w+)"[^>]*\/><text [^>]*>([^<]+)<\/text>/g)) {
+      const v = M[+g[1]][+g[2]], below = +g[1] > +g[2];
+      if (g[6] !== fst(v) || g[3] !== String(below) || g[5] !== (below ? (v[0] ? 'red' : 'green') : 'grid')) fail('cofmoves', key, `entry (${+g[1] + 1}, ${+g[2] + 1}) is drawn wrong`);
+    }
+    if ((svg.match(/data-k="cell"/g) || []).length !== 9) fail('cofmoves', key, 'the grid does not have nine cells');
+    if (!h.includes(`<div id="rwTally" style="text-align:center;font-size:16px;margin:4px 0">det A = <b>${tl}</b></div>`)) fail('cofmoves', key, 'the tally over the grid is not the one in the readout');
+    for (const mv of Object.keys(NAME)) {
+      const off = new RegExp(`data-move="${mv}" disabled`).test(h), r = S.apply(mv);
+      if (off !== !r) fail('cofmoves', key, `${mv} is ${off ? 'shut though it is allowed' : 'open though it runs an entry too far'}`);
+      if (off) shut++;
+    }
+    if (/aria-label="Row to use: R(\d)"/.test(h) && !new RegExp(`disabled onclick="CofMoves.use\\(${S.t}\\)"`).test(h)) fail('cofmoves', key, 'the row being changed can also be picked as the row to use');
+  };
+  let seed = 7;
+  const rnd = n => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed % n; };
+  for (let run = 0; run < 60; run++) {
+    S.pick(run % 3);
+    read(`run ${run} open`, null, null, null);
+    for (let step = 0; step < 40; step++) {
+      const key = `run ${run} step ${step}`, roll = rnd(20);
+      if (roll === 0) { S.again(); if (S.hist.length || !eq(S.f, [1, 1])) fail('cofmoves', key, 'starting again does not go back to A'); read(key, null, null, null); continue; }
+      if (roll === 1) { const n = S.hist.length, top = S.hist[n - 1]; S.undo();
+        if (n && (S.hist.length !== n - 1 || S.M !== top.M)) fail('cofmoves', key, 'undo does not put the last M back'); read(key, null, null, null); continue; }
+      if (roll < 5) { S.row(rnd(3)); if (S.s === S.t) fail('cofmoves', key, 'the row to use is the row being changed'); }
+      if (roll < 8) S.use(rnd(3));
+      const k = Object.keys(NAME)[rnd(6)], ok = S.apply(k), M0 = S.M, f0 = S.f, t = S.t, s = S.s;
+      S.go(k); presses++;
+      if (!ok) { if (S.M !== M0) fail('cofmoves', key, `a shut ${k} still moved M`); read(key, null, null, null); continue; }
+      read(key, M0, f0, k, t, s);
+    }
+  }
+  // the hunt, played through the presses a player would make
+  S.done = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  S.pick(0); S.html();
+  if (S.done.size) fail('cofmoves', 'hunt', 'a goal is found before a move is made');
+  const go = (steps) => { for (const [fn, a] of steps) {
+    const M0 = S.M, f0 = S.f, t = S.t, s = S.s; S[fn](a); S.html();
+    if (fn === 'go') read(`hunt ${a}`, M0, f0, a, t, s); } return [...S.done].sort().join(); };
+  const plan = [
+    [[['row', 1], ['use', 0], ['go', 'minus'], ['go', 'minus']], 'free'],
+    [[['row', 2], ['go', 'plus'], ['use', 1], ['go', 'minus'], ['go', 'minus']], 'free'],
+    [[['go', 'minus']], 'free,pure,tri'],
+    [[['pick', 2], ['row', 0], ['go', 'half']], 'free,pure,scale,tri'],
+    [[['pick', 1], ['row', 0], ['use', 1], ['go', 'swap']], 'flip,free,pure,scale,tri'],
+    [[['row', 2], ['use', 0], ['go', 'minus'], ['go', 'minus'], ['row', 1], ['go', 'half'], ['row', 2], ['use', 1], ['go', 'plus'], ['go', 'plus'], ['go', 'plus'], ['go', 'plus']], 'flip,free,pure,scale,tri'],
+    [[['go', 'plus']], 'corner,flip,free,pure,scale,tri']];
+  plan.forEach(([steps, want], i) => { const got = go(steps); if (got !== want) fail('cofmoves', 'hunt', `step ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Adding rows is free | ✓ Read off the diagonal · The free move alone | ✓ Scaling a row scales det | ✓ A swap flips the sign') fail('cofmoves', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MASTER OF ROW MOVES / every rule seen') fail('cofmoves', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  { // the plain matrix worked with a swap is triangular too, but not by additions alone
+    S.done = new Set(); S.touched = true; S.pick(0); S.row(1); S.use(0); S.go('minus'); S.go('minus'); S.row(2); S.go('plus'); S.use(1); S.go('minus'); S.go('minus'); S.go('swap'); S.go('swap'); S.go('minus'); S.html();
+    if (!S.done.has('tri') || S.done.has('pure')) fail('cofmoves', 'hunt', 'a run with swaps in it counts as additions alone');
+  }
+  S.si = 0; S.M = null; S.t = 1; S.s = 0; S.done = new Set(); S.touched = false; S.last = null; S.hist = [];
+  return { presses, tris, shut, hints };
+})();
+
 /* Which speed? The pick-the-speed round in the ladder workshop. Every number
    on screen is read back off its button as an exact fraction and checked
    against the slip it is named as, worked out here from x, y, L and x′ alone.
@@ -17389,6 +17543,7 @@ console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString()
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  power series stepped ${pad(geoReachNotes.steps.toLocaleString(), 12)}  (every x the how-far mode allows on its four power series, each sentence worked again: ${geoReachNotes.sums} sums inside against twenty and two thousand terms, ${geoReachNotes.edges} ends where the ratio is 1, ${geoReachNotes.runs} steps outside where the terms run away)`);
+console.log(`  row moves pressed ${pad(cofMovesNotes.presses.toLocaleString(), 15)}  (random runs of swaps, scalings and additions on the cofactor workshop's three matrices, det A = tally × det M checked after every one with det M worked by Sarrus' rule; ${cofMovesNotes.tris.toLocaleString()} triangular matrices read off their diagonals, ${cofMovesNotes.hints} zeros on the diagonal pointed to a swap, ${cofMovesNotes.shut} moves shut for running an entry too far)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);
 console.log(`  hidden slopes found ${pad(impPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-slope in the implicit slope workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the curve's real slope; ${impPickNotes.misses.toLocaleString()} wrong picks checked against 2ax + by + (bx + 2cy)·y′ = 0, ${impPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${impPickNotes.wholeR.toLocaleString()} rounds whose slope is whole)`);
 console.log(`  fractions covered up ${pad(covPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-A in the cover-up workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone adding back to f with its B; ${covPickNotes.misses.toLocaleString()} wrong picks checked against the cleared equation at x = r, ${covPickNotes.worked.toLocaleString()} lines worked again from their own numbers, ${covPickNotes.wholeR.toLocaleString()} rounds whose A is whole)`);

@@ -1,81 +1,81 @@
 {
-  "change": "Add a How far? mode to the geometric series workshop: step x along a power series and find its radius.",
+  "change": "Add a Row moves mode to the cofactor workshop: work a matrix down with row moves and track its determinant.",
   "mutations": [
     {
-      "name": "the radius of x²ⁿ taken without the root",
+      "name": "a swap that leaves the tally alone",
       "file": "index.html",
-      "find": "R(){ const S=this.set(); return S.m===2 ? Math.sqrt(S.c) : S.c; },",
-      "replace": "R(){ const S=this.set(); return S.c; },",
+      "find": "if(k==='swap'){ [M[t],M[s]]=[M[s],M[t]]; f=this.mul(f,[-1,1]); }",
+      "replace": "if(k==='swap'){ [M[t],M[s]]=[M[s],M[t]]; }",
       "run": "verify"
     },
     {
-      "name": "the sum with n in front left unsquared",
+      "name": "a scaling that multiplies the tally instead of dividing it",
       "file": "index.html",
-      "find": "return S.p===0 ? this.frac(u, v-u) : this.frac(u*v, (v-u)**2); },",
-      "replace": "return S.p===0 ? this.frac(u, v-u) : this.frac(u, v-u); },",
+      "find": "M[t]=M[t].map(v=>this.mul(v,m)); f=this.mul(f,[m[1],m[0]]); }",
+      "replace": "M[t]=M[t].map(v=>this.mul(v,m)); f=this.mul(f,m); }",
       "run": "verify"
     },
     {
-      "name": "an end counted as inside",
+      "name": "an addition that adds the row the other way round",
       "file": "index.html",
-      "find": "    else if(r<1){\n      const L=this.sum(), f=",
-      "replace": "    else if(r<=1){\n      const L=this.sum(), f=",
+      "find": "M[t]=M[t].map((v,j)=>this.add(v,this.mul([c,1],M[s][j]))); }",
+      "replace": "M[t]=M[t].map((v,j)=>this.add(M[s][j],this.mul([c,1],v))); }",
       "run": "verify"
     },
     {
-      "name": "the bars not cut off at 2",
+      "name": "triangular read without the last entry below the diagonal",
       "file": "index.html",
-      "find": "const v=this.term(n), h=Math.min(Math.abs(v),2)*24;",
-      "replace": "const v=this.term(n), h=Math.abs(v)*24;",
+      "find": "if(!M[1][0][0] && !M[2][0][0] && !M[2][1][0]) return 'up';",
+      "replace": "if(!M[1][0][0] && !M[2][0][0]) return 'up';",
       "run": "verify"
     },
     {
-      "name": "the marker in one colour",
+      "name": "a 0 on the diagonal left without its swap",
       "file": "index.html",
-      "find": "const col=r<1 ? FIG_COL.c : r===1 ? FIG_COL.b : FIG_COL.d;",
-      "replace": "const col=FIG_COL.c;",
+      "find": "if(M[j][j][0]===0) s+=",
+      "replace": "if(M[j][j][0]===9) s+=",
       "run": "verify"
     },
     {
-      "name": "the stepper runs past twice the radius",
+      "name": "scalings counted as swaps",
       "file": "index.html",
-      "find": "K(){ return 2*this.R()*this.set().sd; },",
-      "replace": "K(){ return 3*this.R()*this.set().sd; },",
+      "find": "${this.cnt(c(['swap']),'swap','swaps')}",
+      "replace": "${this.cnt(c(['swap','neg']),'swap','swaps')}",
       "run": "verify"
     },
     {
-      "name": "a goal found before anything is pressed",
+      "name": "the row used outlined as the row changed",
       "file": "index.html",
-      "find": "    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    out+=`<div class=\"panel\" id=\"grGoalPanel\"",
-      "replace": "    if(true) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }\n    out+=`<div class=\"panel\" id=\"grGoalPanel\"",
+      "find": "stroke=\"${role==='t'?FIG_COL.b:role==='s'?FIG_COL.a:'none'}\"",
+      "replace": "stroke=\"${role==='t'||role==='s'?FIG_COL.b:'none'}\"",
       "run": "verify"
     },
     {
-      "name": "the furthest step taken one too close",
+      "name": "a cleared entry still drawn red",
       "file": "index.html",
-      "find": "ok:K=>K.si===2 && K.rho()<1 && Math.abs(K.k)+1>=K.R()*K.set().sd},",
-      "replace": "ok:K=>K.si===2 && K.rho()<1 && Math.abs(K.k)+2>=K.R()*K.set().sd},",
+      "find": "stroke=\"${below?(z?FIG_COL.c:FIG_COL.d):FIG_COL.grid}\"",
+      "replace": "stroke=\"${below?FIG_COL.d:FIG_COL.grid}\"",
       "run": "verify"
     },
     {
-      "name": "the swing on an end not told",
+      "name": "additions alone that count a swap",
       "file": "index.html",
-      "find": "Here every term is ${t[0]<0?'±':''}${each}",
-      "replace": "Here every term is ${each}",
+      "find": "K.hist.every(h=>['plus','minus'].includes(h.move.k))}",
+      "replace": "K.hist.some(h=>['plus','minus'].includes(h.move.k))}",
       "run": "verify"
     },
     {
-      "name": "S₂₀ added with nineteen terms",
+      "name": "no move shut for running too far",
       "file": "index.html",
-      "find": "S20(){ let s=0; for(let n=1;n<=20;n++) s+=this.term(n); return s; },",
-      "replace": "S20(){ let s=0; for(let n=1;n<20;n++) s+=this.term(n); return s; },",
+      "find": "if(M.flat().some(v=>Math.abs(v[0])>999||v[1]>64)) return null;",
+      "replace": "if(M.flat().some(v=>Math.abs(v[0])>99999||v[1]>9999)) return null;",
       "run": "verify"
     },
     {
-      "name": "term 20 read off term 19",
+      "name": "undo that leaves the tally where it was",
       "file": "index.html",
-      "find": "const big=Math.abs(this.term(20));",
-      "replace": "const big=Math.abs(this.term(19));",
+      "find": "this.hist.pop(); if(!h) return; this.M=h.M; this.f=h.f;",
+      "replace": "this.hist.pop(); if(!h) return; this.M=h.M;",
       "run": "verify"
     }
   ]
