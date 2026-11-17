@@ -157,6 +157,7 @@ const SUITES = [
   require('./play/cisternsketch'), // see a spring's flow, set the total at the end of each hour and draw F
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there
   require('./play/hzpick'), // see a fraction with the same power on top and underneath, pick which of four numbers it heads for
+  require('./play/hzrace'), // see four functions, rank them from slowest to fastest as x grows without end
   require('./play/fitpick'), // see a few points, pick which of four numbers is the slope of the best line through them
   require('./play/buildpick'), // see a fence and a paddock count, pick which of four widths holds the most
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it

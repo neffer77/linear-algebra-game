@@ -1951,6 +1951,22 @@ The game is built so that losing teaches you as much as winning.
   number back off its button, checks it against the slip it is named as,
   checks the right one alone against f at ten million, and works every check
   in the readout again.
+
+  **🏁 Race to infinity** races whole functions: four are shown, and you tap
+  them in order from the slowest to the fastest as x grows without end. The
+  rule comes first: every power of ln x is outgrown by every positive power of
+  x, every power of x by every bˣ with b above 1, the bigger power or base
+  wins, and near the start the order can look different. A picture shows the
+  four at x = 10, biggest on top, beside the order you call, with a line from
+  each one's start, so a line that climbs is an overtake. A check rings the
+  places that are wrong and works each pair put the wrong way round: the rule
+  that settles it, both values at x = 10, and both where the faster one has
+  pulled ahead, worked as powers of ten so 3ˣ at a thousand never overflows.
+  Once right, the overtakes are drawn in gold and told. Six races in a fixed
+  order, from ln x against 2ˣ to x¹⁰⁰, which leads 2ˣ and eˣ at x = 10 and
+  loses to both by x = 1,000; six goals. Nothing is saved, and there is no
+  clock. `npm test` ranks every race by its natural log at 10³⁰ and 10⁶⁰, puts
+  each race in all 24 orders, and checks every ring, line and readout.
 - **✖️ Cross Product Workshop** — the cross product, drawn in 3D. Turn v one
   part at a time and watch u × v worked out part by part from the other two
   slots, then checked square to both u and v, its length read as the area of
@@ -2574,7 +2590,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and sixty-three suites, about 6,190 checks, about a minute:
+loop only exists once the page is running. A hundred and sixty-four suites, about 6,230 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2719,6 +2735,7 @@ loop only exists once the page is running. A hundred and sixty-three suites, abo
 | `cisternsketch` | the Tome says the total can be sketched by hand; the mode is pressed and stepping by hand steps aside; the task and the rule come first, with four hours unset, the check shut, the first hour shaded gold and F(0) = 0 drawn; a sketch with a slip rings only that hour and works its area as a trapezoid, giving nothing away; changing it clears its ring, and the fix is explained, draws the true F, shuts the totals and is not a first check; a dip's second hour shades red then gold; a peak, a dip and a steady drain are explained; three first checks in a row are counted; every goal can be found and the last brings a banner; totals stop at 8 and −8; every button and the drawing are named, it fits a phone, stepping by hand comes back, and nothing is saved |
 | `invpick` | the Tome says the inverse slope workshop can be turned round; the workshop opens on mirroring a curve by hand, and switching to which slope puts away the curves, the figure, the stepper, the modes, the readout and the goals and states the rule first; a rising curve and the point it sends to u are shown, and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked against g′(u) × f′(p) = 1, shut and told as not g′(u), and not counted; the right pick works f′ at the point out and flips it, counts (not as a first try after a miss), toasts and deals a new curve; a first try counts as one, and the fifth brings SLOPE FLIPPER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `hzpick` | the Tome says the horizon workshop can be turned round; the workshop opens on stepping x out by hand, and switching to where does it head puts away the fractions, the figure, the stepper, the readout and the goals and states the rule first; a fraction is shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the biggest-power part of the gap, shut and told as not where f heads, and not counted; the right pick divides top and bottom by the biggest power, counts (not as a first try after a miss), toasts and deals a new fraction; a first try counts as one, and the fifth brings HORIZON GAZER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
+| `hzrace` | the Tome says a race can be ranked; the mode is pressed and stepping by hand steps aside; the task and the rule come first, with the four at x = 10 drawn biggest on top with their values, no place called and the check shut; a tap places the next function, slowest first, and names the next place, and a second tap takes one out; a slip rings just the two wrong places and works the pair the wrong way round, with nothing found; taking them out clears the rings, and the fix is explained, shuts the functions and is not a first check; a late winner is explained and its overtake drawn in gold; three first checks in a row are counted; every goal can be found and the last brings a banner; every button and the drawing are named, it fits a phone, stepping by hand comes back, and nothing is saved |
 | `fitpick` | the Tome says the best fit workshop can be turned round; the workshop opens on setting the line by hand, and switching to which slope fits best puts away the sets, the steppers, the figure, the readout and the goals and states the rule first; a few points are shown and four numbers offered, each named by its number; two wrong picks are each named as their slip and checked by the misses from the middle point times their x gaps, shut and told as not the best slope, and not counted; the right pick works the slope from the two sums, counts (not as a first try after a miss), toasts and deals new points; a first try counts as one, and the fifth brings LINE LAYER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `buildpick` | the Tome says the biggest build workshop can be turned round; the workshop opens on stepping x by hand, and switching to which width holds most puts away the builds, the figure, the stepper, the readout and the goals and states the rule first; a fence and a paddock count are shown and four widths offered, each named by its width; two wrong picks are each named as their slip and checked by the slope of the area, shut and told as not holding the most, and not counted; the right pick solves A′(x) = 0, counts (not as a first try after a miss), toasts and deals a new pen; a first try counts as one, and the fifth brings PADDOCK PLANNER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `slicepick` | the Tome says the slice workshop can be turned round; the workshop opens on sweeping by hand, and switching to which volume puts away the functions, the hold, the figure, the stepper, the readout and the goals and states the rule first; a plane and a rectangle are shown and four volumes offered, each named by its volume; two wrong picks are each named as their slip and checked by how the volume grows with its far edge, shut and told as not the volume, and not counted; the right pick sweeps the slices across, counts (not as a first try after a miss), toasts and deals a new solid; a first try counts as one, and the fifth brings MASTER SLICER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |

@@ -12198,134 +12198,149 @@ const cisternSketchNotes = (() => {
   if (env.banners.join() !== 'TALLY KEEPER / every total drawn by hand') fail('cistersketch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, shades };
 })();
-const shapeReadNotes = (() => {
+const horizonRaceNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
   const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
   const S = new Function('env', 'COL',
-    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
     "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
-    "const Bend = {render(){ env.renders++; }};" +
-    cut('const ShapeRead = {', '/* ---------- The average height workshop') + 'return ShapeRead;')(env, COL);
-  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
-  // the six curves as written, read off their names, with f′ and f″ as written
-  const FN = { 'x³ − 3x': x => x ** 3 - 3 * x, 'x²': x => x * x, '4 − x²': x => 4 - x * x, 'x³/3 − x²': x => x ** 3 / 3 - x * x,
-    'x − x³/3': x => x - x ** 3 / 3, 'x⁴/4 − 2x²': x => x ** 4 / 4 - 2 * x * x };
-  const D1 = { 'x³ − 3x': '3x² − 3', 'x²': '2x', '4 − x²': '−2x', 'x³/3 − x²': 'x² − 2x', 'x − x³/3': '1 − x²', 'x⁴/4 − 2x²': 'x³ − 4x' };
-  const D2 = { 'x³ − 3x': '6x', 'x²': '2', '4 − x²': '−2', 'x³/3 − x²': '2x − 2', 'x − x³/3': '−2x', 'x⁴/4 − 2x²': '3x² − 4' };
-  // the slope and the bend worked from f alone, by differences across a small step
-  const rd = (v, p) => { const q = Math.round(v * p) / p; return Object.is(q, -0) ? 0 : q; };
-  const df = (f, x) => rd((f(x + 1e-5) - f(x - 1e-5)) / 2e-5, 1e6);
-  const d2f = (f, x) => rd((f(x + 1e-3) - 2 * f(x) + f(x - 1e-3)) / 1e-6, 1e4);
-  const go = (f, x) => Math.sign(df(f, x)), bd = (f, x) => Math.sign(d2f(f, x));
-  const W = v => v > 0 ? 'rising' : 'falling', B = v => v > 0 ? 'a cup' : 'a cap';
-  const reset = () => { S.ci = 0; S.go = [null, null, null, null]; S.bd = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    "const Horizon = {render(){ env.renders++; }};" +
+    cut('const HzRace = {', '/* ---------- The cross workshop: an arrow square') + 'return HzRace;')(env, COL);
+  // each function as written: its value at a small x, and its natural log far out, worked from the name alone
+  const LL = X => Math.log(Math.log(X));
+  const FNS = {
+    'ln x':    { at: x => Math.log(x),          ln: X => LL(X),                 kin: 'log' },
+    '(ln x)³': { at: x => Math.log(x) ** 3,     ln: X => 3 * LL(X),             kin: 'log' },
+    '√x':      { at: x => Math.sqrt(x),         ln: X => 0.5 * Math.log(X),     kin: 'pow' },
+    'x':       { at: x => x,                    ln: X => Math.log(X),           kin: 'pow' },
+    'x ln x':  { at: x => x * Math.log(x),      ln: X => Math.log(X) + LL(X),   kin: 'pow' },
+    'x²':      { at: x => x * x,                ln: X => 2 * Math.log(X),       kin: 'pow' },
+    'x³':      { at: x => x * x * x,            ln: X => 3 * Math.log(X),       kin: 'pow' },
+    'x¹⁰':     { at: x => x ** 10,              ln: X => 10 * Math.log(X),      kin: 'pow' },
+    'x¹⁰⁰':    { at: x => x ** 100,             ln: X => 100 * Math.log(X),     kin: 'pow' },
+    '2ˣ':      { at: x => 2 ** x,               ln: X => X * Math.log(2),       kin: 'exp' },
+    'eˣ':      { at: x => Math.exp(x),          ln: X => X,                     kin: 'exp' },
+    '3ˣ':      { at: x => 3 ** x,               ln: X => X * Math.log(3),       kin: 'exp' }
+  };
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const sup = n => String(n).split('').map(d => SUP[+d]).join('');
+  const unsup = t => +t.split('').map(c => SUP.indexOf(c)).join('');
+  // a number as the readout should say it at x = 10
+  const say = v => { if (v >= 1e6) { const e = Math.round(Math.log10(v)); if (Math.abs(v / 10 ** e - 1) > 1e-9) return null; return '= 10' + sup(e); }
+    const r = Math.round(v); return Math.abs(v - r) < 1e-9 ? '= ' + r.toLocaleString('en-US') : '≈ ' + (Math.round(v * 10) / 10).toLocaleString('en-US'); };
+  const X0 = 10;
+  const label = k => S.FN[k].s;
+  // the order far out: sorted by ln f at 10³⁰, and it must be the same at 10⁶⁰
+  const far = (ks, X) => ks.slice().sort((a, b) => FNS[label(a)].ln(X) - FNS[label(b)].ln(X));
+  const reset = () => { S.ri = 0; S.order = []; S.marks = null; S.got = 0; S.tries = 0; S.solved = false;
     S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
-  if (S.CURVES.length !== 6) fail('shaperead', 'setup', `there are ${S.CURVES.length} curves, not six`);
-  if (new Set(S.CURVES.map(C => C.fs)).size !== S.CURVES.length) fail('shaperead', 'setup', 'a curve comes round twice');
-  let checks = 0, wrongs = 0;
-  S.CURVES.forEach((C, ci) => {
-    const key = `curve ${ci + 1} (${C.fs})`, f = FN[C.fs];
-    if (!f) { fail('shaperead', key, 'is not one of the curves it is meant to be'); return; }
-    reset(); S.ci = ci;
-    if (C.d1s !== D1[C.fs] || C.d2s !== D2[C.fs]) fail('shaperead', key, `its derivatives are written ${C.d1s} and ${C.d2s}`);
-    if ([-2.2, -1, 0, 0.7, 2.1].some(x => Math.abs(C.f(x) - f(x)) > 1e-9)) fail('shaperead', key, `f is not ${C.fs}`);
-    if ([-2.2, -1, 0.3, 1.8].some(x => Math.abs(C.d1(x) - df(f, x)) > 1e-4 || Math.abs(C.d2(x) - d2f(f, x)) > 1e-3)) fail('shaperead', key, `f′ or f″ is not the slope or bend of ${C.fs}`);
-    const xs = C.xs;
-    if (xs.length !== 4 || xs.some((x, i) => i && x <= xs[i - 1]) || xs[0] <= C.D[0] || xs[3] >= C.D[1]) fail('shaperead', key, 'the four points are not in order inside the drawing');
-    if (xs.some(x => Math.abs(df(f, x)) < 0.5 || Math.abs(d2f(f, x)) < 0.5)) fail('shaperead', key, 'a point sits where f′ or f″ is near 0, so its shape cannot be read');
-    const truth = xs.map(x => [go(f, x), bd(f, x)]);
-    if (truth.some((t, i) => S.sgo(i) !== t[0] || S.sbd(i) !== t[1])) fail('shaperead', key, `its points are read ${[0, 1, 2, 3].map(i => S.sgo(i) + '/' + S.sbd(i)).join()}, not ${truth.map(t => t.join('/')).join()}`);
-    const shapes = new Set(truth.map(t => t.join()));
-    const kind = shapes.size === 4 ? 'four' : truth.every(t => t[1] > 0) && new Set(truth.map(t => t[0])).size === 2 ? 'cup'
-      : truth.every(t => t[1] < 0) && new Set(truth.map(t => t[0])).size === 2 ? 'cap' : 'none';
-    if (C.kind !== kind) fail('shaperead', key, `it is told as ${C.kind}, not ${kind}`);
-    const line = `f(x) = ${C.fs}, so f′(x) = ${D1[C.fs]} and f″(x) = ${D2[C.fs]}.`;
-    // every point read wrong, one at a time, in each of the three wrong ways
-    xs.forEach((x, i) => {
-      for (const [g, b] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
-        if (g === truth[i][0] && b === truth[i][1]) continue;
-        reset(); S.ci = ci; S.go = truth.map(t => t[0]); S.bd = truth.map(t => t[1]); S.go[i] = g; S.bd[i] = b; S.check(); checks++; wrongs++;
-        const s = df(f, x), c = d2f(f, x), X = ng(x);
-        const want = ['3 of 4 right. Fix the ones in red and check again.', line,
-          `At ${'ABCD'[i]}, x = ${X}: f′(${X}) = ${ng(s)} is ${s > 0 ? 'more' : 'less'} than 0, so the curve ${s > 0 ? 'rises' : 'falls'}, and f″(${X}) = ${ng(c)} is ${c > 0 ? 'more' : 'less'} than 0, so it bends ${c > 0 ? 'up like a cup' : 'down like a cap'}. You had it ${W(g)} and ${B(b)}.`,
-          '0 read right on the first check this visit.'];
-        const w = S.working();
-        if (w.join(' | ') !== want.join(' | ')) fail('shaperead', key, `with ${'ABCD'[i]} read ${W(g)} and ${B(b)} the readout is ${w.join(' | ')}`);
-        const svg = S.svg();
-        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="tan"/.test(svg)) fail('shaperead', key, `with ${'ABCD'[i]} wrong, the wrong point is not ringed alone or the tangents are given away`);
-        if (S.solved || S.streak) fail('shaperead', key, 'a wrong reading is counted');
-        if (g !== truth[i][0]) S.set(i, 'go', truth[i][0]); else S.set(i, 'bd', truth[i][1]);
-        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('shaperead', key, `changing ${'ABCD'[i]} leaves its ring`);
-        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', line, '0 read right on the first check this visit.'].join(' | ')) fail('shaperead', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
-        S.set(i, 'go', truth[i][0]); S.set(i, 'bd', truth[i][1]); S.check();
-        if (!S.solved || !S.fixed || S.wins) fail('shaperead', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
-      }
-    });
-    // all four right on the first check, set with the buttons
-    reset(); S.ci = ci;
-    if (!/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, 'the check is open before the points are read');
-    for (let skip = 0; skip < 8; skip++) {
-      S.go = truth.map((t, i) => skip === i ? null : t[0]); S.bd = truth.map((t, i) => skip === i + 4 ? null : t[1]);
-      if (!/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, `the check opens with one answer of ${'ABCD'[skip % 4]} unset`);
-      S.check();
-      if (S.tries || S.marks) fail('shaperead', key, `a check runs with one answer of ${'ABCD'[skip % 4]} unset`);
+  const perms = a => a.length < 2 ? [a] : a.flatMap((x, i) => perms([...a.slice(0, i), ...a.slice(i + 1)]).map(p => [x, ...p]));
+  if (S.RACES.length !== 6) fail('hzrace', 'setup', `${S.RACES.length} races, not 6`);
+  if (Object.values(S.FN).some(F => !FNS[F.s])) fail('hzrace', 'setup', 'a function is not one it is meant to be');
+  if (new Set(S.RACES.map(R => R.fs.slice().sort().join())).size !== S.RACES.length) fail('hzrace', 'setup', 'a race comes round twice');
+  let checks = 0, wrongs = 0, pairs = 0;
+  S.RACES.forEach((R, ri) => {
+    const key = `race ${ri + 1} (${R.fs.map(label).join(', ')})`;
+    if (R.fs.length !== 4 || new Set(R.fs).size !== 4) { fail('hzrace', key, 'is not four different functions'); return; }
+    reset(); S.ri = ri;
+    const T = far(R.fs, 1e30);
+    if (far(R.fs, 1e60).join() !== T.join()) fail('hzrace', key, 'its order far out is not settled by x = 10³⁰');
+    if (S.truth().join() !== T.join()) fail('hzrace', key, `it is ranked ${S.truth().map(label).join(' < ')}, not ${T.map(label).join(' < ')}`);
+    for (const a of R.fs) for (const b of R.fs) if (a !== b && S.beats(a, b) !== (T.indexOf(a) > T.indexOf(b))) fail('hzrace', key, `it says ${label(a)} ${S.beats(a, b) ? 'outgrows' : 'loses to'} ${label(b)}`);
+    // who leads at x = 10, and the overtakes that make a race late
+    const L = R.fs.slice().sort((a, b) => FNS[label(b)].at(X0) - FNS[label(a)].at(X0));
+    const passes = [];
+    for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (FNS[label(T[i])].at(X0) > FNS[label(T[j])].at(X0)) passes.push([T[i], T[j]]);
+    const exps = R.fs.filter(k => FNS[label(k)].kin === 'exp').length;
+    if (R.tags.includes('late') !== passes.length > 0) fail('hzrace', key, `it is ${R.tags.includes('late') ? '' : 'not '}told as late, with ${passes.length} overtakes`);
+    if (R.tags.includes('base') !== exps >= 2) fail('hzrace', key, `it is ${R.tags.includes('base') ? '' : 'not '}told as a race of bases, with ${exps} exponentials`);
+    if (R.tags.includes('between') !== (R.fs.includes('xln') && T.indexOf('xln') > 0 && T.indexOf('xln') < 3 && FNS[label(T[T.indexOf('xln') - 1])].kin === 'pow' && FNS[label(T[T.indexOf('xln') + 1])].kin === 'pow')) fail('hzrace', key, 'it is told wrongly as x ln x between two powers');
+    // the picture before anything is placed: the start in order with its values
+    let svg = S.svg();
+    const left = [...svg.matchAll(/data-k="left" data-f="([^"]+)"[^>]*>([^<]+)</g)];
+    if (left.map(m => m[1]).join() !== L.join()) fail('hzrace', key, `the start is drawn ${left.map(m => m[1]).join()}, not ${L.join()}`);
+    left.forEach(m => { const want = `${label(m[1])} ${say(FNS[label(m[1])].at(X0))}`; if (m[2] !== want) fail('hzrace', key, `at x = 10 it shows ${m[2]}, not ${want}`); });
+    if (/data-k="(line|pass|miss)"/.test(svg) || (svg.match(/data-k="slot" data-f=""/g) || []).length !== 4) fail('hzrace', key, 'something is drawn before anything is placed');
+    const w0 = S.working();
+    if (w0[0] !== S.RULE || w0[1] !== '0 of 4 placed.' || !/^As x grows without end, every power of ln x is outgrown by every positive power of x, and every power of x by every bˣ with b above 1\./.test(S.RULE)) fail('hzrace', key, `before anything is placed the readout is ${w0.join(' | ')}`);
+    if (!/id="hzrCheck" disabled /.test(S.html())) fail('hzrace', key, 'the check is open before anything is placed');
+    // every order the four can be put in, tapped in as a player would
+    for (const P of perms(R.fs)) {
+      reset(); S.ri = ri;
+      P.forEach((k, i) => { S.tap(k); if (i < 3 && (!/id="hzrCheck" disabled /.test(S.html()) || S.working()[1] !== `${i + 1} of 4 placed.`)) fail('hzrace', key, `with ${i + 1} placed the check opens or the count is wrong`); });
+      if (S.order.join() !== P.join()) fail('hzrace', key, `tapping ${P.join()} places ${S.order.join()}`);
+      svg = S.svg();
+      const lines = [...svg.matchAll(/data-k="line" data-f="([^"]+)" x1="118" y1="([^"]+)" x2="202" y2="([^"]+)"/g)];
+      if (lines.length !== 4 || lines.some(m => +m[2] !== 48 + L.indexOf(m[1]) * 34 || +m[3] !== 48 + (3 - P.indexOf(m[1])) * 34)) fail('hzrace', key, `the lines for ${P.map(label).join(' < ')} do not join each start to its called place`);
+      const right = [...svg.matchAll(/data-k="slot" data-f="([^"]*)"/g)].map(m => m[1]);
+      if (right.join() !== P.slice().reverse().join()) fail('hzrace', key, `the called order is drawn ${right.join()}, fastest first`);
+      if (/id="hzrCheck" disabled /.test(S.html())) fail('hzrace', key, 'the check stays shut with all four placed');
+      S.check(); checks++;
+      const right4 = P.map((k, i) => k === T[i]);
+      if (P.join() === T.join()) { if (!S.solved || S.wins !== 1) fail('hzrace', key, 'the right order is not counted'); continue; }
+      wrongs++;
+      if (S.solved || S.streak || S.wins) fail('hzrace', key, `${P.map(label).join(' < ')} is counted`);
+      const w = S.working(), n = right4.filter(Boolean).length;
+      if (w[0] !== `${n} of 4 in the right place. Tap one to take it out, then put it back where it goes.`) fail('hzrace', key, `${P.map(label).join(' < ')} opens ${w[0]}`);
+      const inv = []; for (let i = 0; i < 3; i++) if (T.indexOf(P[i]) > T.indexOf(P[i + 1])) inv.push([P[i + 1], P[i]]);
+      if (w.length !== inv.length + 2 || !inv.length) fail('hzrace', key, `${P.map(label).join(' < ')} explains ${w.length - 2} pairs, not ${inv.length}`);
+      inv.forEach(([slow, fast], j) => {
+        const line = w[j + 1] || '', A = label(slow), B = label(fast); pairs++;
+        if (!line.startsWith(`You ranked ${B} slower than ${A}, but it grows faster. `)) fail('hzrace', key, `a slip reads ${line}`);
+        const ka = FNS[A].kin, kb = FNS[B].kin;
+        const rule = ka === 'exp' ? 'Of two exponentials the bigger base wins' : kb === 'exp' ? 'Every bˣ with b above 1 outgrows every power of x'
+          : ka === 'log' && kb === 'pow' ? 'Every power of ln x is outgrown by every positive power of x' : ka === 'log' ? 'Of two powers of ln x the bigger power wins'
+          : FNS[A].ln(1e300) / Math.log(1e300) < FNS[B].ln(1e300) / Math.log(1e300) - 0.05 ? 'Of two powers of x the bigger power wins' : 'With the same power of x, the bigger power of ln x wins';
+        if (!line.includes(`${rule}: ${A} ÷ ${B} heads for 0. At x = 10, ${A} `)) fail('hzrace', key, `the pair ${A}, ${B} is told by the wrong rule: ${line}`);
+        const ahead = FNS[A].at(X0) > FNS[B].at(X0);
+        if (ahead !== / only /.test(line)) fail('hzrace', key, `the pair ${A}, ${B} ${ahead ? 'does not say' : 'says'} the slower one leads at x = 10`);
+        const m = line.match(/, (?:but|and) at x = (\d{1,3}(?:,\d{3})*|10[⁰¹²³⁴⁵⁶⁷⁸⁹]+), /);
+        const X = !m ? NaN : /^10[⁰¹²³⁴⁵⁶⁷⁸⁹]/.test(m[1]) ? 10 ** unsup(m[1].slice(2)) : +m[1].replace(/,/g, '');
+        if (!(X >= 1000) || FNS[B].ln(X) <= FNS[A].ln(X) || (X > 1000 && FNS[B].ln(X / 10) > FNS[A].ln(X / 10))) fail('hzrace', key, `the pair ${A}, ${B} is worked at x = ${m && m[1]}, not the first power of ten from 1,000 where ${B} leads`);
+      });
+      svg = S.svg();
+      if ((svg.match(/data-k="miss"/g) || []).length !== 4 - n || /data-k="pass"/.test(svg)) fail('hzrace', key, `${P.map(label).join(' < ')} rings ${(svg.match(/data-k="miss"/g) || []).length} places, not ${4 - n}, or shows an overtake`);
+      // fixed: everything taken out and put back right
+      P.forEach(k => S.tap(k));
+      if (S.order.length || S.marks) fail('hzrace', key, 'tapping a placed one does not take it out');
+      T.forEach(k => S.tap(k)); S.check();
+      if (!S.solved || !S.fixed || S.wins) fail('hzrace', key, `fixing ${P.map(label).join(' < ')} is not counted as a fix`);
     }
-    S.go = [null, null, null, null]; S.bd = [null, null, null, null];
-    const h0 = S.html();
-    xs.forEach((x, i) => {
-      for (const [part, v, lab] of [['go', truth[i][0], truth[i][0] > 0 ? 'rises' : 'falls'], ['bd', truth[i][1], truth[i][1] > 0 ? 'bends up like a cup' : 'bends down like a cap']]) {
-        const m = h0.match(new RegExp(`onclick="ShapeRead\\.set\\(${i},'${part}',(-?1)\\)" aria-label="Point ${'ABCD'[i]} ${lab}"`));
-        if (!m || +m[1] !== v) fail('shaperead', key, `the button for ${'ABCD'[i]} ${lab} does not set it`);
-        else S.set(i, part, +m[1]);
-      }
-    });
-    if (S.go.join() !== truth.map(t => t[0]).join() || S.bd.join() !== truth.map(t => t[1]).join()) fail('shaperead', key, 'the buttons cannot set the right reading');
-    if (/id="shpCheck" disabled /.test(S.html())) fail('shaperead', key, 'the check stays shut with every point read');
-    S.check(); checks++;
-    const at = (g, b) => 'ABCD'[truth.findIndex(t => t[0] === g && t[1] === b)];
-    const want = ['Yes: all four points are read right.',
-      kind === 'four' ? `At ${at(1, -1)} the curve climbs while bending down like a cap, and at ${at(-1, 1)} it falls while bending up like a cup: f′ says which way it goes and f″ which way it bends, and the two need not agree.`
-        : kind === 'cup' ? `Every point bends up like a cup, though A and B fall and C and D rise: f″(x) = ${D2[C.fs]} is more than 0 everywhere, while f′(x) = ${D1[C.fs]} changes sign at 0.`
-          : `Every point bends down like a cap, though A and B rise and C and D fall: f″(x) = ${D2[C.fs]} is less than 0 everywhere, while f′(x) = ${D1[C.fs]} changes sign at 0.`,
-      '1 read right on the first check this visit.'];
-    if (kind === 'cup' && truth.map(t => t[0]).join() !== '-1,-1,1,1') fail('shaperead', key, 'its points do not fall at A and B and rise at C and D');
-    if (kind === 'cap' && truth.map(t => t[0]).join() !== '1,1,-1,-1') fail('shaperead', key, 'its points do not rise at A and B and fall at C and D');
-    if (S.working().join(' | ') !== want.join(' | ')) fail('shaperead', key, `once read the readout is ${S.working().join(' | ')}`);
-    // each tangent touches its point, with the slope f′ and the colour of the bend
-    const svg = S.svg(), [lo, hi] = S.span();
-    const PX = v => 20 + (v - C.D[0]) / (C.D[1] - C.D[0]) * 320, PY = v => 188 - (v - lo) / (hi - lo) * 176;
-    const tans = [...svg.matchAll(/data-k="tan" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)" stroke="([^"]+)"/g)];
-    if (tans.length !== 4) fail('shaperead', key, `${tans.length} tangents are drawn once read, not four`);
-    tans.forEach((m, i) => { const x = xs[i], [x1, y1, x2, y2] = m.slice(1, 5).map(Number);
-      const slope = ((PY(0) - y2) - (PY(0) - y1)) / (x2 - x1) * (320 / (C.D[1] - C.D[0])) / (176 / (hi - lo));
-      if (Math.abs((x1 + x2) / 2 - PX(x)) > 0.02 || Math.abs((y1 + y2) / 2 - PY(f(x))) > 0.02) fail('shaperead', key, `the tangent at ${'ABCD'[i]} does not touch its point`);
-      if (Math.abs(slope - df(f, x)) > 0.05) fail('shaperead', key, `the tangent at ${'ABCD'[i]} has slope ${slope.toFixed(2)}, not ${df(f, x)}`);
-      if (m[5] !== (truth[i][1] > 0 ? 'green' : 'red')) fail('shaperead', key, `the tangent at ${'ABCD'[i]} is ${m[5]}, not the colour of its bend`); });
-    const pts = [...svg.matchAll(/data-k="pt" cx="([^"]+)" cy="([^"]+)"/g)];
-    if (pts.length !== 4 || pts.some((m, i) => Math.abs(+m[1] - PX(xs[i])) > 0.02 || Math.abs(+m[2] - PY(f(xs[i]))) > 0.02)) fail('shaperead', key, 'the four points are not on the curve where they are said to be');
-    if ([...svg.matchAll(/text-anchor="middle">([A-D])</g)].map(m => m[1]).join('') !== 'ABCD') fail('shaperead', key, 'the points are not lettered A to D in order');
+    // the right order, first time
+    reset(); S.ri = ri; T.forEach(k => S.tap(k)); S.check();
+    const want = [`Yes: from slowest to fastest, ${T.map(label).join(', ')}.`,
+      ...(passes.length ? passes.map(([a, b]) => `${label(a)} is ahead of ${label(b)} at x = 10, but ${label(b)} passes it in the end.`) : ['They already stand in this order at x = 10, and the gaps only grow.']),
+      '1 ranked right on the first check this visit.'];
+    if (S.working().join(' | ') !== want.join(' | ')) fail('hzrace', key, `once ranked the readout is ${S.working().join(' | ')}`);
+    svg = S.svg();
+    [...svg.matchAll(/data-k="(line|pass)" data-f="([^"]+)" x1="118" y1="([^"]+)" x2="202" y2="([^"]+)" stroke="([^"]+)"/g)].forEach(m => {
+      const up = +m[4] < +m[3];
+      if ((m[1] === 'pass') !== up || m[5] !== (up ? 'gold' : 'blue')) fail('hzrace', key, `${label(m[2])} is drawn as ${m[1]} in ${m[5]}, though it ${up ? 'climbs' : 'does not climb'}`); });
+    if ((svg.match(/data-k="pass"/g) || []).length !== R.fs.filter(k => (3 - T.indexOf(k)) < L.indexOf(k)).length) fail('hzrace', key, 'the overtakes are not all drawn');
     const h = S.html();
-    if (!h.includes('id="shpNext"') || /onclick="ShapeRead\.set/.test(h.replace(/disabled onclick="ShapeRead\.set/g, ''))) fail('shaperead', key, 'once read, Next is not offered or an answer still opens');
-    const before = S.go.join() + S.bd.join(); S.set(0, 'go', -S.go[0]); S.set(0, 'bd', -S.bd[0]);
-    if (S.go.join() + S.bd.join() !== before) fail('shaperead', key, 'an answer moves after the reading is right');
+    if (!h.includes('id="hzrNext"') || h.includes('id="hzrCheck"') || (h.match(/class="btn sm ghost hzrStop"[^>]*disabled /g) || []).length !== 4) fail('hzrace', key, 'once ranked, Next is not offered or a function still opens');
+    S.tap(T[0]); S.tap('nope');
+    if (S.order.join() !== T.join()) fail('hzrace', key, 'the order moves after the race is right');
     S.next();
-    if (S.ci !== (ci + 1) % 6 || S.solved || S.marks || S.tries || S.go.some(v => v !== null) || S.bd.some(v => v !== null)) fail('shaperead', key, 'Next does not deal the next curve fresh');
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.order.length) fail('hzrace', key, 'Next does not deal the next race fresh');
   });
-  // the hunt, played as a player would: a slip fixed, then first checks round the curves
+  // the hunt, played as a player would: a slip fixed, then first checks round the races
   reset(); S.html();
-  if (S.done.size) fail('shaperead', 'hunt', 'a goal is found before anything is pressed');
-  const play = slip => { const C = S.C(), f = FN[C.fs]; S.go = C.xs.map(x => go(f, x)); S.bd = C.xs.map(x => bd(f, x)); if (slip) S.bd[2] = -S.bd[2];
-    S.touched = true; S.check(); S.html();
-    if (slip) { S.set(2, 'bd', -S.bd[2]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
-  const plan = [[true, 'fix,four'], [false, 'cup,fix,four,one'], [false, 'cap,cup,fix,four,one'], [false, 'cap,cup,fix,four,one,three']];
-  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('shaperead', 'hunt', `curve ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
-  if (env.toasts.join(' | ') !== '✓ All four shapes on one curve · A slip caught and fixed | ✓ Right on the first check · A cup can fall | ✓ A cap can climb') fail('shaperead', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
-  if (env.banners.join() !== 'SHAPE READER / every rise and bend named') fail('shaperead', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
-  return { checks, wrongs };
+  if (S.done.size) fail('hzrace', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const T = S.truth(), P = T.slice(); if (slip) [P[0], P[1]] = [P[1], P[0]];
+    P.forEach(k => S.tap(k)); S.check(); S.html();
+    if (slip) { P.forEach(k => S.tap(k)); T.forEach(k => S.tap(k)); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix'], [false, 'fix,late,one'], [false, 'base,fix,late,one'], [false, 'base,between,fix,late,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('hzrace', 'hunt', `race ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A slip caught and fixed | ✓ Right on the first check · The winner started behind | ✓ The bigger base wins') fail('hzrace', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'RACE CALLER / every finish called') fail('hzrace', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (!S.working().join(' | ').endsWith('3 ranked right on the first check this visit, 3 in a row.')) fail('hzrace', 'hunt', `the count reads ${S.working().join(' | ')}`);
+  reset();
+  return { checks, wrongs, pairs };
 })();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -19170,7 +19185,7 @@ console.log(`  euler estimates   ${pad(eulerPickNotes.rounds.toLocaleString(), 1
 console.log(`  fields matched    ${pad(fieldMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-field in the Euler step workshop, with ${fieldMatchNotes.misses} wrong picks each caught at the first point it parts from the field, and ${fieldMatchNotes.dashes.toLocaleString()} slope dashes read back off the drawings)`);
 console.log(`  slopes sketched   ${pad(slopeSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn f′ in the slope tracer, ${slopeSketchNotes.wrongs} of them with one slope set wrong and caught, and ${slopeSketchNotes.tans} tangents measured off the square grid)`);
 console.log(`  totals sketched   ${pad(cisternSketchNotes.checks.toLocaleString(), 12)}  (checks of a hand-drawn total in the cistern workshop, ${cisternSketchNotes.wrongs} of them with one total set wrong and caught, and ${cisternSketchNotes.shades} hours of area shaded)`);
-console.log(`  shapes read       ${pad(shapeReadNotes.checks.toLocaleString(), 12)}  (checks of a curve read point by point in the bend workshop, ${shapeReadNotes.wrongs} of them with one point read wrong and caught)`);
+console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  maps matched      ${pad(contourMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-map in the downhill workshop, with ${contourMatchNotes.misses} wrong picks each caught at two points on one contour that it gives different values, and ${contourMatchNotes.segs.toLocaleString()} contour pieces read back off the drawings onto their level)`);
 console.log(`  flows matched     ${pad(flowMatchNotes.rounds.toLocaleString(), 12)}  (rounds of match-the-flow in the diagonal workshop, every matrix's eigenvalues and kind of flow worked again from its trace and determinant, ${flowMatchNotes.misses} wrong picks each caught at the first arrow it turns, and ${flowMatchNotes.arrows.toLocaleString()} arrows read back as A times their point)`);
 console.log(`  stretch picks     ${pad(stretchPickNotes.rounds.toLocaleString(), 12)}  (rounds of which-y in the doubling workshop, every number read back off its button and checked against the slip it is named as, the right one alone against y(0) × r^(t/T) taken again in floats; ${stretchPickNotes.misses.toLocaleString()} wrong picks explained and checked against the factor, and no check ever naming y)`);

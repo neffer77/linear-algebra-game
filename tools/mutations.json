@@ -1,110 +1,103 @@
 {
-  "change": "Add a Read the shape mode to the bend workshop",
+  "change": "Add a Race to infinity mode to the horizon workshop",
   "mutations": [
     {
-      "name": "rises or falls is read from f″",
+      "name": "an exponential no longer beats a power",
       "file": "index.html",
-      "find": "sgo(i){ const C=this.C(); return Math.sign(this.r(C.d1(",
-      "replace": "sgo(i){ const C=this.C(); return Math.sign(this.r(C.d2(",
+      "find": "if(A.b || B.b) return (A.b||0)>(B.b||0);",
+      "replace": "if(A.b && B.b) return A.b>B.b;",
       "run": "verify"
     },
     {
-      "name": "cup and cap are swapped",
+      "name": "the power of ln x is ignored",
       "file": "index.html",
-      "find": "return Math.sign(this.r(C.d2(C.xs[i])));",
-      "replace": "return -Math.sign(this.r(C.d2(C.xs[i])));",
+      "find": "return A.p!==B.p ? A.p>B.p : A.l>B.l; }",
+      "replace": "return A.p>B.p; }",
       "run": "verify"
     },
     {
-      "name": "the check marks only rises or falls",
+      "name": "values are rounded to whole numbers",
       "file": "index.html",
-      "find": "this.marks=[0,1,2,3].map(i=>this.go[i]===this.sgo(i) && this.bd[i]===this.sbd(i));",
-      "replace": "this.marks=[0,1,2,3].map(i=>this.go[i]===this.sgo(i));",
+      "find": "'≈ '+n.toLocaleString('en-US',{maximumFractionDigits:1})",
+      "replace": "'≈ '+n.toLocaleString('en-US',{maximumFractionDigits:0})",
       "run": "verify"
     },
     {
-      "name": "the check opens with only the slopes set",
+      "name": "places are checked against the order turned round",
       "file": "index.html",
-      "find": "ready(){ return this.go.every(v=>v!==null) && this.bd.every(v=>v!==null); }",
-      "replace": "ready(){ return this.go.every(v=>v!==null); }",
+      "find": "this.marks=this.order.map((k,i)=>k===T[i]);",
+      "replace": "this.marks=this.order.map((k,i)=>k===T[3-i]);",
       "run": "verify"
     },
     {
-      "name": "a fix is counted as a first check",
+      "name": "the check opens with three placed",
       "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      this.kinds.add(this.C().kind);",
-      "replace": "if(this.tries>=1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      this.kinds.add(this.C().kind);",
+      "find": "ready(){ return this.order.length===4; },",
+      "replace": "ready(){ return this.order.length>=3; },",
       "run": "verify"
     },
     {
-      "name": "a ring is kept after the point changes",
+      "name": "a tap keeps the rings",
       "file": "index.html",
-      "find": "if(this.marks) this.marks[i]=null;\n    Bend.render();",
-      "replace": "Bend.render();",
+      "find": "this.marks=null; this.touched=true;\n    Horizon.render();",
+      "replace": "this.touched=true;\n    Horizon.render();",
       "run": "verify"
     },
     {
-      "name": "the tangent takes the colour of the slope",
+      "name": "the pair is worked the wrong way round",
       "file": "index.html",
-      "find": "stroke=\"${C.d2(x)>0?FIG_COL.c:FIG_COL.d}\"",
-      "replace": "stroke=\"${C.d1(x)>0?FIG_COL.c:FIG_COL.d}\"",
+      "find": "but it grows faster. ${this.why(b,a)}",
+      "replace": "but it grows faster. ${this.why(a,b)}",
       "run": "verify"
     },
     {
-      "name": "the tangent slopes the wrong way",
+      "name": "log against log is told as log against power",
       "file": "index.html",
-      "find": "y1=\"${f(PY(y-s*h))}\" x2=\"${f(b)}\" y2=\"${f(PY(y+s*h))}\"",
-      "replace": "y1=\"${f(PY(y+s*h))}\" x2=\"${f(b)}\" y2=\"${f(PY(y-s*h))}\"",
+      "find": "A.p===0 && B.p>0 ? 'Every power of ln x",
+      "replace": "A.p===0 ? 'Every power of ln x",
       "run": "verify"
     },
     {
-      "name": "the working says rises where it bends up",
+      "name": "the pair is worked at x = 10",
       "file": "index.html",
-      "find": "so the curve ${s>0?'rises':'falls'}",
-      "replace": "so the curve ${c>0?'rises':'falls'}",
+      "find": "for(let e=3;e<=12;e++){ let ok=true;",
+      "replace": "for(let e=1;e<=12;e++){ let ok=true;",
       "run": "verify"
     },
     {
-      "name": "the working tells the player the right answer as theirs",
+      "name": "the leader at x = 10 is told the wrong way",
       "file": "index.html",
-      "find": "You had it ${this.goW(this.go[i])}",
-      "replace": "You had it ${this.goW(this.sgo(i))}",
+      "find": "const nums = this.lg(a,10)>this.lg(b,10)",
+      "replace": "const nums = this.lg(a,10)<this.lg(b,10)",
       "run": "verify"
     },
     {
-      "name": "the climbing cap is named at the wrong point",
+      "name": "an overtake is drawn before the check",
       "file": "index.html",
-      "find": "At ${this.first(1,-1)} the curve climbs",
-      "replace": "At ${this.first(1,1)} the curve climbs",
+      "find": "up=this.solved && b<a;",
+      "replace": "up=b<a;",
       "run": "verify"
     },
     {
-      "name": "Next keeps the answers",
+      "name": "Next keeps the order",
       "file": "index.html",
-      "find": "this.go=[null,null,null,null]; this.bd=[null,null,null,null]; this.marks=null;",
-      "replace": "this.bd=[null,null,null,null]; this.marks=null;",
+      "find": "this.ri=(this.ri+1)%this.RACES.length; this.order=[];",
+      "replace": "this.ri=(this.ri+1)%this.RACES.length;",
       "run": "verify"
     },
     {
-      "name": "a button sets the opposite answer",
+      "name": "the race mode is not offered",
       "file": "index.html",
-      "find": "onclick=\"ShapeRead.set(${i},'${part}',${v})\"",
-      "replace": "onclick=\"ShapeRead.set(${i},'${part}',${-v})\"",
-      "run": "verify"
-    },
-    {
-      "name": "the mode's tab is gone",
-      "file": "index.html",
-      "find": ",['shape','🧭 Read the shape','See a curve with four points, and say at each whether it rises or falls and bends like a cup or a cap']]",
+      "find": ",['race','🏁 Race to infinity','See four functions and rank them from slowest to fastest as x grows without end']]",
       "replace": "]",
-      "run": "play:shaperead"
+      "run": "play:hzrace"
     },
     {
-      "name": "the tab shows Where does it flip instead",
+      "name": "the race tab shows where does it head",
       "file": "index.html",
-      "find": "this.tab==='pick' ? FlipPick.html() : ShapeRead.html();",
-      "replace": "this.tab==='pick' ? FlipPick.html() : FlipPick.html();",
-      "run": "play:shaperead"
+      "find": "this.tab==='pick' ? HzPick.html() : HzRace.html();",
+      "replace": "HzPick.html();",
+      "run": "play:hzrace"
     }
   ]
 }
