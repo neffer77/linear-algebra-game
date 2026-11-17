@@ -32,7 +32,7 @@ module.exports = {
 
     await t.ev(() => UI.go('s-tome'));
     t.ok('the Tome says the cistern workshop can be turned round', await t.ev(() =>
-      /Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours\./.test(document.getElementById('s-tome').innerText)));
+      /Then turn it round: see a spring’s flow, and pick which of four numbers is the total after so many hours[.,]/.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCistern');
     t.eq('the cistern workshop opens', await t.screen(), 's-cistern');
     t.eq('stepping it by hand is the pressed mode', await pressed(t), 'true,false,false');

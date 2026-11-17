@@ -64,13 +64,13 @@ module.exports = {
     t.eq('F(0) = 0 is drawn to start from', await t.ev(() => document.querySelectorAll('#cskFig [data-k="start"]').length), 1);
 
     // --- a slip ---
-    await sketch(t, [2, 4, 6, 9]);
-    t.eq('the totals show as set', await shown(t), '2 4 6 9');
+    await sketch(t, [2, 4, 6, 7]);
+    t.eq('the totals show as set', await shown(t), '2 4 6 7');
     t.eq('four gold dots are drawn', await t.ev(() => document.querySelectorAll('#cskFig [data-k="dot"]').length), 4);
     t.ok('the check opens', await t.ev(() => !document.getElementById('cskCheck').disabled));
     await check(t);
     r = await read(t);
-    t.ok('the slip is caught and its hour worked', r.startsWith('3 of 4 right. Fix the ones in red and check again. From t = 3 to 4 the area under f is (f(3) + f(4)) ÷ 2 = (2 + 2) ÷ 2 = 2, so F(4) = F(3) + 2 = 6 + 2 = 8, not 9.'), r);
+    t.ok('the slip is caught and its hour worked', r.startsWith('3 of 4 right. Fix the ones in red and check again. From t = 3 to 4 the area under f is (f(3) + f(4)) ÷ 2 = (2 + 2) ÷ 2 = 2, so F(4) = F(3) + 2 = 6 + 2 = 8, not 7.'), r);
     t.eq('only that dot is ringed', await t.ev(() => document.querySelectorAll('#cskFig [data-k="miss"]').length), 1);
     t.ok('the true total is not given away', await t.ev(() => !document.querySelector('#cskFig [data-k="true"]')));
     t.eq('nothing is found for a slip', await found(t), []);
