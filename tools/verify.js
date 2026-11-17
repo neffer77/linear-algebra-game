@@ -5684,6 +5684,140 @@ const geoReachNotes = (() => {
   return { steps, sums, edges, runs };
 })();
 
+/* Along a curve, the chain rule workshop's third mode. Every t on all four
+   curves: x, y, dx/dt and dy/dt worked again here from the curve alone in
+   exact fractions, the slope as their ratio or told as straight up or no
+   slope at all, the nudge against the curve itself, the crossing at (0, 0),
+   and the drawing: the point where the curve puts it, the tangent along
+   (dx/dt, dy/dt) and the stub the way the point moves. */
+const paramWalkNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', a: 'blue', b: 'gold', c: 'green', d: 'red', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Chain = {render(){ env.renders++; }};" +
+    cut('const ParamWalk = {', '/* -------------------- which dy/dx?') + 'return ParamWalk;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a; };
+  const fr = (p, q) => { if (q < 0) { p = -p; q = -q; } const g = gcd(p, q) || 1; return [p / g, q / g]; };
+  const fst = f => (f[1] === 1 ? ng(f[0]) : `${ng(f[0])}/${f[1]}`);
+  const pf = f => (f[0] < 0 || f[1] !== 1 ? `(${fst(f)})` : fst(f));
+  // each curve as plain functions of t, with their slopes worked by hand
+  const CUR = [
+    { x: t => t * t - 1, y: t => t ** 3 - t, xd: t => 2 * t, yd: t => 3 * t * t - 1, xs: 't² − 1', ys: 't³ − t', xds: '2t', yds: '3t² − 1' },
+    { x: t => t ** 3 - 3 * t, y: t => t * t, xd: t => 3 * t * t - 3, yd: t => 2 * t, xs: 't³ − 3t', ys: 't²', xds: '3t² − 3', yds: '2t' },
+    { x: t => t * t, y: t => t ** 3 - 3 * t, xd: t => 2 * t, yd: t => 3 * t * t - 3, xs: 't²', ys: 't³ − 3t', xds: '2t', yds: '3t² − 3' },
+    { x: t => t ** 3, y: t => t * t, xd: t => 3 * t * t, yd: t => 2 * t, xs: 't³', ys: 't²', xds: '3t²', yds: '2t' }];
+  // t = k/2, so 8 times any of these is a whole number: read them as eighths
+  const ex = v => fr(Math.round(v * 8), 8);
+  if (S.CURVES.length !== 4 || S.CURVES.some((c, i) => c.x !== CUR[i].xs || c.y !== CUR[i].ys || c.xd !== CUR[i].xds || c.yd !== CUR[i].yds))
+    fail('paramwalk', 'curves', 'the four curves are not x = t² − 1, y = t³ − t; x = t³ − 3t, y = t²; x = t², y = t³ − 3t; and x = t³, y = t², with their slopes');
+  if (S.ci !== 0 || S.k !== -4 || S.done.size || S.cross.size || S.touched) fail('paramwalk', 'open', 'the mode does not open on the first curve at t = −2 with nothing found');
+  let steps = 0, slopes = 0, ups = 0, stops = 0, drawn = 0;
+  CUR.forEach((Q, ci) => {
+    S.pick(ci);
+    if (S.k !== -4) fail('paramwalk', 'pick', `picking curve ${ci + 1} does not start at t = −2`);
+    // the box the drawing puts every curve in: one scale both ways
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (let i = 0; i <= 400; i++) { const t = -2 + i / 100; x0 = Math.min(x0, Q.x(t)); x1 = Math.max(x1, Q.x(t)); y0 = Math.min(y0, Q.y(t)); y1 = Math.max(y1, Q.y(t)); }
+    const sc = Math.min(320 / (x1 - x0), 220 / (y1 - y0)), PX = x => 180 + (x - (x0 + x1) / 2) * sc, PY = y => 130 - (y - (y0 + y1) / 2) * sc;
+    for (let k = -4; k <= 4; k++) {
+      S.k = k; steps++;
+      const t = k / 2, T = fst(fr(k, 2)), key = `curve ${ci + 1} at t = ${T}`;
+      const x = ex(Q.x(t)), y = ex(Q.y(t)), a = ex(Q.xd(t)), b = ex(Q.yd(t));
+      const w = S.working();
+      if (w[0] !== `x = ${Q.xs} and y = ${Q.ys} both move with t, so the point (x, y) traces a curve as t runs.`) fail('paramwalk', key, `the curve is not named: ${w[0]}`);
+      if (w[1] !== `At t = ${T}: x = ${fst(x)} and y = ${fst(y)}, so the point is at (${fst(x)}, ${fst(y)}).`) fail('paramwalk', key, `the point is not worked: ${w[1]}`);
+      const rate = (f, v) => f[0] === 0 ? `${v} stands still for a moment` : `${v} moves ${fst([Math.abs(f[0]), f[1]]) === '1' ? 'as fast as' : fst([Math.abs(f[0]), f[1]]) + ' times as fast as'} t${f[0] < 0 ? ', backwards' : ''}`;
+      if (w[2] !== `dx/dt = ${Q.xds}, so at t = ${T}, dx/dt = ${fst(a)}: ${rate(a, 'x')}.`) fail('paramwalk', key, `dx/dt is not worked: ${w[2]}`);
+      if (w[3] !== `dy/dt = ${Q.yds}, so at t = ${T}, dy/dt = ${fst(b)}: ${rate(b, 'y')}.`) fail('paramwalk', key, `dy/dt is not worked: ${w[3]}`);
+      let n = 5;
+      if (a[0] !== 0) {
+        slopes++;
+        const s = fr(b[0] * a[1], b[1] * a[0]);
+        // the slope against the curve itself: a step along t either side
+        const h = 1e-6, r = (Q.y(t + h) - Q.y(t - h)) / (Q.x(t + h) - Q.x(t - h));
+        if (Math.abs(s[0] / s[1] - r) > 1e-6) fail('paramwalk', key, `dy/dx is ${fst(s)}, but the curve climbs ${r} there`);
+        const want = s[0] === 0 ? `So dy/dx = (dy/dt) ÷ (dx/dt) = 0 ÷ ${pf(a)} = 0: y stands still as x moves, so the tangent is flat.`
+          : `So dy/dx = (dy/dt) ÷ (dx/dt) = ${pf(b)} ÷ ${pf(a)} = ${fst(s)}: the tangent ${s[0] > 0 ? 'rises' : 'falls'} ${fst([Math.abs(s[0]), s[1]])} for each 1 across.`;
+        if (w[4] !== want) fail('paramwalk', key, `the slope is not the ratio of the rates: ${w[4]}`);
+        const m = (w[5] || '').match(/^Check with a nudge: from t = (\S+) − 0\.001 to (\S+) \+ 0\.001, Δy\/Δx ≈ (\S+), which agrees with (\S+)\.$/);
+        if (!m || m[1] !== T || m[2] !== T || Math.abs(+m[3].replace('−', '-') - r) > 0.006 || m[4] !== fst(s)) fail('paramwalk', key, `the nudge is not read off the curve: ${w[5]}`);
+        n = 6;
+      } else if (b[0] !== 0) {
+        ups++;
+        if (w[4] !== `dx/dt = 0, so (dy/dt) ÷ (dx/dt) = ${pf(b)} ÷ 0 cannot be worked out: x stands still while y moves, so the tangent stands straight up.`) fail('paramwalk', key, `a vertical tangent is not told as one: ${w[4]}`);
+        const h = 1e-4, dx = Q.x(t + h) - Q.x(t - h), dy = Q.y(t + h) - Q.y(t - h);
+        if (!(Math.abs(dy) > 1000 * Math.abs(dx))) fail('paramwalk', key, 'the curve is said to stand straight up where it does not');
+      } else {
+        stops++;
+        if (w[4] !== 'Both rates are 0: the point stops dead for a moment, so (dy/dt) ÷ (dx/dt) is 0 ÷ 0 and gives no slope. The curve comes to a sharp point here.') fail('paramwalk', key, `a stop is not told as one: ${w[4]}`);
+        const h = 0.01, L = (Q.y(t) - Q.y(t - h)) / (Q.x(t) - Q.x(t - h)), Rr = (Q.y(t + h) - Q.y(t)) / (Q.x(t + h) - Q.x(t));
+        if (!(Math.sign(L) !== Math.sign(Rr) && Math.abs(L) > 10 && Math.abs(Rr) > 10)) fail('paramwalk', key, 'the curve is said to come to a sharp point where it does not');
+      }
+      // the crossing: two t, one point
+      const both = ci === 0 && x[0] === 0 && y[0] === 0;
+      if (both) {
+        const o = -t, os = fr(Math.round(Q.yd(o) * 8), Math.round(Q.xd(o) * 8));
+        if (Q.x(o) !== 0 || Q.y(o) !== 0) fail('paramwalk', key, 'the other t does not reach (0, 0)');
+        if (w[n] !== `The curve crosses itself here: at t = ${fst(fr(-k, 2))} it passes through (0, 0) as well, with slope ${fst(os)}. One point, two slopes, one for each time the curve goes through it.`) fail('paramwalk', key, `the crossing is not told: ${w[n]}`);
+        n++;
+      }
+      if (w.length !== n) fail('paramwalk', key, `the readout has ${w.length} sentences, not ${n}`);
+      // the drawing
+      const svg = S.svg(); drawn++;
+      const pt = svg.match(/data-k="pt" cx="([-\d.]+)" cy="([-\d.]+)"/);
+      if (!pt || Math.abs(+pt[1] - PX(Q.x(t))) > 0.6 || Math.abs(+pt[2] - PY(Q.y(t))) > 0.6) fail('paramwalk', key, 'the red dot is not where the curve puts the point');
+      const curve = svg.match(/data-k="curve" points="([^"]+)"/);
+      if (!curve) fail('paramwalk', key, 'the curve is not drawn');
+      else for (const p of curve[1].split(' ')) { const [u, v] = p.split(',').map(Number); if (u < 19.9 || u > 340.1 || v < 19.9 || v > 240.1) { fail('paramwalk', key, `the curve runs off the drawing at ${p}`); break; } }
+      if (curve && !curve[1].split(' ').some(p => { const [u, v] = p.split(',').map(Number); return Math.hypot(u - PX(Q.x(t)), v - PY(Q.y(t))) < 2; })) fail('paramwalk', key, 'the red dot is not on the curve');
+      const tan = svg.match(/data-k="tan" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/), dir = svg.match(/data-k="dir" x1="([-\d.]+)" y1="([-\d.]+)" x2="([-\d.]+)" y2="([-\d.]+)"/);
+      if (a[0] === 0 && b[0] === 0) { if (tan || dir) fail('paramwalk', key, 'a tangent is drawn where the point stops dead'); }
+      else if (!tan || !dir) fail('paramwalk', key, 'the tangent or the stub is missing');
+      else {
+        const av = a[0] / a[1], bv = b[0] / b[1];
+        const tx = +tan[3] - +tan[1], ty = +tan[4] - +tan[2], dx = +dir[3] - +dir[1], dy = +dir[4] - +dir[2];
+        // on screen y runs down, so the way the point moves is (dx/dt, −dy/dt)
+        if (Math.abs(tx * -bv - ty * av) > 0.02 * Math.hypot(tx, ty) * Math.hypot(av, bv)) fail('paramwalk', key, 'the tangent is not along (dx/dt, dy/dt)');
+        if (Math.abs((+tan[1] + +tan[3]) / 2 - +pt[1]) > 0.02 || Math.abs((+tan[2] + +tan[4]) / 2 - +pt[2]) > 0.02) fail('paramwalk', key, 'the tangent is not centred on the point');
+        if (dx * av - dy * bv <= 0 || Math.abs(dx * -bv - dy * av) > 0.02 * Math.hypot(dx, dy) * Math.hypot(av, bv)) fail('paramwalk', key, 'the stub does not point the way the point moves');
+        if (Math.abs(+dir[1] - +pt[1]) > 0.02 || Math.abs(+dir[2] - +pt[2]) > 0.02) fail('paramwalk', key, 'the stub does not start at the point');
+      }
+      const h0 = S.html();
+      if (/id="twHi"[^>]*disabled/.test(h0) !== (k === 4) || /id="twLo"[^>]*disabled/.test(h0) !== (k === -4)) fail('paramwalk', key, 'a stepper is shut away from its end, or open at it');
+      if (!h0.includes(`<b id="twT" style="font-size:17px;min-width:0">t = ${T}</b>`)) fail('paramwalk', key, `t is not shown as ${T}`);
+    }
+  });
+  // the hunt, played through the presses a player would make
+  S.ci = 0; S.k = -4; S.done = new Set(); S.cross = new Set(); S.touched = false; env.toasts = []; env.banners = [];
+  S.k = 2; S.html();
+  if (S.done.size || S.cross.size) fail('paramwalk', 'hunt', 'a goal is found before anything is pressed');
+  S.k = -4;
+  const go = (ci, n) => { if (ci !== null) { S.pick(ci); S.html(); } for (let i = 0; i < n; i++) { S.move(1); S.html(); } return [...S.done].sort().join(); };
+  const plan = [[0, 2, ''], [null, 1, 'back'], [null, 1, 'back,up'], [null, 2, 'back,cross,up'], [1, 4, 'back,cross,flat,up'], [3, 3, 'back,cross,flat,up'], [null, 1, 'back,cross,flat,stop,up']];
+  plan.forEach(([ci, n, want], i) => { const got = go(ci, n); if (got !== want) fail('paramwalk', 'hunt', `step ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want || 'nothing'}`); });
+  if (env.toasts.join(' | ') !== '✓ Backwards and still climbing | ✓ Straight up | ✓ Two slopes at one point | ✓ A flat tangent') fail('paramwalk', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MASTER OF THE MOVING POINT / every tangent read') fail('paramwalk', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  { // one pass through (0, 0) is not the crossing; the stepper stops at both ends
+    S.ci = 0; S.k = -4; S.done = new Set(); S.cross = new Set(); S.touched = false;
+    S.pick(0); S.move(1); S.move(1); S.html(); S.move(1); S.html();
+    if (S.done.has('cross')) fail('paramwalk', 'hunt', 'one pass through (0, 0) is counted as the crossing');
+    S.pick(2); for (let i = 0; i < 4; i++) { S.move(1); S.html(); }
+    if (S.done.has('cross')) fail('paramwalk', 'hunt', '(0, 0) on another curve is counted as the crossing');
+    for (let i = 0; i < 20; i++) S.move(1); if (S.k !== 4) fail('paramwalk', 'stepper', 'the stepper does not stop at t = 2');
+    for (let i = 0; i < 20; i++) S.move(-1); if (S.k !== -4) fail('paramwalk', 'stepper', 'the stepper does not stop at t = −2');
+  }
+  S.ci = 0; S.k = -4; S.done = new Set(); S.cross = new Set(); S.touched = false;
+  return { steps, slopes, ups, stops, drawn };
+})();
+
+
 /* Row moves, the cofactor workshop's third mode. Random runs of moves on each
    of its three matrices, and after every press det A = tally × det M is
    checked with det M worked here from its nine entries, never trusted from the
@@ -17755,6 +17889,7 @@ console.log(`  next guesses picked ${pad(newtonPickNotes.rounds.toLocaleString()
 console.log(`  levels picked ${pad(avgPickNotes.rounds.toLocaleString(), 19)}  (rounds of which-level in the water level workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone the area spread over the width; the area checked against a thousand thin strips; ${avgPickNotes.misses.toLocaleString()} wrong picks checked by what their level holds, ${avgPickNotes.worked.toLocaleString()} areas and levels worked again from their own numbers, ${avgPickNotes.fracR.toLocaleString()} rounds whose average is a fraction)`);
 console.log(`  endless sums picked ${pad(geoPickNotes.rounds.toLocaleString(), 13)}  (rounds of which-sum in the geometric series workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone where two hundred terms add up to; ${geoPickNotes.misses.toLocaleString()} wrong picks checked against S = a + rS, ${geoPickNotes.worked.toLocaleString()} sums worked again from their own numbers, ${geoPickNotes.fracR.toLocaleString()} rounds whose sum is a fraction)`);
 console.log(`  power series stepped ${pad(geoReachNotes.steps.toLocaleString(), 12)}  (every x the how-far mode allows on its four power series, each sentence worked again: ${geoReachNotes.sums} sums inside against twenty and two thousand terms, ${geoReachNotes.edges} ends where the ratio is 1, ${geoReachNotes.runs} steps outside where the terms run away)`);
+console.log(`  curves walked       ${pad(paramWalkNotes.steps.toLocaleString(), 12)}  (every t the along-a-curve mode allows on its four curves, each sentence worked again from the curve alone: ${paramWalkNotes.slopes} slopes as dy/dt over dx/dt checked against the curve, ${paramWalkNotes.ups} straight-up tangents, ${paramWalkNotes.stops} dead stop, ${paramWalkNotes.drawn} drawings with the point, the tangent and the stub)`);
 console.log(`  row moves pressed ${pad(cofMovesNotes.presses.toLocaleString(), 15)}  (random runs of swaps, scalings and additions on the cofactor workshop's three matrices, det A = tally × det M checked after every one with det M worked by Sarrus' rule; ${cofMovesNotes.tris.toLocaleString()} triangular matrices read off their diagonals, ${cofMovesNotes.hints} zeros on the diagonal pointed to a swap, ${cofMovesNotes.shut} moves shut for running an entry too far)`);
 console.log(`  Cramer ratios read ${pad(elimCramerNotes.ratios.toLocaleString(), 16)}  (every b the steppers allow on the elimination workshop's three systems, b put in each column: every det worked again, each ratio checked to solve its system, ${elimCramerNotes.drawn.toLocaleString()} gold parallelograms read back off the drawing and measured by the shoelace rule against the blue one, ${elimCramerNotes.flats.toLocaleString()} flat states told apart into no solution or a whole line, ${elimCramerNotes.checks.toLocaleString()} checks put back into both equations)`);
 console.log(`  falling tops timed ${pad(ladPickNotes.rounds.toLocaleString(), 14)}  (rounds of which-speed in the ladder workshop, every number read back off its button as an exact fraction and checked against the slip it is named as, the right one alone how fast the top really falls; ${ladPickNotes.misses.toLocaleString()} wrong picks checked against x·x′ + y·y′ = 0, ${ladPickNotes.worked.toLocaleString()} lengths worked again from their own numbers, ${ladPickNotes.wholeR.toLocaleString()} rounds whose speed is whole)`);

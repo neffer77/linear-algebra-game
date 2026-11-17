@@ -1023,6 +1023,24 @@ The game is built so that losing teaches you as much as winning.
   f′(u) and g′(x) out and deals a new curve. Nothing is saved, and there is no
   clock. `npm test` reads every formula on screen back as maths and checks the
   chain rule against a nudge of y and each slip against what it gets wrong.
+
+  **🌀 Along a curve** lets x and y both move with t. Four curves,
+  x = t² − 1, y = t³ − t; x = t³ − 3t, y = t²; x = t², y = t³ − 3t; and
+  x = t³, y = t², and a stepper that moves t from −2 to 2 in halves. The
+  readout works the point, dx/dt and dy/dt as exact fractions, and the slope
+  as their ratio, (dy/dt) ÷ (dx/dt), checked with a nudge: the chain rule
+  read backwards, since dy/dt = dy/dx × dx/dt. Where dx/dt is 0 it says the
+  ratio cannot be worked out and the tangent stands straight up; where both
+  rates are 0 the point stops dead and there is no slope at all. On the first
+  curve, (0, 0) is reached twice, at t = −1 with slope −1 and at t = 1 with
+  slope 1, and the readout says so. The drawing keeps one scale both ways, so
+  a slope looks like itself, with the point, its tangent and a stub showing
+  which way it moves. Five things to find: x running backwards while the
+  curve still climbs, a tangent straight up, both passes through (0, 0), a
+  flat tangent, and the dead stop on x = t³, y = t². Nothing is saved, and
+  there is no clock. `npm test` steps through every t on all four curves and
+  works each sentence again from the curve alone, and checks the drawing's
+  point, tangent and stub.
 - **⛰️ Downhill Workshop** — gradient descent, by hand. f(x, y) = (x − 1)² + 2(y + 1)² is
   a valley with its bottom at (1, −1), drawn from above as rings. Pick a step size η
   (0.1, 0.25, 0.4 or 0.55) and press Step downhill: the readout works f at the point
@@ -2386,7 +2404,7 @@ the knight codec. It first parses the whole page script, because its other check
 pieces of it, and a slip outside those pieces would pass them all and still stop the page
 loading. `npm run test:play` covers what cannot: it drives the real
 `index.html` in Chromium, because there is no build step to import across and the run
-loop only exists once the page is running. A hundred and fifty-five suites, about 6,110 checks, about a minute:
+loop only exists once the page is running. A hundred and fifty-six suites, about 6,150 checks, about a minute:
 
 | suite | what it holds to |
 | --- | --- |
@@ -2487,6 +2505,7 @@ loop only exists once the page is running. A hundred and fifty-five suites, abou
 | `eigspot` | the Tome says the eigenvector hunt can be turned round; the hunt opens on hunting by hand, and switching to spot one puts away the matrices, the arrow, the figure and the goals and states the rule first; the matrix is read out row by row; four arrows are offered, each named with where A sends it and drawn with v in green, A·v in gold and v's dotted line; a wrong pick is multiplied out, told how many degrees it is knocked off its line, shut, drawn in red, told as not an eigenvector and not counted; the right pick is written as λ times itself, counts (not as a first try after a miss), toasts and deals a new matrix with all four open; a first try counts as one, and the fifth spot brings EIGEN SPOTTER; every button is named, nothing runs off a phone, the arrows sit two by two, hunting by hand comes back, and the save is unchanged |
 | `intpick` | the Tome says the area workshop can be turned round; the workshop opens on closing in with rectangles, and switching to which integral puts away the curves, the figure, the stepper, the rules, the readout and the goals and states the rule first; the curve is named with its ends and the picture is read out, saying where it crosses and that part is under the axis; four numbers are offered two by two, each named; a wrong pick is shut, told which slip it is and not counted; the right pick shows F worked at both ends, counts (not as a first try after a miss), toasts and deals a new curve with all four open; a first try counts as one, and the fifth brings INTEGRAL READER; every button is named, nothing runs off a phone, closing in comes back, and the save is unchanged |
 | `chainpick` | the Tome says the chain rule workshop can be turned round; the workshop opens on the two links, and switching to which dy/dx puts away the pairs, the figure, the rules, the x stepper, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′(u) and g′(x) out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings CHAIN READER; every button is named, the eigenvalue detective still draws into its own panel while a curve is up, nothing runs off a phone, the two links come back, and the save is unchanged |
+| `chaincurve` | the Tome says the chain rule workshop can let x and y both move with t; switching to along a curve puts the two links away; x = t² − 1, y = t³ − t opens at t = −2 with the point (3, −6), both rates and the slope 11 ÷ (−4) = −11/4, checked with a nudge; t = −1 is (0, 0) with slope −1 and says the curve comes back with slope 1, but one pass is not counted, and the red dot moves; t = −1/2 runs x backwards with slope 1/4, which is found with a toast; t = 0 has dx/dt = 0, a tangent drawn straight up and no nudge, which is found; t = 1 is (0, 0) with slope 1, which finds the crossing; the stepper stops at t = 2; on x = t³ − 3t, y = t² the tangent is flat at t = 0; on x = t³, y = t² both rates are 0 at t = 0, with no tangent drawn, which brings MASTER OF THE MOVING POINT; every button is named, the drawing is read out, nothing runs off a phone, the two links come back, and the save is unchanged |
 | `productpick` | the Tome says the product rule workshop can be turned round; the workshop opens on growing the field, and switching to which dy/dx puts away the fields, the figure, the h stepper, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′ and g′ out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings PRODUCT READER; every button is named, nothing runs off a phone, the field comes back, and the save is unchanged |
 | `quotpick` | the Tome says the quotient rule workshop can be turned round; the workshop opens on working the slope, and switching to which dy/dx puts away the sets, the figure, the x stepper, the modes, the readout and the goals and states the rule first; y is written and drawn with a point on it, and the picture is read out; four formulas are offered two by two, each named as dy/dx; a wrong pick is named as its slip, set against a nudge of the curve, drawn as a red line through the point that the picture names, shut and not counted; the right pick works f′ and g′ out, counts (not as a first try after a miss), toasts and deals a new curve with all four open and no red line; a first try counts as one, and the fifth brings QUOTIENT READER; every button is named, nothing runs off a phone, the workshop comes back, and the save is unchanged |
 | `slope` | the Tome opens the slope workshop on x² at a = 1; the readout works the secant's slope for the numbers on screen, 2.1 at h = 0.1 and 2.001 at h = 0.001; at the closest h it names f′(a) and the caption says the secant lies along the tangent; the other side brackets the negative h and gives 1.999; the curves and the point change what is worked (f′(2) = 9, f′(−1) = 0, f′(1) = −2); the point and h stop at their ends; every goal can be found with the buttons and is ticked only then; the toast for getting within 0.01 keeps the 0.01 whole; it fits a phone; nothing is saved |
