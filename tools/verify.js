@@ -4566,6 +4566,157 @@ const idNotes = (() => {
   return { ids };
 })();
 
+/* Match them up: the eigenvalue detective's third mode. Every matrix is worked
+   again from its own entries: det(A − λI) expanded as a polynomial, its
+   polynomial found among the four, its eigenvalues found by trying every
+   whole λ, every matrix matched wrong in all three wrong ways and the slip
+   worked, each round's missing roots, zero dets and shared dets found
+   afresh, and the drawing checked: each curve passes through its own
+   polynomial's values, and the green dots sit where it meets the axis. */
+const charMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL; const mat = r => '[' + r.map(x => x.join(' ')).join('; ') + ']';" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Detect = {render(){ env.renders++; }};" +
+    cut('const CharMatch = {', '/* ---------- Which slope? The hillwalker') + 'return CharMatch;')(env, COL);
+  const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // det(A − λI) expanded by hand: the coefficients of λ², λ and 1
+  const charOf = A => { const [[a, b], [c, d]] = A; return [1, -(a + d), a * d - b * c]; };
+  const word = ([, p, q]) => { let s = 'λ²'; if (p) s += ` ${p < 0 ? '−' : '+'} ${Math.abs(p) === 1 ? '' : Math.abs(p)}λ`; if (q) s += ` ${q < 0 ? '−' : '+'} ${Math.abs(q)}`; return s; };
+  const at = ([, p, q], l) => l * l + p * l + q;
+  // the real eigenvalues: every whole λ from −20 to 20 tried, a double root where the curve only touches
+  const eigOf = A => { const k = charOf(A), r = []; for (let l = -20; l <= 20; l++) if (at(k, l) === 0) r.push(l);
+    return r.length === 1 ? [r[0], r[0]] : r; };
+  const realOf = A => { const [, p, q] = charOf(A); return p * p - 4 * q >= 0; };
+  const eigWord = A => { const r = eigOf(A); return !r.length ? 'none real' : r[0] === r[1] ? `${ng(r[0])} twice` : `${ng(r[0])} and ${ng(r[1])}`; };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('charmatch', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  if (S.RULE !== 'For a 2×2 matrix A = [a b; c d], det(A − λI) = (a − λ)(d − λ) − bc = λ² − (a + d)λ + (ad − bc). So the λ term is minus the trace and the number on its own is det A. Work out the trace and det of each matrix, or read its eigenvalues off where its curve meets the axis, and match it to its polynomial.') fail('charmatch', 'rule', 'the rule is not stated as it should be');
+  const seen = new Set();
+  let checks = 0, wrongs = 0, curves = 0;
+  S.ROUNDS.forEach((Rd, ri) => {
+    const key = `round ${ri + 1}`, M = Rd.M;
+    reset(); S.ri = ri;
+    if (M.length !== 4 || [...Rd.order].sort().join() !== '0,1,2,3') { fail('charmatch', key, 'it does not hold four matrices and an order of all four'); return; }
+    M.forEach((A, i) => { const k = A.flat().join(); if (seen.has(k)) fail('charmatch', key, `matrix ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (!A.flat().every(x => Number.isInteger(x) && Math.abs(x) <= 6)) fail('charmatch', key, `matrix ${'ABCD'[i]} has an entry that is not a whole number from −6 to 6`);
+      if (realOf(A) && eigOf(A).length !== 2) fail('charmatch', key, `matrix ${'ABCD'[i]} has an eigenvalue that is not a whole number`); });
+    if (Rd.order.every((m, n) => m === n)) fail('charmatch', key, 'every matrix sits by its own number, so the order gives it away');
+    const polys = M.map(A => word(charOf(A)));
+    if (new Set(polys).size !== 4) fail('charmatch', key, 'two matrices have one polynomial');
+    // the polynomials as numbered, and the right match for each matrix
+    const shown = [0, 1, 2, 3].map(n => S.P(n)), truth = M.map(A => shown.indexOf(word(charOf(A))));
+    if (truth.some((t, i) => t < 0 || S.truth(i) !== t)) fail('charmatch', key, `its matrices are matched ${[0, 1, 2, 3].map(i => S.truth(i) + 1).join('')}, not ${truth.map(t => t + 1).join('')}`);
+    // what the round holds, found afresh, and every round with two that share a trace or a det
+    const ns = [], zs = [], tw = []; let shared = 0;
+    for (let i = 0; i < 4; i++) { const ki = charOf(M[i]); if (!realOf(M[i])) ns.push(i); if (ki[2] === 0) zs.push(i);
+      for (let j = i + 1; j < 4; j++) { const kj = charOf(M[j]); if (ki[2] === kj[2]) tw.push([i, j]); if (ki[1] === kj[1] || ki[2] === kj[2]) shared++; } }
+    if (!shared) fail('charmatch', key, 'no two matrices share a trace or a det, so one number alone settles it');
+    const tags = [ns.length ? 'none' : null, zs.length ? 'zero' : null, tw.length ? 'twin' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('charmatch', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every matrix matched wrong, one at a time, in all three wrong ways
+    M.forEach((A, i) => {
+      for (let c = 0; c < 4; c++) {
+        if (c === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
+        const [[a, b], [cc, d]] = A, k = charOf(A), B = M[Rd.order[c]], kb = charOf(B);
+        const off = kb[1] === k[1] ? 'the trace matches, but det A does not' : kb[2] === k[2] ? 'det A matches, but the trace does not' : 'neither the trace nor det A matches';
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `For ${'ABCD'[i]}, the trace is ${ng(a)} + ${ng(d)} = ${ng(-k[1])} and det A = (${ng(a)})(${ng(d)}) − (${ng(b)})(${ng(cc)}) = ${ng(k[2])}, so det(A − λI) = ${word(k)}: that is ${truth[i] + 1}. You had ${c + 1}, ${word(kb)}: ${off}.`,
+          '0 matched right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('charmatch', key, `with ${'ABCD'[i]} matched to ${c + 1} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        const miss = [...svg.matchAll(/data-k="miss" x="([^"]+)" y="([^"]+)"/g)];
+        if (miss.length !== 1 || +miss[0][1] !== (c % 2) * 180 + 3 || +miss[0][2] !== Math.floor(c / 2) * 120 + 3) fail('charmatch', key, `with ${'ABCD'[i]} matched to ${c + 1}, polynomial ${c + 1} is not ringed alone`);
+        if (/data-k="(who|root)"/.test(svg)) fail('charmatch', key, `with ${'ABCD'[i]} wrong, the answers are given away`);
+        if (S.solved || S.streak) fail('charmatch', key, 'a wrong matching is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('charmatch', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 matched right on the first check this visit.'].join(' | ')) fail('charmatch', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('charmatch', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, matched with the buttons
+    reset(); S.ri = ri;
+    if (!/id="chmCheck" disabled /.test(S.html())) fail('charmatch', key, 'the check is open before the matrices are matched');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="chmCheck" disabled /.test(S.html())) fail('charmatch', key, `the check opens with ${'ABCD'[skip]} unmatched`);
+      S.check();
+      if (S.tries || S.marks) fail('charmatch', key, `a check runs with ${'ABCD'[skip]} unmatched`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="CharMatch\\.call\\(${i},(\\d)\\)" aria-label="Matrix ${'ABCD'[i]} goes with polynomial ${t + 1}, ${polys[i].replace(/[()+]/g, '\\$&')}"`));
+      if (!m || +m[1] !== t) fail('charmatch', key, `the button matching ${'ABCD'[i]} to ${polys[i]} does not match it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`CharMatch\\.call\\(${i},`, 'g')) || []).length !== 4) fail('charmatch', key, `${'ABCD'[i]} does not offer all four polynomials`);
+    });
+    if (S.calls.join() !== truth.join()) fail('charmatch', key, 'the buttons cannot make the right matches');
+    if (/id="chmCheck" disabled /.test(S.html())) fail('charmatch', key, 'the check stays shut with every matrix matched');
+    S.check(); checks++;
+    const L = ix => ix.map(i => 'ABCD'[i]), list = ix => { const n = L(ix); return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
+    const want = ['Yes: all four are matched.'];
+    if (ns.length) { const k = charOf(M[ns[0]]); want.push(`${'ABCD'[ns[0]]} has no real eigenvalues: its trace squared, ${k[1] * k[1]}, is less than 4 × det A = ${4 * k[2]}, so its curve never meets the axis.`); }
+    if (zs.length) want.push(`${list(zs)} ${zs.length > 1 ? 'have' : 'has'} det A = 0, so λ = 0 is an eigenvalue: ${zs.length > 1 ? 'each curve passes' : 'its curve passes'} through 0.`);
+    if (tw.length) { const [i, j] = tw[0]; want.push(`${'ABCD'[i]} and ${'ABCD'[j]} share det A = ${ng(charOf(M[i])[2])}, so only the trace tells them apart: ${ng(-charOf(M[i])[1])} against ${ng(-charOf(M[j])[1])}.`); }
+    want.push(`The eigenvalues: ${M.map((A, i) => `${'ABCD'[i]} ${eigWord(A)}`).join(', ')}.`);
+    want.push('1 matched right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('charmatch', key, `once matched the readout is ${S.working().join(' | ')}`);
+    // eigenvalues add to the trace and multiply to det A
+    M.forEach((A, i) => { const r = eigOf(A), k = charOf(A); if (r.length && (r[0] + r[1] !== -k[1] || r[0] * r[1] !== k[2])) fail('charmatch', key, `the eigenvalues of ${'ABCD'[i]} do not add to its trace and multiply to its det`); });
+    // the drawing: each curve through its own polynomial's values, its letter, and a dot at each eigenvalue
+    const svg = S.svg();
+    const cs = [...svg.matchAll(/data-k="curve" clip-path="url\(#chmClip(\d)\)" points="([^"]+)"/g)];
+    if (cs.length !== 4) fail('charmatch', key, `${cs.length} curves are drawn, not four`);
+    cs.forEach((m, n) => {
+      const X = (n % 2) * 180, Y = Math.floor(n / 2) * 120, k = charOf(M[Rd.order[n]]);
+      if (+m[1] !== n || !svg.includes(`<clipPath id="chmClip${n}"><rect x="${X + 4}" y="${Y + 4}"`)) fail('charmatch', key, `curve ${n + 1} is not held to its own pane`);
+      const pts = m[2].split(' ').map(p => p.split(',').map(Number));
+      if (pts.length < 40) fail('charmatch', key, `curve ${n + 1} has too few points`);
+      // λ from its x, and the height the polynomial gives there, read back through the pane's scale
+      let bad = 0;
+      for (const [x, y] of pts) { const l = -3 + (x - X - 14) / 152 * 10, want = Y + 108 - (at(k, l) + 8) / 20 * 96; if (Math.abs(y - want) > 0.02) bad++; }
+      if (bad) fail('charmatch', key, `curve ${n + 1} misses ${word(k)} at ${bad} points`); else curves++;
+      if (pts[0][0] > X + 14.01 || pts[pts.length - 1][0] < X + 165.99) fail('charmatch', key, `curve ${n + 1} does not run from λ = −3 to 7`);
+    });
+    const who = [...svg.matchAll(/data-k="who" x="[^"]+" y="[^"]+"[^>]*>([A-D])</g)].map(m => m[1]).join('');
+    if (who !== Rd.order.map(i => 'ABCD'[i]).join('')) fail('charmatch', key, `the curves are lettered ${who}`);
+    const dots = [...svg.matchAll(/data-k="root" cx="([^"]+)" cy="([^"]+)"/g)].map(m => [+m[1], +m[2]]);
+    const wantDots = [];
+    [0, 1, 2, 3].forEach(n => { const X = (n % 2) * 180, Y = Math.floor(n / 2) * 120; for (const r of [...new Set(eigOf(M[Rd.order[n]]))]) wantDots.push([X + 14 + (r + 3) / 10 * 152, Y + 108 - 8 / 20 * 96]); });
+    if (dots.length !== wantDots.length || dots.some((d, k) => Math.hypot(d[0] - wantDots[k][0], d[1] - wantDots[k][1]) > 0.02)) fail('charmatch', key, `the eigenvalue dots are at ${dots.map(d => d.join(',')).join(' ')}`);
+    const h = S.html();
+    if (!h.includes('id="chmNext"') || /onclick="CharMatch\.call/.test(h.replace(/disabled onclick="CharMatch\.call/g, ''))) fail('charmatch', key, 'once matched, Next is not offered or a match still opens');
+    const before = S.calls.join(); S.call(0, (truth[0] + 1) % 4);
+    if (S.calls.join() !== before) fail('charmatch', key, 'a match moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('charmatch', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('charmatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const M = S.R().M, shown = [0, 1, 2, 3].map(n => S.P(n)), right = M.map(A => shown.indexOf(word(charOf(A))));
+    S.calls = right.slice(); if (slip) S.calls[1] = (right[1] + 1) % 4;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix'], [false, 'fix,none,one'], [false, 'fix,none,one,twin,zero'], [false, 'fix,none,one,three,twin,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('charmatch', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A slip caught and fixed | ✓ Right on the first check · No real eigenvalues | ✓ Zero is an eigenvalue · Same det, told apart') fail('charmatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'MATCHMAKER / every polynomial placed') fail('charmatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, curves };
+})();
+
 const shapeReadNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -19628,6 +19779,7 @@ console.log(`  antiderivatives   ${pad(antiPickNotes.rounds.toLocaleString(), 15
 console.log(`  eigenvalue pairs  ${pad(lamPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-λ in the eigenvalue detective, every matrix solved by the quadratic formula and every pair read back as its slip; ${lamPickNotes.misses.toLocaleString()} wrong picks explained; ${lamPickNotes.dots.toLocaleString()} red dots read back onto the curve; ${lamPickNotes.pairs} different pairs of eigenvalues)`);
 console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
+console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
 console.log(`  span mixes        ${pad(spanPickNotes.rounds.toLocaleString(), 15)}  (rounds of which-mix in the span workshop, every mix read back as amounts of u and v and worked to where it lands, with u and v pointing different ways; ${spanPickNotes.misses.toLocaleString()} wrong picks explained; ${spanPickNotes.walks.toLocaleString()} red walks read back off their ticks)`);
 console.log(`  ids               ${pad(idNotes.ids.toLocaleString(), 15)}  (ids written in the page and in the HTML its scripts build, each on one element only, bar the alternatives that fill one slot)`);
 console.log(`  arrows walked           ${pad(arrowNotes.n.toLocaleString(), 10)}  (each sum worked by hand, every vector written read back, Pythagoras on the parts, the unit vector, every sentence, the drawing read back, ${arrowNotes.goals} goals findable)`);

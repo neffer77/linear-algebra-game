@@ -1536,7 +1536,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ EIGENVALUE DETECTIVE ============ -->
   <div class="screen" id="s-detect">
     <div class="panel"><h2>🔍 Eigenvalue Detective</h2><div class="sub">An eigenvalue is a λ where A − λI crushes some arrow flat, which is exactly where det(A − λI) = 0. Step λ along and watch that determinant trace out a curve, the characteristic polynomial, and run down where it meets the axis.</div></div>
-    <div id="dcTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt the eigenvalues or pick them"></div>
+    <div id="dcTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Hunt the eigenvalues, pick them, or match them up"></div>
     <div class="panel">
       <div id="dcPick"></div>
       <div id="cpSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which matrix"></div>
@@ -15470,7 +15470,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔍 Eigenvalue Detective</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant. Then turn it round: see a matrix, and pick which of four pairs are its eigenvalues.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step λ along and watch det(A − λI) trace out a curve. Run down the eigenvalues where it meets the axis, and see why they add up to the trace and multiply to the determinant. Then turn it round: see a matrix, and pick which of four pairs are its eigenvalues. Or match them up: four matrices, four polynomials, and each matrix to its det(A − λI).</div>
          <button class="btn sm" id="tomeDetect" style="width:auto;margin-top:8px" onclick="Detect.open()">Open the eigenvalue detective</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -24921,11 +24921,11 @@ const Detect = {
   pick(i){ this.si=i; this.k=this.START; this.touched=true; this.render(); },
   move(by){ const v=this.k+by; if(v<0 || v>=this.L.length) return; this.k=v; this.touched=true; this.render(); },
   render(){
-    document.getElementById('dcTab').innerHTML=[['hunt','🔍 Hunt them down','Step λ along a curve and find where det(A − λI) is 0'],['pick','🎯 Which λ?','See a matrix, and pick which of four pairs are its eigenvalues']]
+    document.getElementById('dcTab').innerHTML=[['hunt','🔍 Hunt them down','Step λ along a curve and find where det(A − λI) is 0'],['pick','🎯 Which λ?','See a matrix, and pick which of four pairs are its eigenvalues'],['match','🧩 Match them up','See four matrices and four polynomials, and match each matrix to its det(A − λI)']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Detect.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hunt';
     for(const id of ['cpSets','cpMat','cpFig','cpStep','cpRead','cpGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('dcPick').innerHTML=pick ? LamPick.html() : '';
+    document.getElementById('dcPick').innerHTML=!pick ? '' : this.tab==='pick' ? LamPick.html() : CharMatch.html();
     if(pick) return;
     document.getElementById('cpSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Detect.pick(\${i})" aria-label="\${s.btn}: A has \${this.rows(s.A)}">\${s.btn}</button>\`).join('');
@@ -24947,6 +24947,171 @@ const Detect = {
         Celebrate.banner('EIGENVALUE DETECTIVE','every eigenvalue cornered','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
+  }
+};
+
+/* ---------- Match them up: the eigenvalue detective's third mode ----------
+   Four 2×2 matrices and four characteristic polynomials, numbered and in
+   another order, each drawn as its curve. The player matches each matrix to
+   its polynomial with the trace and the determinant, or reads the
+   eigenvalues off where a curve meets the axis. Every round pairs two
+   matrices that share a trace or a det, so one number alone never settles
+   it. Every real eigenvalue is a whole number. A slip is worked from the
+   matrix's own entries. Nothing is saved. */
+const CharMatch = {
+  // each round: four matrices, and which matrix each of polynomials 1 to 4 belongs to
+  ROUNDS:[
+    {M:[[[1,1],[-2,4]], [[2,1],[2,3]], [[0,2],[-1,3]], [[1,2],[3,2]]],   order:[2,0,3,1]},
+    {M:[[[2,1],[1,2]], [[1,2],[2,1]], [[0,-1],[1,0]], [[3,1],[-1,1]]],   order:[3,1,0,2]},
+    {M:[[[1,2],[2,4]], [[2,3],[1,4]], [[3,-1],[2,0]], [[1,1],[-1,1]]],   order:[1,3,0,2]},
+    {M:[[[0,1],[-2,3]], [[0,1],[3,2]], [[2,2],[1,3]], [[1,-1],[1,1]]],   order:[2,3,1,0]},
+    {M:[[[4,2],[1,3]], [[2,4],[1,5]], [[1,3],[2,2]], [[2,-1],[4,-2]]],   order:[0,2,1,3]},
+    {M:[[[0,3],[1,2]], [[2,-2],[1,0]], [[4,-2],[1,1]], [[0,2],[1,1]]],   order:[3,0,2,1]}
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Match all four matrices right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'none',  t:'Match a matrix whose curve never meets the axis: no real eigenvalues.', toast:'No real eigenvalues',
+     ok:K=>K.kinds.has('none')},
+    {id:'zero',  t:'Match a matrix with det A = 0, so that λ = 0 is an eigenvalue.', toast:'Zero is an eigenvalue',
+     ok:K=>K.kinds.has('zero')},
+    {id:'twin',  t:'Match a round where two matrices share their det, so only the trace tells them apart.', toast:'Same det, told apart',
+     ok:K=>K.kinds.has('twin')},
+    {id:'fix',   t:'Check a matching with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Match three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'For a 2×2 matrix A = [a b; c d], det(A − λI) = (a − λ)(d − λ) − bc = λ² − (a + d)λ + (ad − bc). So the λ term is minus the trace and the number on its own is det A. Work out the trace and det of each matrix, or read its eigenvalues off where its curve meets the axis, and match it to its polynomial.',
+  L:'ABCD',
+  R(){ return this.ROUNDS[this.ri]; },
+  tr(A){ return A[0][0]+A[1][1]; },
+  det(A){ return A[0][0]*A[1][1]-A[0][1]*A[1][0]; },
+  /* polynomial n (0 to 3) is the one that belongs to matrix order[n] */
+  owner(n){ return this.R().order[n]; },
+  truth(i){ return this.R().order.indexOf(i); },
+  poly(A){ const t=this.tr(A), d=this.det(A);
+    return 'λ²'+(t===0?'':\` \${t>0?'−':'+'} \${Math.abs(t)===1?'':Math.abs(t)}λ\`)+(d===0?'':\` \${d>0?'+':'−'} \${Math.abs(d)}\`); },
+  P(n){ return this.poly(this.R().M[this.owner(n)]); },
+  /* the real eigenvalues of A, smaller first: two, one counted twice, or none */
+  roots(A){ const t=this.tr(A), d=this.det(A), D=t*t-4*d;
+    if(D<0) return []; const s=Math.sqrt(D); return [(t-s)/2,(t+s)/2]; },
+  eig(A){ const r=this.roots(A); return !r.length ? 'none real' : r[0]===r[1] ? \`\${neg(r[0])} twice\` : \`\${neg(r[0])} and \${neg(r[1])}\`; },
+  par(c){ return \`(\${neg(c)})\`; },
+  /* what a round holds: a curve that misses the axis, a det of 0, two matrices with one det */
+  nones(){ return [0,1,2,3].filter(i=>!this.roots(this.R().M[i]).length); },
+  zeros(){ return [0,1,2,3].filter(i=>this.det(this.R().M[i])===0); },
+  twins(){ const M=this.R().M, out=[];
+    for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(this.det(M[i])===this.det(M[j])) out.push([i,j]);
+    return out; },
+  tags(){ const t=[]; if(this.nones().length) t.push('none'); if(this.zeros().length) t.push('zero'); if(this.twins().length) t.push('twin'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  working(){
+    const M=this.R().M, out=[];
+    if(this.solved){
+      out.push('Yes: all four are matched.');
+      const ns=this.nones(), zs=this.zeros(), tw=this.twins();
+      if(ns.length){ const A=M[ns[0]], t=this.tr(A), d=this.det(A);
+        out.push(\`\${this.L[ns[0]]} has no real eigenvalues: its trace squared, \${t*t}, is less than 4 × det A = \${4*d}, so its curve never meets the axis.\`); }
+      if(zs.length) out.push(\`\${this.list(zs)} \${zs.length>1?'have':'has'} det A = 0, so λ = 0 is an eigenvalue: \${zs.length>1?'each curve passes':'its curve passes'} through 0.\`);
+      if(tw.length){ const [i,j]=tw[0];
+        out.push(\`\${this.L[i]} and \${this.L[j]} share det A = \${neg(this.det(M[i]))}, so only the trace tells them apart: \${neg(this.tr(M[i]))} against \${neg(this.tr(M[j]))}.\`); }
+      out.push(\`The eigenvalues: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.eig(M[i])}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const A=M[i], [[a,b],[c,d]]=A, t=this.tr(A), D=this.det(A), n=this.truth(i), k=this.calls[i], B=M[this.owner(k)];
+        const off = this.tr(B)===t ? 'the trace matches, but det A does not' : this.det(B)===D ? 'det A matches, but the trace does not' : 'neither the trace nor det A matches';
+        out.push(\`For \${this.L[i]}, the trace is \${neg(a)} + \${neg(d)} = \${neg(t)} and det A = \${this.par(a)}\${this.par(d)} − \${this.par(b)}\${this.par(c)} = \${neg(D)}, so det(A − λI) = \${this.poly(A)}: that is \${n+1}. You had \${k+1}, \${this.P(k)}: \${off}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 matched.\`);
+    }
+    out.push(\`\${this.wins} matched right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* the four polynomials, each in its own pane against λ from −3 to 7, with
+     a tick at every whole λ; a slip rings the polynomial that was picked
+     wrongly, and once all four are matched each curve gets its matrix's
+     letter and a green dot where it meets the axis */
+  LO:-3, HI:7, YLO:-8, YHI:12,
+  svg(){
+    const f=n=>n.toFixed(2), M=this.R().M;
+    let out=\`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="The four polynomials as curves against λ: \${[0,1,2,3].map(n=>\`\${n+1}, \${this.P(n)}\`).join('; ')}\${this.solved?', each with its matrix and where it meets the axis':''}">\`;
+    out+=\`<defs>\${[0,1,2,3].map(n=>\`<clipPath id="chmClip\${n}"><rect x="\${(n%2)*180+4}" y="\${Math.floor(n/2)*120+4}" width="172" height="112" rx="8"/></clipPath>\`).join('')}</defs>\`;
+    for(let n=0;n<4;n++){
+      const X=(n%2)*180, Y=Math.floor(n/2)*120, A=M[this.owner(n)], t=this.tr(A), d=this.det(A);
+      const PX=l=>X+14+(l-this.LO)/(this.HI-this.LO)*152, PY=y=>Y+108-(y-this.YLO)/(this.YHI-this.YLO)*96;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+10}" y1="\${f(PY(0))}" x2="\${X+170}" y2="\${f(PY(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${f(PX(0))}" y1="\${Y+8}" x2="\${f(PX(0))}" y2="\${Y+112}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(let l=this.LO;l<=this.HI;l++) if(l) out+=\`<line data-k="tick" x1="\${f(PX(l))}" y1="\${f(PY(0)-3)}" x2="\${f(PX(l))}" y2="\${f(PY(0)+3)}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const pts=[]; for(let k=0;k<=80;k++){ const l=this.LO+(this.HI-this.LO)*k/80; pts.push(\`\${f(PX(l))},\${f(PY(l*l-t*l+d))}\`); }
+      out+=\`<polyline data-k="curve" clip-path="url(#chmClip\${n})" points="\${pts.join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2.2" stroke-linejoin="round"/>\`;
+      out+=\`<text data-k="num" x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${n+1}</text>\`;
+      if(this.marks && this.calls.some((c,i)=>c===n && this.marks[i]===false))
+        out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="114" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){
+        out+=\`<text data-k="who" x="\${X+164}" y="\${Y+22}" fill="\${FIG_COL.c}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[this.owner(n)]}</text>\`;
+        for(const r of [...new Set(this.roots(A))]) out+=\`<circle data-k="root" cx="\${f(PX(r))}" cy="\${f(PY(0))}" r="4.5" fill="\${FIG_COL.c}"/>\`;
+      }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,n){
+    if(this.solved || this.calls[i]===n) return;
+    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Detect.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Detect.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Detect.render(); },
+  btn(i,n){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-n="\${n}" aria-pressed="\${this.calls[i]===n}" \${this.solved?'disabled ':''}onclick="CharMatch.call(\${i},\${n})" aria-label="Matrix \${this.L[i]} goes with polynomial \${n+1}, \${this.P(n)}">\${n+1}</button>\`;
+  },
+  html(){
+    const M=this.R().M;
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four matrices and four polynomials. Which det(A − λI) belongs to each matrix?</div>\`;
+    out+=\`<div id="chmPolys" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:15px;margin-bottom:4px">\`+
+      [0,1,2,3].map(n=>\`<div><b style="color:var(--gold)">\${n+1}</b>&nbsp; \${this.P(n)}</div>\`).join('')+\`</div>\`;
+    out+=\`<div id="chmFig">\${this.svg()}<div class="figcap">Each polynomial is drawn in blue against λ, with a tick at every whole number. Where a curve meets the axis is an eigenvalue. Once all four are matched, each curve gets its matrix's letter and a green dot at each eigenvalue.</div></div>\`;
+    out+=\`<div id="chmStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+M.map((A,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="chmStop" data-i="\${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 5;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} = \${mat(A)}</b>\`+
+        [0,1,2,3].map(n=>this.btn(i,n)).join('')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="chmRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="chmNext" onclick="CharMatch.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="chmCheck" \${this.ready()?'':'disabled '}onclick="CharMatch.check()" aria-label="\${this.ready()?'Check the four matches':'Match all four matrices to check them'}">\${this.ready()?'Check my matches':'Match all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="chmGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="chmGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('MATCHMAKER','every polynomial placed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
   }
 };
 
