@@ -14,7 +14,7 @@
 
 const crypto = require('crypto');
 
-const PINNED = '27d2c63b69a741aaf7775ecafb95e21733c9f2df66e52e03b3f14e743028429e';
+const PINNED = '3caf5e673499683db02c8c483318508b1d2199ea29c3deeb6e4dc78f8fea3990';
 
 module.exports = {
   name: 'wave',
