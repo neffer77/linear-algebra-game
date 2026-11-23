@@ -1,60 +1,60 @@
 {
-  "change": "Add a Bowl or saddle mode to the tangent plane workshop",
+  "change": "Add a Same or not mode to Order Matters",
   "mutations": [
     {
-      "name": "the xy term is left out of the test",
+      "name": "the order is never turned round",
       "file": "index.html",
-      "find": "disc(i){ const {a,b,c}=this.Q(i); return 4*a*b-c*c; },",
-      "replace": "disc(i){ const {a,b,c}=this.Q(i); return 4*a*b; },",
+      "find": "truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(B,A)) ? 1 : 0; },",
+      "replace": "truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(A,B)) ? 1 : 0; },",
       "run": "verify"
     },
     {
-      "name": "a saddle of opposite signs is told as a twisted one",
+      "name": "the diagonal gap is added",
       "file": "index.html",
-      "find": "if(a*b<0) return `a = ${neg(a)} and b = ${neg(b)} have opposite signs",
-      "replace": "if(a*b<0 && c===0) return `a = ${neg(a)} and b = ${neg(b)} have opposite signs",
+      "find": "tell:([[a,b],[c,d]])=>[b,c,a-d],",
+      "replace": "tell:([[a,b],[c,d]])=>[b,c,a+d],",
       "run": "verify"
     },
     {
-      "name": "a dome is called a bowl",
+      "name": "the multiple is turned upside down",
       "file": "index.html",
-      "find": "return a*b<0 || D<0 ? 0 : a>0 ? 1 : -1; },",
-      "replace": "return a*b<0 || D<0 ? 0 : 1; },",
+      "find": "p=this.frac(b[k],a[k]), q=",
+      "replace": "p=this.frac(a[k],b[k]), q=",
       "run": "verify"
     },
     {
-      "name": "the wrong diagonal is named",
+      "name": "the shift is read off the wrong corner",
       "file": "index.html",
-      "find": "dv(i){ const {a,c}=this.Q(i); return -Math.sign(a)*Math.sign(c); },",
-      "replace": "dv(i){ const {a,c}=this.Q(i); return Math.sign(a)*Math.sign(c); },",
+      "find": "q=this.frac(B[0][0]*a[k]-b[k]*A[0][0],a[k]);",
+      "replace": "q=this.frac(B[0][0]*a[k]-b[k]*A[1][1],a[k]);",
       "run": "verify"
     },
     {
-      "name": "a twisted saddle is not looked for",
+      "name": "diagonal pairs are not looked for",
       "file": "index.html",
-      "find": "twists(){ return [0,1,2,3].filter(i=>{ const {a,b}=this.Q(i); return a*b>0 && this.disc(i)<0; }); },",
-      "replace": "twists(){ return []; },",
+      "find": "diags(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.diagonal(A) && this.diagonal(B) && !this.scale(A) && !this.scale(B); }); },",
+      "replace": "diags(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the diagonals are drawn before the round is right",
+      "name": "two flips that agree count as a pair that turns",
       "file": "index.html",
-      "find": "if(this.solved){ out+=curve(S.p,'diag',FIG_COL.d,true);",
-      "replace": "if(true){ out+=curve(S.p,'diag',FIG_COL.d,true);",
+      "find": "return this.flipper(A) && this.flipper(B) && this.truth(i)===0; }); },",
+      "replace": "return this.flipper(A) && this.flipper(B); }); },",
       "run": "verify"
     },
     {
-      "name": "the slice along y uses x²",
+      "name": "the square under B is drawn with A",
       "file": "index.html",
-      "find": "slices(i){ const {a,b,c}=this.Q(i); return {x:a, y:b, p:a+b+c, m:a+b-c}; },",
-      "replace": "slices(i){ const {a,b,c}=this.Q(i); return {x:a, y:a, p:a+b+c, m:a+b-c}; },",
+      "find": "out+=shape(A,'sqA',FIG_COL.b)+shape(B,'sqB',FIG_COL.a);",
+      "replace": "out+=shape(A,'sqA',FIG_COL.b)+shape(A,'sqB',FIG_COL.a);",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanPlane.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanPlane.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Compose.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Compose.render();",
       "run": "verify"
     }
   ]

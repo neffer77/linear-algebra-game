@@ -1126,7 +1126,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ORDER MATTERS ============ -->
   <div class="screen" id="s-compose">
     <div class="panel"><h2>🔁 Order Matters</h2><div class="sub">Do one move to the plane, then another. Follow î and ĵ through both to build the matrix for the pair, then see whether the other order lands in the same place.</div></div>
-    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>
+    <div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves, pick the matrix that does both, or call whether the order makes a difference"></div>
     <div class="panel">
       <div id="oqBox"></div>
       <div class="small" id="cmFirstL" style="margin-bottom:4px">First</div>
@@ -15485,7 +15485,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔁 Order Matters</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Do one move to the plane, then another, and see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B. Or call four pairs: does the order make a difference to each?</div>
          <button class="btn sm" id="tomeCompose" style="width:auto;margin-top:8px" onclick="Compose.open()">Open Order Matters</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -19967,6 +19967,205 @@ const FitRank = {
    built column by column from where they land, never from a recipe to
    remember; the other order is drawn dashed beside it, so the player sees
    for themselves that it usually lands somewhere else. */
+/* ---------- Same or not? Order Matters' third mode ----------
+   Four pairs of whole-number 2×2 matrices, and the player calls whether the
+   order makes a difference to each: AB = BA, or not. The rule is stated
+   first and can be worked on the page: write three numbers for each matrix,
+   its top-right entry, its bottom-left entry and its top-left minus its
+   bottom-right; a plain scale has all three 0 and goes either way, and
+   otherwise the order makes no difference exactly when B's three are a
+   multiple of A's, so that B = pA + qI is built from A alone. Each pane draws
+   where the unit square lands under A and under B. A slip rings that pane and
+   works it through: the multiple and B written from A, or the first entry
+   where AB and BA part. Nothing is saved, and there is no clock. */
+const ComposeTurn = {
+  // each pair is [A, B], each matrix its rows run together: [a, b, c, d] for rows (a, b) and (c, d)
+  ROUNDS:[
+    [[[2,0,0,3],[-1,0,0,4]], [[1,1,0,1],[0,-1,1,0]], [[1,2,3,0],[3,4,6,1]], [[1,0,0,-1],[0,1,1,0]]],
+    [[[0,-1,1,0],[2,-1,1,2]], [[2,0,0,1],[1,1,0,1]], [[1,0,2,1],[1,2,0,1]], [[1,2,2,1],[2,1,1,2]]],
+    [[[1,0,0,2],[3,0,0,-1]], [[0,1,-1,0],[1,0,0,-1]], [[2,1,1,0],[5,2,2,1]], [[1,2,0,3],[2,4,0,5]]],
+    [[[1,2,0,1],[1,-4,0,1]], [[0,1,1,0],[-1,0,0,1]], [[2,0,0,-1],[1,0,1,1]], [[-2,0,0,-2],[0,3,1,2]]],
+    [[[1,1,1,2],[2,1,1,3]], [[3,0,0,1],[1,0,0,-2]], [[0,-1,1,0],[0,1,1,0]], [[1,2,3,4],[2,1,4,3]]],
+    [[[2,1,0,2],[1,1,0,2]], [[1,-1,1,1],[0,-1,1,0]], [[0,1,1,0],[0,-1,-1,0]], [[1,0,0,4],[1,3,0,4]]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four pairs right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'diag', t:'Call a pair of diagonal matrices, each a stretch along the axes.', toast:'Diagonals go either way',
+     ok:K=>K.kinds.has('diag')},
+    {id:'built',t:'Call a pair where B is built from A, and the order makes no difference.', toast:'Built from A, it goes either way',
+     ok:K=>K.kinds.has('built')},
+    {id:'flip', t:'Call two flips over different lines, whose order matters.', toast:'Two flips turn opposite ways',
+     ok:K=>K.kinds.has('flip')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'AB and BA are usually different, but not always. To tell, write three numbers for each matrix: its top-right entry, its bottom-left entry, and its top-left minus its bottom-right. If one matrix has all three 0, it is a plain scale, kI, and goes either way. Otherwise the order makes no difference exactly when B\\'s three are a multiple of A\\'s: then B = pA + qI, built from A alone, and anything built from A goes with A.',
+  WORD:{1:'the order making no difference', 0:'the order mattering'},
+  NAMES:{1:'the order makes no difference', 0:'the order matters'},
+  R(){ return this.ROUNDS[this.ri]; },
+  M:([a,b,c,d])=>[[a,b],[c,d]],
+  Q(i){ const [A,B]=this.R()[i]; return {A:this.M(A), B:this.M(B)}; },
+  mul:([[a,b],[c,d]],[[e,f],[g,h]])=>[[a*e+b*g, a*f+b*h],[c*e+d*g, c*f+d*h]],
+  key:M=>JSON.stringify(M),
+  // 1 the order makes no difference, 0 it matters
+  truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(B,A)) ? 1 : 0; },
+  // the three numbers the rule reads off a matrix
+  tell:([[a,b],[c,d]])=>[b,c,a-d],
+  zero:t=>t.every(x=>x===0),
+  diagonal:([[,b],[c]])=>b===0 && c===0,
+  scale(M){ return this.zero(this.tell(M)); },
+  // a flip over a line through the origin: it undoes itself and keeps lengths, and is not ±I
+  flipper(M){ const [[a,b],[c,d]]=M; return b===c && this.key(this.mul(M,M))===this.key([[1,0],[0,1]]) && !(b===0 && a===d); },
+  diags(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.diagonal(A) && this.diagonal(B) && !this.scale(A) && !this.scale(B); }); },
+  builts(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.truth(i)===1 && !(this.diagonal(A) && this.diagonal(B)) && !this.scale(A) && !this.scale(B); }); },
+  flips(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.flipper(A) && this.flipper(B) && this.truth(i)===0; }); },
+  tags(){ const t=[]; if(this.diags().length) t.push('diag'); if(this.builts().length) t.push('built'); if(this.flips().length) t.push('flip'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  pn:n=>n<0 ? \`(\${neg(n)})\` : String(n),
+  rows:M=>M.map(row=>row.map(neg).join(', ')).join('; '),
+  // how B's three numbers stand to A's
+  times(p){ return p.n===1&&p.d===1 ? "B's are the same as A's" : \`B's are \${p.s} times A's\`; },
+  three(t){ return \`(\${t.map(neg).join(', ')})\`; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  // n/d in lowest terms, with the sign in front
+  frac(n,d){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); n/=g; d/=g; return {n,d,s:d===1 ? neg(n) : \`\${n<0?'−':''}\${Math.abs(n)}/\${d}\`}; },
+  // B = pA + qI, worked from the first of A's three numbers that is not 0
+  built(i){
+    const {A,B}=this.Q(i), a=this.tell(A), b=this.tell(B), k=a.findIndex(x=>x!==0);
+    const p=this.frac(b[k],a[k]), q=this.frac(B[0][0]*a[k]-b[k]*A[0][0],a[k]);
+    const coef=(f,s,first)=>{ const m=Math.abs(f.n)===1&&f.d===1 ? '' : f.d===1 ? String(Math.abs(f.n)) : \`(\${Math.abs(f.n)}/\${f.d})\`;
+      return (first ? (f.n<0?'−':'') : (f.n<0?' − ':' + '))+m+s; };
+    return {p, q, txt:'B = '+coef(p,'A',true)+(q.n ? coef(q,'I',false) : '')};
+  },
+  // the first entry where AB and BA part, each worked as a row times a column
+  part(i){
+    const {A,B}=this.Q(i), P=this.mul(A,B), Q=this.mul(B,A);
+    for(const [r,c] of [[0,0],[0,1],[1,0],[1,1]]) if(P[r][c]!==Q[r][c]){
+      const dot=(X,Y)=>\`\${this.pn(X[r][0])} × \${this.pn(Y[0][c])} + \${this.pn(X[r][1])} × \${this.pn(Y[1][c])}\`;
+      return \`At row \${r+1}, column \${c+1}, AB has \${dot(A,B)} = \${neg(P[r][c])}, but BA has \${dot(B,A)} = \${neg(Q[r][c])}.\`;
+    }
+    return '';
+  },
+  why(i){
+    const {A,B}=this.Q(i), a=this.tell(A), b=this.tell(B);
+    if(this.scale(A)) return \`A's three numbers are all 0: A is a plain scale, \${neg(A[0][0])}I, so it goes either way and the order makes no difference.\`;
+    if(this.scale(B)) return \`B's three numbers are all 0: B is a plain scale, \${neg(B[0][0])}I, so it goes either way and the order makes no difference.\`;
+    if(this.truth(i)===0) return \`A's three numbers are \${this.three(a)} and B's are \${this.three(b)}: no one number turns A's into B's, so the order matters. \${this.part(i)}\`;
+    if(this.diagonal(A) && this.diagonal(B)) return \`Both are diagonal, so each only stretches along the axes: A's three numbers are \${this.three(a)} and B's are \${this.three(b)}, always in proportion, so the order makes no difference.\`;
+    const w=this.built(i);
+    return \`A's three numbers are \${this.three(a)} and B's are \${this.three(b)}: \${this.times(w.p)}, so \${w.txt}, built from A alone, and the order makes no difference.\`;
+  },
+  working(){
+    const out=[], n=i=>\`Pair \${i+1}\`;
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const dg=this.diags(), bt=this.builts(), fl=this.flips();
+      if(dg.length){ const i=dg[0], {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, both are diagonal: each stretches along the axes, so either order gives AB = BA, with rows \${this.rows(this.mul(A,B))}.\`); }
+      if(bt.length){ const i=bt[0], {A,B}=this.Q(i), w=this.built(i);
+        out.push(\`In \${n(i)}, \${this.times(w.p).replace("B's","B's three numbers")}, so \${w.txt}: built from A alone, it goes either way, and AB = BA, with rows \${this.rows(this.mul(A,B))}.\`); }
+      if(fl.length){ const i=fl[0], {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, both are flips, over different lines: AB, with rows \${this.rows(this.mul(A,B))}, turns the plane one way, and BA, with rows \${this.rows(this.mul(B,A))}, turns it back the other way.\`); }
+      const d=[0,1,2,3].filter(i=>this.truth(i)===0).map(i=>i+1);
+      out.push(\`The order matters in Pair\${d.length>1?'s':''} \${d.length>1 ? d.slice(0,-1).join(', ')+' and '+d[d.length-1] : d[0]}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const {A,B}=this.Q(i);
+        out.push(\`In \${n(i)}, A has rows \${this.rows(A)} and B has rows \${this.rows(B)}. \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the pair's number, where the unit square lands under A (gold)
+     and under B (blue) on the left, both drawn to one scale so they can be
+     compared, and A and B written out on the right. Once the round is right,
+     each pane is marked same or differ. */
+  corners:([[a,b],[c,d]])=>[[0,0],[a,c],[a+b,c+d],[b,d]],
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four pairs of matrices: \${[0,1,2,3].map(i=>{ const {A,B}=this.Q(i); return \`Pair \${i+1}, A with rows \${this.rows(A)} and B with rows \${this.rows(B)}\`; }).join('; ')}\${this.solved?', each marked':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, {A,B}=this.Q(i);
+      const cx=X+52, cy=Y+72, H=40;
+      const S=Math.max(1,...[A,B].flatMap(M=>this.corners(M).flat().map(Math.abs)));
+      const px=x=>cx+x/S*(H-4), py=y=>cy-y/S*(H-4);
+      const shape=(M,key,col)=>\`<path data-k="\${key}" d="\${this.corners(M).map(([x,y],j)=>(j?'L':'M')+f(px(x))+' '+f(py(y))).join('')}Z" fill="\${col}" fill-opacity="0.18" stroke="\${col}" stroke-width="2"/>\`;
+      const mat=(M,top,nm,col,key)=>{ const xl=X+118, xr=X+172, y1=top, y2=top+16;
+        return \`<text x="\${X+106}" y="\${y1+9}" fill="\${col}" font-size="14" font-weight="700" text-anchor="middle">\${nm}</text>\`+
+          \`<path d="M\${xl+4} \${y1-12}L\${xl} \${y1-12}L\${xl} \${y2+4}L\${xl+4} \${y2+4}M\${xr-4} \${y1-12}L\${xr} \${y1-12}L\${xr} \${y2+4}L\${xr-4} \${y2+4}" fill="none" stroke="\${FIG_COL.dim}" stroke-width="1.2"/>\`+
+          M.map((row,r)=>row.map((x,c)=>\`<text data-k="\${key}" data-cell="\${r},\${c}" x="\${X+[132,158][c]}" y="\${[y1,y2][r]}" fill="\${FIG_COL.ink}" font-size="12" text-anchor="middle">\${neg(x)}</text>\`).join('')).join(''); };
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<rect data-k="frame" x="\${cx-H}" y="\${cy-H}" width="\${2*H}" height="\${2*H}" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line data-k="axis" x1="\${cx-H}" y1="\${cy}" x2="\${cx+H}" y2="\${cy}" stroke="\${FIG_COL.dim}" stroke-width="1"/><line data-k="axis" x1="\${cx}" y1="\${cy-H}" x2="\${cx}" y2="\${cy+H}" stroke="\${FIG_COL.dim}" stroke-width="1"/>\`;
+      out+=shape(A,'sqA',FIG_COL.b)+shape(B,'sqB',FIG_COL.a);
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${i+1}</text>\`;
+      out+=mat(A,Y+46,'A',FIG_COL.b,'mA')+mat(B,Y+92,'B',FIG_COL.a,'mB');
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${t?'same':'differ'}" x="\${X+172}" y="\${Y+21}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${t?'= same':'≠ differ'}</text>\`; }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Compose.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Compose.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Compose.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="ComposeTurn.call(\${i},\${c})" aria-label="Pair \${i+1}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four pairs of matrices. For each pair, is AB the same as BA, or does the order make a difference?</div>\`;
+    out+=\`<div id="cptFig">\${this.svg()}<div class="figcap">Each pane draws where the unit square lands under A in gold and under B in blue, and writes A and B out beside it.</div></div>\`;
+    out+=\`<div id="cptStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="cptStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">Pair \${i+1}</b>\`+
+        this.btn(i,1,'= Same')+this.btn(i,0,'≠ Differ')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="cptRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cptNext" onclick="ComposeTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cptCheck" \${this.ready()?'':'disabled '}onclick="ComposeTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="cptGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cptGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ORDER SPOTTER','every pair called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which matrix? Order Matters turned round ----------
    Two whole-number 2×2 matrices, A done first and B done second, and four
    matrices, one of them BA, the one move that does both. The rule is stated
@@ -20152,11 +20351,11 @@ const Compose = {
   setTab(t){ this.tab=t; this.render(); },
   pick(which, i){ if(which==='first') this.fi=i; else this.si=i; this.touched=true; this.render(); },
   render(){
-    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]
+    document.getElementById('cmTab').innerHTML=[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B'],['turn','⚖️ Same or not?','See four pairs of matrices and call whether the order makes a difference to each']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Compose.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='moves';
     for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';
+    document.getElementById('oqBox').innerHTML=!pick ? '' : this.tab==='pick' ? ComposePick.html() : ComposeTurn.html();
     if(pick) return;
     const row=(which, sel)=>this.MOVES.map((m,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===sel}" aria-label="\${which==='first'?'First':'Then'}: \${m.is}" onclick="Compose.pick('\${which}',\${i})">\${m.btn}</button>\`).join('');

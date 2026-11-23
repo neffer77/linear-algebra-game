@@ -197,6 +197,7 @@ const SUITES = [
   require('./play/arrowpick'), // see u, v and k, pick which of four lengths is the length of k·u + v
   require('./play/mixpick'), // the Tome's mix: one question from a different workshop's pick mode each time
   require('./play/composepick'), // see A and B, pick which of four matrices does A first, then B
+  require('./play/composeturn'), // see four pairs of matrices, call whether the order makes a difference to each
   require('./play/lnpick'), // see a product of powers, pick which of four numbers is the slope of ln y
   require('./play/eulerpick'), // see y′ = px + qy, a start and a step, pick which of four numbers is Euler's estimate
   require('./play/fieldmatch'), // see a slope field and pick which of four equations y′ = f(x, y) drew it

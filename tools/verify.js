@@ -12086,13 +12086,13 @@ const composePickNotes = (() => {
     cut('const ComposePick = {', 'const Compose = {') + 'return ComposePick;')(R, env);
   // the host: a tab for each mode, the pick drawn in its own box, and the hand-worked parts hidden while it shows
   const host = cut('const Compose = {', '\n};\n');
-  if (!html.includes('<div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves or pick the matrix that does both"></div>\n    <div class="panel">\n      <div id="oqBox"></div>')) fail('composepick', 'host', 'the tabs and the pick box are not on the page');
+  if (!html.includes('<div id="cmTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Try the moves, pick the matrix that does both, or call whether the order makes a difference"></div>\n    <div class="panel">\n      <div id="oqBox"></div>')) fail('composepick', 'host', 'the tabs and the pick box are not on the page');
   for (const id of ['cmFirstL', 'cmThenL', 'cmGoalPanel']) if ((html.match(new RegExp(` id="${id}"`, 'g')) || []).length !== 1) fail('composepick', 'host', `${id} is not on the page once`);
   if (!host.includes("  tab:'moves',\n  setTab(t){ this.tab=t; this.render(); },")) fail('composepick', 'host', 'the workshop does not open on the moves, or a tab does not switch');
-  if (!host.includes("[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="Compose.setTab(\'${t}\')"')) fail('composepick', 'host', 'the two tabs are not drawn and pressed as they should be');
+  if (!host.includes("[['moves','🔁 Try the moves','Pick two moves and watch them by hand'],['pick','🎯 Which matrix?','See A and B, and pick which of four matrices does A first, then B'],['turn','⚖️ Same or not?','See four pairs of matrices and call whether the order makes a difference to each']]") || !host.includes('aria-pressed="${this.tab===t}" onclick="Compose.setTab(\'${t}\')"')) fail('composepick', 'host', 'the two tabs are not drawn and pressed as they should be');
   if (!host.includes("for(const id of ['cmFirstL','cmFirst','cmThenL','cmThen','cmFig','cmRead','cmGoalPanel']) document.getElementById(id).style.display=pick?'none':'';")) fail('composepick', 'host', 'the hand-worked parts are not all hidden while the pick shows');
-  if (!host.includes("document.getElementById('oqBox').innerHTML=pick ? ComposePick.html() : '';\n    if(pick) return;")) fail('composepick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
-  if (!html.includes('see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B.</div>')) fail('composepick', 'tome', 'the Tome does not tell of the pick');
+  if (!host.includes("const pick=this.tab!=='moves';") || !host.includes("document.getElementById('oqBox').innerHTML=!pick ? '' : this.tab==='pick' ? ComposePick.html() : ComposeTurn.html();\n    if(pick) return;")) fail('composepick', 'host', 'the pick is not drawn in its box, or the hand-worked parts are drawn under it');
+  if (!html.includes('see why swapping the order usually changes where everything lands. Then turn it round: see A and B, and pick which of four matrices does A first, then B. Or call four pairs: does the order make a difference to each?</div>')) fail('composepick', 'tome', 'the Tome does not tell of the pick');
   const txt = h => h.replace(/<\/div>|<br>/g, ' ').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
   const num = t => +t.replace('−', '-');
   const ng = n => (n < 0 ? '−' + Math.abs(n) : String(n));
@@ -16065,6 +16065,196 @@ const planeTurnNotes = (() => {
   if (env.toasts.join(' | ') !== '✓ Opposite signs cross · The xy term can twist it · A dome stays below · A slip caught and fixed | ✓ Right on the first check') fail('planeturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
   if (env.banners.join() !== 'SADDLE SPOTTER / every surface called') fail('planeturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
+})();
+/* Same or not? Order Matters' third mode, worked again from scratch: every
+   pair multiplied both ways by hand, the rule the player is told tried on
+   every pair and on thousands more, B written from A checked entry by entry,
+   every call and every readout, a slip on every pair, the squares and the
+   matrices read back off each pane, and the hunt for every goal. */
+const composeTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Compose = {render(){ env.renders++; }};" +
+    cut('const ComposeTurn = {', '/* ---------- Which matrix? Order Matters turned round') + 'return ComposeTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${neg(n)})` : String(n));
+  const WD = { 1: 'the order making no difference', 0: 'the order mattering' };
+  const NAME = { 1: 'the order makes no difference', 0: 'the order matters' };
+  // A times B, entry by entry, as sums over the middle index
+  const times = (A, B) => [0, 1].map(r => [0, 1].map(c => { let s = 0; for (let k = 0; k < 2; k++) s += A[r][k] * B[k][c]; return s; }));
+  const same = (P, Q) => P.every((row, r) => row.every((x, c) => x === Q[r][c]));
+  const rows = M => M.map(r => r.map(neg).join(', ')).join('; ');
+  const three = M => [M[0][1], M[1][0], M[0][0] - M[1][1]];
+  const tri = t => `(${t.map(neg).join(', ')})`;
+  const isScale = M => M[0][1] === 0 && M[1][0] === 0 && M[0][0] === M[1][1];
+  const isDiag = M => M[0][1] === 0 && M[1][0] === 0;
+  const isFlip = M => { const sq = times(M, M); return M[0][1] === M[1][0] && same(sq, [[1, 0], [0, 1]]) && !isScale(M); };
+  // the rule the player is told: a scale goes either way; otherwise the three numbers in proportion
+  const rule = (A, B) => { if (isScale(A) || isScale(B)) return 1; const a = three(A), b = three(B);
+    return a[0] * b[1] - a[1] * b[0] === 0 && a[0] * b[2] - a[2] * b[0] === 0 && a[1] * b[2] - a[2] * b[1] === 0 ? 1 : 0; };
+  // the rule, tried on every pair of matrices with entries from −2 to 2, read through the three numbers the page reads
+  let tried = 0;
+  { const E = [-2, -1, 0, 1, 2], all = [];
+    for (const a of E) for (const b of E) for (const c of E) for (const d of E) all.push([[a, b], [c, d]]);
+    for (const A of all) for (const B of all) {
+      if ((tried++) % 7) continue;
+      const tA = S.tell(A), tB = S.tell(B);
+      if (tA.join() !== three(A).join() || tB.join() !== three(B).join()) { fail('composeturn', 'rule', `the three numbers of ${rows(A)} are read as ${tA.join()}`); break; }
+      if (rule(A, B) !== (same(times(A, B), times(B, A)) ? 1 : 0)) { fail('composeturn', 'rule', `the rule the player is told is wrong for A ${rows(A)}, B ${rows(B)}`); break; }
+    } }
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([a, b]) => {
+    const A = [[a[0], a[1]], [a[2], a[3]]], B = [[b[0], b[1]], [b[2], b[3]]], AB = times(A, B), BA = times(B, A);
+    return { A, B, AB, BA, t: same(AB, BA) ? 1 : 0 };
+  });
+  if (S.ROUNDS.length !== 6) fail('composeturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0, builts = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4 || Q.some(p => p.length !== 2 || p.some(m => m.length !== 4))) { fail('composeturn', key, 'it does not hold four pairs of 2×2 matrices'); return; }
+    const W = work(ri), truth = W.map(w => w.t), n = i => `Pair ${i + 1}`;
+    W.forEach((w, i) => {
+      const k = JSON.stringify([w.A, w.B]); if (seen.has(k)) fail('composeturn', key, `${n(i)} comes round twice`); seen.add(k);
+      if ([...w.A.flat(), ...w.B.flat()].some(v => !Number.isInteger(v))) fail('composeturn', key, `${n(i)} is not built of whole numbers`);
+      if (same(w.A, w.B) || [w.A, w.B].some(M => same(M, [[1, 0], [0, 1]]))) fail('composeturn', key, `${n(i)} is a matrix with itself or with I, which tells nothing`);
+      if (rule(w.A, w.B) !== w.t) fail('composeturn', key, `${n(i)} goes against the rule the player is told`);
+      if (S.truth(i) !== w.t) fail('composeturn', key, `${n(i)} is called ${S.truth(i)}, not ${w.t}`);
+    });
+    if (new Set(truth).size < 2) fail('composeturn', key, 'it does not hold both calls');
+    const dg = [], bt = [], fl = [];
+    W.forEach((w, i) => {
+      const sc = isScale(w.A) || isScale(w.B);
+      if (!sc && isDiag(w.A) && isDiag(w.B)) dg.push(i);
+      else if (!sc && w.t === 1) bt.push(i);
+      if (isFlip(w.A) && isFlip(w.B) && w.t === 0) fl.push(i);
+    });
+    const tags = [dg.length ? 'diag' : null, bt.length ? 'built' : null, fl.length ? 'flip' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('composeturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // B written from A: pA + qI, checked entry by entry
+    const built = i => { const w = W[i], a = three(w.A), b = three(w.B), k = a.findIndex(x => x !== 0);
+      const p = b[k] / a[k], q = w.B[0][0] - p * w.A[0][0];
+      [0, 1].forEach(r => [0, 1].forEach(c => { if (Math.abs(p * w.A[r][c] + (r === c ? q : 0) - w.B[r][c]) > 1e-9) fail('composeturn', key, `${n(i)}: B is not ${p}A + ${q}I at row ${r + 1}, column ${c + 1}`); }));
+      const g = S.built(i);
+      if (Math.abs(g.p.n / g.p.d - p) > 1e-9 || Math.abs(g.q.n / g.q.d - q) > 1e-9) fail('composeturn', key, `${n(i)} writes B as ${g.txt}`);
+      const fr = x => { const v = [1, 2, 3, 4, 5, 6].find(d => Math.abs(x * d - Math.round(x * d)) < 1e-9), m = Math.round(x * v);
+        return { m, v, s: v === 1 ? neg(m) : `${m < 0 ? '−' : ''}${Math.abs(m)}/${v}` }; };
+      const P = fr(p), Qq = fr(q), co = (f, s, first) => { const mag = Math.abs(f.m) === 1 && f.v === 1 ? '' : f.v === 1 ? String(Math.abs(f.m)) : `(${Math.abs(f.m)}/${f.v})`;
+        return (first ? (f.m < 0 ? '−' : '') : (f.m < 0 ? ' − ' : ' + ')) + mag + s; };
+      builts++;
+      return { ps: p === 1 ? "B's are the same as A's" : `B's are ${P.s} times A's`, txt: 'B = ' + co(P, 'A', true) + (q ? co(Qq, 'I', false) : '') }; };
+    const part = i => { const w = W[i];
+      for (const [r, c] of [[0, 0], [0, 1], [1, 0], [1, 1]]) if (w.AB[r][c] !== w.BA[r][c]) {
+        const dot = (X, Y) => `${pn(X[r][0])} × ${pn(Y[0][c])} + ${pn(X[r][1])} × ${pn(Y[1][c])}`;
+        return `At row ${r + 1}, column ${c + 1}, AB has ${dot(w.A, w.B)} = ${neg(w.AB[r][c])}, but BA has ${dot(w.B, w.A)} = ${neg(w.BA[r][c])}.`; } };
+    const why = i => { const w = W[i];
+      if (isScale(w.A)) return `A's three numbers are all 0: A is a plain scale, ${neg(w.A[0][0])}I, so it goes either way and the order makes no difference.`;
+      if (isScale(w.B)) return `B's three numbers are all 0: B is a plain scale, ${neg(w.B[0][0])}I, so it goes either way and the order makes no difference.`;
+      if (!w.t) return `A's three numbers are ${tri(three(w.A))} and B's are ${tri(three(w.B))}: no one number turns A's into B's, so the order matters. ${part(i)}`;
+      if (isDiag(w.A) && isDiag(w.B)) return `Both are diagonal, so each only stretches along the axes: A's three numbers are ${tri(three(w.A))} and B's are ${tri(three(w.B))}, always in proportion, so the order makes no difference.`;
+      const b = built(i); return `A's three numbers are ${tri(three(w.A))} and B's are ${tri(three(w.B))}: ${b.ps}, so ${b.txt}, built from A alone, and the order makes no difference.`; };
+    // every pair called wrong, one at a time
+    W.forEach((w, i) => {
+      const k = 1 - w.t;
+      reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+      const want = ['3 of 4 right. Fix the ones in red and check again.',
+        `In ${n(i)}, A has rows ${rows(w.A)} and B has rows ${rows(w.B)}. ${why(i)} You had it as ${WD[k]}.`,
+        '0 called right on the first check this visit.'];
+      const got = S.working();
+      if (got.join(' | ') !== want.join(' | ')) fail('composeturn', key, `with ${n(i)} called wrong the readout is ${got.join(' | ')}`);
+      const svg = S.svg();
+      if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(same|differ)"/.test(svg)) fail('composeturn', key, `with ${n(i)} wrong, the wrong pane is not ringed alone or a mark is given away`);
+      if (S.solved || S.streak) fail('composeturn', key, 'a wrong set of calls is counted');
+      S.call(i, w.t);
+      if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('composeturn', key, `changing ${n(i)} leaves its ring`);
+      if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('composeturn', key, `after changing ${n(i)} the readout is ${S.working().join(' | ')}`);
+      S.check();
+      if (!S.solved || !S.fixed || S.wins) fail('composeturn', key, `fixing ${n(i)} is not counted as a fix`);
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="cptCheck" disabled /.test(S.html())) fail('composeturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="cptCheck" disabled /.test(S.html())) fail('composeturn', key, `the check opens with ${n(skip)} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('composeturn', key, `a check runs with ${n(skip)} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="ComposeTurn\\.call\\(${i},([01])\\)" aria-label="${n(i)}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('composeturn', key, `the button for ${n(i)}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`ComposeTurn\\.call\\(${i},`, 'g')) || []).length !== 2) fail('composeturn', key, `${n(i)} does not offer same and differ`);
+    });
+    if (S.calls.join() !== truth.join()) fail('composeturn', key, 'the buttons cannot make the right calls');
+    if (/id="cptCheck" disabled /.test(S.html())) fail('composeturn', key, 'the check stays shut with every pair called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (dg.length) want.push(`In ${n(dg[0])}, both are diagonal: each stretches along the axes, so either order gives AB = BA, with rows ${rows(W[dg[0]].AB)}.`);
+    if (bt.length) { const b = built(bt[0]); want.push(`In ${n(bt[0])}, ${b.ps.replace("B's", "B's three numbers")}, so ${b.txt}: built from A alone, it goes either way, and AB = BA, with rows ${rows(W[bt[0]].AB)}.`); }
+    if (fl.length) { const w = W[fl[0]];
+      // two flips make a turn each way round: AB and BA undo each other
+      if (!same(times(w.AB, w.BA), [[1, 0], [0, 1]]) || w.AB[0][1] !== -w.AB[1][0] || w.AB[0][0] !== w.AB[1][1]) fail('composeturn', key, `${n(fl[0])}'s flips do not make a turn and its undoing`);
+      want.push(`In ${n(fl[0])}, both are flips, over different lines: AB, with rows ${rows(w.AB)}, turns the plane one way, and BA, with rows ${rows(w.BA)}, turns it back the other way.`); }
+    const d = W.map((w, i) => (w.t ? 0 : i + 1)).filter(Boolean);
+    want.push(`The order matters in Pair${d.length > 1 ? 's' : ''} ${d.length > 1 ? d.slice(0, -1).join(', ') + ' and ' + d[d.length - 1] : d[0]}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('composeturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the unit square under A and under B to one scale, and A and B written out
+    const svg = S.svg(), parts = svg.split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('composeturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const g = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      const fr = g.match(/data-k="frame" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/);
+      if (!fr) { fail('composeturn', key, `${n(i)} has no window`); return; }
+      const [fx, fy, fw, fh] = fr.slice(1).map(Number), cx = fx + fw / 2, cy = fy + fh / 2;
+      if (fx < X + 4 || fx + fw > X + 100 || fy < Y + 26 || fy + fh > Y + 126) fail('composeturn', key, `${n(i)}'s window runs into its pane's labels`);
+      const shape = k => { const m = g.match(new RegExp(`data-k="${k}" d="([^"]+)"`)); return m ? [...m[1].matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(p => [+p[1] - cx, cy - +p[2]]) : null; };
+      const sa = shape('sqA'), sb = shape('sqB');
+      if (!sa || !sb || sa.length !== 4 || sb.length !== 4) { fail('composeturn', key, `${n(i)} does not draw both squares`); return; }
+      const want = M => [[0, 0], [M[0][0], M[1][0]], [M[0][0] + M[0][1], M[1][0] + M[1][1]], [M[0][1], M[1][1]]];
+      const big = Math.max(...[...want(w.A), ...want(w.B)].flat().map(Math.abs));
+      const k = (fw / 2 - 4) / big;
+      [[sa, w.A, 'A'], [sb, w.B, 'B']].forEach(([s, M, nm]) => want(M).forEach(([x, y], j) => {
+        if (Math.abs(s[j][0] - x * k) > 0.02 || Math.abs(s[j][1] - y * k) > 0.02) fail('composeturn', key, `${n(i)}'s square under ${nm} is not where ${nm} sends it`); }));
+      const cells = nm => [...g.matchAll(new RegExp(`data-k="m${nm}" data-cell="(\\d),(\\d)"[^>]*>([^<]*)<`, 'g'))].map(m => `${m[1]}${m[2]}${m[3]}`).join(' ');
+      const cw = M => [0, 1].flatMap(r => [0, 1].map(c => `${r}${c}${neg(M[r][c])}`)).join(' ');
+      if (cells('A') !== cw(w.A) || cells('B') !== cw(w.B)) fail('composeturn', key, `${n(i)}'s matrices are written ${cells('A')} and ${cells('B')}`);
+      panes++;
+    });
+    if (!svg.includes(`aria-label="Four pairs of matrices: ${W.map((w, i) => `${n(i)}, A with rows ${rows(w.A)} and B with rows ${rows(w.B)}`).join('; ')}, each marked"`)) fail('composeturn', key, 'the drawing is not named pair by pair');
+    const marks = [...svg.matchAll(/data-k="(same|differ)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => (w.t ? 'same = same' : 'differ ≠ differ')).join()) fail('composeturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="cptNext"') || /onclick="ComposeTurn\.call/.test(hh.replace(/disabled onclick="ComposeTurn\.call/g, ''))) fail('composeturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, 1 - truth[0]);
+    if (S.calls.join() !== before) fail('composeturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('composeturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('composeturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = 1 - right[1];
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'built,diag,fix,flip'], [false, 'built,diag,fix,flip,one'], [false, 'built,diag,fix,flip,one'], [false, 'built,diag,fix,flip,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('composeturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Diagonals go either way · Built from A, it goes either way · Two flips turn opposite ways · A slip caught and fixed | ✓ Right on the first check') fail('composeturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'ORDER SPOTTER / every pair called') fail('composeturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes, tried: Math.ceil(tried / 7), builts };
 })();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
@@ -23561,6 +23751,7 @@ console.log(`  flat spots called ${pad(optTurnNotes.checks.toLocaleString(), 12)
 console.log(`  inverses called   ${pad(invTurnNotes.checks.toLocaleString(), 12)}  (checks of four inverse slopes called steeper than 1, exactly 1 or gentler in the inverse slope workshop, ${invTurnNotes.wrongs} of them with one called wrong and caught, and ${invTurnNotes.panes} curves and their mirrors read back off the drawing)`);
 console.log(`  secants called    ${pad(secTurnNotes.checks.toLocaleString(), 12)}  (checks of four secants called more than f′(a), equal to it or less in the slope workshop, ${secTurnNotes.wrongs} of them with one called wrong and caught, and ${secTurnNotes.panes} curves, secants and tangents read back off the drawing)`);
 console.log(`  surfaces called   ${pad(planeTurnNotes.checks.toLocaleString(), 12)}  (checks of four surfaces called above their tangent plane, below it or crossing it in the tangent plane workshop, ${planeTurnNotes.wrongs} of them with one called wrong and caught, and ${planeTurnNotes.panes} surfaces' slices read back off the drawing)`);
+console.log(`  orders called     ${pad(composeTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs called same or different in Order Matters, ${composeTurnNotes.wrongs} of them with one called wrong and caught, ${composeTurnNotes.panes} panes read back off the drawing, and the rule the player is told tried on ${composeTurnNotes.tried.toLocaleString()} pairs)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
