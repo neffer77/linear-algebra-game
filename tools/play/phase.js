@@ -46,7 +46,7 @@ const answer = (t, right, dmg = 20) => t.ev(([right, dmg]) => {
   Battle.answer(null, right ? c.a : '✗');
   Combat.strike = cs; Combat.foeHit = fh;
   Battle.updateBars();
-  return { mode: Battle.mode, emax: Battle.emax, boss: Battle.foe.boss, rite: !!Battle.rite, ehp: Battle.ehp, phase: Battle.phase, charge: Battle.chargeMax, bonus, atk, run: Battle.phaseRun,
+  return { ehp: Battle.ehp, phase: Battle.phase, charge: Battle.chargeMax, bonus, atk, run: Battle.phaseRun,
            staggered: Battle.staggered, said: (Talk.turn || {}).text || null,
            name: document.getElementById('foeName').textContent, shown: window.__said.slice() };
 }, [right, dmg]);
@@ -63,10 +63,9 @@ module.exports = {
     t.ok('the fight opens in the first phase', f.phase === 1 && !/Phase II/.test(f.name), JSON.stringify(f));
     const big = Math.ceil(f.hp / 2) - 10;               // leaves it above half
     let a = await answer(t, true, big);
-    t.ok('diagnostic: the first blow', true, JSON.stringify(a));
     t.ok('a blow that leaves it above half does not rally it', a.phase === 1 && !a.shown.some(s => /PHASE TWO/.test(s)), JSON.stringify(a));
     a = await answer(t, true, 20);
-    t.ok('the blow that takes it to half or below rallies it', a.phase === 2, JSON.stringify(a));
+    t.eq('the blow that takes it to half or below rallies it', a.phase, 2);
     t.ok('with a banner that says what to do', a.shown.includes('PHASE TWO: it rallies: three in a row will stagger it'), a.shown.join(' | '));
     const rally = await t.ev(nm => Talk.BOSS[nm].rally, f.nm);
     t.eq('and a line of the boss\'s own', a.said, rally);

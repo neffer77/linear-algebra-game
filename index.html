@@ -8771,7 +8771,7 @@ const Phase = {
   can(B){ return !!(B.foe && B.foe.boss && B.mode==='campaign'); },
   // called with the health before a blow: rallies once, on crossing half
   check(B, was){
-    if(B.phase===2 || !this.can(B) || B.ehp<=0 || was<=B.emax/2 || B.ehp>B.emax/3) return false;
+    if(B.phase===2 || !this.can(B) || B.ehp<=0 || was<=B.emax/2 || B.ehp>B.emax/2) return false;
     B.phase=2; B.phaseFrom=B.missed; B.phaseRun=0; B.phaseJust=true;
     B.chargeMax=Math.max(1, B.chargeMax-1);
     Celebrate.banner('PHASE TWO', 'it rallies: three in a row will stagger it', '#ff5d5d', ()=>Sfx.milestone());
