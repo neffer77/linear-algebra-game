@@ -2598,6 +2598,66 @@ const bestiaryNotes = (() => {
   want(Bestiary.tests(REALMS[0])[0] === 'Adding vectors' && Bestiary.tests(REALMS[0]).length === new Set(REALMS[0].pool).size, 'tests', 'a realm\'s topics are not named as the Tome names them');
   return { checks, foes: foes.length };
 })();
+/* The Saga: a chapter for each realm, read when its boss falls. Each one is
+   checked against the realm it belongs to: it is about that realm's boss and
+   that boss's own mathematics, it points on to the next realm in the order
+   they open, and it is short enough to read on a phone in a breath. A chapter
+   not yet read gives nothing of itself away, the victory over a boss tells its
+   chapter the first time only, and nothing new is saved. */
+const sagaNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Saga = {'), html.indexOf('const Battle = {'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const opening = html.slice(html.indexOf('const OPENING = ['), html.indexOf('\n];', html.indexOf('const OPENING = [')) + 3);
+  const G = { s: { cleared: {} } }, els = {}, painted = [];
+  const el = id => (els[id] = els[id] || { id, textContent: '', innerHTML: '', style: {}, querySelectorAll: () => [] });
+  const doc = { getElementById: el, querySelectorAll: () => [] };
+  const P = new Function('Game', 'document', 'Bestiary', src + realms + opening + ';return {Saga, REALMS, OPENING};')(
+    G, doc, { shot: (c, f, known) => painted.push([f.nm, known]) });
+  const { Saga, REALMS, OPENING } = P;
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('saga', key, msg); };
+  // what each chapter is about, written here and not read from the game
+  const BOSS = ['Wyrm', 'Golem', 'Wraith', 'Lich', 'Dragon', 'Sovereign', 'Unbounded', 'top'];
+  const MATHS = ['head to tail', 'determinant', 'slope', 'limit', 'eigenvectors', 'basis', 'limit', 'gradient is zero'];
+  const NEXT = ['Marches', 'Cliffs', 'Abyss', 'Eigen Dragon', 'Reach', 'Expanse', 'Summit', 'rematch'];
+  want(Saga.CH.length === REALMS.length && REALMS.length === 8, 'chapters', `${Saga.CH.length} chapters for ${REALMS.length} realms`);
+  Saga.CH.forEach((c, ri) => {
+    const key = `chapter ${ri + 1}`, sent = c.b.split(/(?<=[.!?])\s+/);
+    want(sent.length === 3, key, `is ${sent.length} sentences, not 3`);
+    want(c.b.length <= 300 && c.t.length <= 28, key, `runs to ${c.b.length} characters with a title of ${c.t.length}`);
+    want(c.b.includes(BOSS[ri]), key, `is not about ${BOSS[ri]}, the boss of ${REALMS[ri].nm}`);
+    want(c.b.toLowerCase().includes(MATHS[ri]), key, `does not name ${MATHS[ri]}, the mathematics that beat it`);
+    want(sent[2].includes(NEXT[ri]), key, `does not point on to ${NEXT[ri]}`);
+    want(!/[<>]/.test(c.b + c.t), key, 'carries markup');
+    if (ri < 7) want(REALMS[ri + 1].nm.includes(NEXT[ri]) || REALMS[ri + 1].foes.some(f => f.nm.includes(NEXT[ri])), key, `points to ${NEXT[ri]}, which is not the next realm or its boss`);
+    want(Saga.boss(ri).boss === true && Saga.boss(ri) === REALMS[ri].foes[REALMS[ri].foes.length - 1], key, 'is not told by the realm\'s boss');
+  });
+  want(new Set(Saga.CH.map(c => c.t)).size === 8, 'titles', 'two chapters share a title');
+  // read by beating the boss, and nothing before
+  const render = () => { Saga.render(); return { count: els.sagaCount.textContent, bar: els.sagaBar.style.width, list: els.sagaList.innerHTML }; };
+  let r = render();
+  want(Saga.count() === 0 && r.count === '0 of 8 chapters read' && r.bar === '0%', 'new knight', `a new knight has read ${r.count}`);
+  want(Saga.CH.every(c => !r.list.includes(c.t) && !r.list.includes(c.b)), 'new knight', 'a chapter is given away before its boss falls');
+  want(OPENING.every(o => r.list.includes(o.b)) && r.list.indexOf('THE OPENING') < r.list.indexOf('CHAPTER 1'), 'opening', 'the opening does not come first');
+  want((r.list.match(/Beat the boss of /g) || []).length === 8, 'new knight', 'a chapter not read does not say how to read it');
+  G.s.cleared = { '0:0': true, '0:1': true, '0:2': true };
+  want(Saga.count() === 0, 'boss', 'a realm\'s foes without its boss read its chapter');
+  G.s.cleared['0:3'] = true; G.s.cleared['2:3'] = true;
+  r = render(); painted.length = 0; Saga.paint({ querySelectorAll: () => [{ dataset: { saga: '0' } }, { dataset: { saga: '2' } }] });
+  want(r.count === '2 of 8 chapters read' && r.bar === '25%', 'cleared', `with two bosses down it reads ${r.count}, ${r.bar}`);
+  want(r.list.includes(Saga.CH[0].b) && r.list.includes(Saga.CH[2].b) && !r.list.includes(Saga.CH[1].b), 'cleared', 'the chapters read are not the bosses beaten');
+  want(r.list.includes('id="saga-0"') && r.list.includes('The fall of The Vector Wyrm.') && r.list.includes('CHAPTER 3 OF 8 · CLIFFS OF CHANGE'), 'cleared', 'a chapter read is not headed by its realm and boss');
+  want(painted.join() === 'The Vector Wyrm,true,The Tangent Wraith,true', 'portraits', `the portraits drawn are ${painted.join()}`);
+  REALMS.forEach((x, ri) => { G.s.cleared[ri + ':' + (x.foes.length - 1)] = true; });
+  r = render(); want(r.count === '8 of 8 chapters read · the whole saga 🏆' && r.bar === '100%', 'all', `every boss down reads ${r.count}`);
+  // told on the spot: a boss's first fall, and never a foe or a rematch
+  const win = html.slice(html.indexOf('\n  win(){'), html.indexOf('\n  lose(){'));
+  want(win.includes("${this.foe.boss&&first?Saga.card(this.ri):''}") && win.includes("if(this.foe.boss&&first) Saga.paint(document.getElementById('resultBody'));"), 'victory', 'a boss\'s first fall does not tell its chapter');
+  want((html.match(/Saga\.card\(/g) || []).length === 1, 'victory', 'a chapter is told somewhere else too');
+  want(!/Game\.s\.(saga|chapter)/i.test(html), 'save', 'the saga writes to the save');
+  return { checks, chapters: Saga.CH.length };
+})();
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -24208,6 +24268,7 @@ console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(),
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
+console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
