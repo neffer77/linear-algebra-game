@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see f, and pick which of four F has f as its slope\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeAnti');
     t.eq('the antiderivative workshop opens', await t.screen(), 's-anti');
-    t.eq('guessing by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('guessing by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6161));
     await t.tapText(/Which F\?/);
-    t.eq('which F is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which F is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the targets, the curves, F, the steppers, the readout and the goals step aside', await hidden(t, 'adSets') && await hidden(t, 'adFig') && await hidden(t, 'adF') && await hidden(t, 'adSteps') && await hidden(t, 'adRead') && await hidden(t, 'adGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('apBox').innerText)).startsWith(
       'To undo a power of x, raise the power by one and divide by the new power'));
