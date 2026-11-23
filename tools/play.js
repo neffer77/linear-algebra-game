@@ -125,6 +125,7 @@ const SUITES = [
   require('./play/lampick'),  // see a matrix, pick which of four pairs are its eigenvalues
   require('./play/charmatch'),  // match four matrices to their det(A − λI)
   require('./play/spanpick'), // see two arrows and a ring, pick which of four mixes lands on it
+  require('./play/spanturn'), // see four pairs of arrows, call each the plane, a line or a point
   require('./play/dotpick'),  // see two arrows, pick which of four numbers is u·v
   require('./play/dotturn'),  // see four pairs of arrows, call each angle less than, exactly or more than 90°
   require('./play/antipick'), // see f, pick which of four F has f as its slope

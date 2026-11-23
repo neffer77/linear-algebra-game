@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see two arrows and a ring, and pick which of four mixes lands on it\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeSpan');
     t.eq('the span workshop opens', await t.screen(), 's-span');
-    t.eq('mixing the arrows is the pressed mode', await pressed(t), 'true,false');
+    t.eq('mixing the arrows is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which mix\?/);
-    t.eq('which mix is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which mix is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the pairs, the amounts, the plane and the goals step aside', await hidden(t, 'spPairs') && await hidden(t, 'spAmts') && await hidden(t, 'spFig') && await hidden(t, 'spRead') && await hidden(t, 'spGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('spPick').innerText)).startsWith(
       'A mix a·u + b·v walks a lots of u, then b lots of v from where it stopped.'));

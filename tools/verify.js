@@ -13707,6 +13707,146 @@ const tanTurnNotes = (() => {
   if (env.banners.join() !== 'TRUE TOUCH / every tangent called') fail('tanturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, gaps };
 })();
+const spanTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Span = {render(){ env.renders++; }};" +
+    cut('const SpanTurn = {', '/* ============ ELIMINATION WORKSHOP') + 'return SpanTurn;')(env, COL);
+  // what a pair spans, from the rank of the 2×2 matrix with u and v as columns, found by elimination
+  const rank = (u, v) => { const M = [[u[0], v[0]], [u[1], v[1]]]; if (!M[0][0] && !M[1][0]) [M[0][0], M[0][1], M[1][0], M[1][1]] = [M[0][1], 0, M[1][1], 0];
+    if (!M[0][0] && !M[1][0]) return 0; if (!M[0][0]) M.reverse(); const r = M[1][1] - M[1][0] / M[0][0] * M[0][1]; return Math.abs(r) < 1e-12 ? 1 : 2; };
+  const sx = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const vec = w => `⟨${sx(w[0])}, ${sx(w[1])}⟩`;
+  const zero = w => !w[0] && !w[1];
+  const angle = (u, v) => Math.acos(Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1]) / Math.hypot(...u) / Math.hypot(...v)))) * 180 / Math.PI;
+  // a line pair as a whole-number multiple, found by trying every k from −9 to 9
+  const mult = (u, v) => { if (zero(u)) return 'u = ⟨0, 0⟩'; if (zero(v)) return 'v = ⟨0, 0⟩';
+    for (let k = -9; k <= 9; k++) if (k && v[0] === k * u[0] && v[1] === k * u[1]) return `v = ${k === 1 ? '' : k === -1 ? '−' : sx(k)}u`;
+    for (let k = -9; k <= 9; k++) if (k && u[0] === k * v[0] && u[1] === k * v[1]) return `u = ${k === 1 ? '' : k === -1 ? '−' : sx(k)}v`; return null; };
+  const neg = (u, v) => { if (zero(u) || zero(v)) return false; const c = u[0] * v[0] + u[1] * v[1]; return c < 0; };
+  const WD = { 2: 'as the plane', 1: 'as a line', 0: 'as just a point' };
+  const NAME = { 2: 'the plane', 1: 'a line', 0: 'just the point ⟨0, 0⟩' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('spanturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, spans = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('spanturn', key, `it holds ${P.length} pairs, not four`); return; }
+    P.forEach(([u, v], i) => { const k = u + '|' + v; if (seen.has(k)) fail('spanturn', key, `pair ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if ([...u, ...v].some(n => !Number.isInteger(n) || Math.abs(n) > 4)) fail('spanturn', key, `pair ${'ABCD'[i]} does not fit its pane in whole numbers up to 4`);
+      if (rank(u, v) === 1 && !mult(u, v)) fail('spanturn', key, `pair ${'ABCD'[i]} lies on a line but neither is a whole multiple of the other`); });
+    const truth = P.map(([u, v]) => rank(u, v));
+    if (truth.some((t, i) => S.truth(i) !== t || S.det(i) !== P[i][0][0] * P[i][1][1] - P[i][0][1] * P[i][1][0])) fail('spanturn', key, `its pairs are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('spanturn', key, 'every pair is called the same');
+    // what the round holds, found afresh
+    const fl = [], ze = [], ne = [];
+    P.forEach(([u, v], i) => { if (truth[i] === 1 && neg(u, v)) fl.push(i); if (zero(u) || zero(v)) ze.push(i); if (truth[i] === 2 && angle(u, v) < 20) ne.push(i); });
+    const tags = [fl.length ? 'flip' : null, ze.length ? 'zero' : null, ne.length ? 'near' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('spanturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every pair called wrong, one at a time, in both wrong ways
+    P.forEach(([u, v], i) => {
+      const d = u[0] * v[1] - u[1] * v[0], work = `u₁v₂ − u₂v₁ = (${sx(u[0])})(${sx(v[1])}) − (${sx(u[1])})(${sx(v[0])}) = ${sx(d)}`;
+      for (const k of [2, 1, 0]) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const why = truth[i] === 2 ? 'which is not 0, so they point different ways and span the plane'
+          : truth[i] === 0 ? 'and both are ⟨0, 0⟩, so they span just the point ⟨0, 0⟩'
+            : `and ${mult(u, v)}, so they span only the line through ${zero(u) ? 'v' : 'u'}`;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, u = ${vec(u)} and v = ${vec(v)}: ${work}, ${why}. You had it ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('spanturn', key, `with ${'ABCD'[i]} called ${WD[k]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(planefill|spanline|spanpoint|plane|line|point)"/.test(svg)) fail('spanturn', key, `with ${'ABCD'[i]} wrong, the wrong pair is not ringed alone or the answers are given away`);
+        if (S.solved || S.streak) fail('spanturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('spanturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('spanturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('spanturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="sptCheck" disabled /.test(S.html())) fail('spanturn', key, 'the check is open before the pairs are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="sptCheck" disabled /.test(S.html())) fail('spanturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('spanturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="SpanTurn\\.call\\(${i},([012])\\)" aria-label="Pair ${'ABCD'[i]}: spans ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('spanturn', key, `the button for ${'ABCD'[i]} spanning ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`SpanTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('spanturn', key, `${'ABCD'[i]} does not offer the plane, a line and a point`);
+    });
+    if (S.calls.join() !== truth.join()) fail('spanturn', key, 'the buttons cannot make the right calls');
+    if (/id="sptCheck" disabled /.test(S.html())) fail('spanturn', key, 'the check stays shut with every pair called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (fl.length) want.push(`In ${'ABCD'[fl[0]]}, ${mult(...P[fl[0]])}: v points the other way along the same line as u, so the pair still spans only that line.`);
+    if (ze.length) want.push(truth[ze[0]] === 0 ? `In ${'ABCD'[ze[0]]}, both arrows are ⟨0, 0⟩, so all the pair can make is the point ⟨0, 0⟩.` : `In ${'ABCD'[ze[0]]}, ⟨0, 0⟩ adds nothing, so the pair spans only the line its other arrow does.`);
+    if (ne.length) { const [u, v] = P[ne[0]]; want.push(`In ${'ABCD'[ne[0]]}, ${vec(u)} and ${vec(v)} lie only ${Math.round(angle(u, v))}° apart, but u₁v₂ − u₂v₁ = (${sx(u[0])})(${sx(v[1])}) − (${sx(u[1])})(${sx(v[0])}) = ${sx(u[0] * v[1] - u[1] * v[0])} is not 0, so they span the plane.`); }
+    want.push(`Spans: ${truth.map((t, i) => `${'ABCD'[i]} ${['just a point', 'a line', 'the plane'][t]}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('spanturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each pair's arrows from its pane's middle, and its span drawn as called
+    const svg = S.svg();
+    const arrows = [...svg.matchAll(/data-k="(u|v)"><line x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => [m[1], ...m.slice(2).map(Number)]);
+    if (arrows.length !== P.reduce((n, [u, v]) => n + !zero(u) + !zero(v), 0)) fail('spanturn', key, `${arrows.length} arrows are drawn, not one for each arrow that is not ⟨0, 0⟩`);
+    const lines = [...svg.matchAll(/data-k="spanline" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    let a = 0, l = 0;
+    P.forEach(([u, v], i) => {
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, mine = [];
+      for (const w of [u, v]) { if (zero(w)) continue; const ar = arrows[a++]; if (!ar) return; mine.push(ar);
+        const dx = ar[3] - ar[1], dy = ar[2] - ar[4];
+        if (ar[1] < X || ar[1] > X + 180 || ar[3] < X || ar[3] > X + 180 || ar[2] < Y || ar[2] > Y + 130 || ar[4] < Y + 14 || ar[4] > Y + 128) fail('spanturn', key, `an arrow in ${'ABCD'[i]} runs out of its pane`);
+        if (Math.abs(dx * w[1] - dy * w[0]) > 0.05 || dx * w[0] + dy * w[1] <= 0) fail('spanturn', key, `an arrow in ${'ABCD'[i]} does not point along ${vec(w)}`); }
+      if (mine.length === 2) { const s0 = Math.hypot(mine[0][3] - mine[0][1], mine[0][4] - mine[0][2]) / Math.hypot(...u), s1 = Math.hypot(mine[1][3] - mine[1][1], mine[1][4] - mine[1][2]) / Math.hypot(...v);
+        if (Math.abs(s0 - s1) > 0.05 || mine[0][1] !== mine[1][1] || mine[0][2] !== mine[1][2]) fail('spanturn', key, `u and v in ${'ABCD'[i]} are not drawn from one point to one scale`); }
+      if (truth[i] === 1) { const ln = lines[l++]; spans++; const w = zero(u) ? v : u, o = mine[0];
+        if (!ln || !o) { fail('spanturn', key, `${'ABCD'[i]} has no line drawn`); return; }
+        const dx = ln[2] - ln[0], dy = ln[1] - ln[3], mx = (ln[0] + ln[2]) / 2, my = (ln[1] + ln[3]) / 2;
+        if (Math.abs(dx * w[1] - dy * w[0]) > 0.05 * Math.hypot(dx, dy) || Math.abs(mx - o[1]) > 0.02 || Math.abs(my - o[2]) > 0.02) fail('spanturn', key, `${'ABCD'[i]}'s line does not run through its arrows`);
+        if ([ln[0], ln[2]].some(x => x < X || x > X + 180) || [ln[1], ln[3]].some(y => y < Y || y > Y + 130)) fail('spanturn', key, `${'ABCD'[i]}'s line runs out of its pane`); }
+      if (truth[i] !== 1) spans++;
+    });
+    if (lines.length !== truth.filter(t => t === 1).length || (svg.match(/data-k="planefill"/g) || []).length !== truth.filter(t => t === 2).length || (svg.match(/data-k="spanpoint"/g) || []).length !== truth.filter(t => t === 0).length) fail('spanturn', key, 'the spans drawn do not match the calls');
+    const marks = [...svg.matchAll(/data-k="(plane|line|point)"/g)].map(m => m[1]);
+    if (marks.join() !== truth.map(t => ['point', 'line', 'plane'][t]).join()) fail('spanturn', key, `the panes are marked ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="sptNext"') || /onclick="SpanTurn\.call/.test(h.replace(/disabled onclick="SpanTurn\.call/g, ''))) fail('spanturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 2 ? 1 : 2);
+    if (S.calls.join() !== before) fail('spanturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('spanturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('spanturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const P = S.R(), right = P.map(([u, v]) => rank(u, v)); S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 2 ? 1 : 2;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,flip'], [false, 'fix,flip,near,one,zero'], [false, 'fix,flip,near,one,zero'], [false, 'fix,flip,near,one,three,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('spanturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Opposite ways, one line · A slip caught and fixed | ✓ Right on the first check · ⟨0, 0⟩ adds nothing · Close is not the same') fail('spanturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'WIDE VIEW / every span called') fail('spanturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, spans };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21187,6 +21327,7 @@ console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 1
 console.log(`  angles called     ${pad(dotTurnNotes.checks.toLocaleString(), 12)}  (checks of four angles called less than, exactly or more than 90° in the dot product workshop, ${dotTurnNotes.wrongs} of them with one pair called wrong and caught, and ${dotTurnNotes.angles} arcs drawn the short way from u to v)`);
 console.log(`  bends called      ${pad(trapTurnNotes.checks.toLocaleString(), 12)}  (checks of four trapezoid estimates called over, exact or under in the trapezoid workshop, ${trapTurnNotes.wrongs} of them with one curve called wrong and caught, and ${trapTurnNotes.slivers} sets of slivers drawn on the side the curve bends)`);
 console.log(`  tangents called   ${pad(tanTurnNotes.checks.toLocaleString(), 12)}  (checks of four tangent line estimates called too high, exact or too low in the tangent line workshop, ${tanTurnNotes.wrongs} of them with one curve called wrong and caught, and ${tanTurnNotes.gaps} gaps drawn from the curve to its tangent)`);
+console.log(`  spans called      ${pad(spanTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as spanning the plane, a line or a point in the span workshop, ${spanTurnNotes.wrongs} of them with one pair called wrong and caught, and ${spanTurnNotes.spans} spans drawn as called)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
