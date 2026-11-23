@@ -120,6 +120,7 @@ const SUITES = [
   require('./play/slopematch'), // see f, pick which of three graphs is f′
   require('./play/slopesketch'), // see f, set its slope at five stops and draw f′ by hand
   require('./play/matpick'), // see a shape, pick which of four matrices makes it
+  require('./play/detrank'), // see four matrices, and rank them from the biggest stretch of area to the smallest
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/eigturn'), // see four matrices with an arrow each, call each arrow kept, turned or knocked off
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
