@@ -1337,7 +1337,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ GRAM–SCHMIDT WORKSHOP ============ -->
   <div class="screen" id="s-gram">
     <div class="panel"><h2>📐 Gram–Schmidt Workshop</h2><div class="sub">Two arrows that lean on each other make a clumsy basis. Take copies of the first away from the second until what is left stands at a right angle to it. The right number of copies is the second arrow's shadow on the first, and taking it away is all Gram–Schmidt does.</div></div>
-    <div id="gsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Take copies away by hand or pick c"></div>
+    <div id="gsTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Take copies away by hand, pick c, or call each c"></div>
     <div class="panel">
       <div id="gpBox"></div>
       <div id="gsSets" class="wsModes" role="group" aria-label="Which pair of arrows"></div>
@@ -15487,7 +15487,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">📐 Gram–Schmidt Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Take copies of one arrow away from another until what is left stands at a right angle, and see why the right amount is the shadow (u₂ · u₁)/(u₁ · u₁). Then turn it round: see u₁ and u₂, and pick which of four numbers is c.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Take copies of one arrow away from another until what is left stands at a right angle, and see why the right amount is the shadow (u₂ · u₁)/(u₁ · u₁). Then turn it round: see u₁ and u₂, and pick which of four numbers is c. Or call it: see four pairs of arrows, each with a c, and say whether each c is too low, just right or too high.</div>
          <button class="btn sm" id="tomeGram" style="width:auto;margin-top:8px" onclick="Gram.open()">Open the Gram–Schmidt workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -23523,6 +23523,167 @@ const GramPick = {
   }
 };
 
+/* ---------- Too low or too high? The Gram–Schmidt workshop's third mode ----------
+   Four pairs u₁ and u₂, each with a number c of copies of u₁ to take away,
+   and the player calls each c too low, just right or too high. What is left,
+   w = u₂ − c·u₁, has w · u₁ = u₂ · u₁ − c × (u₁ · u₁): above 0 it still
+   leans along u₁ and c is too low, at 0 it stands square, and below 0 too
+   much is gone and c is too high. Rounds hold a c smaller than u₂ · u₁ that
+   is still too high (each copy costs u₁ · u₁, not 1), a u₂ whose shadow
+   points back along u₁, and a pair already square. Nothing is drawn of w
+   until the round is right; then c·u₁ is dashed in and w drawn in red.
+   Nothing is saved, and there is no clock. */
+const GramTurn = {
+  // [u₁, u₂, c]
+  ROUNDS:[
+    [[[2,1],[3,4],2], [[1,0],[3,2],2], [[1,1],[-2,2],1], [[2,0],[3,1],2]],
+    [[[3,1],[1,2],0.5], [[1,2],[-1,3],0.5], [[1,-1],[2,-4],2], [[2,1],[-1,-3],-1]],
+    [[[1,0],[-2,3],0], [[1,1],[4,0],2], [[0,2],[1,3],1], [[2,2],[1,3],1.5]],
+    [[[1,2],[4,-2],0], [[3,0],[4,1],1], [[1,-2],[3,-1],1.5], [[-1,1],[2,1],-0.5]],
+    [[[2,-1],[1,2],-1], [[1,3],[2,1],0.5], [[2,1],[4,1],2], [[1,0],[-3,1],-2]],
+    [[[1,1],[3,1],1.5], [[0,1],[2,-3],-3], [[3,1],[2,4],1], [[2,0],[1,2],1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'cost',  t:'Call a c that is too high though it is smaller than u₂ · u₁.', toast:'Each copy costs u₁ · u₁',
+     ok:K=>K.kinds.has('cost')},
+    {id:'back',  t:'Call a pair where u₂ · u₁ is below 0, so u₂’s shadow points back along u₁.', toast:'A shadow that points backward',
+     ok:K=>K.kinds.has('back')},
+    {id:'zero',  t:'Call a pair where u₂ · u₁ is 0, so nothing needs taking away.', toast:'No shadow at all',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Take c copies of u₁ away from u₂, and what is left is w = u₂ − c·u₁, with w · u₁ = u₂ · u₁ − c × (u₁ · u₁). Above 0, w still leans along u₁ and c is too low; at 0, w stands at a right angle and c is just right; below 0, too much is gone and c is too high.',
+  L:'ABCD',
+  WORD:{1:'too low', 0:'just right', [-1]:'too high'},
+  NAMES:{1:'c is too low', 0:'c is just right', [-1]:'c is too high'},
+  dot:(p,q)=>p[0]*q[0]+p[1]*q[1],
+  R(){ return this.ROUNDS[this.ri]; },
+  dp(i){ const [u,v]=this.R()[i]; return this.dot(v,u); },
+  nn(i){ const [u]=this.R()[i]; return this.dot(u,u); },
+  c(i){ return this.R()[i][2]; },
+  wu(i){ return this.dp(i)-this.c(i)*this.nn(i); },
+  w(i){ const [u,v,c]=this.R()[i]; return [v[0]-c*u[0], v[1]-c*u[1]]; },
+  truth(i){ return Math.sign(this.wu(i)); },
+  num(v){ return neg(Object.is(v,-0)?0:v); },
+  par(v){ return v<0 ? `(${this.num(v)})` : this.num(v); },
+  v(p){ return `⟨${this.num(p[0])}, ${this.num(p[1])}⟩`; },
+  best(i){ let p=this.dp(i), q=this.nn(i); const g=(a,b)=>b?g(b,a%b):a, k=g(Math.abs(p),q)||1; p/=k; q/=k; return q===1 ? this.num(p) : `${this.num(p)}/${q}`; },
+  /* what a round holds: a c below u₂ · u₁ that is still too high, a shadow pointing back, and a pair already square */
+  costs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.c(i)<this.dp(i)); },
+  backs(){ return [0,1,2,3].filter(i=>this.dp(i)<0); },
+  zeros(){ return [0,1,2,3].filter(i=>this.dp(i)===0); },
+  tags(){ const t=[]; if(this.costs().length) t.push('cost'); if(this.backs().length) t.push('back'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const co=this.costs(), ba=this.backs(), ze=this.zeros();
+      if(co.length){ const i=co[0];
+        out.push(`In ${this.L[i]}, c = ${this.num(this.c(i))} is smaller than u₂ · u₁ = ${this.dp(i)}, yet it is too high: each copy takes away u₁ · u₁ = ${this.nn(i)}, not 1.`); }
+      if(ba.length){ const i=ba[0];
+        out.push(`In ${this.L[i]}, u₂ · u₁ = ${this.num(this.dp(i))} is below 0: u₂’s shadow points back along u₁, so the right c, ${this.best(i)}, is below 0 too.`); }
+      if(ze.length){ const i=ze[0];
+        out.push(`In ${this.L[i]}, u₂ · u₁ = 0: u₂ casts no shadow on u₁, so the right c is 0.`); }
+      out.push(`The right c, (u₂ · u₁)/(u₁ · u₁), for each: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.best(i)}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const [u,v,c]=this.R()[i], d=this.wu(i), t=this.truth(i);
+        const how = t>0 ? 'more than 0, so w still leans along u₁ and c is too low'
+          : t<0 ? 'less than 0, so w leans back against u₁ and c is too high'
+          : 'w stands at a right angle to u₁, so c is just right';
+        out.push(`In ${this.L[i]}, u₂ · u₁ = ${this.par(v[0])} × ${this.par(u[0])} + ${this.par(v[1])} × ${this.par(u[1])} = ${this.num(this.dp(i))} and u₁ · u₁ = ${this.nn(i)}, so w · u₁ = ${this.num(this.dp(i))} − ${this.par(c)} × ${this.nn(i)} = ${this.num(d)}: ${how}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane to one scale: u₁ in gold and u₂ in blue from the origin, with
+     its c; once the round is right, c·u₁ dashed in gold and w in red */
+  svg(){
+    const P=this.R(), k=11;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four pairs of arrows: ${P.map(([u,v,c],i)=>`${this.L[i]}, u₁ = ${this.v(u)}, u₂ = ${this.v(v)}, c = ${this.num(c)}`).join('; ')}${this.solved?', each with w drawn':''}">`;
+    P.forEach(([u,v,c],i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, ox=X+90, oy=Y+70, p=q=>[(ox+q[0]*k).toFixed(2),(oy-q[1]*k).toFixed(2)];
+      const seg=(a,b,col,role,dash,wd)=>{ const A=p(a), B=p(b);
+        return `<line data-k="${role}" x1="${A[0]}" y1="${A[1]}" x2="${B[0]}" y2="${B[1]}" stroke="${col}" stroke-width="${wd||2.5}" stroke-linecap="round"${dash?' stroke-dasharray="4 3"':''}/>`; };
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<line x1="${X+4}" y1="${oy}" x2="${X+176}" y2="${oy}" stroke="${FIG_COL.axis}" stroke-width="1"/><line x1="${ox}" y1="${Y+4}" x2="${ox}" y2="${Y+126}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      if(this.solved){ const cu=[c*u[0],c*u[1]], w=this.w(i);
+        if(c!==0) out+=seg([0,0],cu,FIG_COL.b,'cu',true,2);
+        if(w[0]||w[1]) out+=seg([0,0],w,FIG_COL.d,'w',false,2.5); }
+      out+=seg([0,0],v,FIG_COL.a,'u2')+seg([0,0],u,FIG_COL.b,'u1');
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="c" x="${X+172}" y="${Y+19}" fill="${FIG_COL.ink}" font-size="13" font-weight="700" text-anchor="end">c = ${this.num(c)}</text>`;
+      out+=`<text data-k="vecs" x="${X+8}" y="${Y+121}" font-size="10"><tspan fill="${FIG_COL.b}">u₁ ${this.v(u)}</tspan> <tspan fill="${FIG_COL.a}">u₂ ${this.v(v)}</tspan></text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'low',0:'right',[-1]:'high'}[t]}" x="${X+172}" y="${Y+35}" fill="${FIG_COL.d}" font-size="11" font-weight="700" text-anchor="end">w · u₁ = ${this.num(this.wu(i))}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Gram.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Gram.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Gram.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="GramTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const P=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four pairs of arrows, each with a number c of copies of u₁ to take away from u₂. Is each c too low, just right, or too high to leave w at a right angle to u₁?</div>`;
+    out+=`<div id="gtFig">${this.svg()}<div class="figcap">u₁ in gold and u₂ in blue. Once all four are called right, the c copies of u₁ are dashed in gold and w = u₂ − c·u₁ is drawn in red.</div></div>`;
+    out+=`<div id="gtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+P.map(([u,v,c],i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="gtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">c = ${this.num(c)}</span></b>`+
+        this.btn(i,1,'Low')+this.btn(i,0,'Right')+this.btn(i,-1,'High')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="gtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="gtNext" onclick="GramTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="gtCheck" ${this.ready()?'':'disabled '}onclick="GramTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four pairs to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="gtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="gtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SHADOW TAKER','every c called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Gram = {
   SETS:[
     {id:'tilt', btn:'Tilted', u1:[2,1], u2:[3,4]},
@@ -23594,11 +23755,11 @@ const Gram = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('gsTab').innerHTML=[['hand','📐 Take copies by hand','Take copies of u₁ away by hand until w stands at a right angle'],['pick','🎯 Which c?','See u₁ and u₂, and pick which of four numbers is c']]
+    document.getElementById('gsTab').innerHTML=[['hand','📐 Take copies by hand','Take copies of u₁ away by hand until w stands at a right angle'],['pick','🎯 Which c?','See u₁ and u₂, and pick which of four numbers is c'],['turn','⚖️ Too low or too high?','See four pairs of arrows, each with a c, and call each c too low, just right or too high']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Gram.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['gsSets','gsFig','gsStep','gsRead','gsGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('gpBox').innerHTML=pick ? GramPick.html() : '';
+    document.getElementById('gpBox').innerHTML=!pick ? '' : this.tab==='pick' ? GramPick.html() : GramTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('gsSets').innerHTML=this.SETS.map((s,i)=>

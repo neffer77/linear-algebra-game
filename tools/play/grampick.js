@@ -31,11 +31,11 @@ module.exports = {
       /Then turn it round: see u₁ and u₂, and pick which of four numbers is c\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeGram');
     t.eq('the Gram–Schmidt workshop opens', await t.screen(), 's-gram');
-    t.eq('taking copies by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('taking copies by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5151));
     await t.tapText(/Which c\?/);
-    t.eq('which c is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which c is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the pairs, the drawing, the stepper, the readout and the goals step aside',
       await hidden(t, 'gsSets') && await hidden(t, 'gsFig') && await hidden(t, 'gsStep') && await hidden(t, 'gsRead') && await hidden(t, 'gsGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('gpBox').innerText)).startsWith(

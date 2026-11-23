@@ -1,60 +1,60 @@
 {
-  "change": "Add a Which way mode to the implicit slope workshop",
+  "change": "Add a Too low or too high mode to the Gram–Schmidt workshop",
   "mutations": [
     {
-      "name": "an upright tangent is called falling",
+      "name": "a square pair is called too low",
       "file": "index.html",
-      "find": "if(d===0) return 2; if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
-      "replace": "if(d===0) return -1; if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
+      "find": "truth(i){ return Math.sign(this.wu(i)); },",
+      "replace": "truth(i){ return Math.sign(this.wu(i)+0.5); },",
       "run": "verify"
     },
     {
-      "name": "the minus in y′ is dropped",
+      "name": "each copy is taken to cost 1",
       "file": "index.html",
-      "find": "if(n===0) return 0; return Math.sign(this.C(i).sg*n/d);",
-      "replace": "if(n===0) return 0; return Math.sign(n/d);",
+      "find": "wu(i){ return this.dp(i)-this.c(i)*this.nn(i); },",
+      "replace": "wu(i){ return this.dp(i)-this.c(i); },",
       "run": "verify"
     },
     {
-      "name": "a circle's tangent is taken the wrong way round",
+      "name": "u₂ · u₁ drops its second term",
       "file": "index.html",
-      "find": "return (x*y>0 && t===1) || (x*y<0 && t===-1);",
-      "replace": "return (x*y>0 && t===-1) || (x*y<0 && t===1);",
+      "find": "dp(i){ const [u,v]=this.R()[i]; return this.dot(v,u); },",
+      "replace": "dp(i){ const [u,v]=this.R()[i]; return v[0]*u[0]; },",
       "run": "verify"
     },
     {
-      "name": "the curve is drawn before the round is right",
+      "name": "a costly copy is taken as one too low",
       "file": "index.html",
-      "find": "if(this.solved){\n        for(const b of C.br())",
-      "replace": "if(true){\n        for(const b of C.br())",
+      "find": "costs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.c(i)<this.dp(i)); },",
+      "replace": "costs(){ return [0,1,2,3].filter(i=>this.truth(i)===1 && this.c(i)<this.dp(i)); },",
       "run": "verify"
     },
     {
-      "name": "the tangent is drawn upside down",
+      "name": "w is drawn before the round is right",
       "file": "index.html",
-      "find": "y1=\"${f(py(y)+dy)}\" x2=\"${f(px(x)+dx)}\" y2=\"${f(py(y)-dy)}\"",
-      "replace": "y1=\"${f(py(y)-dy)}\" x2=\"${f(px(x)+dx)}\" y2=\"${f(py(y)+dy)}\"",
+      "find": "if(this.solved){ const cu=[c*u[0],c*u[1]], w=this.w(i);",
+      "replace": "if(true){ const cu=[c*u[0],c*u[1]], w=this.w(i);",
       "run": "verify"
     },
     {
-      "name": "the ellipse is drawn as a circle",
+      "name": "w is drawn as u₂ + c·u₁",
       "file": "index.html",
-      "find": "[5*Math.cos(t),2.5*Math.sin(t)]",
-      "replace": "[5*Math.cos(t),5*Math.sin(t)]",
+      "find": "w(i){ const [u,v,c]=this.R()[i]; return [v[0]-c*u[0], v[1]-c*u[1]]; },",
+      "replace": "w(i){ const [u,v,c]=this.R()[i]; return [v[0]+c*u[0], v[1]+c*u[1]]; },",
       "run": "verify"
     },
     {
-      "name": "a flat tangent's readout names the bottom",
+      "name": "a backward shadow's c keeps the wrong sign",
       "file": "index.html",
-      "find": ": t===0 ? `the top, ${C.nS}, is 0, so y′ = 0",
-      "replace": ": t===0 ? `the top, ${C.dS}, is 0, so y′ = 0",
+      "find": "best(i){ let p=this.dp(i), q=this.nn(i);",
+      "replace": "best(i){ let p=Math.abs(this.dp(i)), q=this.nn(i);",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Implicit.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Implicit.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Gram.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Gram.render();",
       "run": "verify"
     }
   ]
