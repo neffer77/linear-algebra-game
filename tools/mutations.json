@@ -1,61 +1,68 @@
 {
-  "change": "Win back half a missed blow by landing the question like it",
+  "change": "Riposte: a right answer as the foe winds up lands half again as hard",
   "mutations": [
     {
-      "name": "the whole blow is won back",
+      "name": "a riposte lands twice as hard",
       "file": "index.html",
-      "find": "owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },",
-      "replace": "owed(dmg){ return dmg>0 ? dmg : 0; },",
+      "find": "const Riposte = {\n  MUL: 1.5,",
+      "replace": "const Riposte = {\n  MUL: 2,",
       "run": "verify"
     },
     {
-      "name": "half is rounded down",
+      "name": "every right answer ripostes",
       "file": "index.html",
-      "find": "owed(dmg){ return dmg>0 ? Math.ceil(dmg/2) : 0; },",
-      "replace": "owed(dmg){ return dmg>0 ? Math.floor(dmg/2) : 0; },",
+      "find": "  on(B){ return !!(B && B.slamNext); },",
+      "replace": "  on(B){ return !!B; },",
       "run": "verify"
     },
     {
-      "name": "winning it back heals past full health",
+      "name": "the riposte is told every time",
       "file": "index.html",
-      "find": "g.hp=Math.min(g.maxHp, g.hp+n); return g.hp-was; },",
-      "replace": "g.hp=g.hp+n; return g.hp-was; },",
+      "find": "if(!B.riposted){ B.riposted=true; UI.toast(",
+      "replace": "if(true){ B.riposted=true; UI.toast(",
       "run": "verify"
     },
     {
-      "name": "any right answer wins it back",
+      "name": "a fight remembers the last fight's riposte",
       "file": "index.html",
-      "find": "      if(owed && this.cur.redo){\n",
-      "replace": "      if(owed){\n",
+      "find": "    this.riposted=false; this.lastRiposte=false;   // the riposte is told once a fight\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "a second miss keeps what was owed",
+      "name": "the riposte is left out of the strike",
       "file": "index.html",
-      "find": "const owed=this.recover||0; this.recover=0; this.recovered=0;",
-      "replace": "const owed=this.recover||0; this.recovered=0;",
+      "find": "* Weak.bonus(this) * Riposte.bonus(this);",
+      "replace": "* Weak.bonus(this);",
       "run": "verify"
     },
     {
-      "name": "a fight carries the last fight's debt",
+      "name": "the explanation never names the riposte",
       "file": "index.html",
-      "find": "    this.recover=0; this.recovered=0;   // half a missed blow",
-      "replace": "    this.recovered=0;   // half a missed blow",
+      "find": "      Riposte.line(!inRite && this.lastRiposte)+\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "the miss does not say what landing the next wins back",
+      "name": "the warning no longer names the riposte",
       "file": "index.html",
-      "find": "so you can use this straight away.</div>`+Recover.line(this.recover) : '')+",
-      "replace": "so you can use this straight away.</div>` : '')+",
+      "find": "      tg.innerHTML=Riposte.tele(this.foe.nm);",
+      "replace": "      tg.innerHTML=`⚡ <b>${this.foe.nm}</b> is winding up — answer correctly to brace the blow!`;",
       "run": "verify"
     },
     {
-      "name": "the blow is owed back from before it lands",
+      "name": "a riposte's line outlives its answer",
       "file": "index.html",
-      "find": "      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);\n",
-      "replace": "      if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg+40);\n",
-      "run": "play:recover"
+      "find": "    this.lastRiposte=false;\n    this.redo = (",
+      "replace": "    this.redo = (",
+      "run": "verify"
+    },
+    {
+      "name": "a riposte turns the slam aside as well",
+      "file": "index.html",
+      "find": "this.lastSlam=this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));",
+      "replace": "this.lastSlam=this.lastRiposte ? 0 : this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));",
+      "run": "play:riposte"
     }
   ]
 }
