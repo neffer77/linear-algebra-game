@@ -1,60 +1,60 @@
 {
-  "change": "Add a Faster or slower mode to the ladder workshop",
+  "change": "Add a Steeper or gentler mode to the inverse slope workshop",
   "mutations": [
     {
-      "name": "the top is compared with half the ladder",
+      "name": "the flip is left out",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(2*this.x(i)**2-this.L2(i)); },",
-      "replace": "truth(i){ return Math.sign(2*this.x(i)-this.len(i)); },",
+      "find": "gp(i){ return 1/this.fp(i); },",
+      "replace": "gp(i){ return this.fp(i); },",
       "run": "verify"
     },
     {
-      "name": "the top's height adds x² instead of taking it away",
+      "name": "f′ is taken at u",
       "file": "index.html",
-      "find": "y2(i){ return this.L2(i)-this.x(i)**2; },",
-      "replace": "y2(i){ return this.L2(i)+this.x(i)**2; },",
+      "find": "fp(i){ return this.S(i).d(this.x(i)); },",
+      "replace": "fp(i){ return this.S(i).d(this.u(i)); },",
       "run": "verify"
     },
     {
-      "name": "x/y is turned upside down",
+      "name": "a slope of exactly 1 is not looked for",
       "file": "index.html",
-      "find": "ratio(i){ return this.x(i)/this.y(i); },",
-      "replace": "ratio(i){ return this.y(i)/this.x(i); },",
+      "find": "return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },",
+      "replace": "return a>1 ? 1 : -1; },",
       "run": "verify"
     },
     {
-      "name": "past halfway needs no slower top",
+      "name": "a falling slope is read by its sign",
       "file": "index.html",
-      "find": "pasts(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && 4*this.x(i)**2>this.L2(i)); },",
-      "replace": "pasts(){ return [0,1,2,3].filter(i=>4*this.x(i)**2>this.L2(i)); },",
+      "find": "size(v){ const a=Math.abs(v);",
+      "replace": "size(v){ const a=v;",
       "run": "verify"
     },
     {
-      "name": "a fast foot starts at 2 m/s",
+      "name": "the f′-at-u slip is never found",
       "file": "index.html",
-      "find": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=3); },",
-      "replace": "quicks(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.v(i)>=2); },",
+      "find": "atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },",
+      "replace": "atxs(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the ladder is drawn before the round is right",
+      "name": "the mirrors are drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){\n        out+=`<line data-k=\"ladder\"",
-      "replace": "if(true){\n        out+=`<line data-k=\"ladder\"",
+      "find": "if(this.solved) out+=`<path data-k=\"g\"",
+      "replace": "if(true) out+=`<path data-k=\"g\"",
       "run": "verify"
     },
     {
-      "name": "the top is drawn x up instead of y",
+      "name": "the blue dot sits at (u, x)",
       "file": "index.html",
-      "find": "fx=gx+this.x(i)*k, ty=gy-this.y(i)*k;",
-      "replace": "fx=gx+this.x(i)*k, ty=gy-this.x(i)*k;",
+      "find": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(x))}\" cy=\"${f(py(u))}\"",
+      "replace": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(u))}\" cy=\"${f(py(x))}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Ladder.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
       "run": "verify"
     }
   ]

@@ -30,11 +30,11 @@ module.exports = {
       /Then turn it round: see a shaded curve, and pick which of four numbers is its integral\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeArea');
     t.eq('the area workshop opens', await t.screen(), 's-area');
-    t.eq('closing in is the pressed mode', await pressed(t), 'true,false');
+    t.eq('closing in is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6161));
     await t.tapText(/Which integral\?/);
-    t.eq('which integral is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which integral is now the pressed mode', await pressed(t), 'false,true,false');
     t.ok('the rectangles and their goals step aside', await hidden(t, 'arCurves') && await hidden(t, 'arFig') && await hidden(t, 'arNs') && await hidden(t, 'arRules') && await hidden(t, 'arGoalPanel'));
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('arPick').innerText)).startsWith(
       'An integral adds up signed area: gold above the axis counts plus, red below counts minus.'));

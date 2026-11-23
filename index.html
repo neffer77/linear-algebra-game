@@ -54,6 +54,10 @@ h2{font-size:18px}
 .btn.gold{background:linear-gradient(180deg,#f2c14e,#c9962c);color:#2a1c00;border-color:#8a6612}
 .btn.ghost{background:linear-gradient(180deg,#241c3c,#1b1530);color:var(--dim)}
 .btn.sm{padding:9px 11px;font-size:14px;margin:5px 0}
+/* the call grids of the third modes: let every column shrink to its share of a phone, and break a long word before it pushes past the edge */
+[id$="Stops"]>*,[id$="Stops"]>*>*{min-width:0}
+[id$="Stops"]{overflow-wrap:anywhere}
+[id$="Stops"] .btn.sm{font-size:13px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .row{display:flex;gap:8px}.row>*{flex:1}
 .center{text-align:center}
@@ -976,7 +980,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ AREA WORKSHOP ============ -->
   <div class="screen" id="s-area">
     <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
-    <div id="arMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in with rectangles or pick the integral"></div>
+    <div id="arMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in with rectangles, pick the integral, or call each sum high or low"></div>
     <div class="panel">
       <div id="arPick"></div>
       <div id="arCurves" class="wsModes" role="group" aria-label="Curve"></div>
@@ -1164,7 +1168,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TAYLOR WORKSHOP ============ -->
   <div class="screen" id="s-taylor">
     <div class="panel"><h2>🌀 Taylor Workshop</h2><div class="sub">eˣ, sin x and cos x can each be built from powers of x, one term at a time. Add terms, move x, and watch the polynomial close in on the curve, fast near 0 and slower far from it.</div></div>
-    <div id="tyTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build the series by hand or pick a coefficient"></div>
+    <div id="tyTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build the series by hand, pick a coefficient, or call each cut-off series over or under"></div>
     <div class="panel">
       <div id="srBox"></div>
       <div id="tyCurves" class="wsModes" role="group" aria-label="Function"></div>
@@ -1848,7 +1852,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ INVERSE SLOPE WORKSHOP ============ -->
   <div class="screen" id="s-invslope">
     <div class="panel"><h2>🪩 Inverse Slope Workshop</h2><div class="sub">Arcsin, arccos and arctan are sin, cos and tan mirrored in the line y = x. A mirror swaps rise and run, so the slope flips. Step along, watch a point land on its mirror image, then try the two slips everyone makes and catch them out.</div></div>
-    <div id="ivTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mirror a curve by hand or pick the slope of an inverse"></div>
+    <div id="ivTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Mirror a curve by hand, pick the slope of an inverse, or call it steeper or gentler"></div>
     <div class="panel">
       <div id="vpBox"></div>
       <div id="ivSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which inverse"></div>
@@ -1956,7 +1960,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ LOGISTIC WORKSHOP ============ -->
   <div class="screen" id="s-logistic">
     <div class="panel"><h2>🐇 Logistic Workshop</h2><div class="sub">Growth with a ceiling: dP/dt = rP(1 − P/K). Step a population forward one unit of time at a time and watch it grow, slow down past half the ceiling, and settle on K from either side.</div></div>
-    <div id="lgwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a population by hand or pick the rate"></div>
+    <div id="lgwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step a population by hand, pick the rate, or call each population growing or shrinking"></div>
     <div class="panel">
       <div id="lgqBox"></div>
       <div id="lgwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Where the population starts"></div>
@@ -2113,7 +2117,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ BIGGEST BUILD WORKSHOP ============ -->
   <div class="screen" id="s-optim">
     <div class="panel"><h2>🏗️ Biggest Build Workshop</h2><div class="sub">With a fixed amount of fence or card, what you build depends on one length x. Change x and watch what it holds and the slope of that. Where the slope is above 0, more x helps; below 0, it hurts; so the most sits where the slope is 0. But check which way the curve goes on either side: a flat tangent can mark the least too.</div></div>
-    <div id="opTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand or pick the width that holds the most"></div>
+    <div id="opTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step x by hand, pick the width that holds the most, or call each flat spot a peak or a valley"></div>
     <div class="panel">
       <div id="bbBox"></div>
       <div id="opSets" class="wsModes" role="group" aria-label="What to build"></div>
@@ -15527,7 +15531,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral. Then turn it round: see a shaded curve, and pick which of four numbers is its integral.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral. Then turn it round: see a shaded curve, and pick which of four numbers is its integral. Or call it: see four curves cut into rectangles, and say whether each sum is over the area, exact or under.</div>
          <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -15542,7 +15546,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -15622,7 +15626,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪩 Inverse Slope Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge. Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">See arcsin, arccos and arctan as sin, cos and tan mirrored in y = x, and why the mirror flips the slope to 1/f′. Find where arcsin stands straight up, then forget to flip, or flip at the wrong point, and catch each slip with a nudge. Then turn it round: see a rising curve and a point, and pick which of four numbers is the slope of its inverse there. Or call four inverse slopes steeper than 1, exactly 1 or gentler.</div>
          <button class="btn sm" id="tomeInvSlope" style="width:auto;margin-top:8px" onclick="InvSlope.open()">Open the inverse slope workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -15662,7 +15666,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🐇 Logistic Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step a population through dP/dt = rP(1 − P/K), starting small, half way or above the ceiling. Watch it grow almost exponentially, slow down past half the ceiling, and settle on K from either side, with the rate worked at every step. Then turn it round: see r, K and P, and pick which of four numbers is dP/dt. Or call it: see four populations, each with its own ceiling, and say whether each is growing, holding or shrinking.</div>
          <button class="btn sm" id="tomeLogiGrow" style="width:auto;margin-top:8px" onclick="LogiGrow.open()">Open the logistic workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -15707,7 +15711,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏗️ Biggest Build Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing. Then turn it round: see a fence and a paddock count and pick which of four widths holds the most.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fence a paddock or fold a box, and find the shape that holds the most where the slope is 0, without being fooled by a flat tangent that holds nothing. Then turn it round: see a fence and a paddock count and pick which of four widths holds the most. Or call it: see four slopes that are 0 at a point, and say whether f has a peak there, a valley or neither.</div>
          <button class="btn sm" id="tomeOptim" style="width:auto;margin-top:8px" onclick="Optim.open()">Open the biggest build workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -16931,6 +16935,196 @@ const Slope = {
   }
 };
 
+/* ---------- High or low? The area workshop's third mode ----------
+   Four curves, each cut into a few rectangles that take their heights at
+   their left edges or at their right edges, and the player calls whether
+   each sum is over the area, exactly it, or under it. Every curve here only
+   rises, only falls, or stays flat across its strip, so the call needs no
+   sums: on a rising curve a left edge is the low end of its strip and a
+   right edge the high end, on a falling curve the other way round, and on a
+   flat line every edge is the same height. Each pane draws the curve and
+   dots where each rectangle takes its height; the rectangles stay hidden.
+   Rounds hold a left sum on a falling curve, which overshoots; a flat line,
+   which the rectangles fit exactly; and a curve under the axis, where over
+   means less negative. A slip rings that pane and works the sum and the
+   area through; once all four are right, each pane draws its rectangles.
+   Nothing is saved, and there is no clock. */
+const AreaTurn = {
+  // each curve as c0 + c1·x + c2·x² + c3·x³
+  CURVES:{
+    sq:{name:'x²', c:[0,0,1,0]},
+    cap:{name:'4 − x²', c:[4,0,-1,0]},
+    lin:{name:'2x + 1', c:[1,2,0,0]},
+    dec:{name:'6 − 2x', c:[6,-2,0,0]},
+    flat:{name:'3', c:[3,0,0,0]},
+    nsq:{name:'−x²', c:[0,0,-1,0]},
+    cube:{name:'x³', c:[0,0,0,1]},
+    decq:{name:'9 − x²', c:[9,0,-1,0]},
+    nlin:{name:'x − 4', c:[-4,1,0,0]}
+  },
+  // [curve, a, b, n, edge]
+  ROUNDS:[
+    [['sq',0,2,2,'L'], ['dec',0,3,3,'L'], ['flat',0,2,2,'R'], ['nsq',0,2,2,'R']],
+    [['cap',0,2,2,'R'], ['lin',0,2,2,'R'], ['nlin',0,3,3,'L'], ['sq',-2,0,2,'L']],
+    [['flat',-1,2,3,'L'], ['cube',0,2,2,'L'], ['decq',0,3,3,'R'], ['cap',-2,0,2,'R']],
+    [['nsq',0,3,3,'L'], ['lin',1,3,2,'L'], ['sq',1,3,2,'R'], ['flat',0,4,2,'R']],
+    [['dec',1,3,2,'R'], ['cube',-2,0,2,'R'], ['cap',0,2,4,'L'], ['nlin',1,4,3,'R']],
+    [['decq',0,3,3,'L'], ['flat',1,3,2,'L'], ['sq',-3,0,3,'R'], ['cube',0,2,4,'R']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four sums right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'fall', t:'Call a left sum on a falling curve.', toast:'Left edges, high edges',
+     ok:K=>K.kinds.has('fall')},
+    {id:'flat', t:'Call a sum on a flat line.', toast:'A perfect fit',
+     ok:K=>K.kinds.has('flat')},
+    {id:'below',t:'Call a sum on a curve under the axis.', toast:'Over means less negative',
+     ok:K=>K.kinds.has('below')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Each rectangle is as tall as the curve at one edge of its strip. On a curve that only rises, the left edge is the low end of every strip, so a left sum falls under the area and a right sum goes over it. On a curve that only falls, it is the other way round. On a flat line every edge is the same height, so the sum is the area exactly. Under the axis the same holds: over means less negative.',
+  L:'ABCD',
+  WORD:{1:'over', 0:'exact', [-1]:'under'},
+  NAMES:{1:'the sum is over the area', 0:'the sum is exactly the area', [-1]:'the sum is under the area'},
+  EDGE:{L:'left', R:'right'},
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  a(i){ return this.R()[i][1]; },
+  b(i){ return this.R()[i][2]; },
+  n(i){ return this.R()[i][3]; },
+  edge(i){ return this.R()[i][4]; },
+  f(i,x){ const c=this.C(i).c; return c[0]+c[1]*x+c[2]*x*x+c[3]*x*x*x; },
+  dx(i){ return (this.b(i)-this.a(i))/this.n(i); },
+  xs(i){ const off=this.edge(i)==='L'?0:1; return Array.from({length:this.n(i)}, (_,k)=>this.a(i)+(k+off)*this.dx(i)); },
+  hs(i){ return this.xs(i).map(x=>this.f(i,x)); },
+  sum(i){ return this.dx(i)*this.hs(i).reduce((s,h)=>s+h,0); },
+  area(i){ const c=this.C(i).c, a=this.a(i), b=this.b(i); return c.reduce((s,ck,k)=>s+ck*(b**(k+1)-a**(k+1))/(k+1),0); },
+  way(i){ const fa=this.f(i,this.a(i)), fb=this.f(i,this.b(i)); return Math.sign(fb-fa); },
+  truth(i){ const d=this.sum(i)-this.area(i); return Math.abs(d)<1e-9 ? 0 : Math.sign(d); },
+  /* an exact number as a whole number or a fraction */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : `${neg(n)}/${d}`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? `(${this.q(v)})` : this.q(v); },
+  /* what a round holds: a left sum on a falling curve, a flat line, a curve under the axis */
+  falls(){ return [0,1,2,3].filter(i=>this.edge(i)==='L' && this.way(i)<0); },
+  flats(){ return [0,1,2,3].filter(i=>this.way(i)===0); },
+  belows(){ return [0,1,2,3].filter(i=>this.way(i)!==0 && Math.max(this.f(i,this.a(i)),this.f(i,this.b(i)))<=0); },
+  tags(){ const t=[]; if(this.falls().length) t.push('fall'); if(this.flats().length) t.push('flat'); if(this.belows().length) t.push('below'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fa=this.falls(), fl=this.flats(), be=this.belows();
+      if(fa.length){ const i=fa[0];
+        out.push(`In ${this.L[i]}, f falls, so each left edge is the high end of its strip and the left sum overshoots: ${this.q(this.sum(i))} against ${this.q(this.area(i))}.`); }
+      if(fl.length){ const i=fl[0];
+        out.push(`In ${this.L[i]}, f(x) = 3 is flat: every edge is the same height, so the sum is the area exactly, ${this.q(this.area(i))}.`); }
+      if(be.length){ const i=be[0], t=this.truth(i);
+        out.push(`In ${this.L[i]}, the curve is under the axis, so its area counts as ${this.q(this.area(i))}, and the sum ${this.q(this.sum(i))} is ${t>0?'more':'less'} than that: ${t>0?'over, though its rectangles look smaller':'under, though its rectangles look bigger'}.`); }
+      out.push(`Each sum, then the area: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.q(this.sum(i))} ${{1:'>',0:'=',[-1]:'<'}[this.truth(i)]} ${this.q(this.area(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const t=this.truth(i), w=this.way(i), e=this.EDGE[this.edge(i)];
+        const shape = w>0 ? `rises from x = ${neg(this.a(i))} to ${neg(this.b(i))}` : w<0 ? `falls from x = ${neg(this.a(i))} to ${neg(this.b(i))}` : `stays at 3 from x = ${neg(this.a(i))} to ${neg(this.b(i))}`;
+        const end = w===0 ? 'all the same height' : (w>0)===(this.edge(i)==='L') ? 'the low end of each strip' : 'the high end of each strip';
+        out.push(`In ${this.L[i]}, f(x) = ${this.C(i).name} ${shape}, and its ${this.n(i)} rectangles take their heights at their ${e} edges, ${end}: Δx × (${this.xs(i).map(x=>`f(${this.q(x)})`).join(' + ')}) = ${this.q(this.dx(i))} × (${this.hs(i).map(h=>this.pq(h)).join(' + ')}) = ${this.q(this.sum(i))}, ${t>0?`over the area ${this.q(this.area(i))}`:t<0?`under the area ${this.q(this.area(i))}`:'exactly the area'}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the curve in gold over its strip, the x-axis, and a blue dot
+     where each rectangle takes its height; once the round is right, the
+     rectangles in blue from the axis to those dots */
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each cut into rectangles: ${Q.map((x,i)=>`${this.L[i]}, f(x) = ${this.C(i).name} from ${neg(this.a(i))} to ${neg(this.b(i))}, ${this.n(i)} rectangles at their ${this.EDGE[this.edge(i)]} edges`).join('; ')}${this.solved?', each with its rectangles drawn':''}">`;
+    Q.forEach((x,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, a=this.a(i), b=this.b(i);
+      let lo=0, hi=0; for(let j=0;j<=40;j++){ const v=this.f(i,a+(b-a)*j/40); lo=Math.min(lo,v); hi=Math.max(hi,v); }
+      const kx=140/(b-a), ky=68/(hi-lo), px=t=>X+22+(t-a)*kx, py=v=>Y+120-(v-lo)*ky, y0=py(0);
+      out+=`<clipPath id="artClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#artClip${i})">`;
+      if(this.solved){
+        const w=this.dx(i);
+        this.xs(i).forEach((xe,k)=>{ const h=this.f(i,xe), x1=a+k*w, top=Math.min(py(h),y0);
+          out+=`<rect data-k="bar" x="${f(px(x1))}" y="${f(top)}" width="${f(w*kx)}" height="${f(Math.abs(py(h)-y0))}" fill="${FIG_COL.a}" fill-opacity="0.3" stroke="${FIG_COL.a}" stroke-width="1"/>`; });
+      }
+      out+=`<line data-k="axis" x1="${f(px(a))}" y1="${f(y0)}" x2="${f(px(b))}" y2="${f(y0)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      const pts=[]; for(let j=0;j<=48;j++){ const t=a+(b-a)*j/48; pts.push((j?'L':'M')+f(px(t))+' '+f(py(this.f(i,t)))); }
+      out+=`<path data-k="curve" d="${pts.join('')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      this.xs(i).forEach(xe=>{ out+=`<circle data-k="edge" cx="${f(px(xe))}" cy="${f(py(this.f(i,xe)))}" r="3.5" fill="${FIG_COL.a}"/>`; });
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">${this.C(i).name} on [${neg(a)}, ${neg(b)}]</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">${this.n(i)} × ${this.EDGE[this.edge(i)]} edge</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'over',0:'exact',[-1]:'under'}[t]}" x="${X+172}" y="${Y+43}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ over',0:'= exact',[-1]:'▼ under'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Area.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Area.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Area.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="AreaTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves, each cut into rectangles at their left or right edges. Is each sum over the area, exactly it, or under it?</div>`;
+    out+=`<div id="artFig">${this.svg()}<div class="figcap">Each pane draws its curve in gold and a blue dot where each rectangle takes its height. Once all four are called right, the rectangles are drawn.</div></div>`;
+    out+=`<div id="artStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="artStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.C(i).name}, ${this.n(i)} × ${this.EDGE[this.edge(i)]}</span></b>`+
+        this.btn(i,1,'▲ Over')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Under')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="artRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="artNext" onclick="AreaTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="artCheck" ${this.ready()?'':'disabled '}onclick="AreaTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four sums to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="artGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="artGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('STRIP READER','every sum called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Area = {
   CURVES:[
     {id:'sq',   name:'x²',     f:{poly:[[1,2]]},        a:0,  b:3, exact:9,    ex:'9'},
@@ -16984,11 +17178,11 @@ const Area = {
   moveN(by){ const v=this.ni+by; if(v<0||v>=this.NS.length) return; this.ni=v; this.touched=true; this.render(); },
   setRule(i){ this.ri=i; this.touched=true; this.render(); },
   render(){
-    document.getElementById('arMode').innerHTML=[['bars','🏺 Close in','Close in on the area with rectangles'],['pick','🎯 Which integral?','See a shaded curve and pick which of four numbers is its integral']]
+    document.getElementById('arMode').innerHTML=[['bars','🏺 Close in','Close in on the area with rectangles'],['pick','🎯 Which integral?','See a shaded curve and pick which of four numbers is its integral'],['turn','📊 High or low?','See four curves cut into rectangles, and call whether each sum is over the area, exact or under']]
       .map(([m,t,l])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Area.setMode('${m}')" aria-label="${l}">${t}</button>`).join('');
-    const pick=this.mode==='pick';
+    const pick=this.mode!=='bars';
     for(const id of ['arCurves','arFig','arNs','arRules','arRead','arGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('arPick').innerHTML=pick ? IntPick.html() : '';
+    document.getElementById('arPick').innerHTML=!pick ? '' : this.mode==='pick' ? IntPick.html() : AreaTurn.html();
     if(pick) return;
     const C=this.curve(), n=this.n(), w=this.dx(), xs=this.xs(), hs=this.heights(), S=this.sum(), e=this.err();
     const edge=this.RULES[this.ri][1];
@@ -21213,6 +21407,206 @@ const SeriesPick = {
     return out;
   }
 };
+/* ---------- Over or under? The Taylor workshop's third mode ----------
+   Four functions, each cut off after a few terms of its series and read at
+   one x, and the player calls whether each polynomial P is over the
+   function there, exactly on it, or under it. f(x) is P(x) plus every term
+   left out, and at these x the first term left out outweighs all the rest,
+   so its sign settles the call: above 0 and P falls short, below 0 and P
+   overshoots, and at x = 0 every power of x is 0, so P is exact. Each pane
+   draws the function and marks the x; the polynomial stays hidden. Rounds
+   hold eˣ at a negative x, where the terms take turns in sign; a P whose
+   next power is missing, so the first term left out is two powers on; and
+   x = 0. A slip rings that pane and works P, f and the first term left out
+   through; once all four are right, each pane draws its polynomial.
+   Nothing is saved, and there is no clock. */
+const TaylorTurn = {
+  FN:{exp:'eˣ', sin:'sin x', cos:'cos x'},
+  // [function, highest power kept, x]
+  ROUNDS:[
+    [['exp',2,1], ['exp',2,-1], ['sin',1,1], ['cos',1,0]],
+    [['exp',3,0], ['cos',2,1], ['sin',2,0.5], ['exp',2,-1.5]],
+    [['cos',0,1], ['exp',1,-1], ['sin',3,-1], ['exp',3,1]],
+    [['sin',0,1.5], ['exp',0,-1], ['cos',3,0], ['cos',4,1.5]],
+    [['exp',4,-2], ['sin',4,1], ['cos',1,-1.5], ['sin',1,0]],
+    [['cos',3,-1], ['exp',1,-2], ['sin',1,1.5], ['exp',5,1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'neg',  t:'Call eˣ at a negative x.', toast:'Signs that take turns',
+     ok:K=>K.kinds.has('neg')},
+    {id:'skip', t:'Call a P whose next power is missing.', toast:'Skip the missing power',
+     ok:K=>K.kinds.has('skip')},
+    {id:'zero', t:'Call a P at x = 0.', toast:'Exact at the centre',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'f(x) is P(x) plus every term left out, and here the first term left out outweighs all the rest. So P is under f when that term is above 0, over f when it is below 0, and exact at x = 0, where every power of x is 0. Mind the gaps: sin x and cos x skip every other power.',
+  L:'ABCD',
+  WORD:{1:'over', 0:'exact', [-1]:'under'},
+  NAMES:{1:'P is over f', 0:'P is exactly f', [-1]:'P is under f'},
+  R(){ return this.ROUNDS[this.ri]; },
+  id(i){ return this.R()[i][0]; },
+  n(i){ return this.R()[i][1]; },
+  x(i){ return this.R()[i][2]; },
+  fact(k){ let p=1; for(let j=2;j<=k;j++) p*=j; return p; },
+  // the coefficient of xᵏ in the series at 0
+  c(i,k){
+    const id=this.id(i), s=this.fact(k);
+    if(id==='exp') return 1/s;
+    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;
+    return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;
+  },
+  ks(i){ const out=[]; for(let k=0;k<=this.n(i);k++) if(this.c(i,k)!==0) out.push(k); return out; },
+  val(i,k,x=this.x(i)){ return this.c(i,k)*Math.pow(x,k); },
+  P(i,x=this.x(i)){ return this.ks(i).reduce((s,k)=>s+this.val(i,k,x),0); },
+  f(i,x=this.x(i)){ return Math[this.id(i)](x); },
+  // the first power the polynomial leaves out that the series has
+  next(i){ let k=this.n(i)+1; while(this.c(i,k)===0) k++; return k; },
+  truth(i){ if(this.x(i)===0) return 0; const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(d); },
+  sup(k){ return String(k).replace(/\d/g, d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  pw(k){ return k===1 ? 'x' : `x${this.sup(k)}`; },
+  term(k){ return k===0 ? '1' : k===1 ? 'x' : `x${this.sup(k)}/${k}!`; },
+  sterm(i,k){ return (this.c(i,k)<0?'−':'')+this.term(k); },
+  eq(v){ const s=this.fmt(v); return s.startsWith('≈') ? s : '= '+s; },
+  // a number to four places, with ≈ when that rounds it
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '' : '≈ ')+this.num(v); },
+  pv(v){ return v<0 ? `(${this.fmt(v)})` : this.fmt(v); },
+  ptext(i){
+    const ks=this.ks(i); if(!ks.length) return '0';
+    return ks.map((k,j)=>{ const s=this.c(i,k)<0; return (j ? (s?' − ':' + ') : (s?'−':''))+this.term(k); }).join('');
+  },
+  // the same, with the middle terms cut to … when there are more than four, to fit a pane
+  pshort(i){
+    const ks=this.ks(i); if(ks.length<=4) return this.ptext(i);
+    const k=ks[ks.length-1], s=this.c(i,k)<0;
+    return this.ptext(i).split(/ (?=[+−] )/).slice(0,2).join(' ')+` + … ${s?'−':'+'} ${this.term(k)}`;
+  },
+  negs(){ return [0,1,2,3].filter(i=>this.id(i)==='exp' && this.x(i)<0); },
+  skips(){ return [0,1,2,3].filter(i=>this.x(i)!==0 && this.c(i,this.n(i)+1)===0); },
+  zeros(){ return [0,1,2,3].filter(i=>this.x(i)===0); },
+  tags(){ const t=[]; if(this.negs().length) t.push('neg'); if(this.skips().length) t.push('skip'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ng=this.negs(), sk=this.skips(), zr=this.zeros();
+      if(ng.length){ const i=ng[0], k=this.next(i), t=this.truth(i);
+        out.push(`In ${this.L[i]}, x is negative, so the terms of eˣ take turns in sign: P stops before ${this.term(k)}, which is ${this.val(i,k)>0?'above':'below'} 0 there, so P comes out ${this.WORD[t]}.`); }
+      if(sk.length){ const i=sk[0], k=this.next(i);
+        out.push(`In ${this.L[i]}, ${this.FN[this.id(i)]} has no ${this.pw(this.n(i)+1)} term, so the first term left out of P = ${this.ptext(i)} is ${this.sterm(i,k)}, two powers on.`); }
+      if(zr.length){ const i=zr[0];
+        out.push(`In ${this.L[i]}, x = 0: every power of x is 0 there, so P is exactly ${this.FN[this.id(i)]}, ${this.num(this.f(i))}.`); }
+      out.push(`Each P, then f: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.num(this.P(i))} ${{1:'>',0:'=',[-1]:'<'}[this.truth(i)]} ${this.num(this.f(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const t=this.truth(i), fn=this.FN[this.id(i)], x=this.x(i);
+        if(x===0){
+          out.push(`In ${this.L[i]}, x = 0: every power of x is 0 there, and so is every term left out, so P and ${fn} are both ${this.num(this.f(i))}, exactly. You had it as ${this.WORD[this.calls[i]]}.`);
+          continue; }
+        const ks=this.ks(i), k=this.next(i), v=this.val(i,k);
+        const sum = ks.length ? `${ks.map(j=>this.pv(this.val(i,j))).join(' + ')} = ${this.fmt(this.P(i))}` : '0';
+        out.push(`In ${this.L[i]}, P = ${this.ptext(i)} at x = ${neg(x)} is ${sum}, and ${fn} there is ${this.fmt(this.f(i))}. The first term left out, ${this.sterm(i,k)} ${this.eq(v)}, is ${v>0?'above':'below'} 0, so P is ${this.WORD[t]} by ${this.fmt(Math.abs(this.P(i)-this.f(i)))}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the function in gold across −2 to 2, the x-axis, and a dashed
+     line at x with a dot where it meets the function; once the round is
+     right, the polynomial in blue with its own dot at x */
+  lo(i){ return this.id(i)==='exp' ? -0.6 : -1.3; },
+  hi(i){ return this.id(i)==='exp' ? 7.6 : 1.3; },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four functions, each cut off after a few terms: ${Q.map((q,i)=>`${this.L[i]}, ${this.FN[this.id(i)]} up to ${this.pw(this.n(i))}, at x = ${neg(this.x(i))}`).join('; ')}${this.solved?', each with its polynomial drawn':''}">`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, lo=this.lo(i), hi=this.hi(i);
+      const kx=150/4.4, ky=84/(hi-lo), px=t=>X+15+(t+2.2)*kx, py=v=>Y+118-(v-lo)*ky, x=this.x(i);
+      out+=`<clipPath id="tytClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#tytClip${i})">`;
+      out+=`<line data-k="axis" x1="${f(px(-2.2))}" y1="${f(py(0))}" x2="${f(px(2.2))}" y2="${f(py(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line data-k="at" x1="${f(px(x))}" y1="${Y+34}" x2="${f(px(x))}" y2="${Y+124}" stroke="${FIG_COL.dim}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      const path=g=>{ const pts=[]; for(let j=0;j<=60;j++){ const t=-2+4*j/60; pts.push((j?'L':'M')+f(px(t))+' '+f(Math.max(Y-40,Math.min(Y+170,py(g(t)))))); } return pts.join(''); };
+      out+=`<path data-k="curve" d="${path(t=>this.f(i,t))}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      if(this.solved){
+        out+=`<path data-k="poly" d="${path(t=>this.P(i,t))}" fill="none" stroke="${FIG_COL.a}" stroke-width="2" stroke-dasharray="5 3"/>`;
+        out+=`<circle data-k="pdot" cx="${f(px(x))}" cy="${f(py(this.P(i)))}" r="3.5" fill="${FIG_COL.a}"/>`;
+      }
+      out+=`<circle data-k="fdot" cx="${f(px(x))}" cy="${f(py(this.f(i)))}" r="3.5" fill="${FIG_COL.b}"/>`;
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">P = ${this.pshort(i)}</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">${this.FN[this.id(i)]} at x = ${neg(x)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'over',0:'exact',[-1]:'under'}[t]}" x="${X+172}" y="${Y+43}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ over',0:'= exact',[-1]:'▼ under'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Taylor.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Taylor.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Taylor.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="TaylorTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four functions, each cut off after a few terms of its series and read at one x. Is each P over the function there, exactly on it, or under it?</div>`;
+    out+=`<div id="tytFig">${this.svg()}<div class="figcap">Each pane draws its function in gold, with a dashed line and a dot at x. Once all four are called right, each polynomial is drawn in blue.</div></div>`;
+    out+=`<div id="tytStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="tytStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.FN[this.id(i)]} up to ${this.pw(this.n(i))}, x = ${neg(this.x(i))}</span></b>`+
+        this.btn(i,1,'▲ Over')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Under')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="tytRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tytNext" onclick="TaylorTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tytCheck" ${this.ready()?'':'disabled '}onclick="TaylorTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="tytGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tytGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CUTOFF READER','every guess called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Taylor = {
   CURVES:[
     {id:'exp', at:'eˣ', f:{fn:'exp'},
@@ -21304,11 +21698,11 @@ const Taylor = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x']]
+    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Taylor.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tyCurves','tyFig','tyStep','tyRead','tyGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('srBox').innerHTML=pick ? SeriesPick.html() : '';
+    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : TaylorTurn.html();
     if(pick) return;
     const C=this.curve(), n=this.n, x=this.x();
     document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>
@@ -32304,6 +32698,194 @@ const TanPlane = {
    it. A wrong pick is checked the way the workshop teaches: g undoes f, so
    g(f(x)) = x has slope 1, and by the chain rule g′(u) × f′(p) must be 1.
    Nothing is saved. */
+/* ---------- Steeper or gentler? The inverse slope workshop's third mode ----------
+   Four curves f, each with its inverse g read at one u, and the player calls
+   whether g's slope there is steeper than 1 in size, exactly 1, or gentler.
+   g sends u back to the x where f(x) = u, and the mirror in y = x flips the
+   slope: g′(u) = 1/f′(x). So where f is gentle, g is steep, and the other
+   way round. Each pane draws f with the point (x, u) on it and the mirror
+   line; g itself stays hidden until the round is right. Rounds hold points
+   where taking f′ at u instead of at x gives the other call, slopes of
+   exactly 1 in size, and falling curves, read by size. A slip rings that pane
+   and works x, f′(x) and the flip through. Nothing is saved, and there is no
+   clock. */
+const InvTurn = {
+  // each curve: f and its slope as text and as numbers, g as text and as numbers, and where f lives
+  F:{
+    exp:  {f:'eˣ', fp:'eˣ', g:'ln u', fn:Math.exp, d:Math.exp, inv:Math.log, lo:-9, hi:9},
+    ln:   {f:'ln x', fp:'1/x', g:'eᵘ', fn:Math.log, d:x=>1/x, inv:Math.exp, lo:1e-9, hi:60},
+    cube: {f:'x³', fp:'3x²', g:'∛u', fn:x=>x**3, d:x=>3*x*x, inv:Math.cbrt, lo:-9, hi:9},
+    sqrt: {f:'√x', fp:'1/(2√x)', g:'u²', fn:Math.sqrt, d:x=>1/(2*Math.sqrt(x)), inv:u=>u*u, lo:0, hi:60},
+    recip:{f:'1/x', fp:'−1/x²', g:'1/u', fn:x=>1/x, d:x=>-1/(x*x), inv:u=>1/u, lo:1e-9, hi:60},
+    sin:  {f:'sin x', fp:'cos x', g:'arcsin u', fn:Math.sin, d:Math.cos, inv:Math.asin, lo:-Math.PI/2, hi:Math.PI/2},
+    tan:  {f:'tan x', fp:'1/cos²x', g:'arctan u', fn:Math.tan, d:x=>1/Math.cos(x)**2, inv:Math.atan, lo:-Math.PI/2+1e-9, hi:Math.PI/2-1e-9},
+    cos:  {f:'cos x', fp:'−sin x', g:'arccos u', fn:Math.cos, d:x=>-Math.sin(x), inv:Math.acos, lo:0, hi:Math.PI},
+    expn: {f:'e⁻ˣ', fp:'−e⁻ˣ', g:'−ln u', fn:x=>Math.exp(-x), d:x=>-Math.exp(-x), inv:u=>-Math.log(u), lo:-9, hi:9},
+    line: {f:'2x + 1', fp:'2', g:'(u − 1)/2', fn:x=>2*x+1, d:()=>2, inv:u=>(u-1)/2, lo:-60, hi:60}
+  },
+  // [curve, x, x as written, u = f(x) as written]
+  ROUNDS:[
+    [['exp',-1,'−1','1/e'], ['sqrt',0.25,'1/4','1/2'], ['cube',2,'2','8'], ['recip',2,'2','1/2']],
+    [['tan',Math.PI/4,'π/4','1'], ['cos',Math.PI/2,'π/2','0'], ['ln',2,'2','ln 2'], ['sin',Math.PI/6,'π/6','1/2']],
+    [['expn',-Math.LN2,'−ln 2','2'], ['sqrt',1/16,'1/16','1/4'], ['sin',0,'0','0'], ['cube',0.5,'1/2','1/8']],
+    [['cube',0.8,'0.8','0.512'], ['cos',Math.PI/3,'π/3','1/2'], ['exp',0,'0','1'], ['line',1,'1','3']],
+    [['recip',1,'1','1'], ['exp',Math.LN2,'ln 2','2'], ['sqrt',4,'4','2'], ['recip',0.5,'1/2','2']],
+    [['tan',0,'0','0'], ['expn',Math.LN2,'ln 2','1/2'], ['ln',0.5,'1/2','−ln 2'], ['cos',Math.PI/6,'π/6','√3/2']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'atx',  t:'Call a slope where taking f′ at u would give the other call.', toast:'f′ belongs at x',
+     ok:K=>K.kinds.has('atx')},
+    {id:'exact',t:'Call a slope of exactly 1 in size.', toast:'Exactly 1, both ways',
+     ok:K=>K.kinds.has('exact')},
+    {id:'fall', t:'Call the slope of a falling inverse.', toast:'Falling, read by size',
+     ok:K=>K.kinds.has('fall')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'g is the inverse of f, so at u it goes back to the x where f(x) = u. The mirror in y = x swaps rise and run, so g′(u) = 1/f′(x), with f′ taken at that x, not at u. Where f is gentler than slope 1, g is steeper, and the other way round. Read the slope by its size, whatever its sign.',
+  L:'ABCD',
+  WORD:{1:'steeper than 1', 0:'exactly 1 in size', [-1]:'gentler than 1'},
+  NAMES:{1:'g is steeper than slope 1 there', 0:'g’s slope is exactly 1 in size there', [-1]:'g is gentler than slope 1 there'},
+  R(){ return this.ROUNDS[this.ri]; },
+  S(i){ return this.F[this.R()[i][0]]; },
+  x(i){ return this.R()[i][1]; },
+  xs(i){ return this.R()[i][2]; },
+  us(i){ return this.R()[i][3]; },
+  u(i){ return this.S(i).fn(this.x(i)); },
+  fp(i){ return this.S(i).d(this.x(i)); },
+  gp(i){ return 1/this.fp(i); },
+  // 1 steeper than 1, 0 exactly 1, −1 gentler, from the size of g′(u)
+  size(v){ const a=Math.abs(v); return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },
+  truth(i){ return this.size(this.gp(i)); },
+  // the slip: f′ taken at u, flipped; null where f has no slope at u
+  atU(i){ const S=this.S(i), u=this.u(i); if(u<S.lo || u>S.hi) return null; const v=S.d(u); return !isFinite(v) ? null : Math.abs(v)<1e-12 ? 0 : v; },
+  wrongAtU(i){ const v=this.atU(i); return v===null ? null : v===0 ? 1 : this.size(1/v); },
+  atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },
+  exacts(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  falls(){ return [0,1,2,3].filter(i=>this.fp(i)<0); },
+  tags(){ const t=[]; if(this.atxs().length) t.push('atx'); if(this.exacts().length) t.push('exact'); if(this.falls().length) t.push('fall'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '= ' : '≈ ')+this.num(v); },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ax=this.atxs(), ex=this.exacts(), fl=this.falls();
+      if(ax.length){ const i=ax[0], v=this.atU(i);
+        out.push(`In ${this.L[i]}, f′ belongs at x = ${this.xs(i)}, not at u = ${this.us(i)}: f′(${this.us(i)}) ${this.fmt(v)}, and ${v===0 ? 'flipping 0 stands g straight up' : `flipped that is ${this.fmt(1/v).replace(/^= /,'')}`}, which would call it ${this.WORD[this.wrongAtU(i)]}.`); }
+      if(ex.length){ const i=ex[0];
+        out.push(`In ${this.L[i]}, f′(${this.xs(i)}) ${this.fmt(this.fp(i))}, size 1, so flipping leaves the size alone: g′(${this.us(i)}) ${this.fmt(this.gp(i))}, as steep as the mirror line.`); }
+      if(fl.length){ const i=fl[0];
+        out.push(`In ${this.L[i]}, f falls, so its mirror g falls too: g′(${this.us(i)}) ${this.fmt(this.gp(i))} is below 0, and its size, ${this.num(Math.abs(this.gp(i)))}, is what is called.`); }
+      out.push(`Each g′(u): ${[0,1,2,3].map(i=>`${this.L[i]} ${this.fmt(this.gp(i)).replace(/^= /,'')}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const S=this.S(i), fp=this.fp(i);
+        out.push(`In ${this.L[i]}, g = ${S.g} undoes f(x) = ${S.f}, so at u = ${this.us(i)} it goes back to x = ${this.xs(i)}. f′(x) = ${S.fp}, so f′(${this.xs(i)}) ${this.fmt(fp)}, and g′(${this.us(i)}) = 1/f′(${this.xs(i)}) ${this.fmt(1/fp)}: ${this.WORD[this.truth(i)]}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: a square window centred between (x, u) and (u, x), so the
+     dashed mirror line runs corner to corner; f in blue with a dot at (x, u)
+     and a dotted line in from height u; once the round is right, g in gold
+     with its dot at (u, x) */
+  win(i){ const x=this.x(i), u=this.u(i); return {c:(x+u)/2, w:Math.max(1.3, Math.abs(x-u)/2+0.9)}; },
+  SZ:88,
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2), SZ=this.SZ;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with its inverse g read at one u: ${Q.map((q,i)=>`${this.L[i]}, f(x) = ${this.S(i).f}, g at u = ${this.us(i)}`).join('; ')}${this.solved?', each with g drawn':''}">`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, S=this.S(i), x=this.x(i), u=this.u(i), {c,w}=this.win(i);
+      const X0=X+46, Y0=Y+36, px=v=>X0+(v-(c-w))/(2*w)*SZ, py=v=>Y0+SZ-(v-(c-w))/(2*w)*SZ;
+      out+=`<clipPath id="ivtClip${i}"><rect x="${X0}" y="${Y0}" width="${SZ}" height="${SZ}"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<rect data-k="frame" x="${X0}" y="${Y0}" width="${SZ}" height="${SZ}" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#ivtClip${i})">`;
+      out+=`<line data-k="mirror" x1="${X0}" y1="${Y0+SZ}" x2="${X0+SZ}" y2="${Y0}" stroke="${FIG_COL.dim}" stroke-width="1" stroke-dasharray="4 4"/>`;
+      // f sampled across the window's x, and g across the window's u through g itself, each kept where it is the inverse of the other, broken where it leaves the window far behind
+      const path=swap=>{ const pts=[], h=swap ? S.inv : S.fn, lo=swap ? c-w-0.5 : Math.max(S.lo,c-w-0.5), hi=swap ? c+w+0.5 : Math.min(S.hi,c+w+0.5); let pen=false;
+        for(let j=0;j<=240;j++){ const t=lo+(hi-lo)*j/240, v=h(t), a=swap ? v : t;
+          if(!isFinite(v) || Math.abs(v-c)>4*w || (swap && (a<S.lo || a>S.hi || Math.abs(S.fn(a)-t)>1e-9*Math.max(1,Math.abs(t))))){ pen=false; continue; }
+          pts.push((pen?'L':'M')+f(px(t))+' '+f(py(v))); pen=true; }
+        return pts.join(''); };
+      out+=`<path data-k="f" d="${path(false)}" fill="none" stroke="${FIG_COL.a}" stroke-width="2"/>`;
+      out+=`<line data-k="ulevel" x1="${X0}" y1="${f(py(u))}" x2="${f(px(x))}" y2="${f(py(u))}" stroke="${FIG_COL.a}" stroke-width="1" stroke-dasharray="2 3"/>`;
+      if(this.solved) out+=`<path data-k="g" d="${path(true)}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      out+=`<circle data-k="fdot" cx="${f(px(x))}" cy="${f(py(u))}" r="3.5" fill="${FIG_COL.a}"/>`;
+      if(this.solved) out+=`<circle data-k="gdot" cx="${f(px(u))}" cy="${f(py(x))}" r="3.5" fill="${FIG_COL.b}"/>`;
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = ${S.f}</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">g at u = ${this.us(i)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'steep',0:'exact',[-1]:'gentle'}[t]}" x="${X+172}" y="${Y+122}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ steeper',0:'● 1',[-1]:'▼ gentler'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    InvSlope.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    InvSlope.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; InvSlope.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="InvTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves f, each with its inverse g read at one u. By size, is g’s slope there steeper than 1, exactly 1, or gentler?</div>`;
+    out+=`<div id="ivtFig">${this.svg()}<div class="figcap">Each pane draws f in blue with its point (x, u) and the dashed mirror line y = x. Once all four are called right, each mirror g is drawn in gold.</div></div>`;
+    out+=`<div id="ivtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="ivtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">g = ${this.S(i).g}, u = ${this.us(i)}</span></b>`+
+        this.btn(i,1,'▲ Steeper')+this.btn(i,0,'● Exactly 1')+this.btn(i,-1,'▼ Gentler')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="ivtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ivtNext" onclick="InvTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ivtCheck" ${this.ready()?'':'disabled '}onclick="InvTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="ivtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ivtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE MIRROR','every inverse slope called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const InvPick = {
   SLIPS:['noFlip','atU','noD','noThree','noB'],
   P:[-2,-1,1,2],
@@ -32566,11 +33148,11 @@ const InvSlope = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('ivTab').innerHTML=[['hand','🪩 Mirror it by hand','Step along a curve and its mirror by hand'],['pick','🎯 Which slope?','See a rising curve and a point, and pick which of four numbers is the slope of its inverse there']]
+    document.getElementById('ivTab').innerHTML=[['hand','🪩 Mirror it by hand','Step along a curve and its mirror by hand'],['pick','🎯 Which slope?','See a rising curve and a point, and pick which of four numbers is the slope of its inverse there'],['turn','📐 Steeper or gentler?','See four curves and a point on each inverse, and call whether the inverse is steeper than slope 1 there, exactly 1 or gentler']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="InvSlope.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['ivSets','ivFig','ivStep','ivModes','ivRead','ivGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('vpBox').innerHTML=pick ? InvPick.html() : '';
+    document.getElementById('vpBox').innerHTML=!pick ? '' : this.tab==='pick' ? InvPick.html() : InvTurn.html();
     if(pick) return;
     document.getElementById('ivSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="InvSlope.pick(${i})" aria-label="g(u) = ${s.g} u, the mirror of ${s.f} x">${s.btn}</button>`).join('');
@@ -34401,6 +34983,172 @@ const Trap = {
    and draws the tangent at the point, as steep as the rate. Small, P grows
    almost like e^(0.5t); past 500 the room left shrinks faster than P grows, so
    the rate falls; and from either side P settles on 1000. Nothing is saved. */
+/* ---------- Growing or shrinking? The logistic workshop's third mode ----------
+   Four populations, each with its own growth rate r, ceiling K and size P,
+   and the player calls whether each one grows, holds or shrinks right now.
+   The rate is dP/dt = rP(1 − P/K), so its sign is the call: P grows below
+   its ceiling, holds at the ceiling or at 0, and shrinks above it. Each pane
+   gives r, K and P as numbers only, since a drawing to K's scale would give
+   the answer away. Rounds hold a population above its own ceiling, though
+   it may be smaller than a growing one beside it; one sitting exactly on
+   its ceiling; and one at 0, with nothing to breed from. A slip rings that
+   pane and works rP(1 − P/K) through; once all four are right, each pane
+   draws dP/dt against P, crossing 0 at 0 and K, with P marked on it.
+   Nothing is saved, and there is no clock. */
+const LogiTurn = {
+  // [r, K, P]
+  ROUNDS:[
+    [[0.5,1000,600], [0.2,800,900], [1,500,500], [0.3,1200,0]],
+    [[0.4,600,900], [0.5,2000,1500], [0.1,300,300], [2,100,40]],
+    [[0.5,400,0], [0.25,1600,1200], [1,900,1000], [0.5,700,700]],
+    [[0.3,1000,1500], [0.2,500,100], [0.8,250,250], [0.5,1200,1300]],
+    [[1,800,200], [0.5,300,0], [0.4,1000,1250], [0.6,1500,1500]],
+    [[0.2,900,1200], [0.5,2400,1800], [0.25,400,0], [1,600,600]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four populations right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'over', t:'Call a population above its own ceiling.', toast:'Over the ceiling, down it comes',
+     ok:K=>K.kinds.has('over')},
+    {id:'cap',  t:'Call a population sitting exactly on its ceiling.', toast:'No room left',
+     ok:K=>K.kinds.has('cap')},
+    {id:'zero', t:'Call a population of 0.', toast:'Nothing to breed from',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'A population with a ceiling changes at dP/dt = rP(1 − P/K). The sign is the call: below its ceiling, 1 − P/K is above 0 and P grows; at its ceiling there is no room left, so P holds; above it, 1 − P/K is below 0 and P shrinks. At P = 0 there is no one to breed, so P holds there too. Each population answers to its own K, not to its neighbours\'.',
+  L:'ABCD',
+  WORD:{1:'growing', 0:'holding', [-1]:'shrinking'},
+  NAMES:{1:'P grows', 0:'P holds', [-1]:'P shrinks'},
+  R(){ return this.ROUNDS[this.ri]; },
+  r(i){ return this.R()[i][0]; },
+  K(i){ return this.R()[i][1]; },
+  P(i){ return this.R()[i][2]; },
+  room(i){ return 1-this.P(i)/this.K(i); },
+  rate(i,P=this.P(i)){ return this.r(i)*P*(1-P/this.K(i)); },
+  truth(i){ return Math.sign(this.P(i)*(this.K(i)-this.P(i))); },
+  /* an exact number as a whole number or a fraction */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : `${neg(n)}/${d}`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? `(${this.q(v)})` : this.q(v); },
+  num(v){ const r=Math.round(v*100)/100; return neg(Object.is(r,-0)?0:r); },
+  /* what a round holds: one above its ceiling, one on it, one at 0 */
+  overs(){ return [0,1,2,3].filter(i=>this.P(i)>this.K(i)); },
+  caps(){ return [0,1,2,3].filter(i=>this.P(i)===this.K(i)); },
+  zeros(){ return [0,1,2,3].filter(i=>this.P(i)===0); },
+  tags(){ const t=[]; if(this.overs().length) t.push('over'); if(this.caps().length) t.push('cap'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  sum(i){ const r=this.r(i), P=this.P(i), K=this.K(i);
+    return `dP/dt = rP(1 − P/K) = ${r} × ${P} × (1 − ${P}/${K}) = ${r} × ${P} × ${this.pq(this.room(i))} = ${this.num(this.rate(i))}`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ov=this.overs(), ca=this.caps(), ze=this.zeros();
+      if(ov.length){ const i=ov[0];
+        out.push(`In ${this.L[i]}, P = ${this.P(i)} is above its own ceiling K = ${this.K(i)}, so 1 − P/K = ${this.q(this.room(i))} is below 0 and P shrinks back toward K.`); }
+      if(ca.length){ const i=ca[0];
+        out.push(`In ${this.L[i]}, P = K = ${this.K(i)}: there is no room left, 1 − P/K = 0, so P holds at its ceiling.`); }
+      if(ze.length){ const i=ze[0];
+        out.push(`In ${this.L[i]}, P = 0: with no one to breed, rP = 0, so P holds at 0 however much room there is.`); }
+      out.push(`Each dP/dt: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.num(this.rate(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const t=this.truth(i);
+        out.push(`In ${this.L[i]}, r = ${this.r(i)}, K = ${this.K(i)} and P = ${this.P(i)}: ${this.sum(i)}, ${t>0?'above 0, so P grows':t<0?'below 0, so P shrinks':'exactly 0, so P holds'}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: r, K and P written out; once the round is right, dP/dt
+     against P from 0 to 1.6K in gold, crossing 0 at 0 and at K, with K
+     ticked and P dotted on the curve */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four populations: ${P.map((x,i)=>`${this.L[i]}, r = ${this.r(i)}, K = ${this.K(i)}, P = ${this.P(i)}`).join('; ')}${this.solved?', each with dP/dt drawn against P':''}">`;
+    P.forEach((x,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, ax=X+15, ay=Y+78, K=this.K(i), kx=150/(1.6*K), ky=60/(this.r(i)*K);
+      const px=p=>ax+p*kx, py=v=>ay-v*ky;
+      out+=`<clipPath id="lgtClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#lgtClip${i})">`;
+      if(this.solved){
+        out+=`<line data-k="axis" x1="${ax}" y1="${ay}" x2="${X+168}" y2="${ay}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+        const pts=[]; for(let j=0;j<=60;j++){ const p=1.6*K*j/60; pts.push((j?'L':'M')+f(px(p))+' '+f(py(this.rate(i,p)))); }
+        out+=`<path data-k="rate" d="${pts.join('')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+        out+=`<line data-k="K" x1="${f(px(K))}" y1="${ay-5}" x2="${f(px(K))}" y2="${ay+5}" stroke="${FIG_COL.ink}" stroke-width="1.5"/><text x="${f(px(K))}" y="${ay+16}" fill="${FIG_COL.ink}" font-size="10" text-anchor="middle">K</text>`;
+        out+=`<circle data-k="dot" cx="${f(px(this.P(i)))}" cy="${f(py(this.rate(i)))}" r="4" fill="${FIG_COL.a}"/>`;
+      }
+      out+=`</g>`;
+      out+=`<text data-k="P" x="${X+90}" y="${Y+46}" fill="${FIG_COL.ink}" font-size="16" font-weight="700" text-anchor="middle">P = ${this.P(i)}</text>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+18}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">r = ${this.r(i)}, K = ${K}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'grow',0:'hold',[-1]:'shrink'}[t]}" x="${X+172}" y="${Y+30}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ grows',0:'= holds',[-1]:'▼ shrinks'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    LogiGrow.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    LogiGrow.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; LogiGrow.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="LogiTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const P=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four populations, each with its own r, ceiling K and size P. Is each one growing, holding or shrinking right now?</div>`;
+    out+=`<div id="lgtFig">${this.svg()}<div class="figcap">Each pane gives r, K and P. Once all four are called right, each draws dP/dt against P in gold, crossing 0 at 0 and at K, with P dotted in blue.</div></div>`;
+    out+=`<div id="lgtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+P.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="lgtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">r = ${this.r(i)}, K = ${this.K(i)}, P = ${this.P(i)}</span></b>`+
+        this.btn(i,1,'▲ Grows')+this.btn(i,0,'= Holds')+this.btn(i,-1,'▼ Shrinks')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="lgtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgtNext" onclick="LogiTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="lgtCheck" ${this.ready()?'':'disabled '}onclick="LogiTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four populations to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="lgtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="lgtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CEILING READER','every population called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const LogiGrow = {
   r:0.5, K:1000, TMAX:20,
   SETS:[
@@ -34489,11 +35237,11 @@ const LogiGrow = {
   tab:'hand', // step by hand, or which rate
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('lgwTab').innerHTML=[['hand','🐇 Step by hand','Step a population through time by hand'],['pick','🎯 Which rate?','See r, K and P, and pick which of four numbers is dP/dt']]
+    document.getElementById('lgwTab').innerHTML=[['hand','🐇 Step by hand','Step a population through time by hand'],['pick','🎯 Which rate?','See r, K and P, and pick which of four numbers is dP/dt'],['turn','📈 Growing or shrinking?','See four populations, and call whether each is growing, holding or shrinking']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="LogiGrow.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['lgwSets','lgwFig','lgwMoveRow','lgwRead','lgwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('lgqBox').innerHTML=pick ? LogiPick.html() : '';
+    document.getElementById('lgqBox').innerHTML=!pick ? '' : this.tab==='pick' ? LogiPick.html() : LogiTurn.html();
     if(pick) return;
     document.getElementById('lgwSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="LogiGrow.pick(${i})" aria-label="Grow a population ${s.name}">${s.btn}</button>`).join('');
@@ -36579,6 +37327,183 @@ const BuildPick = {
    of that, and find where the slope is 0. The steps are half a unit so every
    number is exact; one setting shows a flat tangent that marks the least, so
    the player learns to check which way the curve goes on either side. */
+/* ---------- Peak or valley? The biggest build workshop's third mode ----------
+   Four slopes f′, each 0 at one x = c, and the player calls whether f has a
+   peak there, a valley, or neither. f′ is given as factors, so its sign just
+   either side of c can be read off them: + then − is a peak, − then + is a
+   valley, and the same sign both sides is neither, a flat step on the way up
+   or down. Each pane draws f′ with c marked; f itself stays hidden. Rounds
+   hold a factor squared, which touches 0 without crossing; a factor cubed,
+   where f″(c) is 0 too and the second derivative test says nothing, yet f
+   still turns; and a − out front, which turns every sign round. A slip rings
+   that pane and works f′ half a step either side through; once all four are
+   right, each pane draws f. Nothing is saved, and there is no clock. */
+const OptTurn = {
+  // [the number out front, [[root, power], …], c]: f′(x) = a(x − r₁)^m₁(x − r₂)^m₂…
+  ROUNDS:[
+    [[3,[[-1,1],[1,1]],1], [1,[[0,2]],0], [-2,[[0,1],[2,1]],2], [1,[[1,3]],1]],
+    [[1,[[-2,1],[1,1]],-2], [-1,[[1,2],[3,1]],1], [1,[[0,1],[2,2]],0], [-1,[[-1,3]],-1]],
+    [[2,[[0,1],[3,1]],3], [1,[[-1,1],[1,1]],-1], [1,[[0,1],[2,2]],2], [-3,[[1,1]],1]],
+    [[1,[[0,3],[2,1]],0], [-1,[[-2,1],[0,1]],-2], [1,[[-1,2],[1,1]],-1], [1,[[1,1],[3,1]],3]],
+    [[-1,[[0,2]],0], [1,[[-1,1],[0,1],[1,1]],0], [2,[[1,3],[3,1]],1], [1,[[-1,1],[0,1],[1,1]],1]],
+    [[-1,[[-1,1],[2,1]],2], [1,[[0,1],[1,2]],0], [1,[[-1,3],[1,1]],1], [1,[[-2,1],[0,2]],0]]
+  ],
+  H:0.5,
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flat', t:'Call a slope that touches 0 without crossing.', toast:'A flat step, no turn',
+     ok:K=>K.kinds.has('flat')},
+    {id:'deep', t:'Call a turn where f″ is 0 too.', toast:'f″ is 0, yet it turns',
+     ok:K=>K.kinds.has('deep')},
+    {id:'neg',  t:'Call a slope with a − out front.', toast:'A minus turns every sign',
+     ok:K=>K.kinds.has('neg')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'At x = c the slope f′ is 0. Read the sign of f′ just either side: + then − and f rises then falls, a peak; − then + and f falls then rises, a valley; the same sign both sides and f keeps going through a flat step, neither. A factor (x − c) to an odd power changes sign at c, and to an even power does not.',
+  L:'ABCD',
+  WORD:{1:'a peak', 0:'neither', [-1]:'a valley'},
+  NAMES:{1:'f has a peak there', 0:'f has neither there', [-1]:'f has a valley there'},
+  R(){ return this.ROUNDS[this.ri]; },
+  a(i){ return this.R()[i][0]; },
+  fs(i){ return this.R()[i][1]; },
+  c(i){ return this.R()[i][2]; },
+  m(i){ return this.fs(i).find(([r])=>r===this.c(i))[1]; },
+  d(i,x){ return this.fs(i).reduce((p,[r,m])=>p*Math.pow(x-r,m),this.a(i)); },
+  // the sign f′ keeps just right of c, from the other factors and the number out front
+  side(i){ return Math.sign(this.fs(i).reduce((p,[r,m])=>r===this.c(i) ? p : p*Math.pow(this.c(i)-r,m),this.a(i))); },
+  // 1 a peak, −1 a valley, 0 neither
+  truth(i){ const s=this.side(i); return this.m(i)%2 ? -s : 0; },
+  // f, from f′ multiplied out and summed term by term, with f(c) = 0
+  coef(i){ let p=[this.a(i)]; for(const [r,m] of this.fs(i)) for(let j=0;j<m;j++){ const q=Array(p.length+1).fill(0); p.forEach((v,k)=>{ q[k+1]+=v; q[k]-=r*v; }); p=q; } return p; },
+  F(i,x){ const p=this.coef(i), g=t=>p.reduce((s,v,k)=>s+v*Math.pow(t,k+1)/(k+1),0); return g(x)-g(this.c(i)); },
+  sup(k){ return k===1 ? '' : String(k).replace(/\d/g, d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  fac(r,m){ return (r===0 ? 'x' : `(x ${r<0?'+':'−'} ${Math.abs(r)})`)+this.sup(m); },
+  ftext(i,drop){ const a=drop?Math.abs(this.a(i)):this.a(i); return (a===1?'':a===-1?'−':neg(a))+this.fs(i).map(([r,m])=>this.fac(r,m)).join(''); },
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '' : '≈ ')+this.num(v); },
+  // f′ at x worked factor by factor
+  work(i,x){
+    const a=this.a(i), parts=a===1 ? [] : [neg(a)];
+    for(const [r,m] of this.fs(i)){ const v=x-r, b=v<0 ? `(${neg(v)})` : neg(v); parts.push(b+this.sup(m)); }
+    return `${parts.join(' × ')} ${this.fmt(this.d(i,x)).startsWith('≈') ? '' : '= '}${this.fmt(this.d(i,x))}`;
+  },
+  negs(){ return [0,1,2,3].filter(i=>this.a(i)<0 && this.m(i)%2===1); },
+  flats(){ return [0,1,2,3].filter(i=>this.m(i)%2===0); },
+  deeps(){ return [0,1,2,3].filter(i=>this.m(i)%2===1 && this.m(i)>1); },
+  tags(){ const t=[]; if(this.flats().length) t.push('flat'); if(this.deeps().length) t.push('deep'); if(this.negs().length) t.push('neg'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  sg(v){ return v>0 ? '+' : '−'; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fl=this.flats(), dp=this.deeps(), ng=this.negs();
+      if(fl.length){ const i=fl[0], c=this.c(i), s=this.side(i);
+        out.push(`In ${this.L[i]}, f′ has ${this.fac(c,this.m(i))} in it, so it touches 0 at x = ${neg(c)} without crossing: f keeps ${s>0?'rising':'falling'} through a flat step, neither a peak nor a valley.`); }
+      if(dp.length){ const i=dp[0], c=this.c(i), t=this.truth(i);
+        out.push(`In ${this.L[i]}, ${this.fac(c,this.m(i))} makes f″(${neg(c)}) = 0 too, so the second derivative test says nothing, yet f′ still goes from ${t>0?'+ to −':'− to +'}: ${this.WORD[t]}.`); }
+      if(ng.length){ const i=ng[0], t=this.truth(i);
+        out.push(`In ${this.L[i]}, the − out front turns every sign of f′ round, so this is ${this.WORD[t]} where ${this.ftext(i,true)} alone would give ${this.WORD[-t]}.`); }
+      out.push(`Signs of f′ either side: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.sg(this.d(i,this.c(i)-this.H))} then ${this.sg(this.d(i,this.c(i)+this.H))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const c=this.c(i), lo=c-this.H, hi=c+this.H, dl=this.d(i,lo), dr=this.d(i,hi), t=this.truth(i);
+        const how = t>0 ? 'f rises then falls: a peak' : t<0 ? 'f falls then rises: a valley' : `f keeps ${dl>0?'rising':'falling'} through a flat step: neither`;
+        out.push(`In ${this.L[i]}, f′(x) = ${this.ftext(i)} is 0 at x = ${neg(c)}. Just left, f′(${neg(lo)}) = ${this.work(i,lo)}, ${dl>0?'above':'below'} 0; just right, f′(${neg(hi)}) = ${this.work(i,hi)}, ${dr>0?'above':'below'} 0. So ${how}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: f′ in gold from c − 2 to c + 2, scaled to fit near c, the
+     x-axis, and a dashed line at c with a dot where f′ is 0; once the round
+     is right, f in blue to its own scale */
+  peak(i,g){ let M=0; for(let j=0;j<=48;j++){ const t=this.c(i)-1.2+2.4*j/48; M=Math.max(M,Math.abs(g(t))); } return M; },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four slopes, each 0 at one x: ${Q.map((q,i)=>`${this.L[i]}, f′(x) = ${this.ftext(i)}, at x = ${neg(this.c(i))}`).join('; ')}${this.solved?', each with f drawn':''}">`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, c=this.c(i);
+      const kx=150/4.4, px=t=>X+15+(t-c+2.2)*kx, y0=Y+80, kd=40/this.peak(i,t=>this.d(i,t)), kf=40/this.peak(i,t=>this.F(i,t));
+      out+=`<clipPath id="optClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#optClip${i})">`;
+      out+=`<line data-k="axis" x1="${f(px(c-2.2))}" y1="${f(y0)}" x2="${f(px(c+2.2))}" y2="${f(y0)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line data-k="at" x1="${f(px(c))}" y1="${Y+34}" x2="${f(px(c))}" y2="${Y+124}" stroke="${FIG_COL.dim}" stroke-width="1" stroke-dasharray="3 3"/>`;
+      const path=(g,k)=>{ const pts=[]; for(let j=0;j<=60;j++){ const t=c-2+4*j/60; pts.push((j?'L':'M')+f(px(t))+' '+f(Math.max(Y-40,Math.min(Y+170,y0-g(t)*k)))); } return pts.join(''); };
+      out+=`<path data-k="slope" d="${path(t=>this.d(i,t),kd)}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      if(this.solved) out+=`<path data-k="f" d="${path(t=>this.F(i,t),kf)}" fill="none" stroke="${FIG_COL.a}" stroke-width="2" stroke-dasharray="5 3"/>`;
+      out+=`<circle data-k="zero" cx="${f(px(c))}" cy="${f(y0)}" r="3.5" fill="${FIG_COL.b}"/>`;
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">f′(x) = ${this.ftext(i)}</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">at x = ${neg(c)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'peak',0:'neither',[-1]:'valley'}[t]}" x="${X+172}" y="${Y+43}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'∩ peak',0:'→ neither',[-1]:'∪ valley'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Optim.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Optim.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Optim.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="OptTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four slopes f′, each 0 at one x. Does f have a peak there, a valley, or neither?</div>`;
+    out+=`<div id="optFig">${this.svg()}<div class="figcap">Each pane draws the slope f′ in gold, with a dashed line and a dot where it is 0. Once all four are called right, each f is drawn in blue.</div></div>`;
+    out+=`<div id="optStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="optStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">f′ = ${this.ftext(i)}, x = ${neg(this.c(i))}</span></b>`+
+        this.btn(i,1,'∩ Peak')+this.btn(i,0,'→ Neither')+this.btn(i,-1,'∪ Valley')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="optRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="optNext" onclick="OptTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="optCheck" ${this.ready()?'':'disabled '}onclick="OptTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="optGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="optGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SUMMIT READER','every flat spot called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Optim = {
   SETS:[
     {id:'wall', btn:'Wall paddock', lo:2, hi:38, start:8, unit:'m', uw:'metre', sq:'m²', what:'area', V:'A', best:20,
@@ -36642,11 +37567,11 @@ const Optim = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('opTab').innerHTML=[['hand','🏗️ Step it by hand','Step x by hand and watch what the build holds'],['pick','🎯 Which width holds most?','See a fence and a paddock count and pick which of four widths holds the most']]
+    document.getElementById('opTab').innerHTML=[['hand','🏗️ Step it by hand','Step x by hand and watch what the build holds'],['pick','🎯 Which width holds most?','See a fence and a paddock count and pick which of four widths holds the most'],['turn','⛰️ Peak or valley?','See four slopes that are 0 at a point, and call whether each f has a peak there, a valley or neither']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Optim.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['opSets','opFig','opStep','opRead','opGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('bbBox').innerHTML=pick ? BuildPick.html() : '';
+    document.getElementById('bbBox').innerHTML=!pick ? '' : this.tab==='pick' ? BuildPick.html() : OptTurn.html();
     if(pick) return;
     const S=this.set(), x=this.x(), d=this.d();
     document.getElementById('opSets').innerHTML=this.SETS.map((s,i)=>

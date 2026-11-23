@@ -108,6 +108,7 @@ const SUITES = [
   require('./play/arcpick'),  // see a curve, pick which of four integrals is its length
   require('./play/logistic'),  // step a population toward its ceiling and watch the rate rise and fall
   require('./play/logipick'),  // see r, K and P, pick which of four numbers is dP/dt
+  require('./play/logiturn'),  // see four populations, call each growing, holding or shrinking
   require('./play/trapezoid'), // cut an area into strips and watch the trapezoids' gap quarter
   require('./play/trappick'),  // see a curve and its heights, pick which number is the trapezoid estimate
   require('./play/trapturn'),  // see four curves cut into strips, call each estimate over, exact or under
@@ -119,6 +120,7 @@ const SUITES = [
   require('./play/eigspot'), // see four arrows, spot the one a matrix keeps on its line
   require('./play/eigturn'), // see four matrices with an arrow each, call each arrow kept, turned or knocked off
   require('./play/intpick'), // see a shaded curve, pick which of four numbers is its integral
+  require('./play/areaturn'), // see four curves cut into rectangles, call each sum over, exact or under
   require('./play/chainpick'), // see y = f(g(x)), pick which of four formulas is its slope
   require('./play/chaincurve'), // step t along a curve and read dy/dx as dy/dt over dx/dt
   require('./play/productpick'), // see y = f(x) · g(x), pick which of four formulas is its slope
@@ -164,6 +166,7 @@ const SUITES = [
   require('./play/tailsort'), // see four endless areas, and call which close in and which run off
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
+  require('./play/taylorturn'), // see four functions cut off after a few terms, call each P over, exact or under
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
   require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
   require('./play/hillfence'), // walk a fence across a hill to its lowest point, where ∇f lines up with ∇g
@@ -174,11 +177,13 @@ const SUITES = [
   require('./play/cisternpick'), // see a spring's flow, pick which of four numbers is the total after so many hours
   require('./play/cisternsketch'), // see a spring's flow, set the total at the end of each hour and draw F
   require('./play/invpick'), // see a rising curve and a point, pick which of four numbers is the slope of its inverse there
+  require('./play/invturn'), // see four curves and a point on each inverse, call it steeper than 1, exactly 1 or gentler
   require('./play/hzpick'), // see a fraction with the same power on top and underneath, pick which of four numbers it heads for
   require('./play/hzrace'), // see four functions, rank them from slowest to fastest as x grows without end
   require('./play/fitpick'), // see a few points, pick which of four numbers is the slope of the best line through them
   require('./play/fitrank'), // see four lines through the same points, and rank them from the best fit to the worst
   require('./play/buildpick'), // see a fence and a paddock count, pick which of four widths holds the most
+  require('./play/optturn'), // see four slopes that are 0 at a point, call each a peak, a valley or neither
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split

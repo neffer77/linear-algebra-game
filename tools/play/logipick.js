@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see r, K and P, and pick which of four numbers is dP\/dt\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeLogiGrow');
     t.eq('the logistic workshop opens', await t.screen(), 's-logistic');
-    t.eq('stepping by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('stepping by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5150));
     await t.tapText(/Which rate\?/);
-    t.eq('which rate is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which rate is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the starts, the figure, the step buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('lgqBox').innerText)).startsWith(
