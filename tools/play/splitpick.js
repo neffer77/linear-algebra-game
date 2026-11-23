@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see how the knights ride, and pick which of four numbers is the steady split\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCastles');
     t.eq('the two castles workshop opens', await t.screen(), 's-castles');
-    t.eq('running the nights by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('running the nights by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(6781));
     await t.tapText(/Which split\?/);
-    t.eq('which split is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which split is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the rules, the figure, the steppers, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('kpBox').innerText)).startsWith(

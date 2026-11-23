@@ -1,60 +1,60 @@
 {
-  "change": "Add a Kept or knocked off mode to the eigenvector hunt",
+  "change": "Add a Gain or lose mode to the two castles workshop",
   "mutations": [
     {
-      "name": "an arrow turned round is called kept",
+      "name": "a split that holds is called gaining",
       "file": "index.html",
-      "find": "truth(i){ const l=this.lam(i); return l===null ? 0 : Math.sign(l); },",
-      "replace": "truth(i){ const l=this.lam(i); return l===null ? 0 : 1; },",
+      "find": "truth(i){ return Math.sign(this.in(i)-this.out(i)); },",
+      "replace": "truth(i){ return Math.sign(this.in(i)-this.out(i)+1); },",
       "run": "verify"
     },
     {
-      "name": "A's rows are read as its columns",
+      "name": "riders out are counted from B's knights",
       "file": "index.html",
-      "find": "return [a*x+b*y, c*x+d*y]; },\n  /* λ when Av",
-      "replace": "return [a*x+c*y, b*x+d*y]; },\n  /* λ when Av",
+      "find": "out(i){ const [p,,A]=this.R()[i]; return p*A/10; },",
+      "replace": "out(i){ const [p,,A]=this.R()[i]; return p*(100-A)/10; },",
       "run": "verify"
     },
     {
-      "name": "an arrow a little off its line counts as kept",
+      "name": "riders in are worked with A's share",
       "file": "index.html",
-      "find": "const [x,y]=this.v(i), [p,q]=this.Av(i); if(x*q-y*p) return null;",
-      "replace": "const [x,y]=this.v(i), [p,q]=this.Av(i); if(Math.abs(x*q-y*p)>3) return null;",
+      "find": "in(i){ const [,q,A]=this.R()[i]; return q*(100-A)/10; },",
+      "replace": "in(i){ const [q,,A]=this.R()[i]; return q*(100-A)/10; },",
       "run": "verify"
     },
     {
-      "name": "27° counts as a few degrees off",
+      "name": "a castle as big as its rival counts against its size",
       "file": "index.html",
-      "find": "NEAR:15,",
-      "replace": "NEAR:30,",
+      "find": "(this.a(i)>50 && this.truth(i)===1)",
+      "replace": "(this.a(i)>=50 && this.truth(i)===1)",
       "run": "verify"
     },
     {
-      "name": "the angle off is rounded down",
+      "name": "the next night is drawn before the round is right",
       "file": "index.html",
-      "find": "deg(i){ const o=this.off(i), r=Math.round(o);",
-      "replace": "deg(i){ const o=this.off(i), r=Math.floor(o);",
+      "find": "if(this.solved){ const nA=this.next(i), d=nA-A;",
+      "replace": "if(true){ const nA=this.next(i), d=nA-A;",
       "run": "verify"
     },
     {
-      "name": "Av is drawn before the round is right",
+      "name": "B's next night is drawn as tonight's",
       "file": "index.html",
-      "find": "if(this.solved){ const [ax,ay]=tip(Av);",
-      "replace": "if(true){ const [ax,ay]=tip(Av);",
+      "find": "y=\"${f(base-(100-nA)*H)}\" width=\"30\" height=\"${f((100-nA)*H)}\"",
+      "replace": "y=\"${f(base-(100-A)*H)}\" width=\"30\" height=\"${f((100-A)*H)}\"",
       "run": "verify"
     },
     {
-      "name": "the scale is taken from v alone",
+      "name": "an empty castle is named the wrong way round",
       "file": "index.html",
-      "find": "m=Math.max(...v.map(Math.abs),...Av.map(Math.abs)), s=50/m;",
-      "replace": "m=Math.max(...v.map(Math.abs)), s=50/m;",
+      "find": "this.a(i)===100 ? `In ${this.L[i]}, B is empty",
+      "replace": "this.a(i)===0 ? `In ${this.L[i]}, B is empty",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Eigen.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Eigen.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Castles.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Castles.render();",
       "run": "verify"
     }
   ]
