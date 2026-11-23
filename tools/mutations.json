@@ -1,60 +1,60 @@
 {
-  "change": "Add a Growing or shrinking mode to the logistic workshop",
+  "change": "Add a High or low mode to the area workshop",
   "mutations": [
     {
-      "name": "the sign is read off P alone",
+      "name": "the sum's call is turned round",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.P(i)*(this.K(i)-this.P(i))); },",
-      "replace": "truth(i){ return Math.sign(this.P(i)); },",
+      "find": "return Math.abs(d)<1e-9 ? 0 : Math.sign(d); },",
+      "replace": "return Math.abs(d)<1e-9 ? 0 : Math.sign(-d); },",
       "run": "verify"
     },
     {
-      "name": "the room left is P/K",
+      "name": "right edges are taken as left",
       "file": "index.html",
-      "find": "room(i){ return 1-this.P(i)/this.K(i); },",
-      "replace": "room(i){ return this.P(i)/this.K(i); },",
+      "find": "const off=this.edge(i)==='L'?0:1;",
+      "replace": "const off=0;",
       "run": "verify"
     },
     {
-      "name": "the rate drops the r",
+      "name": "the area drops the 1/(k+1)",
       "file": "index.html",
-      "find": "rate(i,P=this.P(i)){ return this.r(i)*P*(1-P/this.K(i)); },",
-      "replace": "rate(i,P=this.P(i)){ return P*(1-P/this.K(i)); },",
+      "find": "s+ck*(b**(k+1)-a**(k+1))/(k+1),0);",
+      "replace": "s+ck*(b**(k+1)-a**(k+1)),0);",
       "run": "verify"
     },
     {
-      "name": "above the ceiling means above 1000",
+      "name": "a flat line is not looked for",
       "file": "index.html",
-      "find": "overs(){ return [0,1,2,3].filter(i=>this.P(i)>this.K(i)); },",
-      "replace": "overs(){ return [0,1,2,3].filter(i=>this.P(i)>1000); },",
+      "find": "flats(){ return [0,1,2,3].filter(i=>this.way(i)===0); },",
+      "replace": "flats(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "a population of 0 is not looked for",
+      "name": "under the axis means falling",
       "file": "index.html",
-      "find": "zeros(){ return [0,1,2,3].filter(i=>this.P(i)===0); },",
-      "replace": "zeros(){ return []; },",
+      "find": "this.way(i)!==0 && Math.max(this.f(i,this.a(i)),this.f(i,this.b(i)))<=0",
+      "replace": "this.way(i)<0",
       "run": "verify"
     },
     {
-      "name": "the curve is drawn before the round is right",
+      "name": "the rectangles are drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){\n        out+=`<line data-k=\"axis\"",
-      "replace": "if(true){\n        out+=`<line data-k=\"axis\"",
+      "find": "if(this.solved){\n        const w=this.dx(i);",
+      "replace": "if(true){\n        const w=this.dx(i);",
       "run": "verify"
     },
     {
-      "name": "P is dotted at K",
+      "name": "each dot sits on the axis",
       "file": "index.html",
-      "find": "cx=\"${f(px(this.P(i)))}\" cy=\"${f(py(this.rate(i)))}\"",
-      "replace": "cx=\"${f(px(K))}\" cy=\"${f(py(this.rate(i)))}\"",
+      "find": "cy=\"${f(py(this.f(i,xe)))}\" r=\"3.5\"",
+      "replace": "cy=\"${f(y0)}\" r=\"3.5\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    LogiGrow.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    LogiGrow.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Area.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Area.render();",
       "run": "verify"
     }
   ]

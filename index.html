@@ -976,7 +976,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ AREA WORKSHOP ============ -->
   <div class="screen" id="s-area">
     <div class="panel"><h2>🏺 Area Workshop</h2><div class="sub">An integral is the area rectangles close in on as they get thinner. Pick a curve, choose where each rectangle takes its height, then add more and watch the sum.</div></div>
-    <div id="arMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in with rectangles or pick the integral"></div>
+    <div id="arMode" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Close in with rectangles, pick the integral, or call each sum high or low"></div>
     <div class="panel">
       <div id="arPick"></div>
       <div id="arCurves" class="wsModes" role="group" aria-label="Curve"></div>
@@ -15527,7 +15527,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🏺 Area Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral. Then turn it round: see a shaded curve, and pick which of four numbers is its integral.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Fill the area under a curve with rectangles, make them thinner, and watch their sum close in on the integral. Then turn it round: see a shaded curve, and pick which of four numbers is its integral. Or call it: see four curves cut into rectangles, and say whether each sum is over the area, exact or under.</div>
          <button class="btn sm" id="tomeArea" style="width:auto;margin-top:8px" onclick="Area.open()">Open the area workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -16931,6 +16931,196 @@ const Slope = {
   }
 };
 
+/* ---------- High or low? The area workshop's third mode ----------
+   Four curves, each cut into a few rectangles that take their heights at
+   their left edges or at their right edges, and the player calls whether
+   each sum is over the area, exactly it, or under it. Every curve here only
+   rises, only falls, or stays flat across its strip, so the call needs no
+   sums: on a rising curve a left edge is the low end of its strip and a
+   right edge the high end, on a falling curve the other way round, and on a
+   flat line every edge is the same height. Each pane draws the curve and
+   dots where each rectangle takes its height; the rectangles stay hidden.
+   Rounds hold a left sum on a falling curve, which overshoots; a flat line,
+   which the rectangles fit exactly; and a curve under the axis, where over
+   means less negative. A slip rings that pane and works the sum and the
+   area through; once all four are right, each pane draws its rectangles.
+   Nothing is saved, and there is no clock. */
+const AreaTurn = {
+  // each curve as c0 + c1·x + c2·x² + c3·x³
+  CURVES:{
+    sq:{name:'x²', c:[0,0,1,0]},
+    cap:{name:'4 − x²', c:[4,0,-1,0]},
+    lin:{name:'2x + 1', c:[1,2,0,0]},
+    dec:{name:'6 − 2x', c:[6,-2,0,0]},
+    flat:{name:'3', c:[3,0,0,0]},
+    nsq:{name:'−x²', c:[0,0,-1,0]},
+    cube:{name:'x³', c:[0,0,0,1]},
+    decq:{name:'9 − x²', c:[9,0,-1,0]},
+    nlin:{name:'x − 4', c:[-4,1,0,0]}
+  },
+  // [curve, a, b, n, edge]
+  ROUNDS:[
+    [['sq',0,2,2,'L'], ['dec',0,3,3,'L'], ['flat',0,2,2,'R'], ['nsq',0,2,2,'R']],
+    [['cap',0,2,2,'R'], ['lin',0,2,2,'R'], ['nlin',0,3,3,'L'], ['sq',-2,0,2,'L']],
+    [['flat',-1,2,3,'L'], ['cube',0,2,2,'L'], ['decq',0,3,3,'R'], ['cap',-2,0,2,'R']],
+    [['nsq',0,3,3,'L'], ['lin',1,3,2,'L'], ['sq',1,3,2,'R'], ['flat',0,4,2,'R']],
+    [['dec',1,3,2,'R'], ['cube',-2,0,2,'R'], ['cap',0,2,4,'L'], ['nlin',1,4,3,'R']],
+    [['decq',0,3,3,'L'], ['flat',1,3,2,'L'], ['sq',-3,0,3,'R'], ['cube',0,2,4,'R']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four sums right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'fall', t:'Call a left sum on a falling curve.', toast:'Left edges, high edges',
+     ok:K=>K.kinds.has('fall')},
+    {id:'flat', t:'Call a sum on a flat line.', toast:'A perfect fit',
+     ok:K=>K.kinds.has('flat')},
+    {id:'below',t:'Call a sum on a curve under the axis.', toast:'Over means less negative',
+     ok:K=>K.kinds.has('below')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Each rectangle is as tall as the curve at one edge of its strip. On a curve that only rises, the left edge is the low end of every strip, so a left sum falls under the area and a right sum goes over it. On a curve that only falls, it is the other way round. On a flat line every edge is the same height, so the sum is the area exactly. Under the axis the same holds: over means less negative.',
+  L:'ABCD',
+  WORD:{1:'over', 0:'exact', [-1]:'under'},
+  NAMES:{1:'the sum is over the area', 0:'the sum is exactly the area', [-1]:'the sum is under the area'},
+  EDGE:{L:'left', R:'right'},
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  a(i){ return this.R()[i][1]; },
+  b(i){ return this.R()[i][2]; },
+  n(i){ return this.R()[i][3]; },
+  edge(i){ return this.R()[i][4]; },
+  f(i,x){ const c=this.C(i).c; return c[0]+c[1]*x+c[2]*x*x+c[3]*x*x*x; },
+  dx(i){ return (this.b(i)-this.a(i))/this.n(i); },
+  xs(i){ const off=this.edge(i)==='L'?0:1; return Array.from({length:this.n(i)}, (_,k)=>this.a(i)+(k+off)*this.dx(i)); },
+  hs(i){ return this.xs(i).map(x=>this.f(i,x)); },
+  sum(i){ return this.dx(i)*this.hs(i).reduce((s,h)=>s+h,0); },
+  area(i){ const c=this.C(i).c, a=this.a(i), b=this.b(i); return c.reduce((s,ck,k)=>s+ck*(b**(k+1)-a**(k+1))/(k+1),0); },
+  way(i){ const fa=this.f(i,this.a(i)), fb=this.f(i,this.b(i)); return Math.sign(fb-fa); },
+  truth(i){ const d=this.sum(i)-this.area(i); return Math.abs(d)<1e-9 ? 0 : Math.sign(d); },
+  /* an exact number as a whole number or a fraction */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : `${neg(n)}/${d}`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? `(${this.q(v)})` : this.q(v); },
+  /* what a round holds: a left sum on a falling curve, a flat line, a curve under the axis */
+  falls(){ return [0,1,2,3].filter(i=>this.edge(i)==='L' && this.way(i)<0); },
+  flats(){ return [0,1,2,3].filter(i=>this.way(i)===0); },
+  belows(){ return [0,1,2,3].filter(i=>this.way(i)!==0 && Math.max(this.f(i,this.a(i)),this.f(i,this.b(i)))<=0); },
+  tags(){ const t=[]; if(this.falls().length) t.push('fall'); if(this.flats().length) t.push('flat'); if(this.belows().length) t.push('below'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fa=this.falls(), fl=this.flats(), be=this.belows();
+      if(fa.length){ const i=fa[0];
+        out.push(`In ${this.L[i]}, f falls, so each left edge is the high end of its strip and the left sum overshoots: ${this.q(this.sum(i))} against ${this.q(this.area(i))}.`); }
+      if(fl.length){ const i=fl[0];
+        out.push(`In ${this.L[i]}, f(x) = 3 is flat: every edge is the same height, so the sum is the area exactly, ${this.q(this.area(i))}.`); }
+      if(be.length){ const i=be[0], t=this.truth(i);
+        out.push(`In ${this.L[i]}, the curve is under the axis, so its area counts as ${this.q(this.area(i))}, and the sum ${this.q(this.sum(i))} is ${t>0?'more':'less'} than that: ${t>0?'over, though its rectangles look smaller':'under, though its rectangles look bigger'}.`); }
+      out.push(`Each sum, then the area: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.q(this.sum(i))} ${{1:'>',0:'=',[-1]:'<'}[this.truth(i)]} ${this.q(this.area(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const t=this.truth(i), w=this.way(i), e=this.EDGE[this.edge(i)];
+        const shape = w>0 ? `rises from x = ${neg(this.a(i))} to ${neg(this.b(i))}` : w<0 ? `falls from x = ${neg(this.a(i))} to ${neg(this.b(i))}` : `stays at 3 from x = ${neg(this.a(i))} to ${neg(this.b(i))}`;
+        const end = w===0 ? 'all the same height' : (w>0)===(this.edge(i)==='L') ? 'the low end of each strip' : 'the high end of each strip';
+        out.push(`In ${this.L[i]}, f(x) = ${this.C(i).name} ${shape}, and its ${this.n(i)} rectangles take their heights at their ${e} edges, ${end}: Δx × (${this.xs(i).map(x=>`f(${this.q(x)})`).join(' + ')}) = ${this.q(this.dx(i))} × (${this.hs(i).map(h=>this.pq(h)).join(' + ')}) = ${this.q(this.sum(i))}, ${t>0?`over the area ${this.q(this.area(i))}`:t<0?`under the area ${this.q(this.area(i))}`:'exactly the area'}. You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the curve in gold over its strip, the x-axis, and a blue dot
+     where each rectangle takes its height; once the round is right, the
+     rectangles in blue from the axis to those dots */
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each cut into rectangles: ${Q.map((x,i)=>`${this.L[i]}, f(x) = ${this.C(i).name} from ${neg(this.a(i))} to ${neg(this.b(i))}, ${this.n(i)} rectangles at their ${this.EDGE[this.edge(i)]} edges`).join('; ')}${this.solved?', each with its rectangles drawn':''}">`;
+    Q.forEach((x,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, a=this.a(i), b=this.b(i);
+      let lo=0, hi=0; for(let j=0;j<=40;j++){ const v=this.f(i,a+(b-a)*j/40); lo=Math.min(lo,v); hi=Math.max(hi,v); }
+      const kx=140/(b-a), ky=68/(hi-lo), px=t=>X+22+(t-a)*kx, py=v=>Y+120-(v-lo)*ky, y0=py(0);
+      out+=`<clipPath id="artClip${i}"><rect x="${X+4}" y="${Y+4}" width="172" height="122" rx="7"/></clipPath>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<g clip-path="url(#artClip${i})">`;
+      if(this.solved){
+        const w=this.dx(i);
+        this.xs(i).forEach((xe,k)=>{ const h=this.f(i,xe), x1=a+k*w, top=Math.min(py(h),y0);
+          out+=`<rect data-k="bar" x="${f(px(x1))}" y="${f(top)}" width="${f(w*kx)}" height="${f(Math.abs(py(h)-y0))}" fill="${FIG_COL.a}" fill-opacity="0.3" stroke="${FIG_COL.a}" stroke-width="1"/>`; });
+      }
+      out+=`<line data-k="axis" x1="${f(px(a))}" y1="${f(y0)}" x2="${f(px(b))}" y2="${f(y0)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      const pts=[]; for(let j=0;j<=48;j++){ const t=a+(b-a)*j/48; pts.push((j?'L':'M')+f(px(t))+' '+f(py(this.f(i,t)))); }
+      out+=`<path data-k="curve" d="${pts.join('')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      this.xs(i).forEach(xe=>{ out+=`<circle data-k="edge" cx="${f(px(xe))}" cy="${f(py(this.f(i,xe)))}" r="3.5" fill="${FIG_COL.a}"/>`; });
+      out+=`</g>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">${this.C(i).name} on [${neg(a)}, ${neg(b)}]</text>`;
+      out+=`<text data-k="how" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">${this.n(i)} × ${this.EDGE[this.edge(i)]} edge</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'over',0:'exact',[-1]:'under'}[t]}" x="${X+172}" y="${Y+43}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ over',0:'= exact',[-1]:'▼ under'}[t]}</text>`; }
+    });
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Area.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Area.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Area.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="AreaTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    const Q=this.R();
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves, each cut into rectangles at their left or right edges. Is each sum over the area, exactly it, or under it?</div>`;
+    out+=`<div id="artFig">${this.svg()}<div class="figcap">Each pane draws its curve in gold and a blue dot where each rectangle takes its height. Once all four are called right, the rectangles are drawn.</div></div>`;
+    out+=`<div id="artStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+Q.map((x,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="artStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.C(i).name}, ${this.n(i)} × ${this.EDGE[this.edge(i)]}</span></b>`+
+        this.btn(i,1,'▲ Over')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Under')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="artRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="artNext" onclick="AreaTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="artCheck" ${this.ready()?'':'disabled '}onclick="AreaTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four sums to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="artGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="artGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('STRIP READER','every sum called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Area = {
   CURVES:[
     {id:'sq',   name:'x²',     f:{poly:[[1,2]]},        a:0,  b:3, exact:9,    ex:'9'},
@@ -16984,11 +17174,11 @@ const Area = {
   moveN(by){ const v=this.ni+by; if(v<0||v>=this.NS.length) return; this.ni=v; this.touched=true; this.render(); },
   setRule(i){ this.ri=i; this.touched=true; this.render(); },
   render(){
-    document.getElementById('arMode').innerHTML=[['bars','🏺 Close in','Close in on the area with rectangles'],['pick','🎯 Which integral?','See a shaded curve and pick which of four numbers is its integral']]
+    document.getElementById('arMode').innerHTML=[['bars','🏺 Close in','Close in on the area with rectangles'],['pick','🎯 Which integral?','See a shaded curve and pick which of four numbers is its integral'],['turn','📊 High or low?','See four curves cut into rectangles, and call whether each sum is over the area, exact or under']]
       .map(([m,t,l])=>`<button class="btn sm ghost" aria-pressed="${this.mode===m}" onclick="Area.setMode('${m}')" aria-label="${l}">${t}</button>`).join('');
-    const pick=this.mode==='pick';
+    const pick=this.mode!=='bars';
     for(const id of ['arCurves','arFig','arNs','arRules','arRead','arGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('arPick').innerHTML=pick ? IntPick.html() : '';
+    document.getElementById('arPick').innerHTML=!pick ? '' : this.mode==='pick' ? IntPick.html() : AreaTurn.html();
     if(pick) return;
     const C=this.curve(), n=this.n(), w=this.dx(), xs=this.xs(), hs=this.heights(), S=this.sum(), e=this.err();
     const edge=this.RULES[this.ri][1];
