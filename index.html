@@ -1743,7 +1743,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ ANTIDERIVATIVE WORKSHOP ============ -->
   <div class="screen" id="s-anti">
     <div class="panel"><h2>🪃 Antiderivative Workshop</h2><div class="sub">An antiderivative runs the power rule backwards: find an F whose slope is f. Guess F = c·xⁿ + C by hand, take its slope, and see whether the green lands on the gold.</div></div>
-    <div id="adTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Guess F by hand or pick F"></div>
+    <div id="adTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Guess F by hand, pick F, or call whether each guess is too steep, right or too shallow"></div>
     <div class="panel">
       <div id="apBox"></div>
       <div id="adSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
@@ -15604,7 +15604,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪃 Antiderivative Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach. Then turn it round: see f, and pick which of four F has f as its slope.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Run the power rule backwards. Guess an F by hand and see whether its slope lands on f. Undo 6x², 3√x and 1/x², catch the slip of forgetting to divide, meet the + C, and find the one power the rule cannot reach. Then turn it round: see f, and pick which of four F has f as its slope. Or call it: see four guesses F, and say whether each is too steep, just right or too shallow for its f.</div>
          <button class="btn sm" id="tomeAnti" style="width:auto;margin-top:8px" onclick="Anti.open()">Open the antiderivative workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -32930,6 +32930,173 @@ const Quot = {
   }
 };
 
+/* ---------- Steep or shallow? The antiderivative workshop's third mode ----------
+   Four guesses F for four targets f, each with the power already raised
+   right. The player calls whether each F is too steep, just right, or too
+   shallow: whether its slope F′ comes back to more than f, exactly f, or
+   less. The rule comes first: F = c·xⁿ has slope c·n·xⁿ⁻¹, so F′ is
+   c·n / k times f. Every round holds a guess that forgot to divide by a
+   power of 1/2, which leaves it too shallow, not too steep; a right one with
+   a + C on the end; and a power below 0. Once the round is right, each F′
+   is drawn in green over f dashed in gold, with how many f's it makes
+   written in. A slip rings that pane and works F′ through. Nothing is
+   saved, and there is no clock. */
+const AntiTurn = {
+  // [k, p, c, C]: the target f = k·xᵖ and the guess F = c·xᵖ⁺¹ + C
+  ROUNDS:[
+    [[3,2,1,2], [2,-0.5,2,0], [4,3,4,0], [-2,-3,1,0]],
+    [[6,1,6,0], [3,0.5,2,-1], [4,-0.5,4,0], [3,-2,-1.5,0]],
+    [[1,-0.5,1,3], [4,-3,-2,0], [8,3,2,5], [3,0.5,3,0]],
+    [[2,1,2,-3], [6,-0.5,12,1], [6,-3,-2,0], [-2,-0.5,-2,0]],
+    [[-3,2,-3,0], [1,-0.5,2,-4], [4,-0.5,4,1], [2,-2,-4,0]],
+    [[3,0.5,4.5,0], [-6,-3,3,1], [6,-0.5,6,0], [4,1,2,0]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four guesses right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'half', t:'Call a guess that forgot to divide by a power of 1/2, and came out too shallow.', toast:'Too shallow by forgetting',
+     ok:K=>K.kinds.has('half')},
+    {id:'plus', t:'Call a guess that is right with a + C on the end.', toast:'The + C shrugged off',
+     ok:K=>K.kinds.has('plus')},
+    {id:'neg',  t:'Call a guess whose power is below 0.', toast:'Below zero weighed',
+     ok:K=>K.kinds.has('neg')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'To check a guess F, take its slope: it has to come back to f. F = c·xⁿ has slope F′ = c·n·xⁿ⁻¹, the power brought down in front. Every guess here has its power raised right, so F′ is a number of f\'s: c·n over f\'s number in front. More than one f and F is too steep; less than one and it is too shallow; exactly one and F is right. A + C never changes a slope.',
+  L:'ABCD',
+  WORD:{1:'too steep', 0:'right', [-1]:'too shallow'},
+  NAMES:{1:'F is too steep', 0:'F is just right', [-1]:'F is too shallow'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [k,p,c,C]=this.R()[i]; return {k, p, n:p+1, c, C}; },
+  // every number on screen is a simple fraction: halves from the half powers, thirds and quarters from the ratios
+  DEN:[1,2,3,4,6,8],
+  fr(v){ const d=this.DEN.find(d=>Math.abs(v*d-Math.round(v*d))<1e-9), s=v<0?'−':'', n=Math.round(Math.abs(v)*d); return d===1 ? s+n : `${s}${n}/${d}`; },
+  par(v){ return v<0 || !Number.isInteger(v) ? `(${this.fr(v)})` : this.fr(v); },
+  pw(p){ return p===1 ? 'x' : Number.isInteger(p) ? 'x'+String(p).split('').map(ch=>SUP[ch]).join('') : `x^(${this.fr(p)})`; },
+  term(k,p){ return (k===1?'':k===-1?'−':Number.isInteger(k)?this.fr(k):`(${this.fr(k)})`)+this.pw(p); },
+  fs(i){ const {k,p}=this.Q(i); return this.term(k,p); },
+  Fs(i){ const {c,n,C}=this.Q(i), t=this.term(c,n); return C ? `${t} ${C>0?'+':'−'} ${Math.abs(C)}` : t; },
+  // how many f's the slope of F makes: c·n over k
+  ratio(i){ const {k,n,c}=this.Q(i); return c*n/k; },
+  times(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 'exactly f' : `${this.fr(r)} × f`; },
+  // 1 too steep, 0 right, −1 too shallow
+  truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 0 : r>1 ? 1 : -1; },
+  halves(){ return [0,1,2,3].filter(i=>{ const {k,n,c}=this.Q(i); return n===0.5 && c===k; }); },
+  pluses(){ return [0,1,2,3].filter(i=>this.Q(i).C!==0 && this.truth(i)===0); },
+  negs(){ return [0,1,2,3].filter(i=>this.Q(i).n<0); },
+  tags(){ const t=[]; if(this.halves().length) t.push('half'); if(this.pluses().length) t.push('plus'); if(this.negs().length) t.push('neg'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  // F′ worked by the power rule: c · n · xⁿ⁻¹ = (c·n)xᵖ
+  slope(i,drop=true){ const {p,n,c,C}=this.Q(i); return `F′ = ${this.par(c)} · ${this.par(n)} · ${this.pw(p)} = ${this.term(c*n,p)}${C && drop ? `, the ${C>0?'+':'−'} ${Math.abs(C)} dropping away` : ''}`; },
+  why(i){ const t=this.truth(i);
+    return `${this.slope(i)}, which is ${this.times(i)}${t ? `, ${t>0?'more':'less'} than one f: F is ${this.WORD[t]}.` : ': F is right.'}`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const h=this.halves(), pl=this.pluses(), ng=this.negs();
+      if(h.length){ const i=h[0], {k}=this.Q(i);
+        out.push(`In ${this.L[i]}, F raises the power to 1/2 but never divides by it. Dividing by 1/2 doubles, so skipping it leaves the number in front half what it should be: F′ = ${this.term(k/2,this.Q(i).p)}, half of f, and F is too shallow.`); }
+      if(pl.length){ const i=pl[0], {C}=this.Q(i);
+        out.push(`In ${this.L[i]}, the ${C>0?'+':'−'} ${Math.abs(C)} is a number on its own, so it has no slope: ${this.slope(i,false)}, which is f, and F is right.`); }
+      if(ng.length){ const i=ng[0], {n}=this.Q(i);
+        out.push(`In ${this.L[i]}, the power ${this.fr(n)} is below 0, so bringing it down in front turns the sign: ${this.slope(i)}, which is ${this.times(i)}.`); }
+      out.push(`Each F′ against f: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.fr(this.ratio(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad)
+        out.push(`In ${this.L[i]}, f = ${this.fs(i)} and F = ${this.Fs(i)}: ${this.why(i)} You had it as ${this.WORD[this.calls[i]]}.`);
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: x from 0.5 to 2.5. Before the round is right, f is dashed
+     in gold under its formula and the guess's; once it is right, F′ is
+     drawn over it in green, with how many f's it makes written in and the
+     call marked. */
+  svg(){
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four targets f, each with a guess F: ${[0,1,2,3].map(i=>`${this.L[i]}, f = ${this.fs(i)} and F = ${this.Fs(i)}`).join('; ')}${this.solved ? '. Each F′ is drawn over its f' : ''}">`;
+    for(let i=0;i<4;i++){
+      const {k,p}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i);
+      const xs=[]; for(let j=0;j<=40;j++) xs.push(0.5+2*j/40);
+      const curves=[['target',xs.map(u=>k*u**p),FIG_COL.a,true]];
+      if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**p),FIG_COL.c,false]);
+      let lo=0, hi=0; for(const [,ys] of curves) for(const v of ys){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
+      const px=u=>X+14+(u-0.5)/2*152, py=v=>Y+114-(v-lo)/(hi-lo)*62;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="fn" x="${X+172}" y="${Y+19}" fill="${FIG_COL.a}" font-size="11" text-anchor="end">f = ${this.fs(i)}</text>`;
+      out+=`<text data-k="Fn" x="${X+172}" y="${Y+33}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">F = ${this.Fs(i)}</text>`;
+      out+=`<line data-k="zero" x1="${X+14}" y1="${r(py(0))}" x2="${X+166}" y2="${r(py(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      for(const [key,ys,c,dash] of curves)
+        out+=`<polyline data-k="${key}" points="${xs.map((u,j)=>`${r(px(u))},${r(py(ys[j]))}`).join(' ')}" fill="none" stroke="${c}" stroke-width="${dash?2:2.5}"${dash?' stroke-dasharray="5 4"':''}/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="ratio" x="${X+172}" y="${Y+47}" fill="${FIG_COL.c}" font-size="11" text-anchor="end">F′ = ${this.times(i)}</text>`;
+        out+=`<text data-k="${{1:'steep',0:'right',[-1]:'shallow'}[t]}" x="${X+14}" y="${Y+124}" fill="${FIG_COL.c}" font-size="11" font-weight="700">${{1:'▲ too steep',0:'= right',[-1]:'▼ too shallow'}[t]}</text>`; }
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+    }
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Anti.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Anti.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Anti.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="AntiTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four guesses F, each for its own f. Is each F too steep, just right, or too shallow?</div>`;
+    out+=`<div id="adtFig">${this.svg()}<div class="figcap">Each pane dashes f in gold for x from 0.5 to 2.5. Once all four are called right, each F′ is drawn over it in green.</div></div>`;
+    out+=`<div id="adtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="adtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span style="font-weight:400;font-size:12px;color:var(--ink)">F = ${this.Fs(i)}</span></b>`+
+        this.btn(i,1,'▲ Steep')+this.btn(i,0,'= Right')+this.btn(i,-1,'▼ Shallow')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="adtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="adtNext" onclick="AntiTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="adtCheck" ${this.ready()?'':'disabled '}onclick="AntiTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':`Call all four (${this.count()} of 4)`}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="adtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="adtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SLOPE WEIGHER','every F weighed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* -------------- which F? (antiderivative workshop) -------------- */
 /* The workshop turned round: a target f(x) = k·xᵖ and four F's, one of them
    an antiderivative of f. The others are the slips people make running the
@@ -33170,11 +33337,11 @@ const Anti = {
   tab:'guess',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('adTab').innerHTML=[['guess','🪃 Guess F by hand','Guess an F by hand and see whether its slope lands on f'],['pick','🎯 Which F?','See f, and pick which of four F has f as its slope']]
+    document.getElementById('adTab').innerHTML=[['guess','🪃 Guess F by hand','Guess an F by hand and see whether its slope lands on f'],['pick','🎯 Which F?','See f, and pick which of four F has f as its slope'],['turn','📐 Steep or shallow?','See four guesses F, and call whether each is too steep, just right or too shallow for its f']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Anti.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='guess';
     for(const id of ['adSets','adFig','adF','adSteps','adRead','adGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('apBox').innerHTML=pick ? AntiPick.html() : '';
+    document.getElementById('apBox').innerHTML=!pick ? '' : this.tab==='pick' ? AntiPick.html() : AntiTurn.html();
     if(pick) return;
     document.getElementById('adSets').innerHTML=this.SETS.map((s,i)=>
       `<button class="btn sm ghost" aria-pressed="${i===this.si}" onclick="Anti.pick(${i})" aria-label="Target f(x) = ${s.fs.split(',')[0]}">${s.btn}</button>`).join('');

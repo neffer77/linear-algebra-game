@@ -1,67 +1,67 @@
 {
-  "change": "Add a Rising or falling mode to the quotient rule workshop",
+  "change": "Add a Steep or shallow mode to the antiderivative workshop",
   "mutations": [
     {
-      "name": "the top is taken the wrong way round",
+      "name": "the slope forgets to bring the power down",
       "file": "index.html",
-      "find": "top(i){ const p=this.parts(i); return p.fp*p.g-p.f*p.gp; },",
-      "replace": "top(i){ const p=this.parts(i); return p.f*p.gp-p.fp*p.g; },",
+      "find": "ratio(i){ const {k,n,c}=this.Q(i); return c*n/k; },",
+      "replace": "ratio(i){ const {k,n,c}=this.Q(i); return c/k; },",
       "run": "verify"
     },
     {
-      "name": "the slope of x² forgets its 2",
+      "name": "the power is raised by two",
       "file": "index.html",
-      "find": "dv(p,x){ return p[1]+2*p[2]*x; },",
-      "replace": "dv(p,x){ return p[1]+p[2]*x; },",
+      "find": "Q(i){ const [k,p,c,C]=this.R()[i]; return {k, p, n:p+1, c, C}; },",
+      "replace": "Q(i){ const [k,p,c,C]=this.R()[i]; return {k, p, n:p+2, c, C}; },",
       "run": "verify"
     },
     {
-      "name": "the sign is read off the bottom as well as the top",
+      "name": "too steep and too shallow are swapped",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.top(i)); },",
-      "replace": "truth(i){ return Math.sign(this.top(i)*this.parts(i).g); },",
+      "find": "truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 0 : r>1 ? 1 : -1; },",
+      "replace": "truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 0 : r>1 ? -1 : 1; },",
       "run": "verify"
     },
     {
-      "name": "dy/dx is divided by g once, not g²",
+      "name": "a + C is counted when the guess is wrong",
       "file": "index.html",
-      "find": "slope(i){ const g=this.parts(i).g; return this.frac(this.top(i), g*g); },",
-      "replace": "slope(i){ const g=this.parts(i).g; return this.frac(this.top(i), g); },",
+      "find": "pluses(){ return [0,1,2,3].filter(i=>this.Q(i).C!==0 && this.truth(i)===0); },",
+      "replace": "pluses(){ return [0,1,2,3].filter(i=>this.Q(i).C!==0); },",
       "run": "verify"
     },
     {
-      "name": "a bottom below 0 is told as above it",
+      "name": "a half power counts as below 0",
       "file": "index.html",
-      "find": "negs(){ return [0,1,2,3].filter(i=>this.parts(i).g<0); },",
-      "replace": "negs(){ return [0,1,2,3].filter(i=>this.parts(i).g>0); },",
+      "find": "negs(){ return [0,1,2,3].filter(i=>this.Q(i).n<0); },",
+      "replace": "negs(){ return [0,1,2,3].filter(i=>this.Q(i).n<=0.5); },",
       "run": "verify"
     },
     {
-      "name": "a tug of war is counted when only one side pulls",
+      "name": "the + C is written with the wrong sign",
       "file": "index.html",
-      "find": "return this.top(i) && p.fp*p.g>0 && p.f*p.gp>0; }); },",
-      "replace": "return this.top(i) && p.fp*p.g>0; }); },",
+      "find": "return C ? `${t} ${C>0?'+':'−'} ${Math.abs(C)}` : t; },",
+      "replace": "return C ? `${t} + ${Math.abs(C)}` : t; },",
       "run": "verify"
     },
     {
-      "name": "y is drawn before the round is right",
+      "name": "F′ is drawn before the round is right",
       "file": "index.html",
-      "find": "const curves=this.solved ? [['ycurve'",
-      "replace": "const curves=true ? [['ycurve'",
+      "find": "if(this.solved) curves.push(['slope'",
+      "replace": "if(true) curves.push(['slope'",
       "run": "verify"
     },
     {
-      "name": "the tangent is drawn at the left end of the pane",
+      "name": "F′ is drawn as F itself",
       "file": "index.html",
-      "find": "out+=`<circle data-k=\"dot\" cx=\"${r(px(x))}\"",
-      "replace": "out+=`<circle data-k=\"dot\" cx=\"${r(px(a))}\"",
+      "find": "if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**p)",
+      "replace": "if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**(p+1)/(p+1))",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Quot.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Quot.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Anti.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Anti.render();",
       "run": "verify"
     }
   ]

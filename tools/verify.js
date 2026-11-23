@@ -17812,6 +17812,177 @@ const quotTurnNotes = (() => {
   if (env.banners.join() !== 'TOP READER / every slope signed') fail('quotturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Steep or shallow? The antiderivative workshop's third mode, worked again
+   from scratch: every guess's slope found by nudging x either side of five
+   points, with no power rule at all, and set against f to see how many f's
+   it makes; every number on screen a simple fraction; every call and every
+   readout, a slip on every pane both other ways, each pane read back with f
+   before and F′ over it after, and the hunt for every goal. */
+const antiTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const SUPS = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻', '+': '⁺' };
+  const S = new Function('env', 'COL', 'SUP',
+    "const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Anti = {render(){ env.renders++; }};" +
+    cut('const AntiTurn = {', '/* -------------- which F? (antiderivative workshop) -------------- */') + 'return AntiTurn;')(env, COL, SUPS);
+  const L = 'ABCD';
+  const WD = { 1: 'too steep', 0: 'right', [-1]: 'too shallow' };
+  const NAME = { 1: 'F is too steep', 0: 'F is just right', [-1]: 'F is too shallow' };
+  const MARK = { 1: 'steep ▲ too steep', 0: 'right = right', [-1]: 'shallow ▼ too shallow' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // a number as it is written: whole, or over 2, 3, 4, 6 or 8, with a true minus
+  const fr = v => { for (const d of [1, 2, 3, 4, 6, 8]) { const n = Math.round(Math.abs(v) * d); if (Math.abs(Math.abs(v) * d - n) < 1e-9) return (v < 0 ? '−' : '') + (d === 1 ? n : `${n}/${d}`); } return null; };
+  const par = v => (v < 0 || !Number.isInteger(v) ? `(${fr(v)})` : fr(v));
+  const pw = p => (p === 1 ? 'x' : Number.isInteger(p) ? 'x' + [...String(p)].map(ch => SUPS[ch]).join('') : `x^(${fr(p)})`);
+  const term = (k, p) => (k === 1 ? '' : k === -1 ? '−' : Number.isInteger(k) ? fr(k) : `(${fr(k)})`) + pw(p);
+  const work = ri => S.ROUNDS[ri].map(q => {
+    const key = `round ${ri + 1}`;
+    const [k, p, c, C] = q, n = p + 1;
+    if (q.length !== 4 || q.some(v => typeof v !== 'number' || !isFinite(v))) fail('antiturn', key, `${JSON.stringify(q)} is not a target and a guess`);
+    if (p === -1) fail('antiturn', key, 'f = k/x has no power-rule antiderivative, so it cannot be here');
+    if (![k, p, c, C].every(v => fr(v) !== null)) fail('antiturn', key, `${JSON.stringify(q)} has a number that is not a simple fraction`);
+    if (!k || !c) fail('antiturn', key, `${JSON.stringify(q)} has a 0 in front`);
+    const f = u => k * u ** p, F = u => c * u ** n + C, h = 1e-5;
+    // F′ by nudging, at five points, as a number of f's
+    const rs = [0.6, 1, 1.4, 1.9, 2.4].map(u => (F(u + h) - F(u - h)) / (2 * h) / f(u));
+    const r = rs[0];
+    if (rs.some(v => Math.abs(v - r) > 1e-5)) fail('antiturn', key, `the slope of F = ${term(c, n)} is not a steady number of f's, so its power is not raised right`);
+    if (!(r > 0)) fail('antiturn', key, `the slope of F = ${term(c, n)} runs ${r} f's, against f, not along it`);
+    const rr = Math.round(r * 24) / 24;
+    if (Math.abs(rr - r) > 1e-5 || fr(rr) === null) fail('antiturn', key, `the slope of F = ${term(c, n)} is ${r} f's, not a simple fraction`);
+    const t = Math.abs(rr - 1) < 1e-9 ? 0 : rr > 1 ? 1 : -1;
+    const fs = term(k, p), Fs = C ? `${term(c, n)} ${C > 0 ? '+' : '−'} ${Math.abs(C)}` : term(c, n);
+    const sl = drop => `F′ = ${par(c)} · ${par(n)} · ${pw(p)} = ${term(c * n, p)}${C && drop ? `, the ${C > 0 ? '+' : '−'} ${Math.abs(C)} dropping away` : ''}`;
+    const times = t ? `${fr(rr)} × f` : 'exactly f';
+    const why = `${sl(true)}, which is ${times}${t ? `, ${t > 0 ? 'more' : 'less'} than one f: F is ${WD[t]}.` : ': F is right.'}`;
+    return { k, p, n, c, C, f, r: rr, t, fs, Fs, sl, times, why,
+      half: n === 0.5 && c === k, plus: C !== 0 && t === 0, neg: n < 0 };
+  });
+  if (S.ROUNDS.length !== 6) fail('antiturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('antiturn', key, `it holds ${Q.length} guesses, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('antiturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.truth(i) !== w.t) fail('antiturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.fs(i) !== w.fs || S.Fs(i) !== w.Fs || S.times(i) !== w.times) fail('antiturn', key, `${L[i]} is written f = ${S.fs(i)}, F = ${S.Fs(i)}, F′ = ${S.times(i)}, not ${w.fs}, ${w.Fs}, ${w.times}`);
+      if (S.fr(S.ratio(i)) !== fr(w.r)) fail('antiturn', key, `${L[i]}'s F′ is told as ${S.fr(S.ratio(i))} f's, not ${fr(w.r)}`);
+    });
+    if (new Set(truth).size < 3) fail('antiturn', key, 'it does not hold all three calls');
+    const hf = [], pl = [], ng = [];
+    W.forEach((w, i) => { if (w.half) hf.push(i); if (w.plus) pl.push(i); if (w.neg) ng.push(i); });
+    hf.forEach(i => { if (W[i].t !== -1) fail('antiturn', key, `${L[i]} forgets to divide by 1/2 yet is not too shallow`); });
+    const tags = [hf.length ? 'half' : null, pl.length ? 'plus' : null, ng.length ? 'neg' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('antiturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('antiturn', key, 'it does not hold a guess that forgot to divide by 1/2, a right one with a + C, and a power below 0');
+    // every guess called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f = ${w.fs} and F = ${w.Fs}: ${w.why} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('antiturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(slope|ratio|steep|right|shallow)"/.test(svg)) fail('antiturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or F′ is given away`);
+        if (S.solved || S.streak) fail('antiturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('antiturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('antiturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('antiturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // the panes before anything is called: f alone, through its own values
+    reset(); S.ri = ri;
+    const pts = (pg, k) => (pg.match(new RegExp(`data-k="${k}" points="([^"]*)"`)) || [, ''])[1].split(' ').filter(Boolean).map(p => p.split(',').map(Number));
+    const near = (p, q, e = 0.011) => Math.abs(p - q) < e;
+    const XS = Array.from({ length: 41 }, (_, j) => 0.5 + 2 * j / 40);
+    const frame = (fs, X, Y) => { let lo = 0, hi = 0; for (const F of fs) for (const u of XS) { const v = F(u); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+      return { px: u => X + 14 + (u - 0.5) / 2 * 152, py: v => Y + 114 - (v - lo) / (hi - lo) * 62 }; };
+    const inPane = (p, X, Y) => p.every(([u, v]) => u >= X + 3 && u <= X + 177 && v >= Y + 3 && v <= Y + 127);
+    const pre = S.svg().split('data-k="pane"').slice(1);
+    W.forEach((w, i) => {
+      const pg = pre[i] || '', X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, fm = frame([w.f], X, Y), p = pts(pg, 'target');
+      if (p.length !== 41 || p.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j])))) || !inPane(p, X, Y)) fail('antiturn', key, `${L[i]}'s f is not drawn through its own values`);
+      if (/data-k="(slope|ratio|steep|right|shallow)"/.test(pg)) fail('antiturn', key, `${L[i]} shows F′ before it is called`);
+      if (!pg.includes(`>f = ${w.fs}</text>`) || !pg.includes(`>F = ${w.Fs}</text>`)) fail('antiturn', key, `${L[i]}'s f and F are not written in`);
+    });
+    // all four right on the first check, called with the buttons
+    if (!/id="adtCheck" disabled /.test(S.html())) fail('antiturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="adtCheck" disabled /.test(S.html())) fail('antiturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('antiturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="AntiTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('antiturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`AntiTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('antiturn', key, `${L[i]} does not offer too steep, right and too shallow`);
+    });
+    if (S.calls.join() !== truth.join()) fail('antiturn', key, 'the buttons cannot make the right calls');
+    if (/id="adtCheck" disabled /.test(S.html())) fail('antiturn', key, 'the check stays shut with every guess called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    { const i = hf[0], w = W[i]; want.push(`In ${L[i]}, F raises the power to 1/2 but never divides by it. Dividing by 1/2 doubles, so skipping it leaves the number in front half what it should be: F′ = ${term(w.k / 2, w.p)}, half of f, and F is too shallow.`); }
+    { const i = pl[0], w = W[i]; want.push(`In ${L[i]}, the ${w.C > 0 ? '+' : '−'} ${Math.abs(w.C)} is a number on its own, so it has no slope: ${w.sl(false)}, which is f, and F is right.`); }
+    { const i = ng[0], w = W[i]; want.push(`In ${L[i]}, the power ${fr(w.n)} is below 0, so bringing it down in front turns the sign: ${w.sl(true)}, which is ${w.times}.`); }
+    want.push(`Each F′ against f: ${W.map((w, i) => `${L[i]} ${fr(w.r)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('antiturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes once called: F′ in green over f, both through their own values, F′ found by nudging F
+    const parts = S.svg().split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('antiturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, h = 1e-5;
+      const Fp = u => (w.c * (u + h) ** w.n - w.c * (u - h) ** w.n) / (2 * h);
+      const fm = frame([w.f, Fp], X, Y);
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('antiturn', key, `${L[i]}'s pane is out of place`);
+      const pf = pts(pg, 'target'), ps = pts(pg, 'slope');
+      if (pf.length !== 41 || pf.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j]))))) fail('antiturn', key, `${L[i]}'s f is not redrawn on the shared scale`);
+      if (ps.length !== 41 || ps.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(Fp(XS[j])), 0.02)) || !inPane(ps, X, Y)) fail('antiturn', key, `${L[i]}'s F′ is not drawn as the slope of F`);
+      if (!pg.includes(`data-k="ratio" x="${X + 172}" y="${Y + 47}" fill="green" font-size="11" text-anchor="end">F′ = ${w.times}</text>`)) fail('antiturn', key, `${L[i]}'s F′ is not written in as ${w.times}`);
+      panes++;
+    });
+    const marks = [...S.svg().matchAll(/data-k="(steep|right|shallow)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('antiturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="adtNext"') || /onclick="AntiTurn\.call/.test(hh.replace(/disabled onclick="AntiTurn\.call/g, ''))) fail('antiturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('antiturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('antiturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('antiturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,half,neg,plus'], [false, 'fix,half,neg,one,plus'], [false, 'fix,half,neg,one,plus'], [false, 'fix,half,neg,one,plus,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('antiturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Too shallow by forgetting · The + C shrugged off · Below zero weighed · A slip caught and fixed | ✓ Right on the first check') fail('antiturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SLOPE WEIGHER / every F weighed') fail('antiturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -25317,6 +25488,7 @@ console.log(`  boxes weighed     ${pad(sliceTurnNotes.checks.toLocaleString(), 1
 console.log(`  diagonals weighed ${pad(arrowTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as u + v longer, the same or u − v longer in the arrow workshop, ${arrowTurnNotes.wrongs} of them with one called wrong and caught, and ${arrowTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  every c placed    ${pad(chordTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves whose c is called left of the middle, at it or right of it in the chord workshop, ${chordTurnNotes.wrongs} of them with one called wrong and caught, and ${chordTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  every slope signed${pad(quotTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions y = f/g called rising, flat or falling at a point in the quotient rule workshop, ${quotTurnNotes.wrongs} of them with one called wrong and caught, and ${quotTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  every F weighed   ${pad(antiTurnNotes.checks.toLocaleString(), 12)}  (checks of four guesses F called too steep, right or too shallow for their f in the antiderivative workshop, ${antiTurnNotes.wrongs} of them with one called wrong and caught, and ${antiTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
