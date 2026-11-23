@@ -37,12 +37,13 @@ const bubble = t => t.ev(() => {
   return { text: el.textContent, on: el.classList.contains('on') };
 });
 const answer = (t, right, crit) => t.ev(([right, crit]) => {
-  const ws = Battle.wStats;
+  const ws = Battle.wStats, wo = Weak.on;
   if (crit !== undefined) Battle.wStats = () => Object.assign(ws.call(Battle), { crit: crit ? 9 : -9 });
-  Battle.answered = false;
+  Weak.on = () => false;                 // a question on the foe's weak point makes it reel as a crit does
+  Battle.answered = false; Battle.slamNext = false;
   const c = Battle.cur;
   Battle.answer(null, right ? c.a : c.choices.find(x => x !== c.a));
-  Battle.wStats = ws;
+  Battle.wStats = ws; Weak.on = wo;
   document.getElementById('say').classList.remove('on');   // so the next check sees only what comes next
   return document.getElementById('say').dataset.last || '';
 }, [right, crit]);
