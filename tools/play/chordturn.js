@@ -6,7 +6,7 @@
  * called left of the middle, at it, or right of it, and the check stays
  * shut until all four are called; a check with a slip rings just that pane
  * and works the chord's slope and the middle slope through; fixing it and
- * checking again draws each tangent at c in gold and writes c in; first
+ * checking again draws each tangent at c in blue and writes c in; first
  * checks are counted and the goals found with toasts and a banner. Every
  * button is named, walking by hand steps aside and comes back, it fits a
  * phone, and nothing is saved.

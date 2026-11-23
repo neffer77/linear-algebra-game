@@ -1,67 +1,25 @@
 {
-  "change": "Add a Rising or falling mode to the quotient rule workshop",
+  "change": "Make eight figure captions name the colours they really draw",
   "mutations": [
     {
-      "name": "the top is taken the wrong way round",
+      "name": "a caption names gold for what is drawn blue",
       "file": "index.html",
-      "find": "top(i){ const p=this.parts(i); return p.fp*p.g-p.f*p.gp; },",
-      "replace": "top(i){ const p=this.parts(i); return p.f*p.gp-p.fp*p.g; },",
+      "find": "Once all four are called right, A in blue and B in gold are written in",
+      "replace": "Once all four are called right, A in gold and B in blue are written in",
       "run": "verify"
     },
     {
-      "name": "the slope of x² forgets its 2",
-      "file": "index.html",
-      "find": "dv(p,x){ return p[1]+2*p[2]*x; },",
-      "replace": "dv(p,x){ return p[1]+p[2]*x; },",
+      "name": "a check stands blue and gold the wrong way round",
+      "file": "tools/verify.js",
+      "find": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
+      "replace": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
       "run": "verify"
     },
     {
-      "name": "the sign is read off the bottom as well as the top",
+      "name": "the figures draw a in gold",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.top(i)); },",
-      "replace": "truth(i){ return Math.sign(this.top(i)*this.parts(i).g); },",
-      "run": "verify"
-    },
-    {
-      "name": "dy/dx is divided by g once, not g²",
-      "file": "index.html",
-      "find": "slope(i){ const g=this.parts(i).g; return this.frac(this.top(i), g*g); },",
-      "replace": "slope(i){ const g=this.parts(i).g; return this.frac(this.top(i), g); },",
-      "run": "verify"
-    },
-    {
-      "name": "a bottom below 0 is told as above it",
-      "file": "index.html",
-      "find": "negs(){ return [0,1,2,3].filter(i=>this.parts(i).g<0); },",
-      "replace": "negs(){ return [0,1,2,3].filter(i=>this.parts(i).g>0); },",
-      "run": "verify"
-    },
-    {
-      "name": "a tug of war is counted when only one side pulls",
-      "file": "index.html",
-      "find": "return this.top(i) && p.fp*p.g>0 && p.f*p.gp>0; }); },",
-      "replace": "return this.top(i) && p.fp*p.g>0; }); },",
-      "run": "verify"
-    },
-    {
-      "name": "y is drawn before the round is right",
-      "file": "index.html",
-      "find": "const curves=this.solved ? [['ycurve'",
-      "replace": "const curves=true ? [['ycurve'",
-      "run": "verify"
-    },
-    {
-      "name": "the tangent is drawn at the left end of the pane",
-      "file": "index.html",
-      "find": "out+=`<circle data-k=\"dot\" cx=\"${r(px(x))}\"",
-      "replace": "out+=`<circle data-k=\"dot\" cx=\"${r(px(a))}\"",
-      "run": "verify"
-    },
-    {
-      "name": "a call still moves once the round is right",
-      "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Quot.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Quot.render();",
+      "find": "a:'#5aa9e6'",
+      "replace": "a:'#f2c14e'",
       "run": "verify"
     }
   ]
