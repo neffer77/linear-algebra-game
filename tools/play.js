@@ -189,6 +189,7 @@ const SUITES = [
   require('./play/optturn'), // see four slopes that are 0 at a point, call each a peak, a valley or neither
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
+  require('./play/swapturn'), // see four integrals with their u, call whether the rest is du exactly, up to a number, or leaves an x over
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
   require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer

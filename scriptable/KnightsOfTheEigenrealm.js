@@ -1486,7 +1486,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ SWAP WORKSHOP ============ -->
   <div class="screen" id="s-swap">
     <div class="panel"><h2>🔄 Swap Workshop</h2><div class="sub">u-substitution is a swap: trade a piece of the integrand for u, and its derivative for du. Pick a u and see what the swap leaves. The right one absorbs every x and turns the integral into one you know.</div></div>
-    <div id="swTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a u by hand or pick the number in front"></div>
+    <div id="swTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Pick a u by hand, pick the number in front, or check whether du fits"></div>
     <div class="panel">
       <div id="usBox"></div>
       <div id="swSets" class="wsModes" role="group" aria-label="Which integral"></div>
@@ -15705,7 +15705,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔄 Swap Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Pick a u and see what u-substitution turns an integral into. The right u absorbs every x; a wrong one leaves the problem as hard as before. Then turn it round: see an integral to swap, and pick which of four numbers goes in front of the answer.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pick a u and see what u-substitution turns an integral into. The right u absorbs every x; a wrong one leaves the problem as hard as before. Then turn it round: see an integral to swap, and pick which of four numbers goes in front of the answer. Or call four integrals: does du fit exactly, up to a number, or not at all?</div>
          <button class="btn sm" id="tomeSwap" style="width:auto;margin-top:8px" onclick="Swap.open()">Open the swap workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -27120,6 +27120,176 @@ const Lathe = {
   }
 };
 
+/* ---------- Does du fit? The swap workshop's third mode ----------
+   Four integrals, each c·xᵖ times a bracket G(a·xᵐ + b), with u the bracket,
+   and the player calls whether the rest of the integrand is du exactly, du
+   up to a number, or leaves an x over. du = m·a·xᵐ⁻¹ dx, so it all goes by
+   the power of x standing outside: the right power and the right number fit
+   exactly, the right power and another number fit with that number brought
+   out front, and any other power leaves an x the swap cannot absorb. Rounds
+   hold numbers that come out front, brackets with a minus that du carries
+   too, and integrands that look ready yet leave an x over. Each pane writes
+   the integral with its u; once the round is right, du and what the swap
+   gives are written in. A slip rings that pane and works it through.
+   Nothing is saved, and there is no clock. */
+const SwapTurn = {
+  // [c, p, a, m, b, G, n]: c·xᵖ·G(a·xᵐ + b), with G a power n, cos, e^ or √
+  ROUNDS:[
+    [[2,1,1,2,0,'cos'], [1,1,-1,2,1,'pow',3], [1,0,1,2,0,'cos'], [1,2,1,3,0,'exp']],
+    [[1,2,1,2,1,'pow',3], [3,2,1,3,4,'sqrt'], [1,1,-1,2,0,'exp'], [4,1,1,2,3,'pow',5]],
+    [[-2,1,-1,2,1,'sqrt'], [1,1,1,3,0,'cos'], [1,2,2,3,5,'pow',4], [6,2,2,3,0,'cos']],
+    [[1,0,1,2,1,'pow',4], [1,2,-1,3,1,'sqrt'], [2,1,1,2,0,'exp'], [5,1,1,2,-2,'pow',3]],
+    [[1,3,1,3,0,'cos'], [-3,2,-1,3,4,'exp'], [10,1,1,2,1,'pow',4], [1,1,1,2,9,'sqrt']],
+    [[3,2,1,3,-1,'pow',2], [1,2,-1,2,1,'pow',3], [1,1,-1,2,4,'cos'], [1,0,1,2,0,'exp']]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four integrals right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'number',t:'Call one where du is off by only a number.', toast:'A number comes out front',
+     ok:K=>K.kinds.has('number')},
+    {id:'sign',  t:'Call one where u carries a minus, so du carries it too.', toast:'The minus rides along in du',
+     ok:K=>K.kinds.has('sign')},
+    {id:'left',  t:'Call one that leaves an x over, which no number can fix.', toast:'No number fixes a stray x',
+     ok:K=>K.kinds.has('left')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Swap u for the bracket, u = a·xᵐ + b. Then du = m·a·xᵐ⁻¹ dx, so everything outside the bracket has to be that power of x, times dx. If it is, with the same number in front, it is du exactly. If only the number differs, it is du times a number, and the number simply comes out front. If the power of x is any other, an x is left over after the swap, and no number can turn an x into u.',
+  L:'ABCD',
+  SUP:['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'],
+  WORD:{1:'fitting exactly', 0:'fitting up to a number', [-1]:'leaving an x over'},
+  NAMES:{1:'du fits exactly', 0:'du fits up to a number', [-1]:'an x is left over'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [c,p,a,m,b,G,n]=this.R()[i]; return {c,p,a,m,b,G,n}; },
+  // 1 du exactly, 0 du times a number, −1 an x left over
+  truth(i){ const {c,p,a,m}=this.Q(i); return p!==m-1 ? -1 : c===m*a ? 1 : 0; },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : \`\${n<0?'−':''}\${Math.abs(n)}/\${d}\`; },
+  // the number in front once the swap is made: c/(m·a)
+  k(i){ const {c,a,m}=this.Q(i); return this.fr(c,m*a); },
+  kf(i){ const s=this.k(i); return /^\\d+$/.test(s) ? s : \`(\${s})\`; },
+  xp(k){ return k===0 ? '1' : k===1 ? 'x' : k>1 ? 'x'+this.SUP[k] : k===-1 ? '1/x' : '1/x'+this.SUP[-k]; },
+  // c·xᵖ written out, with the number left off when it is 1
+  outside(i){ const {c,p}=this.Q(i); const x=p ? this.xp(p) : '';
+    return x ? (c===1 ? x : c===-1 ? '−'+x : neg(c)+x) : (c===1 ? '' : neg(c)); },
+  inner(i){ const {a,m,b}=this.Q(i), x='x'+this.SUP[m], t=a===1 ? x : a===-1 ? '−'+x : neg(a)+x;
+    if(!b) return t;
+    return a<0 ? \`\${b} − \${a===-1 ? '' : Math.abs(a)}\${x}\` : \`\${t} \${b<0?'−':'+'} \${Math.abs(b)}\`; },
+  wrap(i,s){ const {G,n}=this.Q(i);
+    return G==='pow' ? \`(\${s})\${this.SUP[n]}\` : G==='cos' ? \`cos(\${s})\` : G==='exp' ? \`e^(\${s})\` : \`√(\${s})\`; },
+  gu(i){ const {G,n}=this.Q(i); return G==='pow' ? 'u'+this.SUP[n] : G==='cos' ? 'cos u' : G==='exp' ? 'eᵘ' : '√u'; },
+  integral(i){ const o=this.outside(i); return \`∫ \${o}\${o && this.Q(i).G==='pow' ? '' : o ? ' ' : ''}\${this.wrap(i,this.inner(i))} dx\`; },
+  du(i){ const {a,m}=this.Q(i), x=this.xp(m-1); return \`du = \${m*a===1 ? '' : m*a===-1 ? '−' : neg(m*a)}\${x} dx\`; },
+  gives(i){ const t=this.truth(i);
+    return t===1 ? \`∫ \${this.gu(i)} du\` : t===0 ? \`\${this.kf(i)} ∫ \${this.gu(i)} du\` : \`\${this.xp(this.Q(i).p-this.Q(i).m+1)} left over\`; },
+  numbers(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  signs(){ return [0,1,2,3].filter(i=>this.Q(i).a<0 && this.truth(i)>=0); },
+  lefts(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  tags(){ const t=[]; if(this.numbers().length) t.push('number'); if(this.signs().length) t.push('sign'); if(this.lefts().length) t.push('left'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  why(i){
+    const {p,m}=this.Q(i), t=this.truth(i), o=this.outside(i)||'1';
+    const head=\`u = \${this.inner(i)}, so \${this.du(i)}.\`;
+    if(t===1) return \`\${head} \${o} dx is exactly du, and the integral becomes ∫ \${this.gu(i)} du.\`;
+    if(t===0) return \`\${head} \${o} dx is \${this.kf(i)} du, only a number away, and the number comes out front: \${this.kf(i)} ∫ \${this.gu(i)} du.\`;
+    return \`\${head} That needs \${this.xp(m-1)} outside the bracket, but there is \${p ? this.xp(p) : 'no x'}: after the swap \${this.xp(p-m+1)} is left over, and no number can turn an x into u.\`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const nu=this.numbers(), sg=this.signs(), le=this.lefts();
+      if(nu.length){ const i=nu.find(j=>!sg.includes(j)) ?? nu[0];
+        out.push(\`In \${this.L[i]}, \${this.outside(i)||'1'} dx is \${this.kf(i)} du: a number is no trouble, it just comes out front.\`); }
+      if(sg.length){ const i=sg[0];
+        out.push(\`In \${this.L[i]}, u = \${this.inner(i)} carries a minus, so \${this.du(i)} carries it too.\`); }
+      if(le.length){ const i=le[0];
+        out.push(\`In \${this.L[i]}, \${this.integral(i)} looks ready, but the swap leaves \${this.xp(this.Q(i).p-this.Q(i).m+1)} behind, so u = \${this.inner(i)} does not work there.\`); }
+      out.push(\`What each swap gives: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.gives(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad) out.push(\`In \${this.L[i]}, \${this.integral(i)}: \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`);
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the integral, with what stands outside the bracket in gold
+     and the bracket in blue, and its u. Once the round is right, du and what
+     the swap gives are written in. */
+  svg(){
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four integrals, each with its u: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.integral(i)} with u = \${this.inner(i)}\`).join('; ')}\${this.solved?', each with du and what the swap gives written in':''}">\`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, o=this.outside(i), cx=X+90;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="int" x="\${cx}" y="\${Y+50}" fill="\${FIG_COL.ink}" font-size="13" text-anchor="middle">∫ <tspan data-k="out" fill="\${FIG_COL.a}">\${o}</tspan>\${o && this.Q(i).G!=='pow' ? ' ' : ''}<tspan data-k="in" fill="\${FIG_COL.b}">\${this.wrap(i,this.inner(i))}</tspan> dx</text>\`;
+      out+=\`<text data-k="u" x="\${cx}" y="\${Y+74}" fill="\${FIG_COL.b}" font-size="12" text-anchor="middle">u = \${this.inner(i)}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="du" x="\${cx}" y="\${Y+92}" fill="\${FIG_COL.c}" font-size="12" text-anchor="middle">\${this.du(i)}</text>\`;
+        out+=\`<text data-k="gives" x="\${X+10}" y="\${Y+118}" fill="\${FIG_COL.ink}" font-size="11">→ \${this.gives(i)}</text>\`;
+        out+=\`<text data-k="\${{1:'exact',0:'number',[-1]:'left'}[t]}" x="\${X+172}" y="\${Y+118}" fill="\${t<0?FIG_COL.d:FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'= exact',0:'× number',[-1]:'✗ x left'}[t]}</text>\`; }
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Swap.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Swap.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Swap.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="SwapTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four integrals, each with u the bracket. Is the rest du exactly, du up to a number, or does an x get left over?</div>\`;
+    out+=\`<div id="swtFig">\${this.svg()}<div class="figcap">What stands outside the bracket is in gold and the bracket in blue. Once all four are called right, du and what the swap gives are written in.</div></div>\`;
+    out+=\`<div id="swtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="swtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">u = \${this.inner(i)}</span></b>\`+
+        this.btn(i,1,'= Exact')+this.btn(i,0,'× Number')+this.btn(i,-1,'✗ x left')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="swtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="swtNext" onclick="SwapTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="swtCheck" \${this.ready()?'':'disabled '}onclick="SwapTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="swtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="swtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SWAP SMITH','every du checked','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which number in front? The swap workshop turned round ----------
    An integral c·xᵐ⁻¹(axᵐ + b)ⁿ dx with m 2 or 3 and whole a, b, c and n, and
    four numbers, one of them the k in k·(axᵐ + b)ⁿ⁺¹ + C, which is
@@ -27343,11 +27513,11 @@ const Swap = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('swTab').innerHTML=[['hand','🔄 Pick a u by hand','Pick a u by hand and see what the swap leaves'],['pick','🎯 Which number in front?','See an integral to swap, and pick which of four numbers goes in front of the answer']]
+    document.getElementById('swTab').innerHTML=[['hand','🔄 Pick a u by hand','Pick a u by hand and see what the swap leaves'],['pick','🎯 Which number in front?','See an integral to swap, and pick which of four numbers goes in front of the answer'],['turn','🧩 Does du fit?','See four integrals with their u, and call whether the rest is du exactly, du up to a number, or leaves an x over']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Swap.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['swSets','swFig','swOpts','swRead','swGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('usBox').innerHTML=pick ? SwapPick.html() : '';
+    document.getElementById('usBox').innerHTML=!pick ? '' : this.tab==='pick' ? SwapPick.html() : SwapTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('swSets').innerHTML=this.SETS.map((s,i)=>

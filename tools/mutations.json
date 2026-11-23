@@ -1,60 +1,60 @@
 {
-  "change": "Add a Which holds more mode to the lathe workshop",
+  "change": "Add a Does du fit mode to the swap workshop",
   "mutations": [
     {
-      "name": "the square forgets the cross term",
+      "name": "the power of x is not checked",
       "file": "index.html",
-      "find": "20*(c1*c1+2*c2*c0)*x**3",
-      "replace": "20*(c1*c1+c2*c0)*x**3",
+      "find": "truth(i){ const {c,p,a,m}=this.Q(i); return p!==m-1 ? -1 : c===m*a ? 1 : 0; },",
+      "replace": "truth(i){ const {c,p,a,m}=this.Q(i); return c===m*a ? 1 : 0; },",
       "run": "verify"
     },
     {
-      "name": "the volume goes by the area",
+      "name": "du forgets the m",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.If(i)-this.Ig(i)); },",
-      "replace": "truth(i){ const {F,G,a,b}=this.Q(i); return Math.sign(this.ar6(F,a,b)-this.ar6(G,a,b)); },",
+      "find": "c===m*a ? 1 : 0; },",
+      "replace": "c===a ? 1 : 0; },",
       "run": "verify"
     },
     {
-      "name": "the lowest point skips the vertex",
+      "name": "the number in front is turned upside down",
       "file": "index.html",
-      "find": "if(v>a && v<b) xs.push(v);",
-      "replace": "if(v>b) xs.push(v);",
+      "find": "k(i){ const {c,a,m}=this.Q(i); return this.fr(c,m*a); },",
+      "replace": "k(i){ const {c,a,m}=this.Q(i); return this.fr(m*a,c); },",
       "run": "verify"
     },
     {
-      "name": "pairs with the same area are not looked for",
+      "name": "du drops its minus",
       "file": "index.html",
-      "find": "return this.truth(i)!==0 && this.ar6(F,a,b)===this.ar6(G,a,b); }); },",
-      "replace": "return false; }); },",
+      "find": "return `du = ${m*a===1 ? '' : m*a===-1 ? '−' : neg(m*a)}${x} dx`; },",
+      "replace": "return `du = ${Math.abs(m*a)===1 ? '' : neg(Math.abs(m*a))}${x} dx`; },",
       "run": "verify"
     },
     {
-      "name": "π is written over 30",
+      "name": "the leftover power is off by one",
       "file": "index.html",
-      "find": "pi(n){ const g=this.gcd(n,60), p=n/g, q=60/g;",
-      "replace": "pi(n){ const g=this.gcd(n,30), p=n/g, q=30/g;",
+      "find": "`${this.xp(this.Q(i).p-this.Q(i).m+1)} left over`; },",
+      "replace": "`${this.xp(this.Q(i).p-this.Q(i).m)} left over`; },",
       "run": "verify"
     },
     {
-      "name": "the volumes are written before the round is right",
+      "name": "du is written before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"vols\"",
-      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"vols\"",
+      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
+      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"du\"",
       "run": "verify"
     },
     {
-      "name": "g's mirror is drawn on the same side",
+      "name": "a minus in u is not looked for",
       "file": "index.html",
-      "find": "curve(G,-1,'gm',FIG_COL.b,'5 3')",
-      "replace": "curve(G,1,'gm',FIG_COL.b,'5 3')",
+      "find": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).a<0 && this.truth(i)>=0); },",
+      "replace": "signs(){ return [0,1,2,3].filter(i=>this.Q(i).b<0 && this.truth(i)>=0); },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Lathe.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Lathe.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Swap.render();",
       "run": "verify"
     }
   ]

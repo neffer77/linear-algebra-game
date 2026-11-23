@@ -16599,6 +16599,167 @@ const latheTurnNotes = (() => {
   if (env.banners.join() !== 'DISK WEIGHER / every solid weighed') fail('latheturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Does du fit? The swap workshop's third mode, worked again from scratch:
+   every integrand set against du/dx at several x, the ratio read off as one,
+   a number or a power of x left over, every call and every readout, a slip
+   on every pane both other ways, each pane read back, and the hunt for every
+   goal. */
+const swapTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Swap = {render(){ env.renders++; }};" +
+    cut('const SwapTurn = {', '/* ---------- Which number in front? The swap workshop turned round') + 'return SwapTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L = 'ABCD';
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹';
+  const WD = { 1: 'fitting exactly', 0: 'fitting up to a number', [-1]: 'leaving an x over' };
+  const NAME = { 1: 'du fits exactly', 0: 'du fits up to a number', [-1]: 'an x is left over' };
+  const MARK = { 1: 'exact = exact', 0: 'number × number', [-1]: 'left ✗ x left' };
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); n /= g; d /= g; return d === 1 ? neg(n) : `${n < 0 ? '−' : ''}${Math.abs(n)}/${d}`; };
+  const xp = k => (k === 0 ? '1' : k === 1 ? 'x' : k > 1 ? 'x' + SUP[k] : k === -1 ? '1/x' : '1/x' + SUP[-k]);
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  // each integrand c·xᵖ·G(u), u = a·xᵐ + b, against du/dx = m·a·xᵐ⁻¹: their ratio at x = 1, 2 and 3
+  const work = ri => S.ROUNDS[ri].map(([c, p, a, m, b, G, n]) => {
+    const r = x => (c * x ** p) / (m * a * x ** (m - 1));
+    const r1 = r(1), r2 = r(2), r3 = r(3);
+    const steady = Math.abs(r2 - r1) < 1e-12 && Math.abs(r3 - r1) < 1e-12;
+    const over = Math.round(Math.log(r2 / r1) / Math.log(2));          // the power of x the ratio carries
+    if (Math.abs(r3 / r1 - 3 ** over) > 1e-9) fail('swapturn', `round ${ri + 1}`, 'a ratio is not a power of x');
+    const t = !steady ? -1 : Math.abs(r1 - 1) < 1e-12 ? 1 : 0;
+    // u and its bracket, written the way a person would
+    const xm = 'x' + SUP[m];
+    const inner = !b ? (a === 1 ? xm : a === -1 ? '−' + xm : neg(a) + xm)
+      : a < 0 ? `${b} − ${a === -1 ? '' : -a}${xm}` : `${a === 1 ? '' : a}${xm} ${b < 0 ? '−' : '+'} ${Math.abs(b)}`;
+    const wrapped = G === 'pow' ? `(${inner})${SUP[n]}` : G === 'cos' ? `cos(${inner})` : G === 'exp' ? `e^(${inner})` : `√(${inner})`;
+    const gu = G === 'pow' ? 'u' + SUP[n] : G === 'cos' ? 'cos u' : G === 'exp' ? 'eᵘ' : '√u';
+    const xs = p ? xp(p) : '';
+    const out = xs ? (c === 1 ? xs : c === -1 ? '−' + xs : neg(c) + xs) : (c === 1 ? '' : neg(c));
+    const integral = `∫ ${out}${out && G !== 'pow' ? ' ' : ''}${wrapped} dx`;
+    const d = m * a, du = `du = ${d === 1 ? '' : d === -1 ? '−' : neg(d)}${xp(m - 1)} dx`;
+    const k = fr(c, d), kf = /^\d+$/.test(k) ? k : `(${k})`;
+    const gives = t === 1 ? `∫ ${gu} du` : t === 0 ? `${kf} ∫ ${gu} du` : `${xp(over)} left over`;
+    return { c, p, a, m, b, G, n, t, over, inner, wrapped, gu, out, integral, du, kf, gives };
+  });
+  if (S.ROUNDS.length !== 6) fail('swapturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('swapturn', key, `it holds ${Q.length} integrals, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('swapturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if ([w.c, w.p, w.a, w.m, w.b].some(v => !Number.isInteger(v)) || w.m < 2 || w.m > 3 || !w.c || !w.a || !['pow', 'cos', 'exp', 'sqrt'].includes(w.G)) fail('swapturn', key, `${L[i]} is not a whole-number integrand of the four kinds`);
+      if (S.truth(i) !== w.t) fail('swapturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.integral(i) !== w.integral || S.inner(i) !== w.inner || S.du(i) !== w.du || S.gives(i) !== w.gives) fail('swapturn', key, `${L[i]} is written ${S.integral(i)}, u = ${S.inner(i)}, ${S.du(i)}, giving ${S.gives(i)}`);
+    });
+    if (new Set(truth).size < 3) fail('swapturn', key, 'it does not hold all three calls');
+    const nu = [], sg = [], le = [];
+    W.forEach((w, i) => { if (w.t === 0) nu.push(i); if (w.a < 0 && w.t >= 0) sg.push(i); if (w.t < 0) le.push(i); });
+    const tags = [nu.length ? 'number' : null, sg.length ? 'sign' : null, le.length ? 'left' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('swapturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('swapturn', key, 'it does not hold a number out front, a minus in du and an x left over');
+    const why = w => {
+      const head = `u = ${w.inner}, so ${w.du}.`;
+      if (w.t === 1) return `${head} ${w.out} dx is exactly du, and the integral becomes ∫ ${w.gu} du.`;
+      if (w.t === 0) return `${head} ${w.out} dx is ${w.kf} du, only a number away, and the number comes out front: ${w.kf} ∫ ${w.gu} du.`;
+      return `${head} That needs ${xp(w.m - 1)} outside the bracket, but there is ${w.p ? xp(w.p) : 'no x'}: after the swap ${xp(w.over)} is left over, and no number can turn an x into u.`; };
+    // every integral called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, ${w.integral}: ${why(w)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('swapturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(du|gives|exact|number|left)"/.test(svg)) fail('swapturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or du is given away`);
+        if (S.solved || S.streak) fail('swapturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('swapturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('swapturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('swapturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="swtCheck" disabled /.test(S.html())) fail('swapturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="swtCheck" disabled /.test(S.html())) fail('swapturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('swapturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="SwapTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('swapturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`SwapTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('swapturn', key, `${L[i]} does not offer exact, a number and an x left`);
+    });
+    if (S.calls.join() !== truth.join()) fail('swapturn', key, 'the buttons cannot make the right calls');
+    if (/id="swtCheck" disabled /.test(S.html())) fail('swapturn', key, 'the check stays shut with every integral called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    { const i = nu.find(j => !sg.includes(j)) ?? nu[0], w = W[i]; want.push(`In ${L[i]}, ${w.out || '1'} dx is ${w.kf} du: a number is no trouble, it just comes out front.`); }
+    { const w = W[sg[0]]; want.push(`In ${L[sg[0]]}, u = ${w.inner} carries a minus, so ${w.du} carries it too.`); }
+    { const w = W[le[0]]; want.push(`In ${L[le[0]]}, ${w.integral} looks ready, but the swap leaves ${xp(w.over)} behind, so u = ${w.inner} does not work there.`); }
+    want.push(`What each swap gives: ${W.map((w, i) => `${L[i]} ${w.gives}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('swapturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the integral split into what stands outside and the bracket, its u, its du and what it gives
+    const svg = S.svg();
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('swapturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i];
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('swapturn', key, `${L[i]}'s pane is out of place`);
+      const int = pg.match(/data-k="int"[^>]*>(.*?)<\/text>/);
+      const plain = int ? int[1].replace(/<[^>]+>/g, '') : '';
+      if (plain !== w.integral) fail('swapturn', key, `${L[i]}'s pane writes ${plain}, not ${w.integral}`);
+      if (!int || !int[1].includes(`<tspan data-k="out" fill="gold">${w.out}</tspan>`) || !int[1].includes(`<tspan data-k="in" fill="blue">${w.wrapped}</tspan>`)) fail('swapturn', key, `${L[i]} does not colour what stands outside gold and the bracket blue`);
+      if (!pg.includes(`data-k="u"`) || !new RegExp(`data-k="u"[^>]*>u = ${w.inner.replace(/[()+^√]/g, '\\$&')}</text>`).test(pg)) fail('swapturn', key, `${L[i]}'s u is not written on its pane`);
+      if (!new RegExp(`data-k="du"[^>]*>${w.du}</text>`).test(pg)) fail('swapturn', key, `${L[i]}'s du is not written in once the round is right`);
+      if (!pg.includes(`>→ ${w.gives}</text>`)) fail('swapturn', key, `${L[i]}'s swap is not written in once the round is right`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(exact|number|left)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('swapturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="swtNext"') || /onclick="SwapTurn\.call/.test(hh.replace(/disabled onclick="SwapTurn\.call/g, ''))) fail('swapturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('swapturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('swapturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('swapturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,left,number,sign'], [false, 'fix,left,number,one,sign'], [false, 'fix,left,number,one,sign'], [false, 'fix,left,number,one,sign,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('swapturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A number comes out front · The minus rides along in du · No number fixes a stray x · A slip caught and fixed | ✓ Right on the first check') fail('swapturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SWAP SMITH / every du checked') fail('swapturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24097,6 +24258,7 @@ console.log(`  surfaces called   ${pad(planeTurnNotes.checks.toLocaleString(), 1
 console.log(`  orders called     ${pad(composeTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs called same or different in Order Matters, ${composeTurnNotes.wrongs} of them with one called wrong and caught, ${composeTurnNotes.panes} panes read back off the drawing, and the rule the player is told tried on ${composeTurnNotes.tried.toLocaleString()} pairs)`);
 console.log(`  middles weighed   ${pad(avgTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves called above, equal to or below f at the middle in the water level workshop, ${avgTurnNotes.wrongs} of them with one called wrong and caught, and ${avgTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  solids weighed    ${pad(latheTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of solids called as holding more, the same or less in the lathe workshop, ${latheTurnNotes.wrongs} of them with one called wrong and caught, and ${latheTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  swaps fitted      ${pad(swapTurnNotes.checks.toLocaleString(), 12)}  (checks of four integrals called as du fitting exactly, up to a number or leaving an x over in the swap workshop, ${swapTurnNotes.wrongs} of them with one called wrong and caught, and ${swapTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
