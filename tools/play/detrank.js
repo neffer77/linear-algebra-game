@@ -115,7 +115,7 @@ module.exports = {
     await t.tapText(/Free play/);
     let back = true; for (const id of ['wsMat', 'wsBtns', 'wsGoalPanel']) back = back && !(await hidden(t, id));
     t.ok('the steppers come back', back);
-    t.ok('with their figure and readout', await t.ev(() => !!document.querySelector('#wsFig svg') && /det = ad − bc/.test(document.getElementById('wsRead').innerText)));
+    t.ok('with their figure and readout', await t.ev(() => !!document.querySelector('#wsFig canvas') && /det = ad − bc/.test(document.getElementById('wsRead').innerText)));
     t.ok('and the ranks are put away', await t.ev(() => !document.getElementById('drkStops')));
     t.ok('ranking changes nothing in the save', await t.ev(b => JSON.stringify(Game.s) === b, before));
     await t.ev(() => { Workshop.mode = 'free'; UI.go('s-title'); });
