@@ -1,60 +1,60 @@
 {
-  "change": "Add an Above or below mode to the water level workshop",
+  "change": "Add a Which holds more mode to the lathe workshop",
   "mutations": [
     {
-      "name": "f″ takes 3 for the cube's 6",
+      "name": "the square forgets the cross term",
       "file": "index.html",
-      "find": "f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },",
-      "replace": "f2(i,x){ const {c3,c2}=this.Q(i); return 3*c3*x+2*c2; },",
+      "find": "20*(c1*c1+2*c2*c0)*x**3",
+      "replace": "20*(c1*c1+c2*c0)*x**3",
       "run": "verify"
     },
     {
-      "name": "the bend is counted at the ends too",
+      "name": "the volume goes by the area",
       "file": "index.html",
-      "find": "return z>a && z<b ? this.fr(-c2,3*c3) : null; },",
-      "replace": "return z>=a && z<=b ? this.fr(-c2,3*c3) : null; },",
+      "find": "truth(i){ return Math.sign(this.If(i)-this.Ig(i)); },",
+      "replace": "truth(i){ const {F,G,a,b}=this.Q(i); return Math.sign(this.ar6(F,a,b)-this.ar6(G,a,b)); },",
       "run": "verify"
     },
     {
-      "name": "level cubics are not looked for",
+      "name": "the lowest point skips the vertex",
       "file": "index.html",
-      "find": "flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },",
-      "replace": "flats(){ return []; },",
+      "find": "if(v>a && v<b) xs.push(v);",
+      "replace": "if(v>b) xs.push(v);",
       "run": "verify"
     },
     {
-      "name": "the average takes a third, not a sixth",
+      "name": "pairs with the same area are not looked for",
       "file": "index.html",
-      "find": "avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },",
-      "replace": "avg(i){ const {m}=this.Q(i); return this.fr(3*this.f(i,m)+this.gapN(i),3); },",
+      "find": "return this.truth(i)!==0 && this.ar6(F,a,b)===this.ar6(G,a,b); }); },",
+      "replace": "return false; }); },",
       "run": "verify"
     },
     {
-      "name": "the average is drawn before the round is right",
+      "name": "π is written over 30",
       "file": "index.html",
-      "find": "if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');",
-      "replace": "out+=lvl(av,'avg',FIG_COL.d,'6 3');",
+      "find": "pi(n){ const g=this.gcd(n,60), p=n/g, q=60/g;",
+      "replace": "pi(n){ const g=this.gcd(n,30), p=n/g, q=30/g;",
       "run": "verify"
     },
     {
-      "name": "the middle level is drawn at the left end",
+      "name": "the volumes are written before the round is right",
       "file": "index.html",
-      "find": "out+=lvl(fm,'mid',FIG_COL.dim,'4 3');",
-      "replace": "out+=lvl(this.f(i,a),'mid',FIG_COL.dim,'4 3');",
+      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"vols\"",
+      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"vols\"",
       "run": "verify"
     },
     {
-      "name": "curves that bend down are not looked for",
+      "name": "g's mirror is drawn on the same side",
       "file": "index.html",
-      "find": "downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },",
-      "replace": "downs(){ return []; },",
+      "find": "curve(G,-1,'gm',FIG_COL.b,'5 3')",
+      "replace": "curve(G,1,'gm',FIG_COL.b,'5 3')",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Lathe.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Lathe.render();",
       "run": "verify"
     }
   ]

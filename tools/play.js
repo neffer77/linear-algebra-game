@@ -169,6 +169,7 @@ const SUITES = [
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/taylorturn'), // see four functions cut off after a few terms, call each P over, exact or under
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
+  require('./play/latheturn'), // see four pairs of curves spun into solids, call whether f's holds more than g's, the same or less
   require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
   require('./play/hillfence'), // walk a fence across a hill to its lowest point, where ∇f lines up with ∇g
   require('./play/pathpick'), // see a hill, a path and a moment, pick which of four numbers is dz/dt
