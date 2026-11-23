@@ -1823,7 +1823,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRIG INTEGRAL WORKSHOP ============ -->
   <div class="screen" id="s-trigint">
     <div class="panel"><h2>🎢 Trig Integral Workshop</h2><div class="sub">To integrate sin(kx) or cos(kx), run the chain rule backwards: swap the wave and divide by the k inside. Guess F = c·sin(kx) or c·cos(kx) by hand and see whether its slope lands on f.</div></div>
-    <div id="itTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Undo a wave by hand or pick c"></div>
+    <div id="itTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Undo a wave by hand, pick c, or call whether each guess is right, flipped or the wrong size"></div>
     <div class="panel">
       <div id="iqBox"></div>
       <div id="itSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which target"></div>
@@ -15638,7 +15638,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🎢 Trig Integral Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles. Then turn it round: see a wave to undo, and pick which of four numbers is c.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Undo a sine or cosine wave by hand. Pick sin or cos and a number in front, and see whether the slope lands on the target. Catch the slip of multiplying by the k inside, mind the minus that cos carries, and see why dividing by a half doubles. Then turn it round: see a wave to undo, and pick which of four numbers is c. Or call it: see four waves with a guess F each, and say whether F is right, flipped, or the wrong size.</div>
          <button class="btn sm" id="tomeTrigInt" style="width:auto;margin-top:8px" onclick="TrigInt.open()">Open the trig integral workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -34172,6 +34172,178 @@ const Diag = {
    rule, and see whether it lands on the target. Multiplying by the k inside
    instead of dividing is the classic slip, the slope of cos carries a minus,
    and dividing by a half doubles. Nothing is saved. */
+/* ---------- Sign or size? The trig integral workshop's third mode ----------
+   Four waves f = a·cos(kx) or a·sin(kx), each with a guess F that swaps
+   the wave as it should. The player calls whether F is right, has its sign
+   flipped, or has its size off. The rule comes first: the slope of
+   c·sin(kx) is c·k·cos(kx), and the slope of c·cos(kx) is −c·k·sin(kx), so
+   F′ is a number of f's: one is right, minus one is flipped, anything else
+   is the wrong size. Every round holds a right F for a sine, minus and all;
+   a wave with 1/2 inside, where dividing doubles; and a guess that
+   multiplied by k instead of dividing. Once the round is right, each F′ is
+   drawn in green over f dashed in gold, with how many f's it makes written
+   in. A slip rings that pane and works F′ through. Nothing is saved, and
+   there is no clock. */
+const TrigTurn = {
+  // [g, a, k, c]: the wave f = a·g(kx) and the guess F = c·G(kx), G the other wave
+  ROUNDS:[
+    [['cos',6,2,3], ['sin',4,2,-2], ['cos',2,3,6], ['sin',1,0.5,2]],
+    [['sin',3,3,1], ['cos',2,0.5,4], ['sin',6,2,-3], ['cos',1,4,4]],
+    [['cos',4,2,8], ['sin',2,0.5,-4], ['cos',3,3,-1], ['sin',2,4,-0.5]],
+    [['sin',9,3,-3], ['cos',1,0.5,0.5], ['cos',4,2,-2], ['sin',3,2,-6]],
+    [['cos',5,0.5,10], ['sin',1,3,1/3], ['sin',4,2,-8], ['sin',8,4,-2]],
+    [['sin',2,3,-6], ['cos',6,3,2], ['sin',3,0.5,6], ['sin',4,4,-1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four guesses right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'sine', t:'Call a right F for a sine wave, minus and all.', toast:'The minus kept',
+     ok:K=>K.kinds.has('sine')},
+    {id:'half', t:'Call a wave with 1/2 inside.', toast:'Halved inside, doubled out',
+     ok:K=>K.kinds.has('half')},
+    {id:'mult', t:'Call a guess that multiplied by k instead of dividing.', toast:'Multiplied, not divided',
+     ok:K=>K.kinds.has('mult')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Check a guess by its slope. The slope of c·sin(kx) is c·k·cos(kx), and the slope of c·cos(kx) is −c·k·sin(kx): the k inside comes out in front, and cos carries a minus. So F′ is a number of f\\'s. Exactly one f and F is right; minus one f and its sign is flipped; any other number and its size is off.',
+  L:'ABCD',
+  WORD:{1:'right', [-1]:'flipped', 0:'the wrong size'},
+  NAMES:{1:'F is right', [-1]:'F has its sign flipped', 0:'F has its size off'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [g,a,k,c]=this.R()[i]; return {g, a, k, c, G:g==='cos'?'sin':'cos'}; },
+  DEN:[1,2,3,4,6,8],
+  fr(v){ const d=this.DEN.find(d=>Math.abs(v*d-Math.round(v*d))<1e-9), s=v<0?'−':'', n=Math.round(Math.abs(v)*d); return d===1 ? s+n : \`\${s}\${n}/\${d}\`; },
+  par(v){ return v<0 || !Number.isInteger(v) ? \`(\${this.fr(v)})\` : this.fr(v); },
+  kx(k){ return k===1 ? 'x' : k===0.5 ? 'x/2' : \`\${this.fr(k)}x\`; },
+  w(c,g,k){ return (c===1?'':c===-1?'−':Number.isInteger(c)?this.fr(c):\`(\${this.fr(c)})\`)+\`\${g}(\${this.kx(k)})\`; },
+  fs(i){ const {g,a,k}=this.Q(i); return this.w(a,g,k); },
+  Fs(i){ const {G,k,c}=this.Q(i); return this.w(c,G,k); },
+  // how many f's the slope of F makes
+  ratio(i){ const {a,k,c,G}=this.Q(i); return (G==='sin' ? c*k : -c*k)/a; },
+  times(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 'exactly f' : Math.abs(r+1)<1e-9 ? 'minus f' : \`\${this.fr(r)} × f\`; },
+  // 1 right, −1 flipped, 0 the wrong size
+  truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 1 : Math.abs(r+1)<1e-9 ? -1 : 0; },
+  sines(){ return [0,1,2,3].filter(i=>this.Q(i).g==='sin' && this.truth(i)===1); },
+  halves(){ return [0,1,2,3].filter(i=>this.Q(i).k===0.5); },
+  mults(){ return [0,1,2,3].filter(i=>{ const {g,a,k,c}=this.Q(i); return c===(g==='cos'?1:-1)*a*k; }); },
+  tags(){ const t=[]; if(this.sines().length) t.push('sine'); if(this.halves().length) t.push('half'); if(this.mults().length) t.push('mult'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  // F′ worked by the chain rule
+  slope(i){ const {g,k,c,G}=this.Q(i);
+    return G==='sin' ? \`F′ = \${this.par(c)} · \${this.par(k)} · cos(\${this.kx(k)}) = \${this.w(c*k,'cos',k)}\`
+      : \`F′ = −\${this.par(c)} · \${this.par(k)} · sin(\${this.kx(k)}) = \${this.w(-c*k,'sin',k)}\`; },
+  why(i){ const t=this.truth(i);
+    return \`\${this.slope(i)}, which is \${this.times(i)}: \${t===1 ? 'F is right.' : t===-1 ? 'its sign is flipped.' : 'its size is off.'}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      // one guess for each: the half first, then the multiplied one, then the sine, each a different guess where it can be
+      const used=[], one=l=>{ const i=l.find(j=>!used.includes(j)) ?? l[0]; if(i!==undefined) used.push(i); return i; };
+      const hf=one(this.halves()), mu=one(this.mults()), sn=one(this.sines());
+      if(sn!==undefined){ const i=sn;
+        out.push(\`In \${this.L[i]}, f is a sine, so F is a cosine, and the slope of cos carries a minus: \${this.slope(i)}. F's own minus cancels it, and F is right.\`); }
+      if(hf!==undefined){ const i=hf, t=this.truth(i);
+        out.push(\`In \${this.L[i]}, the k inside is 1/2, and dividing by 1/2 doubles: \${this.slope(i)}, which is \${this.times(i)}\${t===1 ? '.' : t===-1 ? ', the size doubled right but the sign flipped.' : ', so the size is off.'}\`); }
+      if(mu!==undefined){ const i=mu, {k}=this.Q(i);
+        out.push(\`In \${this.L[i]}, F multiplies by the k inside, \${this.fr(k)}, instead of dividing: \${this.slope(i)}, which is \${this.times(i)}, k² times too \${k>1?'big':'small'}.\`); }
+      out.push(\`Each F′ against f: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.fr(this.ratio(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad)
+        out.push(\`In \${this.L[i]}, f = \${this.fs(i)} and F = \${this.Fs(i)}: \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`);
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: x from 0 to 2π. Before the round is right, f is dashed in
+     gold under its formula and the guess's; once it is right, F′ is drawn
+     over it in green, with how many f's it makes written in and the call
+     marked. */
+  N:96,
+  svg(){
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four waves f, each with a guess F: \${[0,1,2,3].map(i=>\`\${this.L[i]}, f = \${this.fs(i)} and F = \${this.Fs(i)}\`).join('; ')}\${this.solved ? '. Each F′ is drawn over its f' : ''}">\`;
+    for(let i=0;i<4;i++){
+      const {g,a,k}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i), W=Math[g];
+      const xs=[]; for(let j=0;j<=this.N;j++) xs.push(2*Math.PI*j/this.N);
+      const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.a,true]];
+      if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u)),FIG_COL.c,false]);
+      let big=0; for(const [,ys] of curves) for(const v of ys) big=Math.max(big,Math.abs(v));
+      const px=u=>X+14+u/(2*Math.PI)*152, py=v=>Y+83-v/big*31;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="Fn" x="\${X+172}" y="\${Y+33}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">F = \${this.Fs(i)}</text>\`;
+      out+=\`<line data-k="zero" x1="\${X+14}" y1="\${Y+83}" x2="\${X+166}" y2="\${Y+83}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(const [key,ys,c,dash] of curves)
+        out+=\`<polyline data-k="\${key}" points="\${xs.map((u,j)=>\`\${r(px(u))},\${r(py(ys[j]))}\`).join(' ')}" fill="none" stroke="\${c}" stroke-width="\${dash?2:2.5}"\${dash?' stroke-dasharray="5 4"':''}/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="ratio" x="\${X+172}" y="\${Y+47}" fill="\${FIG_COL.c}" font-size="11" text-anchor="end">F′ = \${this.times(i)}</text>\`;
+        out+=\`<text data-k="\${{1:'right',[-1]:'flip',0:'size'}[t]}" x="\${X+14}" y="\${Y+124}" fill="\${FIG_COL.c}" font-size="11" font-weight="700">\${{1:'✓ right',[-1]:'± flipped',0:'× size off'}[t]}</text>\`; }
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    TrigInt.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    TrigInt.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; TrigInt.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="TrigTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four waves, each with a guess F. Is each F right, flipped, or the wrong size?</div>\`;
+    out+=\`<div id="tqtFig">\${this.svg()}<div class="figcap">Each pane dashes f in gold for x from 0 to 2π. Once all four are called right, each F′ is drawn over it in green.</div></div>\`;
+    out+=\`<div id="tqtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="tqtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span style="font-weight:400;font-size:12px;color:var(--ink)">F = \${this.Fs(i)}</span></b>\`+
+        this.btn(i,1,'✓ Right')+this.btn(i,-1,'± Flip')+this.btn(i,0,'× Size')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="tqtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tqtNext" onclick="TrigTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tqtCheck" \${this.ready()?'':'disabled '}onclick="TrigTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':\`Call all four (\${this.count()} of 4)\`}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="tqtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tqtGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('WAVE UNWINDER','every F unwound','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which c? The trig integral workshop turned round ----------
  * A wave a·cos(kx) or a·sin(kx) with whole numbers, its antiderivative
  * written c·sin(kx) or c·cos(kx), and four numbers. Running the chain rule
@@ -34386,11 +34558,11 @@ const TrigInt = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('itTab').innerHTML=[['hand','🎢 Undo it by hand','Pick sin or cos and set c by hand'],['pick','🎯 Which c?','See a wave to undo, and pick which of four numbers is c']]
+    document.getElementById('itTab').innerHTML=[['hand','🎢 Undo it by hand','Pick sin or cos and set c by hand'],['pick','🎯 Which c?','See a wave to undo, and pick which of four numbers is c'],['turn','🔄 Sign or size?','See four waves with a guess F each, and call whether F is right, flipped, or the wrong size']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="TrigInt.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['itSets','itFig','itF','itFun','itStep','itRead','itGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('iqBox').innerHTML=pick ? TrigPick.html() : '';
+    document.getElementById('iqBox').innerHTML=!pick ? '' : this.tab==='pick' ? TrigPick.html() : TrigTurn.html();
     if(pick) return;
     document.getElementById('itSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="TrigInt.pick(\${i})" aria-label="Target f(x) = \${this.wave(s.a,s.g,s.k)}">\${s.btn}</button>\`).join('');

@@ -1,67 +1,67 @@
 {
-  "change": "Add a Steep or shallow mode to the antiderivative workshop",
+  "change": "Add a Sign or size mode to the trig integral workshop",
   "mutations": [
     {
-      "name": "the slope forgets to bring the power down",
+      "name": "the slope of cos loses its minus",
       "file": "index.html",
-      "find": "ratio(i){ const {k,n,c}=this.Q(i); return c*n/k; },",
-      "replace": "ratio(i){ const {k,n,c}=this.Q(i); return c/k; },",
+      "find": "return (G==='sin' ? c*k : -c*k)/a; },",
+      "replace": "return (c*k)/a; },",
       "run": "verify"
     },
     {
-      "name": "the power is raised by two",
+      "name": "the k inside divides the slope",
       "file": "index.html",
-      "find": "Q(i){ const [k,p,c,C]=this.R()[i]; return {k, p, n:p+1, c, C}; },",
-      "replace": "Q(i){ const [k,p,c,C]=this.R()[i]; return {k, p, n:p+2, c, C}; },",
+      "find": "return (G==='sin' ? c*k : -c*k)/a; },\n  times(i)",
+      "replace": "return (G==='sin' ? c/k : -c/k)/a; },\n  times(i)",
       "run": "verify"
     },
     {
-      "name": "too steep and too shallow are swapped",
+      "name": "right and flipped are swapped",
       "file": "index.html",
-      "find": "truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 0 : r>1 ? 1 : -1; },",
-      "replace": "truth(i){ const r=this.ratio(i); return Math.abs(r-1)<1e-9 ? 0 : r>1 ? -1 : 1; },",
+      "find": "return Math.abs(r-1)<1e-9 ? 1 : Math.abs(r+1)<1e-9 ? -1 : 0; },",
+      "replace": "return Math.abs(r-1)<1e-9 ? -1 : Math.abs(r+1)<1e-9 ? 1 : 0; },",
       "run": "verify"
     },
     {
-      "name": "a + C is counted when the guess is wrong",
+      "name": "any sine counts as the minus kept",
       "file": "index.html",
-      "find": "pluses(){ return [0,1,2,3].filter(i=>this.Q(i).C!==0 && this.truth(i)===0); },",
-      "replace": "pluses(){ return [0,1,2,3].filter(i=>this.Q(i).C!==0); },",
+      "find": "filter(i=>this.Q(i).g==='sin' && this.truth(i)===1); },",
+      "replace": "filter(i=>this.Q(i).g==='sin'); },",
       "run": "verify"
     },
     {
-      "name": "a half power counts as below 0",
+      "name": "a multiplied guess is looked for without its sign",
       "file": "index.html",
-      "find": "negs(){ return [0,1,2,3].filter(i=>this.Q(i).n<0); },",
-      "replace": "negs(){ return [0,1,2,3].filter(i=>this.Q(i).n<=0.5); },",
+      "find": "return c===(g==='cos'?1:-1)*a*k; }); },",
+      "replace": "return c===a*k; }); },",
       "run": "verify"
     },
     {
-      "name": "the + C is written with the wrong sign",
+      "name": "x/2 is written as 2x",
       "file": "index.html",
-      "find": "return C ? `${t} ${C>0?'+':'−'} ${Math.abs(C)}` : t; },",
-      "replace": "return C ? `${t} + ${Math.abs(C)}` : t; },",
+      "find": "k===0.5 ? 'x/2' : `${this.fr(k)}x`; },",
+      "replace": "k===0.5 ? '2x' : `${this.fr(k)}x`; },",
       "run": "verify"
     },
     {
       "name": "F′ is drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved) curves.push(['slope'",
-      "replace": "if(true) curves.push(['slope'",
+      "find": "if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
+      "replace": "if(true) curves.push(['slope',xs.map(u=>m*a*W(k*u))",
       "run": "verify"
     },
     {
-      "name": "F′ is drawn as F itself",
+      "name": "F′ is drawn without its k inside",
       "file": "index.html",
-      "find": "if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**p)",
-      "replace": "if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**(p+1)/(p+1))",
+      "find": "curves.push(['slope',xs.map(u=>m*a*W(k*u))",
+      "replace": "curves.push(['slope',xs.map(u=>m*a*W(u))",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Anti.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Anti.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TrigInt.render();",
       "run": "verify"
     }
   ]

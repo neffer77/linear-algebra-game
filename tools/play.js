@@ -165,6 +165,7 @@ const SUITES = [
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
   require('./play/coverturn'), // see four fractions split in two, call whether A is bigger than B, the same or smaller
   require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
+  require('./play/trigturn'), // see four waves with a guess F each, call whether F is right, flipped, or the wrong size
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
   require('./play/shaperead'), // read a curve's four points: rises or falls, cup or cap
   require('./play/tailpick'), // see an endless area, pick which of four numbers it closes in on
