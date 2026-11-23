@@ -160,6 +160,7 @@ const SUITES = [
   require('./play/imppick'), // see a curve and a point, pick which of four numbers is the slope there
   require('./play/impturn'), // see four curves with a point each, call each tangent rising, falling, flat or upright
   require('./play/covpick'), // see a fraction split in two, pick which of four numbers is A
+  require('./play/coverturn'), // see four fractions split in two, call whether A is bigger than B, the same or smaller
   require('./play/trigpick'), // see a wave to undo, pick which of four numbers is c
   require('./play/flippick'), // see a cubic, pick which of four numbers is where its bend flips
   require('./play/shaperead'), // read a curve's four points: rises or falls, cup or cap

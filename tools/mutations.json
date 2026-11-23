@@ -1,60 +1,60 @@
 {
-  "change": "Add an Easier or harder mode to the parts workshop",
+  "change": "Add an A or B mode to the cover-up workshop",
   "mutations": [
     {
-      "name": "ln as u is called harder",
+      "name": "A's cover-up puts in the other root",
       "file": "index.html",
-      "find": "return u[0]==='x' || u==='l' ? 1 : dv[0]==='x' ? -1 : 0; },",
-      "replace": "return u[0]==='x' ? 1 : dv[0]==='x' || u==='l' ? -1 : 0; },",
+      "find": "A(i){ const {p,q,r,s}=this.Q(i); return (p*r+q)/(r-s); },",
+      "replace": "A(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(r-s); },",
       "run": "verify"
     },
     {
-      "name": "eˣ against a power is called the same kind",
+      "name": "B's leftover factor is taken the wrong way round",
       "file": "index.html",
-      "find": "u[0]==='x' || u==='l' ? 1 : dv[0]==='x' ? -1 : 0;",
-      "replace": "u[0]==='x' || u==='l' ? 1 : dv[0]==='l' ? -1 : 0;",
+      "find": "B(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(s-r); },",
+      "replace": "B(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(r-s); },",
       "run": "verify"
     },
     {
-      "name": "a cosine's slope loses its minus",
+      "name": "A and B are compared by size",
       "file": "index.html",
-      "find": "t[0]==='c' ? this.term([-k,1],0,['s'+k]) : this.term([1,1],-1,[]); },",
-      "replace": "t[0]==='c' ? this.term([k,1],0,['s'+k]) : this.term([1,1],-1,[]); },",
+      "find": "truth(i){ return Math.sign(this.A(i)-this.B(i)); },",
+      "replace": "truth(i){ return Math.sign(Math.abs(this.A(i))-Math.abs(this.B(i))); },",
       "run": "verify"
     },
     {
-      "name": "integrating a power forgets to divide",
+      "name": "a factor's sign is misread",
       "file": "index.html",
-      "find": "t[0]==='x' ? this.term([1,k+1],k+1,[]) : t[0]==='e'",
-      "replace": "t[0]==='x' ? this.term([1,1],k+1,[]) : t[0]==='e'",
+      "find": "fac(r){ return r===0 ? 'x' : `x ${r<0?'+':'−'} ${Math.abs(r)}`; },",
+      "replace": "fac(r){ return r===0 ? 'x' : `x ${r<0?'−':'+'} ${Math.abs(r)}`; },",
       "run": "verify"
     },
     {
-      "name": "the leftover power stays where it was",
+      "name": "a trap is not looked for",
       "file": "index.html",
-      "find": "mul(A,B){ return this.term([A.c[0]*B.c[0],A.c[1]*B.c[1]],A.p+B.p,[...A.f,...B.f]); },",
-      "replace": "mul(A,B){ return this.term([A.c[0]*B.c[0],A.c[1]*B.c[1]],Math.max(A.p,B.p),[...A.f,...B.f]); },",
+      "find": "return a && b && a!==b && (Math.abs(a)>Math.abs(b)) === (a<b); }); },",
+      "replace": "return a && b && a!==b && (Math.abs(a)>Math.abs(b)) === (a>b); }); },",
       "run": "verify"
     },
     {
-      "name": "du is written before the round is right",
+      "name": "A and B are written before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"duv\"",
-      "replace": "{ const t=this.truth(i);\n        out+=`<text data-k=\"duv\"",
+      "find": "if(this.solved){ const t=this.truth(i), M=this.span(i)",
+      "replace": "{ const t=this.truth(i), M=this.span(i)",
       "run": "verify"
     },
     {
-      "name": "u = ln x is not looked for",
+      "name": "the number line runs backwards",
       "file": "index.html",
-      "find": "lns(){ return [0,1,2,3].filter(i=>this.R()[i][0]==='l'); },",
-      "replace": "lns(){ return [0,1,2,3].filter(i=>this.R()[i][1]==='l'); },",
+      "find": "at=v=>+(X+90+v/M*70).toFixed(2)",
+      "replace": "at=v=>+(X+90-v/M*70).toFixed(2)",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Parts.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Parts.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cover.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Cover.render();",
       "run": "verify"
     }
   ]

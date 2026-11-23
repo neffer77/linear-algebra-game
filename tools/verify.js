@@ -16943,6 +16943,172 @@ const partsTurnNotes = (() => {
   if (env.banners.join() !== 'SPLIT SEER / every split weighed') fail('partsturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* A or B? The cover-up workshop's third mode, worked again from scratch:
+   every split solved a second way, by putting two other values of x into
+   px + q = A(x − s) + B(x − r) and solving the pair, checked against the
+   fraction itself at more x, every call and every readout, a slip on every
+   pane both other ways, each pane read back with its number line, and the
+   hunt for every goal. */
+const coverTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Cover = {render(){ env.renders++; }};" +
+    cut('const CoverTurn = {', '/* ---------- Which A? The cover-up workshop turned round') + 'return CoverTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L = 'ABCD';
+  const WD = { 1: 'A bigger', 0: 'the same', [-1]: 'B bigger' };
+  const NAME = { 1: 'A is bigger than B', 0: 'A and B are the same', [-1]: 'B is bigger than A' };
+  const MARK = { 1: 'abig A &gt; B', 0: 'same A = B', [-1]: 'bbig A &lt; B' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const factor = r => (r === 0 ? 'x' : r < 0 ? `x + ${-r}` : `x − ${r}`);
+  const wrapped = r => (r === 0 ? 'x' : `(${factor(r)})`);
+  const pn = n => (n < 0 ? `(−${-n})` : String(n));
+  const work = ri => S.ROUNDS[ri].map(([p, q, r, s]) => {
+    const key = `round ${ri + 1}`;
+    if (r === s) fail('coverturn', key, 'a fraction has the same factor twice');
+    // solve px + q = A(x − s) + B(x − r) at two values of x away from r and s
+    const [x1, x2] = [r + s + 5, r + s - 7.5];
+    const a11 = x1 - s, a12 = x1 - r, a21 = x2 - s, a22 = x2 - r, b1 = p * x1 + q, b2 = p * x2 + q;
+    const det = a11 * a22 - a12 * a21;
+    const A = (b1 * a22 - a12 * b2) / det, B = (a11 * b2 - b1 * a21) / det;
+    // the split must give back the fraction at other values of x too
+    for (const x of [0.37, -2.71, 9.3]) {
+      const lhs = (p * x + q) / ((x - r) * (x - s)), rhs = A / (x - r) + B / (x - s);
+      if (Math.abs(lhs - rhs) > 1e-9) fail('coverturn', key, `the split of (${p}x + ${q})/((x − ${r})(x − ${s})) does not give the fraction back`);
+    }
+    const Ai = Math.round(A), Bi = Math.round(B);
+    if (Math.abs(A - Ai) > 1e-9 || Math.abs(B - Bi) > 1e-9) fail('coverturn', key, 'a split comes out with a fraction in it');
+    if (!Ai && !Bi) fail('coverturn', key, 'a fraction is 0');
+    const pre = p === 1 ? 'x' : p === -1 ? '−x' : neg(p) + 'x';
+    const top = q ? `${pre} ${q < 0 ? '−' : '+'} ${Math.abs(q)}` : pre;
+    const bottom = wrapped(r) + wrapped(s);
+    const cover = (w, a, b, v) => { const t = `${p === 1 ? '' : p === -1 ? '−' : neg(p) + '·'}${pn(a)}${q ? ` ${q < 0 ? '−' : '+'} ${Math.abs(q)}` : ''}`;
+      return `${w} = ${q ? `(${t})` : t}/(${pn(a)} − ${pn(b)}) = ${neg(p * a + q)}/${pn(a - b)} = ${neg(v)}`; };
+    const t = Math.sign(Ai - Bi);
+    const trap = Ai && Bi && Ai !== Bi && (Math.abs(Ai) > Math.abs(Bi)) === (Ai < Bi);
+    return { p, q, r, s, A: Ai, B: Bi, t, trap, zero: t !== 0 && (!Ai || !Bi), top, bottom,
+      frac: `${q ? `(${top})` : top}/(${bottom})`, covA: cover('A', r, s, Ai), covB: cover('B', s, r, Bi) };
+  });
+  if (S.ROUNDS.length !== 6) fail('coverturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('coverturn', key, `it holds ${Q.length} fractions, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('coverturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.A(i) !== w.A || S.B(i) !== w.B) fail('coverturn', key, `${L[i]} gives A = ${S.A(i)}, B = ${S.B(i)}, not ${w.A} and ${w.B}`);
+      if (S.truth(i) !== w.t) fail('coverturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.frac(i) !== w.frac) fail('coverturn', key, `${L[i]} is written ${S.frac(i)}, not ${w.frac}`);
+    });
+    if (new Set(truth).size < 3) fail('coverturn', key, 'it does not hold all three calls');
+    const sm = [], zr = [], tr = [];
+    W.forEach((w, i) => { if (w.t === 0) sm.push(i); if (w.zero) zr.push(i); if (w.trap) tr.push(i); });
+    const tags = [sm.length ? 'same' : null, zr.length ? 'zero' : null, tr.length ? 'trap' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('coverturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('coverturn', key, 'it does not hold an even split, a factor that cancels and a trap');
+    const why = w => {
+      const z = w.A === 0 ? ` The top is 0 at x = ${neg(w.r)}, so ${factor(w.r)} cancels and A = 0.` : w.B === 0 ? ` The top is 0 at x = ${neg(w.s)}, so ${factor(w.s)} cancels and B = 0.` : '';
+      const v = w.t === 0 ? 'They are the same.' : `${w.t > 0 ? 'A' : 'B'} is bigger${w.trap ? `, though ${w.t > 0 ? 'B' : 'A'} is bigger in size: it is negative` : ''}.`;
+      return `Cover up ${factor(w.r)} and put x = ${neg(w.r)}: ${w.covA}. Cover up ${factor(w.s)} and put x = ${neg(w.s)}: ${w.covB}.${z} ${v}`; };
+    // every fraction called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, ${w.frac}: ${why(w)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('coverturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(nl|dA|dB|ab|abig|same|bbig)"/.test(svg)) fail('coverturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or A and B are given away`);
+        if (S.solved || S.streak) fail('coverturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('coverturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('coverturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('coverturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="cvtCheck" disabled /.test(S.html())) fail('coverturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="cvtCheck" disabled /.test(S.html())) fail('coverturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('coverturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="CoverTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('coverturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`CoverTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('coverturn', key, `${L[i]} does not offer A bigger, the same and B bigger`);
+    });
+    if (S.calls.join() !== truth.join()) fail('coverturn', key, 'the buttons cannot make the right calls');
+    if (/id="cvtCheck" disabled /.test(S.html())) fail('coverturn', key, 'the check stays shut with every fraction called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (sm.length) { const w = W[sm[0]]; want.push(`In ${L[sm[0]]}, A and B are both ${neg(w.A)}: an even split, and A + B is ${neg(w.p)}, the number in front of x in the top, as it always is.`); }
+    if (zr.length) { const w = W[zr[0]], a0 = w.A === 0, root = a0 ? w.r : w.s;
+      want.push(`In ${L[zr[0]]}, the top is 0 at x = ${neg(root)}, so ${factor(root)} cancels top and bottom, ${a0 ? 'A' : 'B'} = 0, and the fraction was ${a0 ? 'B' : 'A'}/${wrapped(a0 ? w.s : w.r)} all along.`); }
+    if (tr.length) { const w = W[tr[0]], aBig = Math.abs(w.A) > Math.abs(w.B);
+      want.push(`In ${L[tr[0]]}, ${aBig ? 'A' : 'B'} = ${neg(aBig ? w.A : w.B)} is bigger in size than ${aBig ? 'B' : 'A'} = ${neg(aBig ? w.B : w.A)}, yet it is the smaller number, lying further left on the line.`); }
+    want.push(`A and B: ${W.map((w, i) => `${L[i]} ${neg(w.A)} and ${neg(w.B)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('coverturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the fraction stacked and its split, then A and B on a number line
+    const svg = S.svg();
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('coverturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('coverturn', key, `${L[i]}'s pane is out of place`);
+      const tx = pg.match(/data-k="top"[^>]*>([^<]*)</), bx = pg.match(/data-k="bottom"[^>]*>([^<]*)</);
+      if (!tx || tx[1] !== w.top || !bx || bx[1] !== w.bottom) fail('coverturn', key, `${L[i]}'s fraction is not written top over bottom`);
+      if (!pg.includes(`>= <tspan fill="gold">A</tspan>/${wrapped(w.r)} + <tspan fill="blue">B</tspan>/${wrapped(w.s)}</text>`)) fail('coverturn', key, `${L[i]}'s split is not written with A in gold over its own factor`);
+      const M = Math.max(1, Math.abs(w.A), Math.abs(w.B)), at = v => +(X + 90 + v / M * 70).toFixed(2);
+      const dA = pg.match(/data-k="dA" cx="([-\d.]+)"/), dB = pg.match(/data-k="dB" cx="([-\d.]+)"/);
+      if (!dA || +dA[1] !== at(w.A) || !dB || +dB[1] !== at(w.B)) fail('coverturn', key, `${L[i]}'s A and B are not set in place on the number line`);
+      if (w.t !== 0 && (+dA[1] > +dB[1]) !== (w.A > w.B)) fail('coverturn', key, `${L[i]}'s bigger number is not to the right`);
+      if (!pg.includes(`>A = ${neg(w.A)} · B = ${neg(w.B)}</text>`)) fail('coverturn', key, `${L[i]}'s A and B are not written in once the round is right`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(abig|same|bbig)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('coverturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="cvtNext"') || /onclick="CoverTurn\.call/.test(hh.replace(/disabled onclick="CoverTurn\.call/g, ''))) fail('coverturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('coverturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('coverturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('coverturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,same,trap,zero'], [false, 'fix,one,same,trap,zero'], [false, 'fix,one,same,trap,zero'], [false, 'fix,one,same,three,trap,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('coverturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ An even split · A factor cancels · Bigger in size is not bigger · A slip caught and fixed | ✓ Right on the first check') fail('coverturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'COVER CAPTAIN / every split compared') fail('coverturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24443,6 +24609,7 @@ console.log(`  middles weighed   ${pad(avgTurnNotes.checks.toLocaleString(), 12)
 console.log(`  solids weighed    ${pad(latheTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of solids called as holding more, the same or less in the lathe workshop, ${latheTurnNotes.wrongs} of them with one called wrong and caught, and ${latheTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  swaps fitted      ${pad(swapTurnNotes.checks.toLocaleString(), 12)}  (checks of four integrals called as du fitting exactly, up to a number or leaving an x over in the swap workshop, ${swapTurnNotes.wrongs} of them with one called wrong and caught, and ${swapTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits weighed    ${pad(partsTurnNotes.checks.toLocaleString(), 12)}  (checks of four splits called as leaving something easier, the same kind or harder in the parts workshop, ${partsTurnNotes.wrongs} of them with one called wrong and caught, and ${partsTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  splits compared   ${pad(coverTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions called as A bigger than B, the same or smaller in the cover-up workshop, ${coverTurnNotes.wrongs} of them with one called wrong and caught, and ${coverTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

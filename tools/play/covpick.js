@@ -34,11 +34,11 @@ module.exports = {
       /Then turn it round: see a fraction split in two, and pick which of four numbers is A\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeCover');
     t.eq('the cover-up workshop opens', await t.screen(), 's-cover');
-    t.eq('covering up by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('covering up by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5252));
     await t.tapText(/Which A\?/);
-    t.eq('which A is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which A is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the fractions, drawing, stepper, keep button, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('cqBox').innerText)).startsWith(

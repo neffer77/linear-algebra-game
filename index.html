@@ -1582,7 +1582,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ COVER-UP WORKSHOP ============ -->
   <div class="screen" id="s-cover">
     <div class="panel"><h2>🙈 Cover-up Workshop</h2><div class="sub">Split a fraction into simpler pieces. Clear the fractions and the equation left holds for every x, so choose x to suit you: where one factor is 0, every term but one vanishes and its unknown drops straight out. Keep the equations you want to use.</div></div>
-    <div id="cvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cover up by hand or pick A"></div>
+    <div id="cvTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cover up by hand, pick A, or call whether A is bigger than B"></div>
     <div class="panel">
       <div id="cqBox"></div>
       <div id="cvSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
@@ -15566,7 +15566,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🙈 Cover-up Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor. Then turn it round: see a fraction split in two, and pick which of four numbers is A.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Split a fraction into partial fractions by choosing the x that makes each factor vanish. Find every unknown, see that any x works if you solve the equations together, and get past a repeated factor. Then turn it round: see a fraction split in two, and pick which of four numbers is A. Or call four splits: is A bigger than B, the same, or smaller?</div>
          <button class="btn sm" id="tomeCover" style="width:auto;margin-top:8px" onclick="Cover.open()">Open the cover-up workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -29590,6 +29590,177 @@ const CofMoves = {
    suit: at the x where one factor is 0, every term but one vanishes and its
    unknown drops straight out. Any other x works too, it just needs solving
    together. A repeated factor can only be covered up once. Nothing is saved. */
+/* ---------- A or B? The cover-up workshop's third mode ----------
+   Four fractions (px + q)/((x − r)(x − s)), each to be split as
+   A/(x − r) + B/(x − s), and the player calls whether A is bigger than B,
+   the same, or smaller, which takes the cover-up twice: A is the top at
+   x = r over r − s, and B the top at x = s over s − r. Rounds set a pair
+   that comes out the same, a top that is 0 at a root so its factor
+   cancels, and a pair where the number bigger in size is the smaller one,
+   being negative. Each pane writes the fraction and its split; once the
+   round is right, A and B are written in and set on a number line. A slip
+   rings that pane and works both cover-ups through. Nothing is saved, and
+   there is no clock. */
+const CoverTurn = {
+  // [p, q, r, s]: (px + q)/((x − r)(x − s)) = A/(x − r) + B/(x − s)
+  ROUNDS:[
+    [[2,-1,-1,2], [-2,0,1,3], [1,1,0,-1], [1,3,-1,1]],
+    [[1,-4,0,2], [2,-5,2,3], [-3,-5,-3,-1], [2,-6,3,1]],
+    [[1,-1,2,3], [4,0,-1,1], [3,6,-2,1], [-2,-3,0,3]],
+    [[-2,5,0,1], [1,0,0,-2], [3,-4,0,1], [4,-2,0,1]],
+    [[2,1,0,-1], [1,5,-2,-3], [-3,7,1,3], [2,-4,2,3]],
+    [[1,-5,1,3], [-2,2,-2,-1], [-4,2,0,1], [3,3,-1,2]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four fractions right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'same', t:'Call one where A and B come out the same.', toast:'An even split',
+     ok:K=>K.kinds.has('same')},
+    {id:'zero', t:'Call one where the top is 0 at a root, so its factor cancels.', toast:'A factor cancels',
+     ok:K=>K.kinds.has('zero')},
+    {id:'trap', t:'Call one where the number bigger in size is the smaller one.', toast:'Bigger in size is not bigger',
+     ok:K=>K.kinds.has('trap')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Cover up twice. For A, cover up its own factor x − r and put x = r into everything left: A = (pr + q)/(r − s). For B, cover up x − s and put x = s: B = (ps + q)/(s − r). Then compare them as numbers on a line, where −3 is smaller than 1 though it is bigger in size.',
+  L:'ABCD',
+  WORD:{1:'A bigger', 0:'the same', [-1]:'B bigger'},
+  NAMES:{1:'A is bigger than B', 0:'A and B are the same', [-1]:'B is bigger than A'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [p,q,r,s]=this.R()[i]; return {p,q,r,s}; },
+  A(i){ const {p,q,r,s}=this.Q(i); return (p*r+q)/(r-s); },
+  B(i){ const {p,q,r,s}=this.Q(i); return (p*s+q)/(s-r); },
+  // 1 A bigger, 0 the same, −1 B bigger
+  truth(i){ return Math.sign(this.A(i)-this.B(i)); },
+  // x − r written out: x, x − 2, x + 3
+  fac(r){ return r===0 ? 'x' : `x ${r<0?'+':'−'} ${Math.abs(r)}`; },
+  pf(r){ return r===0 ? 'x' : `(${this.fac(r)})`; },
+  top(i){ const {p,q}=this.Q(i), x=p===1 ? 'x' : p===-1 ? '−x' : neg(p)+'x';
+    return !q ? x : `${x} ${q<0?'−':'+'} ${Math.abs(q)}`; },
+  bottom(i){ const {r,s}=this.Q(i); return this.pf(r)+this.pf(s); },
+  frac(i){ const t=this.top(i); return `${/ /.test(t) ? `(${t})` : t}/(${this.bottom(i)})`; },
+  split(i){ const {r,s}=this.Q(i); return `A/${this.pf(r)} + B/${this.pf(s)}`; },
+  pn:n=>n<0 ? `(${neg(n)})` : String(n),
+  // one cover-up worked: (p·r + q)/(r − s) = n/d = value
+  cover(i,w){ const {p,q,r,s}=this.Q(i), [a,b]=w==='A' ? [r,s] : [s,r], n=p*a+q, d=a-b;
+    const t=`${p===1?'':p===-1?'−':neg(p)+'·'}${this.pn(a)}${q ? ` ${q<0?'−':'+'} ${Math.abs(q)}` : ''}`;
+    return `${w} = ${q ? `(${t})` : t}/(${this.pn(a)} − ${this.pn(b)}) = ${neg(n)}/${this.pn(d)} = ${neg(n/d)}`; },
+  sames(){ return [0,1,2,3].filter(i=>this.truth(i)===0); },
+  zeros(){ return [0,1,2,3].filter(i=>this.truth(i)!==0 && (this.A(i)===0 || this.B(i)===0)); },
+  traps(){ return [0,1,2,3].filter(i=>{ const a=this.A(i), b=this.B(i); return a && b && a!==b && (Math.abs(a)>Math.abs(b)) === (a<b); }); },
+  tags(){ const t=[]; if(this.sames().length) t.push('same'); if(this.zeros().length) t.push('zero'); if(this.traps().length) t.push('trap'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  verdict(i){ const a=this.A(i), b=this.B(i), t=this.truth(i);
+    return t===0 ? `They are the same.` : `${t>0?'A':'B'} is bigger${(Math.abs(a)>Math.abs(b)) === (a<b) && a && b ? `, though ${t>0?'B':'A'} is bigger in size: it is negative` : ''}.`; },
+  why(i){
+    const {q,p,r,s}=this.Q(i), a=this.A(i), b=this.B(i);
+    const z=a===0 ? ` The top is 0 at x = ${neg(r)}, so ${this.fac(r)} cancels and A = 0.` : b===0 ? ` The top is 0 at x = ${neg(s)}, so ${this.fac(s)} cancels and B = 0.` : '';
+    return `Cover up ${this.fac(r)} and put x = ${neg(r)}: ${this.cover(i,'A')}. Cover up ${this.fac(s)} and put x = ${neg(s)}: ${this.cover(i,'B')}.${z} ${this.verdict(i)}`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const sm=this.sames(), zr=this.zeros(), tr=this.traps();
+      if(sm.length){ const i=sm[0];
+        out.push(`In ${this.L[i]}, A and B are both ${neg(this.A(i))}: an even split, and A + B is ${neg(this.Q(i).p)}, the number in front of x in the top, as it always is.`); }
+      if(zr.length){ const i=zr[0], w=this.A(i)===0 ? 'A' : 'B', root=w==='A' ? this.Q(i).r : this.Q(i).s;
+        out.push(`In ${this.L[i]}, the top is 0 at x = ${neg(root)}, so ${this.fac(root)} cancels top and bottom, ${w} = 0, and the fraction was ${w==='A'?'B':'A'}/${this.pf(w==='A'?this.Q(i).s:this.Q(i).r)} all along.`); }
+      if(tr.length){ const i=tr[0], a=this.A(i), b=this.B(i), [big,small]=Math.abs(a)>Math.abs(b) ? ['A','B'] : ['B','A'];
+        out.push(`In ${this.L[i]}, ${big} = ${neg(big==='A'?a:b)} is bigger in size than ${small} = ${neg(small==='A'?a:b)}, yet it is the smaller number, lying further left on the line.`); }
+      out.push(`A and B: ${[0,1,2,3].map(i=>`${this.L[i]} ${neg(this.A(i))} and ${neg(this.B(i))}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad) out.push(`In ${this.L[i]}, ${this.frac(i)}: ${this.why(i)} You had it as ${this.WORD[this.calls[i]]}.`);
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  // the number line runs from −M to M, M the larger size of A and B, at least 1
+  span(i){ return Math.max(1, Math.abs(this.A(i)), Math.abs(this.B(i))); },
+  /* each pane: the fraction stacked, top over bottom, and its split. Once the
+     round is right, A in gold and B in blue are set on a number line. */
+  svg(){
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four fractions to split: ${[0,1,2,3].map(i=>`${this.L[i]}, ${this.frac(i)} = ${this.split(i)}`).join('; ')}${this.solved?', each with A and B written in and set on a number line':''}">`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+95;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="top" x="${cx}" y="${Y+26}" fill="${FIG_COL.ink}" font-size="13" text-anchor="middle">${this.top(i)}</text>`;
+      out+=`<line data-k="bar" x1="${cx-42}" y1="${Y+32}" x2="${cx+42}" y2="${Y+32}" stroke="${FIG_COL.ink}" stroke-width="1"/>`;
+      out+=`<text data-k="bottom" x="${cx}" y="${Y+47}" fill="${FIG_COL.ink}" font-size="13" text-anchor="middle">${this.bottom(i)}</text>`;
+      out+=`<text data-k="split" x="${cx}" y="${Y+66}" fill="${FIG_COL.ink}" font-size="12" text-anchor="middle">= <tspan fill="${FIG_COL.a}">A</tspan>/${this.pf(this.Q(i).r)} + <tspan fill="${FIG_COL.b}">B</tspan>/${this.pf(this.Q(i).s)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i), M=this.span(i), at=v=>+(X+90+v/M*70).toFixed(2), a=this.A(i), b=this.B(i), ly=Y+90;
+        out+=`<line data-k="nl" x1="${X+20}" y1="${ly}" x2="${X+160}" y2="${ly}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+        out+=`<line data-k="tick0" x1="${X+90}" y1="${ly-4}" x2="${X+90}" y2="${ly+4}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+        out+=`<text data-k="ends" x="${X+20}" y="${ly+14}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${neg(-M)}</text><text x="${X+160}" y="${ly+14}" fill="${FIG_COL.dim}" font-size="10" text-anchor="middle">${neg(M)}</text>`;
+        out+=`<circle data-k="dB" cx="${at(b)}" cy="${ly}" r="${t===0?7:5}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+        out+=`<circle data-k="dA" cx="${at(a)}" cy="${ly}" r="4" fill="${FIG_COL.a}"/>`;
+        out+=`<text data-k="ab" x="${X+10}" y="${Y+120}" fill="${FIG_COL.ink}" font-size="11">A = ${neg(a)} · B = ${neg(b)}</text>`;
+        out+=`<text data-k="${{1:'abig',0:'same',[-1]:'bbig'}[t]}" x="${X+172}" y="${Y+120}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'A &gt; B',0:'A = B',[-1]:'A &lt; B'}[t]}</text>`; }
+    }
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Cover.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Cover.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Cover.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="CoverTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four fractions, each split as A over one factor plus B over the other. Is A bigger than B, the same, or smaller?</div>`;
+    out+=`<div id="cvtFig">${this.svg()}<div class="figcap">Each fraction is written top over bottom with its split. Once all four are called right, A in gold and B in blue are written in and set on a number line.</div></div>`;
+    out+=`<div id="cvtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="cvtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]}</b>`+
+        this.btn(i,1,'A &gt; B')+this.btn(i,0,'A = B')+this.btn(i,-1,'A &lt; B')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="cvtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cvtNext" onclick="CoverTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="cvtCheck" ${this.ready()?'':'disabled '}onclick="CoverTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="cvtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="cvtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('COVER CAPTAIN','every split compared','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 /* ---------- Which A? The cover-up workshop turned round ----------
  * A fraction (px + q)/((x − r)(x − s)) with whole numbers, split as
  * A/(x − r) + B/(x − s), and four numbers. Covering up x − r and putting
@@ -29826,11 +29997,11 @@ const Cover = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('cvTab').innerHTML=[['hand','🙈 Cover it by hand','Try x values and keep the equations by hand'],['pick','🎯 Which A?','See a fraction split in two, and pick which of four numbers is A']]
+    document.getElementById('cvTab').innerHTML=[['hand','🙈 Cover it by hand','Try x values and keep the equations by hand'],['pick','🎯 Which A?','See a fraction split in two, and pick which of four numbers is A'],['turn','⚖️ A or B?','See four fractions split in two, and call whether A is bigger than B, the same, or smaller']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Cover.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['cvSets','cvFig','cvStep','cvKeep','cvRead','cvGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('cqBox').innerHTML=pick ? CovPick.html() : '';
+    document.getElementById('cqBox').innerHTML=!pick ? '' : this.tab==='pick' ? CovPick.html() : CoverTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('cvSets').innerHTML=this.SETS.map((s,i)=>
