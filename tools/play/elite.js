@@ -107,6 +107,8 @@ module.exports = {
         Battle.paid = null; Battle.ehp = 1;
       });
       await answer(t, true);
+      await sleep(1400);                       // the killing blow settles, then the knight steps on
+      await t.ev(() => { const b = document.querySelector('#explain button'); if (b) b.click(); });
       for (let i = 0; i < 30 && await t.screen() !== 's-result'; i++) await sleep(250);
       return t.ev(() => Battle.paid);
     };
