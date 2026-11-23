@@ -2456,6 +2456,69 @@ const eliteNotes = (() => {
   want(floats.length && floats.every(t => t === 'ARMOUR CRACKED'), 'armour', 'cracking the armour does not say so');
   return { checks, foes: foes.length };
 })();
+/* A boss's second phase: when it comes, what it does to the boss's blows
+   and wind-up, how a streak staggers it, and what a flawless phase pays,
+   worked on every realm boss with a stand-in fight. */
+const phaseNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Phase = {'), html.indexOf('const Battle = {'));
+  const realms = html.slice(html.indexOf('const REALMS'), html.indexOf('\n];', html.indexOf('const REALMS')) + 3);
+  const shown = [];
+  const P = new Function('Celebrate', 'Anim', 'Sfx', 'H', src + realms + ';return {Phase, REALMS};')(
+    { banner: (t, sub) => shown.push(t + ': ' + sub) }, { float: (x, y, t) => shown.push(t) }, { milestone() {} }, 600);
+  const { Phase } = P, bosses = P.REALMS.flatMap(r => r.foes).filter(f => f.boss);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('phase', key, msg); };
+  const fight = (foe, mode = 'campaign') => ({ foe, mode, emax: foe.hp, ehp: foe.hp, missed: 0, charge: 0, chargeMax: 2, slamNext: false, phase: 1 });
+  want(bosses.length === 8, 'bosses', `${bosses.length} realm bosses`);
+  for (const f of bosses) {
+    // every blow from full: it rallies exactly when one leaves it at half or below, still standing
+    for (let hit = 1; hit <= f.hp; hit += Math.max(1, Math.floor(f.hp / 97))) {
+      const B = fight(f), was = B.ehp;
+      B.ehp = Math.max(0, was - hit);
+      const r = Phase.check(B, was);
+      const due = B.ehp > 0 && B.ehp <= f.hp / 2;
+      want(r === due && (B.phase === 2) === due, f.nm + ':' + hit, `a blow of ${hit} from full ${r ? 'rallies it' : 'does not rally it'}`);
+      if (due) want(B.chargeMax === 1 && B.phaseFrom === 0 && B.phaseJust === true, f.nm, 'rallying does not quicken the wind-up or mark where the phase began');
+    }
+    // once only, and never from at or under half
+    const B = fight(f); B.ehp = Math.floor(f.hp / 2);
+    want(Phase.check(B, Math.floor(f.hp / 2) + 1) && B.phase === 2, f.nm, 'a blow of one across half does not rally it');
+    B.ehp = Math.floor(f.hp / 2); B.chargeMax = 1;
+    want(!Phase.check(B, f.hp) && B.chargeMax === 1, f.nm, 'a boss rallies twice');
+    const low = fight(f); low.ehp = Math.floor(f.hp / 3);
+    want(!Phase.check(low, Math.floor(f.hp / 2)), f.nm, 'a blow struck at half or under rallies it');
+    for (const mode of ['arena', 'dungeon', 'daily']) {
+      const o = fight(f, mode); o.ehp = Math.floor(f.hp / 3);
+      want(!Phase.check(o, f.hp) && o.phase === 1, f.nm + ':' + mode, `a boss in the ${mode} rallies`);
+    }
+    // its blows: a fifth harder, rounded, once rallied
+    want(Phase.atk({ phase: 1 }, f.atk) === f.atk && Phase.atk({ phase: 2 }, f.atk) === Math.round(f.atk * 1.2), f.nm, 'the second phase does not hit a fifth harder');
+  }
+  { const o = fight(Object.assign({}, bosses[0], { boss: false })); o.ehp = Math.floor(o.emax / 3); want(!Phase.check(o, o.emax) && o.phase === 1, 'plain', 'a plain foe rallies'); }
+  // the stagger: three right in a row after the rallying blow, broken by a miss
+  const runs = [[1, 1, 1], [0, 1, 1, 1], [1, 1, 0, 1, 1, 1], [1, 0, 1, 1], [1, 1, 1, 1, 1, 1]];
+  for (const run of runs) {
+    const B = fight(bosses[0]); B.phase = 2; B.phaseRun = 0; B.phaseJust = true; B.charge = 1; B.slamNext = true;
+    Phase.step(B, true);                                   // the rallying blow itself
+    let streak = 0, at = [];
+    run.forEach((ok, i) => {
+      streak = ok ? streak + 1 : 0;
+      const s = Phase.step(B, !!ok);
+      if (s) at.push(i);
+      if (streak === 3) streak = 0;
+    });
+    const want3 = []; let k = 0; run.forEach((ok, i) => { k = ok ? k + 1 : 0; if (k === 3) { want3.push(i); k = 0; } });
+    want(at.join() === want3.join(), run.join(''), `staggered at ${at.join() || 'none'}, not ${want3.join() || 'none'}`);
+    if (want3.length) want(B.slamNext === false && B.charge === 0 && B.staggered === true, run.join(''), 'a stagger does not break off the wind-up');
+    if (want3.length) want(Phase.bonus(B) === 1.5 && Phase.bonus(B) === 1, run.join(''), 'the next blow after a stagger is not half again, once');
+  }
+  want(!Phase.step({ phase: 1, phaseRun: 2 }, true), 'first', 'a stagger in the first phase');
+  // the reward: through the second phase without a miss
+  want(Phase.flawless({ phase: 2, missed: 3, phaseFrom: 3 }) && !Phase.flawless({ phase: 2, missed: 4, phaseFrom: 3 }) && !Phase.flawless({ phase: 1, missed: 0, phaseFrom: 0 }), 'flawless', 'a flawless second phase is not told apart');
+  want(shown.some(t => t === 'PHASE TWO: it rallies: three in a row will stagger it') && shown.includes('STAGGERED'), 'said', 'the rally or the stagger is not said');
+  return { checks, bosses: bosses.length };
+})();
 const slipNotes = (() => {
   const plain = h => String(h).replace(/<\/?[a-z][^>]*>/gi, ' ').replace(/\s+/g, ' ').trim();
   const STOP = new Set(('the a an and or of to in on is are be it its that this they them their you your not no with ' +
@@ -23806,6 +23869,7 @@ console.log(`  determinants explained     ${pad(detMeaning.toLocaleString(), 10)
 console.log(`  numeric analysis checks    ${pad(analysisChecks.toLocaleString(), 10)}`);
 console.log(`  wrong answers diagnosed    ${pad((tagged / wrongShown * 100).toFixed(1) + '%', 10)}`);
 console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString(), 10)}  (the four twists on every one of the game's ${eliteNotes.foes} foes, how often the dice bring one, and what the armour lets through)`);
+console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  generators independently   ${pad(`${verified}/${total}`, 10)}`);
 console.log(`    verified against maths                 (${(verified / total * 100).toFixed(0)}% coverage)`);
 {

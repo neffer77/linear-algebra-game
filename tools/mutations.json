@@ -1,75 +1,117 @@
 {
-  "change": "Add elite rematches: a beaten foe comes back with one twist",
+  "change": "Give every realm boss a second phase",
   "mutations": [
     {
-      "name": "the armour cracks on a streak of two",
+      "name": "a boss rallies at a third, not half",
       "file": "index.html",
-      "find": "    if(B.combo>=3){ B.armour=0;",
-      "replace": "    if(B.combo>=2){ B.armour=0;",
+      "find": "B.ehp>B.emax/2) return false;",
+      "replace": "B.ehp>B.emax/3) return false;",
       "run": "verify"
     },
     {
-      "name": "the armour lets a third through, not half",
+      "name": "a boss can rally twice",
       "file": "index.html",
-      "find": "    return Math.max(1, Math.round(dmg/2));\n  }\n};",
-      "replace": "    return Math.max(1, Math.round(dmg/3));\n  }\n};",
+      "find": "    if(B.phase===2 || !this.can(B) ||",
+      "replace": "    if(!this.can(B) ||",
       "run": "verify"
     },
     {
-      "name": "a frenzied elite keeps the elite's full health",
+      "name": "bosses rally in the arena too",
       "file": "index.html",
-      "find": "const hp=Math.round(foe.hp*1.25*(k==='frenzied'?0.75:1));",
-      "replace": "const hp=Math.round(foe.hp*1.25);",
+      "find": "return !!(B.foe && B.foe.boss && B.mode==='campaign');",
+      "replace": "return !!(B.foe && B.foe.boss);",
       "run": "verify"
     },
     {
-      "name": "a first meeting can come back elite",
+      "name": "the second phase hits no harder",
       "file": "index.html",
-      "find": "    if(!beaten || !R.chance(this.CHANCE)) return foe;",
-      "replace": "    if(!R.chance(this.CHANCE)) return foe;",
+      "find": "return B.phase===2 ? Math.round(atk*1.2) : atk;",
+      "replace": "return atk;",
       "run": "verify"
     },
     {
-      "name": "a forced twist is never spent",
+      "name": "the blow that rallied it counts toward the stagger",
       "file": "index.html",
-      "find": "    if(this.force){ const k=this.force; this.force=null; return this.make(foe, k); }",
-      "replace": "    if(this.force){ const k=this.force; return this.make(foe, k); }",
+      "find": "    if(B.phaseJust){ B.phaseJust=false; return false; }   // the blow that rallied it does not count\n",
+      "replace": "",
       "run": "verify"
     },
     {
-      "name": "every foe counts as already beaten",
+      "name": "a miss does not break the streak",
       "file": "index.html",
-      "find": "    this._start(Elite.roll(this.realm.foes[fi], !!(Game.s && Game.s.cleared[ri+':'+fi])));",
-      "replace": "    this._start(Elite.roll(this.realm.foes[fi], true));",
-      "run": "play:elite"
+      "find": "    if(!ok){ B.phaseRun=0; return false; }",
+      "replace": "    if(!ok) return false;",
+      "run": "verify"
     },
     {
-      "name": "a swift elite winds up no sooner",
+      "name": "a stagger leaves the wind-up standing",
       "file": "index.html",
-      "find": "- (f.elite==='swift'?1:0));",
-      "replace": "- 0);",
-      "run": "play:elite"
+      "find": "B.phaseRun=0; B.charge=0; B.slamNext=false; B.staggered=true;",
+      "replace": "B.phaseRun=0; B.staggered=true;",
+      "run": "verify"
     },
     {
-      "name": "the armour is never put on",
+      "name": "the stagger's bonus never runs out",
       "file": "index.html",
-      "find": "    this.armour = f.elite==='armoured' ? 1 : 0;",
-      "replace": "    this.armour = 0;",
-      "run": "play:elite"
+      "find": "const b=B.staggered?1.5:1; B.staggered=false; return b;",
+      "replace": "return B.staggered?1.5:1;",
+      "run": "verify"
     },
     {
-      "name": "a vampiric elite drinks nothing",
+      "name": "a second phase with a miss counts as flawless",
       "file": "index.html",
-      "find": "    if(this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
-      "replace": "    if(false && this.foe.elite==='vampiric' && dmg>0 && this.ehp>0){",
-      "run": "play:elite"
+      "find": "return B.phase===2 && B.missed===B.phaseFrom;",
+      "replace": "return B.phase===2;",
+      "run": "verify"
     },
     {
-      "name": "an elite pays like a rematch",
+      "name": "the boss's blows ignore the phase",
       "file": "index.html",
-      "find": "    const full=first || !!this.foe.elite;",
-      "replace": "    const full=first;",
-      "run": "play:elite"
+      "find": "Combat.foeHit(Phase.atk(this, this.foe.atk),",
+      "replace": "Combat.foeHit(this.foe.atk,",
+      "run": "play:phase"
+    },
+    {
+      "name": "the stagger is never asked for",
+      "file": "index.html",
+      "find": "    Phase.step(this, ok && !this.shownWork);\n",
+      "replace": "",
+      "run": "play:phase"
+    },
+    {
+      "name": "the strike ignores the stagger",
+      "file": "index.html",
+      "find": "* (this.nudged?0.5:1) * Phase.bonus(this);",
+      "replace": "* (this.nudged?0.5:1);",
+      "run": "play:phase"
+    },
+    {
+      "name": "the rally says nothing",
+      "file": "index.html",
+      "find": "      else if(rallied) Talk.say('rally', true);\n",
+      "replace": "",
+      "run": "play:phase"
+    },
+    {
+      "name": "the bar never shows the phase",
+      "file": "index.html",
+      "find": "+(this.phase===2?' <span class=\"pips\" title=\"Second phase\">🔥 Phase II</span>':'');",
+      "replace": "",
+      "run": "play:phase"
+    },
+    {
+      "name": "a flawless phase pays no more gold",
+      "file": "index.html",
+      "find": "*(Phase.flawless(this)?1.25:1));",
+      "replace": "*1);",
+      "run": "play:phase"
+    },
+    {
+      "name": "a fight starts already in its second phase",
+      "file": "index.html",
+      "find": "    this.phase=1; this.phaseFrom=0;",
+      "replace": "    this.phase=2; this.phaseFrom=0;",
+      "run": "play:phase"
     }
   ]
 }

@@ -44,6 +44,7 @@ const SUITES = [
   require('./play/findslip'),    // a mastered topic is now and then asked as find the slip
   require('./play/talk'),        // foes speak: an opening line, gloats, worries and last words
   require('./play/elite'),       // a beaten foe comes back as an elite, one fight in four
+  require('./play/phase'),       // a realm boss rallies at half health into a second phase
   require('./play/slips'),       // the same mistake twice is named
   require('./play/review'),      // what has faded is named on the map and brought back
   require('./play/competency'),  // the curriculum on one screen, every topic on its rung

@@ -8010,6 +8010,11 @@ const Anim = {
         cx.save(); cx.globalAlpha=.18+r*.12; cx.strokeStyle='#ffd166'; cx.lineWidth=5;
         cx.beginPath(); cx.ellipse(605, gy-70, 66+r*4, 88+r*4, 0, 0, 7); cx.stroke(); cx.restore();
       }
+      if(B.phase===2 && !B.over){
+        const r=1+Math.sin(Anim.t*5)*.5;
+        cx.save(); cx.globalAlpha=.2+r*.14; cx.strokeStyle='#ff5d5d'; cx.lineWidth=7;
+        cx.beginPath(); cx.ellipse(605, gy-96, 92+r*6, 118+r*6, 0, 0, 7); cx.stroke(); cx.restore();
+      }
       withOutline(()=>drawFoe(605, gy, B.foe.boss?1.55:1.28, B.foe.art, B.foe.col,
                               eLunge, Anim.eh, B.over==='win'));
     }
@@ -8691,14 +8696,14 @@ const Talk = {
             worry:["You're ruffling me!"], low:['Wings… too heavy…'], fall:['Skree…'] }
   },
   BOSS:{
-    'The Vector Wyrm':      { meet:'I have magnitude AND direction.', low:'My direction… lost…', fall:'Down… to the zero vector…' },
-    'The Determinant Golem':{ meet:'MY DETERMINANT IS NOT ZERO. I UNDO ALL.', low:'DETERMINANT. NEARING. ZERO.', fall:'SINGULAR. NO WAY BACK.' },
-    'The Tangent Wraith':   { meet:'I touch your curve and match its slope.', low:'My slope… flattening…', fall:'Horizontal… at last…' },
-    'The Lich of Limits':   { meet:"Approach me. You'll never quite arrive.", low:'My strength… tends to zero…', fall:'The limit exists… and it is you.' },
-    'The Eigen Dragon':     { meet:'Transform me. I keep my direction.', low:'Scaled… down…', fall:'My eigenvalue… is zero…' },
-    'The Spectral Sovereign':{ meet:'Kneel before the spectrum.', low:'My spectrum… narrows…', fall:'A sovereign… dethroned…' },
-    'The Unbounded':        { meet:'I have no ceiling, knight.', low:'Bounded?! Me?!', fall:'Converging… to nothing…' },
-    'The Gradient Itself':  { meet:'I point up the steepest climb.', low:'Every way… is downhill…', fall:'A critical point… my last…' }
+    'The Vector Wyrm':      { meet:'I have magnitude AND direction.', low:'My direction… lost…', rally:'Half a vector is still a vector!', fall:'Down… to the zero vector…' },
+    'The Determinant Golem':{ meet:'MY DETERMINANT IS NOT ZERO. I UNDO ALL.', low:'DETERMINANT. NEARING. ZERO.', rally:'SCALING. UP. BY. TWO.', fall:'SINGULAR. NO WAY BACK.' },
+    'The Tangent Wraith':   { meet:'I touch your curve and match its slope.', low:'My slope… flattening…', rally:'My slope steepens! Feel it!', fall:'Horizontal… at last…' },
+    'The Lich of Limits':   { meet:"Approach me. You'll never quite arrive.", low:'My strength… tends to zero…', rally:'Closer, yes… but never there!', fall:'The limit exists… and it is you.' },
+    'The Eigen Dragon':     { meet:'Transform me. I keep my direction.', low:'Scaled… down…', rally:'I rise along my eigenvector!', fall:'My eigenvalue… is zero…' },
+    'The Spectral Sovereign':{ meet:'Kneel before the spectrum.', low:'My spectrum… narrows…', rally:'The full spectrum, unleashed!', fall:'A sovereign… dethroned…' },
+    'The Unbounded':        { meet:'I have no ceiling, knight.', low:'Bounded?! Me?!', rally:'You thought that was my bound?', fall:'Converging… to nothing…' },
+    'The Gradient Itself':  { meet:'I point up the steepest climb.', low:'Every way… is downhill…', rally:'Now I climb twice as steep!', fall:'A critical point… my last…' }
   },
   said:{}, timer:0,
   turn:null,          // what the foe said in answer to this turn, if anything
@@ -8772,6 +8777,43 @@ const Elite = {
   }
 };
 
+/* ---------- A boss's second phase ----------
+   A realm boss in the campaign rallies once, when a blow takes it to half
+   its health or below without felling it. It says so, glows red, winds up
+   its slam a turn sooner and hits a fifth harder from then on. The answer
+   to it is a streak: three right answers in a row once it has rallied
+   stagger it, which breaks off its wind-up and lands the next right answer
+   for half again as much. Getting through the whole second phase without a
+   miss pays a quarter more gold. Nothing is saved: the phase is the fight's. */
+const Phase = {
+  // only a realm boss in the campaign has a second phase
+  can(B){ return !!(B.foe && B.foe.boss && B.mode==='campaign'); },
+  // called with the health before a blow: rallies once, on crossing half
+  check(B, was){
+    if(B.phase===2 || !this.can(B) || B.ehp<=0 || was<=B.emax/2 || B.ehp>B.emax/2) return false;
+    B.phase=2; B.phaseFrom=B.missed; B.phaseRun=0; B.phaseJust=true;
+    B.chargeMax=Math.max(1, B.chargeMax-1);
+    Celebrate.banner('PHASE TWO', 'it rallies: three in a row will stagger it', '#ff5d5d', ()=>Sfx.milestone());
+    return true;
+  },
+  // a blow from the boss, a fifth harder once it has rallied
+  atk(B, atk){ return B.phase===2 ? Math.round(atk*1.2) : atk; },
+  // after each answer in the second phase: three right in a row stagger it
+  step(B, ok){
+    if(B.phase!==2) return false;
+    if(B.phaseJust){ B.phaseJust=false; return false; }   // the blow that rallied it does not count
+    if(!ok){ B.phaseRun=0; return false; }
+    if(++B.phaseRun<3) return false;
+    B.phaseRun=0; B.charge=0; B.slamNext=false; B.staggered=true;
+    Anim.float(610, H-300, 'STAGGERED', '#ff8f6b', true);
+    return true;
+  },
+  // the next right answer after a stagger lands half again as hard
+  bonus(B){ const b=B.staggered?1.5:1; B.staggered=false; return b; },
+  // through the whole second phase without a miss
+  flawless(B){ return B.phase===2 && B.missed===B.phaseFrom; }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -8828,6 +8870,7 @@ const Battle = {
     this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
     this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
     this.armour = f.elite==='armoured' ? 1 : 0;
+    this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
     this.token=(this.token||0)+1;   // invalidates pending timers from a previous fight
     const bg=this.realm.bg;
     if(bg) Weather.set(bg.weather, bg.accent);
@@ -8865,7 +8908,7 @@ const Battle = {
     // In the daily the bar is the mark to beat, so it is named for that.
     document.getElementById('foeName').innerHTML = this.mode==='daily'
       ? '🎯 '+(Daily.chase||Daily.goal()).label+' <span class="pips">'+this.emax+'</span>'
-      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'');
+      : (this.foe.boss?'👑 ':'')+(this.foe.elite?'⭐ '+Elite.KINDS[this.foe.elite].nm+' ':'')+this.foe.nm+' <span class="pips">'+pips+'</span>'+(this.armour?' <span class="pips" title="Armoured">🛡️</span>':'')+(this.phase===2?' <span class="pips" title="Second phase">🔥 Phase II</span>':'');
     document.getElementById('comboTxt').textContent =
       (this.mode==='arena' ? \`🏟️ Wave \${Arena.wave}  ·  \` : '') +
       (this.mode==='dungeon' ? \`⛏️ Depth \${Dungeon.run.depth}  ·  \` : '') +
@@ -9388,19 +9431,21 @@ const Battle = {
       // A staked strike lands for triple, and the stake is spent either way.
       const staked = this.diceUp; this.diceUp=false;
       const bonus = (this.perfect?3:1) * (this.unassisted?2:1) * (this.finisher||1)
-                  * (staked?3:1) * (this.nudged?0.5:1);
+                  * (staked?3:1) * (this.nudged?0.5:1) * Phase.bonus(this);
       const dmg = Combat.strike(w.dmg, speed, this.combo, crit, this.rage, bonus,
                                 0.9 + Math.random()*0.2);
       this.rage=false;
       if(staked) Anim.float(220, H-290, 'PAID ×3', '#ffd479', true);
       if(this.perfect) Celebrate.banner('PERFECT STRIKE','built, not chosen','var(--gold)',()=>Sfx.mastered());
       else if(this.finisher>1) Celebrate.banner('RITE COMPLETE','×'+this.finisher.toFixed(1)+' finisher','#ff9c3d',()=>Sfx.milestone());
-      const hit=Elite.through(this, dmg);
+      const hit=Elite.through(this, dmg), was=this.ehp;
       this.ehp=Math.max(0,this.ehp-hit);
+      const rallied=Phase.check(this, was);
       Anim.strike('p',hit,crit,null,this.ehp<=0);
       // The foe answers the blow: nearly beaten (once), rattled by a streak of
       // five, or stung by a crit; and the killing blow draws its last words.
       if(this.ehp<=0) Talk.say('fall');
+      else if(rallied) Talk.say('rally', true);
       else if(this.ehp<=this.emax*0.3 && !Talk.said.low) Talk.say('low', true);
       else if(this.combo===5) Talk.say('worry', true);
       else if(crit) Talk.say('reel');
@@ -9469,7 +9514,7 @@ const Battle = {
       this.diceUp=false;
       let dmg=0;
       for(let i=0;i<blows;i++)
-        dmg += this.takeHit(Combat.foeHit(this.foe.atk, this.defStat(), 0.85+Math.random()*0.3));
+        dmg += this.takeHit(Combat.foeHit(Phase.atk(this, this.foe.atk), this.defStat(), 0.85+Math.random()*0.3));
       Game.s.hp=Math.max(0,Game.s.hp-dmg);
       Anim.strike('e',dmg,false);
       // A vampiric elite drinks back the blow it lands.
@@ -9488,6 +9533,9 @@ const Battle = {
         'var(--green)', ()=>{Sfx.mastered(); Haptic.win();}), 700);
     }
 
+    // In a boss's second phase, three right in a row stagger it, breaking off its wind-up.
+    Phase.step(this, ok && !this.shownWork);
+
     // The foe fights on its own clock: it winds up over a few turns and then
     // slams regardless of your answer. A correct answer braces the blow rather
     // than avoiding it, so armour and draughts always matter.
@@ -9502,7 +9550,7 @@ const Battle = {
     if(this.slamNext && this.ehp<=0) this.slamNext=false;
     else if(this.slamNext){
       this.slamNext=false;
-      this.lastSlam=this.spendWard(Combat.slam(this.foe.atk, this.defStat(), ok));
+      this.lastSlam=this.spendWard(Combat.slam(Phase.atk(this, this.foe.atk), this.defStat(), ok));
       Game.s.hp=Math.max(0, Game.s.hp - this.lastSlam);
       const delay = ok?620:900, amt=this.lastSlam, tok=this.token;
       this.settleMs = Math.max(this.settleMs||820, delay + 700);   // the slam lands later still
@@ -9732,7 +9780,8 @@ const Battle = {
     if(this.missed===0) Bounty.bump('flaw',1);
     // An elite pays like a first clear, and always drops a chest.
     const full=first || !!this.foe.elite;
-    const gold=Math.round(this.foe.gold*(full?1:0.45));
+    // A second phase got through without a miss pays a quarter more gold.
+    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1));
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
     const ups=Game.gainXp(xp);
@@ -9753,6 +9802,7 @@ const Battle = {
         <div class="panel center">
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">\${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
+          \${Phase.flawless(this)?\`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>\`:''}
           \${this.foe.elite?\`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>\`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
