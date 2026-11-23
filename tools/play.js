@@ -177,6 +177,7 @@ const SUITES = [
   require('./play/slicepick'), // see a plane over a rectangle, pick which of four numbers is the volume under it
   require('./play/swappick'), // see an integral to swap, pick which of four numbers goes in front of the answer
   require('./play/splitpick'), // see how the knights ride, pick which of four numbers is the steady split
+  require('./play/castleturn'), // see four pairs of castles, call whether A gains, holds or loses in a night
   require('./play/partspick'), // see an integral to split, pick which of four numbers stands alone in the answer
   require('./play/secantpick'), // see a curve and a step, pick which of four numbers is the secant's slope
   require('./play/descentpick'), // see a valley, a start and a step size, pick which of four numbers one step lands on

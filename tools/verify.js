@@ -13990,6 +13990,132 @@ const eigTurnNotes = (() => {
   if (env.banners.join() !== 'TRUE LINE / every arrow called') fail('eigturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, drawn };
 })();
+const castleTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Castles = {render(){ env.renders++; }};" +
+    cut('const CastleTurn = {', '/* ============ TWO CASTLES WORKSHOP') + 'return CastleTurn;')(env, COL);
+  // one night as the matrix M = [1 − p, q; p, 1 − q] times the split ⟨A, B⟩, in hundredths so it stays whole
+  const night = (p, q, A) => { const B = 100 - A, M = [[100 - 10 * p, 10 * q], [10 * p, 100 - 10 * q]]; return M.map(r => (r[0] * A + r[1] * B) / 100); };
+  const WD = { 1: 'gaining', 0: 'holding', [-1]: 'losing' };
+  const NAME = { 1: 'gains knights', 0: 'holds steady', [-1]: 'loses knights' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  if (S.ROUNDS.length !== 6) fail('castleturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, nights = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('castleturn', key, `it holds ${P.length} castle pairs, not four`); return; }
+    P.forEach(([p, q, A], i) => { const k = [p, q, A].join(); if (seen.has(k)) fail('castleturn', key, `${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (![p, q].every(s => Number.isInteger(s) && s >= 1 && s <= 10) || !Number.isInteger(A / 10) || A < 0 || A > 100) fail('castleturn', key, `${'ABCD'[i]} is not shares in tens of percent and A in tens of knights`); });
+    const after = P.map(r => night(...r)), truth = P.map(([, , A], i) => Math.sign(after[i][0] - A));
+    if (after.some(([a, b]) => !Number.isInteger(a) || a + b !== 100)) fail('castleturn', key, 'a night does not keep a hundred whole knights');
+    if (truth.some((t, i) => S.truth(i) !== t || S.next(i) !== after[i][0])) fail('castleturn', key, `its castles are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('castleturn', key, 'every castle is called the same');
+    // what the round holds, found afresh
+    const ho = [], mo = [], em = [];
+    P.forEach(([, , A], i) => { if (truth[i] === 0) ho.push(i); if ((A > 50 && truth[i] > 0) || (A < 50 && truth[i] < 0)) mo.push(i); if (A === 0 || A === 100) em.push(i); });
+    const tags = [ho.length ? 'hold' : null, mo.length ? 'more' : null, em.length ? 'empty' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('castleturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every castle called wrong, one at a time, in both wrong ways
+    P.forEach(([p, q, A], i) => {
+      const o = p * A / 10, n = q * (100 - A) / 10, nA = after[i][0];
+      const what = nA > A ? `A gains ${nA - A}, to ${nA}` : nA < A ? `A loses ${A - nA}, to ${nA}` : `as many ride in as out, so A holds at ${A}`;
+      for (const k of [1, 0, -1]) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, ${p * 10}% of A’s ${A} knights ride out, ${o}, and ${q * 10}% of B’s ${100 - A} ride in, ${n}: ${what}. You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('castleturn', key, `with ${'ABCD'[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(nextA|nextB|gain|hold|lose)"/.test(svg)) fail('castleturn', key, `with ${'ABCD'[i]} wrong, the wrong castle is not ringed alone or the next night is given away`);
+        if (S.solved || S.streak) fail('castleturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('castleturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('castleturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('castleturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="cstCheck" disabled /.test(S.html())) fail('castleturn', key, 'the check is open before the castles are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="cstCheck" disabled /.test(S.html())) fail('castleturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('castleturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="CastleTurn\\.call\\(${i},(-?[01])\\)" aria-label="${'ABCD'[i]}: Castle A ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('castleturn', key, `the button for ${'ABCD'[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`CastleTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('castleturn', key, `${'ABCD'[i]} does not offer gains, holds and loses`);
+    });
+    if (S.calls.join() !== truth.join()) fail('castleturn', key, 'the buttons cannot make the right calls');
+    if (/id="cstCheck" disabled /.test(S.html())) fail('castleturn', key, 'the check stays shut with every castle called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (ho.length) { const [p, q, A] = P[ho[0]]; want.push(`In ${'ABCD'[ho[0]]}, ${q * (100 - A) / 10} ride in and ${p * A / 10} ride out, so A holds at ${A}: that split is steady.`); }
+    if (mo.length) { const A = P[mo[0]][2]; want.push(`In ${'ABCD'[mo[0]]}, A has ${A > 50 ? 'more' : 'fewer'} knights than B, yet it ${truth[mo[0]] > 0 ? 'gains' : 'loses'}: what counts is riders in against riders out, not which castle is bigger.`); }
+    if (em.length) want.push(P[em[0]][2] === 100 ? `In ${'ABCD'[em[0]]}, B is empty, so no one rides in, and A can only lose.` : `In ${'ABCD'[em[0]]}, A is empty, so no one rides out, and A can only gain.`);
+    want.push(`After one night, A has: ${after.map(([a], i) => `${'ABCD'[i]} ${a}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('castleturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each castle's bar its knights tall, from one floor, and the next night outlined to the same scale
+    const svg = S.svg();
+    const bars = k => [...svg.matchAll(new RegExp(`data-k="${k}" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"`, 'g'))].map(m => m.slice(1).map(Number));
+    const bA = bars('barA'), bB = bars('barB'), nA = bars('nextA'), nB = bars('nextB');
+    if ([bA, bB, nA, nB].some(b => b.length !== 4)) fail('castleturn', key, 'not every castle has its bar and its next night drawn');
+    else {
+      const unit = (bA[0][3] + bB[0][3]) / 100;
+      P.forEach(([p, q, A], i) => {
+        const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, floor = bA[i][1] + bA[i][3];
+        const sz = [[bA[i], A], [bB[i], 100 - A], [nA[i], after[i][0]], [nB[i], after[i][1]]];
+        if (sz.some(([b, n]) => Math.abs(b[3] - n * unit) > 0.02 || Math.abs(b[1] + b[3] - floor) > 0.02)) fail('castleturn', key, `${'ABCD'[i]}'s bars are not their knights tall from one floor`);
+        if (nA[i][0] !== bA[i][0] || nB[i][0] !== bB[i][0] || bA[i][0] >= bB[i][0]) fail('castleturn', key, `${'ABCD'[i]}'s next night is not outlined over its own castles, A on the left`);
+        if (sz.some(([b]) => b[0] < X + 4 || b[0] + b[2] > X + 176 || b[1] < Y + 4 || floor > Y + 126)) fail('castleturn', key, `${'ABCD'[i]}'s bars run out of their pane`);
+        nights++;
+      });
+    }
+    const shares = [...svg.matchAll(/data-k="(rideout|ridein)">[\s\S]*?<text[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (shares.join() !== P.map(([p, q]) => `rideout ${p * 10}%,ridein ${q * 10}%`).join()) fail('castleturn', key, `the arrows read ${shares.join()}`);
+    const marks = [...svg.matchAll(/data-k="(gain|hold|lose)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    const wantMarks = P.map(([, , A], i) => { const d = after[i][0] - A; return d > 0 ? `gain A +${d}` : d < 0 ? `lose A −${-d}` : 'hold A holds'; });
+    if (marks.join() !== wantMarks.join()) fail('castleturn', key, `the panes are marked ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="cstNext"') || /onclick="CastleTurn\.call/.test(h.replace(/disabled onclick="CastleTurn\.call/g, ''))) fail('castleturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('castleturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('castleturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('castleturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = S.R().map(r => { const [, , A] = r; return Math.sign(night(...r)[0] - A); });
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 0 ? 1 : 0;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,hold,more'], [false, 'empty,fix,hold,more,one'], [false, 'empty,fix,hold,more,one'], [false, 'empty,fix,hold,more,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('castleturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ In matches out · Flows, not size · A slip caught and fixed | ✓ Right on the first check · Nothing rides out of an empty castle') fail('castleturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'FAIR RIDER / every night called') fail('castleturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, nights };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21472,6 +21598,7 @@ console.log(`  bends called      ${pad(trapTurnNotes.checks.toLocaleString(), 12
 console.log(`  tangents called   ${pad(tanTurnNotes.checks.toLocaleString(), 12)}  (checks of four tangent line estimates called too high, exact or too low in the tangent line workshop, ${tanTurnNotes.wrongs} of them with one curve called wrong and caught, and ${tanTurnNotes.gaps} gaps drawn from the curve to its tangent)`);
 console.log(`  spans called      ${pad(spanTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as spanning the plane, a line or a point in the span workshop, ${spanTurnNotes.wrongs} of them with one pair called wrong and caught, and ${spanTurnNotes.spans} spans drawn as called)`);
 console.log(`  arrows called     ${pad(eigTurnNotes.checks.toLocaleString(), 12)}  (checks of four arrows called kept, turned round or knocked off in the eigenvector hunt, ${eigTurnNotes.wrongs} of them with one arrow called wrong and caught, and ${eigTurnNotes.drawn} arrows drawn beside where their matrix sends them)`);
+console.log(`  nights called     ${pad(castleTurnNotes.checks.toLocaleString(), 12)}  (checks of four castle pairs called gaining, holding or losing in the two castles workshop, ${castleTurnNotes.wrongs} of them with one castle called wrong and caught, and ${castleTurnNotes.nights} next nights drawn to the same scale as tonight)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
