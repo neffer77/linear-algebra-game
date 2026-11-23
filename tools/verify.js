@@ -13702,6 +13702,152 @@ const dotTurnNotes = (() => {
   if (env.banners.join() !== 'TRUE AIM / every angle called') fail('dotturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, angles };
 })();
+const trapTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Trap = {render(){ env.renders++; }};" +
+    cut('const TrapTurn = {', '/* ---------- The trapezoid workshop: cutting an area') + 'return TrapTurn;')(env, COL);
+  // the area by Simpson's rule on 2000 strips, T by its own sum, and the bend from f's own second differences
+  const simpson = c => { const N = 2000, h = (c.b - c.a) / N; let s = c.f(c.a) + c.f(c.b); for (let k = 1; k < N; k++) s += (k % 2 ? 4 : 2) * c.f(c.a + k * h); return s * h / 3; };
+  const trap = (c, n) => { const h = (c.b - c.a) / n; let s = 0; for (let k = 0; k < n; k++) s += (c.f(c.a + k * h) + c.f(c.a + (k + 1) * h)) * h / 2; return s; };
+  const bendOf = c => { const sg = new Set(); for (let k = 1; k < 40; k++) { const x = c.a + (c.b - c.a) * k / 40, e = 1e-3, d2 = (c.f(x + e) - 2 * c.f(x) + c.f(x - e)) / (e * e); sg.add(Math.abs(d2) < 1e-6 ? 0 : Math.sign(d2)); } return sg.size === 1 ? [...sg][0] : NaN; };
+  const dirOf = c => { const ys = Array.from({ length: 41 }, (_, k) => c.f(c.a + (c.b - c.a) * k / 40)); const up = ys.every((y, k) => !k || y > ys[k - 1]), dn = ys.every((y, k) => !k || y < ys[k - 1]); return up ? 1 : dn ? -1 : 0; };
+  const r3 = v => { const r = Math.round(v * 1000) / 1000; return r === 0 ? '0' : (r < 0 ? '−' + Math.abs(+r.toFixed(3)) : String(+r.toFixed(3))); };
+  const WD = { 1: 'as over', 0: 'as exact', [-1]: 'as under' };
+  const gapWord = (c, n) => { const g = trap(c, n) - simpson(c); return Math.abs(g) < 1e-9 ? 'exact' : `${g > 0 ? 'over' : 'under'} by ${r3(Math.abs(g))}`; };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  for (const [id, c] of Object.entries(S.CURVES)) {
+    if (bendOf(c) !== c.bend) fail('trapturn', id, `f(x) = ${c.fs} is said to bend ${c.bend}, but its second differences say ${bendOf(c)}`);
+    if (dirOf(c) !== c.dir) fail('trapturn', id, `f(x) = ${c.fs} is said to go ${c.dir}, but its heights say ${dirOf(c)}`);
+    if (Math.abs(c.F(c.b) - c.F(c.a) - simpson(c)) > 1e-7) fail('trapturn', id, `the antiderivative of ${c.fs} does not give its area`);
+    for (let k = 0; k <= 40; k++) if (c.f(c.a + (c.b - c.a) * k / 40) < 0) { fail('trapturn', id, `f(x) = ${c.fs} dips below 0`); break; }
+  }
+  if (S.ROUNDS.length !== 6) fail('trapturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, slivers = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('trapturn', key, `it holds ${P.length} curves, not four`); return; }
+    P.forEach(([id, n], i) => { const k = id + '|' + n; if (seen.has(k)) fail('trapturn', key, `curve ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (!S.CURVES[id] || !(n >= 1)) fail('trapturn', key, `curve ${'ABCD'[i]} is not a curve cut into strips`); });
+    const C = P.map(([id]) => S.CURVES[id]);
+    const truth = P.map(([id, n]) => { const g = trap(S.CURVES[id], n) - simpson(S.CURVES[id]); return Math.abs(g) < 1e-9 ? 0 : Math.sign(g); });
+    if (truth.some((t, i) => S.truth(i) !== t || Math.abs(S.T(i) - trap(C[i], P[i][1])) > 1e-9 || Math.abs(S.I(i) - simpson(C[i])) > 1e-7)) fail('trapturn', key, `its curves are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('trapturn', key, 'every estimate is called the same');
+    truth.forEach((t, i) => { if (t !== 0 && Math.abs(trap(C[i], P[i][1]) - simpson(C[i])) < 0.002) fail('trapturn', key, `${'ABCD'[i]}'s gap rounds away to nothing`); });
+    // what the round holds, found afresh
+    const fa = [], li = [], pr = [];
+    for (let i = 0; i < 4; i++) { for (let j = i + 1; j < 4; j++) if (P[i][0] === P[j][0] && P[i][1] !== P[j][1]) pr.push([i, j]);
+      if (dirOf(C[i]) === -1 && truth[i] === 1) fa.push(i);
+      if (truth[i] === 0) li.push(i); }
+    pr.forEach(([i, j]) => { if (truth[i] !== truth[j]) fail('trapturn', key, `${'ABCD'[i]} and ${'ABCD'[j]} are one curve cut two ways, called opposite ways`); });
+    const tags = [fa.length ? 'falls' : null, li.length ? 'line' : null, pr.length ? 'more' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('trapturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every curve called wrong, one at a time, in both wrong ways
+    P.forEach(([id, n], i) => {
+      const c = C[i];
+      for (const k of [1, 0, -1]) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const why = truth[i] > 0 ? `which is more than 0 between ${c.aS} and ${c.bS}, so the curve bends up and each straight top runs above it`
+          : truth[i] < 0 ? `which is less than 0 between ${c.aS} and ${c.bS}, so the curve bends down and each straight top runs below it`
+            : 'so f is a straight line and each straight top lies right on it';
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, f(x) = ${c.fs} on [${c.aS}, ${c.bS}] with ${n} strip${n > 1 ? 's' : ''}: f″(x) = ${c.d2}, ${why}. T = ${r3(trap(c, n))} and the area is ${r3(simpson(c))}, so T is ${gapWord(c, n)}. You had it ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('trapturn', key, `with ${'ABCD'[i]} called ${WD[k]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(tops|sliver|over|under|exact)"/.test(svg)) fail('trapturn', key, `with ${'ABCD'[i]} wrong, the wrong curve is not ringed alone or the answers are given away`);
+        if (S.solved || S.streak) fail('trapturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('trapturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('trapturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('trapturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="tztCheck" disabled /.test(S.html())) fail('trapturn', key, 'the check is open before the curves are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="tztCheck" disabled /.test(S.html())) fail('trapturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('trapturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const lab = t === 0 ? 'exact' : t > 0 ? 'over the area' : 'under the area';
+      const m = h0.match(new RegExp(`onclick="TrapTurn\\.call\\(${i},(-?[01])\\)" aria-label="Curve ${'ABCD'[i]}: T is ${lab}"`));
+      if (!m || +m[1] !== t) fail('trapturn', key, `the button for ${'ABCD'[i]} ${lab} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`TrapTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('trapturn', key, `${'ABCD'[i]} does not offer over, exact and under`);
+    });
+    if (S.calls.join() !== truth.join()) fail('trapturn', key, 'the buttons cannot make the right calls');
+    if (/id="tztCheck" disabled /.test(S.html())) fail('trapturn', key, 'the check stays shut with every curve called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (fa.length) want.push(`In ${'ABCD'[fa[0]]}, f(x) = ${C[fa[0]].fs} falls, yet it bends up, so the trapezoids still overshoot: which way a curve bends settles it, not which way it goes.`);
+    if (li.length) want.push(`${'ABCD'[li[0]]} is the straight line f(x) = ${C[li[0]].fs}, so each straight top lies right on it and T is the area exactly.`);
+    if (pr.length) { const [i, j] = pr[0], gi = Math.abs(trap(C[i], P[i][1]) - simpson(C[i])), gj = Math.abs(trap(C[j], P[j][1]) - simpson(C[j]));
+      if ((gj < gi) !== (P[j][1] > P[i][1])) fail('trapturn', key, `more strips do not shrink the gap in ${'ABCD'[i]} and ${'ABCD'[j]}`);
+      want.push(`${'ABCD'[i]} and ${'ABCD'[j]} are both f(x) = ${C[i].fs}, cut into ${P[i][1]} and ${P[j][1]}: more strips shrink the gap from ${r3(gi)} to ${r3(gj)}, but T stays ${truth[i] > 0 ? 'over' : 'under'}.`); }
+    want.push(`T against the area: ${P.map(([id, n], i) => `${'ABCD'[i]} ${gapWord(C[i], n)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('trapturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each curve in its own pane, its tops through its heights, its slivers on the called side
+    const svg = S.svg();
+    const curves = [...svg.matchAll(/data-k="curve" points="([^"]+)"/g)].map(m => m[1].split(' ').map(p => p.split(',').map(Number)));
+    const tops = [...svg.matchAll(/data-k="tops" points="([^"]+)"/g)].map(m => m[1].split(' ').map(p => p.split(',').map(Number)));
+    if (curves.length !== 4 || tops.length !== 4) fail('trapturn', key, 'four curves and four sets of tops are not drawn');
+    P.forEach(([id, n], i) => {
+      const cv = curves[i], tp = tops[i]; if (!cv || !tp) return;
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      if (cv.some(([x, y]) => x < X || x > X + 180 || y < Y || y > Y + 130)) fail('trapturn', key, `${'ABCD'[i]} runs out of its own pane`);
+      if (tp.length !== n + 1) fail('trapturn', key, `${'ABCD'[i]} has ${tp.length - 1} tops, not ${n}`);
+      // each top's middle against the curve at the same x: above when over, below when under, on it when exact
+      for (let k = 0; k < tp.length - 1; k++) {
+        const mx = (tp[k][0] + tp[k + 1][0]) / 2, my = (tp[k][1] + tp[k + 1][1]) / 2;
+        let best = cv[0]; for (const p of cv) if (Math.abs(p[0] - mx) < Math.abs(best[0] - mx)) best = p;
+        const side = Math.abs(best[1] - my) < 0.3 ? 0 : best[1] > my ? 1 : -1;
+        if (side !== truth[i]) { fail('trapturn', key, `a top in ${'ABCD'[i]} does not run ${truth[i] > 0 ? 'above' : truth[i] < 0 ? 'below' : 'along'} the curve`); break; }
+      }
+    });
+    const nsl = (svg.match(/data-k="sliver"/g) || []).length; slivers += nsl;
+    if (nsl !== truth.filter(t => t).length) fail('trapturn', key, `${nsl} curves have slivers, not the ${truth.filter(t => t).length} that are not exact`);
+    const marks = [...svg.matchAll(/data-k="(over|under|exact)"/g)].map(m => m[1]);
+    if (marks.join() !== truth.map(t => t > 0 ? 'over' : t < 0 ? 'under' : 'exact').join()) fail('trapturn', key, `the panes are marked ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="tztNext"') || /onclick="TrapTurn\.call/.test(h.replace(/disabled onclick="TrapTurn\.call/g, ''))) fail('trapturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? -1 : 1);
+    if (S.calls.join() !== before) fail('trapturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('trapturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('trapturn', 'hunt', 'a goal is found before anything is pressed');
+  const callOf = ([id, n]) => { const g = trap(S.CURVES[id], n) - simpson(S.CURVES[id]); return Math.abs(g) < 1e-9 ? 0 : Math.sign(g); };
+  const play = slip => { const P = S.R(); S.calls = P.map(callOf); if (slip) S.calls[1] = S.calls[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, callOf(P[1])); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'falls,fix,line'], [false, 'falls,fix,line,more,one'], [false, 'falls,fix,line,more,one'], [false, 'falls,fix,line,more,one,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('trapturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ The bend decides, not the slope · Straight tops on a straight line · A slip caught and fixed | ✓ Right on the first check · More strips, same side') fail('trapturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SHARP EYE / every bend called') fail('trapturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, slivers };
+})();
 const contourMatchNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -20886,6 +21032,7 @@ console.log(`  mirrors called    ${pad(transSortNotes.checks.toLocaleString(), 1
 console.log(`  pressed shown     ${pad(pressedNotes.n.toLocaleString(), 12)}  (buttons a player can press, each a ghost button that turns gold once pressed, so every call in a round shows what was chosen)`);
 console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  angles called     ${pad(dotTurnNotes.checks.toLocaleString(), 12)}  (checks of four angles called less than, exactly or more than 90° in the dot product workshop, ${dotTurnNotes.wrongs} of them with one pair called wrong and caught, and ${dotTurnNotes.angles} arcs drawn the short way from u to v)`);
+console.log(`  bends called      ${pad(trapTurnNotes.checks.toLocaleString(), 12)}  (checks of four trapezoid estimates called over, exact or under in the trapezoid workshop, ${trapTurnNotes.wrongs} of them with one curve called wrong and caught, and ${trapTurnNotes.slivers} sets of slivers drawn on the side the curve bends)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

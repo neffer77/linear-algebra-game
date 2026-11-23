@@ -32,11 +32,11 @@ module.exports = {
       /Then turn it round: see a curve, its strips and their heights, and pick which of four numbers is T\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTrap');
     t.eq('the trapezoid workshop opens', await t.screen(), 's-trapezoid');
-    t.eq('cutting by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('cutting by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5150));
     await t.tapText(/Which estimate\?/);
-    t.eq('which estimate is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which estimate is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, the figure, the strip buttons, the readout and the goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('tzqBox').innerText)).startsWith(

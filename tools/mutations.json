@@ -1,60 +1,60 @@
 {
-  "change": "Add a Call the angle mode to the dot product workshop",
+  "change": "Add an Over or under mode to the trapezoid workshop",
   "mutations": [
     {
-      "name": "the sign check calls 90° less than 90°",
+      "name": "the call follows which way the curve goes, not how it bends",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.dot(i)); }",
-      "replace": "truth(i){ return this.dot(i)>=0?1:-1; }",
+      "find": "truth(i){ return this.C(i).bend; }",
+      "replace": "truth(i){ return this.C(i).dir; }",
       "run": "verify"
     },
     {
-      "name": "a square pair on an axis counts as off the axes",
+      "name": "1/x is said to bend down",
       "file": "index.html",
-      "find": "this.dot(i)===0 && P[i].every(p=>p[0]!==0 && p[1]!==0)",
-      "replace": "this.dot(i)===0",
+      "find": "d2:'2/x³',           bend:1,",
+      "replace": "d2:'2/x³',           bend:-1,",
       "run": "verify"
     },
     {
-      "name": "a flip checks only v's first number",
+      "name": "the inside heights are not doubled",
       "file": "index.html",
-      "find": "P[i][1][0]===-P[j][1][0] && P[i][1][1]===-P[j][1][1]",
-      "replace": "P[i][1][0]===-P[j][1][0]",
+      "find": "for(let k=1;k<n;k++) s+=2*c.f(c.a+k*h); return h/2*s;",
+      "replace": "for(let k=1;k<n;k++) s+=c.f(c.a+k*h); return h/2*s;",
       "run": "verify"
     },
     {
-      "name": "the arc runs the long way round",
+      "name": "any falling curve counts as overshot",
       "file": "index.html",
-      "find": "A ${r} ${r} 0 0 ${z>0?0:1} ${f(cx+ev[0]*r)}",
-      "replace": "A ${r} ${r} 0 0 ${z>0?1:0} ${f(cx+ev[0]*r)}",
+      "find": "this.C(i).dir===-1 && this.C(i).bend===1",
+      "replace": "this.C(i).dir===-1",
       "run": "verify"
     },
     {
-      "name": "the slip pairs the wrong numbers",
+      "name": "a straight line gets slivers",
       "file": "index.html",
-      "find": "${this.par(u[0])}${this.par(v[0])} + ${this.par(u[1])}${this.par(v[1])} = ${neg(d)}",
-      "replace": "${this.par(u[0])}${this.par(v[1])} + ${this.par(u[1])}${this.par(v[0])} = ${neg(d)}",
+      "find": "if(this.solved && c.bend!==0)",
+      "replace": "if(this.solved)",
       "run": "verify"
     },
     {
-      "name": "the drawn angle is cut down, not rounded",
+      "name": "a curve that bends down is said to have tops above it",
       "file": "index.html",
-      "find": "${Math.round(this.deg(i))}°</text>",
-      "replace": "${Math.floor(this.deg(i))}°</text>",
+      "find": "so the curve bends down and each straight top runs below it",
+      "replace": "so the curve bends down and each straight top runs above it",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Dot.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Dot.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Trap.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Trap.render();",
       "run": "verify"
     },
     {
-      "name": "a square corner is drawn on one arrow only",
+      "name": "gaps are rounded to two places",
       "file": "index.html",
-      "find": "L ${f(cx+(eu[0]+ev[0])*r)} ${f(cy+(eu[1]+ev[1])*r)}",
-      "replace": "L ${f(cx+(eu[0]+eu[0])*r)} ${f(cy+(eu[1]+eu[1])*r)}",
+      "find": "fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  strips",
+      "replace": "fx(v){ const r=Math.round(v*100)/100; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  strips",
       "run": "verify"
     }
   ]

@@ -1954,7 +1954,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TRAPEZOID WORKSHOP ============ -->
   <div class="screen" id="s-trapezoid">
     <div class="panel"><h2>🪟 Trapezoid Workshop</h2><div class="sub">Cut the area under a curve into strips and join the heights at their edges with straight lines: T = h/2 × (ends + 2 × inside). Double the strips and watch the gap to the true area fall to a quarter, over a curve that bends up and under one that bends down.</div></div>
-    <div id="tzwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cut by hand or pick the estimate"></div>
+    <div id="tzwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Cut by hand, pick the estimate, or call it over or under"></div>
     <div class="panel">
       <div id="tzqBox"></div>
       <div id="tzwSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which curve"></div>
@@ -15686,7 +15686,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🪟 Trapezoid Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Cut the area under x², 4x − x² or a line into 1 to 16 strips and add the trapezoids: over a curve that bends up, under one that bends down, exact on a line, and a quarter the gap each time the strips double. Then turn it round: see a curve, its strips and their heights, and pick which of four numbers is T.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Cut the area under x², 4x − x² or a line into 1 to 16 strips and add the trapezoids: over a curve that bends up, under one that bends down, exact on a line, and a quarter the gap each time the strips double. Then turn it round: see a curve, its strips and their heights, and pick which of four numbers is T. Or call it over or under: see four curves cut into strips, and say whether each T is over the area, under it, or exact.</div>
          <button class="btn sm" id="tomeTrap" style="width:auto;margin-top:8px" onclick="Trap.open()">Open the trapezoid workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -32725,6 +32725,185 @@ const TrapPick = {
   }
 };
 
+/* ---------- Over or under? The trapezoid workshop's third mode ----------
+   Four curves, each cut into strips, and the player calls the trapezoid
+   estimate T over the area, under it, or exact. Each trapezoid's top is a
+   straight line between two heights, so where the curve bends up (f″ > 0)
+   that top runs above it and T is over, where it bends down it runs below
+   and T is under, and on a straight line T is exact. Rounds hold falling
+   curves that still overshoot, slanted lines, and one curve cut two ways,
+   whose gap shrinks with more strips but never flips. A slip rings that
+   pane and works its f″, T and area; once all four are right, each gets its
+   straight tops and the slivers between them and the curve. Nothing is
+   saved, and there is no clock. */
+const TrapTurn = {
+  CURVES:{
+    sq:   {fs:'x²',           a:0, b:2, aS:'0', bS:'2', f:x=>x*x,           F:x=>x*x*x/3,             d2:'2',              bend:1,  dir:1},
+    sqrt: {fs:'√x',           a:1, b:4, aS:'1', bS:'4', f:x=>Math.sqrt(x),  F:x=>2*x*Math.sqrt(x)/3,  d2:'−1/(4x√x)',      bend:-1, dir:1},
+    inv:  {fs:'1/x',          a:1, b:3, aS:'1', bS:'3', f:x=>1/x,           F:x=>Math.log(x),         d2:'2/x³',           bend:1,  dir:-1},
+    cap:  {fs:'4 − x²',       a:0, b:2, aS:'0', bS:'2', f:x=>4-x*x,         F:x=>4*x-x*x*x/3,         d2:'−2',             bend:-1, dir:-1},
+    exp:  {fs:'eˣ',           a:0, b:2, aS:'0', bS:'2', f:x=>Math.exp(x),   F:x=>Math.exp(x),         d2:'eˣ',             bend:1,  dir:1},
+    ln:   {fs:'ln x',         a:1, b:4, aS:'1', bS:'4', f:x=>Math.log(x),   F:x=>x*Math.log(x)-x,     d2:'−1/x²',          bend:-1, dir:1},
+    lin1: {fs:'2x + 1',       a:0, b:2, aS:'0', bS:'2', f:x=>2*x+1,         F:x=>x*x+x,               d2:'0',              bend:0,  dir:1},
+    lin2: {fs:'3 − x/2',      a:0, b:4, aS:'0', bS:'4', f:x=>3-x/2,         F:x=>3*x-x*x/4,           d2:'0',              bend:0,  dir:-1},
+    lin3: {fs:'x + 2',        a:1, b:3, aS:'1', bS:'3', f:x=>x+2,           F:x=>x*x/2+2*x,           d2:'0',              bend:0,  dir:1},
+    dec:  {fs:'e⁻ˣ',          a:0, b:2, aS:'0', bS:'2', f:x=>Math.exp(-x),  F:x=>-Math.exp(-x),       d2:'e⁻ˣ',            bend:1,  dir:-1},
+    cos:  {fs:'cos x',        a:0, b:Math.PI/2, aS:'0', bS:'π/2', f:x=>Math.cos(x), F:x=>Math.sin(x),  d2:'−cos x',         bend:-1, dir:-1},
+    cube: {fs:'x³',           a:0, b:2, aS:'0', bS:'2', f:x=>x*x*x,         F:x=>x*x*x*x/4,           d2:'6x',             bend:1,  dir:1},
+    bowl: {fs:'(x − 2)² + 1', a:0, b:4, aS:'0', bS:'4', f:x=>(x-2)*(x-2)+1, F:x=>(x-2)**3/3+x,        d2:'2',              bend:1,  dir:0},
+    sin:  {fs:'sin x',        a:0, b:Math.PI, aS:'0', bS:'π', f:x=>Math.sin(x), F:x=>-Math.cos(x),     d2:'−sin x',         bend:-1, dir:0},
+    fall3:{fs:'8 − x³',       a:0, b:2, aS:'0', bS:'2', f:x=>8-x*x*x,       F:x=>8*x-x*x*x*x/4,       d2:'−6x',            bend:-1, dir:-1},
+    rec2: {fs:'4/(x + 1)',    a:0, b:3, aS:'0', bS:'3', f:x=>4/(x+1),       F:x=>4*Math.log(x+1),     d2:'8/(x + 1)³',     bend:1,  dir:-1}
+  },
+  ROUNDS:[
+    [['sq',1],['sqrt',2],['lin1',2],['inv',2]],
+    [['cap',1],['cap',4],['exp',2],['lin2',1]],
+    [['dec',2],['ln',1],['bowl',4],['sin',2]],
+    [['cube',1],['cube',2],['cos',1],['lin3',2]],
+    [['rec2',3],['fall3',2],['sqrt',1],['exp',4]],
+    [['sin',4],['bowl',1],['lin1',1],['inv',1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four estimates right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'falls', t:'Call a falling curve that the trapezoids still overshoot.', toast:'The bend decides, not the slope',
+     ok:K=>K.kinds.has('falls')},
+    {id:'line',  t:'Call a slanted line, where the trapezoids are exact.', toast:'Straight tops on a straight line',
+     ok:K=>K.kinds.has('line')},
+    {id:'more',  t:'Call one curve cut into two different numbers of strips.', toast:'More strips, same side',
+     ok:K=>K.kinds.has('more')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Each trapezoid\\'s top is a straight line from one height to the next. Where the curve bends up, f″ > 0, that top runs above it and T is over the area; where it bends down, f″ < 0, the top runs below it and T is under; on a straight line T is exact. Which way the curve bends settles it, not which way it goes or how many strips there are.',
+  L:'ABCD',
+  WORD:{1:'as over', 0:'as exact', [-1]:'as under'},
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  n(i){ return this.R()[i][1]; },
+  /* T = h/2 × (ends + 2 × inside), and the area from the antiderivative */
+  T(i){ const c=this.C(i), n=this.n(i), h=(c.b-c.a)/n; let s=c.f(c.a)+c.f(c.b); for(let k=1;k<n;k++) s+=2*c.f(c.a+k*h); return h/2*s; },
+  I(i){ const c=this.C(i); return c.F(c.b)-c.F(c.a); },
+  truth(i){ return this.C(i).bend; },
+  fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },
+  strips(n){ return \`\${n} strip\${n>1?'s':''}\`; },
+  /* what a round holds: a falling curve overshot, a slanted line, one curve cut two ways */
+  falls(){ return [0,1,2,3].filter(i=>this.C(i).dir===-1 && this.C(i).bend===1); },
+  lines(){ return [0,1,2,3].filter(i=>this.C(i).bend===0); },
+  pairs(){ const P=this.R(), out=[]; for(let i=0;i<4;i++) for(let j=i+1;j<4;j++) if(P[i][0]===P[j][0] && P[i][1]!==P[j][1]) out.push([i,j]); return out; },
+  tags(){ const t=[]; if(this.falls().length) t.push('falls'); if(this.lines().length) t.push('line'); if(this.pairs().length) t.push('more'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  gapWord(i){ const g=this.T(i)-this.I(i), b=this.C(i).bend; return b===0 ? 'exact' : \`\${b>0?'over':'under'} by \${this.fx(Math.abs(g))}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fa=this.falls(), li=this.lines(), pr=this.pairs();
+      if(fa.length){ const i=fa[0];
+        out.push(\`In \${this.L[i]}, f(x) = \${this.C(i).fs} falls, yet it bends up, so the trapezoids still overshoot: which way a curve bends settles it, not which way it goes.\`); }
+      if(li.length){ const i=li[0];
+        out.push(\`\${this.L[i]} is the straight line f(x) = \${this.C(i).fs}, so each straight top lies right on it and T is the area exactly.\`); }
+      if(pr.length){ const [i,j]=pr[0];
+        out.push(\`\${this.L[i]} and \${this.L[j]} are both f(x) = \${this.C(i).fs}, cut into \${this.n(i)} and \${this.n(j)}: more strips shrink the gap from \${this.fx(Math.abs(this.T(i)-this.I(i)))} to \${this.fx(Math.abs(this.T(j)-this.I(j)))}, but T stays \${this.C(i).bend>0?'over':'under'}.\`); }
+      out.push(\`T against the area: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.gapWord(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const c=this.C(i), b=c.bend;
+        const why = b>0 ? \`which is more than 0 between \${c.aS} and \${c.bS}, so the curve bends up and each straight top runs above it\`
+          : b<0 ? \`which is less than 0 between \${c.aS} and \${c.bS}, so the curve bends down and each straight top runs below it\`
+          : 'so f is a straight line and each straight top lies right on it';
+        out.push(\`In \${this.L[i]}, f(x) = \${c.fs} on [\${c.aS}, \${c.bS}] with \${this.strips(this.n(i))}: f″(x) = \${c.d2}, \${why}. T = \${this.fx(this.T(i))} and the area is \${this.fx(this.I(i))}, so T is \${this.gapWord(i)}. You had it \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each curve in its own pane, gold, with its strip edges dashed and its
+     heights dotted; a slip is ringed red, and once called right each gets
+     its straight tops in blue and the slivers they miss or take in red */
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves cut into strips: \${[0,1,2,3].map(i=>\`\${this.L[i]}, f(x) = \${this.C(i).fs} on \${this.C(i).aS} to \${this.C(i).bS} with \${this.strips(this.n(i))}\`).join('; ')}\${this.solved?', each with its straight tops':''}">\`;
+    [0,1,2,3].forEach(i=>{
+      const c=this.C(i), n=this.n(i), X=(i%2)*180, Y=Math.floor(i/2)*130;
+      let top=0; for(let k=0;k<=60;k++) top=Math.max(top,c.f(c.a+(c.b-c.a)*k/60));
+      const px=x=>X+16+(x-c.a)/(c.b-c.a)*148, py=y=>Y+116-y/top*80;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<line x1="\${X+12}" y1="\${Y+116}" x2="\${X+168}" y2="\${Y+116}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      const nodes=[]; for(let k=0;k<=n;k++){ const x=c.a+(c.b-c.a)*k/n; nodes.push([px(x),py(c.f(x))]); }
+      const curve=[]; for(let k=0;k<=60;k++){ const x=c.a+(c.b-c.a)*k/60; curve.push([px(x),py(c.f(x))]); }
+      if(this.solved && c.bend!==0)
+        out+=\`<polygon data-k="sliver" points="\${nodes.map(p=>\`\${f(p[0])},\${f(p[1])}\`).join(' ')} \${curve.slice().reverse().map(p=>\`\${f(p[0])},\${f(p[1])}\`).join(' ')}" fill="\${FIG_COL.d}" fill-opacity="0.35" stroke="none"/>\`;
+      nodes.forEach(p=>{ out+=\`<line data-k="edge" x1="\${f(p[0])}" y1="\${Y+116}" x2="\${f(p[0])}" y2="\${f(p[1])}" stroke="\${FIG_COL.grid}" stroke-width="1" stroke-dasharray="3 3"/>\`; });
+      out+=\`<polyline data-k="curve" points="\${curve.map(p=>\`\${f(p[0])},\${f(p[1])}\`).join(' ')}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2.5"/>\`;
+      if(this.solved) out+=\`<polyline data-k="tops" points="\${nodes.map(p=>\`\${f(p[0])},\${f(p[1])}\`).join(' ')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+      nodes.forEach(p=>{ out+=\`<circle data-k="node" cx="\${f(p[0])}" cy="\${f(p[1])}" r="2.5" fill="\${FIG_COL.b}"/>\`; });
+      out+=\`<text x="\${X+16}" y="\${Y+22}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text x="\${X+170}" y="\${Y+20}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">\${c.fs}, \${this.strips(n)}</text>\`;
+      out+=\`<text x="\${X+16}" y="\${Y+126}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="middle">\${c.aS}</text><text x="\${X+164}" y="\${Y+126}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="middle">\${c.bS}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved) out+=\`<text data-k="\${c.bend>0?'over':c.bend<0?'under':'exact'}" x="\${X+170}" y="\${Y+34}" fill="\${FIG_COL.c}" font-size="11" font-weight="700" text-anchor="end">\${c.bend>0?'▲ over':c.bend<0?'▼ under':'= exact'}</text>\`;
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Trap.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Trap.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Trap.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="TrapTurn.call(\${i},\${c})" aria-label="Curve \${this.L[i]}: T is \${c===0?'exact':c>0?'over the area':'under the area'}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves cut into strips. Is each trapezoid estimate T over the area, under it, or exact?</div>\`;
+    out+=\`<div id="tztFig">\${this.svg()}<div class="figcap">Each gold curve is cut at the dashed lines, with its heights dotted. Once all four are called right, each gets its straight trapezoid tops in blue and the slivers they take in or miss in red.</div></div>\`;
+    out+=\`<div id="tztStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null, c=this.C(i);
+      return \`<div class="tztStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${c.fs}, \${this.strips(this.n(i))}</span></b>\`+
+        this.btn(i,1,'▲ Over')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Under')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="tztRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tztNext" onclick="TrapTurn.next()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tztCheck" \${this.ready()?'':'disabled '}onclick="TrapTurn.check()" aria-label="\${this.ready()?'Check the four estimates':'Call all four estimates to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="tztGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tztGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('SHARP EYE','every bend called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- The trapezoid workshop: cutting an area into strips ----------
    Three curves on [0, 4]: x², which bends up; 4x − x², which bends down; and
    the straight line x/2 + 1. Cut the interval into 1, 2, 4, 8 or 16 strips
@@ -32844,11 +33023,11 @@ const Trap = {
   tab:'hand', // cut by hand, or which estimate
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tzwTab').innerHTML=[['hand','🪟 Cut by hand','Cut the area into strips by hand'],['pick','🎯 Which estimate?','See a curve, its strips and their heights, and pick which number is the trapezoid estimate']]
+    document.getElementById('tzwTab').innerHTML=[['hand','🪟 Cut by hand','Cut the area into strips by hand'],['pick','🎯 Which estimate?','See a curve, its strips and their heights, and pick which number is the trapezoid estimate'],['turn','🔺 Over or under?','See four curves cut into strips, and call each trapezoid estimate over the area, under it, or exact']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Trap.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tzwSets','tzwFig','tzwMoveRow','tzwRead','tzwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('tzqBox').innerHTML=pick ? TrapPick.html() : '';
+    document.getElementById('tzqBox').innerHTML=!pick ? '' : this.tab==='pick' ? TrapPick.html() : TrapTurn.html();
     if(pick) return;
     document.getElementById('tzwSets').innerHTML=this.CURVES.map((c,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.ci}" onclick="Trap.pick(\${i})" aria-label="Cut the area under \${c.name}">\${c.btn}</button>\`).join('');
