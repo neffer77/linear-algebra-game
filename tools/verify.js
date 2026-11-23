@@ -17288,6 +17288,161 @@ const sliceTurnNotes = (() => {
   if (env.banners.join() !== 'BOX BREAKER / every centre found') fail('sliceturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Which is longer? The arrow workshop's third mode, worked again from
+   scratch: both diagonals of every parallelogram measured straight from
+   their parts, their squares checked to differ by four times the dot
+   product, every call and every readout, a slip on every pane both other
+   ways, each pane read back with its arrows, diagonals and squares, and
+   the hunt for every goal. */
+const arrowTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Arrow = {render(){ env.renders++; }};" +
+    cut('const ArrowTurn = {', '/* ---------- How long? The arrow workshop turned round') + 'return ArrowTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(−${-n})` : String(n));
+  const L = 'ABCD';
+  const WD = { 1: 'u + v longer', 0: 'the same', [-1]: 'u − v longer' };
+  const NAME = { 1: 'u + v is longer', 0: 'they are the same length', [-1]: 'u − v is longer' };
+  const MARK = { 1: 'plus u + v longer', 0: 'same = same', [-1]: 'minus u − v longer' };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const vec = (x, y) => `⟨${neg(x)}, ${neg(y)}⟩`;
+  const root = n => { const r = Math.round(Math.sqrt(n)); return r * r === n ? String(r) : `√${n}`; };
+  const work = ri => S.ROUNDS[ri].map(([a, b, c, d]) => {
+    const key = `round ${ri + 1}`;
+    if ((!a && !b) || (!c && !d)) fail('arrowturn', key, 'an arrow has no length');
+    if (a * d === b * c) fail('arrowturn', key, 'u and v lie along one line, so there is no parallelogram');
+    if (Math.max(Math.abs(a + c), Math.abs(a - c), Math.abs(b + d), Math.abs(b - d)) > 6) fail('arrowturn', key, 'a diagonal runs off its pane');
+    // both diagonals measured straight from their parts
+    const plus = Math.hypot(a + c, b + d) ** 2, minus = Math.hypot(a - c, b - d) ** 2;
+    const P = Math.round(plus), M = Math.round(minus), dot = a * c + b * d;
+    if (P - M !== 4 * dot) fail('arrowturn', key, 'the squared diagonals do not differ by four times the dot product');
+    const uu = a * a + b * b, vv = c * c + d * d;
+    if (P + M !== 2 * (uu + vv)) fail('arrowturn', key, 'the squared diagonals do not add to twice the squared sides');
+    const t = Math.sign(P - M), x = a * c, y = b * d;
+    const dl = `u·v = ${pn(a)}·${pn(c)} + ${pn(b)}·${pn(d)} = ${neg(x)} ${y < 0 ? '−' : '+'} ${Math.abs(y)} = ${neg(dot)}`;
+    return { a, b, c, d, P, M, dot, uu, vv, t, dl, x, y,
+      same: dot === 0, pull: x !== 0 && y !== 0 && (x > 0) !== (y > 0) && dot !== 0, axis: (a * b === 0 || c * d === 0) && dot !== 0 };
+  });
+  if (S.ROUNDS.length !== 6) fail('arrowturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('arrowturn', key, `it holds ${Q.length} pairs, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = JSON.stringify(Q[i]); if (seen.has(k)) fail('arrowturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (S.plus(i) !== w.P || S.minus(i) !== w.M || S.dot(i) !== w.dot) fail('arrowturn', key, `${L[i]} gives ${S.plus(i)}, ${S.minus(i)} and u·v = ${S.dot(i)}, not ${w.P}, ${w.M} and ${w.dot}`);
+      if (S.truth(i) !== w.t) fail('arrowturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (w.same && (w.a * w.b === 0 || w.c * w.d === 0)) fail('arrowturn', key, `${L[i]}'s right angle lies along the axes, where it shows at a glance`);
+      if (w.pull && w.axis) fail('arrowturn', key, `${L[i]} is both a pull and an axis`);
+    });
+    if (new Set(truth).size < 3) fail('arrowturn', key, 'it does not hold all three calls');
+    const sm = [], pl = [], ax = [];
+    W.forEach((w, i) => { if (w.same) sm.push(i); if (w.pull) pl.push(i); if (w.axis) ax.push(i); });
+    const tags = [sm.length ? 'same' : null, pl.length ? 'pull' : null, ax.length ? 'axis' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('arrowturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    if (tags.length !== 3) fail('arrowturn', key, 'it does not hold a right angle, opposite pulls and an arrow along an axis');
+    const why = w => w.t === 0
+      ? `${w.dl}. So |u + v|² and |u − v|² are both ${w.uu} + ${w.vv} = ${w.uu + w.vv}: they are the same.`
+      : `${w.dl}. So |u + v|² = ${w.uu} + ${w.vv} ${w.t > 0 ? '+' : '−'} ${2 * Math.abs(w.dot)} = ${w.P} and |u − v|² = ${w.uu} + ${w.vv} ${w.t > 0 ? '−' : '+'} ${2 * Math.abs(w.dot)} = ${w.M}: ${w.t > 0 ? 'u + v' : 'u − v'} is longer.`;
+    // every pair called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, u = ${vec(w.a, w.b)} and v = ${vec(w.c, w.d)}: ${why(w)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('arrowturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(sides|sum|diff|dot|sp|sm|plus|same|minus)"/.test(svg)) fail('arrowturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or the diagonals are given away`);
+        if (S.solved || S.streak) fail('arrowturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('arrowturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('arrowturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('arrowturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="arwCheck" disabled /.test(S.html())) fail('arrowturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="arwCheck" disabled /.test(S.html())) fail('arrowturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('arrowturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="ArrowTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t].replace(/[+]/g, '\\+')}"`));
+      if (!m || +m[1] !== t) fail('arrowturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`ArrowTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('arrowturn', key, `${L[i]} does not offer u + v, the same and u − v`);
+    });
+    if (S.calls.join() !== truth.join()) fail('arrowturn', key, 'the buttons cannot make the right calls');
+    if (/id="arwCheck" disabled /.test(S.html())) fail('arrowturn', key, 'the check stays shut with every pair called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (sm.length) { const w = W[sm[0]];
+      want.push(`In ${L[sm[0]]}, ${w.dl}: u and v meet at a right angle, so the parallelogram is a rectangle and its two diagonals are the same length, ${root(w.P)} each.`); }
+    if (pl.length) { const w = W[pl[0]];
+      want.push(`In ${L[pl[0]]}, the x-parts give ${neg(w.x)} and the y-parts ${neg(w.y)}: they pull opposite ways, the bigger in size wins, and u·v = ${neg(w.dot)}, so ${w.t > 0 ? 'u + v' : 'u − v'} is longer.`); }
+    if (ax.length) { const w = W[ax[0]], onU = w.a * w.b === 0, z = onU ? (w.a === 0 ? 'y' : 'x') : (w.c === 0 ? 'y' : 'x');
+      want.push(`In ${L[ax[0]]}, ${onU ? 'u' : 'v'} lies along the ${z}-axis, so only the ${z}-parts count: u·v = ${neg(z === 'x' ? w.x : w.y)}.`); }
+    want.push(`Squared diagonals, u + v against u − v: ${W.map((w, i) => `${L[i]} ${w.P} and ${w.M}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('arrowturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: u and v from the origin, then both diagonals and their squares
+    const svg = S.svg();
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (parts.length !== 4) fail('arrowturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, ox = X + 48, oy = Y + 70, px = x => ox + x * 6, py = y => oy - y * 6;
+      if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('arrowturn', key, `${L[i]}'s pane is out of place`);
+      if (!pg.includes(`fill="gold" font-size="12" text-anchor="end">u = ${vec(w.a, w.b)}</text>`) || !pg.includes(`fill="blue" font-size="12" text-anchor="end">v = ${vec(w.c, w.d)}</text>`)) fail('arrowturn', key, `${L[i]}'s arrows are not written u in gold and v in blue`);
+      if (!pg.includes(`data-k="ua" x1="${ox}" y1="${oy}" x2="${px(w.a)}" y2="${py(w.b)}" stroke="gold"`)) fail('arrowturn', key, `${L[i]}'s u is not drawn from the origin to ${vec(w.a, w.b)}`);
+      if (!pg.includes(`data-k="va" x1="${ox}" y1="${oy}" x2="${px(w.c)}" y2="${py(w.d)}" stroke="blue"`)) fail('arrowturn', key, `${L[i]}'s v is not drawn from the origin to ${vec(w.c, w.d)}`);
+      if (!pg.includes(`data-k="sum" x1="${ox}" y1="${oy}" x2="${px(w.a + w.c)}" y2="${py(w.b + w.d)}"`)) fail('arrowturn', key, `${L[i]}'s u + v does not run from the origin to the far corner`);
+      if (!pg.includes(`data-k="diff" x1="${px(w.c)}" y1="${py(w.d)}" x2="${px(w.a)}" y2="${py(w.b)}"`)) fail('arrowturn', key, `${L[i]}'s u − v does not run from v's tip to u's tip`);
+      if (!pg.includes(`>u·v = ${neg(w.dot)}</text>`) || !pg.includes(`>|u + v|² = ${w.P}</text>`) || !pg.includes(`>|u − v|² = ${w.M}</text>`)) fail('arrowturn', key, `${L[i]}'s dot product and squares are not written in once the round is right`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(plus|same|minus)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('arrowturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="arwNext"') || /onclick="ArrowTurn\.call/.test(hh.replace(/disabled onclick="ArrowTurn\.call/g, ''))) fail('arrowturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('arrowturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('arrowturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('arrowturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'axis,fix,pull,same'], [false, 'axis,fix,one,pull,same'], [false, 'axis,fix,one,pull,same'], [false, 'axis,fix,one,pull,same,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('arrowturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ A right angle evens them · Opposite pulls weighed · One part drops out · A slip caught and fixed | ✓ Right on the first check') fail('arrowturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'DIAGONAL JUDGE / every diagonal weighed') fail('arrowturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24790,6 +24945,7 @@ console.log(`  swaps fitted      ${pad(swapTurnNotes.checks.toLocaleString(), 12
 console.log(`  splits weighed    ${pad(partsTurnNotes.checks.toLocaleString(), 12)}  (checks of four splits called as leaving something easier, the same kind or harder in the parts workshop, ${partsTurnNotes.wrongs} of them with one called wrong and caught, and ${partsTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  splits compared   ${pad(coverTurnNotes.checks.toLocaleString(), 12)}  (checks of four fractions called as A bigger than B, the same or smaller in the cover-up workshop, ${coverTurnNotes.wrongs} of them with one called wrong and caught, and ${coverTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  boxes weighed     ${pad(sliceTurnNotes.checks.toLocaleString(), 12)}  (checks of four solids under planes called as more than a box, the same or less in the slice workshop, ${sliceTurnNotes.wrongs} of them with one called wrong and caught, and ${sliceTurnNotes.panes} panes read back off the drawing)`);
+console.log(`  diagonals weighed ${pad(arrowTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs of arrows called as u + v longer, the same or u − v longer in the arrow workshop, ${arrowTurnNotes.wrongs} of them with one called wrong and caught, and ${arrowTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  labels rimmed     ${pad(haloNotes.figs.toLocaleString(), 12)}  (workshop figures whose labels sit on a rim of the panel's colour, so a curve beneath one leaves it readable)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);

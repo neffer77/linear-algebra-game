@@ -1,60 +1,60 @@
 {
-  "change": "Add a More than the box mode to the slice workshop",
+  "change": "Add a Which is longer mode to the arrow workshop",
   "mutations": [
     {
-      "name": "the centre is taken at the far corner",
+      "name": "the dot product pairs the wrong parts",
       "file": "index.html",
-      "find": "mid(i){ const {p,q}=this.Q(i); return this.f(i,p/2,q/2); },",
-      "replace": "mid(i){ const {p,q}=this.Q(i); return this.f(i,p,q); },",
+      "find": "dot(i){ const {a,b,c,d}=this.Q(i); return a*c+b*d; },",
+      "replace": "dot(i){ const {a,b,c,d}=this.Q(i); return a*d+b*c; },",
       "run": "verify"
     },
     {
-      "name": "the volume forgets the width",
+      "name": "the call is made from the x-parts alone",
       "file": "index.html",
-      "find": "V(i){ const {p,q}=this.Q(i); return p*q*this.mid(i); },",
-      "replace": "V(i){ const {p,q}=this.Q(i); return q*this.mid(i); },",
+      "find": "// 1 u + v longer, 0 the same, −1 u − v longer\n  truth(i){ return Math.sign(this.dot(i)); },",
+      "replace": "// 1 u + v longer, 0 the same, −1 u − v longer\n  truth(i){ return Math.sign(this.Q(i).a*this.Q(i).c); },",
       "run": "verify"
     },
     {
-      "name": "the volume is set against the box's height alone",
+      "name": "u − v keeps a plus in its y-part",
       "file": "index.html",
-      "find": "truth(i){ return Math.sign(this.V(i)-this.box(i)); },",
-      "replace": "truth(i){ return Math.sign(this.V(i)-this.Q(i).h); },",
+      "find": "minus(i){ const {a,b,c,d}=this.Q(i); return (a-c)**2+(b-d)**2; },",
+      "replace": "minus(i){ const {a,b,c,d}=this.Q(i); return (a-c)**2+(b+d)**2; },",
       "run": "verify"
     },
     {
-      "name": "a falling term is written as climbing",
+      "name": "opposite pulls are not looked for",
       "file": "index.html",
-      "find": "out.map(([k,t],j)=>j ? `${k<0?'−':'+'} ${t}`",
-      "replace": "out.map(([k,t],j)=>j ? `${k<0?'+':'−'} ${t}`",
+      "find": "return a*c && b*d && (a*c>0)!==(b*d>0) && this.dot(i); }); },",
+      "replace": "return a*c && b*d && (a*c>0)===(b*d>0) && this.dot(i); }); },",
       "run": "verify"
     },
     {
-      "name": "a climb against a fall is not looked for",
+      "name": "a negative part loses its brackets",
       "file": "index.html",
-      "find": "tilts(){ return [0,1,2,3].filter(i=>this.Q(i).a*this.Q(i).b<0); },",
-      "replace": "tilts(){ return [0,1,2,3].filter(i=>this.Q(i).a*this.Q(i).b>0); },",
+      "find": "pn:n=>n<0 ? `(${neg(n)})` : String(n),\n  root(n)",
+      "replace": "pn:n=>neg(n),\n  root(n)",
       "run": "verify"
     },
     {
-      "name": "half of an odd side is written as a decimal",
+      "name": "the diagonals are drawn before the round is right",
       "file": "index.html",
-      "find": "half:n=>Number.isInteger(n/2) ? neg(n/2) : `${neg(n)}/2`,",
-      "replace": "half:n=>neg(n/2),",
+      "find": "if(this.solved){ const t=this.truth(i);\n        out+=`<path data-k=\"sides\"",
+      "replace": "{ const t=this.truth(i);\n        out+=`<path data-k=\"sides\"",
       "run": "verify"
     },
     {
-      "name": "the corners are written before the round is right",
+      "name": "u − v is drawn from the origin",
       "file": "index.html",
-      "find": "if(this.solved){ const t=this.truth(i), cx=x0+p*s/2",
-      "replace": "{ const t=this.truth(i), cx=x0+p*s/2",
+      "find": "<line data-k=\"diff\" x1=\"${px(c)}\" y1=\"${py(d)}\"",
+      "replace": "<line data-k=\"diff\" x1=\"${ox}\" y1=\"${oy}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slice.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slice.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Arrow.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Arrow.render();",
       "run": "verify"
     }
   ]
