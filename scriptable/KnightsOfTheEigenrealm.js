@@ -73,6 +73,10 @@ h2{font-size:18px}
 .btn.gold{background:linear-gradient(180deg,#f2c14e,#c9962c);color:#2a1c00;border-color:#8a6612}
 .btn.ghost{background:linear-gradient(180deg,#241c3c,#1b1530);color:var(--dim)}
 .btn.sm{padding:9px 11px;font-size:14px;margin:5px 0}
+/* the call grids of the third modes: let every column shrink to its share of a phone, and break a long word before it pushes past the edge */
+[id$="Stops"]>*,[id$="Stops"]>*>*{min-width:0}
+[id$="Stops"]{overflow-wrap:anywhere}
+[id$="Stops"] .btn.sm{font-size:13px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .row{display:flex;gap:8px}.row>*{flex:1}
 .center{text-align:center}
