@@ -1,60 +1,60 @@
 {
-  "change": "Add a Too high or too low mode to the tangent line workshop",
+  "change": "Add a Line or plane mode to the span workshop",
   "mutations": [
     {
-      "name": "the call follows the bend, not the side it puts the curve on",
+      "name": "a pair with a negative u₁v₂ − u₂v₁ is called a line",
       "file": "index.html",
-      "find": "truth(i){ return -this.bend(i); }",
-      "replace": "truth(i){ return this.bend(i); }",
+      "find": "truth(i){ return this.det(i)!==0 ? 2 :",
+      "replace": "truth(i){ return this.det(i)>0 ? 2 :",
       "run": "verify"
     },
     {
-      "name": "√x is said to bend up left of 4",
+      "name": "u₁v₂ − u₂v₁ is added instead",
       "file": "index.html",
-      "find": "d2:'−1/(4x√x)',     bR:-1, bL:-1,",
-      "replace": "d2:'−1/(4x√x)',     bR:-1, bL:1,",
+      "find": "return u[0]*v[1]-u[1]*v[0]; },\n  isZero(w)",
+      "replace": "return u[0]*v[1]+u[1]*v[0]; },\n  isZero(w)",
       "run": "verify"
     },
     {
-      "name": "the estimate leaves off f(a)",
+      "name": "a pair with one ⟨0, 0⟩ is called a point",
       "file": "index.html",
-      "find": "return c.f(c.a)+c.d(c.a)*(x-c.a); },\n  fv",
-      "replace": "return c.d(c.a)*(x-c.a); },\n  fv",
+      "find": "this.isZero(this.u(i)) && this.isZero(this.v(i)) ? 0 : 1; },",
+      "replace": "this.isZero(this.u(i)) || this.isZero(this.v(i)) ? 0 : 1; },",
       "run": "verify"
     },
     {
-      "name": "a curve that changes bend counts as bending one way left of a",
+      "name": "any line pair counts as pointing opposite ways",
       "file": "index.html",
-      "find": "this.x(i)<c.a && c.bL!==0 && c.bL===c.bR",
-      "replace": "this.x(i)<c.a && c.bL!==0",
+      "find": "this.truth(i)===1 && this.rel(i).k<0",
+      "replace": "this.truth(i)===1 && this.rel(i).k!==null",
       "run": "verify"
     },
     {
-      "name": "a line gets a gap",
+      "name": "37° counts as nearly alike",
       "file": "index.html",
-      "find": "if(this.solved && this.truth(i)!==0) out+=`<line data-k=\"gap\"",
-      "replace": "if(this.solved) out+=`<line data-k=\"gap\"",
+      "find": "NEAR:20,",
+      "replace": "NEAR:40,",
       "run": "verify"
     },
     {
-      "name": "a curve that bends up is said to sit below its tangent",
+      "name": "a line is drawn at right angles to its arrows",
       "file": "index.html",
-      "find": "so the curve bends up, above its tangent",
-      "replace": "so the curve bends up, below its tangent",
+      "find": "const w=this.isZero(this.u(i)) ? this.v(i) : this.u(i), n=",
+      "replace": "const w0=this.isZero(this.u(i)) ? this.v(i) : this.u(i), w=[-w0[1],w0[0]], n=",
+      "run": "verify"
+    },
+    {
+      "name": "arrows are drawn upside down",
+      "file": "index.html",
+      "find": "y2=Y-w[1]*U,",
+      "replace": "y2=Y+w[1]*U,",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanLine.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanLine.render();",
-      "run": "verify"
-    },
-    {
-      "name": "gaps are rounded to two places",
-      "file": "index.html",
-      "find": "fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  gapWord",
-      "replace": "fx(v){ const r=Math.round(v*100)/100; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  gapWord",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Span.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Span.render();",
       "run": "verify"
     }
   ]
