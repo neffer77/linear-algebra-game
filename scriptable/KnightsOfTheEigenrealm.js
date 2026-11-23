@@ -1740,7 +1740,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ QUOTIENT WORKSHOP ============ -->
   <div class="screen" id="s-quot">
     <div class="panel"><h2>➗ Quotient Rule Workshop</h2><div class="sub">The slope of f/g is not f′ over g′. Step along a fraction of two curves and work its slope with the quotient rule, check it with a nudge, then try the two slips everyone makes and catch them out.</div></div>
-    <div id="qoTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work the slope or pick dy/dx"></div>
+    <div id="qoTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Work the slope, pick dy/dx, or call whether each fraction is rising, flat or falling"></div>
     <div class="panel">
       <div id="qoPick"></div>
       <div id="qoSets" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Which fraction"></div>
@@ -15618,7 +15618,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">➗ Quotient Rule Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out. Then turn it round: see y = f(x) / g(x), and pick which of four formulas is its slope.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Step along a fraction of two curves and work its slope with the quotient rule, checked by a nudge. Find a flat tangent, a gap, the top of a bump, then try the two slips everyone makes and catch them out. Then turn it round: see y = f(x) / g(x), and pick which of four formulas is its slope. Or call it: see four fractions, each at one x, and say whether each is rising, flat or falling there.</div>
          <button class="btn sm" id="tomeQuot" style="width:auto;margin-top:8px" onclick="Quot.open()">Open the quotient rule workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -32427,6 +32427,189 @@ const CrossTurn = {
   }
 };
 
+/* ---------- Rising or falling? The quotient rule workshop's third mode ----------
+   Four fractions y = f(x) / g(x), each read at one x, with f and g drawn
+   near it. The player calls whether y is rising there, flat, or falling.
+   The rule comes first: the quotient rule's bottom, g², is a square and
+   never below 0, so only the top, f′g − fg′, decides; take the top the
+   wrong way round and every call turns over. Every round holds a fraction
+   that levels off, one whose bottom is below 0, and one where f′g and fg′
+   both pull and the bigger wins. Once the round is right, each y is drawn
+   with its tangent and dy/dx written in. A slip rings that pane and works
+   its top through. Nothing is saved, and there is no clock. */
+const QuotTurn = {
+  // [f₀, f₁, f₂, g₀, g₁, g₂, x]: y = (f₀ + f₁x + f₂x²) / (g₀ + g₁x + g₂x²), read at x
+  ROUNDS:[
+    [[-1,1,0, 3,0,1, -1], [2,2,0, -3,0,1, 0], [1,3,0, 2,0,1, 1], [0,3,-1, 3,0,1, -1]],
+    [[3,1,0, -3,1,0, 1], [1,3,0, 3,0,1, 1], [0,1,0, 1,0,1, -1], [1,-2,0, -3,0,1, 0]],
+    [[-3,-2,0, 2,0,1, -1], [0,0,-1, 3,0,1, -1], [0,-3,-1, -1,1,0, -2], [0,-1,0, 1,0,1, 1]],
+    [[1,-1,0, -3,0,1, 0], [0,3,0, 1,0,1, 1], [3,-1,0, 3,0,1, 1], [3,1,0, 1,0,1, 1]],
+    [[0,-3,-1, -3,1,0, 1], [3,0,1, -1,1,0, -1], [1,2,0, 1,0,1, 1], [3,-2,0, -3,0,1, 0]],
+    [[0,-3,1, 3,0,1, 1], [-2,1,0, 1,0,1, -1], [1,-3,0, 3,1,0, 1], [-2,-2,0, -3,1,0, 1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four fractions right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'flat', t:'Call a fraction that levels off, where f′g and fg′ cancel.', toast:'Level where they cancel',
+     ok:K=>K.kinds.has('flat')},
+    {id:'neg',  t:'Call a fraction whose bottom is below 0 at the point.', toast:'Squared away',
+     ok:K=>K.kinds.has('neg')},
+    {id:'pull', t:'Call a fraction where f′g and fg′ both pull, and the bigger wins.', toast:'The tug of war weighed',
+     ok:K=>K.kinds.has('pull')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'The quotient rule: if y = f / g, then dy/dx = (f′g − fg′) / g². The bottom, g², is a square, so it is never below 0: only the top decides. Work f, f′, g and g′ at the point. If f′g is bigger than fg′, y is rising; if they are equal, y is flat; if fg′ is bigger, y is falling. Take the top the wrong way round, fg′ − f′g, and every call turns over.',
+  L:'ABCD',
+  WORD:{1:'rising', 0:'flat', [-1]:'falling'},
+  NAMES:{1:'y is rising there', 0:'y is flat there', [-1]:'y is falling there'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const q=this.R()[i]; return {f:q.slice(0,3), g:q.slice(3,6), x:q[6]}; },
+  neg:n=>(n<0 ? '−'+Math.abs(n) : String(n)),
+  pn(n){ return n<0 ? \`(\${this.neg(n)})\` : String(n); },
+  // a polynomial, highest power first: x² + 3, −2x + 1, 3x
+  poly(p){
+    const t=[];
+    for(let d=p.length-1;d>=0;d--){ const c=p[d]; if(!c) continue;
+      const w=d===0 ? '' : d===1 ? 'x' : 'x²', n=Math.abs(c)===1 && d>0 ? '' : String(Math.abs(c));
+      t.push((t.length ? (c<0?' − ':' + ') : (c<0?'−':''))+n+w); }
+    return t.join('') || '0';
+  },
+  // the fraction as written: a single term needs no brackets
+  ys(i){ const {f,g}=this.Q(i), b=p=>p.filter(Boolean).length>1 ? \`(\${this.poly(p)})\` : this.poly(p); return \`\${b(f)}/\${b(g)}\`; },
+  ev(p,x){ return p[0]+p[1]*x+p[2]*x*x; },
+  dv(p,x){ return p[1]+2*p[2]*x; },
+  parts(i){ const {f,g,x}=this.Q(i); return {f:this.ev(f,x), fp:this.dv(f,x), g:this.ev(g,x), gp:this.dv(g,x)}; },
+  top(i){ const p=this.parts(i); return p.fp*p.g-p.f*p.gp; },
+  // a fraction cut down: 6/9 is 2/3, 8/4 is 2
+  frac(n,d){ const gcd=(a,b)=>b ? gcd(b,a%b) : Math.abs(a), k=gcd(n,d)||1, a=n/k, b=d/k; return b===1 ? this.neg(a) : \`\${this.neg(a)}/\${b}\`; },
+  slope(i){ const g=this.parts(i).g; return this.frac(this.top(i), g*g); },
+  // 1 rising, 0 flat, −1 falling: the sign of the top alone
+  truth(i){ return Math.sign(this.top(i)); },
+  flats(){ return [0,1,2,3].filter(i=>{ const p=this.parts(i); return !this.top(i) && p.fp*p.g; }); },
+  negs(){ return [0,1,2,3].filter(i=>this.parts(i).g<0); },
+  pulls(){ return [0,1,2,3].filter(i=>{ const p=this.parts(i); return this.top(i) && p.fp*p.g>0 && p.f*p.gp>0; }); },
+  tags(){ const t=[]; if(this.flats().length) t.push('flat'); if(this.negs().length) t.push('neg'); if(this.pulls().length) t.push('pull'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  why(i){
+    const p=this.parts(i), A=p.fp*p.g, B=p.f*p.gp, N=A-B, g2=p.g*p.g, t=this.truth(i);
+    const head=\`f = \${this.neg(p.f)}, f′ = \${this.neg(p.fp)}, g = \${this.neg(p.g)} and g′ = \${this.neg(p.gp)}. The top is f′g − fg′ = \${this.pn(p.fp)}·\${this.pn(p.g)} − \${this.pn(p.f)}·\${this.pn(p.gp)} = \${this.neg(A)} − \${this.pn(B)} = \${this.neg(N)}\`;
+    return t ? \`\${head}, and g² = \${g2} is above 0, so dy/dx = \${this.slope(i)} is \${t>0?'above':'below'} 0: y is \${this.WORD[t]}.\`
+      : \`\${head}, so dy/dx = 0: y is flat.\`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const fl=this.flats(), ng=this.negs(), pu=this.pulls();
+      if(fl.length){ const i=fl[0], p=this.parts(i);
+        out.push(\`In \${this.L[i]}, f′g and fg′ are both \${this.neg(p.fp*p.g)}: they cancel, the top is 0, and y levels off at x = \${this.neg(this.Q(i).x)}.\`); }
+      if(ng.length){ const i=ng[0], p=this.parts(i);
+        out.push(\`In \${this.L[i]}, g = \${this.neg(p.g)} is below 0, yet it is squared: g² = \${p.g*p.g}, so the top alone decides, and y is \${this.WORD[this.truth(i)]}.\`); }
+      if(pu.length){ const i=pu[0], p=this.parts(i);
+        out.push(\`In \${this.L[i]}, f′g = \${p.fp*p.g} lifts y and fg′ = \${p.f*p.gp} pulls it down: the bigger wins by \${Math.abs(this.top(i))}, so y is \${this.WORD[this.truth(i)]}.\`); }
+      out.push(\`Each dy/dx: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.slope(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad)
+        out.push(\`In \${this.L[i]}, y = \${this.ys(i)} at x = \${this.neg(this.Q(i).x)}: \${this.why(i)} You had it as \${this.WORD[this.calls[i]]}.\`);
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: a stretch of x either side of the point, dashed at the point.
+     Before the round is right, f is drawn in blue and g in green on one
+     scale, so g's sign and both slopes can be read off; once it is right,
+     they give way to y itself in blue, with its tangent at the point in
+     gold, dy/dx written in and the call marked. */
+  svg(){
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four fractions y = f over g, each read at one x: \${[0,1,2,3].map(i=>\`\${this.L[i]}, y = \${this.ys(i)} at x = \${this.neg(this.Q(i).x)}\`).join('; ')}\${this.solved?', each drawn with its tangent':''}">\`;
+    for(let i=0;i<4;i++){
+      const {f,g,x}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, a=x-1.5, b=x+1.5, r=v=>v.toFixed(2);
+      const xs=[]; for(let j=0;j<=36;j++) xs.push(a+3*j/36);
+      const curves=this.solved ? [['ycurve',xs.map(u=>this.ev(f,u)/this.ev(g,u)),FIG_COL.b]] : [['fcurve',xs.map(u=>this.ev(f,u)),FIG_COL.b],['gcurve',xs.map(u=>this.ev(g,u)),FIG_COL.c]];
+      let lo=Infinity, hi=-Infinity; for(const [,ys] of curves) for(const v of ys){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
+      if(hi-lo<1e-9){ lo-=1; hi+=1; }
+      const px=u=>X+14+(u-a)/3*152, py=v=>Y+112-(v-lo)/(hi-lo)*70;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">y = \${this.ys(i)}</text>\`;
+      out+=\`<text data-k="at" x="\${X+14}" y="\${Y+35}" fill="\${FIG_COL.dim}" font-size="11">at x = \${this.neg(x)}</text>\`;
+      out+=\`<line data-k="xline" x1="\${r(px(x))}" y1="\${Y+40}" x2="\${r(px(x))}" y2="\${Y+114}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="2 3"/>\`;
+      if(lo<0 && hi>0) out+=\`<line data-k="zero" x1="\${X+14}" y1="\${r(py(0))}" x2="\${X+166}" y2="\${r(py(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(const [k,ys,c] of curves){
+        out+=\`<polyline data-k="\${k}" points="\${xs.map((u,j)=>\`\${r(px(u))},\${r(py(ys[j]))}\`).join(' ')}" fill="none" stroke="\${c}" stroke-width="2"/>\`;
+        if(!this.solved) out+=\`<text data-k="\${k[0]}lab" x="\${X+170}" y="\${r(Math.min(Y+116,Math.max(Y+46,py(ys[36])+4)))}" fill="\${c}" font-size="10" text-anchor="end">\${k[0]}</text>\`;
+      }
+      out+=\`<text data-k="tick" x="\${r(px(x))}" y="\${Y+124}" fill="\${FIG_COL.dim}" font-size="9" text-anchor="middle">\${this.neg(x)}</text>\`;
+      if(this.solved){ const t=this.truth(i), y0=this.ev(f,x)/this.ev(g,x), p=this.parts(i), m=this.top(i)/(p.g*p.g), h=0.6;
+        out+=\`<line data-k="tan" x1="\${r(px(x-h))}" y1="\${r(py(y0-m*h))}" x2="\${r(px(x+h))}" y2="\${r(py(y0+m*h))}" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+        out+=\`<circle data-k="dot" cx="\${r(px(x))}" cy="\${r(py(y0))}" r="3.5" fill="\${FIG_COL.a}"/>\`;
+        out+=\`<text data-k="dydx" x="\${X+172}" y="\${Y+35}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">dy/dx = \${this.slope(i)}</text>\`;
+        out+=\`<text data-k="\${{1:'rise',0:'flat',[-1]:'fall'}[t]}" x="\${X+14}" y="\${Y+124}" fill="\${FIG_COL.c}" font-size="11" font-weight="700">\${{1:'▲ rising',0:'= flat',[-1]:'▼ falling'}[t]}</text>\`; }
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+    }
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Quot.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Quot.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Quot.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="QuotTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four fractions y = f/g, each read at one x. Is y rising there, flat, or falling?</div>\`;
+    out+=\`<div id="qttFig">\${this.svg()}<div class="figcap">Each pane draws f in blue and g in green either side of the point, dashed at x. Once all four are called right, y itself is drawn in blue with its tangent in gold.</div></div>\`;
+    out+=\`<div id="qttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="qttStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span style="font-weight:400;font-size:12px;color:var(--ink)">\${this.ys(i)} at \${this.neg(this.Q(i).x)}</span></b>\`+
+        this.btn(i,1,'▲ Rises')+this.btn(i,0,'= Flat')+this.btn(i,-1,'▼ Falls')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="qttRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="qttNext" onclick="QuotTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="qttCheck" \${this.ready()?'':'disabled '}onclick="QuotTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="qttGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="qttGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('TOP READER','every slope signed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* The quotient rule workshop turned round: y = f(x) / g(x) and four formulas
    for dy/dx. One is the quotient rule, (f′g − fg′) / g²; the others are the
    slips people make: the top taken the wrong way round (exactly minus the
@@ -32736,11 +32919,11 @@ const Quot = {
   moveX(by){ const v=this.k+by; if(v<0 || v>=this.X.length) return; this.k=v; this.touched=true; this.render(); },
   setMode(m){ this.mode=m; this.touched=true; this.render(); },
   render(){
-    document.getElementById('qoTab').innerHTML=[['work','➗ Work the slope','Step along a fraction and work its slope with the quotient rule'],['pick','🎯 Which dy/dx?','See y = f(x) / g(x) and pick which of four formulas is its slope']]
+    document.getElementById('qoTab').innerHTML=[['work','➗ Work the slope','Step along a fraction and work its slope with the quotient rule'],['pick','🎯 Which dy/dx?','See y = f(x) / g(x) and pick which of four formulas is its slope'],['turn','📈 Rising or falling?','See four fractions y = f/g, each at one x, and call whether y is rising, flat or falling there']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Quot.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='work';
     for(const id of ['qoSets','qoFig','qoXs','qoModes','qoRead','qoGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('qoPick').innerHTML=pick ? QuotPick.html() : '';
+    document.getElementById('qoPick').innerHTML=!pick ? '' : this.tab==='pick' ? QuotPick.html() : QuotTurn.html();
     if(pick) return;
     document.getElementById('qoSets').innerHTML=this.SETS.map((s,i)=>
       \`<button class="btn sm ghost" aria-pressed="\${i===this.si}" onclick="Quot.pick(\${i})" aria-label="y = \${s.fs} over \${s.gs}">\${s.btn}</button>\`).join('');
