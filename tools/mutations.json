@@ -1,117 +1,61 @@
 {
-  "change": "Give every realm boss a second phase",
+  "change": "Add a Bestiary of every campaign foe",
   "mutations": [
     {
-      "name": "a boss rallies at a third, not half",
+      "name": "a beaten foe stays a shadow",
       "file": "index.html",
-      "find": "B.ehp>B.emax/2) return false;",
-      "replace": "B.ehp>B.emax/3) return false;",
+      "find": "beaten:!!(g.cleared&&g.cleared[ri+':'+fi])})));",
+      "replace": "beaten:false})));",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the shadow keeps its colours",
+      "file": "index.html",
+      "find": "    if(!known){ o.globalCompositeOperation='source-in';",
+      "replace": "    if(false){ o.globalCompositeOperation='source-in';",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the scene canvas is left at the portrait's size",
+      "file": "index.html",
+      "find": "    cv.width=w0; cv.height=h0; fitCanvas();\n",
+      "replace": "",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "a shadow gives its name away",
+      "file": "index.html",
+      "find": "          : `<div style=\"font-weight:800;opacity:.6\">${f.boss?'👑 ':''}???</div>",
+      "replace": "          : `<div style=\"font-weight:800;opacity:.6\">${f.boss?'👑 ':''}${f.nm}</div>",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "fighting again starts the realm's first foe",
+      "file": "index.html",
+      "find": "onclick=\"Battle.begin(${ri},${fi})\" aria-label=\"Fight ${f.nm} again\"",
+      "replace": "onclick=\"Battle.begin(${ri},0)\" aria-label=\"Fight ${f.nm} again\"",
+      "run": "play:bestiary"
+    },
+    {
+      "name": "the count leaves out the last realm",
+      "file": "index.html",
+      "find": "return REALMS.flatMap((r,ri)=>r.foes.map(",
+      "replace": "return REALMS.slice(0,-1).flatMap((r,ri)=>r.foes.map(",
       "run": "verify"
     },
     {
-      "name": "a boss can rally twice",
+      "name": "a realm names its topics by their keys",
       "file": "index.html",
-      "find": "    if(B.phase===2 || !this.can(B) ||",
-      "replace": "    if(!this.can(B) ||",
+      "find": "return [...new Set(r.pool.map(k=>TOPIC_LABEL[k]||k))];",
+      "replace": "return [...new Set(r.pool)];",
       "run": "verify"
     },
     {
-      "name": "bosses rally in the arena too",
+      "name": "a tale goes missing",
       "file": "index.html",
-      "find": "return !!(B.foe && B.foe.boss && B.mode==='campaign');",
-      "replace": "return !!(B.foe && B.foe.boss);",
-      "run": "verify"
-    },
-    {
-      "name": "the second phase hits no harder",
-      "file": "index.html",
-      "find": "return B.phase===2 ? Math.round(atk*1.2) : atk;",
-      "replace": "return atk;",
-      "run": "verify"
-    },
-    {
-      "name": "the blow that rallied it counts toward the stagger",
-      "file": "index.html",
-      "find": "    if(B.phaseJust){ B.phaseJust=false; return false; }   // the blow that rallied it does not count\n",
+      "find": "   \"Riemann Shade\": \"It builds itself out of thin strips and grows truer the thinner they get.\",\n",
       "replace": "",
       "run": "verify"
-    },
-    {
-      "name": "a miss does not break the streak",
-      "file": "index.html",
-      "find": "    if(!ok){ B.phaseRun=0; return false; }",
-      "replace": "    if(!ok) return false;",
-      "run": "verify"
-    },
-    {
-      "name": "a stagger leaves the wind-up standing",
-      "file": "index.html",
-      "find": "B.phaseRun=0; B.charge=0; B.slamNext=false; B.staggered=true;",
-      "replace": "B.phaseRun=0; B.staggered=true;",
-      "run": "verify"
-    },
-    {
-      "name": "the stagger's bonus never runs out",
-      "file": "index.html",
-      "find": "const b=B.staggered?1.5:1; B.staggered=false; return b;",
-      "replace": "return B.staggered?1.5:1;",
-      "run": "verify"
-    },
-    {
-      "name": "a second phase with a miss counts as flawless",
-      "file": "index.html",
-      "find": "return B.phase===2 && B.missed===B.phaseFrom;",
-      "replace": "return B.phase===2;",
-      "run": "verify"
-    },
-    {
-      "name": "the boss's blows ignore the phase",
-      "file": "index.html",
-      "find": "Combat.foeHit(Phase.atk(this, this.foe.atk),",
-      "replace": "Combat.foeHit(this.foe.atk,",
-      "run": "play:phase"
-    },
-    {
-      "name": "the stagger is never asked for",
-      "file": "index.html",
-      "find": "    Phase.step(this, ok && !this.shownWork);\n",
-      "replace": "",
-      "run": "play:phase"
-    },
-    {
-      "name": "the strike ignores the stagger",
-      "file": "index.html",
-      "find": "* (this.nudged?0.5:1) * Phase.bonus(this);",
-      "replace": "* (this.nudged?0.5:1);",
-      "run": "play:phase"
-    },
-    {
-      "name": "the rally says nothing",
-      "file": "index.html",
-      "find": "      else if(rallied) Talk.say('rally', true);\n",
-      "replace": "",
-      "run": "play:phase"
-    },
-    {
-      "name": "the bar never shows the phase",
-      "file": "index.html",
-      "find": "+(this.phase===2?' <span class=\"pips\" title=\"Second phase\">🔥 Phase II</span>':'');",
-      "replace": "",
-      "run": "play:phase"
-    },
-    {
-      "name": "a flawless phase pays no more gold",
-      "file": "index.html",
-      "find": "*(Phase.flawless(this)?1.25:1));",
-      "replace": "*1);",
-      "run": "play:phase"
-    },
-    {
-      "name": "a fight starts already in its second phase",
-      "file": "index.html",
-      "find": "    this.phase=1; this.phaseFrom=0;",
-      "replace": "    this.phase=2; this.phaseFrom=0;",
-      "run": "play:phase"
     }
   ]
 }

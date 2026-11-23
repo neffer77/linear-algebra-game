@@ -104,6 +104,12 @@ prefilled — tap through it and you need never touch a keyboard again.
   fifth harder. The answer is a streak: three right answers in a row stagger it, breaking
   off its wind-up and landing the next right answer for half again as much. Get through the
   whole second phase without a miss and the boss pays a quarter more gold. Nothing is saved.
+- **👹 The Bestiary.** A page off the map with every campaign foe, realm by realm, and a
+  count of how many you have beaten. A beaten foe steps out of the shadow in its own
+  colours, drawn by the battle's own sprites, with a tale of its own, its health, blow and
+  gold, a boss's opening line, and the topics its realm tests, plus a button to fight it
+  again, where one time in four it comes back as an elite. A foe not yet beaten is a dark
+  shape with no name. It reads only which foes are cleared, so nothing new is saved.
 
 **⛓️ Rites.** A topic that is genuinely complex does not arrive as one hard question. It
 arrives as a ladder of five-second steps — *pick u · find du · rewrite · integrate* — each
@@ -3157,6 +3163,7 @@ Inside `index.html` the code is organised as:
 | `Talk` | what foes say as a fight opens, when a blow lands either way, at a streak of five, when nearly beaten and on the killing blow, repeated in the verdict; a voice for each kind of foe and one for each realm boss |
 | `Elite` | the four twists a beaten foe can come back with, how often it comes back as one, what an elite's armour lets through, and the line that opens an elite fight |
 | `Phase` | a realm boss's second phase: when it rallies, its harder blows and quicker wind-up, the stagger a streak earns, and the gold a flawless phase pays |
+| `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
 | `UI`, `Shop`, `Train` | screens |
@@ -3258,6 +3265,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `talk` | every kind of foe has a line for every moment and every boss its own, none too long for the bubble; a foe speaks as the fight opens, in its own voice, with a boss's line its own; the bubble is hidden from screen readers, fits the scene at 320px even at its longest line and goes away by itself; a landed blow draws a gloat, repeated in the verdict and hidden there from screen readers too, a crit a cry and an ordinary hit nothing, with no line carried over from an earlier turn or the opening; a streak of five draws one worry, nearly beaten one plea, and the killing blow last words; a wind-up due on a foe left standing still lands, braced, and one due on a foe the answer beats dies with it; a new fight starts quiet; the daily's straw knight keeps silent and talk never moves the daily's seeded draw; nothing is saved |
 | `elite` | a beaten foe is an elite one fight in four and a first meeting never is; an armoured elite has a quarter more health, its twist on its bar and said as the fight opens, halves the first two blows and is cracked by the third answer in a row, landing in full from then on; a vampiric elite drinks back the blow it lands on a miss; a swift one winds up a turn sooner; a frenzied one has a quarter less health and hits half again as hard; felling an elite pays a first clear's gold with a sure chest and says so, where a plain rematch pays under half and says nothing; nothing runs off a phone and nothing is saved |
 | `phase` | a realm boss rallies once, on the blow that leaves it at half or below, with a banner, its own line and Phase II on its bar; its wind-up comes a turn sooner and its blows a fifth harder; three right in a row stagger it, breaking off a wind-up, and the next right blow lands half again as hard; a miss breaks the streak; a flawless second phase pays a quarter more gold and says so, one with a miss does not; a plain foe and a boss in the arena never rally; nothing is saved |
+| `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |
 | `slips` | the same misconception a second time is named as a pattern in the yard and in a fight, a different one is not, walking past the trap is named once and restarts the count, numbers and brackets do not split a slip, topics and knights keep separate counts, and nothing is saved |
 | `review` | the map names exactly the topics that have slipped past their review point, most slipped first and the same after a reload; the Ledger and the yard read what you know now; a tap starts a round of just those, a wrong answer keeps a topic in, each right one brings one back, and the round ends when the last is back |
