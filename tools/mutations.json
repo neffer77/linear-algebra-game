@@ -1,60 +1,60 @@
 {
-  "change": "Add a More or less mode to the slope workshop",
+  "change": "Add a Bowl or saddle mode to the tangent plane workshop",
   "mutations": [
     {
-      "name": "the step's direction is ignored",
+      "name": "the xy term is left out of the test",
       "file": "index.html",
-      "find": "sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/h; },",
-      "replace": "sec(i){ const S=this.S(i), a=this.a(i), h=this.h(i); return (this.fn(S,a+h)-this.fn(S,a))/Math.abs(h); },",
+      "find": "disc(i){ const {a,b,c}=this.Q(i); return 4*a*b-c*c; },",
+      "replace": "disc(i){ const {a,b,c}=this.Q(i); return 4*a*b; },",
       "run": "verify"
     },
     {
-      "name": "f′ is taken at a + h",
+      "name": "a saddle of opposite signs is told as a twisted one",
       "file": "index.html",
-      "find": "tan(i){ return this.d(this.S(i),this.a(i)); },",
-      "replace": "tan(i){ return this.d(this.S(i),this.b(i)); },",
+      "find": "if(a*b<0) return `a = ${neg(a)} and b = ${neg(b)} have opposite signs",
+      "replace": "if(a*b<0 && c===0) return `a = ${neg(a)} and b = ${neg(b)} have opposite signs",
       "run": "verify"
     },
     {
-      "name": "equal is never called",
+      "name": "a dome is called a bowl",
       "file": "index.html",
-      "find": "truth(i){ const g=this.sec(i)-this.tan(i); return Math.abs(g)<1e-9 ? 0 : g>0 ? 1 : -1; },",
-      "replace": "truth(i){ const g=this.sec(i)-this.tan(i); return g>0 ? 1 : -1; },",
+      "find": "return a*b<0 || D<0 ? 0 : a>0 ? 1 : -1; },",
+      "replace": "return a*b<0 || D<0 ? 0 : 1; },",
       "run": "verify"
     },
     {
-      "name": "a straight line is not looked for",
+      "name": "the wrong diagonal is named",
       "file": "index.html",
-      "find": "lines(){ return [0,1,2,3].filter(i=>this.flat(i)); },",
-      "replace": "lines(){ return []; },",
+      "find": "dv(i){ const {a,c}=this.Q(i); return -Math.sign(a)*Math.sign(c); },",
+      "replace": "dv(i){ const {a,c}=this.Q(i); return Math.sign(a)*Math.sign(c); },",
       "run": "verify"
     },
     {
-      "name": "a step to the left is not looked for",
+      "name": "a twisted saddle is not looked for",
       "file": "index.html",
-      "find": "lefts(){ return [0,1,2,3].filter(i=>this.h(i)<0 && !this.flat(i)); },",
-      "replace": "lefts(){ return []; },",
+      "find": "twists(){ return [0,1,2,3].filter(i=>{ const {a,b}=this.Q(i); return a*b>0 && this.disc(i)<0; }); },",
+      "replace": "twists(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the lines are drawn before the round is right",
+      "name": "the diagonals are drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);",
-      "replace": "if(true){ const m=this.sec(i), k=this.tan(i), fa=this.fn(S,a);",
+      "find": "if(this.solved){ out+=curve(S.p,'diag',FIG_COL.d,true);",
+      "replace": "if(true){ out+=curve(S.p,'diag',FIG_COL.d,true);",
       "run": "verify"
     },
     {
-      "name": "the blue dot sits at a",
+      "name": "the slice along y uses x²",
       "file": "index.html",
-      "find": "out+=`<circle data-k=\"bdot\" cx=\"${f(px(b))}\" cy=\"${f(py(this.fn(S,b)))}\"",
-      "replace": "out+=`<circle data-k=\"bdot\" cx=\"${f(px(a))}\" cy=\"${f(py(this.fn(S,a)))}\"",
+      "find": "slices(i){ const {a,b,c}=this.Q(i); return {x:a, y:b, p:a+b+c, m:a+b-c}; },",
+      "replace": "slices(i){ const {a,b,c}=this.Q(i); return {x:a, y:a, p:a+b+c, m:a+b-c}; },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slope.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Slope.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanPlane.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanPlane.render();",
       "run": "verify"
     }
   ]

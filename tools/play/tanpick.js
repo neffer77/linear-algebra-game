@@ -36,11 +36,11 @@ module.exports = {
       /Then turn it round: see a surface and a point, and pick which of four planes touches it there\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTanPlane');
     t.eq('the tangent plane workshop opens', await t.screen(), 's-tanplane');
-    t.eq('building it by hand is the pressed mode', await pressed(t), 'true,false');
+    t.eq('building it by hand is the pressed mode', await pressed(t), 'true,false,false');
 
     await t.ev(() => R.seed(5656));
     await t.tapText(/Which plane\?/);
-    t.eq('which plane is now the pressed mode', await pressed(t), 'false,true');
+    t.eq('which plane is now the pressed mode', await pressed(t), 'false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the surfaces, slices, plane, buttons, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('tnBox').innerText)).startsWith(

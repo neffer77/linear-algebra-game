@@ -15890,6 +15890,182 @@ const secTurnNotes = (() => {
   if (env.banners.join() !== 'SECANT JUDGE / every secant called') fail('secturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+/* Bowl or saddle? The tangent plane workshop's third mode, worked again from
+   scratch: every surface's tangent plane off its own nudged slopes, what is
+   left once it is taken away sampled all the way round the point, every call
+   and every readout, a slip on every pane both other ways, what each round
+   holds, the slices read back off each pane, and the hunt for every goal. */
+const planeTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TanPlane = {render(){ env.renders++; }};" +
+    cut('const PlaneTurn = {', '/* ---------- Which plane? The tangent plane workshop turned round') + 'return PlaneTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const pn = n => (n < 0 ? `(${neg(n)})` : String(n));
+  const L = 'ABCD';
+  const WD = { 1: 'staying above the plane', 0: 'crossing the plane', [-1]: 'staying below the plane' };
+  const SAY = { 1: 'it stays above the plane', [-1]: 'it stays below the plane' };
+  const NAME = { 1: 'it stays above its tangent plane', 0: 'it crosses its tangent plane', [-1]: 'it stays below its tangent plane' };
+  const MARK = { 1: 'above ∪ above', 0: 'cross ✕ crosses', [-1]: 'below ∩ below' };
+  const side = n => (n > 0 ? 'above the plane' : 'below the plane');
+  // a·p² + c·pq + b·q² as a person would write it
+  const write = (a, c, b, p, q) => [[a, p + '²'], [c, p + q], [b, q + '²']].filter(([k]) => k)
+    .map(([k, s], j) => (j ? (k < 0 ? ' − ' : ' + ') : (k < 0 ? '−' : '')) + (Math.abs(k) === 1 ? '' : Math.abs(k)) + s).join('');
+  const mono = (k, s) => (k < 0 ? '−' : '') + (Math.abs(k) === 1 ? '' : Math.abs(k)) + s;
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([a, c, b, x0, y0]) => {
+    const f = (x, y) => a * x * x + c * x * y + b * y * y, e = 1e-5;
+    // the tangent plane from nudged slopes, not from the form the screen writes
+    const h = f(x0, y0), fx = (f(x0 + e, y0) - f(x0 - e, y0)) / (2 * e), fy = (f(x0, y0 + e) - f(x0, y0 - e)) / (2 * e);
+    const left = (u, v) => f(x0 + u, y0 + v) - (h + fx * u + fy * v);
+    let lo = Infinity, hi = -Infinity;
+    for (let j = 0; j < 720; j++) { const th = j * Math.PI / 360; for (const r of [0.5, 1]) { const v = left(r * Math.cos(th), r * Math.sin(th)) / (r * r); lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+    const t = lo > 1e-6 ? 1 : hi < -1e-6 ? -1 : 0;
+    return { a, c, b, x0, y0, f, left, lo, hi, t, D: 4 * a * b - c * c };
+  });
+  if (S.ROUNDS.length !== 6) fail('planeturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('planeturn', key, `it holds ${Q.length} surfaces, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = `${w.a} ${w.c} ${w.b}`; if (seen.has(k)) fail('planeturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (!w.a || !w.b || [w.a, w.b, w.c, w.x0, w.y0].some(v => !Number.isInteger(v))) fail('planeturn', key, `${L[i]} is not built of whole numbers with both squares in`);
+      // what is left is the same quadratic at every point, worked off f itself
+      for (const [u, v] of [[1, 0], [0, 1], [1, 1], [1, -1], [2, -1], [-1, 3]])
+        if (Math.abs(w.left(u, v) - (w.a * u * u + w.c * u * v + w.b * v * v)) > 1e-4) fail('planeturn', key, `${L[i]}'s leftover is not au² + cuv + bv² at (${u}, ${v})`);
+      // no call sits on a knife edge: a flat direction would be neither
+      if (Math.min(Math.abs(w.lo), Math.abs(w.hi)) < 0.05) fail('planeturn', key, `${L[i]} nearly touches its plane along a line`);
+      // the rule the player is told gives the same call
+      const rule = w.a * w.b < 0 || w.D < 0 ? 0 : w.a > 0 ? 1 : -1;
+      if (rule !== w.t) fail('planeturn', key, `${L[i]} goes against the rule the player is told`);
+    });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('planeturn', key, `its calls are ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 3) fail('planeturn', key, 'it does not hold all three calls');
+    const op = [], tw = [], dm = [];
+    W.forEach((w, i) => { if (w.a * w.b < 0) op.push(i); else if (w.t === 0) tw.push(i); if (w.t === -1) dm.push(i); });
+    const tags = [op.length ? 'opp' : null, tw.length ? 'twist' : null, dm.length ? 'dome' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('planeturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // the diagonal named for a twisted saddle really lands on the other side
+    const diag = i => { const w = W[i];
+      let v = null; for (const s of [1, -1]) if (Math.sign(w.left(1, s)) === -Math.sign(w.a) && Math.abs(w.left(1, s)) > 0.5) { v = s; break; }
+      if (v === null) { fail('planeturn', key, `${L[i]} has no diagonal step that lands on the other side`); v = 1; }
+      const t = [w.a, w.c * v, w.b], val = Math.round(w.left(1, v));
+      return { v, txt: t.map((k, j) => (j ? (k < 0 ? ' − ' : ' + ') + Math.abs(k) : neg(k))).join('') + ` = ${neg(val)}`, val }; };
+    const dstr = w => `4·${pn(w.a)}·${pn(w.b)} − ${pn(w.c)}² = ${neg(w.D)}`;
+    const why = (w, i) => {
+      if (w.a * w.b < 0) return `a = ${neg(w.a)} and b = ${neg(w.b)} have opposite signs, so a step along x alone leaves ${mono(w.a, 'u²')}, ${side(w.a)}, and a step along y alone leaves ${mono(w.b, 'v²')}, ${side(w.b)}: it crosses.`;
+      if (w.t === 0) { const d = diag(i); return `a = ${neg(w.a)} and b = ${neg(w.b)} share a sign, but ${dstr(w)} is below 0: along u = 1, v = ${neg(d.v)} what is left is ${d.txt}, ${side(d.val)}, so it crosses.`; }
+      return `a = ${neg(w.a)} and b = ${neg(w.b)} share a sign, and ${dstr(w)} is above 0, so the xy term cannot turn it round: ${SAY[w.t]}.`; };
+    // every surface called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f = ${write(w.a, w.c, w.b, 'x', 'y')}. Take away its tangent plane at (${neg(w.x0)}, ${neg(w.y0)}) and what is left is ${write(w.a, w.c, w.b, 'u', 'v')}, where u and v are the steps from the point. ${why(w, i)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('planeturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(diag|above|below|cross)"/.test(svg)) fail('planeturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a diagonal is given away`);
+        if (S.solved || S.streak) fail('planeturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('planeturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('planeturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('planeturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="ptnCheck" disabled /.test(S.html())) fail('planeturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="ptnCheck" disabled /.test(S.html())) fail('planeturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('planeturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="PlaneTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t].replace(/[()]/g, '\\$&')}"`));
+      if (!m || +m[1] !== t) fail('planeturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`PlaneTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('planeturn', key, `${L[i]} does not offer above, crosses and below`);
+      if (!h0.includes(`${L[i]} <span class="small">${write(W[i].a, W[i].c, W[i].b, 'x', 'y')}</span>`)) fail('planeturn', key, `${L[i]}'s buttons are not labelled with its surface`);
+    });
+    if (S.calls.join() !== truth.join()) fail('planeturn', key, 'the buttons cannot make the right calls');
+    if (/id="ptnCheck" disabled /.test(S.html())) fail('planeturn', key, 'the check stays shut with every surface called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (tw.length) { const w = W[tw[0]], d = diag(tw[0]);
+      want.push(`In ${L[tw[0]]}, x² and y² both lean ${w.a > 0 ? 'up' : 'down'}, but the xy term is strong: ${dstr(w)} is below 0, and along u = 1, v = ${neg(d.v)} what is left is ${d.txt}, ${side(d.val)}. It is a saddle.`); }
+    if (op.length) { const w = W[op[0]];
+      want.push(`In ${L[op[0]]}, x² leans ${w.a > 0 ? 'up' : 'down'} and y² leans ${w.b > 0 ? 'up' : 'down'}, so a step along x lands ${side(w.a)} and a step along y lands ${side(w.b)}: a saddle.`); }
+    if (dm.length) { const w = W[dm[0]]; want.push(`In ${L[dm[0]]}, a = ${neg(w.a)} and ${dstr(w)} is above 0, so every step falls below the plane: a dome.`); }
+    want.push(`4ab − c² for each: ${W.map((w, i) => `${L[i]} ${neg(w.D)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('planeturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the slices, read back off each pane: the plane as the middle line, then what is left along x, y and both diagonals
+    const svg = S.svg();
+    const frames = [...svg.matchAll(/data-k="frame" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (frames.length !== 4 || parts.length !== 4) fail('planeturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const [X0, Y0, PW, PH] = frames[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, g = parts[i];
+      if (X0 < X + 4 || X0 + PW > X + 176 || Y0 < Y + 33 || Y0 + PH > Y + 112) fail('planeturn', key, `${L[i]}'s window runs into its pane's labels`);
+      const mid = Y0 + PH / 2, pl = g.match(/data-k="plane" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/);
+      if (!pl || Math.abs(+pl[2] - mid) > 0.02 || Math.abs(+pl[4] - mid) > 0.02 || Math.abs(+pl[1] - X0) > 0.02 || Math.abs(+pl[3] - X0 - PW) > 0.02) fail('planeturn', key, `${L[i]}'s plane is not the middle line across its window`);
+      const read = k => { const m = g.match(new RegExp(`data-k="${k}" d="([^"]+)"`, 'g')) || [];
+        return m.map(s => [...s.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(p => [(+p[1] - X0) / PW * 2 - 1, mid - +p[2]])); };
+      // the height each slice reaches at a step of 1, measured off the drawing, against what is left there
+      const reach = P => { if (P.length < 30) return null; const e = P.find(p => Math.abs(Math.abs(p[0]) - 1) < 1e-3); if (!e) return null;
+        if (!P.every(p => Math.abs(p[1] - e[1] * p[0] * p[0]) < 0.05)) return null; return e[1]; };
+      const sx = read('sx'), sy = read('sy'), dg = read('diag');
+      const want = [w.left(1, 0), w.left(0, 1), w.left(1, 1), w.left(1, -1)], M = Math.max(...want.map(Math.abs));
+      const got = [sx[0], sy[0], dg[0], dg[1]].map(P => (P ? reach(P) : null));
+      if (sx.length !== 1 || sy.length !== 1 || dg.length !== 2 || got.some(v => v === null)) { fail('planeturn', key, `${L[i]} does not draw its four slices as parabolas`); return; }
+      const scale = got[0] / want[0] || got[1] / want[1];
+      if (!(scale > 0)) fail('planeturn', key, `${L[i]}'s slices lean the wrong way`);
+      got.forEach((v, j) => { if (Math.abs(v - want[j] * scale) > 0.05) fail('planeturn', key, `${L[i]}'s ${['x', 'y', 'first diagonal', 'second diagonal'][j]} slice is not what is left along it`); });
+      if (Math.abs(M * scale - (PH / 2 - 4)) > 0.05) fail('planeturn', key, `${L[i]}'s tallest slice does not fill its window`);
+      if (!svg.includes(`>f = ${write(w.a, w.c, w.b, 'x', 'y')}</text>`) || !svg.includes(`>at (${neg(w.x0)}, ${neg(w.y0)})</text>`)) fail('planeturn', key, `${L[i]}'s surface and point are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(above|below|cross)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('planeturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="ptnNext"') || /onclick="PlaneTurn\.call/.test(hh.replace(/disabled onclick="PlaneTurn\.call/g, ''))) fail('planeturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('planeturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('planeturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('planeturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'dome,fix,opp,twist'], [false, 'dome,fix,one,opp,twist'], [false, 'dome,fix,one,opp,twist'], [false, 'dome,fix,one,opp,three,twist']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('planeturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Opposite signs cross · The xy term can twist it · A dome stays below · A slip caught and fixed | ✓ Right on the first check') fail('planeturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'SADDLE SPOTTER / every surface called') fail('planeturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -23384,6 +23560,7 @@ console.log(`  guesses called    ${pad(taylorTurnNotes.checks.toLocaleString(), 
 console.log(`  flat spots called ${pad(optTurnNotes.checks.toLocaleString(), 12)}  (checks of four flat spots called a peak, a valley or neither in the biggest build workshop, ${optTurnNotes.wrongs} of them with one called wrong and caught, and ${optTurnNotes.panes} slopes and their f read back off the drawing)`);
 console.log(`  inverses called   ${pad(invTurnNotes.checks.toLocaleString(), 12)}  (checks of four inverse slopes called steeper than 1, exactly 1 or gentler in the inverse slope workshop, ${invTurnNotes.wrongs} of them with one called wrong and caught, and ${invTurnNotes.panes} curves and their mirrors read back off the drawing)`);
 console.log(`  secants called    ${pad(secTurnNotes.checks.toLocaleString(), 12)}  (checks of four secants called more than f′(a), equal to it or less in the slope workshop, ${secTurnNotes.wrongs} of them with one called wrong and caught, and ${secTurnNotes.panes} curves, secants and tangents read back off the drawing)`);
+console.log(`  surfaces called   ${pad(planeTurnNotes.checks.toLocaleString(), 12)}  (checks of four surfaces called above their tangent plane, below it or crossing it in the tangent plane workshop, ${planeTurnNotes.wrongs} of them with one called wrong and caught, and ${planeTurnNotes.panes} surfaces' slices read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
