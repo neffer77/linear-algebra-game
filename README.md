@@ -689,6 +689,11 @@ The game is built so that losing teaches you as much as winning.
   says what it cost, and so does fleeing a live fight; leaving a fight already won ends
   nothing. It pays gold alone, which buys convenience, and it is never saved, so a fresh
   sitting starts a fresh path.
+- **❤️ Win it back.** A miss lets the foe's blow land, and the next question is one like it,
+  asked while the explanation is still up. Land that one and half the blow, rounded up, comes
+  back: the miss says "Land it to win back 20 of that blow.", and the second go says what it won
+  back. A second miss, or being shown the working, lets it go, it never heals past full health,
+  and it never pays more than the miss cost, so missing on purpose only loses. Nothing is saved.
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
@@ -3078,6 +3083,7 @@ Inside `index.html` the code is organised as:
 | `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
 | `Grade` | a victory's grade, S to C, from three marks the fight holds: no miss, a streak of five, over half health left; the marks under the letter, and the first open one named; nothing saved |
 | `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
+| `Recover` | half a missed blow, rounded up, owed to the question like it that comes straight after; won back by landing it, never past full health; offered under the miss, named on the second go, let go by a second miss or the working shown; never saved |
 | `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
@@ -3183,6 +3189,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
 | `grade` | a clean, hale win with a streak of five is an S with all three marks ticked and its banner; a miss drops it to an A that names the open mark; two open marks is a B, three a C; the streak line counts that battle alone; nothing is saved |
 | `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
+| `recover` | a miss owes half its blow back and says so; landing the question like it wins it back, on the field and in the explanation; a right answer after no miss, a second miss or the working shown wins nothing back; an odd blow rounds up; full health caps it; a new fight forgets it; nothing is saved |
 | `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |

@@ -2764,6 +2764,61 @@ const warPathNotes = (() => {
   return checks;
 })();
 
+/* Win it back: a miss's blow is half won back by landing the question like it
+   that comes straight after. Worked here from its own rule, and its place in a
+   fight read off the source. */
+const recoverNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const Recover = {'), html.indexOf('const Battle = {'));
+  const Game = { s: { hp: 0, maxHp: 0 } };
+  const R = new Function('Game', src + ';return Recover;')(Game);
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('recover', key, msg); };
+  // half the blow, rounded up, written here and not read from the game
+  const HALF = d => d > 0 ? Math.ceil(d / 2) : 0;
+  for (let d = -3; d <= 300; d++) {
+    const o = R.owed(d);
+    want(o === HALF(d), `a blow of ${d}`, `owes ${o}, not ${HALF(d)}`);
+    if (d >= 1) want(o >= 1 && o <= d, `a blow of ${d}`, `owes ${o}, which a miss on purpose could profit from or which wins nothing back`);
+  }
+  for (const max of [100, 137, 244, 500]) for (const hp of [1, 2, 50, max - 7, max - 1, max]) for (const n of [0, 1, 6, 13, 40, 400]) {
+    if (hp > max) continue;
+    Game.s.hp = hp; Game.s.maxHp = max;
+    const got = R.heal(n), want_ = Math.min(max, hp + n) - hp;
+    want(got === want_ && Game.s.hp === hp + want_, `${hp} of ${max} winning back ${n}`, `heals ${got} to ${Game.s.hp}, not ${want_}`);
+    want(Game.s.hp <= max, `${hp} of ${max} winning back ${n}`, 'heals past full health');
+  }
+  want(R.line(0) === '', 'line', 'offers to win back nothing');
+  for (const n of [1, 9, 23]) {
+    want(R.line(n).includes(`❤️ <b>Land it to win back ${n}</b> of that blow.</div>`) && R.line(n).includes('id="recoverLine"') && R.line(n).includes('class="miss again"'), 'line', `reads ${R.line(n)}`);
+    want(R.back(n) === `, and won back <b id="recovered">❤️ ${n}</b> of the blow`, 'back', `reads ${R.back(n)}`);
+  }
+  want(R.back(0) === '', 'back', 'says nothing was won back as if something was');
+
+  // its place in a fight
+  const B = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const begin = B.slice(B.indexOf('\n  _start(f){'), B.indexOf('\n  wStats(){'));
+  want(begin.includes('this.recover=0; this.recovered=0;'), 'begin', 'a fight does not start owing nothing');
+  const ans = B.slice(B.indexOf('\n  answer(btn, choice){'), B.indexOf('\n  showExplain('));
+  const cap = ans.indexOf('const owed=this.recover||0; this.recover=0; this.recovered=0;');
+  want(cap > ans.indexOf("if(this.mode==='daily'){") && cap < ans.indexOf("this.redo = (!ok && !this.cur.redo"), 'answer', 'what is owed is not taken up once, after the daily and before the next go is set');
+  const okAt = ans.indexOf('    if(ok){\n      this.combo++;'), shown = ans.indexOf('} else if(this.shownWork){');
+  const heal = ans.indexOf('if(owed && this.cur.redo){\n        this.recovered=Recover.heal(owed);');
+  want(heal > okAt && heal < shown && heal < ans.indexOf('const w=this.wStats();', okAt), 'answer', 'the blow is won back by something other than landing the question like it');
+  want(ans.includes("if(this.recovered) Anim.float(220, H-250, '+'+this.recovered+' WON BACK', '#7ee08a', true);"), 'answer', 'winning it back is not shown on the field');
+  const last = ans.lastIndexOf('} else {', ans.indexOf('// Crossing a topic into'));
+  const hit = ans.indexOf('Game.s.hp=Math.max(0,Game.s.hp-dmg);', last);
+  const owe = ans.indexOf('if(this.redo && Game.s.hp>0) this.recover=Recover.owed(dmg);', last);
+  want(hit > last && owe > hit && owe < ans.indexOf('Anim.strike(\'e\',dmg,false);', last), 'answer', 'a landed blow is not owed back, or is owed before it lands, or after a fall');
+  want((ans.match(/this\.recover=/g) || []).length === 2 && (B.match(/this\.recover=/g) || []).length === 3, 'answer', 'the debt is set somewhere else too');
+  want((html.match(/Recover\.heal\(/g) || []).length === 1, 'answer', 'health is won back somewhere else too');
+  const ex = B.slice(B.indexOf('\n  showExplain('), B.indexOf('\n  }', B.indexOf('\n  showExplain(') + 900));
+  want(ex.includes("so you can use this straight away.</div>`+Recover.line(this.recover) : '')"), 'explain', 'a miss does not say what landing the next one wins back');
+  want(ex.includes('The second go landed${Recover.back(this.recovered)}.</div>'), 'explain', 'the second go does not say what it won back');
+  want(!/(Game\.s|\bg|this\.s)\.(recover|recovered|owed)\b/.test(html), 'save', 'what is owed is saved');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -24377,6 +24432,7 @@ console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
 console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
+console.log(`  blows won back checked     ${pad(recoverNotes.toLocaleString(), 10)}  (half a missed blow, rounded up, won back by landing the question like it straight after, never past full health or more than the miss cost, offered under the miss and named on the second go, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);
