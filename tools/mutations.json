@@ -1,60 +1,60 @@
 {
-  "change": "Add a Which way next mode to the Newton workshop",
+  "change": "Add a Rising or falling mode to the product rule workshop",
   "mutations": [
     {
-      "name": "a root already is called stuck",
+      "name": "the slope keeps only f′g",
       "file": "index.html",
-      "find": "if(F===0) return 0; if(D===0) return 2;",
-      "replace": "if(F===0) return 2; if(D===0) return 2;",
+      "find": "slope(i){ return this.fp(i)*this.ga(i)+this.fa(i)*this.gp(i); },",
+      "replace": "slope(i){ return this.fp(i)*this.ga(i); },",
       "run": "verify"
     },
     {
-      "name": "the step is taken as +f/f′",
+      "name": "the slope is f′g′",
       "file": "index.html",
-      "find": "return Math.sign(-F/D); },",
-      "replace": "return Math.sign(F/D); },",
+      "find": "truth(i){ return Math.sign(this.slope(i)); },",
+      "replace": "truth(i){ return Math.sign(this.fp(i)*this.gp(i)); },",
       "run": "verify"
     },
     {
-      "name": "x₁ adds the step the wrong way",
+      "name": "f′ of x² loses its 2",
       "file": "index.html",
-      "find": "x1(i){ return this.x0(i)-this.F(i)/this.D(i); },",
-      "replace": "x1(i){ return this.x0(i)+this.F(i)/this.D(i); },",
+      "find": "sq: {s:'x²',     d:'2x', f:x=>x*x,     fp:x=>2*x},",
+      "replace": "sq: {s:'x²',     d:'2x', f:x=>x*x,     fp:x=>x},",
       "run": "verify"
     },
     {
-      "name": "f′ of x³ − 3x loses its −3",
+      "name": "a fall from two rises needs only one",
       "file": "index.html",
-      "find": "fp:x=>3*x*x-3,",
-      "replace": "fp:x=>3*x*x,",
+      "find": "boths(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && this.fp(i)>0 && this.gp(i)>0); },",
+      "replace": "boths(){ return [0,1,2,3].filter(i=>this.truth(i)===-1 && (this.fp(i)>0 || this.gp(i)>0)); },",
       "run": "verify"
     },
     {
-      "name": "a jump past a root goes unseen",
+      "name": "y is drawn before the round is right",
       "file": "index.html",
-      "find": "roots.some(([r])=>(r-a)*(r-b)<0); }); },",
-      "replace": "roots.some(([r])=>(r-a)*(r-b)<-1e9); }); },",
+      "find": "if(this.solved){\n        out+=line('y'",
+      "replace": "if(true){\n        out+=line('y'",
       "run": "verify"
     },
     {
-      "name": "the curve is drawn before the round is right",
+      "name": "y is drawn as f + g",
       "file": "index.html",
-      "find": "if(this.solved){\n        const pts=[];",
-      "replace": "if(true){\n        const pts=[];",
+      "find": "y(i,x){ return this.Fn(i).f(x)*this.Gn(i).f(x); },",
+      "replace": "y(i,x){ return this.Fn(i).f(x)+this.Gn(i).f(x); },",
       "run": "verify"
     },
     {
-      "name": "the tangent runs straight down to x₀",
+      "name": "the tangent leans the other way",
       "file": "index.html",
-      "find": "x2=\"${f(px(this.x1(i)))}\" y2=\"${cy}\" stroke=\"${FIG_COL.c}\"",
-      "replace": "x2=\"${f(px(a))}\" y2=\"${cy}\" stroke=\"${FIG_COL.c}\"",
+      "find": "y2=\"${f(py(y0+0.8*m))}\"",
+      "replace": "y2=\"${f(py(y0-0.8*m))}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Newton.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Newton.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Product.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Product.render();",
       "run": "verify"
     }
   ]
