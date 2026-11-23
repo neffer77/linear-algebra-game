@@ -1,60 +1,60 @@
 {
-  "change": "Add a Same or not mode to Order Matters",
+  "change": "Add an Above or below mode to the water level workshop",
   "mutations": [
     {
-      "name": "the order is never turned round",
+      "name": "f″ takes 3 for the cube's 6",
       "file": "index.html",
-      "find": "truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(B,A)) ? 1 : 0; },",
-      "replace": "truth(i){ const {A,B}=this.Q(i); return this.key(this.mul(A,B))===this.key(this.mul(A,B)) ? 1 : 0; },",
+      "find": "f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },",
+      "replace": "f2(i,x){ const {c3,c2}=this.Q(i); return 3*c3*x+2*c2; },",
       "run": "verify"
     },
     {
-      "name": "the diagonal gap is added",
+      "name": "the bend is counted at the ends too",
       "file": "index.html",
-      "find": "tell:([[a,b],[c,d]])=>[b,c,a-d],",
-      "replace": "tell:([[a,b],[c,d]])=>[b,c,a+d],",
+      "find": "return z>a && z<b ? this.fr(-c2,3*c3) : null; },",
+      "replace": "return z>=a && z<=b ? this.fr(-c2,3*c3) : null; },",
       "run": "verify"
     },
     {
-      "name": "the multiple is turned upside down",
+      "name": "level cubics are not looked for",
       "file": "index.html",
-      "find": "p=this.frac(b[k],a[k]), q=",
-      "replace": "p=this.frac(a[k],b[k]), q=",
+      "find": "flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },",
+      "replace": "flats(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "the shift is read off the wrong corner",
+      "name": "the average takes a third, not a sixth",
       "file": "index.html",
-      "find": "q=this.frac(B[0][0]*a[k]-b[k]*A[0][0],a[k]);",
-      "replace": "q=this.frac(B[0][0]*a[k]-b[k]*A[1][1],a[k]);",
+      "find": "avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },",
+      "replace": "avg(i){ const {m}=this.Q(i); return this.fr(3*this.f(i,m)+this.gapN(i),3); },",
       "run": "verify"
     },
     {
-      "name": "diagonal pairs are not looked for",
+      "name": "the average is drawn before the round is right",
       "file": "index.html",
-      "find": "diags(){ return [0,1,2,3].filter(i=>{ const {A,B}=this.Q(i); return this.diagonal(A) && this.diagonal(B) && !this.scale(A) && !this.scale(B); }); },",
-      "replace": "diags(){ return []; },",
+      "find": "if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');",
+      "replace": "out+=lvl(av,'avg',FIG_COL.d,'6 3');",
       "run": "verify"
     },
     {
-      "name": "two flips that agree count as a pair that turns",
+      "name": "the middle level is drawn at the left end",
       "file": "index.html",
-      "find": "return this.flipper(A) && this.flipper(B) && this.truth(i)===0; }); },",
-      "replace": "return this.flipper(A) && this.flipper(B); }); },",
+      "find": "out+=lvl(fm,'mid',FIG_COL.dim,'4 3');",
+      "replace": "out+=lvl(this.f(i,a),'mid',FIG_COL.dim,'4 3');",
       "run": "verify"
     },
     {
-      "name": "the square under B is drawn with A",
+      "name": "curves that bend down are not looked for",
       "file": "index.html",
-      "find": "out+=shape(A,'sqA',FIG_COL.b)+shape(B,'sqB',FIG_COL.a);",
-      "replace": "out+=shape(A,'sqA',FIG_COL.b)+shape(A,'sqB',FIG_COL.a);",
+      "find": "downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },",
+      "replace": "downs(){ return []; },",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Compose.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Compose.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Avg.render();",
       "run": "verify"
     }
   ]

@@ -150,6 +150,7 @@ const SUITES = [
   require('./play/newtonpick'), // see a curve and a first guess, pick which of four numbers is the next guess
   require('./play/newtonturn'), // see four curves with a first guess each, call where each Newton step goes
   require('./play/avgpick'), // see a curve and its area, pick which of four numbers is its average value
+  require('./play/avgturn'), // see four curves, call each average above f at the middle, equal to it or below it
   require('./play/geopick'), // see a series, pick which of four numbers is its endless sum
   require('./play/georeach'), // step x along a power series and find how far it still adds up
   require('./play/rowmoves'), // work a 3×3 matrix down with row moves and keep track of its determinant

@@ -16256,6 +16256,174 @@ const composeTurnNotes = (() => {
   if (env.banners.join() !== 'ORDER SPOTTER / every pair called') fail('composeturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes, tried: Math.ceil(tried / 7), builts };
 })();
+/* Above or below? The water level workshop's third mode, worked again from
+   scratch: every average out of the curve's own antiderivative, exactly,
+   and out of a thousand thin strips, f″ at the middle out of nudged
+   values of f, the pairing the player is told tried step by step, every call
+   and every readout, a slip on every pane both other ways, the curve and
+   both levels read back off each pane, and the hunt for every goal. */
+const avgTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Avg = {render(){ env.renders++; }};" +
+    cut('const AvgTurn = {', '/* ---------- Which level? The water level workshop turned round') + 'return AvgTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  const L = 'ABCD';
+  const WD = { 1: 'sitting above f(m)', 0: 'equal to f(m)', [-1]: 'sitting below f(m)' };
+  const NAME = { 1: 'the average sits above f at the middle', 0: 'the average equals f at the middle', [-1]: 'the average sits below f at the middle' };
+  const MARK = { 1: 'above ▲ above', 0: 'equal = equal', [-1]: 'below ▼ below' };
+  const gcd = (a, b) => { a = Math.abs(a); b = Math.abs(b); while (b) [a, b] = [b, a % b]; return a || 1; };
+  const fr = (n, d) => { if (d < 0) { n = -n; d = -d; } const g = gcd(n, d); n /= g; d /= g; return d === 1 ? neg(n) : `${n < 0 ? '−' : ''}${Math.abs(n)}/${d}`; };
+  const write = T => { const s = T.filter(([k]) => k); return s.length ? s.map(([k, x], j) => (j ? (k < 0 ? ' − ' : ' + ') : (k < 0 ? '−' : '')) + (Math.abs(k) === 1 && x ? '' : Math.abs(k)) + x).join('') : '0'; };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([c3, c2, c1, c0, a, b]) => {
+    const f = x => c3 * x ** 3 + c2 * x ** 2 + c1 * x + c0, m = (a + b) / 2, h = (b - a) / 2;
+    // 12·F, an antiderivative with whole coefficients, so the average comes out exact
+    const F12 = x => 3 * c3 * x ** 4 + 4 * c2 * x ** 3 + 6 * c1 * x ** 2 + 12 * c0 * x;
+    const six = (F12(b) - F12(a)) / (2 * (b - a));          // 6 × the average
+    let strips = 0; const n = 1000; for (let j = 0; j < n; j++) strips += f(a + (b - a) * (j + 0.5) / n); strips /= n;
+    const e = 1e-3, f2 = (f(m + e) - 2 * f(m) + f(m - e)) / (e * e);
+    const t = Math.abs(six / 6 - f(m)) < 1e-9 ? 0 : Math.sign(six / 6 - f(m));
+    return { c3, c2, c1, c0, a, b, m, h, f, six, strips, f2: Math.round(f2), t };
+  });
+  if (S.ROUNDS.length !== 6) fail('avgturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('avgturn', key, `it holds ${Q.length} curves, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => {
+      const k = Q[i].join(); if (seen.has(k)) fail('avgturn', key, `${L[i]} comes round twice`); seen.add(k);
+      if (Q[i].some(v => !Number.isInteger(v)) || w.b <= w.a || (w.b - w.a) % 2) fail('avgturn', key, `${L[i]} is not whole numbers on an interval with a whole middle`);
+      if (!Number.isInteger(w.six)) fail('avgturn', key, `${L[i]}'s average is not a whole number of sixths`);
+      if (Math.abs(w.strips - w.six / 6) > 1e-3) fail('avgturn', key, `${L[i]}'s average does not match a thousand thin strips`);
+      // the pairing the player is told: each pair's mean is f(m) + f″(m)·t²/2
+      for (const s of [0.25, 0.5, 1, w.h]) if (Math.abs((w.f(w.m + s) + w.f(w.m - s)) / 2 - (w.f(w.m) + w.f2 * s * s / 2)) > 1e-6) fail('avgturn', key, `${L[i]}'s pairs at a step of ${s} do not average as the player is told`);
+      if (Math.sign(w.f2) !== w.t) fail('avgturn', key, `${L[i]} goes against the rule the player is told`);
+      if (Math.abs(w.f(w.m) + w.f2 * w.h * w.h / 6 - w.six / 6) > 1e-9) fail('avgturn', key, `${L[i]}'s average is not f(m) + f″(m)·h²/6`);
+      if (S.truth(i) !== w.t) fail('avgturn', key, `${L[i]} is called ${S.truth(i)}, not ${w.t}`);
+      if (S.avg(i) !== fr(w.six, 6)) fail('avgturn', key, `${L[i]}'s average is told as ${S.avg(i)}, not ${fr(w.six, 6)}`);
+    });
+    if (new Set(truth).size < 3) fail('avgturn', key, 'it does not hold all three calls');
+    // where f″ crosses 0 strictly inside, found by walking the interval
+    const bend = w => { let z = null; const n = 600; for (let j = 1; j < n; j++) { const x = w.a + (w.b - w.a) * j / n, y = 6 * w.c3 * x + 2 * w.c2, x2 = w.a + (w.b - w.a) * (j + 1) / n, y2 = 6 * w.c3 * x2 + 2 * w.c2;
+      if (j + 1 < n && y * y2 < 0) z = x - y * (x2 - x) / (y2 - y); if (Math.abs(y) < 1e-12) z = x; } return z; };
+    const dn = [], fl = [], tw = [];
+    W.forEach((w, i) => { if (w.t === -1) dn.push(i); if (w.c3 && w.t === 0) fl.push(i); if (w.t !== 0 && bend(w) !== null) tw.push(i); });
+    const tags = [dn.length ? 'down' : null, fl.length ? 'flat' : null, tw.length ? 'twist' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('avgturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    const fs_ = w => write([[w.c3, 'x³'], [w.c2, 'x²'], [w.c1, 'x'], [w.c0, '']]);
+    const f2s = w => write([[6 * w.c3, 'x'], [2 * w.c2, '']]);
+    const span = w => `[${neg(w.a)}, ${neg(w.b)}]`;
+    const why = w => { const fm = neg(w.f(w.m));
+      if (!w.t) return `f″(x) = ${f2s(w)}, so f″(${neg(w.m)}) = 0: each step right of m is matched by the same step left, every pair's mean is f(m) exactly, and the average equals f(${neg(w.m)}) = ${fm}.`;
+      const s = w.t > 0 ? 'above' : 'below';
+      return `f″(x) = ${f2s(w)}, so f″(${neg(w.m)}) = ${neg(w.f2)}, ${s} 0: every pair's mean is f(m) + f″(m)·t²/2, ${s} f(m), and the average is f(m) + f″(m)·h²/6 = ${fm} ${w.t > 0 ? '+' : '−'} ${fr(Math.abs(w.six - 6 * w.f(w.m)), 6)} = ${fr(w.six, 6)}, ${s} f(${neg(w.m)}) = ${fm}.`; };
+    // every curve called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${L[i]}, f(x) = ${fs_(w)} on ${span(w)}: the middle is m = ${neg(w.m)} and half the width is h = ${w.h}. ${why(w)} You had it as ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('avgturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(avg|above|below|equal)"/.test(svg)) fail('avgturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or the average is given away`);
+        if (S.solved || S.streak) fail('avgturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('avgturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('avgturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('avgturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="avtCheck" disabled /.test(S.html())) fail('avgturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="avtCheck" disabled /.test(S.html())) fail('avgturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('avgturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="AvgTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('avgturn', key, `the button for ${L[i]}, ${NAME[t]}, does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`AvgTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('avgturn', key, `${L[i]} does not offer above, equal and below`);
+      if (!h0.includes(`${L[i]} <span class="small">${fs_(W[i])}</span>`)) fail('avgturn', key, `${L[i]}'s buttons are not labelled with its curve`);
+    });
+    if (S.calls.join() !== truth.join()) fail('avgturn', key, 'the buttons cannot make the right calls');
+    if (/id="avtCheck" disabled /.test(S.html())) fail('avgturn', key, 'the check stays shut with every curve called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (tw.length) { const w = W[tw[0]], s = w.t > 0 ? 'above' : 'below', z = bend(w);
+      if (Math.abs(z - -w.c2 / (3 * w.c3)) > 1e-6) fail('avgturn', key, `${L[tw[0]]} bends at ${z}, not where f″ = 0 says`);
+      want.push(`In ${L[tw[0]]}, f bends both ways on ${span(w)}: f″ is 0 at x = ${fr(-w.c2, 3 * w.c3)}, inside it. Still, f″(${neg(w.m)}) = ${neg(w.f2)}, so every pair's mean sits ${s} f(m), and the average, ${fr(w.six, 6)}, is ${s} f(${neg(w.m)}) = ${neg(w.f(w.m))}.`); }
+    if (fl.length) { const w = W[fl[0]]; want.push(`In ${L[fl[0]]}, f curves, but f″(${neg(w.m)}) = 0: each step right of m is undone by the same step left, so the average is f(${neg(w.m)}) = ${neg(w.f(w.m))} exactly.`); }
+    if (dn.length) { const w = W[dn[0]]; want.push(`In ${L[dn[0]]}, f″(${neg(w.m)}) = ${neg(w.f2)}, below 0: every pair's mean sits below f(m), and the average, ${fr(w.six, 6)}, is below f(${neg(w.m)}) = ${neg(w.f(w.m))}.`); }
+    want.push(`The average minus f(m) for each: ${W.map((w, i) => `${L[i]} ${fr(w.six - 6 * w.f(w.m), 6)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('avgturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the panes, read back: the curve, f at the middle and the average, all on one scale that fills the window
+    const svg = S.svg();
+    const frames = [...svg.matchAll(/data-k="frame" x="([^"]+)" y="([^"]+)" width="([^"]+)" height="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    const parts = svg.split('data-k="pane"').slice(1);
+    if (frames.length !== 4 || parts.length !== 4) fail('avgturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const [X0, Y0, PW, PH] = frames[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, g = parts[i];
+      if (X0 < X + 4 || X0 + PW > X + 176 || Y0 < Y + 33 || Y0 + PH > Y + 112) fail('avgturn', key, `${L[i]}'s window runs into its pane's labels`);
+      const pm = g.match(/data-k="f" d="([^"]+)"/);
+      if (!pm) { fail('avgturn', key, `${L[i]} draws no curve`); return; }
+      const P = [...pm[1].matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(p => [+p[1], +p[2]]);
+      const xs = P.map(p => w.a + (p[0] - X0) / PW * (w.b - w.a)), vs = xs.map(w.f);
+      if (P.length < 30 || Math.abs(xs[0] - w.a) > 0.01 || Math.abs(xs[xs.length - 1] - w.b) > 0.01) fail('avgturn', key, `${L[i]}'s curve does not run across its interval`);
+      const lo = Math.min(...vs, w.f(w.m), w.six / 6), hi = Math.max(...vs, w.f(w.m), w.six / 6);
+      const yOf = v => Y0 + PH - 4 - (v - lo) / (hi - lo) * (PH - 8);
+      if (P.some((p, j) => Math.abs(p[1] - yOf(vs[j])) > 0.02)) fail('avgturn', key, `${L[i]}'s curve is not f drawn to one scale`);
+      const lv = k => { const m = g.match(new RegExp(`data-k="${k}" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"`)); return m ? m.slice(1).map(Number) : null; };
+      const mid = lv('mid'), av = lv('avg');
+      if (!mid || Math.abs(mid[1] - yOf(w.f(w.m))) > 0.02 || Math.abs(mid[3] - mid[1]) > 1e-9 || Math.abs(mid[0] - X0) > 0.02 || Math.abs(mid[2] - X0 - PW) > 0.02) fail('avgturn', key, `${L[i]}'s middle level is not f(m) across the window`);
+      if (!av || Math.abs(av[1] - yOf(w.six / 6)) > 0.02 || Math.abs(av[3] - av[1]) > 1e-9) fail('avgturn', key, `${L[i]}'s average is not drawn at its height`);
+      if (!svg.includes(`>f(x) = ${fs_(w)}</text>`) || !svg.includes(`>on ${span(w)}</text>`)) fail('avgturn', key, `${L[i]}'s curve and interval are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(above|below|equal)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('avgturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="avtNext"') || /onclick="AvgTurn\.call/.test(hh.replace(/disabled onclick="AvgTurn\.call/g, ''))) fail('avgturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('avgturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('avgturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('avgturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'down,fix,flat,twist'], [false, 'down,fix,flat,one,twist'], [false, 'down,fix,flat,one,twist'], [false, 'down,fix,flat,one,three,twist']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('avgturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Bends down, sits below · Curved, yet level · Only f″ at the middle counts · A slip caught and fixed | ✓ Right on the first check') fail('avgturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'LEVEL READER / every middle weighed') fail('avgturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -23752,6 +23920,7 @@ console.log(`  inverses called   ${pad(invTurnNotes.checks.toLocaleString(), 12)
 console.log(`  secants called    ${pad(secTurnNotes.checks.toLocaleString(), 12)}  (checks of four secants called more than f′(a), equal to it or less in the slope workshop, ${secTurnNotes.wrongs} of them with one called wrong and caught, and ${secTurnNotes.panes} curves, secants and tangents read back off the drawing)`);
 console.log(`  surfaces called   ${pad(planeTurnNotes.checks.toLocaleString(), 12)}  (checks of four surfaces called above their tangent plane, below it or crossing it in the tangent plane workshop, ${planeTurnNotes.wrongs} of them with one called wrong and caught, and ${planeTurnNotes.panes} surfaces' slices read back off the drawing)`);
 console.log(`  orders called     ${pad(composeTurnNotes.checks.toLocaleString(), 12)}  (checks of four pairs called same or different in Order Matters, ${composeTurnNotes.wrongs} of them with one called wrong and caught, ${composeTurnNotes.panes} panes read back off the drawing, and the rule the player is told tried on ${composeTurnNotes.tried.toLocaleString()} pairs)`);
+console.log(`  middles weighed   ${pad(avgTurnNotes.checks.toLocaleString(), 12)}  (checks of four curves called above, equal to or below f at the middle in the water level workshop, ${avgTurnNotes.wrongs} of them with one called wrong and caught, and ${avgTurnNotes.panes} panes read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

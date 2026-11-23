@@ -1404,7 +1404,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ WATER LEVEL WORKSHOP ============ -->
   <div class="screen" id="s-avg">
     <div class="panel"><h2>🌊 Water Level Workshop</h2><div class="sub">Pour the area under a curve into a flat tank of the same width and it settles at one height: the curve's average value. Raise or lower the level until the part of the curve sticking up above it exactly fills the gaps beneath it.</div></div>
-    <div id="avTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Level the tank by hand or pick the average"></div>
+    <div id="avTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Level the tank by hand, pick the average, or call where it sits against the middle"></div>
     <div class="panel">
       <div id="agBox"></div>
       <div id="avSets" class="wsModes" role="group" aria-label="Which curve"></div>
@@ -15701,7 +15701,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌊 Water Level Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line. Then turn it round: see a curve and its area, and pick which of four numbers is its average value.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Pour the area under a curve into a flat tank and find the height it settles at: the average value. See why it is not the middle of the two ends, unless the curve is a straight line. Then turn it round: see a curve and its area, and pick which of four numbers is its average value. Or call four curves: does each average sit above f at the middle, equal it, or sit below it?</div>
          <button class="btn sm" id="tomeAvg" style="width:auto;margin-top:8px" onclick="Avg.open()">Open the water level workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -25862,6 +25862,187 @@ const ShapeRead = {
    compare the part of the curve sticking up above it with the gaps under it.
    They match exactly when c × width equals the area, c = (1/(b − a))∫f.
    Only for a straight line is that the average of the two ends. Nothing is saved. */
+/* ---------- Above or below? The water level workshop's third mode ----------
+   Four curves, each on a whole-number interval [a, b] with middle m, and the
+   player calls whether the average value sits above f(m), equals it, or sits
+   below it. Pair each step t right of m with the same step left: the average
+   is the mean of the pairs' means, and for a cubic or anything simpler each
+   pair's mean is f(m) + f″(m)·t²/2, so the call goes by the sign of f″ at the
+   middle, and the average itself is f(m) + f″(m)·h²/6 with h the half-width.
+   Rounds hold curves that bend down, cubics that curve yet sit level because
+   f″(m) = 0, and cubics that bend both ways on the interval, where only
+   f″(m) counts. Each pane draws the curve with f(m) as a dashed level; the
+   average is drawn in once the round is right. A slip rings that pane and
+   works it through. Nothing is saved, and there is no clock. */
+const AvgTurn = {
+  // [c₃, c₂, c₁, c₀, a, b] for f(x) = c₃x³ + c₂x² + c₁x + c₀ on [a, b]
+  ROUNDS:[
+    [[0,1,0,0,-1,3], [0,-1,4,0,0,2], [1,-3,3,1,0,2], [1,-3,0,0,0,4]],
+    [[1,0,0,0,-1,3], [0,0,3,-2,1,5], [0,-2,1,0,-2,0], [1,-6,0,0,0,2]],
+    [[-1,0,0,0,-2,2], [0,1,-2,0,0,4], [-1,3,0,0,-1,5], [0,-1,0,0,1,3]],
+    [[1,0,1,0,0,2], [0,-1,0,2,-3,1], [1,-3,0,2,-1,3], [0,0,-1,4,0,6]],
+    [[-1,0,0,0,0,2], [1,0,-9,0,-2,4], [0,2,0,-3,-2,0], [0,0,1,3,-2,2]],
+    [[1,3,0,0,-3,1], [-1,0,0,0,-3,1], [0,1,0,1,1,3], [0,-3,6,0,0,4]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four curves right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'down', t:'Call a curve whose average sits below its middle.', toast:'Bends down, sits below',
+     ok:K=>K.kinds.has('down')},
+    {id:'flat', t:'Call a curving cubic whose average still equals its middle.', toast:'Curved, yet level',
+     ok:K=>K.kinds.has('flat')},
+    {id:'twist',t:'Call a curve that bends both ways on its interval.', toast:'Only f″ at the middle counts',
+     ok:K=>K.kinds.has('twist')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Pair each step t to the right of the middle m with the same step to the left: the average value is the mean of all the pairs\' means, (f(m + t) + f(m − t))/2. For a cubic or anything simpler, each pair\'s mean is f(m) + f″(m)·t²/2, so it all comes down to f″ at the middle. If f″(m) > 0 the average sits above f(m), if f″(m) < 0 it sits below, and if f″(m) = 0 it equals f(m), even when the curve bends. The average itself is f(m) + f″(m)·h²/6, where h is half the width.',
+  L:'ABCD',
+  WORD:{1:'sitting above f(m)', 0:'equal to f(m)', [-1]:'sitting below f(m)'},
+  REL:{1:'above', 0:'equal to', [-1]:'below'},
+  NAMES:{1:'the average sits above f at the middle', 0:'the average equals f at the middle', [-1]:'the average sits below f at the middle'},
+  R(){ return this.ROUNDS[this.ri]; },
+  Q(i){ const [c3,c2,c1,c0,a,b]=this.R()[i]; return {c3,c2,c1,c0,a,b,m:(a+b)/2,h:(b-a)/2}; },
+  f(i,x){ const {c3,c2,c1,c0}=this.Q(i); return ((c3*x+c2)*x+c1)*x+c0; },
+  f2(i,x){ const {c3,c2}=this.Q(i); return 6*c3*x+2*c2; },
+  f2m(i){ return this.f2(i,this.Q(i).m); },
+  // 1 above, 0 equal, −1 below
+  truth(i){ return Math.sign(this.f2m(i)); },
+  gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ [a,b]=[b,a%b]; } return a||1; },
+  fr(n,d){ if(d<0){ n=-n; d=-d; } const g=this.gcd(n,d); n/=g; d/=g; return d===1 ? neg(n) : `${n<0?'−':''}${Math.abs(n)}/${d}`; },
+  // the average minus f(m), f″(m)·h²/6, as a fraction
+  gapN(i){ const {h}=this.Q(i); return this.f2m(i)*h*h; },
+  gap(i){ return this.fr(this.gapN(i),6); },
+  avg(i){ const {m}=this.Q(i); return this.fr(6*this.f(i,m)+this.gapN(i),6); },
+  // where f″ is 0 strictly inside the interval, if it is
+  zero(i){ const {c3,c2,a,b}=this.Q(i); if(!c3) return null; const z=-c2/(3*c3); return z>a && z<b ? this.fr(-c2,3*c3) : null; },
+  lines(){ return [0,1,2,3].filter(i=>{ const {c3,c2}=this.Q(i); return !c3 && !c2; }); },
+  downs(){ return [0,1,2,3].filter(i=>this.truth(i)===-1); },
+  flats(){ return [0,1,2,3].filter(i=>this.Q(i).c3 && this.truth(i)===0); },
+  twists(){ return [0,1,2,3].filter(i=>this.truth(i)!==0 && this.zero(i)!==null); },
+  tags(){ const t=[]; if(this.downs().length) t.push('down'); if(this.flats().length) t.push('flat'); if(this.twists().length) t.push('twist'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  // c₃x³ + c₂x² + c₁x + c₀, written the usual way
+  poly(T){ const S=T.filter(([k])=>k);
+    return S.length ? S.map(([k,s],j)=>{ const m=Math.abs(k)===1&&s ? '' : String(Math.abs(k));
+      return j ? `${k<0?' − ':' + '}${m}${s}` : `${k<0?'−':''}${m}${s}`; }).join('') : '0'; },
+  fs(i){ const {c3,c2,c1,c0}=this.Q(i); return this.poly([[c3,'x³'],[c2,'x²'],[c1,'x'],[c0,'']]); },
+  f2s(i){ const {c3,c2}=this.Q(i); return this.poly([[6*c3,'x'],[2*c2,'']]); },
+  span(i){ const {a,b}=this.Q(i); return `[${neg(a)}, ${neg(b)}]`; },
+  why(i){
+    const {m}=this.Q(i), t=this.truth(i), v=this.f2m(i), fm=neg(this.f(i,m));
+    if(t===0) return `f″(x) = ${this.f2s(i)}, so f″(${neg(m)}) = 0: each step right of m is matched by the same step left, every pair's mean is f(m) exactly, and the average equals f(${neg(m)}) = ${fm}.`;
+    return `f″(x) = ${this.f2s(i)}, so f″(${neg(m)}) = ${neg(v)}, ${t>0?'above':'below'} 0: every pair's mean is f(m) + f″(m)·t²/2, ${t>0?'above':'below'} f(m), and the average is f(m) + f″(m)·h²/6 = ${fm} ${t>0?'+':'−'} ${this.fr(Math.abs(this.gapN(i)),6)} = ${this.avg(i)}, ${t>0?'above':'below'} f(${neg(m)}) = ${fm}.`;
+  },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const tw=this.twists(), fl=this.flats(), dn=this.downs();
+      if(tw.length){ const i=tw[0], {m}=this.Q(i), t=this.truth(i), w=t>0?'above':'below';
+        out.push(`In ${this.L[i]}, f bends both ways on ${this.span(i)}: f″ is 0 at x = ${this.zero(i)}, inside it. Still, f″(${neg(m)}) = ${neg(this.f2m(i))}, so every pair's mean sits ${w} f(m), and the average, ${this.avg(i)}, is ${w} f(${neg(m)}) = ${neg(this.f(i,m))}.`); }
+      if(fl.length){ const i=fl[0], {m}=this.Q(i);
+        out.push(`In ${this.L[i]}, f curves, but f″(${neg(m)}) = 0: each step right of m is undone by the same step left, so the average is f(${neg(m)}) = ${neg(this.f(i,m))} exactly.`); }
+      if(dn.length){ const i=dn[0], {m}=this.Q(i);
+        out.push(`In ${this.L[i]}, f″(${neg(m)}) = ${neg(this.f2m(i))}, below 0: every pair's mean sits below f(m), and the average, ${this.avg(i)}, is below f(${neg(m)}) = ${neg(this.f(i,m))}.`); }
+      out.push(`The average minus f(m) for each: ${[0,1,2,3].map(i=>`${this.L[i]} ${this.gap(i)}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const {m,h}=this.Q(i);
+        out.push(`In ${this.L[i]}, f(x) = ${this.fs(i)} on ${this.span(i)}: the middle is m = ${neg(m)} and half the width is h = ${h}. ${this.why(i)} You had it as ${this.WORD[this.calls[i]]}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 called.`);
+    }
+    out.push(`${this.wins} called right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* each pane: the curve in gold across its interval, with f at the middle
+     as a dashed level and a dot. The window's height is set by the curve,
+     its middle level and its average together, so nothing moves when the
+     average is drawn in, in red, once the round is right. */
+  PW:156, PH:72,
+  svg(){
+    const f=n=>n.toFixed(2), PW=this.PW, PH=this.PH;
+    let out=`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each on an interval: ${[0,1,2,3].map(i=>`${this.L[i]}, f(x) = ${this.fs(i)} on ${this.span(i)}`).join('; ')}${this.solved?', each with its average drawn':''}">`;
+    for(let i=0;i<4;i++){
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, {a,b,m}=this.Q(i), N=48;
+      const ys=[]; for(let j=0;j<=N;j++) ys.push(this.f(i,a+(b-a)*j/N));
+      const fm=this.f(i,m), av=fm+this.gapN(i)/6;
+      let lo=Math.min(...ys,fm,av), hi=Math.max(...ys,fm,av); if(hi-lo<1e-9){ lo-=1; hi+=1; }
+      const X0=X+12, Y0=Y+38, px=x=>X0+(x-a)/(b-a)*PW, py=v=>Y0+PH-4-(v-lo)/(hi-lo)*(PH-8);
+      const lvl=(v,key,col,dash)=>`<line data-k="${key}" x1="${X0}" y1="${f(py(v))}" x2="${X0+PW}" y2="${f(py(v))}" stroke="${col}" stroke-width="1.6" stroke-dasharray="${dash}"/>`;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<rect data-k="frame" x="${X0}" y="${Y0}" width="${PW}" height="${PH}" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=lvl(fm,'mid',FIG_COL.dim,'4 3');
+      if(this.solved) out+=lvl(av,'avg',FIG_COL.d,'6 3');
+      out+=`<path data-k="f" d="${ys.map((v,j)=>(j?'L':'M')+f(px(a+(b-a)*j/N))+' '+f(py(v))).join('')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2"/>`;
+      out+=`<circle data-k="pt" cx="${f(px(m))}" cy="${f(py(fm))}" r="3.5" fill="${FIG_COL.ink}"/>`;
+      out+=`<text x="${X+14}" y="${Y+21}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${this.L[i]}</text>`;
+      out+=`<text data-k="eq" x="${X+172}" y="${Y+17}" fill="${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = ${this.fs(i)}</text>`;
+      out+=`<text data-k="on" x="${X+172}" y="${Y+30}" fill="${FIG_COL.dim}" font-size="11" text-anchor="end">on ${this.span(i)}</text>`;
+      if(this.marks && this.marks[i]===false) out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="124" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){ const t=this.truth(i);
+        out+=`<text data-k="${{1:'above',0:'equal',[-1]:'below'}[t]}" x="${X+172}" y="${Y+123}" fill="${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">${{1:'▲ above',0:'= equal',[-1]:'▼ below'}[t]}</text>`; }
+    }
+    return out+`</svg>`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Avg.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Avg.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Avg.render(); },
+  btn(i,c,b){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="${c}" aria-pressed="${this.calls[i]===c}" ${this.solved?'disabled ':''}onclick="AvgTurn.call(${i},${c})" aria-label="${this.L[i]}: ${this.NAMES[c]}">${b}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four curves, each on an interval. Does the average value sit above f at the middle, equal it, or sit below it?</div>`;
+    out+=`<div id="avtFig">${this.svg()}<div class="figcap">Each pane draws the curve in gold, with f at the middle as a dashed level and a dot. Once all four are called right, the average is drawn in red.</div></div>`;
+    out+=`<div id="avtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="avtStop" data-i="${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 4;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} <span class="small">${this.fs(i)}</span></b>`+
+        this.btn(i,1,'▲ Above')+this.btn(i,0,'= Equal')+this.btn(i,-1,'▼ Below')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="avtRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="avtNext" onclick="AvgTurn.deal()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="avtCheck" ${this.ready()?'':'disabled '}onclick="AvgTurn.check()" aria-label="${this.ready()?'Check the four calls':'Call all four to check them'}">${this.ready()?'Check my calls':'Call all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="avtGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="avtGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('LEVEL READER','every middle weighed','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 /* ---------- Which level? The water level workshop turned round ----------
  * A quadratic f on a whole-number interval [a, b], its area there worked
  * out, and four numbers. The average value is the area spread across the
@@ -26073,11 +26254,11 @@ const Avg = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('avTab').innerHTML=[['hand','🌊 Level it by hand','Raise and lower the level by hand until it holds the area'],['pick','🎯 Which level?','See a curve and its area, and pick which of four numbers is its average value']]
+    document.getElementById('avTab').innerHTML=[['hand','🌊 Level it by hand','Raise and lower the level by hand until it holds the area'],['pick','🎯 Which level?','See a curve and its area, and pick which of four numbers is its average value'],['turn','📏 Above or below?','See four curves and call whether each average sits above f at the middle, equals it, or sits below it']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Avg.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['avSets','avFig','avStep','avRead','avGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('agBox').innerHTML=pick ? AvgPick.html() : '';
+    document.getElementById('agBox').innerHTML=!pick ? '' : this.tab==='pick' ? AvgPick.html() : AvgTurn.html();
     if(pick) return;
     const S=this.set();
     document.getElementById('avSets').innerHTML=this.SETS.map((s,i)=>
