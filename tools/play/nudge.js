@@ -123,7 +123,9 @@ module.exports = {
     t.eq('and an answer is found however it is spaced', edge.spaced, 8);
 
     // --- in a fight: offered, taken, and shown above the choices ---
-    await t.ev(() => { Prefs.d.lessons = false; Battle.begin(0, 0); });
+    // The goblin, not the slime: Vector Length is the slime's weak point, and a
+    // weak point hit would fold its own half-again into the strike weighed below.
+    await t.ev(() => { Prefs.d.lessons = false; Battle.begin(0, 1); });
     await sleep(300);
     let p = await pose(t, 'mag', 4242);
     t.ok('a fight offers the nudge beside the working', p.offered && /Nudge me/.test(p.label), JSON.stringify(p));
