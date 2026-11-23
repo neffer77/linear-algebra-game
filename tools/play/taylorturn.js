@@ -42,7 +42,7 @@ module.exports = {
     await t.tap('tomeTaylor');
     t.eq('the Taylor workshop opens', await t.screen(), 's-taylor');
     await t.tapText(/Over or under\?/);
-    t.eq('over or under is now the pressed mode', await pressed(t), 'false,false,true');
+    t.eq('over or under is now the pressed mode', await pressed(t), 'false,false,true,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('building by hand steps aside', away);
 

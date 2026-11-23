@@ -178,6 +178,7 @@ const SUITES = [
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
   require('./play/taylorturn'), // see four functions cut off after a few terms, call each P over, exact or under
+  require('./play/taylormatch'), // match four functions to the polynomial that hugs each near 0
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
   require('./play/latheturn'), // see four pairs of curves spun into solids, call whether f's holds more than g's, the same or less
   require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
