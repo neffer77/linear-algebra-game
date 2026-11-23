@@ -1,61 +1,26 @@
 {
-  "change": "Give every campaign foe a weak point",
+  "change": "Draw the target f in gold in two call-it modes, as their captions say",
   "mutations": [
     {
-      "name": "a weak point adds nothing",
+      "name": "Steep or shallow draws f in blue again",
       "file": "index.html",
-      "find": "  MUL: 1.5,",
-      "replace": "  MUL: 1,",
+      "find": "const curves=[['target',xs.map(u=>k*u**p),FIG_COL.b,true]];",
+      "replace": "const curves=[['target',xs.map(u=>k*u**p),FIG_COL.a,true]];",
       "run": "verify"
     },
     {
-      "name": "an arena foe has a weak point",
+      "name": "Sign or size draws f in blue again",
       "file": "index.html",
-      "find": "  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },",
-      "replace": "  of(B){ return (B && B.foe && this.OF[B.foe.nm]) || null; },",
+      "find": "const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.b,true]];",
+      "replace": "const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.a,true]];",
       "run": "verify"
     },
     {
-      "name": "the weak point is named on every hit",
+      "name": "Steep or shallow names f in blue",
       "file": "index.html",
-      "find": "    if(!B.weakHit){ B.weakHit=true;",
-      "replace": "    if(true){ B.weakHit=true;",
+      "find": "out+=`<text data-k=\"fn\" x=\"${X+172}\" y=\"${Y+19}\" fill=\"${FIG_COL.b}\" font-size=\"11\" text-anchor=\"end\">f = ${this.fs(i)}</text>`;\n      out+=`<text data-k=\"Fn\" x=\"${X+172}\" y=\"${Y+33}\" fill=\"${FIG_COL.ink}\" font-size=\"11\" text-anchor=\"end\">F = ${this.Fs(i)}</text>`;\n      out+=`<line data-k=\"zero\" x1=\"${X+14}\" y1=\"${r(py(0))}\"",
+      "replace": "out+=`<text data-k=\"fn\" x=\"${X+172}\" y=\"${Y+19}\" fill=\"${FIG_COL.a}\" font-size=\"11\" text-anchor=\"end\">f = ${this.fs(i)}</text>`;\n      out+=`<text data-k=\"Fn\" x=\"${X+172}\" y=\"${Y+33}\" fill=\"${FIG_COL.ink}\" font-size=\"11\" text-anchor=\"end\">F = ${this.Fs(i)}</text>`;\n      out+=`<line data-k=\"zero\" x1=\"${X+14}\" y1=\"${r(py(0))}\"",
       "run": "verify"
-    },
-    {
-      "name": "the slime's weak point is a topic of another realm",
-      "file": "index.html",
-      "find": "\"Meadow Slime\":'mag',",
-      "replace": "\"Meadow Slime\":'det2',",
-      "run": "verify"
-    },
-    {
-      "name": "the strike leaves the weak point out",
-      "file": "index.html",
-      "find": "* Phase.bonus(this) * Weak.bonus(this);",
-      "replace": "* Phase.bonus(this);",
-      "run": "verify"
-    },
-    {
-      "name": "the question line never shows the chip",
-      "file": "index.html",
-      "find": "      Weak.chip(this);",
-      "replace": "      '';",
-      "run": "play:weakpoint"
-    },
-    {
-      "name": "a right answer on the weak point is not said",
-      "file": "index.html",
-      "find": "      const weak=Weak.hit(this);",
-      "replace": "      const weak=false;",
-      "run": "play:weakpoint"
-    },
-    {
-      "name": "the Bestiary leaves the weak point out",
-      "file": "index.html",
-      "find": "color:#7ff0a8\">${Weak.line(f)}</div>",
-      "replace": "color:#7ff0a8\"></div>",
-      "run": "play:weakpoint"
     }
   ]
 }

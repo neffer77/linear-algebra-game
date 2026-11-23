@@ -33475,13 +33475,13 @@ const AntiTurn = {
     for(let i=0;i<4;i++){
       const {k,p}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i);
       const xs=[]; for(let j=0;j<=40;j++) xs.push(0.5+2*j/40);
-      const curves=[['target',xs.map(u=>k*u**p),FIG_COL.a,true]];
+      const curves=[['target',xs.map(u=>k*u**p),FIG_COL.b,true]];
       if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**p),FIG_COL.c,false]);
       let lo=0, hi=0; for(const [,ys] of curves) for(const v of ys){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
       const px=u=>X+14+(u-0.5)/2*152, py=v=>Y+114-(v-lo)/(hi-lo)*62;
       out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
       out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
-      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.b}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
       out+=\`<text data-k="Fn" x="\${X+172}" y="\${Y+33}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">F = \${this.Fs(i)}</text>\`;
       out+=\`<line data-k="zero" x1="\${X+14}" y1="\${r(py(0))}" x2="\${X+166}" y2="\${r(py(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
       for(const [key,ys,c,dash] of curves)
@@ -34703,13 +34703,13 @@ const TrigTurn = {
     for(let i=0;i<4;i++){
       const {g,a,k}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i), W=Math[g];
       const xs=[]; for(let j=0;j<=this.N;j++) xs.push(2*Math.PI*j/this.N);
-      const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.a,true]];
+      const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.b,true]];
       if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u)),FIG_COL.c,false]);
       let big=0; for(const [,ys] of curves) for(const v of ys) big=Math.max(big,Math.abs(v));
       const px=u=>X+14+u/(2*Math.PI)*152, py=v=>Y+83-v/big*31;
       out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
       out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
-      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.b}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
       out+=\`<text data-k="Fn" x="\${X+172}" y="\${Y+33}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">F = \${this.Fs(i)}</text>\`;
       out+=\`<line data-k="zero" x1="\${X+14}" y1="\${Y+83}" x2="\${X+166}" y2="\${Y+83}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
       for(const [key,ys,c,dash] of curves)

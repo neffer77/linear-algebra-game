@@ -18157,7 +18157,7 @@ const antiTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const SUPS = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻', '+': '⁺' };
   const S = new Function('env', 'COL', 'SUP',
     "const FIG_COL = COL;" +
@@ -18254,6 +18254,7 @@ const antiTurnNotes = (() => {
       if (p.length !== 41 || p.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j])))) || !inPane(p, X, Y)) fail('antiturn', key, `${L[i]}'s f is not drawn through its own values`);
       if (/data-k="(slope|ratio|steep|right|shallow)"/.test(pg)) fail('antiturn', key, `${L[i]} shows F′ before it is called`);
       if (!pg.includes(`>f = ${w.fs}</text>`) || !pg.includes(`>F = ${w.Fs}</text>`)) fail('antiturn', key, `${L[i]}'s f and F are not written in`);
+      if (!/<polyline data-k="target" points="[^"]*" fill="none" stroke="gold"/.test(pg) || !pg.includes(`data-k="fn" x="${X + 172}" y="${Y + 19}" fill="gold"`)) fail('antiturn', key, `${L[i]}'s f and its name are not drawn in gold, as the caption says`);
     });
     // all four right on the first check, called with the buttons
     if (!/id="adtCheck" disabled /.test(S.html())) fail('antiturn', key, 'the check is open before the calls are made');
@@ -18328,7 +18329,7 @@ const trigTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const S = new Function('env', 'COL',
     "const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -18424,6 +18425,7 @@ const trigTurnNotes = (() => {
       if (p.length !== 97 || p.some(([u, v], j) => !near(u, fm.px(XS[j])) || !near(v, fm.py(w.f(XS[j])))) || !inPane(p, X, Y)) fail('trigturn', key, `${L[i]}'s f is not drawn through its own values`);
       if (/data-k="(slope|ratio|right|flip|size)"/.test(pg)) fail('trigturn', key, `${L[i]} shows F′ before it is called`);
       if (!pg.includes(`>f = ${w.fs}</text>`) || !pg.includes(`>F = ${w.Fs}</text>`)) fail('trigturn', key, `${L[i]}'s f and F are not written in`);
+      if (!/<polyline data-k="target" points="[^"]*" fill="none" stroke="gold"/.test(pg) || !pg.includes(`data-k="fn" x="${X + 172}" y="${Y + 19}" fill="gold"`)) fail('trigturn', key, `${L[i]}'s f and its name are not drawn in gold, as the caption says`);
     });
     // all four right on the first check, called with the buttons
     if (!/id="tqtCheck" disabled /.test(S.html())) fail('trigturn', key, 'the check is open before the calls are made');
