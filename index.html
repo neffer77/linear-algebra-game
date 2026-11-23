@@ -9061,6 +9061,31 @@ const Grade = {
   }
 };
 
+/* -------------- war path --------------
+   Campaign victories in a row, this sitting. Each one after the first pays
+   a tenth more gold, up to half again from the sixth on, and a fall or a
+   flight from a live fight ends it. It lives in memory and is never saved,
+   so a fresh sitting starts a fresh path. The victory screen says how long
+   it runs and what the next win pays; a fall says what it cost. Gold buys
+   convenience, never mastery, so this pushes a knight on without making
+   them any better at the questions than their answers do. */
+const WarPath = {
+  n:0, STEP:0.1, CAP:5,
+  bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },
+  won(){ this.n++; return 1+this.bonus(this.n); },
+  broke(){ const n=this.n; this.n=0; return n; },
+  pct(n){ return Math.round(this.bonus(n)*100); },
+  line(){
+    const n=this.n;
+    if(n<2) return '';
+    const next=n-1<this.CAP ? ` Win the next for +${this.pct(n+1)}%.` : ' The most it pays.';
+    return `<div id="warPath" style="color:#ff9c3d;font-weight:800;margin-top:6px">🔥 War path: ${n} victories in a row, +${this.pct(n)}% gold.${next}</div>`;
+  },
+  ended(n){
+    return n>=2 ? `<div id="warPathEnd" class="sub" style="margin-top:8px;color:#ff9c3d">🔥 Your war path of ${n} victories ends here.</div>` : '';
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -10032,7 +10057,9 @@ const Battle = {
     // An elite pays like a first clear, and always drops a chest.
     const full=first || !!this.foe.elite;
     // A second phase got through without a miss pays a quarter more gold.
-    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1));
+    // Victories in a row this sitting pay a tenth more each, up to half again.
+    const wp=this.mode==='campaign' ? WarPath.won() : 1;
+    const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1)*wp);
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
     // graded on the health left as the foe falls, before a level-up restores it
@@ -10056,6 +10083,7 @@ const Battle = {
           <h1 style="font-size:22px">Victory!</h1>
           <div class="sub" style="margin-top:6px">${this.foe.elite?'The '+Elite.KINDS[this.foe.elite].nm.toLowerCase()+' '+this.foe.nm:this.foe.nm} falls before your blade.</div>
           ${Phase.flawless(this)?`<div id="phaseWon" style="color:#ff8f6b;font-weight:800;margin-top:6px">👑 A flawless second phase: a quarter more gold.</div>`:''}
+          ${WarPath.line()}
           ${this.foe.elite?`<div id="eliteWon" style="color:var(--gold);font-weight:800;margin-top:6px">⭐ An elite felled: the full reward and a sure chest.</div>`:''}
           <hr>
           <div style="font-size:16px;font-weight:800;line-height:1.9">
@@ -10081,6 +10109,7 @@ const Battle = {
       for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
+      else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH', 'six in a row: half again the gold', '#ff9c3d', ()=>Sfx.milestone());
       else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE', 'No miss, a streak of five, health to spare', 'var(--gold)', ()=>Sfx.milestone());
       Titles.check();
       if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
@@ -10095,6 +10124,7 @@ const Battle = {
     if(this.mode==='arena'){ const f=this.foe; setTimeout(()=>{Anim.stop(); Arena.ended(f);},900); return; }
     if(this.mode==='dungeon'){ const cb=this._roomDone; setTimeout(()=>{Anim.stop(); cb(false);},900); return; }
     const g=Game.s;
+    const path=WarPath.broke();
     const lost=Math.round(g.gold*.15);
     g.gold-=lost; g.hp=Math.max(1,Math.round(g.maxHp*.4));
     Game.save();
@@ -10108,6 +10138,7 @@ const Battle = {
           <hr>
           <div style="font-weight:800">−${lost} gold lost in the retreat</div>
           <div class="sub" style="margin-top:10px">Nothing else is lost. Study the Tome, buy a draught, and return.</div>
+          ${WarPath.ended(path)}
           ${this.learnedHtml()}
         </div>
         ${g.gold>=Game.restCost()
@@ -10126,11 +10157,13 @@ const Battle = {
   restAgain(){ if(Game.rest()) this.begin(this.ri,this.fi); },
 
   flee(){
+    const live=!this.over;
     clearInterval(this.timer); this.over='flee'; Anim.stop(); this.tension(1); Talk.hide();
     if(this.mode==='arena'){ Arena.retire(); return; }
     if(this.mode==='dungeon'){ Dungeon.leave(true); return; }
     UI.go('s-map');
-    UI.toast('🏃 You slip away into the trees.');
+    const path=live && this.mode==='campaign' ? WarPath.broke() : 0;
+    UI.toast(path>=2 ? `🏃 You slip away into the trees, and your war path of ${path} victories ends.` : '🏃 You slip away into the trees.');
   }
 };
 

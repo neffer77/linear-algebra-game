@@ -682,6 +682,13 @@ The game is built so that losing teaches you as much as winning.
   banner. The grade is that fight's alone and nothing is saved, so a rematch is a fresh
   try. The line under it now counts the longest streak of that battle, where it used to
   show the best streak of the whole save.
+- **🔥 War path.** Campaign victories in a row, this sitting, pay more: each one after
+  the first pays a tenth more gold, up to half again from the sixth on, which gets its
+  own banner. The victory screen says how long the path runs and what the next win pays
+  (War path: 3 victories in a row, +20% gold. Win the next for +30%.). A fall ends it and
+  says what it cost, and so does fleeing a live fight; leaving a fight already won ends
+  nothing. It pays gold alone, which buys convenience, and it is never saved, so a fresh
+  sitting starts a fresh path.
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
@@ -3070,6 +3077,7 @@ Inside `index.html` the code is organised as:
 | `Weak` | each campaign foe's weak point, a topic from its own realm: the chip on its questions, the half-again blow, the line said once a fight, and the Bestiary's line |
 | `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
 | `Grade` | a victory's grade, S to C, from three marks the fight holds: no miss, a streak of five, over half health left; the marks under the letter, and the first open one named; nothing saved |
+| `WarPath` | campaign victories in a row this sitting: a tenth more gold each after the first, up to half again; said on the victory screen, ended by a fall or a flight from a live fight; never saved |
 | `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
@@ -3174,6 +3182,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `phase` | a realm boss rallies once, on the blow that leaves it at half or below, with a banner, its own line and Phase II on its bar; its wind-up comes a turn sooner and its blows a fifth harder; three right in a row stagger it, breaking off a wind-up, and the next right blow lands half again as hard; a miss breaks the streak; a flawless second phase pays a quarter more gold and says so, one with a miss does not; a plain foe and a boss in the arena never rally; nothing is saved |
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
 | `grade` | a clean, hale win with a streak of five is an S with all three marks ticked and its banner; a miss drops it to an A that names the open mark; two open marks is a B, three a C; the streak line counts that battle alone; nothing is saved |
+| `warpath` | a first victory pays plain gold and says nothing; a second pays a tenth more and says how long the path runs; leaving a won fight keeps it; fleeing a live one ends it and says so; six in a row pays half again with a banner, and a seventh no more; a fall ends it and says what it cost; nothing is saved |
 | `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |

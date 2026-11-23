@@ -2709,6 +2709,61 @@ const gradeNotes = (() => {
   return checks;
 })();
 
+/* War path: victories in a row this sitting pay a tenth more gold each, up
+   to half again, and a fall or a flight from a live fight ends it. Worked
+   here from its own rule, and its place in a fight read off the source. */
+const warPathNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const src = html.slice(html.indexOf('const WarPath = {'), html.indexOf('const Battle = {'));
+  const W = new Function(src + ';return WarPath;')();
+  let checks = 0;
+  const want = (ok, key, msg) => { checks++; if (!ok) fail('warpath', key, msg); };
+  // the bonus for the nth victory in a row, written here and not read from the game
+  const PAY = n => Math.min(50, Math.max(0, (n - 1) * 10));
+  want(W.n === 0, 'start', `a sitting starts ${W.n} victories in`);
+  for (let n = 0; n <= 30; n++) {
+    const key = `${n} in a row`;
+    want(W.pct(n) === PAY(n) && Math.abs(W.bonus(n) - PAY(n) / 100) < 1e-9, key, `pays +${W.pct(n)}%, not +${PAY(n)}%`);
+  }
+  W.n = 0;
+  for (let n = 1; n <= 12; n++) {
+    const key = `victory ${n} in a row`, m = W.won();
+    want(W.n === n && Math.abs(m - (1 + PAY(n) / 100)) < 1e-9, key, `counts ${W.n} and pays ×${m}`);
+    const ln = W.line();
+    if (n < 2) want(ln === '', key, 'speaks before there is a path');
+    else {
+      const tail = n < 6 ? ` Win the next for +${PAY(n + 1)}%.` : ' The most it pays.';
+      want(ln.includes(`🔥 War path: ${n} victories in a row, +${PAY(n)}% gold.${tail}</div>`) && ln.includes('id="warPath"'), key, `reads ${ln}`);
+    }
+  }
+  want(W.broke() === 12 && W.n === 0 && W.line() === '', 'a fall', 'does not end the path and give back its length');
+  want(W.broke() === 0, 'a second fall', 'ends a path that was not there');
+  want(W.ended(0) === '' && W.ended(1) === '', 'ended', 'mourns a path of one');
+  want(W.ended(4).includes('🔥 Your war path of 4 victories ends here.') && W.ended(4).includes('id="warPathEnd"'), 'ended', 'does not say what a fall cost');
+
+  // its place in a fight
+  const B = html.slice(html.indexOf('const Battle = {'), html.indexOf('\n};', html.indexOf('const Battle = {')));
+  const win = B.slice(B.indexOf('\n  win(){'), B.indexOf('\n  lose(){'));
+  const lose = B.slice(B.indexOf('\n  lose(){'), B.indexOf('\n  }', B.indexOf('\n  lose(){') + 5) + 4);
+  const flee = B.slice(B.indexOf('\n  flee(){'), B.indexOf('\n  }', B.indexOf('\n  flee(){')) + 4);
+  const wp = win.indexOf("const wp=this.mode==='campaign' ? WarPath.won() : 1;");
+  want(wp > win.indexOf("if(this.mode==='dungeon')") && wp < win.indexOf('const gold='), 'win', 'a victory is not counted once, for the campaign alone, before its gold');
+  want(/const gold=Math\.round\(this\.foe\.gold\*\(full\?1:0\.45\)\*\(Phase\.flawless\(this\)\?1\.25:1\)\*wp\);/.test(win), 'win', 'the gold is not paid at the war path\'s rate');
+  want(!/const xp=[^\n]*wp/.test(win), 'win', 'the war path pays experience too, not gold alone');
+  want(win.includes('${WarPath.line()}') && win.indexOf('${WarPath.line()}') < win.indexOf('<hr>'), 'win', 'the victory does not say how long the path runs');
+  want(win.includes("else if(WarPath.n===WarPath.CAP+1) Celebrate.banner('ON THE WAR PATH'"), 'win', 'six in a row has no banner, or one on top of a level-up');
+  want((html.match(/WarPath\.won\(\)/g) || []).length === 1, 'win', 'a victory is counted somewhere else too');
+  const bk = lose.indexOf('const path=WarPath.broke();');
+  want(bk > lose.indexOf("if(this.mode==='dungeon')") && bk < lose.indexOf("UI.go('s-result')"), 'lose', 'a fall in the campaign does not end the path');
+  want(lose.includes('${WarPath.ended(path)}'), 'lose', 'a fall does not say what it cost');
+  want(/const live=!this\.over;\n\s*clearInterval\(this\.timer\); this\.over='flee';/.test(flee), 'flee', 'a flight does not tell a live fight from one already over');
+  want(flee.includes("const path=live && this.mode==='campaign' ? WarPath.broke() : 0;") && flee.indexOf('WarPath.broke()') > flee.indexOf("if(this.mode==='dungeon')"), 'flee', 'a flight from a live campaign fight does not end the path, or leaving one already over does');
+  want(flee.includes('your war path of ${path} victories ends.'), 'flee', 'a flight does not say what it cost');
+  want((html.match(/WarPath\.broke\(\)/g) || []).length === 2, 'breaks', 'the path is ended somewhere else too');
+  want(!/(Game\.s|\bg|this\.s)\.(warPath|warpath|path)\b/.test(html), 'save', 'the war path is saved');
+  return checks;
+})();
+
 /* Rank the stretch: the matrix workshop's fourth mode. Every matrix is worked
    again from its numbers: its determinant ad − bc, the size of it, and the
    ranks from a sort of the sizes. Every matrix is ranked wrong in all three
@@ -24321,6 +24376,7 @@ console.log(`  elites checked             ${pad(eliteNotes.checks.toLocaleString
 console.log(`  second phases checked      ${pad(phaseNotes.checks.toLocaleString(), 10)}  (when each of the ${phaseNotes.bosses} realm bosses rallies, how hard it hits after, how a streak staggers it, and what a flawless phase pays)`);
 console.log(`  saga chapters checked      ${pad(sagaNotes.checks.toLocaleString(), 10)}  (each of the ${sagaNotes.chapters} chapters about its realm\'s boss and the mathematics that beat it, pointing on to the next realm, and read only once that boss falls)`);
 console.log(`  battle grades checked      ${pad(gradeNotes.toLocaleString(), 10)}  (every way the three marks can fall graded S to C, the card ticking each mark and naming the first open one, and the grade taken from the health left as the foe falls, above the battle\'s own streak, with nothing saved)`);
+console.log(`  war paths checked          ${pad(warPathNotes.toLocaleString(), 10)}  (victories in a row paying a tenth more gold each up to half again, counted for the campaign alone before its gold, said on the victory screen, and ended by a fall or a flight from a live fight, with nothing saved)`);
 console.log(`  bestiary tales checked     ${pad(bestiaryNotes.checks.toLocaleString(), 10)}  (a tale for each of the ${bestiaryNotes.foes} campaign foes, none too long and none shared, and the count of foes beaten)`);
 console.log(`  stretches ranked           ${pad(detRankNotes.checks.toLocaleString(), 10)}  (checks of four matrices ranked by the size of their determinants in the matrix workshop, ${detRankNotes.wrongs} of them with one matrix ranked wrong and caught, and ${detRankNotes.shapes} drawn shapes whose corners and area were read back)`);
 console.log(`  weak points                ${pad(weakNotes.foes.toLocaleString(), 10)}  (every campaign foe's weak point a topic its own realm tests, none shared in a realm, ${weakNotes.checks} checks of when it is in force, the blow it adds and what is said)`);

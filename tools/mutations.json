@@ -1,16 +1,12 @@
 {
-  "change": "Grade every victory S to C on three marks the fight holds",
+  "change": "Add a war path: victories in a row this sitting pay more gold",
   "mutations": [
-    { "name": "a streak of four counts as five", "file": "index.html", "find": "ok:best>=5}", "replace": "ok:best>=4}", "run": "verify" },
-    { "name": "half health counts as over half", "file": "index.html", "find": "ok:hp*2>maxHp}", "replace": "ok:hp*2>=maxHp}", "run": "verify" },
-    { "name": "the health is read after a level-up restores it", "file": "index.html",
-      "find": "    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);\n    const ups=Game.gainXp(xp);\n",
-      "replace": "    const ups=Game.gainXp(xp);\n    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);\n", "run": "verify" },
-    { "name": "the streak line shows the save's best again", "file": "index.html",
-      "find": "Longest streak this battle: ${this.runBest||0}", "replace": "Longest streak this battle: ${g.stats.best}", "run": "verify" },
-    { "name": "the line names the last open mark", "file": "index.html", "find": "const open=m.find(x=>!x.ok);", "replace": "const open=[...m].reverse().find(x=>!x.ok);", "run": "verify" },
-    { "name": "one mark is a C", "file": "index.html", "find": "LET: ['C','B','A','S'],", "replace": "LET: ['C','C','A','S'],", "run": "verify" },
-    { "name": "a fight keeps the last fight's streak", "file": "index.html", "find": "this.missed=0; this.runBest=0;", "replace": "this.missed=0;", "run": "verify" },
-    { "name": "the battle's streak is never raised", "file": "index.html", "find": "this.runBest=Math.max(this.runBest||0,this.combo);", "replace": "this.runBest=this.runBest||0;", "run": "play:grade" }
+    { "name": "the war path never stops climbing", "file": "index.html", "find": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },", "replace": "bonus(n){ return this.STEP*Math.max(0, n-1); },", "run": "verify" },
+    { "name": "the first victory already pays more", "file": "index.html", "find": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n-1)); },", "replace": "bonus(n){ return this.STEP*Math.min(this.CAP, Math.max(0, n)); },", "run": "verify" },
+    { "name": "the arena counts toward the path", "file": "index.html", "find": "const wp=this.mode==='campaign' ? WarPath.won() : 1;", "replace": "const wp=WarPath.won();", "run": "verify" },
+    { "name": "a fall leaves the path running", "file": "index.html", "find": "    const path=WarPath.broke();\n    const lost=", "replace": "    const path=WarPath.n;\n    const lost=", "run": "verify" },
+    { "name": "leaving a won fight ends the path", "file": "index.html", "find": "const path=live && this.mode==='campaign' ? WarPath.broke() : 0;", "replace": "const path=this.mode==='campaign' ? WarPath.broke() : 0;", "run": "verify" },
+    { "name": "the line promises the wrong next pay", "file": "index.html", "find": "Win the next for +${this.pct(n+1)}%.", "replace": "Win the next for +${this.pct(n)}%.", "run": "verify" },
+    { "name": "the gold is paid at the plain rate", "file": "index.html", "find": "(Phase.flawless(this)?1.25:1)*wp);", "replace": "(Phase.flawless(this)?1.25:1));", "run": "play:warpath" }
   ]
 }
