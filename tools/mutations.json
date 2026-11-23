@@ -56,6 +56,13 @@
       "find": "   \"Riemann Shade\": \"It builds itself out of thin strips and grows truer the thinner they get.\",\n",
       "replace": "",
       "run": "verify"
+    },
+    {
+      "name": "a stagger lets the wind-up start again at once",
+      "file": "index.html",
+      "find": "    } else if(!staggered && ++this.charge >= this.chargeMax){",
+      "replace": "    } else if(++this.charge >= this.chargeMax){",
+      "run": "play:phase"
     }
   ]
 }

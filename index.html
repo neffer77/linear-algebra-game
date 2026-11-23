@@ -9630,7 +9630,7 @@ const Battle = {
     }
 
     // In a boss's second phase, three right in a row stagger it, breaking off its wind-up.
-    Phase.step(this, ok && !this.shownWork);
+    const staggered=Phase.step(this, ok && !this.shownWork);
 
     // The foe fights on its own clock: it winds up over a few turns and then
     // slams regardless of your answer. A correct answer braces the blow rather
@@ -9656,7 +9656,7 @@ const Battle = {
         Sfx.hurt();
         setTimeout(()=>this.updateBars(),420);
       }, delay);
-    } else if(++this.charge >= this.chargeMax){
+    } else if(!staggered && ++this.charge >= this.chargeMax){   // a stagger holds the wind-up back a turn
       this.charge=0; this.slamNext=true;
     }
 
