@@ -56,9 +56,9 @@ module.exports = {
       [...document.querySelectorAll('#swtFig [data-k="int"]')].map(x => x.textContent).join(' | ') + ' ' +
       [...document.querySelectorAll('#swtFig [data-k="u"]')].map(x => x.textContent).join(' | ')),
       'ABCD ∫ 2x cos(x²) dx | ∫ x(1 − x²)³ dx | ∫ cos(x²) dx | ∫ x² e^(x³) dx u = x² | u = 1 − x² | u = x² | u = x³');
-    t.eq('what stands outside is gold and the bracket blue', await t.ev(() => {
+    t.eq('what stands outside is blue and the bracket gold', await t.ev(() => {
       const o = document.querySelector('#swtFig [data-k="out"]'), b = document.querySelector('#swtFig [data-k="in"]');
-      return [o.textContent, b.textContent, o.getAttribute('fill') !== b.getAttribute('fill')].join(); }), '2x,cos(x²),true');
+      return [o.textContent, b.textContent, o.getAttribute('fill'), b.getAttribute('fill')].join(); }), '2x,cos(x²),#5aa9e6,#f2c14e');
     t.ok('nothing gives the answer away', await t.ev(() => !document.querySelector('#swtFig [data-k="du"], #swtFig [data-k="gives"], #swtFig [data-k="exact"], #swtFig [data-k="number"], #swtFig [data-k="left"]')));
     t.ok('the check is shut until all four are called', await t.ev(() => { const b = document.getElementById('swtCheck'); return b.disabled && b.getAttribute('aria-label') === 'Call all four to check them'; }));
 

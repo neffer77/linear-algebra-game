@@ -1,25 +1,25 @@
 {
-  "change": "Draw the target f in gold in two call-it modes, as their captions say",
+  "change": "Make eight figure captions name the colours they really draw",
   "mutations": [
     {
-      "name": "Steep or shallow draws f in blue again",
+      "name": "a caption names gold for what is drawn blue",
       "file": "index.html",
-      "find": "const curves=[['target',xs.map(u=>k*u**p),FIG_COL.b,true]];",
-      "replace": "const curves=[['target',xs.map(u=>k*u**p),FIG_COL.a,true]];",
+      "find": "Once all four are called right, A in blue and B in gold are written in",
+      "replace": "Once all four are called right, A in gold and B in blue are written in",
       "run": "verify"
     },
     {
-      "name": "Sign or size draws f in blue again",
-      "file": "index.html",
-      "find": "const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.b,true]];",
-      "replace": "const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.a,true]];",
+      "name": "a check stands blue and gold the wrong way round",
+      "file": "tools/verify.js",
+      "find": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
+      "replace": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
       "run": "verify"
     },
     {
-      "name": "Steep or shallow names f in blue",
+      "name": "the figures draw a in gold",
       "file": "index.html",
-      "find": "out+=`<text data-k=\"fn\" x=\"${X+172}\" y=\"${Y+19}\" fill=\"${FIG_COL.b}\" font-size=\"11\" text-anchor=\"end\">f = ${this.fs(i)}</text>`;\n      out+=`<text data-k=\"Fn\" x=\"${X+172}\" y=\"${Y+33}\" fill=\"${FIG_COL.ink}\" font-size=\"11\" text-anchor=\"end\">F = ${this.Fs(i)}</text>`;\n      out+=`<line data-k=\"zero\" x1=\"${X+14}\" y1=\"${r(py(0))}\"",
-      "replace": "out+=`<text data-k=\"fn\" x=\"${X+172}\" y=\"${Y+19}\" fill=\"${FIG_COL.a}\" font-size=\"11\" text-anchor=\"end\">f = ${this.fs(i)}</text>`;\n      out+=`<text data-k=\"Fn\" x=\"${X+172}\" y=\"${Y+33}\" fill=\"${FIG_COL.ink}\" font-size=\"11\" text-anchor=\"end\">F = ${this.Fs(i)}</text>`;\n      out+=`<line data-k=\"zero\" x1=\"${X+14}\" y1=\"${r(py(0))}\"",
+      "find": "a:'#5aa9e6'",
+      "replace": "a:'#f2c14e'",
       "run": "verify"
     }
   ]

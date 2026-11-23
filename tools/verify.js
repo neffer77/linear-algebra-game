@@ -15526,6 +15526,24 @@ const areaTurnNotes = (() => {
   if (env.banners.join() !== 'STRIP READER / every sum called') fail('areaturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+{ // the colours a figure's words name are the ones it draws: FIG_COL.a is blue and b gold, and every check here stands them in that way
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const fc = html.match(/const FIG_COL = \{[\s\S]*?\};/)[0];
+  const hex = k => (fc.match(new RegExp(`\\b${k}:'(#[0-9a-f]{6})'`)) || [])[1];
+  if (hex('a') !== '#5aa9e6' || hex('b') !== '#f2c14e') fail('colours', 'FIG_COL', `a is ${hex('a')} and b is ${hex('b')}, not blue #5aa9e6 and gold #f2c14e`);
+  const me = fs.readFileSync(__filename, 'utf8');
+  let cols = 0;
+  for (const m of me.matchAll(/const COL = \{([^}]*)\}/g)) { cols++;
+    if (/\ba: /.test(m[1]) && (!/\ba: 'blue'/.test(m[1]) || !/\bb: 'gold'/.test(m[1]))) fail('colours', 'checks', `a check stands the colours in the wrong way round: ${m[1].trim()}`); }
+  if (cols < 40) fail('colours', 'checks', `only ${cols} colour maps found`);
+  // the call-it captions that once named blue and gold the other way round
+  const caps = [['qttFig', 'f in gold and g in green'], ['qttFig', 'y itself is drawn in gold with its tangent in blue'], ['cdtFig', 'f in gold across [a, b]'],
+    ['cdtFig', 'the tangent at c is drawn in blue'], ['arwFig', 'u in blue and v in gold'], ['lhtFig', 'f and its mirror in blue, g and its mirror dashed in gold'],
+    ['pttFig', 'Each u is in blue and each dv in gold'], ['sltFig', 'its plane in gold and its box in blue'],
+    ['swtFig', 'outside the bracket is in blue and the bracket in gold'], ['cvtFig', 'A in blue and B in gold']];
+  for (const [id, t] of caps) { const c = (html.match(new RegExp(`id="${id}"[^\\n]*?class="figcap">([^<]*)`)) || [])[1] || '';
+    if (!c.includes(t)) fail('colours', id, `the caption does not say ${t}`); }
+}
 const taylorTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -16769,7 +16787,7 @@ const latheTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -16906,7 +16924,7 @@ const latheTurnNotes = (() => {
         if (Math.abs(xOf(c.P[0][0]) - w.a) > 0.01 || Math.abs(xOf(c.P[c.P.length - 1][0]) - w.b) > 0.01) fail('latheturn', key, `${L[i]}'s ${c.k} does not run across its interval`);
         if (c.P.some(([px, py]) => Math.abs(cy - c.sgn * c.h(xOf(px)) * s - py) > 0.05)) fail('latheturn', key, `${L[i]}'s ${c.k} is not drawn to the pane's one scale`);
       }
-      if (!/data-k="g" d="[^"]+" fill="none" stroke="blue" stroke-width="2" stroke-dasharray/.test(pg) || !/data-k="f" d="[^"]+" fill="none" stroke="gold" stroke-width="2"\/>/.test(pg)) fail('latheturn', key, `${L[i]}'s f is not solid gold, or its g not dashed blue`);
+      if (!/data-k="g" d="[^"]+" fill="none" stroke="gold" stroke-width="2" stroke-dasharray/.test(pg) || !/data-k="f" d="[^"]+" fill="none" stroke="blue" stroke-width="2"\/>/.test(pg)) fail('latheturn', key, `${L[i]}'s f is not solid blue, or its g not dashed gold`);
       if (!pg.includes(`>f(x) = ${ps(w.F)}</text>`) || !pg.includes(`>g(x) = ${ps(w.G)} on ${span(w)}</text>`)) fail('latheturn', key, `${L[i]}'s curves and interval are not written on its pane`);
       if (!pg.includes(`>f ${piw(w.If)} · g ${piw(w.Ig)}</text>`)) fail('latheturn', key, `${L[i]}'s volumes are not written on its pane`);
       panes++;
@@ -16943,7 +16961,7 @@ const swapTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17066,7 +17084,7 @@ const swapTurnNotes = (() => {
       const int = pg.match(/data-k="int"[^>]*>(.*?)<\/text>/);
       const plain = int ? int[1].replace(/<[^>]+>/g, '') : '';
       if (plain !== w.integral) fail('swapturn', key, `${L[i]}'s pane writes ${plain}, not ${w.integral}`);
-      if (!int || !int[1].includes(`<tspan data-k="out" fill="gold">${w.out}</tspan>`) || !int[1].includes(`<tspan data-k="in" fill="blue">${w.wrapped}</tspan>`)) fail('swapturn', key, `${L[i]} does not colour what stands outside gold and the bracket blue`);
+      if (!int || !int[1].includes(`<tspan data-k="out" fill="blue">${w.out}</tspan>`) || !int[1].includes(`<tspan data-k="in" fill="gold">${w.wrapped}</tspan>`)) fail('swapturn', key, `${L[i]} does not colour what stands outside blue and the bracket gold`);
       if (!pg.includes(`data-k="u"`) || !new RegExp(`data-k="u"[^>]*>u = ${w.inner.replace(/[()+^√]/g, '\\$&')}</text>`).test(pg)) fail('swapturn', key, `${L[i]}'s u is not written on its pane`);
       if (!new RegExp(`data-k="du"[^>]*>${w.du}</text>`).test(pg)) fail('swapturn', key, `${L[i]}'s du is not written in once the round is right`);
       if (!pg.includes(`>→ ${w.gives}</text>`)) fail('swapturn', key, `${L[i]}'s swap is not written in once the round is right`);
@@ -17105,7 +17123,7 @@ const partsTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17242,7 +17260,7 @@ const partsTurnNotes = (() => {
     want.push(`What each split leaves: ${W.map((w, i) => `${L[i]} ${w.left}`).join(', ')}.`);
     want.push('1 called right on the first check this visit.');
     if (S.working().join(' | ') !== want.join(' | ')) fail('partsturn', key, `once called the readout is ${S.working().join(' | ')}`);
-    // the panes, read back: the integral, u in gold and dv in blue, then du, v and what parts leaves
+    // the panes, read back: the integral, u in blue and dv in gold, then du, v and what parts leaves
     const svg = S.svg();
     const parts = svg.split('data-k="pane"').slice(1);
     if (parts.length !== 4) fail('partsturn', key, 'not every pane is drawn');
@@ -17250,7 +17268,7 @@ const partsTurnNotes = (() => {
       const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
       if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('partsturn', key, `${L[i]}'s pane is out of place`);
       if (!pg.includes(`>${w.integral}</text>`)) fail('partsturn', key, `${L[i]}'s integral is not written on its pane`);
-      if (!pg.includes(`<tspan data-k="u" fill="gold">u = ${w.U.s}</tspan>`) || !pg.includes(`<tspan data-k="dv" fill="blue">${w.dvs}</tspan>`)) fail('partsturn', key, `${L[i]}'s u is not gold or its dv not blue`);
+      if (!pg.includes(`<tspan data-k="u" fill="blue">u = ${w.U.s}</tspan>`) || !pg.includes(`<tspan data-k="dv" fill="gold">${w.dvs}</tspan>`)) fail('partsturn', key, `${L[i]}'s u is not blue or its dv not gold`);
       if (!pg.includes(`>${w.du} · ${w.v}</text>`)) fail('partsturn', key, `${L[i]}'s du and v are not written in once the round is right`);
       if (!pg.includes(`>→ ${w.left}</text>`)) fail('partsturn', key, `what ${L[i]}'s split leaves is not written in once the round is right`);
       panes++;
@@ -17288,7 +17306,7 @@ const coverTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17413,7 +17431,7 @@ const coverTurnNotes = (() => {
       if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('coverturn', key, `${L[i]}'s pane is out of place`);
       const tx = pg.match(/data-k="top"[^>]*>([^<]*)</), bx = pg.match(/data-k="bottom"[^>]*>([^<]*)</);
       if (!tx || tx[1] !== w.top || !bx || bx[1] !== w.bottom) fail('coverturn', key, `${L[i]}'s fraction is not written top over bottom`);
-      if (!pg.includes(`>= <tspan fill="gold">A</tspan>/${wrapped(w.r)} + <tspan fill="blue">B</tspan>/${wrapped(w.s)}</text>`)) fail('coverturn', key, `${L[i]}'s split is not written with A in gold over its own factor`);
+      if (!pg.includes(`>= <tspan fill="blue">A</tspan>/${wrapped(w.r)} + <tspan fill="gold">B</tspan>/${wrapped(w.s)}</text>`)) fail('coverturn', key, `${L[i]}'s split is not written with A in blue over its own factor`);
       const M = Math.max(1, Math.abs(w.A), Math.abs(w.B)), at = v => +(X + 90 + v / M * 70).toFixed(2);
       const dA = pg.match(/data-k="dA" cx="([-\d.]+)"/), dB = pg.match(/data-k="dB" cx="([-\d.]+)"/);
       if (!dA || +dA[1] !== at(w.A) || !dB || +dB[1] !== at(w.B)) fail('coverturn', key, `${L[i]}'s A and B are not set in place on the number line`);
@@ -17468,7 +17486,7 @@ const sliceTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17584,8 +17602,8 @@ const sliceTurnNotes = (() => {
     else W.forEach((w, i) => {
       const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, x0 = X + 26, y0 = Y + 112;
       if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('sliceturn', key, `${L[i]}'s pane is out of place`);
-      if (!pg.includes(`data-k="f" x="${X + 172}" y="${Y + 19}" fill="blue" font-size="12" text-anchor="end">f = ${w.fs}</text>`)) fail('sliceturn', key, `${L[i]}'s plane is not written in blue`);
-      if (!pg.includes(`data-k="box" x="${X + 172}" y="${Y + 35}" fill="gold" font-size="11" text-anchor="end">box ${w.p} × ${w.q} × ${w.h}</text>`)) fail('sliceturn', key, `${L[i]}'s box is not written in gold`);
+      if (!pg.includes(`data-k="f" x="${X + 172}" y="${Y + 19}" fill="gold" font-size="12" text-anchor="end">f = ${w.fs}</text>`)) fail('sliceturn', key, `${L[i]}'s plane is not written in gold`);
+      if (!pg.includes(`data-k="box" x="${X + 172}" y="${Y + 35}" fill="blue" font-size="11" text-anchor="end">box ${w.p} × ${w.q} × ${w.h}</text>`)) fail('sliceturn', key, `${L[i]}'s box is not written in blue`);
       if (!pg.includes(`data-k="rect" x="${x0}" y="${y0 - w.q * 14}" width="${w.p * 14}" height="${w.q * 14}"`)) fail('sliceturn', key, `${L[i]}'s rectangle is not drawn ${w.p} by ${w.q}`);
       const sides = [...pg.matchAll(/data-k="(p|q)"[^>]*>([^<]*)</g)].map(m => m[1] + m[2]).join();
       if (sides !== `p${w.p},q${w.q}`) fail('sliceturn', key, `${L[i]}'s sides are labelled ${sides}`);
@@ -17633,7 +17651,7 @@ const arrowTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const S = new Function('env', 'COL',
     "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17747,9 +17765,9 @@ const arrowTurnNotes = (() => {
     else W.forEach((w, i) => {
       const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130, ox = X + 48, oy = Y + 70, px = x => ox + x * 6, py = y => oy - y * 6;
       if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('arrowturn', key, `${L[i]}'s pane is out of place`);
-      if (!pg.includes(`fill="gold" font-size="12" text-anchor="end">u = ${vec(w.a, w.b)}</text>`) || !pg.includes(`fill="blue" font-size="12" text-anchor="end">v = ${vec(w.c, w.d)}</text>`)) fail('arrowturn', key, `${L[i]}'s arrows are not written u in gold and v in blue`);
-      if (!pg.includes(`data-k="ua" x1="${ox}" y1="${oy}" x2="${px(w.a)}" y2="${py(w.b)}" stroke="gold"`)) fail('arrowturn', key, `${L[i]}'s u is not drawn from the origin to ${vec(w.a, w.b)}`);
-      if (!pg.includes(`data-k="va" x1="${ox}" y1="${oy}" x2="${px(w.c)}" y2="${py(w.d)}" stroke="blue"`)) fail('arrowturn', key, `${L[i]}'s v is not drawn from the origin to ${vec(w.c, w.d)}`);
+      if (!pg.includes(`fill="blue" font-size="12" text-anchor="end">u = ${vec(w.a, w.b)}</text>`) || !pg.includes(`fill="gold" font-size="12" text-anchor="end">v = ${vec(w.c, w.d)}</text>`)) fail('arrowturn', key, `${L[i]}'s arrows are not written u in blue and v in gold`);
+      if (!pg.includes(`data-k="ua" x1="${ox}" y1="${oy}" x2="${px(w.a)}" y2="${py(w.b)}" stroke="blue"`)) fail('arrowturn', key, `${L[i]}'s u is not drawn from the origin to ${vec(w.a, w.b)}`);
+      if (!pg.includes(`data-k="va" x1="${ox}" y1="${oy}" x2="${px(w.c)}" y2="${py(w.d)}" stroke="gold"`)) fail('arrowturn', key, `${L[i]}'s v is not drawn from the origin to ${vec(w.c, w.d)}`);
       if (!pg.includes(`data-k="sum" x1="${ox}" y1="${oy}" x2="${px(w.a + w.c)}" y2="${py(w.b + w.d)}"`)) fail('arrowturn', key, `${L[i]}'s u + v does not run from the origin to the far corner`);
       if (!pg.includes(`data-k="diff" x1="${px(w.c)}" y1="${py(w.d)}" x2="${px(w.a)}" y2="${py(w.b)}"`)) fail('arrowturn', key, `${L[i]}'s u − v does not run from v's tip to u's tip`);
       if (!pg.includes(`>u·v = ${neg(w.dot)}</text>`) || !pg.includes(`>|u + v|² = ${w.P}</text>`) || !pg.includes(`>|u − v|² = ${w.M}</text>`)) fail('arrowturn', key, `${L[i]}'s dot product and squares are not written in once the round is right`);
@@ -17789,7 +17807,7 @@ const chordTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const S = new Function('env', 'COL',
     "const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -17923,7 +17941,7 @@ const chordTurnNotes = (() => {
     else W.forEach((w, i) => {
       const pg = parts[i], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
       if (!pg.startsWith(` x="${X + 3}" y="${Y + 3}"`)) fail('chordturn', key, `${L[i]}'s pane is out of place`);
-      if (!pg.includes(`fill="blue" font-size="12" text-anchor="end">f = ${poly(w.k)}</text>`)) fail('chordturn', key, `${L[i]}'s curve is not written in blue`);
+      if (!pg.includes(`fill="gold" font-size="12" text-anchor="end">f = ${poly(w.k)}</text>`)) fail('chordturn', key, `${L[i]}'s curve is not written in gold`);
       const ticks = [...pg.matchAll(/data-k="tick"[^>]*>([^<]*)</g)].map(m => m[1]).join();
       if (ticks !== [w.a, w.m, w.b].map(num).join()) fail('chordturn', key, `${L[i]} is marked ${ticks} along the bottom, not a, the middle and b`);
       const xs = []; let lo = Infinity, hi = -Infinity;
@@ -17943,7 +17961,7 @@ const chordTurnNotes = (() => {
         if (Math.abs(sl - sc) > 0.01) fail('chordturn', key, `${L[i]}'s tangent at c does not run parallel to the chord`);
         if (cp && Math.abs((cp.cy - tn.y1) - sl * (cp.cx - tn.x1)) > 0.05) fail('chordturn', key, `${L[i]}'s tangent does not pass through c`);
       }
-      if (!pg.includes(`data-k="cval" x="${X + 172}" y="${Y + 35}" fill="gold" font-size="11" text-anchor="end">c ${w.cs}</text>`)) fail('chordturn', key, `${L[i]}'s c is not written in as c ${w.cs}`);
+      if (!pg.includes(`data-k="cval" x="${X + 172}" y="${Y + 35}" fill="blue" font-size="11" text-anchor="end">c ${w.cs}</text>`)) fail('chordturn', key, `${L[i]}'s c is not written in as c ${w.cs}`);
       panes++;
     });
     const marks = [...svg.matchAll(/data-k="(right|middle|left)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
@@ -17979,7 +17997,7 @@ const quotTurnNotes = (() => {
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
   const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
   const env = { toasts: [], banners: [], renders: 0 };
-  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim', fill: 'fill' };
   const S = new Function('env', 'COL',
     "const FIG_COL = COL;" +
     "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
@@ -18121,7 +18139,7 @@ const quotTurnNotes = (() => {
         if (Math.abs(slope - w.N / w.g2) > 0.02) fail('quotturn', key, `${L[i]}'s tangent slopes ${slope.toFixed(3)}, not ${w.N}/${w.g2}`);
         if (dt && Math.abs((+dt[2] - y1) - (y2 - y1) / (x2 - x1) * (+dt[1] - x1)) > 0.05) fail('quotturn', key, `${L[i]}'s tangent misses its point`);
       }
-      if (!pg.includes(`data-k="dydx" x="${X + 172}" y="${Y + 35}" fill="gold" font-size="11" text-anchor="end">dy/dx = ${w.sl}</text>`)) fail('quotturn', key, `${L[i]}'s dy/dx is not written in as ${w.sl}`);
+      if (!pg.includes(`data-k="dydx" x="${X + 172}" y="${Y + 35}" fill="blue" font-size="11" text-anchor="end">dy/dx = ${w.sl}</text>`)) fail('quotturn', key, `${L[i]}'s dy/dx is not written in as ${w.sl}`);
       panes++;
     });
     const marks = [...S.svg().matchAll(/data-k="(rise|flat|fall)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
