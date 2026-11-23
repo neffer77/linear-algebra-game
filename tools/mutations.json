@@ -1,60 +1,60 @@
 {
-  "change": "Add an Over or under mode to the trapezoid workshop",
+  "change": "Add a Too high or too low mode to the tangent line workshop",
   "mutations": [
     {
-      "name": "the call follows which way the curve goes, not how it bends",
+      "name": "the call follows the bend, not the side it puts the curve on",
       "file": "index.html",
-      "find": "truth(i){ return this.C(i).bend; }",
-      "replace": "truth(i){ return this.C(i).dir; }",
+      "find": "truth(i){ return -this.bend(i); }",
+      "replace": "truth(i){ return this.bend(i); }",
       "run": "verify"
     },
     {
-      "name": "1/x is said to bend down",
+      "name": "√x is said to bend up left of 4",
       "file": "index.html",
-      "find": "d2:'2/x³',           bend:1,",
-      "replace": "d2:'2/x³',           bend:-1,",
+      "find": "d2:'−1/(4x√x)',     bR:-1, bL:-1,",
+      "replace": "d2:'−1/(4x√x)',     bR:-1, bL:1,",
       "run": "verify"
     },
     {
-      "name": "the inside heights are not doubled",
+      "name": "the estimate leaves off f(a)",
       "file": "index.html",
-      "find": "for(let k=1;k<n;k++) s+=2*c.f(c.a+k*h); return h/2*s;",
-      "replace": "for(let k=1;k<n;k++) s+=c.f(c.a+k*h); return h/2*s;",
+      "find": "return c.f(c.a)+c.d(c.a)*(x-c.a); },\n  fv",
+      "replace": "return c.d(c.a)*(x-c.a); },\n  fv",
       "run": "verify"
     },
     {
-      "name": "any falling curve counts as overshot",
+      "name": "a curve that changes bend counts as bending one way left of a",
       "file": "index.html",
-      "find": "this.C(i).dir===-1 && this.C(i).bend===1",
-      "replace": "this.C(i).dir===-1",
+      "find": "this.x(i)<c.a && c.bL!==0 && c.bL===c.bR",
+      "replace": "this.x(i)<c.a && c.bL!==0",
       "run": "verify"
     },
     {
-      "name": "a straight line gets slivers",
+      "name": "a line gets a gap",
       "file": "index.html",
-      "find": "if(this.solved && c.bend!==0)",
-      "replace": "if(this.solved)",
+      "find": "if(this.solved && this.truth(i)!==0) out+=`<line data-k=\"gap\"",
+      "replace": "if(this.solved) out+=`<line data-k=\"gap\"",
       "run": "verify"
     },
     {
-      "name": "a curve that bends down is said to have tops above it",
+      "name": "a curve that bends up is said to sit below its tangent",
       "file": "index.html",
-      "find": "so the curve bends down and each straight top runs below it",
-      "replace": "so the curve bends down and each straight top runs above it",
+      "find": "so the curve bends up, above its tangent",
+      "replace": "so the curve bends up, below its tangent",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Trap.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Trap.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanLine.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    TanLine.render();",
       "run": "verify"
     },
     {
       "name": "gaps are rounded to two places",
       "file": "index.html",
-      "find": "fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  strips",
-      "replace": "fx(v){ const r=Math.round(v*100)/100; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  strips",
+      "find": "fx(v){ const r=Math.round(v*1000)/1000; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  gapWord",
+      "replace": "fx(v){ const r=Math.round(v*100)/100; return r===0 ? '0' : neg(+r.toFixed(3)); },\n  gapWord",
       "run": "verify"
     }
   ]

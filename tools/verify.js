@@ -13554,6 +13554,159 @@ const crossTurnNotes = (() => {
   if (env.banners.join() !== 'RIGHT HAND / every turn called') fail('crossturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, turns };
 })();
+const tanTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const TanLine = {render(){ env.renders++; }};" +
+    cut('const TanTurn = {', '/* ---------- The tangent line workshop') + 'return TanTurn;')(env, COL);
+  // the slope at a from f itself, the tangent from that slope, and the bend between a and x from f's own second differences
+  const slope = (c, x) => { const e = 1e-5; return (c.f(x + e) - c.f(x - e)) / (2 * e); };
+  const L = (c, x) => c.f(c.a) + slope(c, c.a) * (x - c.a);
+  const bendOn = (c, lo, hi) => { const sg = new Set(); for (let k = 1; k < 40; k++) { const t = lo + (hi - lo) * k / 40, e = 1e-3, d2 = (c.f(t + e) - 2 * c.f(t) + c.f(t - e)) / (e * e); sg.add(Math.abs(d2) < 1e-6 ? 0 : Math.sign(d2)); } return sg.size === 1 ? [...sg][0] : NaN; };
+  const r3 = v => { const r = Math.round(v * 1000) / 1000; return r === 0 ? '0' : (r < 0 ? '−' + Math.abs(+r.toFixed(3)) : String(+r.toFixed(3))); };
+  const sx = v => (v < 0 ? '−' + Math.abs(v) : String(v));
+  const WD = { 1: 'as too high', 0: 'as exact', [-1]: 'as too low' };
+  const gapWord = (c, x) => { const g = L(c, x) - c.f(x); return Math.abs(g) < 1e-7 ? 'exact' : `too ${g > 0 ? 'high' : 'low'} by ${r3(Math.abs(g))}`; };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  for (const [id, c] of Object.entries(S.CURVES)) {
+    if (Math.abs(c.d(c.a) - slope(c, c.a)) > 1e-6) fail('tanturn', id, `f′(${c.aS}) for ${c.fs} is not the curve's own slope`);
+    if (+c.aS !== c.a) fail('tanturn', id, `a is shown as ${c.aS}, not ${c.a}`);
+    const R = bendOn(c, c.a, c.a + 1.2), Lb = bendOn(c, c.a - (c.a > 0 ? Math.min(c.a * 0.6, 1.2) : 1.2), c.a);
+    if (R !== c.bR || Lb !== c.bL) fail('tanturn', id, `f(x) = ${c.fs} is said to bend ${c.bL} left of ${c.aS} and ${c.bR} right, but its second differences say ${Lb} and ${R}`);
+  }
+  if (S.ROUNDS.length !== 6) fail('tanturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, gaps = 0;
+  S.ROUNDS.forEach((P, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (P.length !== 4) { fail('tanturn', key, `it holds ${P.length} estimates, not four`); return; }
+    P.forEach(([id, x], i) => { const k = id + '|' + x; if (seen.has(k)) fail('tanturn', key, `estimate ${'ABCD'[i]} comes round twice`); seen.add(k);
+      if (!S.CURVES[id] || x === S.CURVES[id].a) fail('tanturn', key, `estimate ${'ABCD'[i]} is not a curve with x away from a`); });
+    const C = P.map(([id]) => S.CURVES[id]);
+    const truth = P.map(([id, x]) => { const c = S.CURVES[id], g = L(c, x) - c.f(x); return Math.abs(g) < 1e-7 ? 0 : Math.sign(g); });
+    if (truth.some((t, i) => S.truth(i) !== t || Math.abs(S.Lv(i) - L(C[i], P[i][1])) > 1e-6 || Math.abs(S.fv(i) - C[i].f(P[i][1])) > 1e-12)) fail('tanturn', key, `its estimates are called ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('tanturn', key, 'every estimate is called the same');
+    truth.forEach((t, i) => { const c = C[i], x = P[i][1];
+      if (t !== 0 && Math.abs(L(c, x) - c.f(x)) < 0.002) fail('tanturn', key, `${'ABCD'[i]}'s gap rounds away to nothing`);
+      const b = bendOn(c, Math.min(c.a, x), Math.max(c.a, x));
+      if (t !== -b) fail('tanturn', key, `${'ABCD'[i]} bends ${b} between a and x, yet its tangent is ${t}`); });
+    // what the round holds, found afresh
+    const lf = [], sd = [], li = [];
+    for (let i = 0; i < 4; i++) { const c = C[i], x = P[i][1];
+      const left = bendOn(c, x, c.a), right = bendOn(c, c.a, c.a + Math.abs(x - c.a));
+      if (x < c.a && left !== 0 && left === right) lf.push(i);
+      if (truth[i] === 0) li.push(i);
+      for (let j = i + 1; j < 4; j++) if (P[i][0] === P[j][0] && (x - c.a) * (P[j][1] - c.a) < 0 && truth[i] !== truth[j]) sd.push([i, j]); }
+    const tags = [lf.length ? 'left' : null, sd.length ? 'sides' : null, li.length ? 'line' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('tanturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every estimate called wrong, one at a time, in both wrong ways
+    P.forEach(([id, x], i) => {
+      const c = C[i], xs = sx(x), btw = x > c.a ? `${c.aS} and ${xs}` : `${xs} and ${c.aS}`;
+      for (const k of [1, 0, -1]) {
+        if (k === truth[i]) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const why = truth[i] < 0 ? `between ${btw}, f″(x) = ${c.d2} is more than 0, so the curve bends up, above its tangent`
+          : truth[i] > 0 ? `between ${btw}, f″(x) = ${c.d2} is less than 0, so the curve bends down, below its tangent`
+            : 'f″(x) = 0, so the line is its own tangent';
+        const want = ['3 of 4 right. Fix the ones in red and check again.',
+          `In ${'ABCD'[i]}, f(x) = ${c.fs} near a = ${c.aS}: L(x) = ${c.Ls}, so L(${xs}) = ${r3(L(c, x))}, while ${c.at(xs)} = ${r3(c.f(x))}. L is ${gapWord(c, x)}: ${why}. You had it ${WD[k]}.`,
+          '0 called right on the first check this visit.'];
+        const w = S.working();
+        if (w.join(' | ') !== want.join(' | ')) fail('tanturn', key, `with ${'ABCD'[i]} called ${WD[k]} the readout is ${w.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(tangent|gap|high|low|exact)"/.test(svg)) fail('tanturn', key, `with ${'ABCD'[i]} wrong, the wrong estimate is not ringed alone or the answers are given away`);
+        if (S.solved || S.streak) fail('tanturn', key, 'a wrong set of calls is counted');
+        S.call(i, truth[i]);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('tanturn', key, `changing ${'ABCD'[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('tanturn', key, `after changing ${'ABCD'[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('tanturn', key, `fixing ${'ABCD'[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="tltCheck" disabled /.test(S.html())) fail('tanturn', key, 'the check is open before the estimates are called');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => skip === i ? null : t);
+      if (!/id="tltCheck" disabled /.test(S.html())) fail('tanturn', key, `the check opens with ${'ABCD'[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('tanturn', key, `a check runs with ${'ABCD'[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const lab = t === 0 ? 'exact' : t > 0 ? 'too high' : 'too low';
+      const m = h0.match(new RegExp(`onclick="TanTurn\\.call\\(${i},(-?[01])\\)" aria-label="Estimate ${'ABCD'[i]}: L is ${lab}"`));
+      if (!m || +m[1] !== t) fail('tanturn', key, `the button for ${'ABCD'[i]} ${lab} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`TanTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('tanturn', key, `${'ABCD'[i]} does not offer too high, exact and too low`);
+    });
+    if (S.calls.join() !== truth.join()) fail('tanturn', key, 'the buttons cannot make the right calls');
+    if (/id="tltCheck" disabled /.test(S.html())) fail('tanturn', key, 'the check stays shut with every estimate called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (sd.length) { const [i, j] = sd[0], c = C[i], up = s => s > 0 ? 'up' : 'down', side = s => s > 0 ? 'low' : 'high';
+      want.push(`${'ABCD'[i]} and ${'ABCD'[j]} are both f(x) = ${c.fs} near ${c.aS}, on either side: it bends ${up(c.bR)} to the right of ${c.aS} and ${up(c.bL)} to the left, so the tangent is too ${side(c.bR)} on one side and too ${side(c.bL)} on the other.`); }
+    if (lf.length) { const i = lf[0], c = C[i], b = -truth[i];
+      want.push(`In ${'ABCD'[i]}, x = ${sx(P[i][1])} is left of a = ${c.aS}, but ${c.fs} bends ${b > 0 ? 'up' : 'down'} on both sides, so the tangent is still too ${b > 0 ? 'low' : 'high'}: the side does not flip it.`); }
+    if (li.length) want.push(`${'ABCD'[li[0]]} is the line f(x) = ${C[li[0]].fs}, its own tangent, so L is exact.`);
+    want.push(`L against f: ${P.map(([id, x], i) => `${'ABCD'[i]} ${gapWord(C[i], x)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('tanturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each curve in its own pane, its tangent through the dot at a, its gap on the called side
+    const svg = S.svg();
+    const curves = [...svg.matchAll(/data-k="curve" points="([^"]+)"/g)].map(m => m[1].split(' ').map(p => p.split(',').map(Number)));
+    const tans = [...svg.matchAll(/data-k="tangent" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    const dots = [...svg.matchAll(/data-k="a" cx="([^"]+)" cy="([^"]+)"/g)].map(m => [+m[1], +m[2]]);
+    const gl = [...svg.matchAll(/data-k="gap" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)" y2="([^"]+)"/g)].map(m => m.slice(1).map(Number));
+    if (curves.length !== 4 || tans.length !== 4 || dots.length !== 4) fail('tanturn', key, 'four curves, four tangents and four points a are not drawn');
+    let g = 0;
+    P.forEach(([id, x], i) => {
+      const cv = curves[i], tn = tans[i], d = dots[i]; if (!cv || !tn || !d) return;
+      const X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      if ([...cv, [tn[0], tn[1]], [tn[2], tn[3]]].some(([px, py]) => px < X || px > X + 180 || py < Y || py > Y + 130)) fail('tanturn', key, `${'ABCD'[i]} runs out of its own pane`);
+      // the tangent passes through the dot at a, and the dot sits on the curve
+      const ty = tn[1] + (tn[3] - tn[1]) * (d[0] - tn[0]) / (tn[2] - tn[0]);
+      const k = cv.findIndex((p, n) => n && p[0] >= d[0]), cy = k < 1 ? NaN : cv[k - 1][1] + (cv[k][1] - cv[k - 1][1]) * (d[0] - cv[k - 1][0]) / (cv[k][0] - cv[k - 1][0]);
+      if (Math.abs(ty - d[1]) > 0.05 || !(Math.abs(cy - d[1]) < 0.3)) fail('tanturn', key, `${'ABCD'[i]}'s tangent does not touch the curve at a`);
+      if (truth[i] === 0) return;
+      const gp = gl[g++]; if (!gp) return; gaps++;
+      // the gap stands at x, from the curve to the tangent, the tangent above when too high
+      const tx = tn[1] + (tn[3] - tn[1]) * (gp[0] - tn[0]) / (tn[2] - tn[0]);
+      if (Math.abs(gp[0] - gp[2]) > 1e-9 || Math.abs(gp[3] - tx) > 0.05 || Math.sign(gp[1] - gp[3]) !== truth[i]) fail('tanturn', key, `${'ABCD'[i]}'s gap does not run from the curve up or down to the tangent as called`);
+    });
+    if (gl.length !== truth.filter(t => t).length) fail('tanturn', key, `${gl.length} panes have gaps, not the ${truth.filter(t => t).length} that are not exact`);
+    const marks = [...svg.matchAll(/data-k="(high|low|exact)"/g)].map(m => m[1]);
+    if (marks.join() !== truth.map(t => t > 0 ? 'high' : t < 0 ? 'low' : 'exact').join()) fail('tanturn', key, `the panes are marked ${marks.join()}`);
+    const h = S.html();
+    if (!h.includes('id="tltNext"') || /onclick="TanTurn\.call/.test(h.replace(/disabled onclick="TanTurn\.call/g, ''))) fail('tanturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? -1 : 1);
+    if (S.calls.join() !== before) fail('tanturn', key, 'a call moves after the round is right');
+    S.next();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('tanturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('tanturn', 'hunt', 'a goal is found before anything is pressed');
+  const callOf = ([id, x]) => { const c = S.CURVES[id], gg = L(c, x) - c.f(x); return Math.abs(gg) < 1e-7 ? 0 : Math.sign(gg); };
+  const play = slip => { const P = S.R(); S.calls = P.map(callOf); if (slip) S.calls[1] = S.calls[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, callOf(P[1])); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,line'], [false, 'fix,left,line,one,sides'], [false, 'fix,left,line,one,sides'], [false, 'fix,left,line,one,sides,three']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('tanturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Straight on straight · A slip caught and fixed | ✓ Right on the first check · The side does not flip it · A change of bend, a change of side') fail('tanturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'TRUE TOUCH / every tangent called') fail('tanturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, gaps };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -21033,6 +21186,7 @@ console.log(`  pressed shown     ${pad(pressedNotes.n.toLocaleString(), 12)}  (b
 console.log(`  turns called      ${pad(crossTurnNotes.checks.toLocaleString(), 12)}  (checks of four cross products called out, in or zero in the cross product workshop, ${crossTurnNotes.wrongs} of them with one pair called wrong and caught, and ${crossTurnNotes.turns} short turns drawn and followed)`);
 console.log(`  angles called     ${pad(dotTurnNotes.checks.toLocaleString(), 12)}  (checks of four angles called less than, exactly or more than 90° in the dot product workshop, ${dotTurnNotes.wrongs} of them with one pair called wrong and caught, and ${dotTurnNotes.angles} arcs drawn the short way from u to v)`);
 console.log(`  bends called      ${pad(trapTurnNotes.checks.toLocaleString(), 12)}  (checks of four trapezoid estimates called over, exact or under in the trapezoid workshop, ${trapTurnNotes.wrongs} of them with one curve called wrong and caught, and ${trapTurnNotes.slivers} sets of slivers drawn on the side the curve bends)`);
+console.log(`  tangents called   ${pad(tanTurnNotes.checks.toLocaleString(), 12)}  (checks of four tangent line estimates called too high, exact or too low in the tangent line workshop, ${tanTurnNotes.wrongs} of them with one curve called wrong and caught, and ${tanTurnNotes.gaps} gaps drawn from the curve to its tangent)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);
