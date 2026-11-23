@@ -8848,7 +8848,7 @@ const Phase = {
    nothing of it is saved: what is beaten is already kept.                 */
 const Weak = {
   OF: {
-   "Meadow Slime":'det2', "Bramble Goblin":'vecAdd', "Thicket Brute":'vecScale', "The Vector Wyrm":'vecCombo',
+   "Meadow Slime":'mag', "Bramble Goblin":'vecAdd', "Thicket Brute":'vecScale', "The Vector Wyrm":'vecCombo',
    "Rank-One Skeleton":'transpose', "Row Reducer":'solve2', "Shear Sentinel":'matVec', "The Determinant Golem":'det2',
    "Asymptote Wisp":'limInf', "Secant Harpy":'limRational', "Slope Stalker":'evalDeriv', "The Tangent Wraith":'tangent',
    "Riemann Shade":'area', "Abyssal Chimera":'chainRule', "Constant of Dread":'indefPower', "The Lich of Limits":'defPoly',
