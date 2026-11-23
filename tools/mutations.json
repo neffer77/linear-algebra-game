@@ -1,96 +1,33 @@
 {
-  "change": "Add a Name the undo mode to the undo workshop",
+  "change": "Name each matrix's own det in Match them up",
   "mutations": [
     {
-      "name": "the 3×3 det skips the sign of the middle term",
+      "name": "the slip readout works every det as det A",
       "file": "index.html",
-      "find": "s+(j%2?-1:1)*x*this.minor(A,j)",
-      "replace": "s+x*this.minor(A,j)",
+      "find": "and det ${X} = ${this.par(a)}",
+      "replace": "and det A = ${this.par(a)}",
       "run": "verify"
     },
     {
-      "name": "Aᵀ is swapped for A with its signs dropped",
+      "name": "the slip says det A does not match for every matrix",
       "file": "index.html",
-      "find": ": !this.off(this.mul(this.tr(A),A)) ? 'T' : 'N'; },",
-      "replace": ": !this.off(this.mul(A,A.map(r=>r.map(x=>Math.abs(x))))) ? 'T' : 'N'; },",
+      "find": "`the trace matches, but det ${X} does not`",
+      "replace": "`the trace matches, but det A does not`",
       "run": "verify"
     },
     {
-      "name": "the off-I entry reads only the diagonal",
+      "name": "two matrices sharing a det are told as sharing det A",
       "file": "index.html",
-      "find": "for(let j=0;j<M.length;j++) if(M[i][j]!==(i===j?1:0)) return [i,j];",
-      "replace": "if(M[i][i]!==1) return [i,i];",
+      "find": "both have det ${neg(this.det(M[i]))}, so only",
+      "replace": "share det A = ${neg(this.det(M[i]))}, so only",
       "run": "verify"
     },
     {
-      "name": "the 2×2 det work swaps b and c",
+      "name": "a curve that misses the axis is weighed against det A",
       "file": "index.html",
-      "find": "− ${this.amt(A[0][1])}·${this.amt(A[1][0])} = ${d}`;",
-      "replace": "− ${this.amt(A[1][0])}·${this.amt(A[1][0])} = ${d}`;",
+      "find": "4 × det ${this.L[ns[0]]} = ${4*d}",
+      "replace": "4 × det A = ${4*d}",
       "run": "verify"
-    },
-    {
-      "name": "a shear is any 2×2 with 1s down the diagonal",
-      "file": "index.html",
-      "find": "A[0][0]===1 && A[1][1]===1 && (A[0][1]===0)!==(A[1][0]===0); },",
-      "replace": "A[0][0]===1 && A[1][1]===1; },",
-      "run": "verify"
-    },
-    {
-      "name": "big numbers start at 2",
-      "file": "index.html",
-      "find": "r.some(x=>Math.abs(x)>=3))); },",
-      "replace": "r.some(x=>Math.abs(x)>=2))); },",
-      "run": "verify"
-    },
-    {
-      "name": "the shear hint is given for any wrong name",
-      "file": "index.html",
-      "find": "if(t==='N' && c==='S' && this.shear(A)) s+=",
-      "replace": "if(t==='N' && this.shear(A)) s+=",
-      "run": "verify"
-    },
-    {
-      "name": "the rows-in-step hint ignores zeros",
-      "file": "index.html",
-      "find": "A.length===2 && A.every(r=>r.every(x=>x!==0))) s+=",
-      "replace": "A.length===2) s+=",
-      "run": "verify"
-    },
-    {
-      "name": "a fix counts as a first check",
-      "file": "index.html",
-      "find": "if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Undo.render();",
-      "replace": "{ this.wins++; this.streak++; }\n      for(const t of this.tags()) this.kinds.add(t);\n    } else this.streak=0;\n    Undo.render();",
-      "run": "verify"
-    },
-    {
-      "name": "the nothing button names it as another",
-      "file": "index.html",
-      "find": "+this.btn(i,'Z','Nothing')+",
-      "replace": "+this.btn(i,'N','Nothing')+",
-      "run": "verify"
-    },
-    {
-      "name": "a matrix's cells are drawn transposed",
-      "file": "index.html",
-      "find": "fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[r][c])}</text>`;\n      out+=`<text x=\"${X+16}\"",
-      "replace": "fill=\"${FIG_COL.ink}\" font-size=\"14\" text-anchor=\"middle\">${neg(A[c][r])}</text>`;\n      out+=`<text x=\"${X+16}\"",
-      "run": "verify"
-    },
-    {
-      "name": "the name-the-undo tab opens the pick mode",
-      "file": "index.html",
-      "find": "this.tab==='pick' ? UndoPick.html() : UndoSort.html();",
-      "replace": "this.tab!=='hand' ? UndoPick.html() : UndoSort.html();",
-      "run": "play:undosort"
-    },
-    {
-      "name": "a slip rings every matrix",
-      "file": "index.html",
-      "find": "if(this.marks && this.marks[i]===false) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\" rx=\"8\" fill=\"none\" stroke=\"${FIG_COL.d}\" stroke-width=\"2.5\"/>`;\n      if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"tag\"",
-      "replace": "if(this.marks) out+=`<rect data-k=\"miss\" x=\"${X+3}\" y=\"${Y+3}\" width=\"174\" height=\"124\" rx=\"8\" fill=\"none\" stroke=\"${FIG_COL.d}\" stroke-width=\"2.5\"/>`;\n      if(this.solved){ const t=this.truth(i);\n        out+=`<text data-k=\"tag\"",
-      "run": "play:undosort"
     }
   ]
 }

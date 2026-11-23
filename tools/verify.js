@@ -4627,9 +4627,9 @@ const charMatchNotes = (() => {
         if (c === truth[i]) continue;
         reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = c; S.check(); checks++; wrongs++;
         const [[a, b], [cc, d]] = A, k = charOf(A), B = M[Rd.order[c]], kb = charOf(B);
-        const off = kb[1] === k[1] ? 'the trace matches, but det A does not' : kb[2] === k[2] ? 'det A matches, but the trace does not' : 'neither the trace nor det A matches';
+        const X = 'ABCD'[i], off = kb[1] === k[1] ? `the trace matches, but det ${X} does not` : kb[2] === k[2] ? `det ${X} matches, but the trace does not` : `neither the trace nor det ${X} matches`;
         const want = ['3 of 4 right. Fix the ones in red and check again.',
-          `For ${'ABCD'[i]}, the trace is ${ng(a)} + ${ng(d)} = ${ng(-k[1])} and det A = (${ng(a)})(${ng(d)}) − (${ng(b)})(${ng(cc)}) = ${ng(k[2])}, so det(A − λI) = ${word(k)}: that is ${truth[i] + 1}. You had ${c + 1}, ${word(kb)}: ${off}.`,
+          `For ${X}, the trace is ${ng(a)} + ${ng(d)} = ${ng(-k[1])} and det ${X} = (${ng(a)})(${ng(d)}) − (${ng(b)})(${ng(cc)}) = ${ng(k[2])}, so det(A − λI) = ${word(k)}: that is ${truth[i] + 1}. You had ${c + 1}, ${word(kb)}: ${off}.`,
           '0 matched right on the first check this visit.'];
         const w = S.working();
         if (w.join(' | ') !== want.join(' | ')) fail('charmatch', key, `with ${'ABCD'[i]} matched to ${c + 1} the readout is ${w.join(' | ')}`);
@@ -4667,9 +4667,9 @@ const charMatchNotes = (() => {
     S.check(); checks++;
     const L = ix => ix.map(i => 'ABCD'[i]), list = ix => { const n = L(ix); return n.length < 2 ? n.join('') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; };
     const want = ['Yes: all four are matched.'];
-    if (ns.length) { const k = charOf(M[ns[0]]); want.push(`${'ABCD'[ns[0]]} has no real eigenvalues: its trace squared, ${k[1] * k[1]}, is less than 4 × det A = ${4 * k[2]}, so its curve never meets the axis.`); }
-    if (zs.length) want.push(`${list(zs)} ${zs.length > 1 ? 'have' : 'has'} det A = 0, so λ = 0 is an eigenvalue: ${zs.length > 1 ? 'each curve passes' : 'its curve passes'} through 0.`);
-    if (tw.length) { const [i, j] = tw[0]; want.push(`${'ABCD'[i]} and ${'ABCD'[j]} share det A = ${ng(charOf(M[i])[2])}, so only the trace tells them apart: ${ng(-charOf(M[i])[1])} against ${ng(-charOf(M[j])[1])}.`); }
+    if (ns.length) { const k = charOf(M[ns[0]]); want.push(`${'ABCD'[ns[0]]} has no real eigenvalues: its trace squared, ${k[1] * k[1]}, is less than 4 × det ${'ABCD'[ns[0]]} = ${4 * k[2]}, so its curve never meets the axis.`); }
+    if (zs.length) want.push(`${list(zs)} ${zs.length > 1 ? 'have' : 'has'} det 0, so λ = 0 is an eigenvalue: ${zs.length > 1 ? 'each curve passes' : 'its curve passes'} through 0.`);
+    if (tw.length) { const [i, j] = tw[0]; want.push(`${'ABCD'[i]} and ${'ABCD'[j]} both have det ${ng(charOf(M[i])[2])}, so only the trace tells them apart: ${ng(-charOf(M[i])[1])} against ${ng(-charOf(M[j])[1])}.`); }
     want.push(`The eigenvalues: ${M.map((A, i) => `${'ABCD'[i]} ${eigWord(A)}`).join(', ')}.`);
     want.push('1 matched right on the first check this visit.');
     if (S.working().join(' | ') !== want.join(' | ')) fail('charmatch', key, `once matched the readout is ${S.working().join(' | ')}`);
