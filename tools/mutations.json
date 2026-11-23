@@ -1,60 +1,60 @@
 {
-  "change": "Add a High or low mode to the area workshop",
+  "change": "Add an Over or under mode to the Taylor workshop",
   "mutations": [
     {
-      "name": "the sum's call is turned round",
+      "name": "the call is turned round",
       "file": "index.html",
-      "find": "return Math.abs(d)<1e-9 ? 0 : Math.sign(d); },",
-      "replace": "return Math.abs(d)<1e-9 ? 0 : Math.sign(-d); },",
+      "find": "const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(d); },",
+      "replace": "const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(-d); },",
       "run": "verify"
     },
     {
-      "name": "right edges are taken as left",
+      "name": "the factorial is dropped",
       "file": "index.html",
-      "find": "const off=this.edge(i)==='L'?0:1;",
-      "replace": "const off=0;",
+      "find": "const id=this.id(i), s=this.fact(k);",
+      "replace": "const id=this.id(i), s=k||1;",
       "run": "verify"
     },
     {
-      "name": "the area drops the 1/(k+1)",
+      "name": "sin x gets cos x's powers",
       "file": "index.html",
-      "find": "s+ck*(b**(k+1)-a**(k+1))/(k+1),0);",
-      "replace": "s+ck*(b**(k+1)-a**(k+1)),0);",
+      "find": "const id=this.id(i), s=this.fact(k);\n    if(id==='exp') return 1/s;\n    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;",
+      "replace": "const id=this.id(i), s=this.fact(k);\n    if(id==='exp') return 1/s;\n    if(id==='sin') return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;",
       "run": "verify"
     },
     {
-      "name": "a flat line is not looked for",
+      "name": "a missing power is not looked for",
       "file": "index.html",
-      "find": "flats(){ return [0,1,2,3].filter(i=>this.way(i)===0); },",
-      "replace": "flats(){ return []; },",
+      "find": "skips(){ return [0,1,2,3].filter(i=>this.x(i)!==0 && this.c(i,this.n(i)+1)===0); },",
+      "replace": "skips(){ return []; },",
       "run": "verify"
     },
     {
-      "name": "under the axis means falling",
+      "name": "a negative x counts for sin and cos too",
       "file": "index.html",
-      "find": "this.way(i)!==0 && Math.max(this.f(i,this.a(i)),this.f(i,this.b(i)))<=0",
-      "replace": "this.way(i)<0",
+      "find": "negs(){ return [0,1,2,3].filter(i=>this.id(i)==='exp' && this.x(i)<0); },",
+      "replace": "negs(){ return [0,1,2,3].filter(i=>this.x(i)<0); },",
       "run": "verify"
     },
     {
-      "name": "the rectangles are drawn before the round is right",
+      "name": "the polynomials are drawn before the round is right",
       "file": "index.html",
-      "find": "if(this.solved){\n        const w=this.dx(i);",
-      "replace": "if(true){\n        const w=this.dx(i);",
+      "find": "if(this.solved){\n        out+=`<path data-k=\"poly\"",
+      "replace": "if(true){\n        out+=`<path data-k=\"poly\"",
       "run": "verify"
     },
     {
-      "name": "each dot sits on the axis",
+      "name": "the gold dot sits on the axis",
       "file": "index.html",
-      "find": "cy=\"${f(py(this.f(i,xe)))}\" r=\"3.5\"",
-      "replace": "cy=\"${f(y0)}\" r=\"3.5\"",
+      "find": "cy=\"${f(py(this.f(i)))}\" r=\"3.5\" fill=\"${FIG_COL.b}\"",
+      "replace": "cy=\"${f(py(0))}\" r=\"3.5\" fill=\"${FIG_COL.b}\"",
       "run": "verify"
     },
     {
       "name": "a call still moves once the round is right",
       "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Area.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Area.render();",
+      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
       "run": "verify"
     }
   ]

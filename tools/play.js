@@ -166,6 +166,7 @@ const SUITES = [
   require('./play/tailsort'), // see four endless areas, and call which close in and which run off
   require('./play/growpick'), // see an exponential, pick which of four numbers goes in front of its antiderivative
   require('./play/seriespick'), // see an exponential, pick which of four numbers sits in front of a power of x
+  require('./play/taylorturn'), // see four functions cut off after a few terms, call each P over, exact or under
   require('./play/lathepick'), // see a curve spun into a solid, pick which of four numbers is its volume
   require('./play/hillpick'), // see a hill, a point and a heading, pick which of four numbers is the slope that way
   require('./play/hillfence'), // walk a fence across a hill to its lowest point, where ∇f lines up with ∇g

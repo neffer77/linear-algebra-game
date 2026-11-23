@@ -15192,6 +15192,175 @@ const areaTurnNotes = (() => {
   if (env.banners.join() !== 'STRIP READER / every sum called') fail('areaturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+const taylorTurnNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Taylor = {render(){ env.renders++; }};" +
+    cut('const TaylorTurn = {', 'const Taylor = {') + 'return TaylorTurn;')(env, COL);
+  const neg = n => (n < 0 ? '−' + Math.abs(n) : String(n));
+  // each function from its own derivatives at 0, which cycle: eˣ always 1, sin x 0 1 0 −1, cos x 1 0 −1 0
+  const D = { exp: () => 1, sin: k => [0, 1, 0, -1][k % 4], cos: k => [1, 0, -1, 0][k % 4] };
+  const F = { exp: Math.exp, sin: Math.sin, cos: Math.cos };
+  const NM = { exp: 'eˣ', sin: 'sin x', cos: 'cos x' };
+  const fa = k => (k < 2 ? 1 : k * fa(k - 1));
+  const co = (id, k) => D[id](k) / fa(k);
+  const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', sup = k => String(k).split('').map(d => SUP[d]).join('');
+  const pw = k => (k === 1 ? 'x' : `x${sup(k)}`);
+  const tm = k => (k === 0 ? '1' : k === 1 ? 'x' : `x${sup(k)}/${k}!`);
+  const r4 = v => { const r = Math.round(v * 1e4) / 1e4; return Object.is(r, -0) ? 0 : r; };
+  const nm = v => neg(r4(v)), fm = v => (Math.abs(r4(v) - v) < 1e-12 ? '' : '≈ ') + nm(v);
+  const pv = v => (v < 0 ? `(${fm(v)})` : fm(v)), eqv = v => (fm(v).startsWith('≈') ? fm(v) : '= ' + fm(v));
+  const WD = { 1: 'over', 0: 'exact', [-1]: 'under' };
+  const NAME = { 1: 'P is over f', 0: 'P is exactly f', [-1]: 'P is under f' };
+  const MARK = { 1: 'over ▲ over', 0: 'exact = exact', [-1]: 'under ▼ under' };
+  const SIGN = { 1: '>', 0: '=', [-1]: '<' };
+  const L = 'ABCD';
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  const work = ri => S.ROUNDS[ri].map(([id, n, x]) => {
+    const ks = []; for (let k = 0; k <= n; k++) if (co(id, k) !== 0) ks.push(k);
+    const P = t => ks.reduce((s, k) => s + co(id, k) * t ** k, 0);
+    let nx = n + 1; while (co(id, nx) === 0) nx++;
+    const v = co(id, nx) * x ** nx, Px = P(x), fx = F[id](x);
+    const t = x === 0 ? 0 : Math.sign(Px - fx);
+    // the rest of the tail past the first term left out, summed far enough to settle it
+    let rest = 0; for (let k = nx + 1; k < 40; k++) rest += co(id, k) * x ** k;
+    const text = ks.length ? ks.map((k, j) => (j ? (co(id, k) < 0 ? ' − ' : ' + ') : (co(id, k) < 0 ? '−' : '')) + tm(k)).join('') : '0';
+    const short = ks.length <= 4 ? text : text.split(/ (?=[+−] )/).slice(0, 2).join(' ') + ` + … ${co(id, ks[ks.length - 1]) < 0 ? '−' : '+'} ${tm(ks[ks.length - 1])}`;
+    return { id, n, x, ks, P, Px, fx, nx, v, t, rest, text, short, f: F[id], skip: x !== 0 && co(id, n + 1) === 0 };
+  });
+  if (S.ROUNDS.length !== 6) fail('taylorturn', 'setup', `there are ${S.ROUNDS.length} rounds, not six`);
+  const seen = new Set();
+  let checks = 0, wrongs = 0, panes = 0;
+  S.ROUNDS.forEach((Q, ri) => {
+    const key = `round ${ri + 1}`;
+    reset(); S.ri = ri;
+    if (Q.length !== 4) { fail('taylorturn', key, `it holds ${Q.length} functions, not four`); return; }
+    const W = work(ri), truth = W.map(w => w.t);
+    W.forEach((w, i) => { const s = Q[i].join(); if (seen.has(s)) fail('taylorturn', key, `${L[i]} comes round twice`); seen.add(s);
+      if (!D[w.id] || !Number.isInteger(w.n) || w.n < 0 || w.n > 5 || Math.abs(w.x) > 2 || Math.round(w.x * 2) !== w.x * 2) fail('taylorturn', key, `${L[i]} is not eˣ, sin x or cos x up to x⁵ at a half-step x from −2 to 2`);
+      if (S.ks(i).join() !== w.ks.join() || Math.abs(S.P(i) - w.Px) > 1e-12 || Math.abs(S.f(i) - w.fx) > 1e-12 || S.next(i) !== w.nx) fail('taylorturn', key, `${L[i]}'s P is worked as ${S.ks(i).join()} to ${S.P(i)}, not ${w.ks.join()} to ${w.Px}`);
+      for (let k = 0; k <= 8; k++) if (Math.abs(S.c(i, k) - co(w.id, k)) > 1e-15) fail('taylorturn', key, `${L[i]}'s x${sup(k)} coefficient is ${S.c(i, k)}, not ${co(w.id, k)}`);
+      // the rule the player is given must give the same call as the numbers
+      if (w.x !== 0) {
+        if (Math.abs(w.rest) >= Math.abs(w.v)) fail('taylorturn', key, `in ${L[i]} the first term left out does not outweigh the rest, so the rule cannot settle it`);
+        if (-Math.sign(w.v) !== w.t) fail('taylorturn', key, `${L[i]}'s call by the rule is not its call by the numbers`);
+        if (Math.abs(w.Px - w.fx) < 5e-4) fail('taylorturn', key, `${L[i]}'s P and f are too close to tell apart at four places`);
+      }
+      if (S.ptext(i) !== w.text || S.pshort(i) !== w.short) fail('taylorturn', key, `${L[i]}'s P is written ${S.ptext(i)}, not ${w.text}`); });
+    if (truth.some((t, i) => S.truth(i) !== t)) fail('taylorturn', key, `its calls are ${[0, 1, 2, 3].map(i => S.truth(i)).join()}, not ${truth.join()}`);
+    if (new Set(truth).size < 2) fail('taylorturn', key, 'every P is called the same');
+    // what the round holds, found afresh: eˣ at a negative x, a missing next power, and x = 0
+    const ng = [], sk = [], zr = [];
+    W.forEach((w, i) => { if (w.id === 'exp' && w.x < 0) ng.push(i); if (w.skip) sk.push(i); if (w.x === 0) zr.push(i); });
+    const tags = [ng.length ? 'neg' : null, sk.length ? 'skip' : null, zr.length ? 'zero' : null].filter(Boolean);
+    if (S.tags().join() !== tags.join()) fail('taylorturn', key, `it is told as holding ${S.tags().join() || 'nothing'}, not ${tags.join() || 'nothing'}`);
+    // every P called wrong, one at a time, both wrong ways
+    W.forEach((w, i) => {
+      const fn = NM[w.id];
+      for (const k of [1, 0, -1]) {
+        if (k === w.t) continue;
+        reset(); S.ri = ri; S.calls = truth.slice(); S.calls[i] = k; S.check(); checks++; wrongs++;
+        const line = w.x === 0
+          ? `In ${L[i]}, x = 0: every power of x is 0 there, and so is every term left out, so P and ${fn} are both ${nm(w.fx)}, exactly. You had it as ${WD[k]}.`
+          : `In ${L[i]}, P = ${w.text} at x = ${neg(w.x)} is ${w.ks.length ? `${w.ks.map(j => pv(co(w.id, j) * w.x ** j)).join(' + ')} = ${fm(w.Px)}` : '0'}, and ${fn} there is ${fm(w.fx)}. ` +
+            `The first term left out, ${co(w.id, w.nx) < 0 ? '−' : ''}${tm(w.nx)} ${eqv(w.v)}, is ${w.v > 0 ? 'above' : 'below'} 0, so P is ${WD[w.t]} by ${fm(Math.abs(w.Px - w.fx))}. You had it as ${WD[k]}.`;
+        const want = ['3 of 4 right. Fix the ones in red and check again.', line, '0 called right on the first check this visit.'];
+        const got = S.working();
+        if (got.join(' | ') !== want.join(' | ')) fail('taylorturn', key, `with ${L[i]} called ${WD[k]} the readout is ${got.join(' | ')}`);
+        const svg = S.svg();
+        if ((svg.match(/data-k="miss"/g) || []).length !== 1 || /data-k="(poly|pdot|over|exact|under)"/.test(svg)) fail('taylorturn', key, `with ${L[i]} wrong, the wrong pane is not ringed alone or a polynomial is given away`);
+        if (S.solved || S.streak) fail('taylorturn', key, 'a wrong set of calls is counted');
+        S.call(i, w.t);
+        if (S.marks[i] !== null || /data-k="miss"/.test(S.svg())) fail('taylorturn', key, `changing ${L[i]} leaves its ring`);
+        if (S.working().join(' | ') !== ['3 of 4 right. Check again.', '0 called right on the first check this visit.'].join(' | ')) fail('taylorturn', key, `after changing ${L[i]} the readout is ${S.working().join(' | ')}`);
+        S.check();
+        if (!S.solved || !S.fixed || S.wins) fail('taylorturn', key, `fixing ${L[i]} is not counted as a fix`);
+      }
+    });
+    // all four right on the first check, called with the buttons
+    reset(); S.ri = ri;
+    if (!/id="tytCheck" disabled /.test(S.html())) fail('taylorturn', key, 'the check is open before the calls are made');
+    for (let skip = 0; skip < 4; skip++) {
+      S.calls = truth.map((t, i) => (skip === i ? null : t));
+      if (!/id="tytCheck" disabled /.test(S.html())) fail('taylorturn', key, `the check opens with ${L[skip]} uncalled`);
+      S.check();
+      if (S.tries || S.marks) fail('taylorturn', key, `a check runs with ${L[skip]} uncalled`);
+    }
+    S.calls = [null, null, null, null];
+    const h0 = S.html();
+    truth.forEach((t, i) => {
+      const m = h0.match(new RegExp(`onclick="TaylorTurn\\.call\\(${i},(-?[01])\\)" aria-label="${L[i]}: ${NAME[t]}"`));
+      if (!m || +m[1] !== t) fail('taylorturn', key, `the button for ${L[i]} ${NAME[t]} does not call it`);
+      else S.call(i, +m[1]);
+      if ((h0.match(new RegExp(`TaylorTurn\\.call\\(${i},`, 'g')) || []).length !== 3) fail('taylorturn', key, `${L[i]} does not offer over, exact and under`);
+      if (!h0.includes(`${L[i]} <span class="small">${NM[W[i].id]} up to ${pw(W[i].n)}, x = ${neg(W[i].x)}</span>`)) fail('taylorturn', key, `${L[i]}'s buttons are not labelled with its function`);
+    });
+    if (S.calls.join() !== truth.join()) fail('taylorturn', key, 'the buttons cannot make the right calls');
+    if (/id="tytCheck" disabled /.test(S.html())) fail('taylorturn', key, 'the check stays shut with every P called');
+    S.check(); checks++;
+    const want = ['Yes: all four are called right.'];
+    if (ng.length) { const w = W[ng[0]]; want.push(`In ${L[ng[0]]}, x is negative, so the terms of eˣ take turns in sign: P stops before ${tm(w.nx)}, which is ${w.v > 0 ? 'above' : 'below'} 0 there, so P comes out ${WD[w.t]}.`); }
+    if (sk.length) { const w = W[sk[0]]; want.push(`In ${L[sk[0]]}, ${NM[w.id]} has no ${pw(w.n + 1)} term, so the first term left out of P = ${w.text} is ${co(w.id, w.nx) < 0 ? '−' : ''}${tm(w.nx)}, two powers on.`); }
+    if (zr.length) { const w = W[zr[0]]; want.push(`In ${L[zr[0]]}, x = 0: every power of x is 0 there, so P is exactly ${NM[w.id]}, ${nm(w.fx)}.`); }
+    want.push(`Each P, then f: ${W.map((w, i) => `${L[i]} ${nm(w.Px)} ${SIGN[w.t]} ${nm(w.fx)}`).join(', ')}.`);
+    want.push('1 called right on the first check this visit.');
+    if (S.working().join(' | ') !== want.join(' | ')) fail('taylorturn', key, `once called the readout is ${S.working().join(' | ')}`);
+    // the drawing: each function, polynomial and dot read back off its pane to one scale
+    const svg = S.svg();
+    const groups = [...svg.matchAll(/<g clip-path="url\(#tytClip(\d)\)">([\s\S]*?)<\/g>/g)].map(m => [+m[1], m[2]]);
+    if (groups.length !== 4) fail('taylorturn', key, 'not every pane is drawn');
+    else W.forEach((w, i) => {
+      const g = groups[i][1], X = (i % 2) * 180, Y = Math.floor(i / 2) * 130;
+      const ax = g.match(/data-k="axis" x1="([^"]+)" y1="([^"]+)" x2="([^"]+)"/), pa = g.match(/data-k="curve" d="([^"]+)"/), po = g.match(/data-k="poly" d="([^"]+)"/);
+      if (groups[i][0] !== i || !ax || !pa || !po) { fail('taylorturn', key, `${L[i]} is missing its axis, function or polynomial`); return; }
+      const x0 = +ax[1], y0 = +ax[2], kx = (+ax[3] - x0) / 4.4, T = sx => (sx - x0) / kx - 2.2;
+      const read = d => [...d.matchAll(/[ML]([-\d.]+) ([-\d.]+)/g)].map(m => [+m[1], +m[2]]);
+      const pts = read(pa[1]), qts = read(po[1]);
+      const far = pts.reduce((p, q) => (Math.abs(q[1] - y0) > Math.abs(p[1] - y0) ? q : p));
+      const ky = (y0 - far[1]) / w.f(T(far[0]));
+      if (!(kx > 0) || !(ky > 0)) { fail('taylorturn', key, `${L[i]}'s function has no scale to read`); return; }
+      const X0 = t => x0 + (t + 2.2) * kx, Y0 = v => y0 - v * ky;
+      const off = (P, g) => P.some(([x, y]) => y > Y - 39.9 && y < Y + 169.9 && Math.abs(Y0(g(T(x))) - y) > 0.03) || Math.abs(T(P[0][0]) + 2) > 0.01 || Math.abs(T(P[P.length - 1][0]) - 2) > 0.01;
+      if (off(pts, w.f)) fail('taylorturn', key, `${L[i]}'s function, read back off the drawing, is not ${NM[w.id]} from −2 to 2`);
+      if (off(qts, w.P)) fail('taylorturn', key, `${L[i]}'s polynomial, read back off the drawing, is not ${w.text}`);
+      if (pts.some(([x, y]) => y < Y + 34 || y > Y + 124 || x < X + 4 || x > X + 176)) fail('taylorturn', key, `${L[i]}'s function runs into its labels or out of its pane`);
+      const at = g.match(/data-k="at" x1="([^"]+)"/), fd = g.match(/data-k="fdot" cx="([^"]+)" cy="([^"]+)"/), pd = g.match(/data-k="pdot" cx="([^"]+)" cy="([^"]+)"/);
+      if (!at || Math.abs(+at[1] - X0(w.x)) > 0.01) fail('taylorturn', key, `${L[i]}'s dashed line is not at x = ${neg(w.x)}`);
+      if (!fd || Math.abs(+fd[1] - X0(w.x)) > 0.01 || Math.abs(+fd[2] - Y0(w.fx)) > 0.02) fail('taylorturn', key, `${L[i]}'s gold dot is not on ${NM[w.id]} at x = ${neg(w.x)}`);
+      if (!pd || Math.abs(+pd[1] - X0(w.x)) > 0.01 || Math.abs(+pd[2] - Y0(w.Px)) > 0.02 || +pd[2] < Y + 4 || +pd[2] > Y + 126) fail('taylorturn', key, `${L[i]}'s blue dot is not on P at x = ${neg(w.x)}, inside its pane`);
+      if (!svg.includes(`>P = ${w.short}</text>`) || !svg.includes(`>${NM[w.id]} at x = ${neg(w.x)}</text>`)) fail('taylorturn', key, `${L[i]}'s P and x are not written on its pane`);
+      panes++;
+    });
+    const marks = [...svg.matchAll(/data-k="(over|exact|under)"[^>]*>([^<]*)</g)].map(m => m[1] + ' ' + m[2]);
+    if (marks.join() !== W.map(w => MARK[w.t]).join()) fail('taylorturn', key, `the panes are marked ${marks.join()}`);
+    const hh = S.html();
+    if (!hh.includes('id="tytNext"') || /onclick="TaylorTurn\.call/.test(hh.replace(/disabled onclick="TaylorTurn\.call/g, ''))) fail('taylorturn', key, 'once called, Next is not offered or a call still opens');
+    const before = S.calls.join(); S.call(0, truth[0] === 1 ? 0 : 1);
+    if (S.calls.join() !== before) fail('taylorturn', key, 'a call moves after the round is right');
+    S.deal();
+    if (S.ri !== (ri + 1) % 6 || S.solved || S.marks || S.tries || S.calls.some(c => c !== null)) fail('taylorturn', key, 'Next does not deal the next round fresh');
+  });
+  // the hunt, played as a player would: a slip fixed, then first checks round the rounds
+  reset(); S.html();
+  if (S.done.size) fail('taylorturn', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const right = work(S.ri).map(w => w.t);
+    S.calls = right.slice(); if (slip) S.calls[1] = right[1] === 1 ? -1 : 1;
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(1, right[1]); S.html(); S.check(); S.html(); } S.deal(); return [...S.done].sort().join(); };
+  const plan = [[true, 'fix,neg,skip,zero'], [false, 'fix,neg,one,skip,zero'], [false, 'fix,neg,one,skip,zero'], [false, 'fix,neg,one,skip,three,zero']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('taylorturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Signs that take turns · Skip the missing power · Exact at the centre · A slip caught and fixed | ✓ Right on the first check') fail('taylorturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'CUTOFF READER / every guess called') fail('taylorturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -22682,6 +22851,7 @@ console.log(`  products called   ${pad(productTurnNotes.checks.toLocaleString(),
 console.log(`  ladders called    ${pad(ladderTurnNotes.checks.toLocaleString(), 12)}  (checks of four ladders called faster, just as fast or slower than the foot in the ladder workshop, ${ladderTurnNotes.wrongs} of them with one ladder called wrong and caught, and ${ladderTurnNotes.panes} ladders read back off the drawing)`);
 console.log(`  populations called ${pad(logiTurnNotes.checks.toLocaleString(), 12)}  (checks of four populations called growing, holding or shrinking in the logistic workshop, ${logiTurnNotes.wrongs} of them with one population called wrong and caught, and ${logiTurnNotes.panes} rate curves read back off the drawing)`);
 console.log(`  sums called      ${pad(areaTurnNotes.checks.toLocaleString(), 12)}  (checks of four rectangle sums called over, exact or under the area in the area workshop, ${areaTurnNotes.wrongs} of them with one sum called wrong and caught, and ${areaTurnNotes.panes} curves read back off the drawing)`);
+console.log(`  guesses called    ${pad(taylorTurnNotes.checks.toLocaleString(), 12)}  (checks of four cut-off series called over, exact or under the function in the Taylor workshop, ${taylorTurnNotes.wrongs} of them with one guess called wrong and caught, and ${taylorTurnNotes.panes} functions and polynomials read back off the drawing)`);
 console.log(`  undos named       ${pad(undoSortNotes.checks.toLocaleString(), 12)}  (checks of four matrices named as undone by A, by Aᵀ, by another matrix or by nothing in the undo workshop, each inverted here by its adjugate; ${undoSortNotes.wrongs} of them with one matrix named wrong and caught, and ${undoSortNotes.cells} cells drawn and read back)`);
 console.log(`  races ranked      ${pad(horizonRaceNotes.checks.toLocaleString(), 12)}  (checks of a ranked race in the horizon workshop, ${horizonRaceNotes.wrongs} of them in a wrong order and caught, with ${horizonRaceNotes.pairs} wrong pairs worked)`);
 console.log(`  polynomials matched ${pad(charMatchNotes.checks.toLocaleString(), 14)}  (checks of four matrices matched to their det(A − λI) in the eigenvalue detective, ${charMatchNotes.wrongs} of them with one matrix matched wrong and caught, and ${charMatchNotes.curves} curves read back through their own polynomials)`);

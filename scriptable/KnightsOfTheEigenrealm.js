@@ -1183,7 +1183,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ TAYLOR WORKSHOP ============ -->
   <div class="screen" id="s-taylor">
     <div class="panel"><h2>🌀 Taylor Workshop</h2><div class="sub">eˣ, sin x and cos x can each be built from powers of x, one term at a time. Add terms, move x, and watch the polynomial close in on the curve, fast near 0 and slower far from it.</div></div>
-    <div id="tyTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build the series by hand or pick a coefficient"></div>
+    <div id="tyTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Build the series by hand, pick a coefficient, or call each cut-off series over or under"></div>
     <div class="panel">
       <div id="srBox"></div>
       <div id="tyCurves" class="wsModes" role="group" aria-label="Function"></div>
@@ -15561,7 +15561,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21422,6 +21422,206 @@ const SeriesPick = {
     return out;
   }
 };
+/* ---------- Over or under? The Taylor workshop's third mode ----------
+   Four functions, each cut off after a few terms of its series and read at
+   one x, and the player calls whether each polynomial P is over the
+   function there, exactly on it, or under it. f(x) is P(x) plus every term
+   left out, and at these x the first term left out outweighs all the rest,
+   so its sign settles the call: above 0 and P falls short, below 0 and P
+   overshoots, and at x = 0 every power of x is 0, so P is exact. Each pane
+   draws the function and marks the x; the polynomial stays hidden. Rounds
+   hold eˣ at a negative x, where the terms take turns in sign; a P whose
+   next power is missing, so the first term left out is two powers on; and
+   x = 0. A slip rings that pane and works P, f and the first term left out
+   through; once all four are right, each pane draws its polynomial.
+   Nothing is saved, and there is no clock. */
+const TaylorTurn = {
+  FN:{exp:'eˣ', sin:'sin x', cos:'cos x'},
+  // [function, highest power kept, x]
+  ROUNDS:[
+    [['exp',2,1], ['exp',2,-1], ['sin',1,1], ['cos',1,0]],
+    [['exp',3,0], ['cos',2,1], ['sin',2,0.5], ['exp',2,-1.5]],
+    [['cos',0,1], ['exp',1,-1], ['sin',3,-1], ['exp',3,1]],
+    [['sin',0,1.5], ['exp',0,-1], ['cos',3,0], ['cos',4,1.5]],
+    [['exp',4,-2], ['sin',4,1], ['cos',1,-1.5], ['sin',1,0]],
+    [['cos',3,-1], ['exp',1,-2], ['sin',1,1.5], ['exp',5,1]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',  t:'Call all four right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'neg',  t:'Call eˣ at a negative x.', toast:'Signs that take turns',
+     ok:K=>K.kinds.has('neg')},
+    {id:'skip', t:'Call a P whose next power is missing.', toast:'Skip the missing power',
+     ok:K=>K.kinds.has('skip')},
+    {id:'zero', t:'Call a P at x = 0.', toast:'Exact at the centre',
+     ok:K=>K.kinds.has('zero')},
+    {id:'fix',  t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three',t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'f(x) is P(x) plus every term left out, and here the first term left out outweighs all the rest. So P is under f when that term is above 0, over f when it is below 0, and exact at x = 0, where every power of x is 0. Mind the gaps: sin x and cos x skip every other power.',
+  L:'ABCD',
+  WORD:{1:'over', 0:'exact', [-1]:'under'},
+  NAMES:{1:'P is over f', 0:'P is exactly f', [-1]:'P is under f'},
+  R(){ return this.ROUNDS[this.ri]; },
+  id(i){ return this.R()[i][0]; },
+  n(i){ return this.R()[i][1]; },
+  x(i){ return this.R()[i][2]; },
+  fact(k){ let p=1; for(let j=2;j<=k;j++) p*=j; return p; },
+  // the coefficient of xᵏ in the series at 0
+  c(i,k){
+    const id=this.id(i), s=this.fact(k);
+    if(id==='exp') return 1/s;
+    if(id==='sin') return k%2 ? ((k-1)/2%2 ? -1 : 1)/s : 0;
+    return k%2 ? 0 : (k/2%2 ? -1 : 1)/s;
+  },
+  ks(i){ const out=[]; for(let k=0;k<=this.n(i);k++) if(this.c(i,k)!==0) out.push(k); return out; },
+  val(i,k,x=this.x(i)){ return this.c(i,k)*Math.pow(x,k); },
+  P(i,x=this.x(i)){ return this.ks(i).reduce((s,k)=>s+this.val(i,k,x),0); },
+  f(i,x=this.x(i)){ return Math[this.id(i)](x); },
+  // the first power the polynomial leaves out that the series has
+  next(i){ let k=this.n(i)+1; while(this.c(i,k)===0) k++; return k; },
+  truth(i){ if(this.x(i)===0) return 0; const d=this.P(i)-this.f(i); return Math.abs(d)<1e-12 ? 0 : Math.sign(d); },
+  sup(k){ return String(k).replace(/\\d/g, d=>'⁰¹²³⁴⁵⁶⁷⁸⁹'[d]); },
+  pw(k){ return k===1 ? 'x' : \`x\${this.sup(k)}\`; },
+  term(k){ return k===0 ? '1' : k===1 ? 'x' : \`x\${this.sup(k)}/\${k}!\`; },
+  sterm(i,k){ return (this.c(i,k)<0?'−':'')+this.term(k); },
+  eq(v){ const s=this.fmt(v); return s.startsWith('≈') ? s : '= '+s; },
+  // a number to four places, with ≈ when that rounds it
+  num(v){ const r=+v.toFixed(4); return neg(Object.is(r,-0)?0:r); },
+  fmt(v){ return (Math.abs(+v.toFixed(4)-v)<1e-12 ? '' : '≈ ')+this.num(v); },
+  pv(v){ return v<0 ? \`(\${this.fmt(v)})\` : this.fmt(v); },
+  ptext(i){
+    const ks=this.ks(i); if(!ks.length) return '0';
+    return ks.map((k,j)=>{ const s=this.c(i,k)<0; return (j ? (s?' − ':' + ') : (s?'−':''))+this.term(k); }).join('');
+  },
+  // the same, with the middle terms cut to … when there are more than four, to fit a pane
+  pshort(i){
+    const ks=this.ks(i); if(ks.length<=4) return this.ptext(i);
+    const k=ks[ks.length-1], s=this.c(i,k)<0;
+    return this.ptext(i).split(/ (?=[+−] )/).slice(0,2).join(' ')+\` + … \${s?'−':'+'} \${this.term(k)}\`;
+  },
+  negs(){ return [0,1,2,3].filter(i=>this.id(i)==='exp' && this.x(i)<0); },
+  skips(){ return [0,1,2,3].filter(i=>this.x(i)!==0 && this.c(i,this.n(i)+1)===0); },
+  zeros(){ return [0,1,2,3].filter(i=>this.x(i)===0); },
+  tags(){ const t=[]; if(this.negs().length) t.push('neg'); if(this.skips().length) t.push('skip'); if(this.zeros().length) t.push('zero'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const ng=this.negs(), sk=this.skips(), zr=this.zeros();
+      if(ng.length){ const i=ng[0], k=this.next(i), t=this.truth(i);
+        out.push(\`In \${this.L[i]}, x is negative, so the terms of eˣ take turns in sign: P stops before \${this.term(k)}, which is \${this.val(i,k)>0?'above':'below'} 0 there, so P comes out \${this.WORD[t]}.\`); }
+      if(sk.length){ const i=sk[0], k=this.next(i);
+        out.push(\`In \${this.L[i]}, \${this.FN[this.id(i)]} has no \${this.pw(this.n(i)+1)} term, so the first term left out of P = \${this.ptext(i)} is \${this.sterm(i,k)}, two powers on.\`); }
+      if(zr.length){ const i=zr[0];
+        out.push(\`In \${this.L[i]}, x = 0: every power of x is 0 there, so P is exactly \${this.FN[this.id(i)]}, \${this.num(this.f(i))}.\`); }
+      out.push(\`Each P, then f: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.num(this.P(i))} \${{1:'>',0:'=',[-1]:'<'}[this.truth(i)]} \${this.num(this.f(i))}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const t=this.truth(i), fn=this.FN[this.id(i)], x=this.x(i);
+        if(x===0){
+          out.push(\`In \${this.L[i]}, x = 0: every power of x is 0 there, and so is every term left out, so P and \${fn} are both \${this.num(this.f(i))}, exactly. You had it as \${this.WORD[this.calls[i]]}.\`);
+          continue; }
+        const ks=this.ks(i), k=this.next(i), v=this.val(i,k);
+        const sum = ks.length ? \`\${ks.map(j=>this.pv(this.val(i,j))).join(' + ')} = \${this.fmt(this.P(i))}\` : '0';
+        out.push(\`In \${this.L[i]}, P = \${this.ptext(i)} at x = \${neg(x)} is \${sum}, and \${fn} there is \${this.fmt(this.f(i))}. The first term left out, \${this.sterm(i,k)} \${this.eq(v)}, is \${v>0?'above':'below'} 0, so P is \${this.WORD[t]} by \${this.fmt(Math.abs(this.P(i)-this.f(i)))}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the function in gold across −2 to 2, the x-axis, and a dashed
+     line at x with a dot where it meets the function; once the round is
+     right, the polynomial in blue with its own dot at x */
+  lo(i){ return this.id(i)==='exp' ? -0.6 : -1.3; },
+  hi(i){ return this.id(i)==='exp' ? 7.6 : 1.3; },
+  svg(){
+    const Q=this.R(), f=n=>n.toFixed(2);
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four functions, each cut off after a few terms: \${Q.map((q,i)=>\`\${this.L[i]}, \${this.FN[this.id(i)]} up to \${this.pw(this.n(i))}, at x = \${neg(this.x(i))}\`).join('; ')}\${this.solved?', each with its polynomial drawn':''}">\`;
+    Q.forEach((q,i)=>{
+      const X=(i%2)*180, Y=Math.floor(i/2)*130, lo=this.lo(i), hi=this.hi(i);
+      const kx=150/4.4, ky=84/(hi-lo), px=t=>X+15+(t+2.2)*kx, py=v=>Y+118-(v-lo)*ky, x=this.x(i);
+      out+=\`<clipPath id="tytClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#tytClip\${i})">\`;
+      out+=\`<line data-k="axis" x1="\${f(px(-2.2))}" y1="\${f(py(0))}" x2="\${f(px(2.2))}" y2="\${f(py(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      out+=\`<line data-k="at" x1="\${f(px(x))}" y1="\${Y+34}" x2="\${f(px(x))}" y2="\${Y+124}" stroke="\${FIG_COL.dim}" stroke-width="1" stroke-dasharray="3 3"/>\`;
+      const path=g=>{ const pts=[]; for(let j=0;j<=60;j++){ const t=-2+4*j/60; pts.push((j?'L':'M')+f(px(t))+' '+f(Math.max(Y-40,Math.min(Y+170,py(g(t)))))); } return pts.join(''); };
+      out+=\`<path data-k="curve" d="\${path(t=>this.f(i,t))}" fill="none" stroke="\${FIG_COL.b}" stroke-width="2"/>\`;
+      if(this.solved){
+        out+=\`<path data-k="poly" d="\${path(t=>this.P(i,t))}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2" stroke-dasharray="5 3"/>\`;
+        out+=\`<circle data-k="pdot" cx="\${f(px(x))}" cy="\${f(py(this.P(i)))}" r="3.5" fill="\${FIG_COL.a}"/>\`;
+      }
+      out+=\`<circle data-k="fdot" cx="\${f(px(x))}" cy="\${f(py(this.f(i)))}" r="3.5" fill="\${FIG_COL.b}"/>\`;
+      out+=\`</g>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+17}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">P = \${this.pshort(i)}</text>\`;
+      out+=\`<text data-k="how" x="\${X+172}" y="\${Y+30}" fill="\${FIG_COL.dim}" font-size="11" text-anchor="end">\${this.FN[this.id(i)]} at x = \${neg(x)}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'over',0:'exact',[-1]:'under'}[t]}" x="\${X+172}" y="\${Y+43}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${{1:'▲ over',0:'= exact',[-1]:'▼ under'}[t]}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Taylor.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Taylor.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Taylor.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="TaylorTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const Q=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four functions, each cut off after a few terms of its series and read at one x. Is each P over the function there, exactly on it, or under it?</div>\`;
+    out+=\`<div id="tytFig">\${this.svg()}<div class="figcap">Each pane draws its function in gold, with a dashed line and a dot at x. Once all four are called right, each polynomial is drawn in blue.</div></div>\`;
+    out+=\`<div id="tytStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+Q.map((q,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="tytStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 4;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">\${this.FN[this.id(i)]} up to \${this.pw(this.n(i))}, x = \${neg(this.x(i))}</span></b>\`+
+        this.btn(i,1,'▲ Over')+this.btn(i,0,'= Exact')+this.btn(i,-1,'▼ Under')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="tytRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tytNext" onclick="TaylorTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tytCheck" \${this.ready()?'':'disabled '}onclick="TaylorTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="tytGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tytGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CUTOFF READER','every guess called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Taylor = {
   CURVES:[
     {id:'exp', at:'eˣ', f:{fn:'exp'},
@@ -21513,11 +21713,11 @@ const Taylor = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x']]
+    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Taylor.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['tyCurves','tyFig','tyStep','tyRead','tyGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('srBox').innerHTML=pick ? SeriesPick.html() : '';
+    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : TaylorTurn.html();
     if(pick) return;
     const C=this.curve(), n=this.n, x=this.x();
     document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>
