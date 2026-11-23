@@ -52,7 +52,7 @@ module.exports = {
     t.ok('the rule comes before anything is called', r.startsWith('Each night some of A’s knights ride out to B and some of B’s ride in to A. Work both:'), r);
     t.ok('nothing is called yet', /0 of 4 called\./.test(r), r);
     t.eq('four pairs of castles are drawn and lettered', await t.ev(() => document.querySelectorAll('#cstFig [data-k="barA"]').length + ' ' +
-      [...document.querySelectorAll('#cstFig text')].map(x => x.textContent).filter(x => /^[A-D]$/.test(x)).join('')), '4 ABCD');
+      [...document.querySelectorAll('#cstFig text[font-size="14"]')].map(x => x.textContent).join('')), '4 ABCD');
     t.ok('no next night gives the answer away', await t.ev(() => !document.querySelector('#cstFig [data-k="nextA"], #cstFig [data-k="gain"], #cstFig [data-k="hold"], #cstFig [data-k="lose"]')));
     t.ok('the check is shut until all four are called', await t.ev(() => { const b = document.getElementById('cstCheck'); return b.disabled && b.getAttribute('aria-label') === 'Call all four castles to check them'; }));
 
