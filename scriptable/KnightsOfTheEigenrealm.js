@@ -27250,7 +27250,7 @@ const LatheTurn = {
     return out;
   },
   /* each pane: both solids seen from the side, to one scale, about the
-     dashed axis: f and its mirror in gold, g and its mirror in blue. The
+     dashed axis: f and its mirror in blue, g and its mirror in gold. The
      volumes are written under the window once the round is right. */
   PW:156, PH:72,
   svg(){
@@ -27300,7 +27300,7 @@ const LatheTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four pairs of curves, each spun round the x-axis. Does f's solid hold more than g's, the same, or less?</div>\`;
-    out+=\`<div id="lhtFig">\${this.svg()}<div class="figcap">Each pane shows both solids from the side: f and its mirror in gold, g and its mirror dashed in blue, about the dashed axis. Once all four are called right, the volumes are written in.</div></div>\`;
+    out+=\`<div id="lhtFig">\${this.svg()}<div class="figcap">Each pane shows both solids from the side: f and its mirror in blue, g and its mirror dashed in gold, about the dashed axis. Once all four are called right, the volumes are written in.</div></div>\`;
     out+=\`<div id="lhtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="lhtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -27652,8 +27652,8 @@ const SwapTurn = {
     out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
     return out;
   },
-  /* each pane: the integral, with what stands outside the bracket in gold
-     and the bracket in blue, and its u. Once the round is right, du and what
+  /* each pane: the integral, with what stands outside the bracket in blue
+     and the bracket in gold, and its u. Once the round is right, du and what
      the swap gives are written in. */
   svg(){
     let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four integrals, each with its u: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.integral(i)} with u = \${this.inner(i)}\`).join('; ')}\${this.solved?', each with du and what the swap gives written in':''}">\`;
@@ -27695,7 +27695,7 @@ const SwapTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four integrals, each with u the bracket. Is the rest du exactly, du up to a number, or does an x get left over?</div>\`;
-    out+=\`<div id="swtFig">\${this.svg()}<div class="figcap">What stands outside the bracket is in gold and the bracket in blue. Once all four are called right, du and what the swap gives are written in.</div></div>\`;
+    out+=\`<div id="swtFig">\${this.svg()}<div class="figcap">What stands outside the bracket is in blue and the bracket in gold. Once all four are called right, du and what the swap gives are written in.</div></div>\`;
     out+=\`<div id="swtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="swtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -28504,7 +28504,7 @@ const PartsTurn = {
     out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
     return out;
   },
-  /* each pane: the integral, its u in gold and its dv in blue. Once the
+  /* each pane: the integral, its u in blue and its dv in gold. Once the
      round is right, du, v and what parts leaves are written in. */
   svg(){
     let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four integrals split for parts: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.integral(i)} with u = \${this.show(this.R()[i][0])} and dv = \${this.R()[i][1]==='1'?'':this.show(this.R()[i][1])+' '}dx\`).join('; ')}\${this.solved?', each with du, v and what parts leaves written in':''}">\`;
@@ -28546,7 +28546,7 @@ const PartsTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four integrals, each split into u and dv. Is what parts leaves, ∫ v du, easier, the same kind, or harder?</div>\`;
-    out+=\`<div id="pttFig">\${this.svg()}<div class="figcap">Each u is in gold and each dv in blue. Once all four are called right, du, v and what parts leaves are written in.</div></div>\`;
+    out+=\`<div id="pttFig">\${this.svg()}<div class="figcap">Each u is in blue and each dv in gold. Once all four are called right, du, v and what parts leaves are written in.</div></div>\`;
     out+=\`<div id="pttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="pttStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -30138,7 +30138,7 @@ const CoverTurn = {
   // the number line runs from −M to M, M the larger size of A and B, at least 1
   span(i){ return Math.max(1, Math.abs(this.A(i)), Math.abs(this.B(i))); },
   /* each pane: the fraction stacked, top over bottom, and its split. Once the
-     round is right, A in gold and B in blue are set on a number line. */
+     round is right, A in blue and B in gold are set on a number line. */
   svg(){
     let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four fractions to split: \${[0,1,2,3].map(i=>\`\${this.L[i]}, \${this.frac(i)} = \${this.split(i)}\`).join('; ')}\${this.solved?', each with A and B written in and set on a number line':''}">\`;
     for(let i=0;i<4;i++){
@@ -30185,7 +30185,7 @@ const CoverTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four fractions, each split as A over one factor plus B over the other. Is A bigger than B, the same, or smaller?</div>\`;
-    out+=\`<div id="cvtFig">\${this.svg()}<div class="figcap">Each fraction is written top over bottom with its split. Once all four are called right, A in gold and B in blue are written in and set on a number line.</div></div>\`;
+    out+=\`<div id="cvtFig">\${this.svg()}<div class="figcap">Each fraction is written top over bottom with its split. Once all four are called right, A in blue and B in gold are written in and set on a number line.</div></div>\`;
     out+=\`<div id="cvtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="cvtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -30621,7 +30621,7 @@ const SliceTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four planes, each over a rectangle with a box beside it. Does the solid under the plane hold more than the box, the same, or less?</div>\`;
-    out+=\`<div id="sltFig">\${this.svg()}<div class="figcap">Each rectangle is seen from above, with its plane in blue and its box in gold. Once all four are called right, the corner heights are written in and the centre is marked in green with its height.</div></div>\`;
+    out+=\`<div id="sltFig">\${this.svg()}<div class="figcap">Each rectangle is seen from above, with its plane in gold and its box in blue. Once all four are called right, the corner heights are written in and the centre is marked in green with its height.</div></div>\`;
     out+=\`<div id="sltStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="sltStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -31463,7 +31463,7 @@ const ArrowTurn = {
     out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
     return out;
   },
-  /* each pane: u in gold and v in blue from the origin, 6 to a unit, with
+  /* each pane: u in blue and v in gold from the origin, 6 to a unit, with
      both written beside them. Once the round is right, the parallelogram's
      sides are dotted in, u + v is drawn from the origin in green and u − v
      from v's tip to u's tip, and both squared lengths are written. */
@@ -31515,7 +31515,7 @@ const ArrowTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four pairs of arrows u and v. Which diagonal is longer, u + v or u − v, or are they the same?</div>\`;
-    out+=\`<div id="arwFig">\${this.svg()}<div class="figcap">Each pane draws u in gold and v in blue from the origin. Once all four are called right, u + v is drawn in green and u − v dashed across the parallelogram, with their squared lengths written in.</div></div>\`;
+    out+=\`<div id="arwFig">\${this.svg()}<div class="figcap">Each pane draws u in blue and v in gold from the origin. Once all four are called right, u + v is drawn in green and u − v dashed across the parallelogram, with their squared lengths written in.</div></div>\`;
     out+=\`<div id="arwStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="arwStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -32954,10 +32954,10 @@ const QuotTurn = {
     return out;
   },
   /* each pane: a stretch of x either side of the point, dashed at the point.
-     Before the round is right, f is drawn in blue and g in green on one
+     Before the round is right, f is drawn in gold and g in green on one
      scale, so g's sign and both slopes can be read off; once it is right,
-     they give way to y itself in blue, with its tangent at the point in
-     gold, dy/dx written in and the call marked. */
+     they give way to y itself in gold, with its tangent at the point in
+     blue, dy/dx written in and the call marked. */
   svg(){
     let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four fractions y = f over g, each read at one x: \${[0,1,2,3].map(i=>\`\${this.L[i]}, y = \${this.ys(i)} at x = \${this.neg(this.Q(i).x)}\`).join('; ')}\${this.solved?', each drawn with its tangent':''}">\`;
     for(let i=0;i<4;i++){
@@ -33011,7 +33011,7 @@ const QuotTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four fractions y = f/g, each read at one x. Is y rising there, flat, or falling?</div>\`;
-    out+=\`<div id="qttFig">\${this.svg()}<div class="figcap">Each pane draws f in blue and g in green either side of the point, dashed at x. Once all four are called right, y itself is drawn in blue with its tangent in gold.</div></div>\`;
+    out+=\`<div id="qttFig">\${this.svg()}<div class="figcap">Each pane draws f in gold and g in green either side of the point, dashed at x. Once all four are called right, y itself is drawn in gold with its tangent in blue.</div></div>\`;
     out+=\`<div id="qttStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null;
       return \`<div class="qttStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
@@ -33475,13 +33475,13 @@ const AntiTurn = {
     for(let i=0;i<4;i++){
       const {k,p}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i);
       const xs=[]; for(let j=0;j<=40;j++) xs.push(0.5+2*j/40);
-      const curves=[['target',xs.map(u=>k*u**p),FIG_COL.a,true]];
+      const curves=[['target',xs.map(u=>k*u**p),FIG_COL.b,true]];
       if(this.solved) curves.push(['slope',xs.map(u=>m*k*u**p),FIG_COL.c,false]);
       let lo=0, hi=0; for(const [,ys] of curves) for(const v of ys){ lo=Math.min(lo,v); hi=Math.max(hi,v); }
       const px=u=>X+14+(u-0.5)/2*152, py=v=>Y+114-(v-lo)/(hi-lo)*62;
       out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
       out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
-      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.b}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
       out+=\`<text data-k="Fn" x="\${X+172}" y="\${Y+33}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">F = \${this.Fs(i)}</text>\`;
       out+=\`<line data-k="zero" x1="\${X+14}" y1="\${r(py(0))}" x2="\${X+166}" y2="\${r(py(0))}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
       for(const [key,ys,c,dash] of curves)
@@ -34703,13 +34703,13 @@ const TrigTurn = {
     for(let i=0;i<4;i++){
       const {g,a,k}=this.Q(i), X=(i%2)*180, Y=Math.floor(i/2)*130, r=v=>v.toFixed(2), m=this.ratio(i), W=Math[g];
       const xs=[]; for(let j=0;j<=this.N;j++) xs.push(2*Math.PI*j/this.N);
-      const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.a,true]];
+      const curves=[['target',xs.map(u=>a*W(k*u)),FIG_COL.b,true]];
       if(this.solved) curves.push(['slope',xs.map(u=>m*a*W(k*u)),FIG_COL.c,false]);
       let big=0; for(const [,ys] of curves) for(const v of ys) big=Math.max(big,Math.abs(v));
       const px=u=>X+14+u/(2*Math.PI)*152, py=v=>Y+83-v/big*31;
       out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
       out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
-      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.a}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
+      out+=\`<text data-k="fn" x="\${X+172}" y="\${Y+19}" fill="\${FIG_COL.b}" font-size="11" text-anchor="end">f = \${this.fs(i)}</text>\`;
       out+=\`<text data-k="Fn" x="\${X+172}" y="\${Y+33}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">F = \${this.Fs(i)}</text>\`;
       out+=\`<line data-k="zero" x1="\${X+14}" y1="\${Y+83}" x2="\${X+166}" y2="\${Y+83}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
       for(const [key,ys,c,dash] of curves)
@@ -36972,10 +36972,10 @@ const ChordTurn = {
     out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
     return out;
   },
-  /* each pane: f across [a, b] in blue, its chord dashed between the two
+  /* each pane: f across [a, b] in gold, its chord dashed between the two
      ends, and the middle m dashed straight up, with a, m and b along the
-     bottom. Once the round is right, the tangent at c is drawn in gold
-     through a gold point, with c written in and the side it falls on. */
+     bottom. Once the round is right, the tangent at c is drawn in blue
+     through a blue point, with c written in and the side it falls on. */
   svg(){
     let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with its chord and its middle: \${[0,1,2,3].map(i=>{ const {k,a,b}=this.Q(i); return \`\${this.L[i]}, f(x) = \${this.poly(k)} on \${this.fx(a)} to \${this.fx(b)}\`; }).join('; ')}\${this.solved?', each with its tangent at c drawn':''}">\`;
     for(let i=0;i<4;i++){
@@ -37025,7 +37025,7 @@ const ChordTurn = {
   },
   html(){
     let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each with its chord and its middle. Is c, where the tangent runs parallel to the chord, left of the middle, at it, or right of it?</div>\`;
-    out+=\`<div id="cdtFig">\${this.svg()}<div class="figcap">Each pane draws f in blue across [a, b], the chord dashed between the ends and the middle dashed straight up. Once all four are called right, the tangent at c is drawn in gold with c written in.</div></div>\`;
+    out+=\`<div id="cdtFig">\${this.svg()}<div class="figcap">Each pane draws f in gold across [a, b], the chord dashed between the ends and the middle dashed straight up. Once all four are called right, the tangent at c is drawn in blue with c written in.</div></div>\`;
     out+=\`<div id="cdtStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+[0,1,2,3].map(i=>{
       const m=this.marks?this.marks[i]:null, {k,a,b}=this.Q(i);
       return \`<div class="cdtStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+

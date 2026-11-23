@@ -1,61 +1,26 @@
 {
-  "change": "Give every campaign foe a weak point",
+  "change": "Make eight figure captions name the colours they really draw",
   "mutations": [
     {
-      "name": "a weak point adds nothing",
+      "name": "a caption names gold for what is drawn blue",
       "file": "index.html",
-      "find": "  MUL: 1.5,",
-      "replace": "  MUL: 1,",
+      "find": "Once all four are called right, A in blue and B in gold are written in",
+      "replace": "Once all four are called right, A in gold and B in blue are written in",
       "run": "verify"
     },
     {
-      "name": "an arena foe has a weak point",
-      "file": "index.html",
-      "find": "  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },",
-      "replace": "  of(B){ return (B && B.foe && this.OF[B.foe.nm]) || null; },",
+      "name": "a check stands blue and gold the wrong way round",
+      "file": "tools/verify.js",
+      "find": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
+      "replace": "const coverTurnNotes = (() => {\n  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');\n  const script = html.match(/<script>([\\s\\S]*)<\\/script>/)[1];\n  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));\n  const env = { toasts: [], banners: [], renders: 0 };\n  const COL = { axis: 'axis', grid: 'grid', a: 'gold', b: 'blue', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };",
       "run": "verify"
     },
     {
-      "name": "the weak point is named on every hit",
+      "name": "the figures draw a in gold",
       "file": "index.html",
-      "find": "    if(!B.weakHit){ B.weakHit=true;",
-      "replace": "    if(true){ B.weakHit=true;",
+      "find": "a:'#5aa9e6'",
+      "replace": "a:'#f2c14e'",
       "run": "verify"
-    },
-    {
-      "name": "the slime's weak point is a topic of another realm",
-      "file": "index.html",
-      "find": "\"Meadow Slime\":'mag',",
-      "replace": "\"Meadow Slime\":'det2',",
-      "run": "verify"
-    },
-    {
-      "name": "the strike leaves the weak point out",
-      "file": "index.html",
-      "find": "* Phase.bonus(this) * Weak.bonus(this);",
-      "replace": "* Phase.bonus(this);",
-      "run": "verify"
-    },
-    {
-      "name": "the question line never shows the chip",
-      "file": "index.html",
-      "find": "      Weak.chip(this);",
-      "replace": "      '';",
-      "run": "play:weakpoint"
-    },
-    {
-      "name": "a right answer on the weak point is not said",
-      "file": "index.html",
-      "find": "      const weak=Weak.hit(this);",
-      "replace": "      const weak=false;",
-      "run": "play:weakpoint"
-    },
-    {
-      "name": "the Bestiary leaves the weak point out",
-      "file": "index.html",
-      "find": "color:#7ff0a8\">${Weak.line(f)}</div>",
-      "replace": "color:#7ff0a8\"></div>",
-      "run": "play:weakpoint"
     }
   ]
 }
