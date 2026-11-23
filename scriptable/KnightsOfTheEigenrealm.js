@@ -1207,7 +1207,7 @@ details.strand[open]>summary .schev{transform:rotate(90deg)}
   <!-- ============ NEWTON'S METHOD ============ -->
   <div class="screen" id="s-newton">
     <div class="panel"><h2>🔎 Newton's Method Workshop</h2><div class="sub">Guess where a curve crosses the axis, then follow the tangent at your guess down to the axis: where it lands is a better guess. Step again and again, and watch a root run down in a few steps, or watch the method go astray.</div></div>
-    <div id="nwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step by hand or pick x₁"></div>
+    <div id="nwTab" class="wsModes" style="flex-wrap:wrap" role="group" aria-label="Step by hand, pick x₁, or call each step"></div>
     <div class="panel">
       <div id="nkBox"></div>
       <div id="nwCurves" class="wsModes" role="group" aria-label="Function"></div>
@@ -15566,7 +15566,7 @@ const UI = {
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🔎 Newton's Method Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever. Then turn it round: see a curve and a first guess, and pick which of four numbers is the next guess.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Slide down a tangent to the axis, again and again, and run a root down in a few steps, or watch the method stall on a flat tangent or loop for ever. Then turn it round: see a curve and a first guess, and pick which of four numbers is the next guess. Or call it: see four curves, each with a first guess, and say whether the step goes left or right, stays put at a root, or sticks on a flat tangent.</div>
          <button class="btn sm" id="tomeNewton" style="width:auto;margin-top:8px" onclick="Newton.open()">Open the Newton's method workshop</button>
        </div>\` +
       \`<div class="panel" style="border-color:var(--gold-dk)">
@@ -21490,6 +21490,182 @@ const NewtonPick = {
   }
 };
 
+/* ---------- Which way next? The Newton's method workshop's third mode ----------
+   Four curves given by their formulas, each with a first guess x₀, and the
+   player calls where Newton's step takes it: left, right, nowhere because
+   x₀ is already a root, or nowhere because the tangent is flat. The step is
+   −f(x₀)/f′(x₀), so its way is the opposite of the sign of f·f′, which the
+   player works from f(x₀) and f′(x₀). The curve is not drawn until the round
+   is right. Rounds hold steps that jump right past a root, a step that heads
+   away from every root, and flat tangents. A slip rings that pane and works
+   the step through; once all four are right, each curve is drawn with its
+   tangent run down to the axis. Nothing is saved, and there is no clock. */
+const NewtonTurn = {
+  CURVES:{
+    a:{name:'x² − 2',      d:'2x',      f:x=>x*x-2,       fp:x=>2*x,       roots:[[Math.SQRT2,'√2 ≈ 1.414'],[-Math.SQRT2,'−√2 ≈ −1.414']]},
+    b:{name:'x² − 4x + 3', d:'2x − 4',  f:x=>x*x-4*x+3,   fp:x=>2*x-4,     roots:[[1,'1'],[3,'3']]},
+    c:{name:'x³ − 2x + 2', d:'3x² − 2', f:x=>x*x*x-2*x+2, fp:x=>3*x*x-2,   roots:[[-1.7692923542386314,'≈ −1.769']]},
+    d:{name:'x² − 2x − 3', d:'2x − 2',  f:x=>x*x-2*x-3,   fp:x=>2*x-2,     roots:[[-1,'−1'],[3,'3']]},
+    e:{name:'4 − x²',      d:'−2x',     f:x=>4-x*x,       fp:x=>-2*x,      roots:[[-2,'−2'],[2,'2']]},
+    g:{name:'x³ − 3x',     d:'3x² − 3', f:x=>x*x*x-3*x,   fp:x=>3*x*x-3,   roots:[[-Math.sqrt(3),'−√3 ≈ −1.732'],[0,'0'],[Math.sqrt(3),'√3 ≈ 1.732']]}
+  },
+  // [curve, x₀]
+  ROUNDS:[
+    [['a',1], ['b',2], ['c',0], ['d',3]],
+    [['a',2], ['e',1], ['g',2], ['b',0]],
+    [['d',0], ['c',1], ['e',0], ['b',1]],
+    [['g',0.5], ['c',-2], ['a',-1], ['d',-2]],
+    [['e',0.5], ['b',4], ['g',-1], ['a',0]],
+    [['b',1.5], ['g',1.5], ['c',-1], ['e',2]]
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Call all four guesses right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'past',  t:'Call a step that jumps right past a root.', toast:'Jumped past a root',
+     ok:K=>K.kinds.has('past')},
+    {id:'away',  t:'Call a step that heads away from every root.', toast:'A step the wrong way',
+     ok:K=>K.kinds.has('away')},
+    {id:'stuck', t:'Call a guess where the tangent is flat, so there is no next guess.', toast:'Stuck on a flat tangent',
+     ok:K=>K.kinds.has('stuck')},
+    {id:'fix',   t:'Check a set of calls with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Call three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Newton’s step from x₀ is −f(x₀)/f′(x₀), so x₁ = x₀ − f(x₀)/f′(x₀). Work f(x₀) and f′(x₀): when they have the same sign the step goes left, and when their signs differ it goes right. If f(x₀) = 0, x₀ is a root already and stays put; if f′(x₀) = 0, the tangent is flat and there is no next guess.',
+  L:'ABCD',
+  WORD:{1:'moving right', [-1]:'moving left', 0:'staying put', 2:'stuck'},
+  NAMES:{1:'x₁ is to the right', [-1]:'x₁ is to the left', 0:'x₀ stays put', 2:'stuck on a flat tangent'},
+  R(){ return this.ROUNDS[this.ri]; },
+  C(i){ return this.CURVES[this.R()[i][0]]; },
+  x0(i){ return this.R()[i][1]; },
+  F(i){ return this.C(i).f(this.x0(i)); },
+  D(i){ return this.C(i).fp(this.x0(i)); },
+  x1(i){ return this.x0(i)-this.F(i)/this.D(i); },
+  truth(i){ const F=this.F(i), D=this.D(i); if(F===0) return 0; if(D===0) return 2; return Math.sign(-F/D); },
+  /* an exact number as a whole number or a fraction: every value here is a ratio of small whole numbers */
+  q(v){ for(let d=1; d<=200; d++){ const n=Math.round(v*d); if(Math.abs(n-v*d)<1e-9){ return d===1 ? neg(n) : \`\${neg(n)}/\${d}\`; } } return neg(Math.round(v*1000)/1000); },
+  pq(v){ return v<0 ? \`(\${this.q(v)})\` : this.q(v); },
+  /* what a round holds: a step past a root, a step away from every root, and a flat tangent */
+  pasts(){ return [0,1,2,3].filter(i=>{ const t=this.truth(i); if(t!==1 && t!==-1) return false; const a=this.x0(i), b=this.x1(i);
+    return this.C(i).roots.some(([r])=>(r-a)*(r-b)<0); }); },
+  aways(){ return [0,1,2,3].filter(i=>{ const t=this.truth(i); if(t!==1 && t!==-1) return false; const a=this.x0(i), b=this.x1(i);
+    return this.C(i).roots.every(([r])=>Math.abs(b-r)>Math.abs(a-r)); }); },
+  stucks(){ return [0,1,2,3].filter(i=>this.truth(i)===2); },
+  tags(){ const t=[]; if(this.pasts().length) t.push('past'); if(this.aways().length) t.push('away'); if(this.stucks().length) t.push('stuck'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  each(i){ const t=this.truth(i); return t===2 ? 'no next guess' : t===0 ? \`stays at \${this.q(this.x0(i))}\` : \`x₁ = \${this.q(this.x1(i))}\`; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are called right.');
+      const pa=this.pasts(), aw=this.aways(), st=this.stucks();
+      if(pa.length){ const i=pa[0], [, lab]=this.C(i).roots.find(([r])=>(r-this.x0(i))*(r-this.x1(i))<0);
+        out.push(\`In \${this.L[i]}, x₁ = \${this.q(this.x1(i))} lands past the root \${lab}: the tangent overshoots it, and the next step comes back.\`); }
+      if(aw.length){ const i=aw[0];
+        out.push(\`In \${this.L[i]}, x₁ = \${this.q(this.x1(i))} is farther from every root than x₀ = \${this.q(this.x0(i))} was: the tangent there points away, and Newton’s method can wander before it closes in.\`); }
+      if(st.length){ const i=st[0];
+        out.push(\`In \${this.L[i]}, f′(\${this.q(this.x0(i))}) = 0: the tangent is flat and never meets the axis, so there is no next guess.\`); }
+      out.push(\`Each next guess: \${[0,1,2,3].map(i=>\`\${this.L[i]} \${this.each(i)}\`).join(', ')}.\`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(\`\${this.got} of 4 right. \${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}\`);
+      for(const i of bad){ const C=this.C(i), a=this.x0(i), F=this.F(i), D=this.D(i), t=this.truth(i);
+        const how = t===0 ? \`f(\${this.q(a)}) = 0 already, so x₀ is a root and the step is 0\`
+          : t===2 ? 'the tangent is flat, so it never meets the axis and there is no next guess'
+          : \`the step is −f(x₀)/f′(x₀) = −\${this.pq(F)}/\${this.pq(D)} = \${this.q(-F/D)}, so x₁ = \${this.q(this.x1(i))} and the guess moves \${t>0?'right':'left'}\`;
+        out.push(\`In \${this.L[i]}, f(x) = \${C.name} at x₀ = \${this.q(a)}: f(\${this.q(a)}) = \${this.q(F)} and f′(x) = \${C.d} gives f′(\${this.q(a)}) = \${this.q(D)}. Here \${how}. You had it as \${this.WORD[this.calls[i]]}.\`); }
+    } else {
+      out.push(this.RULE);
+      out.push(\`\${this.count()} of 4 called.\`);
+    }
+    out.push(\`\${this.wins} called right on the first check this visit\${this.streak>1 ? \`, \${this.streak} in a row\` : ''}.\`);
+    return out;
+  },
+  /* each pane: the axis with x₀ marked in gold; once the round is right, the
+     curve in blue (cut to the pane), its roots, and the tangent from the curve
+     above x₀ down to the axis at x₁ in green */
+  svg(){
+    const P=this.R(), f=n=>n.toFixed(2), kx=18, ky=8;
+    let out=\`<svg viewBox="0 0 360 260" style="width:100%;height:auto;display:block" role="img" aria-label="Four curves, each with a first guess: \${P.map((r,i)=>\`\${this.L[i]}, f(x) = \${this.C(i).name} at x₀ = \${this.q(this.x0(i))}\`).join('; ')}\${this.solved?', each with its curve and tangent drawn':''}">\`;
+    P.forEach((r,i)=>{
+      const C=this.C(i), a=this.x0(i), X=(i%2)*180, Y=Math.floor(i/2)*130, cx=X+90, cy=Y+72, px=v=>cx+v*kx, py=v=>cy-v*ky;
+      out+=\`<clipPath id="ntClip\${i}"><rect x="\${X+4}" y="\${Y+4}" width="172" height="122" rx="7"/></clipPath>\`;
+      out+=\`<rect data-k="pane" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.grid}" stroke-width="1"/>\`;
+      out+=\`<g clip-path="url(#ntClip\${i})"><line x1="\${X+4}" y1="\${cy}" x2="\${X+176}" y2="\${cy}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      for(let t=-4; t<=4; t++) out+=\`<line x1="\${px(t)}" y1="\${cy-2}" x2="\${px(t)}" y2="\${cy+2}" stroke="\${FIG_COL.axis}" stroke-width="1"/>\`;
+      if(this.solved){
+        const pts=[]; for(let j=0;j<=160;j++){ const x=-4.8+9.6*j/160; pts.push([x,C.f(x)]); }
+        out+=\`<path data-k="curve" d="\${pts.map(([x,y],j)=>(j?'L':'M')+f(px(x))+' '+f(py(Math.max(-30,Math.min(30,y))))).join('')}" fill="none" stroke="\${FIG_COL.a}" stroke-width="2"/>\`;
+        for(const [rv] of C.roots) out+=\`<circle data-k="root" cx="\${f(px(rv))}" cy="\${cy}" r="2.5" fill="\${FIG_COL.ink}"/>\`;
+        const t=this.truth(i);
+        if(t===1 || t===-1) out+=\`<line data-k="tan" x1="\${f(px(a))}" y1="\${f(py(this.F(i)))}" x2="\${f(px(this.x1(i)))}" y2="\${cy}" stroke="\${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/><circle data-k="x1" cx="\${f(px(this.x1(i)))}" cy="\${cy}" r="3.5" fill="\${FIG_COL.c}"/>\`;
+        if(t===2) out+=\`<line data-k="tan" x1="\${f(px(a)-24)}" y1="\${f(py(this.F(i)))}" x2="\${f(px(a)+24)}" y2="\${f(py(this.F(i)))}" stroke="\${FIG_COL.c}" stroke-width="2.5" stroke-linecap="round"/>\`;
+      }
+      out+=\`</g><circle data-k="x0" cx="\${f(px(a))}" cy="\${cy}" r="4" fill="\${FIG_COL.b}"/>\`;
+      out+=\`<text x="\${f(px(a))}" y="\${cy+16}" fill="\${FIG_COL.b}" font-size="11" text-anchor="middle">x₀ = \${this.q(a)}</text>\`;
+      out+=\`<text x="\${X+14}" y="\${Y+21}" fill="\${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">\${this.L[i]}</text>\`;
+      out+=\`<text data-k="eq" x="\${X+172}" y="\${Y+18}" fill="\${FIG_COL.ink}" font-size="11" text-anchor="end">f(x) = \${C.name}</text>\`;
+      if(this.marks && this.marks[i]===false) out+=\`<rect data-k="miss" x="\${X+3}" y="\${Y+3}" width="174" height="124" rx="8" fill="none" stroke="\${FIG_COL.d}" stroke-width="2.5"/>\`;
+      if(this.solved){ const t=this.truth(i);
+        out+=\`<text data-k="\${{1:'right',[-1]:'left',0:'stay',2:'stuck'}[t]}" x="\${X+172}" y="\${Y+121}" fill="\${FIG_COL.c}" font-size="12" font-weight="700" text-anchor="end">\${this.each(i)}</text>\`; }
+    });
+    return out+\`</svg>\`;
+  },
+  call(i,c){
+    if(this.solved || this.calls[i]===c) return;
+    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Newton.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Newton.render();
+  },
+  deal(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Newton.render(); },
+  btn(i,c,b){
+    return \`<button class="btn sm ghost" style="margin:0;padding:4px 1px" data-c="\${c}" aria-pressed="\${this.calls[i]===c}" \${this.solved?'disabled ':''}onclick="NewtonTurn.call(\${i},\${c})" aria-label="\${this.L[i]}: \${this.NAMES[c]}">\${b}</button>\`;
+  },
+  html(){
+    const P=this.R();
+    let out=\`<div class="small" style="margin:2px 0 6px">Round \${this.ri+1} of \${this.ROUNDS.length}: four curves, each with a first guess x₀. Does Newton’s step take it left or right, or does it stay put at a root, or stick on a flat tangent?</div>\`;
+    out+=\`<div id="ntFig">\${this.svg()}<div class="figcap">Only each first guess is marked, with its curve’s formula. Once all four are called right, each curve is drawn in blue with its tangent run down to the axis in green.</div></div>\`;
+    out+=\`<div id="ntStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">\`+P.map((r,i)=>{
+      const m=this.marks?this.marks[i]:null;
+      return \`<div class="ntStop" data-i="\${i}" style="display:grid;grid-template-columns:1fr 1fr;gap:3px;border-radius:8px;padding:4px;border:1px solid \${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">\`+
+        \`<b style="grid-column:1 / 3;text-align:center;color:\${m===false?FIG_COL.d:'var(--gold)'}">\${this.L[i]} <span class="small">x₀ = \${this.q(this.x0(i))}</span></b>\`+
+        this.btn(i,-1,'← Left')+this.btn(i,1,'Right →')+this.btn(i,0,'• Stays')+this.btn(i,2,'✕ Stuck')+\`</div>\`;
+    }).join('')+\`</div>\`;
+    out+=\`<div id="ntRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">\${this.working().map(l=>\`<div>\${l}</div>\`).join('')}</div>\`;
+    out+=this.solved
+      ? \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ntNext" onclick="NewtonTurn.deal()" aria-label="Show the next round">Next round →</button></div>\`
+      : \`<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="ntCheck" \${this.ready()?'':'disabled '}onclick="NewtonTurn.check()" aria-label="\${this.ready()?'Check the four calls':'Call all four guesses to check them'}">\${this.ready()?'Check my calls':'Call all four'}</button></div>\`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=\`<div class="panel" id="ntGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="ntGoals">\`+
+      \`<div class="small" style="margin-bottom:4px">\${this.done.size} of \${this.GOALS.length} found</div>\`+
+      this.GOALS.map(g=>\`<div class="wsGoal\${this.done.has(g.id)?' done':''}" data-goal="\${g.id}">
+        <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('ROOT RUNNER','every step called','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
+
 const Newton = {
   CURVES:[
     {id:'sq',   name:'x² − 2',      d:'2x',      f:{poly:[[1,2],[-2,0]]},       up:true,  ylim:[-3,8],
@@ -21593,11 +21769,11 @@ const Newton = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('nwTab').innerHTML=[['hand','🔎 Step by hand','Slide down the tangents by hand and watch the guesses'],['pick','🎯 Which x₁?','See a curve and a first guess, and pick which of four numbers is the next guess']]
+    document.getElementById('nwTab').innerHTML=[['hand','🔎 Step by hand','Slide down the tangents by hand and watch the guesses'],['pick','🎯 Which x₁?','See a curve and a first guess, and pick which of four numbers is the next guess'],['turn','🧭 Which way next?','See four curves, each with a first guess, and call where Newton’s step takes it']]
       .map(([t,b,l])=>\`<button class="btn sm ghost" aria-pressed="\${this.tab===t}" onclick="Newton.setTab('\${t}')" aria-label="\${l}">\${b}</button>\`).join('');
-    const pick=this.tab==='pick';
+    const pick=this.tab!=='hand';
     for(const id of ['nwCurves','nwFig','nwStep','nwRead','nwGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('nkBox').innerHTML=pick ? NewtonPick.html() : '';
+    document.getElementById('nkBox').innerHTML=!pick ? '' : this.tab==='pick' ? NewtonPick.html() : NewtonTurn.html();
     if(pick) return;
     const C=this.curve(), xs=this.path(), n=xs.length-1, X=xs[n], F=this.f(X), D=this.fp(X);
     document.getElementById('nwCurves').innerHTML=this.CURVES.map((c,i)=>
