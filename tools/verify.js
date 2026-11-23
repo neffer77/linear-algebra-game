@@ -15526,6 +15526,123 @@ const areaTurnNotes = (() => {
   if (env.banners.join() !== 'STRIP READER / every sum called') fail('areaturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
+const taylorMatchNotes = (() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
+  const cut = (a, b) => script.slice(script.indexOf(a), script.indexOf(b, script.indexOf(a)));
+  const env = { toasts: [], banners: [], renders: 0 };
+  const COL = { axis: 'axis', grid: 'grid', a: 'blue', b: 'gold', c: 'green', d: 'red', ink: 'ink', dim: 'dim' };
+  const S = new Function('env', 'COL',
+    "const neg = n => (n<0? '−'+Math.abs(n) : String(n)); const FIG_COL = COL;" +
+    "const UI = {toast:m=>env.toasts.push(m)}; const Sfx = {good(){}, mastered(){}};" +
+    "const Celebrate = {banner:(t,s)=>env.banners.push(t+' / '+s)};" +
+    "const Taylor = {render(){ env.renders++; }};" +
+    cut('const TaylorMatch = {', 'const Taylor = {') + 'return TaylorMatch;')(env, COL);
+  let checks = 0, wrongs = 0, panes = 0;
+  const L = 'ABCD';
+  // the height, slope and half the bend at 0, worked from each function's own values by central differences
+  const h = 1e-3;
+  const taylor = f => [f(0), (f(h) - f(-h)) / (2 * h), (f(h) - 2 * f(0) + f(-h)) / (2 * h * h)];
+  const near = (a, b, e) => Math.abs(a - b) < e;
+  // a polynomial written independently: each term from its own value, with the true minus sign
+  const term = (v, k) => {
+    if (Math.abs(v) < 1e-6) return null;
+    const r = [[1, 1], [1, 2], [1, 4], [1, 8], [2, 1], [4, 1], [8, 1]].find(([a, b]) => near(Math.abs(v), a / b, 1e-4));
+    if (!r) return '?';
+    const [a, b] = r, body = k === 0 ? (b === 1 ? `${a}` : `${a}/${b}`) : `${a === 1 ? '' : a}${['', 'x', 'x²'][k]}${b === 1 ? '' : '/' + b}`;
+    return [v < 0, body];
+  };
+  const write = cs => { const t = cs.map(term).filter(Boolean); if (!t.length) return '0';
+    return t.map(([n, b], j) => (j ? `${n ? '−' : '+'} ${b}` : `${n ? '−' : ''}${b}`)).join(' '); };
+  const reset = () => { S.ri = 0; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    S.wins = 0; S.streak = 0; S.fixed = false; S.touched = false; S.done = new Set(); S.kinds = new Set(); env.toasts = []; env.banners = []; };
+  reset();
+  S.ROUNDS.forEach((R, ri) => {
+    const key = `round ${ri + 1}`;
+    S.ri = ri; S.calls = [null, null, null, null]; S.marks = null; S.tries = 0; S.solved = false;
+    const own = R.F.map(id => taylor(S.FN[id].f));
+    // every coefficient agrees with the function's own derivatives at 0
+    R.F.forEach((id, i) => { checks++; const c = S.FN[id].c.map(q => q[0] / q[1]);
+      if (!own[i].every((v, k) => near(v, c[k], 1e-4))) fail('taylormatch', key, `${S.FN[id].at} has coefficients ${c.join(', ')}, not ${own[i].map(v => v.toFixed(4)).join(', ')}`); });
+    if ([...R.order].sort().join() !== '0,1,2,3') fail('taylormatch', key, 'the polynomials are not each one function\'s');
+    if (R.order.some((o, n) => o === n) && R.order.every((o, n) => o === n)) fail('taylormatch', key, 'the polynomials come in the functions\' own order');
+    const polys = [0, 1, 2, 3].map(n => write(own[R.order[n]]));
+    if (new Set(polys).size !== 4) fail('taylormatch', key, `two polynomials are the same: ${polys.join('; ')}`);
+    // two of the four share a height and a slope at 0
+    let twin = false; for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) if (near(own[i][0], own[j][0], 1e-6) && near(own[i][1], own[j][1], 1e-4)) twin = true;
+    if (!twin) fail('taylormatch', key, 'no two functions share a height and slope at 0');
+    const h0 = S.html();
+    polys.forEach((p, n) => { checks++; if (!h0.includes(`<b style="color:var(--gold)">${n + 1}</b>&nbsp; ${p}</div>`)) fail('taylormatch', key, `polynomial ${n + 1} is not listed as ${p}`); });
+    if (!/Round \d+ of \d+: four functions and four polynomials\. Which polynomial hugs each function near 0\?/.test(h0)) fail('taylormatch', key, 'the task does not come first');
+    if (!h0.includes('Near 0 a function is close to f(0) + f′(0)·x + f″(0)/2·x²')) fail('taylormatch', key, 'the rule is not given before the first check');
+    if (!h0.includes('id="tymCheck" disabled')) fail('taylormatch', key, 'the check is open before all four are matched');
+    if (/data-k="(fn|who|touch|miss)"/.test(h0)) fail('taylormatch', key, 'a function, letter or ring is drawn before the round is checked');
+    // each blue curve is its polynomial, read back off the drawing
+    const fig = h0.match(/<svg[\s\S]*?<\/svg>/)[0];
+    const curves = [...fig.matchAll(/data-k="curve" clip-path="url\(#tymClip(\d)\)" points="([^"]+)"/g)];
+    if (curves.length !== 4) fail('taylormatch', key, `the figure draws ${curves.length} polynomials, not 4`);
+    curves.forEach(([, n, pts]) => { panes++; n = +n;
+      const X = (n % 2) * 180, Y = Math.floor(n / 2) * 120, c = own[R.order[n]];
+      const ok = pts.split(' ').every(pt => { const [px, py] = pt.split(',').map(Number);
+        const x = S.LO + (px - X - 14) / 152 * (S.HI - S.LO), y = c[0] + c[1] * x + c[2] * x * x;
+        return near(py, Y + 108 - (y - S.YLO) / (S.YHI - S.YLO) * 96, 0.03 + 1e-3 * Math.abs(c[1] + 2 * c[2] * x) * 100); });
+      if (!ok) fail('taylormatch', key, `pane ${n + 1} does not draw ${polys[n]}`); });
+    R.F.forEach((id, i) => { const m = (h0.match(new RegExp(`onclick="TaylorMatch\\.call\\(${i},\\d\\)"`, 'g')) || []).length;
+      if (m !== 4) fail('taylormatch', key, `${L[i]} does not offer all four polynomials`);
+      if (!h0.includes(`aria-label="${S.FN[id].at} goes with polynomial 1, ${polys[0]}"`)) fail('taylormatch', key, `${L[i]}'s buttons are not named`); });
+    const right = [0, 1, 2, 3].map(i => R.order.indexOf(i));
+    // a slip: each function in turn swapped with another
+    for (let i = 0; i < 4; i++) {
+      const j = (i + 1) % 4, w = right.slice(); [w[i], w[j]] = [w[j], w[i]];
+      S.calls = w; S.marks = null; S.solved = false; S.tries = 0; S.check(); wrongs++; checks++;
+      const hw = S.html();
+      if (S.solved || S.marks[i] !== false || S.marks[j] !== false || S.got !== 2) fail('taylormatch', key, `swapping ${L[i]} and ${L[j]} is not caught as two wrong`);
+      const rings = (hw.match(/data-k="miss"/g) || []).length;
+      if (rings !== 2) fail('taylormatch', key, `swapping ${L[i]} and ${L[j]} rings ${rings} panes, not 2`);
+      if (/data-k="(fn|who)"/.test(hw)) fail('taylormatch', key, 'a slip draws the functions or their letters');
+      const c = own[i], o = own[R.order[w[i]]];
+      const read = hw.match(/<div id="tymRead"[^>]*>([\s\S]*?)<\/div><div class="wsModes"/)[1];
+      const bt = term(2 * c[2], 0), bend = bt ? `${bt[0] ? '−' : ''}${bt[1]}` : '0';
+      if (!read.includes(`and f″(0) = ${bend}, so its x² term is f″(0)/2.`)) fail('taylormatch', key, `the slip on ${L[i]} does not give f″(0) = ${bend}`);
+      if (!read.includes(`For ${L[i]} = ${S.FN[R.F[i]].at}: f(0) = `) || !read.includes(`You had ${w[i] + 1}, ${polys[w[i]]}: `)) fail('taylormatch', key, `the slip on ${L[i]} is not worked`);
+      const why = !near(o[0], c[0], 1e-6) ? 'its number on its own' : !near(o[1], c[1], 1e-4) ? 'its x term' : 'its x² term';
+      if (!read.includes(`${polys[w[i]]}: ${why}`) && !read.includes(`${polys[w[i]]}: it starts at the right height${why === 'its x term' ? ', but its x term' : ' with the right slope, but its x² term'}`)) fail('taylormatch', key, `the slip on ${L[i]} does not say ${why} is off`);
+      if (read.includes(`${L[i]} is ${right[i] + 1}`)) fail('taylormatch', key, 'a slip gives the match away');
+      S.call(i, right[i]); if (S.marks[i] !== null) fail('taylormatch', key, 'changing a match does not clear its mark');
+    }
+    // the right matches
+    S.calls = right.slice(); S.marks = null; S.solved = false; S.tries = 0; S.check(); checks++;
+    const hs = S.html();
+    if (!S.solved || S.got !== 4) fail('taylormatch', key, 'the right matches are not taken');
+    const fns = [...hs.matchAll(/data-k="fn" clip-path="url\(#tymClip(\d)\)" points="([^"]+)"/g)];
+    if (new Set(fns.map(m => m[1])).size !== 4) fail('taylormatch', key, 'not every pane gets its function');
+    fns.forEach(([, n, pts]) => { n = +n; const X = (n % 2) * 180, Y = Math.floor(n / 2) * 120, f = S.FN[R.F[R.order[n]]].f;
+      const ok = pts.split(' ').every(pt => { const [px, py] = pt.split(',').map(Number); const x = S.LO + (px - X - 14) / 152 * (S.HI - S.LO);
+        const sl = Math.abs(f(x + 1e-4) - f(x - 1e-4)) / 2e-4 * 0.006 / 152 * (S.HI - S.LO) * 96 / (S.YHI - S.YLO);
+        return !Number.isFinite(sl) || near(py, Y + 108 - (f(x) - S.YLO) / (S.YHI - S.YLO) * 96, 0.02 + sl); });
+      if (!ok) fail('taylormatch', key, `pane ${n + 1} draws the wrong function`); });
+    [0, 1, 2, 3].forEach(n => { const X = (n % 2) * 180, Y = Math.floor(n / 2) * 120;
+      if (!hs.includes(`data-k="who" x="${X + 164}" y="${Y + 22}" fill="green" font-size="14" font-weight="700" text-anchor="middle">${L[R.order[n]]}<`)) fail('taylormatch', key, `pane ${n + 1} is not lettered ${L[R.order[n]]}`);
+      const t = hs.match(new RegExp(`data-k="touch" cx="([\\d.]+)" cy="([\\d.]+)"`, 'g'))[n].match(/cy="([\d.]+)"/)[1];
+      if (!near(+t, Y + 108 - (own[R.order[n]][0] - S.YLO) / (S.YHI - S.YLO) * 96, 0.01)) fail('taylormatch', key, `pane ${n + 1}'s dot is not at the function's height at 0`); });
+    if (!hs.includes(`The matches: ${[0, 1, 2, 3].map(i => `${L[i]} is ${right[i] + 1}`).join(', ')}.`)) fail('taylormatch', key, 'the matches are not listed once right');
+    if (!hs.includes('only the x² term tells them apart')) fail('taylormatch', key, 'the two with one height and slope are not explained');
+    if (!hs.includes('id="tymNext"') || !/disabled onclick="TaylorMatch\.call/.test(hs)) fail('taylormatch', key, 'once right, Next is not offered or the matches stay open');
+    const before = S.calls.join(); S.call(0, (right[0] + 1) % 4); if (S.calls.join() !== before) fail('taylormatch', key, 'a match moves after the round is right');
+  });
+  // the hunt: six rounds in order, a slip in the first
+  reset();
+  S.html(); if (S.done.size) fail('taylormatch', 'hunt', 'a goal is found before anything is pressed');
+  const play = slip => { const R = S.R(), right = [0, 1, 2, 3].map(i => R.order.indexOf(i));
+    S.calls = right.slice(); if (slip) { S.calls[0] = right[1]; S.calls[1] = right[0]; }
+    S.touched = true; S.check(); S.html();
+    if (slip) { S.call(0, right[0]); S.call(1, right[1]); S.html(); S.check(); S.html(); } S.next(); return [...S.done].sort().join(); };
+  const plan = [[true, 'down,fix,twin'], [false, 'down,fix,flat,one,twin'], [false, 'down,fix,flat,one,twin'], [false, 'down,fix,flat,one,three,twin']];
+  plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('taylormatch', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
+  if (env.toasts.join(' | ') !== '✓ Told apart by the bend · Bending down · A slip caught and fixed | ✓ Right on the first check · No bend at 0') fail('taylormatch', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
+  if (env.banners.join() !== 'CURVE HUGGER / every function matched near 0') fail('taylormatch', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  return { checks, wrongs, panes };
+})();
 const taylorTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
   const script = html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -24253,6 +24370,7 @@ console.log(`  products called   ${pad(productTurnNotes.checks.toLocaleString(),
 console.log(`  ladders called    ${pad(ladderTurnNotes.checks.toLocaleString(), 12)}  (checks of four ladders called faster, just as fast or slower than the foot in the ladder workshop, ${ladderTurnNotes.wrongs} of them with one ladder called wrong and caught, and ${ladderTurnNotes.panes} ladders read back off the drawing)`);
 console.log(`  populations called ${pad(logiTurnNotes.checks.toLocaleString(), 12)}  (checks of four populations called growing, holding or shrinking in the logistic workshop, ${logiTurnNotes.wrongs} of them with one population called wrong and caught, and ${logiTurnNotes.panes} rate curves read back off the drawing)`);
 console.log(`  sums called      ${pad(areaTurnNotes.checks.toLocaleString(), 12)}  (checks of four rectangle sums called over, exact or under the area in the area workshop, ${areaTurnNotes.wrongs} of them with one sum called wrong and caught, and ${areaTurnNotes.panes} curves read back off the drawing)`);
+console.log(`  hugs matched      ${pad(taylorMatchNotes.checks.toLocaleString(), 12)}  (checks of four functions matched to the polynomial that hugs each near 0 in the Taylor workshop, ${taylorMatchNotes.wrongs} of them with two matches swapped and caught, and ${taylorMatchNotes.panes} polynomials read back off the drawing)`);
 console.log(`  guesses called    ${pad(taylorTurnNotes.checks.toLocaleString(), 12)}  (checks of four cut-off series called over, exact or under the function in the Taylor workshop, ${taylorTurnNotes.wrongs} of them with one guess called wrong and caught, and ${taylorTurnNotes.panes} functions and polynomials read back off the drawing)`);
 console.log(`  flat spots called ${pad(optTurnNotes.checks.toLocaleString(), 12)}  (checks of four flat spots called a peak, a valley or neither in the biggest build workshop, ${optTurnNotes.wrongs} of them with one called wrong and caught, and ${optTurnNotes.panes} slopes and their f read back off the drawing)`);
 console.log(`  inverses called   ${pad(invTurnNotes.checks.toLocaleString(), 12)}  (checks of four inverse slopes called steeper than 1, exactly 1 or gentler in the inverse slope workshop, ${invTurnNotes.wrongs} of them with one called wrong and caught, and ${invTurnNotes.panes} curves and their mirrors read back off the drawing)`);

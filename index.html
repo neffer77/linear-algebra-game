@@ -15810,7 +15810,7 @@ const UI = {
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
          <h2 style="font-size:16px;color:var(--gold)">🌀 Taylor Workshop</h2>
-         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under.</div>
+         <div class="sub" style="margin-top:6px;font-size:14px">Build eˣ, sin x and cos x out of powers of x, one term at a time, and watch the polynomial close in on the curve. Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x. Or call it: see four functions cut off after a few terms, and say whether each P is over the function, exact or under. Or match them up: four functions and four polynomials, and which hugs which near 0.</div>
          <button class="btn sm" id="tomeTaylor" style="width:auto;margin-top:8px" onclick="Taylor.open()">Open the Taylor workshop</button>
        </div>` +
       `<div class="panel" style="border-color:var(--gold-dk)">
@@ -22428,6 +22428,207 @@ const TaylorTurn = {
     return out;
   }
 };
+/* ---------- Match them up: the Taylor workshop's fourth mode ----------
+   Four functions and four quadratics, numbered and in another order, each
+   drawn as its curve near 0. The player matches each function to its
+   polynomial f(0) + f′(0)·x + f″(0)/2·x², the parabola that hugs it at 0.
+   Every round pairs two functions that start at the same height with the
+   same slope, so only the x² term tells them apart. Every coefficient is a
+   whole number or a simple fraction. A slip is worked from the function's
+   own value, slope and bend at 0. Once a round is right, each function is
+   drawn in gold over its polynomial. Nothing is saved. */
+const TaylorMatch = {
+  // each function's name, its values near 0, and its x⁰, x¹ and x² coefficients as [top, bottom]
+  FN:{
+    exp:   {at:'eˣ',        f:x=>Math.exp(x),      c:[[1,1],[1,1],[1,2]]},
+    expm:  {at:'e⁻ˣ',       f:x=>Math.exp(-x),     c:[[1,1],[-1,1],[1,2]]},
+    exp2:  {at:'e²ˣ',       f:x=>Math.exp(2*x),    c:[[1,1],[2,1],[2,1]]},
+    expsq: {at:'e^(x²)',    f:x=>Math.exp(x*x),    c:[[1,1],[0,1],[1,1]]},
+    xexp:  {at:'x·eˣ',      f:x=>x*Math.exp(x),    c:[[0,1],[1,1],[1,1]]},
+    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[-1,2]]},
+    cos2:  {at:'cos 2x',    f:x=>Math.cos(2*x),    c:[[1,1],[0,1],[-2,1]]},
+    cosh:  {at:'cosh x',    f:x=>Math.cosh(x),     c:[[1,1],[0,1],[1,2]]},
+    sin:   {at:'sin x',     f:x=>Math.sin(x),      c:[[0,1],[1,1],[0,1]]},
+    sin2:  {at:'sin 2x',    f:x=>Math.sin(2*x),    c:[[0,1],[2,1],[0,1]]},
+    tan:   {at:'tan x',     f:x=>Math.tan(x),      c:[[0,1],[1,1],[0,1]]},
+    ln1p:  {at:'ln(1 + x)', f:x=>Math.log(1+x),    c:[[0,1],[1,1],[-1,2]]},
+    ln1m:  {at:'ln(1 − x)', f:x=>Math.log(1-x),    c:[[0,1],[-1,1],[-1,2]]},
+    geo:   {at:'1/(1 − x)', f:x=>1/(1-x),          c:[[1,1],[1,1],[1,1]]},
+    geom:  {at:'1/(1 + x)', f:x=>1/(1+x),          c:[[1,1],[-1,1],[1,1]]},
+    geo2:  {at:'1/(1 − 2x)',f:x=>1/(1-2*x),        c:[[1,1],[2,1],[4,1]]},
+    sq:    {at:'(1 + x)²',  f:x=>(1+x)*(1+x),      c:[[1,1],[2,1],[1,1]]},
+    root:  {at:'√(1 + x)',  f:x=>Math.sqrt(1+x),   c:[[1,1],[1,2],[-1,8]]}
+  },
+  // each round: four functions, and which function each of polynomials 1 to 4 belongs to
+  ROUNDS:[
+    {F:['exp','geo','cos','expm'],   order:[1,3,0,2]},
+    {F:['sin','ln1p','xexp','expsq'], order:[2,0,3,1]},
+    {F:['exp2','sq','root','cos2'],  order:[3,1,2,0]},
+    {F:['geom','expm','cosh','cos'], order:[0,2,3,1]},
+    {F:['sin2','ln1m','tan','ln1p'], order:[1,3,0,2]},
+    {F:['geo2','exp2','cosh','expsq'], order:[2,0,3,1]}
+  ],
+  ri:0, calls:[null,null,null,null], marks:null, got:0, tries:0, solved:false,
+  wins:0, streak:0, fixed:false, touched:false, done:new Set(), kinds:new Set(),
+  GOALS:[
+    {id:'one',   t:'Match all four functions right on the first check.', toast:'Right on the first check',
+     ok:K=>K.wins>=1},
+    {id:'twin',  t:'Match two functions with the same height and slope at 0, told apart by the x² term.', toast:'Told apart by the bend',
+     ok:K=>K.kinds.has('twin')},
+    {id:'flat',  t:'Match a function with no x² term: it does not bend at 0.', toast:'No bend at 0',
+     ok:K=>K.kinds.has('flat')},
+    {id:'down',  t:'Match a function that bends down at 0, with a minus on its x² term.', toast:'Bending down',
+     ok:K=>K.kinds.has('down')},
+    {id:'fix',   t:'Check a matching with a slip in it, then fix it and check again.', toast:'A slip caught and fixed',
+     ok:K=>K.fixed},
+    {id:'three', t:'Match three rounds in a row, each right on the first check.', toast:'Three in a row',
+     ok:K=>K.streak>=3}
+  ],
+  RULE:'Near 0 a function is close to f(0) + f′(0)·x + f″(0)/2·x². The number on its own is its height at 0, the x term is its slope there, and the x² term is half its bend. Work out the three for each function and match it to its polynomial.',
+  L:'ABCD',
+  R(){ return this.ROUNDS[this.ri]; },
+  fn(i){ return this.FN[this.R().F[i]]; },
+  owner(n){ return this.R().order[n]; },
+  truth(i){ return this.R().order.indexOf(i); },
+  val(q){ return q[0]/q[1]; },
+  same(p,q){ return p[0]*q[1]===q[0]*p[1]; },
+  frac(q){ const [a,b]=q; return b===1 ? neg(a) : `${neg(a)}/${b}`; },
+  // f″(0) is twice the x² coefficient
+  bend(i){ const [a,b]=this.fn(i).c[2]; return b===2 ? [a,1] : b%2===0 ? [a,b/2] : [2*a,b]; },
+  // a polynomial written as a person would: 1 + x + x²/2, x − x²/2, 1 − 2x²
+  poly(c){
+    const out=[];
+    c.forEach(([a,b],k)=>{
+      if(a===0) return;
+      const v=['','x','x²'][k], m=Math.abs(a);
+      const body = k===0 ? (b===1?`${m}`:`${m}/${b}`) : (m===1?'':m)+v+(b===1?'':`/${b}`);
+      out.push(out.length ? `${a<0?'−':'+'} ${body}` : `${a<0?'−':''}${body}`);
+    });
+    return out.length ? out.join(' ') : '0';
+  },
+  P(n){ return this.poly(this.FN[this.R().F[this.owner(n)]].c); },
+  at(n){ return this.FN[this.R().F[this.owner(n)]].c.map(q=>this.val(q)); },
+  /* what a round holds: two with one height and slope, one with no x² term, one bending down */
+  twins(){ const out=[];
+    for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){ const a=this.fn(i).c, b=this.fn(j).c; if(this.same(a[0],b[0]) && this.same(a[1],b[1])) out.push([i,j]); }
+    return out; },
+  flats(){ return [0,1,2,3].filter(i=>this.fn(i).c[2][0]===0); },
+  downs(){ return [0,1,2,3].filter(i=>this.fn(i).c[2][0]<0); },
+  tags(){ const t=[]; if(this.twins().length) t.push('twin'); if(this.flats().length) t.push('flat'); if(this.downs().length) t.push('down'); return t; },
+  ready(){ return this.calls.every(c=>c!==null); },
+  count(){ return this.calls.filter(c=>c!==null).length; },
+  list(ix){ const n=ix.map(i=>this.L[i]); return n.length<2 ? n.join('') : n.slice(0,-1).join(', ')+' and '+n[n.length-1]; },
+  working(){
+    const out=[];
+    if(this.solved){
+      out.push('Yes: all four are matched.');
+      const tw=this.twins(), fl=this.flats(), dn=this.downs();
+      if(tw.length){ const [i,j]=tw[0], a=this.fn(i).c, b=this.fn(j).c;
+        out.push(`${this.L[i]} and ${this.L[j]} both start at ${this.frac(a[0])} with slope ${this.frac(a[1])}, so only the x² term tells them apart: ${this.frac(a[2])} against ${this.frac(b[2])}.`); }
+      if(fl.length) out.push(`${this.list(fl)} ${fl.length>1?'have':'has'} no x² term: f″(0) = 0, so near 0 ${fl.length>1?'they run':'it runs'} straight.`);
+      if(dn.length) out.push(`${this.list(dn)} ${dn.length>1?'bend':'bends'} down at 0: f″(0) is negative, so the x² term has a minus.`);
+      out.push(`The matches: ${[0,1,2,3].map(i=>`${this.L[i]} is ${this.truth(i)+1}`).join(', ')}.`);
+    } else if(this.marks){
+      const bad=[0,1,2,3].filter(i=>this.marks[i]===false);
+      out.push(`${this.got} of 4 right. ${bad.length ? 'Fix the ones in red and check again.' : 'Check again.'}`);
+      for(const i of bad){ const F=this.fn(i), c=F.c, k=this.calls[i], o=this.FN[this.R().F[this.owner(k)]].c, X=this.L[i];
+        const off = !this.same(o[0],c[0]) ? `its number on its own is ${this.frac(o[0])}, not f(0) = ${this.frac(c[0])}`
+                  : !this.same(o[1],c[1]) ? `it starts at the right height, but its x term is ${this.frac(o[1])}, not f′(0) = ${this.frac(c[1])}`
+                  : `it starts at the right height with the right slope, but its x² term is ${this.frac(o[2])}, not f″(0)/2 = ${this.frac(c[2])}`;
+        out.push(`For ${X} = ${F.at}: f(0) = ${this.frac(c[0])}, f′(0) = ${this.frac(c[1])} and f″(0) = ${this.frac(this.bend(i))}, so its x² term is f″(0)/2. You had ${k+1}, ${this.P(k)}: ${off}.`); }
+    } else {
+      out.push(this.RULE);
+      out.push(`${this.count()} of 4 matched.`);
+    }
+    out.push(`${this.wins} matched right on the first check this visit${this.streak>1 ? `, ${this.streak} in a row` : ''}.`);
+    return out;
+  },
+  /* the four polynomials, each in its own pane for x from −1.5 to 1.5, with
+     a tick at every half; a slip rings the polynomial picked wrongly, and
+     once all four are matched each pane gets its function, dashed in gold,
+     and that function's letter */
+  LO:-1.5, HI:1.5, YLO:-2.5, YHI:4,
+  svg(){
+    const f=n=>n.toFixed(2);
+    let out=`<svg viewBox="0 0 360 240" style="width:100%;height:auto;display:block" role="img" aria-label="The four polynomials as curves near 0: ${[0,1,2,3].map(n=>`${n+1}, ${this.P(n)}`).join('; ')}${this.solved?', each with its function drawn over it':''}">`;
+    out+=`<defs>${[0,1,2,3].map(n=>`<clipPath id="tymClip${n}"><rect x="${(n%2)*180+4}" y="${Math.floor(n/2)*120+4}" width="172" height="112" rx="8"/></clipPath>`).join('')}</defs>`;
+    for(let n=0;n<4;n++){
+      const X=(n%2)*180, Y=Math.floor(n/2)*120, [a,b,c]=this.at(n), F=this.FN[this.R().F[this.owner(n)]];
+      const PX=x=>X+14+(x-this.LO)/(this.HI-this.LO)*152, PY=y=>Y+108-(y-this.YLO)/(this.YHI-this.YLO)*96;
+      out+=`<rect data-k="pane" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.grid}" stroke-width="1"/>`;
+      out+=`<line x1="${X+10}" y1="${f(PY(0))}" x2="${X+170}" y2="${f(PY(0))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      out+=`<line x1="${f(PX(0))}" y1="${Y+8}" x2="${f(PX(0))}" y2="${Y+112}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      for(let k=-3;k<=3;k++) if(k) out+=`<line data-k="tick" x1="${f(PX(k/2))}" y1="${f(PY(0)-3)}" x2="${f(PX(k/2))}" y2="${f(PY(0)+3)}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      for(let k=1;k<=3;k++) out+=`<line data-k="ytick" x1="${f(PX(0)-3)}" y1="${f(PY(k))}" x2="${f(PX(0)+3)}" y2="${f(PY(k))}" stroke="${FIG_COL.axis}" stroke-width="1"/>`;
+      const pts=[]; for(let k=0;k<=60;k++){ const x=this.LO+(this.HI-this.LO)*k/60; pts.push(`${f(PX(x))},${f(PY(a+b*x+c*x*x))}`); }
+      out+=`<polyline data-k="curve" clip-path="url(#tymClip${n})" points="${pts.join(' ')}" fill="none" stroke="${FIG_COL.a}" stroke-width="2.2" stroke-linejoin="round"/>`;
+      out+=`<text data-k="num" x="${X+16}" y="${Y+22}" fill="${FIG_COL.ink}" font-size="14" font-weight="700" text-anchor="middle">${n+1}</text>`;
+      if(this.marks && this.calls.some((c,i)=>c===n && this.marks[i]===false))
+        out+=`<rect data-k="miss" x="${X+3}" y="${Y+3}" width="174" height="114" rx="8" fill="none" stroke="${FIG_COL.d}" stroke-width="2.5"/>`;
+      if(this.solved){
+        // the function itself, broken wherever it runs off to infinity or is not defined
+        const runs=[]; let run=[];
+        for(let k=0;k<=120;k++){ const x=this.LO+(this.HI-this.LO)*k/120, y=F.f(x);
+          if(Number.isFinite(y) && Math.abs(y)<12) run.push(`${f(PX(x))},${f(PY(y))}`); else { if(run.length>1) runs.push(run); run=[]; } }
+        if(run.length>1) runs.push(run);
+        for(const r of runs) out+=`<polyline data-k="fn" clip-path="url(#tymClip${n})" points="${r.join(' ')}" fill="none" stroke="${FIG_COL.b}" stroke-width="2" stroke-dasharray="5 4"/>`;
+        out+=`<circle data-k="touch" cx="${f(PX(0))}" cy="${f(PY(a))}" r="4" fill="${FIG_COL.c}"/>`;
+        out+=`<text data-k="who" x="${X+164}" y="${Y+22}" fill="${FIG_COL.c}" font-size="14" font-weight="700" text-anchor="middle">${this.L[this.owner(n)]}</text>`;
+      }
+    }
+    return out+`</svg>`;
+  },
+  call(i,n){
+    if(this.solved || this.calls[i]===n) return;
+    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;
+    if(this.marks) this.marks[i]=null;
+    Taylor.render();
+  },
+  check(){
+    if(this.solved || !this.ready()) return;
+    this.tries++; this.touched=true;
+    this.marks=[0,1,2,3].map(i=>this.calls[i]===this.truth(i));
+    this.got=this.marks.filter(Boolean).length;
+    if(this.marks.every(Boolean)){
+      this.solved=true;
+      if(this.tries===1){ this.wins++; this.streak++; } else { this.streak=0; this.fixed=true; }
+      for(const t of this.tags()) this.kinds.add(t);
+    } else this.streak=0;
+    Taylor.render();
+  },
+  next(){ if(!this.solved) return; this.ri=(this.ri+1)%this.ROUNDS.length; this.calls=[null,null,null,null]; this.marks=null; this.tries=0; this.solved=false; Taylor.render(); },
+  btn(i,n){
+    return `<button class="btn sm ghost" style="margin:0;padding:4px 2px" data-n="${n}" aria-pressed="${this.calls[i]===n}" ${this.solved?'disabled ':''}onclick="TaylorMatch.call(${i},${n})" aria-label="${this.fn(i).at} goes with polynomial ${n+1}, ${this.P(n)}">${n+1}</button>`;
+  },
+  html(){
+    let out=`<div class="small" style="margin:2px 0 6px">Round ${this.ri+1} of ${this.ROUNDS.length}: four functions and four polynomials. Which polynomial hugs each function near 0?</div>`;
+    out+=`<div id="tymPolys" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:15px;margin-bottom:4px">`+
+      [0,1,2,3].map(n=>`<div><b style="color:var(--gold)">${n+1}</b>&nbsp; ${this.P(n)}</div>`).join('')+`</div>`;
+    out+=`<div id="tymFig">${this.svg()}<div class="figcap">Each polynomial is drawn in blue for x from −1.5 to 1.5, with a tick at every half. Once all four are matched, each function is dashed over its polynomial, touching it at 0.</div></div>`;
+    out+=`<div id="tymStops" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">`+[0,1,2,3].map(i=>{
+      const m=this.marks?this.marks[i]:null;
+      return `<div class="tymStop" data-i="${i}" style="display:grid;grid-template-columns:repeat(4,1fr);gap:3px;border-radius:8px;padding:4px;border:1px solid ${m===false?FIG_COL.d:m===true?FIG_COL.c:FIG_COL.grid}">`+
+        `<b style="grid-column:1 / 5;text-align:center;color:${m===false?FIG_COL.d:'var(--gold)'}">${this.L[i]} = ${this.fn(i).at}</b>`+
+        [0,1,2,3].map(n=>this.btn(i,n)).join('')+`</div>`;
+    }).join('')+`</div>`;
+    out+=`<div id="tymRead" aria-live="polite" style="font-size:14px;line-height:1.6;margin-top:6px">${this.working().map(l=>`<div>${l}</div>`).join('')}</div>`;
+    out+=this.solved
+      ? `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tymNext" onclick="TaylorMatch.next()" aria-label="Show the next round">Next round →</button></div>`
+      : `<div class="wsModes" style="margin-top:6px"><button class="btn sm" id="tymCheck" ${this.ready()?'':'disabled '}onclick="TaylorMatch.check()" aria-label="${this.ready()?'Check the four matches':'Match all four functions to check them'}">${this.ready()?'Check my matches':'Match all four'}</button></div>`;
+    const fresh=[];
+    if(this.touched) for(const g of this.GOALS) if(!this.done.has(g.id) && g.ok(this)){ this.done.add(g.id); fresh.push(g); }
+    out+=`<div class="panel" id="tymGoalPanel" style="margin:8px 0 0"><h2 style="font-size:15px;color:var(--gold)">Things to find</h2><div id="tymGoals">`+
+      `<div class="small" style="margin-bottom:4px">${this.done.size} of ${this.GOALS.length} found</div>`+
+      this.GOALS.map(g=>`<div class="wsGoal${this.done.has(g.id)?' done':''}" data-goal="${g.id}">
+        <i aria-hidden="true">${this.done.has(g.id)?'✓':'○'}</i><span>${g.t}${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>`).join('')+`</div></div>`;
+    if(fresh.length){
+      if(this.done.size===this.GOALS.length)
+        Celebrate.banner('CURVE HUGGER','every function matched near 0','var(--gold)',()=>Sfx.mastered());
+      else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
+    }
+    return out;
+  }
+};
 const Taylor = {
   CURVES:[
     {id:'exp', at:'eˣ', f:{fn:'exp'},
@@ -22519,11 +22720,11 @@ const Taylor = {
   tab:'hand',
   setTab(t){ this.tab=t; this.render(); },
   render(){
-    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under']]
+    document.getElementById('tyTab').innerHTML=[['hand','🌀 Build it by hand','Build the series by hand, one term at a time'],['pick','🎯 Which coefficient?','See an exponential, and pick which of four numbers sits in front of a power of x'],['turn','📉 Over or under?','See four functions cut off after a few terms, and call whether each P is over the function, exact or under'],['match','🔗 Match them up','See four functions and four polynomials, and match each function to the polynomial that hugs it near 0']]
       .map(([t,b,l])=>`<button class="btn sm ghost" aria-pressed="${this.tab===t}" onclick="Taylor.setTab('${t}')" aria-label="${l}">${b}</button>`).join('');
     const pick=this.tab!=='hand';
     for(const id of ['tyCurves','tyFig','tyStep','tyRead','tyGoalPanel']) document.getElementById(id).style.display=pick?'none':'';
-    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : TaylorTurn.html();
+    document.getElementById('srBox').innerHTML=!pick ? '' : this.tab==='pick' ? SeriesPick.html() : this.tab==='turn' ? TaylorTurn.html() : TaylorMatch.html();
     if(pick) return;
     const C=this.curve(), n=this.n, x=this.x();
     document.getElementById('tyCurves').innerHTML=this.CURVES.map((c,i)=>

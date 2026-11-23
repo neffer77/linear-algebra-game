@@ -35,11 +35,11 @@ module.exports = {
       /Then turn it round: see an exponential, and pick which of four numbers sits in front of a power of x\./.test(document.getElementById('s-tome').innerText)));
     await t.tap('tomeTaylor');
     t.eq('the Taylor workshop opens', await t.screen(), 's-taylor');
-    t.eq('building it by hand is the pressed mode', await pressed(t), 'true,false,false');
+    t.eq('building it by hand is the pressed mode', await pressed(t), 'true,false,false,false');
 
     await t.ev(() => R.seed(5353));
     await t.tapText(/Which coefficient\?/);
-    t.eq('which coefficient is now the pressed mode', await pressed(t), 'false,true,false');
+    t.eq('which coefficient is now the pressed mode', await pressed(t), 'false,true,false,false');
     let away = true; for (const id of AWAY) away = away && await hidden(t, id);
     t.ok('the curves, drawing, steppers, readout and goals step aside', away);
     t.ok('the rule is stated before anything is asked', (await t.ev(() => document.getElementById('srBox').innerText)).startsWith(

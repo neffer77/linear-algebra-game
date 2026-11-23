@@ -1,61 +1,61 @@
 {
-  "change": "Give every campaign foe a weak point",
+  "change": "Add a Match them up mode to the Taylor workshop",
   "mutations": [
     {
-      "name": "a weak point adds nothing",
+      "name": "cos x is said to bend up at 0",
       "file": "index.html",
-      "find": "  MUL: 1.5,",
-      "replace": "  MUL: 1,",
+      "find": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[-1,2]]},",
+      "replace": "    cos:   {at:'cos x',     f:x=>Math.cos(x),      c:[[1,1],[0,1],[1,2]]},",
       "run": "verify"
     },
     {
-      "name": "an arena foe has a weak point",
+      "name": "f″(0) is taken as the x² term itself",
       "file": "index.html",
-      "find": "  of(B){ return (B && B.mode==='campaign' && B.foe && this.OF[B.foe.nm]) || null; },",
-      "replace": "  of(B){ return (B && B.foe && this.OF[B.foe.nm]) || null; },",
+      "find": "return b===2 ? [a,1] : b%2===0 ? [a,b/2] : [2*a,b]; },",
+      "replace": "return [a,b]; },",
       "run": "verify"
     },
     {
-      "name": "the weak point is named on every hit",
+      "name": "each function is matched by its own place, not its polynomial's",
       "file": "index.html",
-      "find": "    if(!B.weakHit){ B.weakHit=true;",
-      "replace": "    if(true){ B.weakHit=true;",
+      "find": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order.indexOf(i); },",
+      "replace": "  fn(i){ return this.FN[this.R().F[i]]; },\n  owner(n){ return this.R().order[n]; },\n  truth(i){ return this.R().order[i]; },",
       "run": "verify"
     },
     {
-      "name": "the slime's weak point is a topic of another realm",
+      "name": "the functions are drawn before the round is right",
       "file": "index.html",
-      "find": "\"Meadow Slime\":'mag',",
-      "replace": "\"Meadow Slime\":'det2',",
+      "find": "      if(this.solved){\n        // the function itself",
+      "replace": "      if(this.marks){\n        // the function itself",
       "run": "verify"
     },
     {
-      "name": "the strike leaves the weak point out",
+      "name": "a match still moves once the round is right",
       "file": "index.html",
-      "find": "* Phase.bonus(this) * Weak.bonus(this);",
-      "replace": "* Phase.bonus(this);",
+      "find": "    if(this.solved || this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
+      "replace": "    if(this.calls[i]===n) return;\n    this.calls=this.calls.slice(); this.calls[i]=n; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    Taylor.render();",
       "run": "verify"
     },
     {
-      "name": "the question line never shows the chip",
+      "name": "the check opens before all four are matched",
       "file": "index.html",
-      "find": "      Weak.chip(this);",
-      "replace": "      '';",
-      "run": "play:weakpoint"
+      "find": "id=\"tymCheck\" ${this.ready()?'':'disabled '}onclick",
+      "replace": "id=\"tymCheck\" onclick",
+      "run": "verify"
     },
     {
-      "name": "a right answer on the weak point is not said",
+      "name": "a wrong slope is blamed on the x² term",
       "file": "index.html",
-      "find": "      const weak=Weak.hit(this);",
-      "replace": "      const weak=false;",
-      "run": "play:weakpoint"
+      "find": "                  : !this.same(o[1],c[1]) ? `it starts at the right height, but its x term",
+      "replace": "                  : false ? `it starts at the right height, but its x term",
+      "run": "verify"
     },
     {
-      "name": "the Bestiary leaves the weak point out",
+      "name": "the Tome never mentions matching them up",
       "file": "index.html",
-      "find": "color:#7ff0a8\">${Weak.line(f)}</div>",
-      "replace": "color:#7ff0a8\"></div>",
-      "run": "play:weakpoint"
+      "find": " Or match them up: four functions and four polynomials, and which hugs which near 0.",
+      "replace": "",
+      "run": "play:taylormatch"
     }
   ]
 }
