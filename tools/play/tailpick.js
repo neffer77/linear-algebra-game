@@ -84,7 +84,7 @@ module.exports = {
       Celebrate.banner = real;
       return seen;
     });
-    t.eq('the fifth pick brings a banner', banners.join(), 'TAIL TAMER / 5 endless areas measured');
+    t.eq('the fifth pick brings a banner', banners.join(), 'AREA TAMER / 5 endless areas measured');
 
     // --- every button is named, it fits, and the workshop comes back ---
     const unnamed = await t.ev(() => [...document.querySelectorAll('#tlTab button, #taPick button')]

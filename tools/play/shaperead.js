@@ -95,7 +95,7 @@ module.exports = {
     r = await read(t);
     t.ok('the run is counted', /3 read right on the first check this visit, 3 in a row\.$/.test(r), r);
     t.eq('every goal can be found with the buttons', await found(t), ['cap', 'cup', 'fix', 'four', 'one', 'three']);
-    t.eq('the last one found brings a banner', banners.join(), 'SHAPE READER / every rise and bend named');
+    t.eq('the last one found brings a banner', banners.join(), 'CURVE READER / every rise and bend named');
 
     // --- named, fits, comes back ---
     await next(t);

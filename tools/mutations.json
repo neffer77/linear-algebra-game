@@ -1,60 +1,18 @@
 {
-  "change": "Add a Steeper or gentler mode to the inverse slope workshop",
+  "change": "Give each workshop's finishing banner a name of its own",
   "mutations": [
     {
-      "name": "the flip is left out",
+      "name": "two growth workshops share a banner again",
       "file": "index.html",
-      "find": "gp(i){ return 1/this.fp(i); },",
-      "replace": "gp(i){ return this.fp(i); },",
+      "find": "Celebrate.banner('MASTER OF LOGS','every exponential undone'",
+      "replace": "Celebrate.banner('MASTER OF GROWTH','every exponential undone'",
       "run": "verify"
     },
     {
-      "name": "f′ is taken at u",
+      "name": "the endless area banner is the series banner again",
       "file": "index.html",
-      "find": "fp(i){ return this.S(i).d(this.x(i)); },",
-      "replace": "fp(i){ return this.S(i).d(this.u(i)); },",
-      "run": "verify"
-    },
-    {
-      "name": "a slope of exactly 1 is not looked for",
-      "file": "index.html",
-      "find": "return Math.abs(a-1)<1e-9 ? 0 : a>1 ? 1 : -1; },",
-      "replace": "return a>1 ? 1 : -1; },",
-      "run": "verify"
-    },
-    {
-      "name": "a falling slope is read by its sign",
-      "file": "index.html",
-      "find": "size(v){ const a=Math.abs(v);",
-      "replace": "size(v){ const a=v;",
-      "run": "verify"
-    },
-    {
-      "name": "the f′-at-u slip is never found",
-      "file": "index.html",
-      "find": "atxs(){ return [0,1,2,3].filter(i=>{ const w=this.wrongAtU(i); return w!==null && w!==this.truth(i); }); },",
-      "replace": "atxs(){ return []; },",
-      "run": "verify"
-    },
-    {
-      "name": "the mirrors are drawn before the round is right",
-      "file": "index.html",
-      "find": "if(this.solved) out+=`<path data-k=\"g\"",
-      "replace": "if(true) out+=`<path data-k=\"g\"",
-      "run": "verify"
-    },
-    {
-      "name": "the blue dot sits at (u, x)",
-      "file": "index.html",
-      "find": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(x))}\" cy=\"${f(py(u))}\"",
-      "replace": "out+=`<circle data-k=\"fdot\" cx=\"${f(px(u))}\" cy=\"${f(py(x))}\"",
-      "run": "verify"
-    },
-    {
-      "name": "a call still moves once the round is right",
-      "file": "index.html",
-      "find": "if(this.solved || this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
-      "replace": "if(this.calls[i]===c) return;\n    this.calls=this.calls.slice(); this.calls[i]=c; this.touched=true;\n    if(this.marks) this.marks[i]=null;\n    InvSlope.render();",
+      "find": "Celebrate.banner('AREA TAMER', this.matched+' endless areas measured'",
+      "replace": "Celebrate.banner('TAIL TAMER', this.matched+' endless areas measured'",
       "run": "verify"
     }
   ]

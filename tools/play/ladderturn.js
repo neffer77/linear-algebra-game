@@ -100,7 +100,7 @@ module.exports = {
     }
     t.ok('the run is counted', /3 called right on the first check this visit, 3 in a row\.$/.test(r), r);
     t.eq('every goal can be found with the buttons', await found(t), ['fix', 'one', 'past', 'quick', 'same', 'three']);
-    t.eq('the last one found brings a banner', banners.join(), 'LADDER READER / every speed called');
+    t.eq('the last one found brings a banner', banners.join(), 'SPEED READER / every speed called');
 
     // --- named, fits, comes back ---
     await next(t);

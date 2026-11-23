@@ -23843,7 +23843,7 @@ const LadderTurn = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('LADDER READER','every speed called','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('SPEED READER','every speed called','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
     return out;
@@ -25474,7 +25474,7 @@ const ShapeRead = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('')+\`</div></div>\`;
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('SHAPE READER','every rise and bend named','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('CURVE READER','every rise and bend named','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
     return out;
@@ -25801,7 +25801,7 @@ const TailPick = {
       const tries=this.misses+1;
       Sfx.good();
       if(this.matched===5||this.matched===10||this.matched===25)
-        Celebrate.banner('TAIL TAMER', this.matched+' endless areas measured','var(--gold)',()=>Sfx.milestone());
+        Celebrate.banner('AREA TAMER', this.matched+' endless areas measured','var(--gold)',()=>Sfx.milestone());
       else UI.toast(\`✓ \${'ABCD'[i]} is where it closes in, picked \${tries===1?'on the first try':'in '+tries+' tries'}. Here is another.\`);
       this.last={S:r.S};
       this.newRound();
@@ -36813,7 +36813,7 @@ const ExpInt = {
         <i aria-hidden="true">\${this.done.has(g.id)?'✓':'○'}</i><span>\${g.t}\${this.done.has(g.id)?' <span class="sr-only">(found)</span>':''}</span></div>\`).join('');
     if(fresh.length){
       if(this.done.size===this.GOALS.length)
-        Celebrate.banner('MASTER OF GROWTH','every exponential undone','var(--gold)',()=>Sfx.mastered());
+        Celebrate.banner('MASTER OF LOGS','every exponential undone','var(--gold)',()=>Sfx.mastered());
       else { UI.toast('✓ '+fresh.map(g=>g.toast).join(' · ')); Sfx.good(); }
     }
   }

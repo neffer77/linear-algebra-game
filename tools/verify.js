@@ -4843,7 +4843,7 @@ const shapeReadNotes = (() => {
   const plan = [[true, 'fix,four'], [false, 'cup,fix,four,one'], [false, 'cap,cup,fix,four,one'], [false, 'cap,cup,fix,four,one,three']];
   plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('shaperead', 'hunt', `curve ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
   if (env.toasts.join(' | ') !== '✓ All four shapes on one curve · A slip caught and fixed | ✓ Right on the first check · A cup can fall | ✓ A cap can climb') fail('shaperead', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
-  if (env.banners.join() !== 'SHAPE READER / every rise and bend named') fail('shaperead', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (env.banners.join() !== 'CURVE READER / every rise and bend named') fail('shaperead', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs };
 })();
 
@@ -7749,7 +7749,7 @@ const tailPickNotes = (() => {
       if (env.renders !== r0 + 1) fail('tailpick', key, 'a pick does not redraw the workshop');
       if (S.matched !== m0 + 1 || S.firstTry !== ft + (missN === 0 ? 1 : 0)) fail('tailpick', key, 'the right pick is not counted');
       if (S.round === r || S.misses !== 0 || S.picked !== null) fail('tailpick', key, 'no fresh curve after the right pick');
-      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'TAIL TAMER / 5 endless areas measured') fail('tailpick', key, 'no banner at five'); }
+      if (S.matched === 5) { fives++; if (env.banners.length !== nb + 1 || env.banners[nb] !== 'AREA TAMER / 5 endless areas measured') fail('tailpick', key, 'no banner at five'); }
       else { const tries = missN + 1, wt = `✓ ${'ABCD'[ri]} is where it closes in, picked ${tries === 1 ? 'on the first try' : 'in ' + tries + ' tries'}. Here is another.`;
         if (env.toasts.length !== nt + 1 || env.toasts[nt] !== wt || env.banners.length !== nb) fail('tailpick', key, `the toast is ${env.toasts[nt]}`); }
       const rt = read(), raw = Q.p === 2 ? ng(Q.a) : `${ng(Q.a)}/${Q.p - 1}`;
@@ -14888,7 +14888,7 @@ const ladderTurnNotes = (() => {
   const plan = [[true, 'fix,past,quick,same'], [false, 'fix,one,past,quick,same'], [false, 'fix,one,past,quick,same'], [false, 'fix,one,past,quick,same,three']];
   plan.forEach(([slip, want], i) => { const got = play(slip); if (got !== want) fail('ladderturn', 'hunt', `round ${i + 1} of the hunt finds ${got || 'nothing'}, not ${want}`); });
   if (env.toasts.join(' | ') !== '✓ Past halfway, still slower · Neck and neck · A fast foot, a slow top · A slip caught and fixed | ✓ Right on the first check') fail('ladderturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
-  if (env.banners.join() !== 'LADDER READER / every speed called') fail('ladderturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
+  if (env.banners.join() !== 'SPEED READER / every speed called') fail('ladderturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
 })();
 const logiTurnNotes = (() => {
@@ -15700,6 +15700,12 @@ const invTurnNotes = (() => {
   if (env.toasts.join(' | ') !== '✓ f′ belongs at x · Exactly 1, both ways · Falling, read by size · A slip caught and fixed | ✓ Right on the first check') fail('invturn', 'hunt', `the toasts are ${env.toasts.join(' | ')}`);
   if (env.banners.join() !== 'SLOPE MIRROR / every inverse slope called') fail('invturn', 'hunt', `the banners are ${env.banners.join() || 'none'}`);
   return { checks, wrongs, panes };
+})();
+// every workshop's banner has a name of its own, so finishing one never reads as finishing another
+(() => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8'), seen = new Map();
+  for (const m of html.matchAll(/Celebrate\.banner\('([A-Z0-9 ]+)'/g)) seen.set(m[1], (seen.get(m[1]) || 0) + 1);
+  for (const [k, n] of seen) if (n > 1 && !k.startsWith('LEVEL')) fail('banners', k, `${n} workshops share this banner`);
 })();
 const dotTurnNotes = (() => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
