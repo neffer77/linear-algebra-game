@@ -674,6 +674,14 @@ without a pick is a dead end rather than a dead run.
 
 The game is built so that losing teaches you as much as winning.
 
+- **🏅 Battle grade.** Every victory over a realm's foe is graded on three marks the
+  fight itself holds: no answer missed, a streak of five, and over half your health left
+  as the foe falls. Three marks is an S, two an A, one a B and none a C, with each mark
+  ticked or left open under the letter and one line naming the first open mark (Win with
+  no answer missed as well for an S). An S that comes without a level-up gets its own
+  banner. The grade is that fight's alone and nothing is saved, so a rematch is a fresh
+  try. The line under it now counts the longest streak of that battle, where it used to
+  show the best streak of the whole save.
 - **Every answer, right or wrong, comes with a worked explanation** in plain language —
   the actual arithmetic of that specific problem, not a generic rule restated.
 - **📖 A topic is taught before it is tested.** Recognising, judging, choosing and
@@ -3061,6 +3069,7 @@ Inside `index.html` the code is organised as:
 | `Phase` | a realm boss's second phase: when it rallies, its harder blows and quicker wind-up, the stagger a streak earns, and the gold a flawless phase pays |
 | `Weak` | each campaign foe's weak point, a topic from its own realm: the chip on its questions, the half-again blow, the line said once a fight, and the Bestiary's line |
 | `Bestiary` | every campaign foe on one page: its tale, numbers and realm's topics once beaten, a shadow until then, and its portrait drawn off the battle's sprites |
+| `Grade` | a victory's grade, S to C, from three marks the fight holds: no miss, a streak of five, over half health left; the marks under the letter, and the first open one named; nothing saved |
 | `Saga` | the story of the Eigenrealm, a chapter for each realm: told on the victory screen the first time its boss falls, and kept on a page off the map with the opening |
 | `Battle` | turn flow, damage maths, victory and defeat; shared by campaign and arena via `mode`; after a miss, asks one fresh question on the same topic next (`redo`) |
 | `Competency` | the competency map: each topic's rung read off effective mastery, strand scores, prerequisites and where you are on each track |
@@ -3164,6 +3173,7 @@ loop only exists once the page is running. A hundred and seventy-three suites, a
 | `elite` | a beaten foe is an elite one fight in four and a first meeting never is; an armoured elite has a quarter more health, its twist on its bar and said as the fight opens, halves the first two blows and is cracked by the third answer in a row, landing in full from then on; a vampiric elite drinks back the blow it lands on a miss; a swift one winds up a turn sooner; a frenzied one has a quarter less health and hits half again as hard; felling an elite pays a first clear's gold with a sure chest and says so, where a plain rematch pays under half and says nothing; nothing runs off a phone and nothing is saved |
 | `phase` | a realm boss rallies once, on the blow that leaves it at half or below, with a banner, its own line and Phase II on its bar; its wind-up comes a turn sooner and its blows a fifth harder; three right in a row stagger it, breaking off a wind-up, and the next right blow lands half again as hard; a miss breaks the streak; a flawless second phase pays a quarter more gold and says so, one with a miss does not; a plain foe and a boss in the arena never rally; nothing is saved |
 | `bestiary` | a button on the map opens it; a new knight sees every foe as an unnamed shadow and a count of none beaten; a beaten foe shows its name, numbers, its own tale and its realm's topics, a boss its opening line; its portrait is drawn in colour and a shadow's in one dark tone; the count and bar follow what is cleared; fighting again from it starts that very foe; it fits a phone; nothing is saved |
+| `grade` | a clean, hale win with a streak of five is an S with all three marks ticked and its banner; a miss drops it to an A that names the open mark; two open marks is a B, three a C; the streak line counts that battle alone; nothing is saved |
 | `saga` | a button on the map opens it; a new knight sees the opening first and eight chapters held back, each saying where to read it; a plain foe's fall tells none; the first boss's first fall tells chapter 1 on the victory screen, drawn beside the boss in colour, between the rewards and the way on; a rematch tells none; the page then counts and keeps it, drawn the same, and still holds back the next; the Tome opens it too; it fits a phone; nothing is saved |
 | `weakpoint` | the first foe's weak point is its own; a question on another topic carries no chip and lands no extra blow; one on the weak point shows the green chip, lands half again as hard with WEAK POINT on the scene and names the topic, once a fight; the Bestiary lists a beaten foe's weak point and not a shadow's; it fits a phone; nothing is saved |
 | `again` | a miss leaves its topic and difficulty to come again and the verdict says so; the next question is a new one on that topic at that difficulty, marked; a miss on the second go queues no third and the next is drawn as usual; a landed second go is named; a right answer brings nothing back; the shown working brings the topic back and says so; a missed first meeting is left to the lesson ladder; a new fight starts clean; the daily is untouched; nothing is saved |

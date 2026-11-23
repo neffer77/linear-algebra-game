@@ -9029,6 +9029,38 @@ const Saga = {
   }
 };
 
+/* -------------- battle grade --------------
+   A victory is graded on three marks the fight itself holds: no answer
+   missed, a streak of five, and more than half your health left as the foe
+   falls. Three marks is an S, two an A, one a B and none a C. Nothing is
+   saved: the grade is this fight's alone, and the line under it names the
+   first mark still open, so the next try has one plain thing to aim at. */
+const Grade = {
+  LET: ['C','B','A','S'],
+  COL: {S:'var(--gold)', A:'var(--green)', B:'var(--blue)', C:'var(--dim)'},
+  AN: {S:'an S', A:'an A', B:'a B', C:'a C'},
+  marks(missed, best, hp, maxHp){ return [
+    {id:'clean',  ic:'🎯', nm:'No answer missed',           to:'no answer missed',           ok:missed===0},
+    {id:'streak', ic:'🔥', nm:'A streak of five',            to:'a streak of five',           ok:best>=5},
+    {id:'hale',   ic:'❤️', nm:'Over half your health left', to:'over half your health left', ok:hp*2>maxHp}]; },
+  of(m){ return this.LET[m.filter(x=>x.ok).length]; },
+  next(m){
+    const open=m.find(x=>!x.ok);
+    if(!open) return 'All three marks: the top grade.';
+    return `Win with ${open.to} as well for ${this.AN[this.LET[m.filter(x=>x.ok).length+1]]}.`;
+  },
+  card(m){
+    const g=this.of(m);
+    return `<div id="gradeCard" style="margin:8px 0 2px">
+      <div class="small" style="color:var(--dim);letter-spacing:1px">BATTLE GRADE</div>
+      <div id="gradeLet" data-grade="${g}" style="font-size:46px;font-weight:900;line-height:1.1;color:${this.COL[g]}">${g}</div>
+      <div style="display:flex;flex-direction:column;gap:2px;font-size:13px;margin:4px 0">${m.map(x=>
+        `<div data-mark="${x.id}" data-ok="${x.ok?1:0}" style="color:${x.ok?'var(--green)':'var(--dim)'}">${x.ok?'✓':'○'} ${x.ic} ${x.nm}</div>`).join('')}</div>
+      <div class="small" id="gradeNext">${this.next(m)}</div>
+    </div>`;
+  }
+};
+
 const Battle = {
   realm:null, foe:null, ri:0, fi:0,
   ehp:0, emax:0, combo:0, over:null,
@@ -9082,7 +9114,7 @@ const Battle = {
     // companion, not a consumable.
     this.beastLeft=Passage.guard();
     this.combo=0; this.over=null; this.rage=false; this.usedFeather=false;
-    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0;
+    this.charge=0; this.slamNext=false; this.lastSlam=0; this.missed=0; this.runBest=0;
     this.chargeMax=Math.max(1, (f.boss?2:3) + (this.mode==='arena'?Arena.mods.charge:0) - (f.elite==='swift'?1:0));
     this.armour = f.elite==='armoured' ? 1 : 0;
     this.phase=1; this.phaseFrom=0; this.phaseRun=0; this.phaseJust=false; this.staggered=false;
@@ -9642,6 +9674,7 @@ const Battle = {
     if(ok){
       this.combo++;
       Game.s.stats.best=Math.max(Game.s.stats.best,this.combo);
+      this.runBest=Math.max(this.runBest||0,this.combo);
       const w=this.wStats();
       const speed = this.speedMult(el);
       const crit = R.chance(w.crit + this.combo*0.02);
@@ -10002,6 +10035,8 @@ const Battle = {
     const gold=Math.round(this.foe.gold*(full?1:0.45)*(Phase.flawless(this)?1.25:1));
     const xp=Math.round(this.foe.xp*(full?1:0.4));
     g.gold+=gold;
+    // graded on the health left as the foe falls, before a level-up restores it
+    const marks=Grade.marks(this.missed, this.runBest||0, g.hp, g.maxHp);
     const ups=Game.gainXp(xp);
 
     // loot — rolled now, revealed by the chest once the victory panel is up
@@ -10031,7 +10066,8 @@ const Battle = {
             ${unlocked?`<div style="color:var(--green)">🗺️ ${unlocked} now lies open.</div>`:''}
           </div>
           <hr>
-          <div class="small">Longest streak this battle: ${g.stats.best}</div>
+          ${Grade.card(marks)}
+          <div class="small">Longest streak this battle: ${this.runBest||0}</div>
           ${this.learnedHtml()}
         </div>
         ${this.foe.boss&&first?Saga.card(this.ri):''}
@@ -10045,6 +10081,7 @@ const Battle = {
       for(let i=0;i<Math.min(8,Math.ceil(gold/25));i++) Sfx.coin(i);
       Haptic.win();
       if(ups) Celebrate.banner('LEVEL '+g.lvl, 'Maximum health now '+g.maxHp, 'var(--gold)', ()=>Sfx.level());
+      else if(Grade.of(marks)==='S') Celebrate.banner('S GRADE', 'No miss, a streak of five, health to spare', 'var(--gold)', ()=>Sfx.milestone());
       Titles.check();
       if(this.foe.boss) setTimeout(()=>{ Keep.maybeHint(); Keep.maybeBackup(); }, 2600);
       Anim.stop();
